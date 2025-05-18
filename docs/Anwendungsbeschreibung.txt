@@ -1,0 +1,364 @@
+# Anwendungsbeschreibung "Lymphknoten T2 - Avocado Sign Analyse" (v2.1.0 - überarbeitet mit Publikation-Tab)
+
+## 1. Zweck und Kontext
+
+Diese Webanwendung ist ein **spezialisiertes, interaktives Analysewerkzeug**, das ursprünglich für die Autoren der **Avocado-Sign Studie** (Lurz & Schäfer, Eur Radiol 2025) entwickelt wurde und nun erweitert wird. Sie dient der **detaillierten explorativen Analyse, dem Vergleich der diagnostischen Leistung des kontrastmittelbasierten Avocado Signs (AS) gegenüber verschiedenen T2-gewichteten morphologischen Kriterien** sowie der **Unterstützung bei der Erstellung einer neuen wissenschaftlichen Publikation**. Diese neue Publikation fokussiert auf den Vergleich der Performance des Avocado Signs mit etablierten T2-Kriterien (gemäß den Studien von Koh et al. 2008, Barbaro et al. 2024, Rutegård et al. 2025) und mit durch Brute-Force-Analyse optimierten T2-Kriterien.
+
+Die Anwendung basiert auf dem **identischen Patientenkollektiv (N=106)** der genannten Avocado-Sign Studie und ermöglicht:
+
+* Flexible Definition und Anwendung benutzerdefinierter T2-Kriteriensets.
+* Automatisierte Optimierung von T2-Kriterien zur Maximierung diagnostischer Metriken mittels eines Brute-Force-Verfahrens.
+* Direkten Vergleich des Avocado Signs mit Literatur-basierten T2-Kriteriensets.
+* Umfassende statistische Auswertungen der diagnostischen Güte und Assoziationen mit präziser Tooltip-Unterstützung, die sowohl die Beschreibung als auch die kontextsensitive Interpretation von Metriken und Tests anzeigt.
+* Generierung von **publikations- und präsentationsreifen** Tabellen, Diagrammen und Berichten.
+* Bereitstellung von Textvorschlägen, relevanten Tabellen und Schaubildern im neuen **"Publikation"-Tab**, um die Erstellung der neuen Forschungsarbeit signifikant zu erleichtern. Die Inhalte dieses Tabs orientieren sich im Aufbau und Vorgehen stark an der ersten Avocado-Sign Publikation.
+
+Alle Analysen verwenden den **histopathologischen Befund** des Operationspräparats als Referenzstandard (Goldstandard) für den N-Status der mesorektalen Lymphknoten.
+
+## 2. Benutzeroberfläche und Bedienung
+
+Die Anwendung ist als **Single-Page Application (SPA)** konzipiert und läuft vollständig im Browser des Nutzers, ohne serverseitige Komponenten.
+
+* **Layout:** Das Layout ist responsiv und passt sich dynamisch verschiedenen Bildschirmgrößen an. Es besteht aus einem auf größeren Bildschirmen fixierten Header, einer Navigationsleiste mit Tabs und dem Hauptinhaltsbereich, der den Inhalt des jeweils aktiven Tabs anzeigt.
+* **Header:**
+    * Zeigt prominent den Anwendungstitel: "Lymphknoten T2 - Avocado Sign".
+    * Stellt dynamisch aktualisierte **Schlüsselstatistiken** für das aktuell ausgewählte globale Patientenkollektiv dar:
+        * `Kollektiv`: Name des ausgewählten Kollektivs (z.B. "Gesamt").
+        * `Pat.`: Gesamtzahl der Patienten im ausgewählten Kollektiv.
+        * `N`: Prozentualer Anteil der Patienten mit positivem histopathologischem Lymphknotenstatus (N+).
+        * `AS`: Prozentualer Anteil der Patienten mit positivem Avocado-Sign-Status (AS+).
+        * `T2`: Prozentualer Anteil der Patienten mit positivem T2-Status, basierend auf den aktuell *angewendeten und gespeicherten* benutzerdefinierten T2-Kriterien.
+        * Alle diese Statistiken sind mit Tooltips versehen, die ihre Bedeutung erläutern.
+    * Enthält eine Button-Gruppe zur **globalen Auswahl des Patientenkollektivs**:
+        * `Gesamt`: Alle 106 Patienten der Studie.
+        * `Direkt OP`: Nur Patienten, die primär operiert wurden und keine neoadjuvante Therapie erhielten (n=29).
+        * `nRCT`: Nur Patienten, die eine neoadjuvante Radiochemotherapie (nRCT) vor der Operation erhielten (n=77).
+        * Die Auswahl eines Kollektivs filtert die Datenbasis für alle Analysen und Darstellungen in sämtlichen Tabs der Anwendung. Die Buttons verfügen über Tooltips.
+* **Navigation (Tabs):** Eine horizontale Leiste unterhalb des Headers ermöglicht den Wechsel zwischen den Hauptfunktionsbereichen der Anwendung. Jeder Tab-Reiter ist mit einem Icon und einem beschreibenden Tooltip versehen:
+    * **`Daten`** (<i class="fas fa-database fa-fw"></i>): Zeigt eine detaillierte, sortierbare Liste der Patientendaten des aktuell ausgewählten globalen Kollektivs, inklusive aufklappbarer Detailansichten für T2-Lymphknotenmerkmale. (Ehemals "Patienten"-Tab).
+    * **`Auswertung`** (<i class="fas fa-tasks fa-fw"></i>): Beinhaltet ein Dashboard mit deskriptiven Übersichten, die interaktive Definition und Anwendung von T2-Malignitätskriterien, die Steuerung und Ergebnisanzeige der Brute-Force-Optimierung von T2-Kriterien sowie eine detaillierte Auswertungstabelle der Patientenergebnisse unter Anwendung der aktuellen T2-Kriterien.
+    * **`Statistik`** (<i class="fas fa-chart-bar fa-fw"></i>): Bietet umfassende statistische Analysen und Vergleiche der diagnostischen Güte von Avocado Sign und T2-Kriterien, Assoziationsanalysen und Kollektivvergleiche.
+    * **`Präsentation`** (<i class="fas fa-slideshare fa-fw"></i>): Stellt ausgewählte Ergebnisse in einem für Präsentationen optimierten Format dar, inklusive Vergleichsmöglichkeiten zwischen Avocado Sign und verschiedenen T2-Kriteriensets.
+    * **`Publikation`** (<i class="fas fa-feather-pointed fa-fw"></i>) (NEU): Bietet Hilfestellungen, Textvorschläge, verwendbare Tabellen und Grafiken speziell zugeschnitten auf die Erstellung der neuen wissenschaftlichen Publikation, die das Avocado Sign mit Literatur-basierten und Brute-Force-optimierten T2-Kriterien vergleicht. Enthält eine eigene Steuerung für Publikationsabschnitte und Sprache.
+    * **`Export`** (<i class="fas fa-download fa-fw"></i>): Ermöglicht den Download von Analyseergebnissen, Rohdaten, Tabellen, Diagrammen und Berichten in verschiedenen Dateiformaten (CSV, MD, TXT, HTML, PNG, SVG, ZIP).
+* **Allgemeine UI-Elemente und Interaktion:**
+    * **Tooltips (Tippy.js):** Nahezu alle interaktiven Elemente (Buttons, Eingabefelder, Auswahlfelder, Spaltenköpfe in Tabellen, Header-Statistiken, Diagrammelemente etc.) sind mit detaillierten Tooltips ausgestattet. Diese erklären die Funktion des Elements oder die Bedeutung der angezeigten Information.
+    * **Spezifische Tooltip-Logik für statistische Kennzahlen:** Bei statistischen Metriken und Tests (z.B. in den Tabs "Statistik", "Präsentation" und in der Metrik-Übersicht im "Auswertung"-Tab) wird unterschieden:
+        * Das Überfahren des **Namens** der Metrik oder des Tests zeigt eine **allgemeine Beschreibung** und ggf. die Formel.
+        * Das Überfahren des **Wertes** (z.B. Zahl, Prozent, p-Wert, Konfidenzintervall) zeigt eine spezifische **Interpretation dieses Wertes im Kontext** des aktuellen Kollektivs, der verglichenen Methoden und der Signifikanz.
+    * **Toast-Benachrichtigungen:** Am unteren rechten Bildschirmrand erscheinen kurze, nicht-blockierende Nachrichten, um den Nutzer über erfolgreiche Aktionen (z.B. Speichern, Export), Warnungen oder aufgetretene Fehler zu informieren.
+    * **Modale Fenster (Bootstrap):** Werden für die detaillierte Anzeige von Ergebnissen verwendet, beispielsweise für die Top-10-Resultate der Brute-Force-Optimierung, und erlauben weiterführende Aktionen wie den Export dieser Detailergebnisse.
+    * **Interaktive Tabellen:**
+        * Die Tabellen in den Tabs "Daten" und "Auswertung" sind durch Klick auf die Spaltenköpfe sortierbar. Bei der Status-Spalte (N/AS/T2) ist eine Sub-Sortierung nach dem jeweiligen Einzelstatus möglich. Tooltips an den Spaltenköpfen erläutern die Sortierfunktion.
+        * Diese Tabellen verfügen über aufklappbare Detailzeilen (`<tr class="sub-row">`), die per Klick auf die Hauptzeile ein- und ausgeblendet werden können, um zusätzliche Informationen (z.B. detaillierte Lymphknotenmerkmale oder Bewertungsdetails) anzuzeigen, ohne die Haupttabelle zu überladen. Buttons zum globalen Ein-/Ausklappen aller Details sind vorhanden.
+    * **Responsivität:** Das gesamte Anwendungsdesign ist responsiv gestaltet und passt sich automatisch an unterschiedliche Bildschirmgrößen und -orientierungen an, um eine optimale Darstellung und Bedienbarkeit auf Desktops, Tablets und Smartphones zu gewährleisten.
+    * **Dynamische Aktualisierungen:** Änderungen an globalen Einstellungen (wie dem Patientenkollektiv) oder an den T2-Kriterien führen zu einer automatischen Neuberechnung und Aktualisierung aller relevanten Ansichten und Statistiken in der Anwendung.
+
+## 3. Datenbasis und Verarbeitung
+
+* **Datenquelle:** Die Anwendung verwendet einen fest integrierten, statischen JavaScript-Array (`patientDataRaw` in `data/data.js`). Dieser enthält die anonymisierten Daten der 106 Patienten, die auch der Originalpublikation zum Avocado Sign (Lurz & Schäfer, Eur Radiol 2025) zugrunde liegen. Ein Upload externer Daten ist nicht vorgesehen.
+* **Datenmodell (pro Patient nach initialer Verarbeitung durch `js/core/data_processor.js`):**
+    * **Basisidentifikation und Demographie:** `nr` (fortlaufende interne ID), `name` (kodiert), `vorname` (kodiert), `geburtsdatum` (String im Format "YYYY-MM-DD"), `untersuchungsdatum` (String im Format "YYYY-MM-DD"), `geschlecht` (String: 'm', 'f', oder standardisiert zu 'unbekannt'), `alter` (numerisch, berechnet in Jahren zum Untersuchungszeitpunkt).
+    * **Therapieinformation:** `therapie` (String: 'direkt OP' für primäre Operation, 'nRCT' für neoadjuvante Radiochemotherapie, oder standardisiert zu 'unbekannt').
+    * **N-Status (Histopathologischer Referenzstandard):** `n` (String: '+' für positiv, '-' für negativ, oder `null` bei fehlender Angabe), `anzahl_patho_lk` (numerisch: Gesamtzahl der histopathologisch untersuchten Lymphknoten, validiert ≥ 0), `anzahl_patho_n_plus_lk` (numerisch: Anzahl der davon positiven Lymphknoten, validiert ≥ 0).
+    * **Avocado-Sign-Status (AS, basierend auf T1KM-MRT):** `as` (String: '+' für positiv, '-' für negativ, oder `null`), `anzahl_as_lk` (numerisch: Gesamtzahl der im T1KM-MRT sichtbaren und bewerteten mesorektalen Lymphknoten, validiert ≥ 0), `anzahl_as_plus_lk` (numerisch: Anzahl der davon AS-positiven Lymphknoten, validiert ≥ 0).
+    * **T2-gewichtete Lymphknotenmerkmale:** `lymphknoten_t2` (Array von Objekten). Jedes Objekt repräsentiert einen einzelnen, im hochauflösenden T2w-MRT sichtbaren mesorektalen Lymphknoten und enthält folgende validierte Eigenschaften:
+        * `groesse`: Numerisch, Kurzachsendurchmesser in Millimetern (validiert ≥ 0 oder `null` falls nicht messbar/vorhanden).
+        * `form`: String: 'rund', 'oval', oder `null` (standardisiert auf Kleinbuchstaben).
+        * `kontur`: String: 'scharf', 'irregulär', oder `null` (standardisiert auf Kleinbuchstaben).
+        * `homogenitaet`: String: 'homogen', 'heterogen', oder `null` (standardisiert auf Kleinbuchstaben).
+        * `signal`: String: 'signalarm', 'intermediär', 'signalreich', oder `null` (standardisiert auf Kleinbuchstaben).
+    * `anzahl_t2_lk`: Numerisch, die Anzahl valider Lymphknotenobjekte im `lymphknoten_t2`-Array des Patienten.
+    * **Sonstiges:** `bemerkung` (String: freie Texteingabe für klinische oder radiologische Anmerkungen).
+* **Dynamisch hinzugefügte T2-Bewertungsdaten (nach Anwendung von Kriterien durch `js/core/t2_criteria_manager.js` oder `js/core/study_criteria_manager.js`):**
+    * `t2`: String ('+' oder '-'), der berechnete T2-Status des Patienten basierend auf den angewendeten Kriterien und der gewählten Logik.
+    * `anzahl_t2_plus_lk`: Numerisch, die Anzahl der Lymphknoten dieses Patienten, die die angewendeten T2-Kriterien erfüllen.
+    * `lymphknoten_t2_bewertet`: Array von Objekten, parallel zu `lymphknoten_t2`. Jedes Objekt enthält die ursprünglichen Merkmale des Lymphknotens sowie:
+        * `isPositive`: Boolean, gibt an, ob dieser einzelne Lymphknoten gemäß den angewendeten Kriterien als positiv bewertet wurde.
+        * `checkResult`: Ein Objekt, das für jedes aktive T2-Kriterium (Größe, Form, etc.) das Ergebnis des Checks speichert (Boolean: `true` falls erfüllt, `false` falls nicht erfüllt, `null` falls Kriterium inaktiv oder nicht anwendbar).
+* **Datenverarbeitungslogik (`js/core/data_processor.js`):**
+    * **Initialverarbeitung (`processPatientData`, `processSinglePatient`):** Beim Start der Anwendung werden die Rohdaten aus `data.js` validiert und aufbereitet. Dies beinhaltet:
+        * Berechnung des Patientenalters aus Geburts- und Untersuchungsdatum.
+        * Trimmen von String-Werten.
+        * Standardisierung von Enum-Werten (z.B. Geschlecht, Therapie, T2-Lymphknotenmerkmale) auf definierte Kleinbuchstaben-Werte oder `null`.
+        * Validierung von numerischen Zählwerten (z.B. Anzahl Lymphknoten) auf ≥ 0.
+        * Initialisierung der dynamischen T2-Bewertungsfelder (`t2`, `anzahl_t2_plus_lk`, `lymphknoten_t2_bewertet`) mit Standardwerten.
+    * **Filterung (`filterDataByKollektiv`):** Stellt Funktionen bereit, um den verarbeiteten Datensatz basierend auf dem global im Header ausgewählten Kollektiv (`Gesamt`, `direkt OP`, `nRCT`) zu filtern. Gibt eine tiefe Kopie (mittels `cloneDeep`) der gefilterten Daten zurück.
+    * **Header-Statistiken (`calculateHeaderStats`):** Berechnet die im Anwendungsheader angezeigten aggregierten Statistiken (Patientenzahl, N+/AS+/T2+-Raten) für das aktuell gefilterte Kollektiv.
+
+## 4. Kernfunktionalitäten (pro Tab)
+
+### 4.1. Tab: Daten
+
+* **Zweck:** Anzeige und Exploration der grundlegenden Patientendaten und ihrer jeweiligen Nodalstatus-Klassifikationen.
+* **Patiententabelle:** Zeigt eine tabellarische Übersicht aller Patienten des aktuell ausgewählten globalen Kollektivs.
+    * **Spalten:** Umfasst `Nr.` (Patienten-ID), `Name` (kodiert), `Vorname` (kodiert), `Geschl.` (Geschlecht), `Alter`, `Therapie` (Behandlungsgruppe), `N/AS/T2` (kombinierte Statusanzeige für Pathologie, Avocado Sign und aktuelle T2-Kriterien-Bewertung), `Bemerkung`.
+    * **Sortierung:** Alle Spalten sind durch Klick auf den Spaltenkopf sortierbar (auf-/absteigend). Die Spalte `N/AS/T2` bietet eine Sub-Sortierungsmöglichkeit, sodass gezielt nach dem N-, AS- oder T2-Status sortiert werden kann. Der aktuell aktive Sortierstatus wird durch ein Icon und Hervorhebung im Spaltenkopf visualisiert. Tooltips erklären die Sortierfunktion.
+    * **Detailansicht pro Patient:** Jede Zeile ist per Klick aufklappbar. Die aufklappende Detailzeile (`<tr class="sub-row">`) visualisiert die detaillierten morphologischen Eigenschaften (Größe, Form, Kontur, Homogenität, Signalintensität) jedes einzelnen im T2w-MRT erfassten Lymphknotens dieses Patienten. Diese Merkmale werden durch spezifische SVG-Icons und Textwerte dargestellt, wobei jedes Merkmal und Icon einen erklärenden Tooltip besitzt.
+    * **Globale Detailsteuerung:** Ein Button "Alle Details Ein-/Ausblenden" oberhalb der Tabelle ermöglicht das gleichzeitige Öffnen oder Schließen aller Detailzeilen in der aktuellen Tabellenansicht.
+* **Datenquelle:** Die angezeigten Daten sind die nach Kollektiv gefilterten und gemäß den aktuell angewendeten T2-Kriterien evaluierten Patientendaten.
+
+### 4.2. Tab: Auswertung
+
+* **Zweck:** Interaktive Definition von T2-Kriterien, deren Optimierung und Visualisierung der Auswirkungen auf das Patientenkollektiv.
+* **Dashboard:**
+    * Zeigt eine dynamische Übersicht der wichtigsten deskriptiven Statistiken für das aktuell ausgewählte globale Kollektiv.
+    * **Kennzahlen:** Median-Alter, Geschlechterverteilung (M/W), Therapiegruppenverteilung (Direkt OP/nRCT), Statusverteilungen (N+/N-, AS+/AS-, T2+/T2-). Jede Kennzahl ist mit einem Tooltip versehen.
+    * **Diagramme (D3.js):**
+        * Altersverteilung (Histogramm).
+        * Geschlechterverteilung (Tortendiagramm).
+        * Therapieverteilung (Tortendiagramm).
+        * N-Status Verteilung (Tortendiagramm).
+        * AS-Status Verteilung (Tortendiagramm).
+        * T2-Status Verteilung (Tortendiagramm, basierend auf angewendeten Kriterien).
+    * Alle Diagramme sind als PNG- und SVG-Dateien direkt aus der Karte exportierbar.
+* **T2-Kriterien-Definition (`js/core/t2_criteria_manager.js`):**
+    * Eine interaktive Karte ermöglicht die detaillierte Definition und Anpassung eines benutzerdefinierten T2-Malignitätskriteriensets.
+    * **Aktivierbare Merkmale:**
+        * `Größe`: Schwellenwert für den Kurzachsendurchmesser (in mm), einstellbar über einen Slider (Bereich: 0.1 mm bis 25.0 mm, Schrittweite 0.1 mm) und ein direktes numerisches Eingabefeld. Das Kriterium ist "größer oder gleich" (≥) dem Schwellenwert.
+        * `Form`: Auswahl des als suspekt geltenden Werts ('rund' oder 'oval') über Buttons.
+        * `Kontur`: Auswahl des als suspekt geltenden Werts ('scharf' oder 'irregulär') über Buttons.
+        * `Homogenität`: Auswahl des als suspekt geltenden Werts ('homogen' oder 'heterogen') über Buttons.
+        * `Signal`: Auswahl der als suspekt geltenden T2-Signalintensität ('signalarm', 'intermediär', 'signalreich') über Buttons. Ein Hinweis verdeutlicht, dass Lymphknoten mit Signal='null' dieses Kriterium nie erfüllen.
+    * Jedes Merkmal kann einzeln über eine Checkbox aktiviert oder deaktiviert werden. Alle Bedienelemente sind mit Tooltips versehen.
+    * **Logische Verknüpfung:** Ein Switch-Element erlaubt die Wahl der logischen Verknüpfung für die aktivierten Kriterien:
+        * `UND`: Ein Lymphknoten gilt als positiv, wenn ALLE aktivierten Kriterien erfüllt sind.
+        * `ODER`: Ein Lymphknoten gilt als positiv, wenn MINDESTENS EIN aktiviertes Kriterium erfüllt ist.
+    * **Aktionsbuttons:**
+        * `Anwenden & Speichern`: Übernimmt die aktuellen Einstellungen als "angewandte Kriterien", speichert diese im Local Storage des Browsers für zukünftige Sitzungen, aktualisiert alle abhängigen Ansichten und Berechnungen in der gesamten Anwendung (Header-Statistiken, T2-Spalten in Tabellen, statistische Auswertungen, Diagramme) und entfernt die "ungespeicherte Änderungen"-Markierung.
+        * `Zurücksetzen (Standard)`: Setzt alle Kriterien und die Logik auf die vordefinierten Standardwerte zurück. Diese Änderung wird erst nach einem Klick auf "Anwenden & Speichern" wirksam.
+    * **Statusanzeige:** Die Kriterien-Karte wird visuell hervorgehoben (z.B. gestrichelter Rahmen), wenn ungespeicherte Änderungen an den Kriterien oder der Logik vorliegen. Ein Tooltip erklärt diesen Zustand.
+* **T2 Metrik-Übersicht:**
+    * Eine kompakte Karte zeigt die wichtigsten diagnostischen Gütekriterien (Sensitivität, Spezifität, PPV, NPV, Accuracy, Balanced Accuracy, F1-Score, AUC) inklusive ihrer 95% Konfidenzintervalle.
+    * Diese Metriken beziehen sich auf die Performance der **aktuell angewendeten und gespeicherten** T2-Kriterien im Vergleich zum histopathologischen N-Status für das global ausgewählte Kollektiv.
+    * Tooltip-Logik: Der Metrikname zeigt die Beschreibung der Metrik; der numerische Wert (inkl. CI) zeigt die spezifische Interpretation im Kontext.
+* **Brute-Force-Optimierung (`js/workers/brute_force_worker.js`):**
+    * Diese Funktion dient der automatischen Suche nach der optimalen Kombination von T2-Kriterien.
+    * **Zielmetrik-Auswahl:** Ein Dropdown-Menü erlaubt die Auswahl der diagnostischen Metrik, die maximiert werden soll (Accuracy, Balanced Accuracy, F1-Score, PPV, NPV).
+    * **Steuerung:** Ein "Optimierung starten"-Button initiiert den Prozess. Die Berechnung läuft asynchron in einem Web Worker, um die Benutzeroberfläche nicht zu blockieren. Während der Ausführung wird der Fortschritt angezeigt (Anzahl getesteter Kombinationen / Gesamtanzahl möglicher Kombinationen, aktueller Bestwert der Zielmetrik und die zugehörigen Kriterien/Logik). Ein "Abbrechen"-Button ist verfügbar.
+    * **Ergebnisanzeige:** Nach Abschluss der Optimierung werden das beste gefundene Ergebnis (Kriterien, Logik, Wert der Zielmetrik, Dauer, Anzahl getesteter Kombinationen) und Buttons zur Interaktion angezeigt:
+        * `Anwenden`: Übernimmt die beste gefundene Kriterienkombination in die T2-Kriterien-Definition und wendet sie an (inkl. Speicherung).
+        * `Top 10`: Öffnet ein modales Fenster, das eine sortierte Liste der bis zu zehn besten Kriterienkombinationen (einschließlich solcher mit identischem Metrikwert) detailliert anzeigt. Aus diesem Modal heraus kann ein Textbericht der Brute-Force-Ergebnisse exportiert werden.
+    * Alle Elemente dieser Karte sind mit Tooltips versehen.
+* **Auswertungstabelle:**
+    * Zeigt eine detaillierte Tabelle der Patienten im aktuell ausgewählten Kollektiv.
+    * **Spalten:** `Nr.`, `Name`, `Therapie`, `N/AS/T2`-Status (Sub-Sortierung möglich), `N+/N gesamt`, `AS+/AS gesamt`, `T2+/T2 gesamt` (basierend auf angewendeten Kriterien).
+    * **Sortierbar:** Alle Spalten sind sortierbar.
+    * **Aufklappbare Detailzeilen:** Für jeden Patienten kann eine Detailansicht aufgeklappt werden. Diese zeigt jeden einzelnen T2-Lymphknoten des Patienten mit seinen morphologischen Merkmalen und wie diese gemäß den **aktuell angewendeten** T2-Kriterien bewertet wurden. Merkmale, die zur Positiv-Bewertung eines Lymphknotens beigetragen haben (abhängig von UND/ODER-Logik), werden visuell hervorgehoben. Tooltips erklären die Merkmale und deren Bewertung.
+    * Ein Button "Alle Details Ein-/Ausblenden" ist vorhanden.
+
+### 4.3. Tab: Statistik
+
+* **Zweck:** Durchführung und Anzeige detaillierter statistischer Analysen zur diagnostischen Güte und zu Assoziationen. Alle Berechnungen basieren auf dem global ausgewählten Kollektiv und den **aktuell angewendeten** T2-Kriterien. Die Implementierung der statistischen Verfahren befindet sich in `js/services/statistics_service.js`.
+* **Ansichtswahl:**
+    * `Einzelansicht`: Führt alle Analysen für das global im Header ausgewählte Patientenkollektiv durch.
+    * `Vergleich Aktiv`: Ermöglicht die Auswahl zweier spezifischer Kollektive (z.B. "Direkt OP" vs. "nRCT") aus Dropdown-Menüs. Die Analysen werden für beide Kollektive getrennt dargestellt, und zusätzliche Tests zum direkten Vergleich der Performance-Metriken zwischen den beiden Gruppen werden durchgeführt.
+    * Die Steuerelemente für die Ansichts- und Kollektivauswahl sind mit Tooltips versehen.
+* **Dargestellte Analysen (pro Kollektiv in Einzelansicht; für beide Kollektive und als Vergleich in Vergleichsansicht):**
+    * Die Ergebnisse werden in thematisch gruppierten Karten präsentiert. Jeder Kartentitel ist mit einem Tooltip versehen, der den Inhalt der Karte erläutert.
+    * **Deskriptive Statistik:** Detaillierte Tabellen zu demographischen Daten, Therapiegruppen und Lymphknotenanzahlen. Zusätzlich werden Diagramme (Histogramm für Alter, Tortendiagramm für Geschlecht) angezeigt. Spezifische Zeilen in den Tabellen und die Diagramme selbst haben erklärende Tooltips.
+    * **Diagnostische Güte (Avocado Sign vs. N):** Tabellarische Darstellung von Sensitivität, Spezifität, PPV, NPV, Accuracy, Balanced Accuracy (BalAcc)/AUC, F1-Score, jeweils mit 95% Konfidenzintervallen und der verwendeten CI-Methode. Enthält auch die 2x2 Konfusionsmatrix. Die Metriknamen sind mit Tooltips zur Beschreibung, die Werte mit Tooltips zur kontextspezifischen Interpretation versehen.
+    * **Diagnostische Güte (Angewandte T2-Kriterien vs. N):** Gleiche Struktur und Tooltip-Logik wie bei der Avocado Sign Güte.
+    * **Statistischer Vergleich (AS vs. Angewandte T2-Kriterien, gepaart):** Tabelle mit den Ergebnissen (Teststatistik, p-Wert, Methode) des McNemar-Tests (für Accuracy) und des DeLong-Tests (für AUC/BalAcc). Testnamen und p-Werte sind mit interpretierenden Tooltips versehen.
+    * **Assoziationsanalyse (Merkmale vs. N-Status):** Tabelle mit Odds Ratio (OR) und 95% CI, Risk Difference (RD) und 95% CI, Phi-Koeffizient (φ), sowie p-Wert und Name des statistischen Tests (Fisher's Exact Test für kategoriale Merkmale, Mann-Whitney-U-Test für Lymphknotengröße) für die Assoziation des Avocado Sign-Status und jedes einzelnen T2-Merkmals (unabhängig von dessen Aktivierung in den benutzerdefinierten Kriterien) mit dem pathologischen N-Status. Merkmalsnamen, Werte und Testnamen sind mit beschreibenden bzw. interpretierenden Tooltips versehen.
+    * **Statistischer Vergleich zwischen Kollektiven (ungepaart, nur in "Vergleich Aktiv"-Ansicht):** Vergleicht die Accuracy (mittels Fisher's Exact Test) und die AUC (mittels Z-Test, basierend auf Standardfehlern aus Bootstrap) für das Avocado Sign und die angewandten T2-Kriterien zwischen den beiden ausgewählten Kollektiven. Testergebnisse und p-Werte sind mit interpretierenden Tooltips versehen.
+    * **Kriterienvergleichstabelle:** Eine Tabelle, die die diagnostische Güte (Sens, Spez, PPV, NPV, Acc, AUC/BalAcc) des Avocado Signs, der aktuell angewandten T2-Kriterien sowie der fest implementierten Literatur-Kriteriensets (Koh et al. 2008, Barbaro et al. 2024, Rutegård et al. 2025/ESGAR 2016) für das global gewählte Kollektiv (bzw. das erste gewählte Kollektiv in der Vergleichsansicht) darstellt. Spaltenköpfe haben Tooltips zur Beschreibung der Metrik, Wert-Zellen zur Interpretation für die jeweilige Methode/Set.
+* **Export:** Einzelne Tabellen und Diagramme innerhalb der Statistik-Karten können direkt als PNG-Dateien heruntergeladen werden. Die entsprechenden Buttons sind mit Tooltips versehen.
+
+### 4.4. Tab: Präsentation
+
+* **Zweck:** Aufbereitung ausgewählter Analyseergebnisse in einem Format, das sich für wissenschaftliche Präsentationen eignet.
+* **Ansichtswahl:** Über Radio-Buttons kann zwischen zwei Hauptansichten gewählt werden:
+    * **`Avocado Sign (Daten)`:** Fokussiert auf die Performance des Avocado Signs.
+        * Zeigt eine Tabelle mit den diagnostischen Gütekriterien (Sens, Spez, PPV, NPV, Acc, AUC mit 95% CIs) des Avocado Signs für alle drei Kollektive (Gesamt, Direkt OP, nRCT).
+        * Präsentiert ein Balkendiagramm zur Visualisierung dieser Gütekriterien für das aktuell global ausgewählte Kollektiv.
+        * Tabellen-Header und Wert-Zellen sowie das Diagramm sind mit beschreibenden und interpretierenden Tooltips versehen.
+    * **`AS vs. T2 (Vergleich)`:** Ermöglicht den direkten Vergleich des Avocado Signs mit einem ausgewählten T2-Kriterienset.
+        * **Auswahl der T2-Vergleichsbasis:** Ein Dropdown-Menü erlaubt die Auswahl entweder der "Eingestellten T2-Kriterien" (die aktuell im Auswertungstab definiert und angewendet sind) oder eines der fest implementierten Literatur-Kriteriensets (Koh et al. 2008, Barbaro et al. 2024, Rutegård et al. 2025/ESGAR 2016). Die Auswahl aktualisiert dynamisch die angezeigten Vergleiche und Informationen. Das global im Header gewählte Patientenkollektiv dient als Basis für diesen Vergleich; falls ein Literaturkriterium spezifisch für eine Subgruppe ist (z.B. Barbaro für nRCT), wird der Nutzer ggf. darauf hingewiesen oder das globale Kollektiv bei Auswahl automatisch angepasst.
+        * **Info-Karte zur T2-Basis:** Zeigt detaillierte Informationen zum ausgewählten T2-Vergleichskriterium (Referenzpublikation, ursprüngliche Kohorte der Studie, Untersuchungstyp, Studienfokus, Zusammenfassung der Kriterien). Jedes Feld ist mit einem Tooltip versehen.
+        * **Vergleichs-Metrik-Tabelle:** Stellt die diagnostischen Gütekriterien (Sens, Spez, etc. mit CIs) für das Avocado Sign und das ausgewählte T2-Kriterienset nebeneinander dar, berechnet für das aktuell global gewählte Kollektiv. Metriknamen und Werte sind mit Tooltips zur Beschreibung bzw. Interpretation versehen.
+        * **Statistische Tests (Tabelle):** Zeigt die Ergebnisse (Teststatistik, p-Wert, Methode) des McNemar-Tests (für Accuracy) und des DeLong-Tests (für AUC) für den direkten Vergleich von AS vs. dem ausgewählten T2-Kriterienset. Testnamen und p-Werte sind mit interpretierenden Tooltips versehen.
+        * **Vergleichs-Chart (Balkendiagramm):** Visualisiert ausgewählte Performance-Metriken (z.B. Sens, Spez, Acc, AUC) für AS und das T2-Kriterienset nebeneinander. Mit Tooltip.
+* **Download-Optionen:** Spezifische Buttons erlauben den Export der angezeigten Tabellen (als CSV, Markdown oder PNG) und Diagramme (als PNG oder SVG). Alle Download-Buttons sind mit Tooltips versehen, die den Inhalt und das Format der zu exportierenden Datei erklären.
+
+### 4.5. Tab: Publikation (NEU)
+
+* **Zweck:** Dieses Tab dient als zentrale Anlaufstelle zur Unterstützung bei der Erstellung der neuen wissenschaftlichen Publikation, die das Avocado Sign mit Literatur-basierten und Brute-Force-optimierten T2-Kriterien vergleicht. Es generiert Textvorschläge und stellt relevante Datenzusammenfassungen, Tabellen und Platzhalter für Diagramme bereit.
+* **Steuerleiste (oben, fixiert innerhalb des Tabs):**
+    * **Abschnittsauswahl:** Buttons ermöglichen die Auswahl des gewünschten Publikationsabschnitts, für den Inhalte generiert werden sollen (aktuell implementiert: "Methoden", "Ergebnisse"). Die Buttons zeigen Icons und Beschriftungen, die sich je nach gewählter Sprache anpassen. Der aktive Abschnitt ist hervorgehoben. Tooltips erklären die Funktion jedes Buttons.
+    * **Sprachumschalter:** Ein Switch-Element erlaubt den Wechsel der Sprache für die generierten Textvorschläge und UI-Elemente innerhalb dieses Tabs zwischen Deutsch (`de`) und Englisch (`en`). Die Auswahl wird im Local Storage gespeichert.
+* **Inhaltsbereich für Publikationsabschnitte:**
+    * Basierend auf der Auswahl in der Steuerleiste wird der entsprechende Inhalt dynamisch geladen und angezeigt.
+    * **Abschnitt "Methoden":**
+        * Präsentiert einen umfassend ausformulierten Textvorschlag für den Methoden-Teil der Publikation. Der Text ist in Unterabschnitte gegliedert (z.B. Studiendesign, MRT-Protokoll, Bildanalyse [AS, T2-Morphologie, Literatur-Kriterien, Brute-Force-Optimierung, Referenzstandard], Statistische Analyse, Software).
+        * Die Textvorlagen stammen aus `js/config/publication_content.js` und werden dynamisch mit spezifischen Werten und Details aus der Anwendung (z.B. Patientenzahlen, Details zur Brute-Force-Konfiguration, verwendete statistische Konstanten) gefüllt.
+        * Dieser Abschnitt kann Verweise auf Tabellen (z.B. Patientencharakteristika, Definition der Literatur-Kriterien) und ggf. methodische Flussdiagramme enthalten, die hier als Platzhalter oder direkt gerenderte Elemente angezeigt werden.
+        * Die Darstellung erfolgt in einer gut lesbaren, wissenschaftlichen Prosa (gesteuert durch CSS-Klasse `.publication-prose`).
+    * **Abschnitt "Ergebnisse":**
+        * Präsentiert einen umfassend ausformulierten Textvorschlag für den Ergebnisse-Teil der Publikation. Die Gliederung folgt der vom Nutzer bestätigten Struktur (Patientenkohorte, Performance AS, Performance Literatur-T2, Vergleich AS vs. Literatur-T2, Performance Brute-Force-T2, Vergleich AS vs. Brute-Force-T2).
+        * Die Textvorlagen stammen ebenfalls aus `js/config/publication_content.js` und werden intensiv mit dynamisch berechneten Ergebnissen gefüllt. Dies umfasst:
+            * **Statische Ergebnisse:** Performance-Daten des Avocado Signs und der Literatur-T2-Kriterien (Koh, Barbaro, Rutegård), berechnet auf den jeweils passenden Kollektiven.
+            * **Dynamische Ergebnisse:**
+                * Performance-Daten der durch Brute-Force-Analyse (basierend auf der Zielmetrik Balanced Accuracy/AUC) optimierten T2-Kriterien für alle drei Kollektive (Gesamt, Direkt OP, nRCT).
+                * Performance-Daten der aktuell im "Auswertung"-Tab eingestellten und angewendeten T2-Kriterien, ebenfalls für alle drei Kollektive (relevant für den Fall, dass der Nutzer eigene, nicht-optimierte Kriterien vergleichen möchte, obwohl der Hauptfokus auf den Brute-Force optimierten liegt).
+                * Ergebnisse der statistischen Vergleichstests (p-Werte für DeLong und McNemar) zwischen AS und den verschiedenen T2-Kriteriensets.
+        * Alle numerischen Ergebnisse (Performance-Metriken) werden mit 95% Konfidenzintervallen angegeben.
+        * Dieser Abschnitt enthält Verweise auf dynamisch generierte Tabellen (z.B. Performance-Vergleiche) und Diagramme (z.B. vergleichende ROC-Kurven, Balkendiagramme für Schlüsselmetriken), die direkt im Kontext des Textes angezeigt werden.
+        * Die Darstellung erfolgt ebenfalls in der `.publication-prose`-Formatierung.
+* **Logik und Datenbeschaffung (`js/ui/publication/publication_logic.js`, `js/ui/publication/publication_renderer.js`):**
+    * Die Logik für die Aufbereitung der Daten, die Durchführung der notwendigen statistischen Berechnungen (unter Verwendung von `statistics_service.js`) und die dynamische Befüllung der Textvorlagen ist in `publication_logic.js` gekapselt.
+    * `publication_renderer.js` ist für die Darstellung der Steuerleiste und das Rendern des von `publication_logic.js` generierten HTML-Contents (inklusive der eingebetteten Tabellen und Diagramme) zuständig.
+
+### 4.6. Tab: Export
+
+* **Zweck:** Zentrale Anlaufstelle für den Download von Analyseergebnissen, Rohdaten, Tabellen, Diagrammen und Berichten.
+* Alle Exporte basieren auf dem **global ausgewählten Patientenkollektiv** und den **zuletzt angewendeten und gespeicherten** benutzerdefinierten T2-Kriterien.
+* **Dateiformate:** CSV (Semikolon-getrennt), Markdown (MD), Text (TXT), HTML, PNG (für Diagramme und Tabellen), SVG (für Diagramme).
+* **Angebotene Exporte:**
+    * **Einzel-Exporte:**
+        * Statistik Ergebnisse (detaillierte CSV-Datei aller Metriken und Tests aus dem Statistik-Tab).
+        * Brute-Force Bericht (TXT-Datei mit Top-10-Ergebnissen und Konfiguration, falls eine Optimierung durchgeführt wurde).
+        * Deskriptive Statistik (MD-Tabelle).
+        * Datenliste (MD-Tabelle der Patientendaten).
+        * Auswertungstabelle (MD-Tabelle mit T2-Ergebnissen).
+        * Gefilterte Rohdaten (CSV-Datei des aktuellen Kollektivs inkl. aller T2-Bewertungen).
+        * Umfassender HTML-Bericht (zusammenfassender Bericht mit Statistiken, Konfigurationen und eingebetteten Diagrammen).
+        * Alle aktuell sichtbaren Diagramme & Tabellen der Anwendung (als ZIP-Archiv mit einzelnen PNG-Dateien).
+        * Alle aktuell sichtbaren Diagramme der Anwendung (als ZIP-Archiv mit einzelnen SVG-Dateien).
+    * **Export-Pakete (ZIP-Archive):**
+        * Gesamtpaket (Alle oben genannten Einzel-Textdateien und CSVs).
+        * Nur CSVs (Statistik-CSV, Gefilterte Daten-CSV).
+        * Nur Markdown (Deskriptiv-MD, Datenliste-MD, Auswertungstabelle-MD).
+* Eine Hinweis-Box im Tab erläutert die verschiedenen Formate und die zugrundeliegende Exportlogik (z.B. dass ZIP-Exporte nur aktuell sichtbare Elemente umfassen, während Einzel-Downloads direkt an den Elementen in anderen Tabs möglich sind).
+* Alle Export-Buttons sind mit detaillierten Tooltips versehen, die den Inhalt und den generierten Dateinamen (der Kollektiv und Datum enthält) erklären.
+* Die Implementierung der Exportfunktionen befindet sich in `js/services/export_service.js`.
+
+## 5. Statistische Methoden
+
+Die Anwendung verwendet eine Reihe von statistischen Verfahren, die in `js/services/statistics_service.js` implementiert sind:
+
+* **Deskriptive Statistik:** Berechnung von Median, Mittelwert, Standardabweichung (SD), Minimum und Maximum für kontinuierliche Variablen; Häufigkeiten und Prozentwerte für kategoriale Variablen.
+* **Diagnostische Gütekriterien:** Für das Avocado Sign und die verschiedenen T2-Kriteriensets werden Sensitivität, Spezifität, Positiver Prädiktiver Wert (PPV), Negativer Prädiktiver Wert (NPV), Accuracy, Balanced Accuracy (BalAcc, als Äquivalent zur AUC für binäre Tests) und der F1-Score aus 2x2-Konfusionsmatrizen berechnet.
+* **Konfidenzintervalle (95% CI):**
+    * Für Proportionen (Sens, Spez, PPV, NPV, Acc): **Wilson Score Intervall Methode**.
+    * Für Effektstärken wie BalAcc/AUC und F1-Score: **Bootstrap Percentile Methode** (Standard: 1000 Replikationen).
+    * Für Odds Ratios (OR): **Woolf Logit Methode** (mit +0.5 Anpassung für Stabilität bei Nullwerten).
+    * Für Risk Differences (RD): **Wald Methode**.
+* **Statistische Vergleichstests (gepaart, z.B. AS vs. T2 innerhalb desselben Kollektivs):**
+    * **McNemar-Test:** Zum Vergleich der Accuracy (bzw. der diskordanten Paare).
+    * **DeLong-Test:** Zum Vergleich von zwei AUC-Werten.
+* **Statistische Vergleichstests (ungepaart, z.B. Performance einer Methode zwischen zwei Kollektiven):**
+    * **Fisher's Exact Test:** Zum Vergleich von Accuracies (als Proportionen in einer 2x2-Tafel).
+    * **Z-Test:** Zum Vergleich von zwei unabhängigen AUC-Werten (unter Verwendung der Standardfehler aus der Bootstrap-Methode).
+* **Assoziationstests und -maße (für den Zusammenhang zwischen einem Merkmal und dem N-Status):**
+    * **Fisher's Exact Test:** Für den Zusammenhang zwischen zwei kategorialen Variablen.
+    * **Mann-Whitney-U-Test:** Zum Vergleich der Verteilung einer kontinuierlichen Variablen (z.B. Lymphknotengröße) zwischen zwei unabhängigen Gruppen (N+ vs. N-).
+    * **Odds Ratio (OR)** mit 95% CI.
+    * **Risk Difference (RD)** mit 95% CI.
+    * **Phi-Koeffizient (φ)** als Maß für die Stärke des Zusammenhangs bei 2x2-Tabellen.
+* **Signifikanzniveau:** Ein p-Wert von < 0.05 (konfigurierbar in `APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL`) wird als statistisch signifikant interpretiert. Signifikanzsymbole (*, **, ***) werden entsprechend verwendet.
+
+## 6. Literatur-Referenzen (für Vergleichssets im Präsentation- und Publikation-Tab)
+
+Die Anwendung ermöglicht den Vergleich des Avocado Signs mit etablierten T2-Kriteriensets aus folgenden Publikationen:
+
+* **Lurz M, Schäfer AO.** The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. *Eur Radiol*. 2025. (DOI: 10.1007/s00330-025-11462-y) - *Diese Studie liefert den Basisdatensatz und die Definition des Avocado Signs.*
+* **Koh DM, Chau I, Tait D, et al.** Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. *Int J Radiat Oncol Biol Phys*. 2008;71(2):456-461.
+* **Barbaro B, Carafa MRP, Minordi LM, et al.** Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: A single center experience. *Radiother Oncol*. 2024;193:110124.
+* **Rutegård MK, Båtsman M, Blomqvist L, et al.** Evaluation of MRI characterisation of histopathologically matched lymph nodes and other mesorectal nodal structures in rectal cancer. *Eur Radiol*. 2025. (DOI: 10.1007/s00330-025-11361-2) - *Diese Studie evaluiert die ESGAR 2016 Konsensus-Kriterien.*
+* **Beets-Tan RGH, Lambregts DMJ, Maas M, et al.** Magnetic resonance imaging for clinical management of rectal cancer: updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. *Eur Radiol*. 2018;28(4):1465-1475. - *Definiert die komplexen ESGAR 2016 T2-Kriterien.*
+
+Diese Referenzen sind in `js/core/study_criteria_manager.js` hinterlegt und werden für Vergleiche und zur Kontextualisierung im "Präsentation"- und "Publikation"-Tab herangezogen.
+
+## 7. Technologie und Architektur
+
+* **Typ:** Reine Frontend Single-Page Application (SPA), die keine serverseitige Verarbeitung oder Datenbank benötigt. Alle Berechnungen und Datenmanipulationen erfolgen clientseitig im Browser.
+* **Kerntechnologien:** HTML5, CSS3 (mit CSS-Variablen für Theming), JavaScript (ES6+).
+* **Externe Bibliotheken und Frameworks (eingebunden via CDN):**
+    * Bootstrap (v5.3.3): Für das grundlegende UI-Framework, Layout und Styling von Komponenten.
+    * D3.js (v7.9.0): Zur Erstellung dynamischer und interaktiver Datenvisualisierungen (Diagramme).
+    * Tippy.js (v6.3.7): Für erweiterte, anpassbare Tooltips.
+    * PapaParse (v5.4.1): Zum Parsen und Generieren von CSV-Dateien für den Export.
+    * JSZip (v3.10.1): Zur Erstellung von ZIP-Archiven für den Export mehrerer Dateien.
+* **Architektur:** Die Anwendung ist modular aufgebaut, um die Wartbarkeit und Erweiterbarkeit zu fördern. Die Hauptverzeichnisse und ihre Verantwortlichkeiten sind:
+    * `css/`: Enthält die benutzerdefinierte CSS-Datei (`style.css`).
+    * `data/`: Beinhaltet die statische Rohdatendatei (`data.js`).
+    * `docs/`: Enthält die Referenzpublikationen und diese Anwendungsbeschreibung.
+    * `js/app/`: Kernlogik der Anwendung (`main.js` für Initialisierung und Event-Handling, `state.js` für das Zustandsmanagement).
+    * `js/config/`: Konfigurationsdateien (`config.js` für globale Einstellungen, `texts.js` für UI-Texte und Tooltips, `publication_content.js` für die Textvorlagen des Publikation-Tabs).
+    * `js/core/`: Kernmodule für die Datenverarbeitung und Kriterienverwaltung (`data_processor.js`, `t2_criteria_manager.js`, `study_criteria_manager.js`).
+    * `js/services/`: Module für spezifische Dienste (`statistics_service.js`, `export_service.js`).
+    * `js/ui/`: Alle UI-bezogenen Module:
+        * `core/`: Allgemeine UI-Helfer und -Komponenten (`ui_helpers.js`, `ui_components.js`).
+        * `publication/`: Spezifische Logik und Renderer für den neuen "Publikation"-Tab (`publication_logic.js`, `publication_renderer.js`).
+        * `renderers/`: Spezifische Renderer für komplexe UI-Elemente wie Tabellen und Diagramme (`table_renderer.js`, `chart_renderer.js`).
+        * `ui_view_logic.js`: Enthält Logik zur Erstellung von HTML-Strukturen für verschiedene Ansichten.
+        * `view_renderer.js`: Haupt-Renderer, der die Inhalte der einzelnen Tabs dynamisch zusammenstellt.
+    * `js/utils/`: Allgemeine Hilfsfunktionen (`utils.js`).
+    * `js/workers/`: Web Worker Skripte (`brute_force_worker.js` für die rechenintensive Optimierung).
+* **Zustandsmanagement (`js/app/state.js`):** Ein dediziertes Modul verwaltet den globalen Anwendungszustand (z.B. aktuelles Kollektiv, Sortierreihenfolgen, Spracheinstellungen, aktiver Tab). Ausgewählte Teile des Zustands werden im Local Storage des Browsers persistiert, um Benutzereinstellungen über Sitzungen hinweg zu erhalten.
+* **Event Handling (`js/app/main.js`):** Nutzt Event Delegation für eine effiziente Behandlung von Benutzerinteraktionen. Debouncing wird für frequente Events (z.B. Slider-Input) eingesetzt, um die Performance zu optimieren.
+* **Asynchronität:** Der Brute-Force-Optimierungsalgorithmus wird in einem separaten Web Worker ausgeführt, um die Haupt-UI der Anwendung responsiv zu halten. `setTimeout` wird an verschiedenen Stellen genutzt, um UI-Updates nach dem Rendern von Inhalten zu entkoppeln und dem Browser Zeit für die Darstellung zu geben.
+* **Code-Stil:** Der Code ist kompakt, modular und ohne Kommentare verfasst, um den spezifischen Anforderungen des Projekts zu entsprechen.
+
+## 8. Setup und Installation
+
+Die Anwendung erfordert keine serverseitige Installation oder Build-Prozesse.
+
+1.  Stellen Sie sicher, dass alle Dateien und Verzeichnisse der Anwendung (`index.html`, `css/`, `js/`, `data/`, `workers/`, `docs/`) im korrekten relativen Pfad zueinander auf Ihrem lokalen System vorhanden sind.
+2.  Öffnen Sie die Datei `index.html` direkt in einem modernen Webbrowser (z.B. Google Chrome, Mozilla Firefox, Microsoft Edge in aktuellen Versionen). Die Anwendung lädt alle notwendigen Ressourcen und ist sofort einsatzbereit.
+
+## 9. Verwendung
+
+Die Bedienung der Anwendung erfolgt intuitiv über die grafische Benutzeroberfläche:
+
+1.  **Globales Kollektiv wählen:** Nutzen Sie die Buttons (`Gesamt`, `Direkt OP`, `nRCT`) im Header der Anwendung, um das primäre Patientenkollektiv für alle Analysen auszuwählen. Die im Header angezeigten Statistiken sowie die Inhalte der meisten Tabs passen sich dynamisch an diese Auswahl an.
+2.  **Durch Tabs navigieren:** Klicken Sie auf die entsprechenden Reiter in der Navigationsleiste, um zwischen den verschiedenen Funktionsbereichen (`Daten`, `Auswertung`, `Statistik`, `Präsentation`, `Publikation`, `Export`) zu wechseln.
+3.  **(Optional) T2-Kriterien definieren und anwenden (Tab "Auswertung"):**
+    * Nutzen Sie die interaktive Karte "T2 Malignitäts-Kriterien Definieren", um spezifische T2-Merkmale (Größe, Form, Kontur, Homogenität, Signal) zu aktivieren/deaktivieren und deren als suspekt geltende Ausprägungen festzulegen.
+    * Wählen Sie die logische Verknüpfung (`UND` oder `ODER`) für die aktiven Kriterien.
+    * Klicken Sie auf `Anwenden & Speichern`, um Ihre benutzerdefinierte T2-Kriterienkonfiguration zu übernehmen. Diese wird dann für alle T2-bezogenen Berechnungen und Darstellungen in der gesamten Anwendung verwendet und im Local Storage für zukünftige Sitzungen gespeichert.
+    * Mit `Zurücksetzen (Standard)` können Sie die Einstellungen auf die vordefinierten Standardwerte zurücksetzen (Anwendung erst nach erneutem Klick auf `Anwenden & Speichern`).
+4.  **(Optional) Brute-Force-Optimierung ausführen (Tab "Auswertung"):**
+    * Wählen Sie eine Zielmetrik für die Optimierung.
+    * Starten Sie die Brute-Force-Analyse. Beobachten Sie den Fortschritt.
+    * Nach Abschluss können die besten gefundenen Kriterien eingesehen, als Bericht exportiert oder direkt als neue T2-Kriterienkonfiguration angewendet werden.
+5.  **Ergebnisse analysieren:**
+    * **Tab "Daten":** Untersuchen Sie die detaillierte Liste der Patientendaten und deren individuellen Lymphknotenmerkmale. Nutzen Sie die Sortier- und Filterfunktionen.
+    * **Tab "Auswertung":** Analysieren Sie das Dashboard, die T2-Metrik-Übersicht und die Auswertungstabelle, um die Auswirkungen der angewendeten T2-Kriterien zu verstehen.
+    * **Tab "Statistik":** Führen Sie detaillierte statistische Vergleiche durch. Wechseln Sie bei Bedarf zwischen Einzel- und Vergleichsansicht und wählen Sie die zu vergleichenden Kollektive.
+    * **Tab "Präsentation":** Nutzen Sie die aufbereiteten Ansichten für den Vergleich von AS vs. T2-Kriterien, inklusive der Auswahl verschiedener Literatur- oder benutzerdefinierter T2-Sets.
+6.  **(NEU) Publikationsentwurf erstellen (Tab "Publikation"):**
+    * Wählen Sie den gewünschten Publikationsabschnitt (z.B. "Methoden", "Ergebnisse") über die Buttons in der oberen Steuerleiste des Tabs.
+    * Wählen Sie die gewünschte Sprache (Deutsch/Englisch) für die Textvorschläge über den Sprachumschalter.
+    * Analysieren Sie die generierten Textvorschläge, Tabellen und Diagramm-Platzhalter. Diese basieren auf den aktuellen Daten, angewendeten Kriterien und Brute-Force-Ergebnissen (falls vorhanden).
+7.  **Daten und Ergebnisse exportieren (Tab "Export" oder direkte Buttons):**
+    * Im Tab "Export" können umfassende Datenpakete und Berichte heruntergeladen werden.
+    * In anderen Tabs (Auswertung, Statistik, Präsentation) ermöglichen spezifische Download-Buttons den Export einzelner Tabellen oder Diagramme als PNG/SVG.
+8.  **Anwendungskontext verstehen (ursprünglicher "Methoden"-Tab wurde in den "Publikation"-Tab integriert):** Die detaillierte Beschreibung der Anwendungslogik, Daten und statistischen Verfahren ist nun Teil des "Methoden"-Abschnitts im "Publikation"-Tab und kann dort in der gewünschten Sprache eingesehen werden.
+
+## 10. Konfiguration (`js/config/config.js`)
+
+Die Datei `js/config/config.js` ist von zentraler Bedeutung und definiert eine Vielzahl von globalen Anwendungseinstellungen und Konstanten. Dazu gehören:
+* Anwendungsname und -version.
+* Standardeinstellungen für den initialen Zustand der Anwendung (z.B. aktiver Tab, Default-Kollektiv, Default T2-Logik, Sortierreihenfolgen, Spracheinstellungen für den Publikation-Tab, Default-Abschnitt im Publikation-Tab).
+* Schlüssel für den Local Storage zur Persistierung von Benutzereinstellungen.
+* Pfade (z.B. zum Web Worker).
+* Performance-Einstellungen (z.B. Debounce-Zeiten).
+* Statistische Konstanten (z.B. Anzahl Bootstrap-Replikationen, Signifikanzniveau, Standard-CI-Methoden).
+* Parameterbereiche und erlaubte Werte für die T2-Kriterien-Definition.
+* UI-Einstellungen (z.B. Icon-Größen, Tooltip-Verzögerungen, Toast-Dauer, Definition der Abschnitte für den Publikationstab).
+* Standardeinstellungen für Diagramme (Farben, Margins, Schriftgrößen).
+* Detaillierte Konfigurationen für den Export (Dateinamensvorlagen, aktivierte Exporttypen, CSV-Trennzeichen).
+* Einstellungen für den generierten HTML-Bericht.
+* Spezielle IDs für intern verwendete Kriteriensets wie "Avocado Sign" oder "Angewandte Kriterien".
+Die Datei enthält auch die Funktion `getDefaultT2Criteria()`, die die Standard-T2-Kriterienkonfiguration bereitstellt.
+
+## 11. Limitationen
+
+* Die Anwendung basiert auf einem **statischen, fest integrierten Datensatz (N=106)** aus der Avocado-Sign Studie. Ein Import oder die Verwendung eigener Patientendaten ist nicht vorgesehen.
+* Alle statistischen Berechnungen sind spezifisch in JavaScript für diese Anwendung implementiert. Es werden keine externen Statistik-Bibliotheken (wie R oder Python-Äquivalente) clientseitig verwendet. Dies limitiert die Komplexität der möglichen statistischen Modellierungen.
+* Die Performance, insbesondere bei der Brute-Force-Optimierung und dem Rendering komplexer Diagramme mit vielen Datenpunkten, ist von der Leistungsfähigkeit des Webbrowsers und des Client-Systems abhängig.
+* Die Darstellung und Funktionalität ist für moderne Desktop-Webbrowser optimiert. Obwohl responsiv, kann die Benutzererfahrung auf sehr kleinen mobilen Geräten bei komplexen Ansichten eingeschränkt sein.
+* Die im "Publikation"-Tab generierten Texte sind als **Vorschläge und Hilfestellungen** zu verstehen und bedürfen einer sorgfältigen wissenschaftlichen Überprüfung und Anpassung durch den Nutzer. Sie ersetzen nicht den eigentlichen wissenschaftlichen Schreibprozess.
+* Die Auswahl der "besten" Brute-Force-Kriterien für den Publikationstab basiert auf einer vordefinierten Zielmetrik (Balanced Accuracy/AUC). Andere Optimierungsziele könnten zu anderen "besten" Kriterien führen.
