@@ -285,7 +285,7 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
     };
 }
 
-function getStatisticalSignificanceSymbol(pValue, significanceLevel = 0.05) {
+function getStatisticalSignificanceSymbol(pValue, significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL) {
     if (pValue === null || pValue === undefined || isNaN(pValue)) return '';
     const level = significanceLevel;
     if (pValue < 0.001) return '***';
@@ -294,12 +294,12 @@ function getStatisticalSignificanceSymbol(pValue, significanceLevel = 0.05) {
     return 'ns';
 }
 
-function getStatisticalSignificanceText(pValue, significanceLevel = 0.05) {
+function getStatisticalSignificanceText(pValue, significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL) {
      if (pValue === null || pValue === undefined || isNaN(pValue)) return '';
      const level = significanceLevel;
      return pValue < level
-         ? 'statistisch signifikant'
-         : 'statistisch nicht signifikant';
+         ? UI_TEXTS.statMetrics.signifikanzTexte.SIGNIFIKANT || 'statistisch signifikant'
+         : UI_TEXTS.statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT || 'statistisch nicht signifikant';
 }
 
 function generateUUID() {
@@ -307,7 +307,7 @@ function generateUUID() {
         return crypto.randomUUID();
     } else {
         let d = new Date().getTime();
-        let d2 = (performance && performance.now && (performance.now() * 1000)) || 0;
+        let d2 = (typeof performance !== 'undefined' && performance.now && (performance.now() * 1000)) || 0;
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
             let r = Math.random() * 16;
             if (d > 0) {
@@ -356,8 +356,9 @@ function getPhiBewertung(phiValue) {
     const value = parseFloat(phiValue);
     if (isNaN(value)) return 'N/A';
     const absPhi = Math.abs(value);
-    if (absPhi >= 0.5) return 'stark';
-    if (absPhi >= 0.3) return 'moderat';
-    if (absPhi >= 0.1) return 'schwach';
-    return 'sehr schwach';
+    const texts = UI_TEXTS.statMetrics.assoziationStaerkeTexte || {};
+    if (absPhi >= 0.5) return texts.stark || 'stark';
+    if (absPhi >= 0.3) return texts.moderat || 'moderat';
+    if (absPhi >= 0.1) return texts.schwach || 'schwach';
+    return texts.sehr_schwach || 'sehr schwach';
 }
