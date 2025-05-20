@@ -61,7 +61,7 @@ const t2CriteriaManager = (() => {
          if (APP_CONFIG.T2_CRITERIA_SETTINGS.hasOwnProperty(allowedValuesKey)) {
             isValidValue = APP_CONFIG.T2_CRITERIA_SETTINGS[allowedValuesKey].includes(value);
          } else {
-             isValidValue = false;
+             isValidValue = false; // Should not happen if APP_CONFIG is correct
          }
 
          if (isValidValue && currentT2Criteria[key].value !== value) {
@@ -116,7 +116,7 @@ const t2CriteriaManager = (() => {
     function resetCurrentT2Criteria() {
         const defaultCriteria = getDefaultT2Criteria();
         currentT2Criteria = cloneDeep(defaultCriteria);
-        currentT2Logic = defaultCriteria.logic;
+        currentT2Logic = defaultCriteria.logic; // Ensure logic is also reset from default object
         isCriteriaUnsaved = true;
     }
 
@@ -146,7 +146,7 @@ const t2CriteriaManager = (() => {
         if (criteria.size?.active) {
             const threshold = criteria.size.threshold;
             const nodeSize = lymphNode.groesse;
-            const condition = criteria.size.condition || '>=';
+            const condition = criteria.size.condition || '>='; // Default to >= if not specified
             if (typeof nodeSize === 'number' && !isNaN(nodeSize) && typeof threshold === 'number' && !isNaN(threshold)) {
                  switch(condition) {
                     case '>=': checkResult.size = nodeSize >= threshold; break;
@@ -154,10 +154,10 @@ const t2CriteriaManager = (() => {
                     case '<=': checkResult.size = nodeSize <= threshold; break;
                     case '<': checkResult.size = nodeSize < threshold; break;
                     case '==': checkResult.size = nodeSize === threshold; break;
-                    default: checkResult.size = false;
+                    default: checkResult.size = false; // Should not happen with proper config
                  }
             } else {
-                 checkResult.size = false;
+                 checkResult.size = false; // Mark as failed if data is invalid
             }
         }
 
@@ -182,6 +182,7 @@ const t2CriteriaManager = (() => {
         if (criteria.signal?.active) {
             const requiredSignal = criteria.signal.value;
             const nodeSignal = lymphNode.signal;
+            // Ensure nodeSignal is not null before comparison, as 'null' is a valid value for the *absence* of a specific signal type, not a signal type itself.
             checkResult.signal = (nodeSignal !== null && typeof nodeSignal === 'string' && nodeSignal === requiredSignal);
         }
 
@@ -196,7 +197,10 @@ const t2CriteriaManager = (() => {
 
         const lymphNodes = patient.lymphknoten_t2;
         if (!Array.isArray(lymphNodes)) {
-             return defaultReturn;
+             // Return '-',0 for patients without any T2 LNs documented, if there are active criteria
+             // If no active criteria, they should be T2 null.
+            const activeCriteriaKeysForEmpty = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true);
+            return { t2Status: activeCriteriaKeysForEmpty.length > 0 ? '-' : null, positiveLKCount: 0, bewerteteLK: [] };
         }
 
         let patientIsPositive = false;
@@ -204,13 +208,19 @@ const t2CriteriaManager = (() => {
         const bewerteteLK = [];
         const activeCriteriaKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true);
 
-        if (lymphNodes.length === 0) {
+        if (lymphNodes.length === 0 && activeCriteriaKeys.length > 0) {
+            // If there are active criteria but no nodes, patient is T2 negative.
             return { t2Status: '-', positiveLKCount: 0, bewerteteLK: [] };
         }
+        if (lymphNodes.length === 0 && activeCriteriaKeys.length === 0) {
+            // No active criteria, no nodes, T2 status is null (cannot be determined as + or -)
+            return { t2Status: null, positiveLKCount: 0, bewerteteLK: [] };
+        }
+
 
         lymphNodes.forEach(lk => {
-            if (!lk) {
-                 bewerteteLK.push(null);
+            if (!lk) { // Should not happen if data_processor cleans data properly
+                 bewerteteLK.push(null); // Or some indicator of invalid LK data
                  return;
             }
             const checkResult = checkSingleLymphNode(lk, criteria);
@@ -219,7 +229,7 @@ const t2CriteriaManager = (() => {
             if (activeCriteriaKeys.length > 0) {
                 if (logic === 'UND') {
                     lkIsPositive = activeCriteriaKeys.every(key => checkResult[key] === true);
-                } else {
+                } else { // ODER
                     lkIsPositive = activeCriteriaKeys.some(key => checkResult[key] === true);
                 }
             }
@@ -236,13 +246,21 @@ const t2CriteriaManager = (() => {
                 homogenitaet: lk.homogenitaet ?? null,
                 signal: lk.signal ?? null,
                 isPositive: lkIsPositive,
-                checkResult: checkResult
+                checkResult: checkResult // Store the individual check results
             };
             bewerteteLK.push(bewerteterLK);
         });
 
+        // Determine final T2 status: If no criteria are active, T2 status is null.
+        // Otherwise, it's '+' if any LK was positive, and '-' if all LKs were negative (or no LKs and active criteria).
+        let finalT2Status = null;
+        if (activeCriteriaKeys.length > 0) {
+            finalT2Status = patientIsPositive ? '+' : '-';
+        }
+
+
         return {
-            t2Status: patientIsPositive ? '+' : '-',
+            t2Status: finalT2Status,
             positiveLKCount: positiveLKCount,
             bewerteteLK: bewerteteLK
         };
@@ -251,23 +269,31 @@ const t2CriteriaManager = (() => {
     function evaluateDataset(dataset, criteria, logic) {
         if (!Array.isArray(dataset)) {
             console.error("evaluateDataset: Ungültige Eingabedaten, Array erwartet.");
-            return [];
+            return []; // Return empty array for consistency
         }
         if (!criteria || (logic !== 'UND' && logic !== 'ODER')) {
              console.error("evaluateDataset: Ungültige Kriterien oder Logik.");
-             return cloneDeep(dataset);
+             // Return a deep clone so original data isn't modified if it's to be reused.
+             // Or, if criteria/logic are invalid, perhaps T2 should be null for all.
+             return dataset.map(p => {
+                 const pCopy = cloneDeep(p);
+                 pCopy.t2 = null;
+                 pCopy.anzahl_t2_plus_lk = 0;
+                 pCopy.lymphknoten_t2_bewertet = (pCopy.lymphknoten_t2 || []).map(lk => ({...lk, isPositive: false, checkResult: {}}));
+                 return pCopy;
+             });
         }
 
         return dataset.map(patient => {
-            if (!patient) return null;
-            const patientCopy = cloneDeep(patient);
+            if (!patient) return null; // Should be filtered by data_processor
+            const patientCopy = cloneDeep(patient); // Ensure original patient object in processedData isn't modified
             const { t2Status, positiveLKCount, bewerteteLK } = applyT2CriteriaToPatient(patientCopy, criteria, logic);
             patientCopy.t2 = t2Status;
             patientCopy.anzahl_t2_plus_lk = positiveLKCount;
             patientCopy.lymphknoten_t2_bewertet = bewerteteLK;
-
+            // anzahl_t2_lk is already set by data_processor correctly
             return patientCopy;
-        }).filter(p => p !== null);
+        }).filter(p => p !== null); // Filter out any null patients if they somehow slipped through
     }
 
     return Object.freeze({
@@ -284,8 +310,8 @@ const t2CriteriaManager = (() => {
         updateLogic: updateCurrentT2Logic,
         resetCriteria: resetCurrentT2Criteria,
         applyCriteria: applyCurrentT2Criteria,
-        checkSingleNode: checkSingleLymphNode,
-        evaluatePatient: applyT2CriteriaToPatient,
+        checkSingleNode: checkSingleLymphNode, // Exposing for potential reuse if needed
+        evaluatePatient: applyT2CriteriaToPatient, // Exposing for potential reuse
         evaluateDataset: evaluateDataset
     });
 })();
