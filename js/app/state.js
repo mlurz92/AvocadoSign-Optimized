@@ -3,30 +3,38 @@ const state = (() => {
 
     const defaultState = {
         currentKollektiv: APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV,
-        patientTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.PATIENT_TABLE_SORT),
+        datenTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT), // Umbenannt
         auswertungTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT),
-        currentMethodenLang: APP_CONFIG.DEFAULT_SETTINGS.METHODEN_LANG,
+        currentPublikationLang: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG, // NEU
+        currentPublikationSection: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION, // NEU
+        currentPublikationBruteForceMetric: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC, // NEU
         currentStatsLayout: APP_CONFIG.DEFAULT_SETTINGS.STATS_LAYOUT,
         currentStatsKollektiv1: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1,
         currentStatsKollektiv2: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2,
         currentPresentationView: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW,
         currentPresentationStudyId: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID,
-        activeTabId: 'patienten-tab'
+        activeTabId: 'daten-tab' // Geändert von patienten-tab
     };
 
     function init() {
         currentState = {
             currentKollektiv: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV) ?? defaultState.currentKollektiv,
-            currentMethodenLang: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG) ?? defaultState.currentMethodenLang,
+            currentPublikationLang: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG) ?? defaultState.currentPublikationLang, // NEU
+            currentPublikationSection: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION) ?? defaultState.currentPublikationSection, // NEU
+            currentPublikationBruteForceMetric: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC) ?? defaultState.currentPublikationBruteForceMetric, // NEU
             currentStatsLayout: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT) ?? defaultState.currentStatsLayout,
             currentStatsKollektiv1: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1) ?? defaultState.currentStatsKollektiv1,
             currentStatsKollektiv2: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2) ?? defaultState.currentStatsKollektiv2,
             currentPresentationView: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW) ?? defaultState.currentPresentationView,
             currentPresentationStudyId: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID) ?? defaultState.currentPresentationStudyId,
-            patientTableSort: cloneDeep(defaultState.patientTableSort),
+            datenTableSort: cloneDeep(defaultState.datenTableSort), // Umbenannt
             auswertungTableSort: cloneDeep(defaultState.auswertungTableSort),
             activeTabId: defaultState.activeTabId
         };
+        // Entferne veralteten LocalStorage-Eintrag für METHODEN_LANG
+        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) {
+            localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
+        }
         console.log("State Manager initialisiert mit:", currentState);
     }
 
@@ -43,16 +51,16 @@ const state = (() => {
         return false;
     }
 
-    function getPatientTableSort() {
-        return cloneDeep(currentState.patientTableSort);
+    function getDatenTableSort() { // Umbenannt
+        return cloneDeep(currentState.datenTableSort);
     }
 
-    function updatePatientTableSortDirection(key, subKey = null) {
+    function updateDatenTableSortDirection(key, subKey = null) { // Umbenannt
         if (!key) return false;
-        if (currentState.patientTableSort.key === key && currentState.patientTableSort.subKey === subKey) {
-            currentState.patientTableSort.direction = currentState.patientTableSort.direction === 'asc' ? 'desc' : 'asc';
+        if (currentState.datenTableSort.key === key && currentState.datenTableSort.subKey === subKey) {
+            currentState.datenTableSort.direction = currentState.datenTableSort.direction === 'asc' ? 'desc' : 'asc';
         } else {
-            currentState.patientTableSort = { key: key, direction: 'asc', subKey: subKey };
+            currentState.datenTableSort = { key: key, direction: 'asc', subKey: subKey };
         }
         return true;
      }
@@ -71,14 +79,41 @@ const state = (() => {
         return true;
      }
 
-    function getCurrentMethodenLang() {
-        return currentState.currentMethodenLang;
+    function getCurrentPublikationLang() { // NEU
+        return currentState.currentPublikationLang;
     }
 
-    function setCurrentMethodenLang(newLang) {
-        if ((newLang === 'de' || newLang === 'en') && currentState.currentMethodenLang !== newLang) {
-            currentState.currentMethodenLang = newLang;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG, currentState.currentMethodenLang);
+    function setCurrentPublikationLang(newLang) { // NEU
+        if ((newLang === 'de' || newLang === 'en') && currentState.currentPublikationLang !== newLang) {
+            currentState.currentPublikationLang = newLang;
+            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG, currentState.currentPublikationLang);
+            return true;
+        }
+        return false;
+    }
+
+    function getCurrentPublikationSection() { // NEU
+        return currentState.currentPublikationSection;
+    }
+
+    function setCurrentPublikationSection(newSectionId) { // NEU
+        if (typeof newSectionId === 'string' && currentState.currentPublikationSection !== newSectionId) {
+            currentState.currentPublikationSection = newSectionId;
+            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION, currentState.currentPublikationSection);
+            return true;
+        }
+        return false;
+    }
+
+    function getCurrentPublikationBruteForceMetric() { // NEU
+        return currentState.currentPublikationBruteForceMetric;
+    }
+
+    function setCurrentPublikationBruteForceMetric(newMetric) { // NEU
+        const isValidMetric = PUBLICATION_CONFIG.bruteForceMetricsForPublication.some(m => m.value === newMetric);
+        if (isValidMetric && currentState.currentPublikationBruteForceMetric !== newMetric) {
+            currentState.currentPublikationBruteForceMetric = newMetric;
+            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC, currentState.currentPublikationBruteForceMetric);
             return true;
         }
         return false;
@@ -171,12 +206,16 @@ const state = (() => {
         init,
         getCurrentKollektiv,
         setCurrentKollektiv,
-        getPatientTableSort,
-        updatePatientTableSortDirection,
+        getDatenTableSort, // Umbenannt
+        updateDatenTableSortDirection, // Umbenannt
         getAuswertungTableSort,
         updateAuswertungTableSortDirection,
-        getCurrentMethodenLang,
-        setCurrentMethodenLang,
+        getCurrentPublikationLang, // NEU
+        setCurrentPublikationLang, // NEU
+        getCurrentPublikationSection, // NEU
+        setCurrentPublikationSection, // NEU
+        getCurrentPublikationBruteForceMetric, // NEU
+        setCurrentPublikationBruteForceMetric, // NEU
         getCurrentStatsLayout,
         setCurrentStatsLayout,
         getCurrentStatsKollektiv1,
