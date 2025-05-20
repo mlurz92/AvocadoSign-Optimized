@@ -1,4 +1,4 @@
-const viewRenderer = ((uiHelpers, uiComp, viewLogic, statsService, sT2CritManager, dProcessor, cRenderer, pubTabRenderer) => {
+const viewRenderer = ((uiHelpers, uiComp, viewLogic, statsService, sT2CritManager, t2CritManager, dProcessor, cRenderer, pubTabRenderer) => {
 
     function _renderTabContent(tabId, renderFunction) {
         const containerId = `${tabId}-pane`;
@@ -169,7 +169,7 @@ const viewRenderer = ((uiHelpers, uiComp, viewLogic, statsService, sT2CritManage
                  }
 
                  uiHelpers.updateT2CriteriaControlsUI(currentCriteria, currentLogic);
-                 uiHelpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
+                 uiHelpers.markCriteriaSavedIndicator(t2CritManager.isUnsaved());
                  uiHelpers.updateBruteForceUI('idle', {}, bfWorkerAvailable, currentKollektiv);
 
              }, 10);
@@ -185,7 +185,7 @@ const viewRenderer = ((uiHelpers, uiComp, viewLogic, statsService, sT2CritManage
              let datasets = [], kollektivNames = [], kollektivDisplayNames = [];
              let baseEvaluatedData = [];
              try {
-                  baseEvaluatedData = t2CriteriaManager.evaluateDataset(cloneDeep(processedDataFull), appliedCriteria, appliedLogic);
+                  baseEvaluatedData = t2CritManager.evaluateDataset(cloneDeep(processedDataFull), appliedCriteria, appliedLogic);
              } catch(e) { console.error("Fehler bei der T2 Evaluierung für Statistik:", e); }
 
              if (layout === 'einzel') { const singleData = dProcessor.filterDataByKollektiv(baseEvaluatedData, currentGlobalKollektiv); datasets.push(singleData); kollektivNames.push(currentGlobalKollektiv); kollektivDisplayNames.push(getKollektivDisplayName(currentGlobalKollektiv)); }
@@ -284,7 +284,7 @@ const viewRenderer = ((uiHelpers, uiComp, viewLogic, statsService, sT2CritManage
             } else if (view === 'as-vs-t2') {
                  if (filteredData && filteredData.length > 0) {
                     presentationData.statsAS = statsService.calculateDiagnosticPerformance(filteredData, 'as', 'n'); let studySet = null; let evaluatedDataT2 = null; const isApplied = selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
-                    if(isApplied) { studySet = { criteria: appliedCriteria, logic: appliedLogic, id: selectedStudyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: "Angewandt", studyInfo: { reference: "Benutzerdefiniert", patientCohort: `Aktuell: ${getKollektivDisplayName(currentGlobalKollektiv)} (N=${presentationData.patientCount})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: sT2CritManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } }; evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(filteredData), studySet.criteria, studySet.logic); }
+                    if(isApplied) { studySet = { criteria: appliedCriteria, logic: appliedLogic, id: selectedStudyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: "Angewandt", studyInfo: { reference: "Benutzerdefiniert", patientCohort: `Aktuell: ${getKollektivDisplayName(currentGlobalKollektiv)} (N=${presentationData.patientCount})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: sT2CritManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } }; evaluatedDataT2 = t2CritManager.evaluateDataset(cloneDeep(filteredData), studySet.criteria, studySet.logic); }
                     else if (selectedStudyId) { studySet = sT2CritManager.getStudyCriteriaSetById(selectedStudyId); if(studySet) evaluatedDataT2 = sT2CritManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredData), studySet); }
                     if (studySet && evaluatedDataT2) { presentationData.statsT2 = statsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n'); evaluatedDataT2.forEach((p, i) => { if (filteredData[i]) p.as = filteredData[i].as; }); presentationData.vergleich = statsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n'); presentationData.comparisonCriteriaSet = studySet; presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2'; presentationData.t2CriteriaLabelFull = `${studySet.name}: ${sT2CritManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`; }
                 }
@@ -318,9 +318,9 @@ const viewRenderer = ((uiHelpers, uiComp, viewLogic, statsService, sT2CritManage
         });
     }
 
-    function renderPublikationTab(processedData, bruteForceResults, currentGlobalKollektiv, appliedCriteria, appliedLogic, publicationLang, activeSectionKey = 'methoden') {
+    function renderPublikationTab(processedDataFull, bruteForceResults, currentGlobalKollektiv, appliedCriteria, appliedLogic, publicationLang, activeSectionKey = 'methoden') {
         _renderTabContent('publikation-tab', () => {
-            if (!processedData) throw new Error("Daten für Publikation-Tab nicht verfügbar.");
+            if (!processedDataFull) throw new Error("Daten für Publikation-Tab nicht verfügbar.");
             const initialHTML = `
                 <div class="d-flex justify-content-between align-items-center mb-3 p-2 border-bottom sticky-top bg-light-alpha" id="publikation-tab-header-controls">
                     ${uiComp.createPublikationTabNavigation(activeSectionKey)}
@@ -336,7 +336,7 @@ const viewRenderer = ((uiHelpers, uiComp, viewLogic, statsService, sT2CritManage
                 </div>
             `;
             setTimeout(() => {
-                 pubTabRenderer.renderPublicationTabContent(processedData, bruteForceResults, currentGlobalKollektiv, appliedCriteria, appliedLogic, publicationLang, activeSectionKey);
+                 pubTabRenderer.renderPublicationTabContent(processedDataFull, bruteForceResults, currentGlobalKollektiv, appliedCriteria, appliedLogic, publicationLang, activeSectionKey);
                  uiHelpers.updatePublikationLangSwitchUI(publicationLang);
                  uiHelpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
             }, 10);
@@ -358,4 +358,4 @@ const viewRenderer = ((uiHelpers, uiComp, viewLogic, statsService, sT2CritManage
         renderPublikationTab,
         renderExportTab
     });
-})(ui_helpers, uiComponents, uiViewLogic, statisticsService, studyT2CriteriaManager, dataProcessor, chartRenderer, publicationTabRenderer);
+})(ui_helpers, uiComponents, uiViewLogic, statisticsService, studyT2CriteriaManager, t2CriteriaManager, dataProcessor, chartRenderer, publicationTabRenderer);
