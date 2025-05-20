@@ -1,0 +1,98 @@
+const PUBLICATION_CONFIG = Object.freeze({
+    defaultLanguage: 'de',
+    defaultSection: 'methoden_studienanlage', // Eindeutiger Schlüssel für den ersten Methodenabschnitt
+    sections: Object.freeze([
+        Object.freeze({
+            id: 'methoden',
+            labelKey: 'methoden', // Schlüssel für UI_TEXTS.publikationTab.sectionLabels
+            subSections: Object.freeze([
+                Object.freeze({ id: 'methoden_studienanlage', label: 'Studiendesign und Ethik' }),
+                Object.freeze({ id: 'methoden_patientenkollektiv', label: 'Patientenkollektiv' }),
+                Object.freeze({ id: 'methoden_mrt_protokoll', label: 'MRT-Protokoll & Kontrastmittelgabe' }),
+                Object.freeze({ id: 'methoden_as_definition', label: 'Definition & Bewertung Avocado Sign' }),
+                Object.freeze({ id: 'methoden_t2_definition', label: 'Definition & Bewertung T2-Kriterien' }),
+                Object.freeze({ id: 'methoden_referenzstandard', label: 'Referenzstandard (Histopathologie)' }),
+                Object.freeze({ id: 'methoden_statistische_analyse', label: 'Statistische Analyse' })
+            ])
+        }),
+        Object.freeze({
+            id: 'ergebnisse',
+            labelKey: 'ergebnisse',
+            subSections: Object.freeze([
+                Object.freeze({ id: 'ergebnisse_patientencharakteristika', label: 'Patientencharakteristika' }),
+                Object.freeze({ id: 'ergebnisse_as_performance', label: 'Diagnostische Güte: Avocado Sign' }),
+                Object.freeze({ id: 'ergebnisse_literatur_t2_performance', label: 'Diagnostische Güte: Literatur-T2-Kriterien' }),
+                Object.freeze({ id: 'ergebnisse_optimierte_t2_performance', label: 'Diagnostische Güte: Optimierte T2-Kriterien (Brute-Force)' }),
+                Object.freeze({ id: 'ergebnisse_vergleich_performance', label: 'Vergleich: AS vs. T2-Kriterien' })
+            ])
+        })
+    ]),
+    // Definition der für den Publikations-Tab relevanten Literatur-Kriteriensets
+    // Die IDs müssen mit denen in study_criteria_manager.js übereinstimmen
+    literatureCriteriaSets: Object.freeze([
+        Object.freeze({
+            id: 'koh_2008_morphology',
+            nameKey: 'Koh et al. (2008)', // Wird für die Anzeige verwendet
+            shortName: 'Koh et al.'
+        }),
+        Object.freeze({
+            id: 'barbaro_2024_restaging',
+            nameKey: 'Barbaro et al. (2024)',
+            shortName: 'Barbaro et al.'
+        }),
+        Object.freeze({
+            id: 'rutegard_et_al_esgar',
+            nameKey: 'Rutegård et al. (2025) / ESGAR 2016',
+            shortName: 'ESGAR 2016'
+        })
+    ]),
+    // Mögliche Metriken für die Anzeige der Brute-Force Ergebnisse im Publikationstab
+    // Sollte mit den Optionen in ui_components.js und APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC übereinstimmen
+    bruteForceMetricsForPublication: Object.freeze([
+        { value: 'Balanced Accuracy', label: 'Balanced Accuracy' },
+        { value: 'Accuracy', label: 'Accuracy' },
+        { value: 'F1-Score', label: 'F1-Score' },
+        { value: 'PPV', label: 'Positiver Prädiktiver Wert (PPV)' },
+        { value: 'NPV', label: 'Negativer Prädiktiver Wert (NPV)' }
+    ]),
+    defaultBruteForceMetricForPublication: 'Balanced Accuracy',
+
+    // Konfiguration für Tabellen und Diagramme, die im Publikations-Tab angezeigt werden sollen
+    // Dies dient als Referenz für die Logik in publikation_tab_logic.js
+    publicationElements: Object.freeze({
+        methoden: Object.freeze({
+            literaturT2KriterienTabelle: {
+                id: 'pub-table-literatur-t2-kriterien',
+                titleDe: 'Übersicht der Literatur-basierten T2-Kriteriensets',
+                titleEn: 'Overview of Literature-Based T2 Criteria Sets'
+            }
+        }),
+        ergebnisse: Object.freeze({
+            patientenCharakteristikaTabelle: {
+                id: 'pub-table-patienten-charakteristika',
+                titleDe: 'Patientencharakteristika',
+                titleEn: 'Patient Characteristics'
+            },
+            diagnostischeGueteGesamtTabelle: {
+                id: 'pub-table-diagnostische-guete',
+                titleDe: 'Diagnostische Güte: Avocado Sign und T2-Kriterien',
+                titleEn: 'Diagnostic Performance: Avocado Sign and T2 Criteria'
+            },
+            rocChartAsVsT2: {
+                id: 'pub-chart-roc-as-vs-t2',
+                titleDe: 'ROC-Kurven: Avocado Sign vs. Beste T2-Kriterien (pro Kollektiv)',
+                titleEn: 'ROC Curves: Avocado Sign vs. Best T2 Criteria (per Cohort)'
+            },
+            sensSpezBarChart: {
+                id: 'pub-chart-sens-spez-bar',
+                titleDe: 'Sensitivität & Spezifität: AS vs. T2-Kriterien (pro Kollektiv)',
+                titleEn: 'Sensitivity & Specificity: AS vs. T2 Criteria (per Cohort)'
+            }
+        })
+    })
+});
+
+// Um sicherzustellen, dass das Objekt nicht versehentlich geändert wird
+if (typeof Object.freeze === 'function') {
+    Object.freeze(PUBLICATION_CONFIG);
+}
