@@ -49,23 +49,22 @@ function initializeApp() {
             console.warn("Keine validen Patientendaten gefunden nach Prozessierung.");
             ui_helpers.showToast("Warnung: Keine validen Patientendaten geladen.", "warning");
         }
-        // Initialisiere Daten für den Publikation-Tab frühzeitig, damit sie beim ersten Rendern verfügbar sind.
-        // `lastBruteForceResults` ist hier noch null, wird aber in `getRenderedSectionContent` ggf. geholt.
+
         publikationTabLogic.initializeData(processedData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), null);
 
 
-        filterAndPrepareData(); // Dies wertet auch initial die T2-Kriterien aus.
+        filterAndPrepareData();
         updateUIState();
         setupEventListeners();
         initializeBruteForceWorker();
 
-        const initialTabId = state.getActiveTabId() || 'daten-tab'; // Angepasst zu daten-tab
+        const initialTabId = state.getActiveTabId() || 'daten-tab';
         const initialTabElement = document.getElementById(initialTabId);
          if(initialTabElement && bootstrap.Tab) {
             const tab = bootstrap.Tab.getOrCreateInstance(initialTabElement);
             if(tab) tab.show();
          } else {
-             state.setActiveTabId('daten-tab'); // Fallback auf daten-tab
+             state.setActiveTabId('daten-tab');
              const fallbackTabElement = document.getElementById('daten-tab');
              if(fallbackTabElement && bootstrap.Tab) bootstrap.Tab.getOrCreateInstance(fallbackTabElement).show();
          }
@@ -93,7 +92,7 @@ function initializeApp() {
 
         let sortState = null;
         const activeTabId = state.getActiveTabId();
-        if (activeTabId === 'daten-tab') { sortState = state.getDatenTableSort(); } // Angepasst
+        if (activeTabId === 'daten-tab') { sortState = state.getDatenTableSort(); }
         else if (activeTabId === 'auswertung-tab') { sortState = state.getAuswertungTableSort(); }
 
         if(sortState && sortState.key) {
@@ -102,7 +101,7 @@ function initializeApp() {
         currentData = evaluatedData;
     } catch (error) {
          console.error("Fehler bei filterAndPrepareData:", error);
-         currentData = []; // Sicherstellen, dass currentData ein Array bleibt
+         currentData = [];
          ui_helpers.showToast("Fehler bei der Datenaufbereitung.", "danger");
     }
 }
@@ -115,7 +114,7 @@ function updateUIState() {
         ui_helpers.updateKollektivButtonsUI(currentKollektiv);
         ui_helpers.updateStatistikSelectorsUI(state.getCurrentStatsLayout(), state.getCurrentStatsKollektiv1(), state.getCurrentStatsKollektiv2());
         ui_helpers.updatePresentationViewSelectorUI(state.getCurrentPresentationView());
-        // Update für Publikation-Tab UI
+
         if (state.getActiveTabId() === 'publikation-tab') {
             ui_helpers.updatePublikationUI(state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), state.getCurrentPublikationBruteForceMetric());
         }
@@ -144,10 +143,10 @@ function setupEventListeners() {
              if (target.id === 'input-size') { debouncedUpdateSizeInput(target.value); }
              else if (target.matches('.criteria-checkbox')) { handleT2CheckboxChange(target); }
              else if (target.id === 't2-logic-switch') { handleT2LogicChange(target); }
-             else if (target.id === 'brute-force-metric') { /* Wird direkt beim Starten ausgelesen */ }
+             else if (target.id === 'brute-force-metric') { }
         } else if (target.closest('#statistik-tab-pane')) { handleStatistikChange(event); }
         else if (target.closest('#praesentation-tab-pane')) { handlePresentationChangeDelegation(event); }
-        else if (target.closest('#publikation-tab-pane')) { handlePublikationChange(event); } // NEU
+        else if (target.closest('#publikation-tab-pane')) { handlePublikationChange(event); }
     });
 }
 
@@ -162,16 +161,15 @@ function handleBodyClickDelegation(event) {
     const auswertungPane = target.closest('#auswertung-tab-pane');
     const statistikPane = target.closest('#statistik-tab-pane');
     const exportButton = target.closest('#export-tab-pane button[id^="export-"]');
-    const praesDownloadButton = target.closest('#praesentation-tab-pane button[id^="download-"]'); // Angepasst, um spezifischer zu sein
-    const toggleAllDatenBtn = target.closest('#daten-toggle-details'); // Angepasst
+    const praesDownloadButton = target.closest('#praesentation-tab-pane button[id^="download-"]');
+    const toggleAllDatenBtn = target.closest('#daten-toggle-details');
     const toggleAllAuswBtn = target.closest('#auswertung-toggle-details');
     const modalExportBtn = target.closest('#export-bruteforce-modal-txt');
-    const publikationNavLink = target.closest('#publikation-sections-nav .publikation-section-link'); // NEU
+    const publikationNavLink = target.closest('#publikation-sections-nav .publikation-section-link');
 
-    // Verhindere, dass Klicks auf interaktive Elemente in einer clickable-row die Zeile toggeln
     const clickableRowParent = target.closest('tr.clickable-row[data-bs-target]');
     if (clickableRowParent && target.closest('a, button, input, select, .btn-close, [data-bs-toggle="modal"], .table-download-png-btn, .chart-download-btn')) {
-        event.stopPropagation(); // Verhindere das Bubbling zum TR Element
+        event.stopPropagation();
         return;
     }
 
@@ -179,10 +177,10 @@ function handleBodyClickDelegation(event) {
     if (closestHeader) { handleSortClick(closestHeader, closestSubHeader); return; }
     if (chartDownloadButton) { handleSingleChartDownload(chartDownloadButton); return; }
     if (tableDownloadButton) { handleSingleTableDownload(tableDownloadButton); return; }
-    if (toggleAllDatenBtn) { ui_helpers.toggleAllDetails('daten-table-body', 'daten-toggle-details'); return; } // Angepasst
+    if (toggleAllDatenBtn) { ui_helpers.toggleAllDetails('daten-table-body', 'daten-toggle-details'); return; }
     if (toggleAllAuswBtn) { ui_helpers.toggleAllDetails('auswertung-table-body', 'auswertung-toggle-details'); return; }
     if (modalExportBtn && !modalExportBtn.disabled) { exportService.exportBruteForceReport(lastBruteForceResults, state.getCurrentKollektiv()); return; }
-    if (publikationNavLink) { event.preventDefault(); handlePublikationSectionChange(publikationNavLink.dataset.sectionId); return; } // NEU
+    if (publikationNavLink) { event.preventDefault(); handlePublikationSectionChange(publikationNavLink.dataset.sectionId); return; }
 
     if (auswertungPane) {
         const criteriaButton = target.closest('.t2-criteria-button'); const resetButton = target.closest('#btn-reset-criteria'); const applyButton = target.closest('#btn-apply-criteria'); const startBfButton = target.closest('#btn-start-brute-force'); const cancelBfButton = target.closest('#btn-cancel-brute-force'); const applyBestBfButton = target.closest('#btn-apply-best-bf-criteria');
@@ -195,9 +193,9 @@ function handleBodyClickDelegation(event) {
 
 function handleTabShownEvent(event) {
     if (event.target && event.target.id && state.setActiveTabId(event.target.id)) {
-        filterAndPrepareData(); // Daten neu filtern und aufbereiten für den aktuellen Tab
-        updateUIState(); // UI-Zustand global aktualisieren
-        handleTabShown(event.target.id); // Spezifische Render-Logik für den Tab ausführen
+        filterAndPrepareData();
+        updateUIState();
+        handleTabShown(event.target.id);
     }
 }
 
@@ -214,15 +212,15 @@ function handleTabShown(tabId) {
     const appliedLogic = t2CriteriaManager.getAppliedLogic();
 
     switch (tabId) {
-        case 'daten-tab': viewRenderer.renderDatenTab(currentData, state.getDatenTableSort()); break; // Angepasst
+        case 'daten-tab': viewRenderer.renderDatenTab(currentData, state.getDatenTableSort()); break;
         case 'auswertung-tab': viewRenderer.renderAuswertungTab(currentData, t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic(), state.getAuswertungTableSort(), currentKollektiv, !!bruteForceWorker); break;
         case 'statistik-tab': viewRenderer.renderStatistikTab(processedData, appliedCriteria, appliedLogic, state.getCurrentStatsLayout(), state.getCurrentStatsKollektiv1(), state.getCurrentStatsKollektiv2(), currentKollektiv); break;
         case 'praesentation-tab': viewRenderer.renderPresentationTab(state.getCurrentPresentationView(), state.getCurrentPresentationStudyId(), currentKollektiv, processedData, appliedCriteria, appliedLogic); break;
-        case 'publikation-tab': viewRenderer.renderPublikationTab(state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), currentKollektiv, processedData, lastBruteForceResults); break; // NEU
+        case 'publikation-tab': viewRenderer.renderPublikationTab(state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), currentKollektiv, processedData, lastBruteForceResults); break;
         case 'export-tab': viewRenderer.renderExportTab(currentKollektiv); break;
         default: console.warn(`Unbekannter Tab angezeigt: ${tabId}`); const paneId = tabId.replace('-tab', '-tab-pane'); ui_helpers.updateElementHTML(paneId, `<div class="alert alert-warning m-3">Inhalt für Tab '${tabId}' nicht implementiert.</div>`);
     }
-    updateUIState(); // Sicherstellen, dass UI nach dem Rendern aktuell ist
+    updateUIState();
 }
 
 function handleKollektivChange(newKollektiv) { if (state.setCurrentKollektiv(newKollektiv)) { filterAndPrepareData(); updateUIState(); handleTabShown(state.getActiveTabId()); ui_helpers.showToast(`Kollektiv '${getKollektivDisplayName(newKollektiv)}' ausgewählt.`, 'info'); return true; } return false; }
@@ -250,7 +248,7 @@ function handlePublikationSectionChange(sectionId) { if (state.setCurrentPublika
 function initializeBruteForceWorker() { if (!window.Worker) { ui_helpers.showToast("Web Worker nicht unterstützt.", "danger"); ui_helpers.updateBruteForceUI('error', {message: 'Web Worker not supported'}, false, state.getCurrentKollektiv()); return; } try { if(bruteForceWorker) bruteForceWorker.terminate(); bruteForceWorker = new Worker(APP_CONFIG.PATHS.BRUTE_FORCE_WORKER); bruteForceWorker.onmessage = handleBruteForceMessage; bruteForceWorker.onerror = handleBruteForceError; bruteForceWorker.onmessageerror = (e) => console.error("Worker messageerror:", e); ui_helpers.updateBruteForceUI('idle', {}, true, state.getCurrentKollektiv()); } catch (e) { console.error("Fehler Initialisierung Brute Force Worker:", e); ui_helpers.showToast("Fehler: Worker Start fehlgeschlagen.", "danger"); bruteForceWorker = null; ui_helpers.updateBruteForceUI('error', {message: 'Worker init failed'}, false, state.getCurrentKollektiv()); } }
 function handleStartBruteForce() { if (isBruteForceRunning || !bruteForceWorker) return; isBruteForceRunning = true; lastBruteForceResults = null; const metric = document.getElementById('brute-force-metric')?.value || APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC; const currentKollektiv = state.getCurrentKollektiv(); const dataForWorker = dataProcessor.filterDataByKollektiv(processedData, currentKollektiv).map(p => ({ nr: p.nr, n: p.n, lymphknoten_t2: p.lymphknoten_t2 })); if (dataForWorker.length === 0) { ui_helpers.showToast("Keine Daten für Optimierung.", "warning"); isBruteForceRunning = false; ui_helpers.updateBruteForceUI('idle', {}, !!bruteForceWorker, currentKollektiv); return; } ui_helpers.updateBruteForceUI('start', { metric: metric, kollektiv: currentKollektiv }, true, currentKollektiv); bruteForceWorker.postMessage({ action: 'start', payload: { data: dataForWorker, metric: metric, kollektiv: currentKollektiv, t2SizeRange: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE } }); updateUIState(); }
 function handleCancelBruteForce() { if (!isBruteForceRunning || !bruteForceWorker) return; bruteForceWorker.postMessage({ action: 'cancel' }); isBruteForceRunning = false; ui_helpers.updateBruteForceUI('cancelled', {}, true, state.getCurrentKollektiv()); ui_helpers.showToast('Optimierung abgebrochen.', 'warning'); updateUIState(); }
-function handleBruteForceMessage(event) { if (!event || !event.data) return; const { type, payload } = event.data; if (!isBruteForceRunning && type !== 'cancelled' && type !== 'error') return; const currentKollektiv = state.getCurrentKollektiv(); const currentMetric = payload?.metric || (type === 'progress' ? payload?.currentBest?.metric : null) || document.getElementById('brute-force-metric')?.value || 'Balanced Accuracy'; switch (type) { case 'started': ui_helpers.updateBruteForceUI('started', { ...payload, metric: currentMetric }, true, currentKollektiv); break; case 'progress': ui_helpers.updateBruteForceUI('progress', { ...payload, metric: currentMetric }, true, currentKollektiv); break; case 'result': isBruteForceRunning = false; lastBruteForceResults = payload; ui_helpers.updateBruteForceUI('result', payload, true, currentKollektiv); if(payload?.results?.length > 0){ const modalBody = document.querySelector('#brute-force-modal .modal-body'); if (modalBody) { modalBody.innerHTML = uiComponents.createBruteForceModalContent(payload.results, payload.metric, payload.kollektiv, payload.duration, payload.totalTested); ui_helpers.initializeTooltips(modalBody); } ui_helpers.showToast('Optimierung abgeschlossen.', 'success'); if (state.getActiveTabId() === 'publikation-tab') { // Potentially re-render publication tab if it's active and depends on BF results // This ensures the publication tab can reflect the new BF results if it was the active one. publikationTabLogic.initializeData(processedData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), lastBruteForceResults); handleTabShown('publikation-tab'); } } else { ui_helpers.showToast('Optimierung ohne valide Ergebnisse.', 'warning'); } updateUIState(); break; case 'cancelled': isBruteForceRunning = false; ui_helpers.updateBruteForceUI('cancelled', {}, true, currentKollektiv); updateUIState(); break; case 'error': isBruteForceRunning = false; ui_helpers.showToast(`Optimierungsfehler: ${payload?.message || 'Unbekannt'}`, 'danger'); ui_helpers.updateBruteForceUI('error', payload, true, currentKollektiv); updateUIState(); break; default: console.warn(`Unbekannter Worker Nachrichtentyp: ${type}`); } }
+function handleBruteForceMessage(event) { if (!event || !event.data) return; const { type, payload } = event.data; if (!isBruteForceRunning && type !== 'cancelled' && type !== 'error') return; const currentKollektiv = state.getCurrentKollektiv(); const currentMetric = payload?.metric || (type === 'progress' ? payload?.currentBest?.metric : null) || document.getElementById('brute-force-metric')?.value || 'Balanced Accuracy'; switch (type) { case 'started': ui_helpers.updateBruteForceUI('started', { ...payload, metric: currentMetric }, true, currentKollektiv); break; case 'progress': ui_helpers.updateBruteForceUI('progress', { ...payload, metric: currentMetric }, true, currentKollektiv); break; case 'result': isBruteForceRunning = false; lastBruteForceResults = payload; ui_helpers.updateBruteForceUI('result', payload, true, currentKollektiv); if(payload?.results?.length > 0){ const modalBody = document.querySelector('#brute-force-modal .modal-body'); if (modalBody) { modalBody.innerHTML = uiComponents.createBruteForceModalContent(payload.results, payload.metric, payload.kollektiv, payload.duration, payload.totalTested); ui_helpers.initializeTooltips(modalBody); } ui_helpers.showToast('Optimierung abgeschlossen.', 'success'); if (state.getActiveTabId() === 'publikation-tab') { publikationTabLogic.initializeData(processedData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), lastBruteForceResults); handleTabShown('publikation-tab'); } } else { ui_helpers.showToast('Optimierung ohne valide Ergebnisse.', 'warning'); } updateUIState(); break; case 'cancelled': isBruteForceRunning = false; ui_helpers.updateBruteForceUI('cancelled', {}, true, currentKollektiv); updateUIState(); break; case 'error': isBruteForceRunning = false; ui_helpers.showToast(`Optimierungsfehler: ${payload?.message || 'Unbekannt'}`, 'danger'); ui_helpers.updateBruteForceUI('error', payload, true, currentKollektiv); updateUIState(); break; default: console.warn(`Unbekannter Worker Nachrichtentyp: ${type}`); } }
 function handleBruteForceError(error) { console.error("Fehler im Brute Force Worker:", error); isBruteForceRunning = false; ui_helpers.showToast("Fehler: Hintergrundverarbeitung gestoppt.", "danger"); ui_helpers.updateBruteForceUI('error', { message: error.message || 'Worker Error' }, false, state.getCurrentKollektiv()); bruteForceWorker = null; updateUIState(); }
 
 document.addEventListener('DOMContentLoaded', initializeApp);
