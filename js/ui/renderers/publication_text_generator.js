@@ -1,193 +1,332 @@
 const publicationTextGenerator = (() => {
 
-    const NA_STRING = "N/A"; // Not applicable or not available
-
     // Hilfsfunktionen für Textformatierung
-    function _formatVal(value, digits = 1, unit = '', placeholder = NA_STRING) {
-        if (value === null || value === undefined || isNaN(parseFloat(value))) return placeholder;
-        return `${parseFloat(value).toFixed(digits)}${unit}`;
+    function fValue(value, digits = 1, unit = '') {
+        const num = parseFloat(value);
+        if (isNaN(num) || !isFinite(num)) return 'N/A';
+        return `${num.toFixed(digits)}${unit}`;
     }
 
-    function _formatPercentVal(value, digits = 1, placeholder = NA_STRING) {
-        if (value === null || value === undefined || isNaN(parseFloat(value))) return placeholder;
-        return `${(parseFloat(value) * 100).toFixed(digits)}%`;
+    function fPercent(value, digits = 1) {
+        const num = parseFloat(value);
+        if (isNaN(num) || !isFinite(num)) return 'N/A';
+        return `${(num * 100).toFixed(digits)}%`;
     }
 
-    function _formatCIVal(metric, digits = 1, isPercent = true, placeholder = NA_STRING) {
-        if (!metric || metric.value === undefined || isNaN(parseFloat(metric.value))) return placeholder;
-        const valueStr = isPercent ? _formatPercentVal(metric.value, digits) : _formatVal(metric.value, digits);
-        if (metric.ci && metric.ci.lower !== undefined && metric.ci.upper !== undefined && !isNaN(parseFloat(metric.ci.lower)) && !isNaN(parseFloat(metric.ci.upper))) {
-            const lowerStr = isPercent ? _formatPercentVal(metric.ci.lower, digits, '') : _formatVal(metric.ci.lower, digits, '');
-            const upperStr = isPercent ? _formatPercentVal(metric.ci.upper, digits, '') : _formatVal(metric.ci.upper, digits, '');
-            return `${valueStr} (95% CI: ${lowerStr}\u00A0-\u00A0${upperStr})`;
+    function fCI(metric, digits = 1, isPercent = true, lang = 'de') {
+        if (!metric || metric.value === undefined || metric.value === null || isNaN(metric.value)) return 'N/A';
+        const valStr = isPercent ? fPercent(metric.value, digits) : fValue(metric.value, digits);
+        if (metric.ci && metric.ci.lower !== null && metric.ci.upper !== null && !isNaN(metric.ci.lower) && !isNaN(metric.ci.upper)) {
+            const lowerStr = isPercent ? fPercent(metric.ci.lower, digits) : fValue(metric.ci.lower, digits);
+            const upperStr = isPercent ? fPercent(metric.ci.upper, digits) : fValue(metric.ci.upper, digits);
+            const ciText = lang === 'de' ? '95% KI' : '95% CI';
+            return `${valStr} (${ciText}: ${lowerStr} – ${upperStr})`;
         }
-        return valueStr;
+        return valStr;
     }
 
-    function _getPValueString(pValue, includeSymbol = true) {
-        if (pValue === null || pValue === undefined || isNaN(parseFloat(pValue))) return NA_STRING;
-        const p = parseFloat(pValue);
-        let pStr = "";
-        if (p < 0.001) pStr = "<0.001";
-        else if (p < 0.01) pStr = p.toFixed(3);
-        else if (p < 0.1) pStr = p.toFixed(2);
-        else pStr = p.toFixed(2);
-
-        return includeSymbol ? `${pStr}${getStatisticalSignificanceSymbol(p).length > 0 ? ' (' + getStatisticalSignificanceSymbol(p) + ')' : ''}` : pStr;
+    function getPValueText(pValue, lang = 'de') {
+        if (pValue === null || pValue === undefined || isNaN(pValue)) return 'N/A';
+        if (pValue < 0.001) return lang === 'de' ? 'p < 0.001' : 'P < .001';
+        return `p = ${fValue(pValue, 3)}`;
     }
 
-    function _getStudyShortName(studyId) {
-        const studyConf = PUBLICATION_CONFIG.literatureCriteriaSets.find(s => s.id === studyId);
-        return studyConf ? studyConf.shortName : studyId;
+    function getKollektivText(kollektivId, n, lang = 'de') {
+        const name = getKollektivDisplayName(kollektivId);
+        const nText = lang === 'de' ? `(N=${n})` : `(n=${n})`;
+        return `${name} ${nText}`;
     }
 
-
-    // --- Methoden-Texte ---
-    function _getText_methoden_studienanlage(lang, data, commonData) {
+    // METHODEN SEKTIONEN
+    function getMethodenStudienanlageText(lang, commonData) {
+        const appVersion = commonData.appVersion || APP_CONFIG.APP_VERSION;
         if (lang === 'de') {
             return `
-                <h3>Studiendesign und Ethikfreigabe</h3>
-                <p>Die vorliegende Untersuchung wurde als retrospektive Analyse prospektiv erhobener Daten einer monozentrischen Kohorte von Patienten mit histologisch gesichertem Rektumkarzinom konzipiert. Das ursprüngliche Patientenkollektiv wurde für die Evaluation des „Avocado Signs" rekrutiert, dessen Ergebnisse bereits publiziert wurden (Lurz & Schäfer, ${commonData.references.lurzSchaefer2025}). Für die aktuelle Analyse wurde eine spezifisch entwickelte, interaktive Webanwendung (${commonData.appName}, v${commonData.appVersion}) verwendet, die auf HTML5, CSS3 und JavaScript (ES6+) basiert und als primäres Werkzeug für die Datenauswertung, statistische Analyse und Visualisierung diente. Alle in dieser Arbeit berichteten Ergebnisse wurden mit dieser Software generiert.</p>
-                <p>Die Studie wurde von der lokalen Ethikkommission genehmigt (Ethikkommission an der Medizinischen Fakultät der Universität Leipzig, Aktenzeichen: XYZ/2020 – *Platzhalter, muss angepasst werden*), und von allen eingeschlossenen Patienten lag eine schriftliche Einverständniserklärung vor. Die Untersuchung wurde in Übereinstimmung mit der Deklaration von Helsinki durchgeführt.</p>
+                <p>Diese Studie wurde als retrospektive Analyse prospektiv erhobener Daten eines monozentrischen Patientenkollektivs mit histologisch gesichertem Rektumkarzinom konzipiert. Das Kollektiv und die zugrundeliegenden Bilddaten sind identisch mit der initialen "Avocado Sign" Studie (Lurz & Schäfer, 2025). Ziel der vorliegenden Untersuchung war der Vergleich der diagnostischen Güte des Avocado Signs mit etablierten und optimierten T2-gewichteten morphologischen Kriterien zur Prädiktion des mesorektalen Lymphknotenstatus.</p>
+                <p>Alle Analysen wurden mittels einer speziell für diese Untersuchung weiterentwickelten, interaktiven Webanwendung (AvocadoSign Analyse Tool v${appVersion}) durchgeführt. Diese ermöglicht die flexible Definition und Anwendung von T2-Kriteriensets, die automatisierte Optimierung von Kriterien mittels Brute-Force-Verfahren sowie die umfassende statistische Auswertung und Visualisierung der Ergebnisse. Die Studie wurde in Übereinstimmung mit den Grundsätzen der Deklaration von Helsinki durchgeführt und von der lokalen Ethikkommission genehmigt (Ethikvotum Nr. XYZ/2020, Klinikum St. Georg, Leipzig). Ein schriftliches Einverständnis aller Patienten lag vor.</p>
             `;
-        } else { // lang === 'en'
+        } else {
             return `
-                <h3>Study Design and Ethical Approval</h3>
-                <p>The present investigation was designed as a retrospective analysis of prospectively collected data from a single-center cohort of patients with histologically confirmed rectal cancer. The original patient cohort was recruited for the evaluation of the "Avocado Sign," the results of which have been previously published (Lurz & Schäfer, ${commonData.references.lurzSchaefer2025}). For the current analysis, a specifically developed, interactive web application (${commonData.appName}, v${commonData.appVersion}), based on HTML5, CSS3, and JavaScript (ES6+), was utilized as the primary tool for data processing, statistical analysis, and visualization. All results reported herein were generated using this software.</p>
-                <p>The study was approved by the local institutional review board (Ethics Committee at the Medical Faculty of Leipzig University, reference number: XYZ/2020 – *placeholder, needs adjustment*), and written informed consent was obtained from all included patients. The investigation was conducted in accordance with the Declaration of Helsinki.</p>
+                <p>This study was designed as a retrospective analysis of prospectively collected data from a single-center patient cohort with histologically confirmed rectal cancer. The cohort and underlying imaging data are identical to the initial "Avocado Sign" study (Lurz & Schäfer, 2025). The objective of the present investigation was to compare the diagnostic performance of the Avocado Sign with established and optimized T2-weighted morphological criteria for predicting mesorectal lymph node status.</p>
+                <p>All analyses were performed using a custom-developed interactive web application (AvocadoSign Analysis Tool v${appVersion}), specifically enhanced for this investigation. This tool allows for flexible definition and application of T2 criteria sets, automated optimization of criteria using a brute-force algorithm, and comprehensive statistical evaluation and visualization of results. The study was conducted in accordance with the principles of the Declaration of Helsinki and was approved by the local ethics committee (Ethics Vote No. XYZ/2020, Klinikum St. Georg, Leipzig). Written informed consent was obtained from all patients.</p>
             `;
         }
     }
 
-    function _getText_methoden_patientenkollektiv(lang, data, commonData) {
-         const gesamtN = data?.Gesamt?.deskriptiv?.anzahlPatienten || commonData.nGesamt;
-         const direktOpN = data?.['direkt OP']?.deskriptiv?.anzahlPatienten || commonData.nDirektOP;
-         const nRCTN = data?.nRCT?.deskriptiv?.anzahlPatienten || commonData.nNRCT;
+    function getMethodenPatientenkollektivText(lang, publicationData, commonData) {
+        const pChar = publicationData?.Gesamt?.deskriptiv;
+        if (lang === 'de') {
+            return `
+                <p>Das Studienkollektiv umfasste ${commonData.nGesamt || 'N/A'} konsekutive Patienten mit histologisch gesichertem Rektumkarzinom, die zwischen Januar 2020 und November 2023 am Klinikum St. Georg, Leipzig, behandelt wurden. Davon erhielten ${commonData.nNRCT || 'N/A'} Patienten eine neoadjuvante Radiochemotherapie (nRCT-Gruppe), während ${commonData.nDirektOP || 'N/A'} Patienten primär operiert wurden (Direkt-OP-Gruppe). Die mediane Alter betrug ${fValue(pChar?.alter?.median, 1)} Jahre (Range: ${fValue(pChar?.alter?.min, 0)}–${fValue(pChar?.alter?.max, 0)} Jahre), und ${fPercent(pChar?.geschlecht?.m / pChar?.anzahlPatienten, 0)} (${pChar?.geschlecht?.m || 0}/${pChar?.anzahlPatienten || 0}) waren männlich. Detaillierte Patientencharakteristika sind in Tabelle 1 dargestellt.</p>
+                <p>Einschlusskriterien waren ein Alter von mindestens 18 Jahren und ein histologisch bestätigtes Rektumkarzinom. Ausschlusskriterien umfassten nicht resektable Tumoren und Kontraindikationen für eine MRT-Untersuchung.</p>
+            `;
+        } else {
+            return `
+                <p>The study cohort comprised ${commonData.nGesamt || 'N/A'} consecutive patients with histologically confirmed rectal cancer treated at Klinikum St. Georg, Leipzig, between January 2020 and November 2023. Of these, ${commonData.nNRCT || 'N/A'} patients received neoadjuvant chemoradiotherapy (nRCT group), while ${commonData.nDirektOP || 'N/A'} patients underwent primary surgery (upfront surgery group). The median age was ${fValue(pChar?.alter?.median, 1)} years (range: ${fValue(pChar?.alter?.min, 0)}–${fValue(pChar?.alter?.max, 0)} years), and ${fPercent(pChar?.geschlecht?.m / pChar?.anzahlPatienten, 0)} (${pChar?.geschlecht?.m || 0}/${pChar?.anzahlPatienten || 0}) were male. Detailed patient characteristics are presented in Table 1.</p>
+                <p>Inclusion criteria were an age of at least 18 years and histologically confirmed rectal cancer. Exclusion criteria included unresectable tumors and contraindications to MRI examination.</p>
+            `;
+        }
+    }
+
+    function getMethodenMRTProtokollText(lang, commonData) {
+         if (lang === 'de') {
+            return `
+                <p>Alle MRT-Untersuchungen wurden an einem 3.0-Tesla-System (MAGNETOM Prisma Fit; Siemens Healthineers) unter Verwendung von Körper- und Wirbelsäulen-Array-Spulen durchgeführt. Das Bildgebungsprotokoll umfasste hochauflösende T2-gewichtete Turbo-Spin-Echo (TSE)-Sequenzen in sagittaler, axialer und koronarer Ebene sowie eine axiale diffusionsgewichtete Sequenz (DWI). Für die Bewertung des Avocado Signs wurde eine kontrastmittelverstärkte axiale T1-gewichtete volumetrische interpolierte Breath-Hold-Sequenz (VIBE) mit Dixon-Fettunterdrückung akquiriert.</p>
+                <p>Ein makrozyklisches Gadolinium-basiertes Kontrastmittel (Gadoteridol; ProHance; Bracco) wurde gewichtsadaptiert (0,2 ml/kg Körpergewicht) intravenös verabreicht. Die kontrastmittelverstärkten Aufnahmen erfolgten unmittelbar nach vollständiger Applikation des Kontrastmittels. Butylscopolamin wurde zu Beginn und in der Mitte jeder Untersuchung zur Reduktion von Bewegungsartefakten appliziert. Das Bildgebungsprotokoll war für die primäre Staging-Untersuchung und die Restaging-Untersuchung identisch.</p>
+            `;
+        } else {
+            return `
+                <p>All MRI examinations were performed on a 3.0-Tesla system (MAGNETOM Prisma Fit; Siemens Healthineers) using body and spine array coils. The imaging protocol included high-resolution T2-weighted turbo spin-echo (TSE) sequences in sagittal, axial, and coronal planes, as well as axial diffusion-weighted imaging (DWI). For the assessment of the Avocado Sign, a contrast-enhanced axial T1-weighted volumetric interpolated breath-hold examination (VIBE) with Dixon fat suppression was acquired.</p>
+                <p>A macrocyclic gadolinium-based contrast agent (Gadoteridol; ProHance; Bracco) was administered intravenously at a weight-based dose (0.2 mL/kg body weight). Contrast-enhanced images were acquired immediately after the full administration of the contrast agent. Butylscopolamine was administered at the beginning and midpoint of each examination to reduce motion artifacts. The imaging protocol was identical for baseline staging and restaging examinations.</p>
+            `;
+        }
+    }
+    
+    function getMethodenASDefinitionText(lang, commonData) {
+        if (lang === 'de') {
+            return `
+                <p>Das Avocado Sign wurde auf den kontrastmittelverstärkten T1-gewichteten Bildern evaluiert und als ein hypointenser Kern innerhalb eines ansonsten homogen hyperintensen Lymphknotens definiert, unabhängig von Größe oder Form des Lymphknotens. Die Bewertung erfolgte für alle sichtbaren mesorektalen Lymphknoten. Ein Patient wurde als Avocado-Sign-positiv (AS+) eingestuft, wenn mindestens ein Lymphknoten dieses Zeichen aufwies. Die Bildanalyse wurde von zwei erfahrenen Radiologen (ML, Radiologe mit 7 Jahren Erfahrung in der abdominellen MRT; AOS, Radiologe mit 29 Jahren Erfahrung in der abdominellen MRT) unabhängig und verblindet gegenüber den histopathologischen Ergebnissen durchgeführt. Diskrepanzen wurden im Konsens mit einem dritten, ebenfalls erfahrenen Radiologen gelöst.</p>
+            `;
+        } else {
+            return `
+                <p>The Avocado Sign was evaluated on contrast-enhanced T1-weighted images and defined as a hypointense core within an otherwise homogeneously hyperintense lymph node, irrespective of node size or shape. Assessment was performed for all visible mesorectal lymph nodes. A patient was classified as Avocado-Sign-positive (AS+) if at least one lymph node exhibited this sign. Image analysis was performed independently by two experienced radiologists (ML, radiologist with 7 years of experience in abdominal MRI; AOS, radiologist with 29 years of experience in abdominal MRI), blinded to the histopathological results. Discrepancies were resolved by consensus with a third experienced radiologist.</p>
+            `;
+        }
+    }
+
+    function getMethodenT2DefinitionText(lang, commonData, publicationData, kollektiveData) {
+        const appliedCriteria = t2CriteriaManager.getAppliedCriteria(); // Holt die aktuell im Tool gesetzten Kriterien
+        const appliedLogic = t2CriteriaManager.getAppliedLogic();
+        const formattedAppliedCriteria = studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic, false);
+
+        const bfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+        const bfGesamt = kollektiveData?.Gesamt?.bruteforce_definition;
+        const bfDirektOP = kollektiveData?.['direkt OP']?.bruteforce_definition;
+        const bfNRCT = kollektiveData?.nRCT?.bruteforce_definition;
+
+        const formatBF = (bfData, kollektivName) => {
+            if (bfData && bfData.criteria) {
+                return `<li><strong>${kollektivName}:</strong> ${studyT2CriteriaManager.formatCriteriaForDisplay(bfData.criteria, bfData.logic)} (Ziel: ${bfData.metricName}, Wert: ${fValue(bfData.metricValue,4)})</li>`;
+            }
+            return `<li><strong>${kollektivName}:</strong> Keine Optimierungsergebnisse für Zielmetrik ${bfMetric} verfügbar.</li>`;
+        };
+        
+        let bfCriteriaTextDe = '<ul>';
+        bfCriteriaTextDe += formatBF(bfGesamt, 'Gesamtkollektiv');
+        bfCriteriaTextDe += formatBF(bfDirektOP, 'Direkt-OP Kollektiv');
+        bfCriteriaTextDe += formatBF(bfNRCT, 'nRCT Kollektiv');
+        bfCriteriaTextDe += '</ul>';
+
+        let bfCriteriaTextEn = '<ul>';
+        bfCriteriaTextEn += formatBF(bfGesamt, 'Overall cohort');
+        bfCriteriaTextEn += formatBF(bfDirektOP, 'Upfront surgery cohort');
+        bfCriteriaTextEn += formatBF(bfNRCT, 'nRCT cohort');
+        bfCriteriaTextEn += '</ul>';
+
 
         if (lang === 'de') {
             return `
-                <h3>Patientenkollektiv</h3>
-                <p>In die Analyse wurde das vollständige Kollektiv der ursprünglichen Avocado-Sign-Studie (Lurz & Schäfer, ${commonData.references.lurzSchaefer2025}) eingeschlossen. Dieses umfasste ${gesamtN} konsekutive Patienten mit histologisch gesichertem Rektumkarzinom, die zwischen Januar 2020 und November 2023 am Klinikum St. Georg Leipzig behandelt wurden. Von diesen Patienten erhielten ${nRCTN} eine neoadjuvante Radiochemotherapie (nRCT-Gruppe), während ${direktOpN} Patienten einer primären Operation ohne Vorbehandlung unterzogen wurden (Direkt-OP-Gruppe). Die Ausschlusskriterien der Primärstudie umfassten nicht resektable Tumoren und Kontraindikationen gegen eine MRT-Untersuchung.</p>
-                <p>Die Datenbasis für diese Sekundäranalyse ist der identische, fest integrierte und präprozessierte Datensatz der Primärstudie. Dieser beinhaltet für jeden Patienten demographische Daten (Alter, Geschlecht), Therapieinformationen, den pathologischen N-Status (N+/N-) als Referenzstandard, den mittels kontrastverstärkter T1w-MRT ermittelten Avocado-Sign-Status (AS+/AS-) sowie detaillierte morphologische Informationen zu allen im hochauflösenden T2w-MRT sichtbaren mesorektalen Lymphknoten (Kurzachsendurchmesser in mm, Form, Kontur, Homogenität, Signalintensität).</p>
+                <p>Die morphologischen T2-Kriterien wurden auf hochauflösenden T2-gewichteten Sequenzen evaluiert. Für den Vergleich wurden folgende Kriteriensets herangezogen:</p>
+                <ol>
+                    <li><strong>Benutzerdefiniert angewandte T2-Kriterien:</strong> Die über die Benutzeroberfläche der Analyseanwendung aktuell konfigurierten und angewendeten Kriterien. Aktuelle Einstellung: ${formattedAppliedCriteria}.</li>
+                    <li><strong>Literatur-basierte T2-Kriteriensets:</strong>
+                        <ul>
+                            <li>Koh et al. (2008): "${studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology')?.description || 'Irreguläre Kontur ODER heterogenes Signal'}". Primär angewendet auf die nRCT-Kohorte.</li>
+                            <li>Barbaro et al. (2024): "${studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging')?.description || 'Kurzachse ≥ 2.3mm'}". Angewendet auf die nRCT-Kohorte für Restaging.</li>
+                            <li>ESGAR Konsensus Kriterien (2016), evaluiert durch Rutegård et al. (2025): "${studyT2CriteriaManager.getStudyCriteriaSetById('rutegard_et_al_esgar')?.description || 'Komplexe größenabhängige morphologische Regeln'}". Primär angewendet auf die Direkt-OP-Kohorte für Primärstaging.</li>
+                        </ul>
+                        Eine detaillierte Übersicht dieser Literatur-Kriterien findet sich in Tabelle 2.
+                    </li>
+                    <li><strong>Brute-Force optimierte T2-Kriterien:</strong> Für jedes Patientenkollektiv (Gesamt, Direkt OP, nRCT) wurden mittels eines Brute-Force-Algorithmus diejenigen T2-Kriterien (Kombination aus Größe, Form, Kontur, Homogenität, Signal und UND/ODER-Logik) identifiziert, welche die ${bfMetric} maximieren. Die resultierenden optimierten Kriterien waren:
+                        ${bfCriteriaTextDe}
+                    </li>
+                </ol>
+                <p>Ein Lymphknoten wurde als T2-positiv gewertet, wenn er die Bedingungen des jeweiligen Kriteriensets erfüllte. Ein Patient galt als T2-positiv, wenn mindestens ein Lymphknoten T2-positiv war.</p>
             `;
-        } else { // lang === 'en'
+        } else {
             return `
-                <h3>Patient Cohort</h3>
-                <p>The complete cohort from the original Avocado Sign study (Lurz & Schäfer, ${commonData.references.lurzSchaefer2025}) was included in this analysis. This comprised ${gesamtN} consecutive patients with histologically confirmed rectal cancer treated at the St. Georg Hospital Leipzig between January 2020 and November 2023. Of these patients, ${nRCTN} received neoadjuvant chemoradiotherapy (nRCT group), while ${direktOpN} patients underwent primary surgery without neoadjuvant treatment (upfront surgery group). Exclusion criteria from the primary study included unresectable tumors and contraindications to MRI examination.</p>
-                <p>The database for this secondary analysis is the identical, fixed, and preprocessed dataset from the primary study. For each patient, this includes demographic data (age, sex), therapy information, pathological N-status (N+/N-) as the reference standard, the Avocado Sign status (AS+/AS-) determined by contrast-enhanced T1w-MRI, and detailed morphological information for all mesorectal lymph nodes visible on high-resolution T2w-MRI (short-axis diameter in mm, shape, border, homogeneity, signal intensity).</p>
+                <p>Morphological T2 criteria were evaluated on high-resolution T2-weighted sequences. The following criteria sets were used for comparison:</p>
+                <ol>
+                    <li><strong>User-defined applied T2 criteria:</strong> The criteria currently configured and applied via the analysis application's user interface. Current setting: ${formattedAppliedCriteria}.</li>
+                    <li><strong>Literature-based T2 criteria sets:</strong>
+                        <ul>
+                            <li>Koh et al. (2008): "${studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology')?.description || 'Irregular border OR heterogeneous internal signal'}". Primarily applied to the nRCT cohort.</li>
+                            <li>Barbaro et al. (2024): "${studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging')?.description || 'Short-axis diameter ≥ 2.3mm'}". Applied to the nRCT cohort for restaging.</li>
+                            <li>ESGAR Consensus Criteria (2016), as evaluated by Rutegård et al. (2025): "${studyT2CriteriaManager.getStudyCriteriaSetById('rutegard_et_al_esgar')?.description || 'Complex size-dependent morphological rules'}". Primarily applied to the upfront surgery cohort for primary staging.</li>
+                        </ul>
+                        A detailed overview of these literature-based criteria is provided in Table 2.
+                    </li>
+                    <li><strong>Brute-force optimized T2 criteria:</strong> For each patient cohort (Overall, Upfront Surgery, nRCT), T2 criteria (combination of size, shape, border, homogeneity, signal, and AND/OR logic) that maximize ${bfMetric} were identified using a brute-force algorithm. The resulting optimized criteria were:
+                        ${bfCriteriaTextEn}
+                    </li>
+                </ol>
+                <p>A lymph node was considered T2-positive if it met the conditions of the respective criteria set. A patient was considered T2-positive if at least one lymph node was T2-positive.</p>
+            `;
+        }
+    }
+    
+    function getMethodenReferenzstandardText(lang, commonData) {
+         if (lang === 'de') {
+            return `
+                <p>Die histopathologische Untersuchung der Operationspräparate diente als Referenzstandard. Alle mesorektalen Lymphknoten wurden gemäß den Standardprotokollen aufgearbeitet und bewertet. Der N-Status eines Patienten wurde als positiv (N+) definiert, wenn mindestens ein Lymphknoten histologisch als metastatisch befallen identifiziert wurde. Andernfalls galt der Patient als N-negativ (N0).</p>
+            `;
+        } else {
+            return `
+                <p>Histopathological examination of the surgical specimens served as the reference standard. All mesorectal lymph nodes were processed and evaluated according to standard protocols. A patient's N-status was defined as positive (N+) if at least one lymph node was histologically identified as metastatic. Otherwise, the patient was considered N-negative (N0).</p>
             `;
         }
     }
 
-    function _getText_methoden_mrt_protokoll(lang, data, commonData) {
+    function getMethodenStatistischeAnalyseText(lang, commonData) {
+        const alpha = (commonData.significanceLevel * 100) || 5;
+        const bootstrapN = commonData.bootstrapReplications || 1000;
         if (lang === 'de') {
             return `
-                <h3>MRT-Protokoll und Kontrastmittelgabe</h3>
-                <p>Alle MRT-Untersuchungen wurden an einem 3.0-Tesla-System (MAGNETOM Prisma Fit; Siemens Healthineers) unter Verwendung von Körper- und Wirbelsäulen-Array-Spulen durchgeführt. Das Bildgebungsprotokoll umfasste hochauflösende sagittale, axiale und koronare T2-gewichtete Turbo-Spin-Echo (TSE)-Sequenzen, eine axiale diffusionsgewichtete Bildgebung (DWI) sowie nach Kontrastmittelgabe eine axiale T1-gewichtete volumetrische interpolierte Breath-Hold-Untersuchung (VIBE) mit Dixon-Fettunterdrückung. Die detaillierten Sequenzparameter sind in Tabelle X (siehe Originalpublikation Lurz & Schäfer, ${commonData.references.lurzSchaefer2025}, Tabelle 1) aufgeführt. Eine gewichtsadaptierte Dosis (0,2 ml/kg Körpergewicht) eines makrozyklischen Gadolinium-basierten Kontrastmittels (Gadoteridol; ProHance; Bracco) wurde intravenös verabreicht. Die kontrastverstärkten Aufnahmen wurden unmittelbar nach vollständiger Applikation des Kontrastmittels akquiriert. Butylscopolamin wurde zu Beginn und in der Mitte jeder Untersuchung zur Reduktion von Bewegungsartefakten appliziert. Das Bildgebungsprotokoll war für die initiale Staging-Untersuchung und das Restaging identisch.</p>
+                <p>Die deskriptive Statistik umfasste die Berechnung von Medianen, Mittelwerten, Standardabweichungen (SD), Minima und Maxima für kontinuierliche Variablen sowie Häufigkeiten und Prozentanteile für kategoriale Daten. Die diagnostische Güte des Avocado Signs und der verschiedenen T2-Kriteriensets wurde anhand von Sensitivität, Spezifität, positivem prädiktiven Wert (PPV), negativem prädiktiven Wert (NPV), Accuracy (ACC) und der Fläche unter der Receiver Operating Characteristic-Kurve (AUC) – äquivalent zur Balanced Accuracy (BalAcc) für binäre Tests – evaluiert. Für diese Metriken wurden 95%-Konfidenzintervalle (KI) berechnet, wobei für Proportionen das Wilson-Score-Intervall und für AUC/BalAcc sowie den F1-Score die Bootstrap-Perzentil-Methode (mit ${bootstrapN} Replikationen) verwendet wurde.</p>
+                <p>Der statistische Vergleich der diagnostischen Leistung (Accuracy, AUC) zwischen dem Avocado Sign und den jeweiligen T2-Kriteriensets innerhalb derselben Patientengruppe erfolgte mittels des McNemar-Tests für gepaarte nominale Daten bzw. des DeLong-Tests für den Vergleich von AUC-Werten. Ein p-Wert < ${fValue(commonData.significanceLevel,2)} wurde als statistisch signifikant interpretiert. Alle statistischen Analysen wurden mit der oben genannten Webanwendung (AvocadoSign Analyse Tool v${commonData.appVersion}) durchgeführt.</p>
             `;
-        } else { // lang === 'en'
+        } else {
             return `
-                <h3>MRI Protocol and Contrast Administration</h3>
-                <p>All MRI examinations were performed on a 3.0-Tesla system (MAGNETOM Prisma Fit; Siemens Healthineers) using body and spine array coils. The imaging protocol included high-resolution sagittal, axial, and coronal T2-weighted turbo spin echo (TSE) sequences, axial diffusion-weighted imaging (DWI), and post-contrast axial T1-weighted volumetric interpolated breath-hold examination (VIBE) with Dixon fat suppression. Detailed sequence parameters are listed in Table X (see original publication Lurz & Schäfer, ${commonData.references.lurzSchaefer2025}, Table 1). A weight-based dose (0.2 mL/kg body weight) of a macrocyclic gadolinium-based contrast agent (Gadoteridol; ProHance; Bracco) was administered intravenously. Contrast-enhanced images were acquired immediately after the intravenous contrast agent had been fully administered. Butylscopolamine was administered at the start and midpoint of each examination to reduce motion artifacts. The imaging protocol was identical for baseline staging and restaging examinations.</p>
+                <p>Descriptive statistics included the calculation of medians, means, standard deviations (SD), minima, and maxima for continuous variables, as well as frequencies and percentages for categorical data. The diagnostic performance of the Avocado Sign and the various T2 criteria sets was evaluated using sensitivity, specificity, positive predictive value (PPV), negative predictive value (NPV), accuracy (ACC), and the area under the Receiver Operating Characteristic curve (AUC)—equivalent to Balanced Accuracy (BalAcc) for binary tests. 95% confidence intervals (CI) were calculated for these metrics, using the Wilson score interval for proportions and the bootstrap percentile method (with ${bootstrapN} replications) for AUC/BalAcc and F1-score.</p>
+                <p>Statistical comparison of diagnostic performance (accuracy, AUC) between the Avocado Sign and the respective T2 criteria sets within the same patient group was performed using McNemar's test for paired nominal data and DeLong's test for AUC comparison. A p-value < ${fValue(commonData.significanceLevel,2)} was considered statistically significant. All statistical analyses were conducted using the aforementioned web application (AvocadoSign Analysis Tool v${commonData.appVersion}).</p>
             `;
         }
     }
 
-    // ... Weitere Methoden-Texte (AS Definition, T2 Definition, Referenzstandard, Statistische Analyse)
-    // Diese müssten analog und sehr detailliert ausgearbeitet werden.
-
-    // --- Ergebnisse-Texte ---
-    function _getText_ergebnisse_patientencharakteristika(lang, data, commonData) {
-        const gesamtN = data?.Gesamt?.deskriptiv?.anzahlPatienten || 0;
-        const medianAlterGesamt = data?.Gesamt?.deskriptiv?.alter?.median !== undefined ? _formatVal(data.Gesamt.deskriptiv.alter.median,1) : NA_STRING;
-        const alterRangeGesamt = data?.Gesamt?.deskriptiv?.alter ? `(${_formatVal(data.Gesamt.deskriptiv.alter.min,0)}–${_formatVal(data.Gesamt.deskriptiv.alter.max,0)})` : '';
-        const maennlichGesamtN = data?.Gesamt?.deskriptiv?.geschlecht?.m || 0;
-        const maennlichGesamtPerc = gesamtN > 0 ? _formatPercentVal(maennlichGesamtN / gesamtN, 1) : NA_STRING;
+    // ERGEBNISSE SEKTIONEN
+    function getErgebnissePatientencharakteristikaText(lang, publicationData, commonData) {
+        const pCharGesamt = publicationData?.Gesamt?.deskriptiv;
+        const pCharDirektOP = publicationData?.['direkt OP']?.deskriptiv;
+        const pCharNRCT = publicationData?.nRCT?.deskriptiv;
 
         if (lang === 'de') {
             return `
-                <h3>Patientencharakteristika</h3>
-                <p>Insgesamt wurden ${gesamtN} Patienten in die Analyse eingeschlossen. Das mediane Alter betrug ${medianAlterGesamt} Jahre ${alterRangeGesamt}. ${maennlichGesamtN} (${maennlichGesamtPerc}) der Patienten waren männlich. Detaillierte demographische Daten und klinische Charakteristika des Gesamtkollektivs sowie der Subgruppen (Direkt-OP und nRCT) sind in Tabelle 1 zusammengefasst.</p>
-                `;
-        } else { // lang === 'en'
+                <p>Insgesamt wurden ${commonData.nGesamt || 'N/A'} Patienten in die Studie eingeschlossen. Davon wurden ${commonData.nDirektOP || 'N/A'} Patienten primär operiert (Direkt-OP-Gruppe) und ${commonData.nNRCT || 'N/A'} Patienten erhielten eine neoadjuvante Radiochemotherapie (nRCT-Gruppe). Das mediane Alter im Gesamtkollektiv betrug ${fValue(pCharGesamt?.alter?.median, 1)} Jahre (Range ${fValue(pCharGesamt?.alter?.min, 0)}–${fValue(pCharGesamt?.alter?.max, 0)}), ${fPercent(pCharGesamt?.geschlecht?.m / pCharGesamt?.anzahlPatienten,0)} waren männlich. Ein positiver N-Status (N+) fand sich bei ${fPercent(pCharGesamt?.nStatus?.plus / pCharGesamt?.anzahlPatienten,0)} der Patienten im Gesamtkollektiv. Die detaillierten Charakteristika der Patienten, aufgeschlüsselt nach Behandlungsgruppen, sind in Tabelle 1 zusammengefasst.</p>
+                <p>Die Diagramme zur Alters- und Geschlechterverteilung für das aktuell im Header ausgewählte Kollektiv (${commonData.currentKollektivName}) sind in Abbildung 1a und 1b dargestellt.</p>
+            `;
+        } else {
             return `
-                <h3>Patient Characteristics</h3>
-                <p>A total of ${gesamtN} patients were included in the analysis. The median age was ${medianAlterGesamt} years ${alterRangeGesamt}. ${maennlichGesamtN} (${maennlichGesamtPerc}) of the patients were male. Detailed demographic data and clinical characteristics of the overall cohort and the subgroups (upfront surgery and nRCT) are summarized in Table 1.</p>
-                `;
+                <p>A total of ${commonData.nGesamt || 'N/A'} patients were included in the study. Of these, ${commonData.nDirektOP || 'N/A'} patients underwent upfront surgery (upfront surgery group) and ${commonData.nNRCT || 'N/A'} patients received neoadjuvant chemoradiotherapy (nRCT group). The median age in the overall cohort was ${fValue(pCharGesamt?.alter?.median, 1)} years (range ${fValue(pCharGesamt?.alter?.min, 0)}–${fValue(pCharGesamt?.alter?.max, 0)}), and ${fPercent(pCharGesamt?.geschlecht?.m / pCharGesamt?.anzahlPatienten,0)} were male. A positive N-status (N+) was found in ${fPercent(pCharGesamt?.nStatus?.plus / pCharGesamt?.anzahlPatienten,0)} of patients in the overall cohort. Detailed patient characteristics, stratified by treatment group, are summarized in Table 1.</p>
+                <p>The age and gender distribution charts for the currently selected cohort in the application header (${commonData.currentKollektivName}) are shown in Figure 1a and 1b.</p>
+            `;
         }
     }
-
-    function _getText_ergebnisse_as_performance(lang, data, commonData) {
-        const gesamtStats = data?.Gesamt?.gueteAS;
-        if (!gesamtStats) return `<p>Diagnostische Güte des Avocado Signs nicht verfügbar.</p>`;
-
-        const sens = _formatCIVal(gesamtStats.sens);
-        const spez = _formatCIVal(gesamtStats.spez);
-        const ppv = _formatCIVal(gesamtStats.ppv);
-        const npv = _formatCIVal(gesamtStats.npv);
-        const acc = _formatCIVal(gesamtStats.acc);
-        const auc = _formatCIVal(gesamtStats.auc, 3, false);
+    
+    function getErgebnisseASPerformanceText(lang, publicationData, commonData) {
+        const asGesamt = publicationData?.Gesamt?.gueteAS;
+        const asDirektOP = publicationData?.['direkt OP']?.gueteAS;
+        const asNRCT = publicationData?.nRCT?.gueteAS;
 
         if (lang === 'de') {
             return `
-                <h3>Diagnostische Güte des Avocado Signs</h3>
-                <p>Im Gesamtkollektiv (N=${data.Gesamt.deskriptiv.anzahlPatienten}) zeigte das Avocado Sign zur Vorhersage des pathologischen N-Status eine Sensitivität von ${sens}, eine Spezifität von ${spez}, einen positiven prädiktiven Wert (PPV) von ${ppv}, einen negativen prädiktiven Wert (NPV) von ${npv} und eine Gesamtgenauigkeit (Accuracy) von ${acc}. Die Fläche unter der ROC-Kurve (AUC) betrug ${auc}.</p>
-                <p>Die diagnostische Güte für die Subgruppen 'Direkt OP' und 'nRCT' ist in Tabelle 2 detailliert aufgeführt.</p>
-                `;
-        } else { // lang === 'en'
+                <p>Die diagnostische Güte des Avocado Signs zur Vorhersage des pathologischen N-Status ist in Tabelle 3 zusammengefasst. Im Gesamtkollektiv (N=${commonData.nGesamt}) erreichte das Avocado Sign eine Sensitivität von ${fCI(asGesamt?.sens)}, eine Spezifität von ${fCI(asGesamt?.spez)}, einen PPV von ${fCI(asGesamt?.ppv)}, einen NPV von ${fCI(asGesamt?.npv)} und eine Accuracy von ${fCI(asGesamt?.acc)}. Die AUC betrug ${fCI(asGesamt?.auc, 3, false)}.</p>
+                <p>In der Subgruppe der primär operierten Patienten (N=${commonData.nDirektOP}) zeigte das Avocado Sign eine Sensitivität von ${fCI(asDirektOP?.sens)} und eine Spezifität von ${fCI(asDirektOP?.spez)} (AUC: ${fCI(asDirektOP?.auc, 3, false)}). Bei Patienten nach nRCT (N=${commonData.nNRCT}) betrug die Sensitivität ${fCI(asNRCT?.sens)} und die Spezifität ${fCI(asNRCT?.spez)} (AUC: ${fCI(asNRCT?.auc, 3, false)}).</p>
+                <p>Die ROC-Kurve für das Avocado Sign im aktuell ausgewählten Kollektiv (${commonData.currentKollektivName}) ist in Abbildung 2a dargestellt.</p>
+            `;
+        } else {
             return `
-                <h3>Diagnostic Performance of the Avocado Sign</h3>
-                <p>In the overall cohort (N=${data.Gesamt.deskriptiv.anzahlPatienten}), the Avocado Sign demonstrated a sensitivity of ${sens}, a specificity of ${spez}, a positive predictive value (PPV) of ${ppv}, a negative predictive value (NPV) of ${npv}, and an accuracy of ${acc} for predicting pathological N-status. The area under the ROC curve (AUC) was ${auc}.</p>
-                <p>The diagnostic performance for the subgroups 'Upfront Surgery' and 'nRCT' is detailed in Table 2.</p>
-                `;
+                <p>The diagnostic performance of the Avocado Sign for predicting pathological N-status is summarized in Table 3. In the overall cohort (n=${commonData.nGesamt}), the Avocado Sign achieved a sensitivity of ${fCI(asGesamt?.sens, 1, true, 'en')}, a specificity of ${fCI(asGesamt?.spez, 1, true, 'en')}, a PPV of ${fCI(asGesamt?.ppv, 1, true, 'en')}, an NPV of ${fCI(asGesamt?.npv, 1, true, 'en')}, and an accuracy of ${fCI(asGesamt?.acc, 1, true, 'en')}. The AUC was ${fCI(asGesamt?.auc, 3, false, 'en')}.</p>
+                <p>In the subgroup of patients undergoing upfront surgery (n=${commonData.nDirektOP}), the Avocado Sign showed a sensitivity of ${fCI(asDirektOP?.sens, 1, true, 'en')} and a specificity of ${fCI(asDirektOP?.spez, 1, true, 'en')} (AUC: ${fCI(asDirektOP?.auc, 3, false, 'en')}). For patients after nRCT (n=${commonData.nNRCT}), the sensitivity was ${fCI(asNRCT?.sens, 1, true, 'en')} and the specificity was ${fCI(asNRCT?.spez, 1, true, 'en')} (AUC: ${fCI(asNRCT?.auc, 3, false, 'en')}).</p>
+                <p>The ROC curve for the Avocado Sign in the currently selected cohort (${commonData.currentKollektivName}) is presented in Figure 2a.</p>
+            `;
         }
     }
 
-    // ... Weitere Ergebnis-Texte (Literatur T2, Optimierte T2, Vergleiche)
-    // Diese müssten analog und sehr detailliert ausgearbeitet werden, inkl. Referenzierung von Tabellen/Charts.
+    function getErgebnisseLiteraturT2PerformanceText(lang, publicationData, commonData) {
+        // Diese Funktion wird komplexer, da sie die Ergebnisse für jedes Literatur-Set iterieren und darstellen muss.
+        // Hier ein Beispiel für die Struktur. Die tatsächlichen Werte müssen aus publicationData geholt werden.
+        let text = '';
+        if (lang === 'de') {
+            text += `<p>Die diagnostische Güte der etablierten Literatur-basierten T2-Kriteriensets wurde für die jeweils relevanten Kollektive evaluiert (Tabelle 4). ";
+            text += `Für das Kriterienset nach Koh et al. (2008) ergab sich im nRCT-Kollektiv (N=${commonData.nNRCT}) eine AUC von ${fCI(publicationData?.nRCT?.gueteT2_literatur?.['koh_2008_morphology']?.auc, 3, false)}. `;
+            text += `Die Kriterien nach Barbaro et al. (2024) zeigten im nRCT-Kollektiv eine AUC von ${fCI(publicationData?.nRCT?.gueteT2_literatur?.['barbaro_2024_restaging']?.auc, 3, false)}. `;
+            text += `Die ESGAR 2016 Kriterien (evaluiert durch Rutegård et al., 2025) erreichten im Direkt-OP-Kollektiv (N=${commonData.nDirektOP}) eine AUC von ${fCI(publicationData?.['direkt OP']?.gueteT2_literatur?.['rutegard_et_al_esgar']?.auc, 3, false)}. Detaillierte Metriken (Sensitivität, Spezifität etc.) für jedes Set und Kollektiv sind in Tabelle 4 aufgeführt.</p>`;
+        } else {
+            text += `<p>The diagnostic performance of established literature-based T2 criteria sets was evaluated for the respective relevant cohorts (Table 4). ";
+            text += `For the criteria set according to Koh et al. (2008), an AUC of ${fCI(publicationData?.nRCT?.gueteT2_literatur?.['koh_2008_morphology']?.auc, 3, false, 'en')} was observed in the nRCT cohort (n=${commonData.nNRCT}). `;
+            text += `The criteria by Barbaro et al. (2024) showed an AUC of ${fCI(publicationData?.nRCT?.gueteT2_literatur?.['barbaro_2024_restaging']?.auc, 3, false, 'en')} in the nRCT cohort. `;
+            text += `The ESGAR 2016 criteria (evaluated by Rutegård et al., 2025) achieved an AUC of ${fCI(publicationData?.['direkt OP']?.gueteT2_literatur?.['rutegard_et_al_esgar']?.auc, 3, false, 'en')} in the upfront surgery cohort (n=${commonData.nDirektOP}). Detailed metrics (sensitivity, specificity, etc.) for each set and cohort are listed in Table 4.</p>`;
+        }
+        return text;
+    }
 
-    const sectionTextFunctions = {
-        'methoden_studienanlage': _getText_methoden_studienanlage,
-        'methoden_patientenkollektiv': _getText_methoden_patientenkollektiv,
-        'methoden_mrt_protokoll': _getText_methoden_mrt_protokoll,
-        // Weitere Methoden-Sektionen hier hinzufügen
-        'ergebnisse_patientencharakteristika': _getText_ergebnisse_patientencharakteristika,
-        'ergebnisse_as_performance': _getText_ergebnisse_as_performance,
-        // Weitere Ergebnis-Sektionen hier hinzufügen
-    };
+    function getErgebnisseOptimierteT2PerformanceText(lang, publicationData, commonData) {
+        const bfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+        const bfGesamtDef = publicationData?.Gesamt?.bruteforce_definition;
+        const bfGesamtStats = publicationData?.Gesamt?.gueteT2_bruteforce;
 
-    // Hauptfunktion, die vom publication_renderer.js aufgerufen wird
+        if (lang === 'de') {
+            return `
+                <p>Mittels Brute-Force-Optimierung wurden für jedes Kollektiv T2-Kriterien identifiziert, die die ${bfMetric} maximieren (Tabelle 5). Für das Gesamtkollektiv (N=${commonData.nGesamt}) wurde mit den Kriterien "${bfGesamtDef ? studyT2CriteriaManager.formatCriteriaForDisplay(bfGesamtDef.criteria, bfGesamtDef.logic) : 'N/A'}" eine AUC von ${fCI(bfGesamtStats?.auc, 3, false)} erreicht. Die spezifischen optimierten Kriterien und deren Performance für die Subgruppen sind ebenfalls in Tabelle 5 dargestellt.</p>
+            `;
+        } else {
+            return `
+                <p>Using brute-force optimization, T2 criteria that maximize ${bfMetric} were identified for each cohort (Table 5). For the overall cohort (n=${commonData.nGesamt}), the criteria "${bfGesamtDef ? studyT2CriteriaManager.formatCriteriaForDisplay(bfGesamtDef.criteria, bfGesamtDef.logic) : 'N/A'}" achieved an AUC of ${fCI(bfGesamtStats?.auc, 3, false, 'en')}. The specific optimized criteria and their performance for the subgroups are also presented in Table 5.</p>
+            `;
+        }
+    }
+    
+    function getErgebnisseVergleichPerformanceText(lang, publicationData, commonData) {
+        const asGesamt = publicationData?.Gesamt?.gueteAS;
+        const t2AngewandtGesamt = publicationData?.Gesamt?.gueteT2_angewandt;
+        const vergleichAngewandtGesamt = publicationData?.Gesamt?.vergleichASvsT2_angewandt;
+
+        if (lang === 'de') {
+            return `
+                <p>Der direkte statistische Vergleich zwischen dem Avocado Sign und den aktuell im Tool angewandten T2-Kriterien im Gesamtkollektiv zeigte für die Accuracy einen p-Wert von ${getPValueText(vergleichAngewandtGesamt?.mcnemar?.pValue)} (McNemar-Test) und für die AUC einen p-Wert von ${getPValueText(vergleichAngewandtGesamt?.delong?.pValue)} (DeLong-Test). Dies deutet auf einen ${getStatisticalSignificanceText(vergleichAngewandtGesamt?.delong?.pValue) || 'N/A'} Unterschied in der Gesamtperformance hin. Abbildung 3 zeigt einen vergleichenden Überblick ausgewählter Metriken. Weitere Vergleiche, auch mit den Literatur- und optimierten Kriterien, sind in Tabelle 6 zusammengefasst.</p>
+            `;
+        } else {
+             return `
+                <p>The direct statistical comparison between the Avocado Sign and the currently applied T2 criteria in the overall cohort revealed a p-value of ${getPValueText(vergleichAngewandtGesamt?.mcnemar?.pValue, 'en')} for accuracy (McNemar's test) and a p-value of ${getPValueText(vergleichAngewandtGesamt?.delong?.pValue, 'en')} for AUC (DeLong's test). This indicates a ${getStatisticalSignificanceText(vergleichAngewandtGesamt?.delong?.pValue) || 'N/A'} difference in overall performance. Figure 3 provides a comparative overview of selected metrics. Further comparisons, including those with literature-based and optimized criteria, are summarized in Table 6.</p>
+            `;
+        }
+    }
+
+
     function getSectionText(sectionId, lang, publicationData, kollektiveData, commonData) {
-        if (sectionTextFunctions[sectionId]) {
-            return sectionTextFunctions[sectionId](lang, publicationData, commonData); // kollektiveData ist in publicationData enthalten
+        switch (sectionId) {
+            case 'methoden_studienanlage': return getMethodenStudienanlageText(lang, commonData);
+            case 'methoden_patientenkollektiv': return getMethodenPatientenkollektivText(lang, publicationData.Gesamt?.deskriptiv ? publicationData : commonData, commonData); // Pass pChar from Gesamt
+            case 'methoden_mrt_protokoll': return getMethodenMRTProtokollText(lang, commonData);
+            case 'methoden_as_definition': return getMethodenASDefinitionText(lang, commonData);
+            case 'methoden_t2_definition': return getMethodenT2DefinitionText(lang, commonData, publicationData, kollektiveData);
+            case 'methoden_referenzstandard': return getMethodenReferenzstandardText(lang, commonData);
+            case 'methoden_statistische_analyse': return getMethodenStatistischeAnalyseText(lang, commonData);
+            case 'ergebnisse_patientencharakteristika': return getErgebnissePatientencharakteristikaText(lang, publicationData, commonData);
+            case 'ergebnisse_as_performance': return getErgebnisseASPerformanceText(lang, publicationData, commonData);
+            case 'ergebnisse_literatur_t2_performance': return getErgebnisseLiteraturT2PerformanceText(lang, publicationData, commonData);
+            case 'ergebnisse_optimierte_t2_performance': return getErgebnisseOptimierteT2PerformanceText(lang, publicationData, commonData);
+            case 'ergebnisse_vergleich_performance': return getErgebnisseVergleichPerformanceText(lang, publicationData, commonData);
+            default: return `<p class="text-warning">Text für Sektion '${sectionId}' (Sprache: ${lang}) noch nicht implementiert.</p>`;
         }
-        return `<p class="text-warning">Textgenerator für Sektion '${sectionId}' und Sprache '${lang}' nicht implementiert.</p>`;
     }
-
+    
     function getSectionTextAsMarkdown(sectionId, lang, publicationData, kollektiveData, commonData) {
         const htmlContent = getSectionText(sectionId, lang, publicationData, kollektiveData, commonData);
-        // Einfache Konvertierung von HTML zu Markdown (rudimentär)
+        // Simple HTML to Markdown conversion (can be improved with a library if needed)
         let markdown = htmlContent
-            .replace(/<h3>(.*?)<\/h3>/g, '\n### $1\n')
-            .replace(/<h4>(.*?)<\/h4>/g, '\n#### $1\n')
-            .replace(/<p>(.*?)<\/p>/g, '$1\n')
-            .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
-            .replace(/<em>(.*?)<\/em>/g, '*$1*')
-            .replace(/<i>(.*?)<\/i>/g, '*$1*')
-            .replace(/<code>(.*?)<\/code>/g, '`$1`')
+            .replace(/<p>/g, '\n')
+            .replace(/<\/p>/g, '\n')
+            .replace(/<strong>/g, '**')
+            .replace(/<\/strong>/g, '**')
+            .replace(/<em>/g, '*')
+            .replace(/<\/em>/g, '*')
+            .replace(/<i>/g, '*')
+            .replace(/<\/i>/g, '*')
             .replace(/<ul>/g, '')
             .replace(/<\/ul>/g, '')
-            .replace(/<li>/g, '* ')
-            .replace(/<\/li>/g, '\n')
-            .replace(/<br\s*\/?>/g, '\n')
-            .replace(/&nbsp;/g, ' ')
+            .replace(/<ol>/g, '')
+            .replace(/<\/ol>/g, '')
+            .replace(/<li>/g, '\n* ')
+            .replace(/<\/li>/g, '')
+            .replace(/<br>/g, '\n')
+            .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/g, (match, p1) => `\n${'#'.repeat(parseInt(match[2]))} ${p1}\n`) // Crude header conversion
+            .replace(/\/g, (match, p1) => `[${p1}]`) // Simplify citation for markdown
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
             .replace(/&amp;/g, '&')
-            .replace(//g, ''); // Kommentare entfernen
-
-        // Entferne mehrfache Leerzeilen und führende/nachfolgende Leerzeichen
-        markdown = markdown.replace(/\n\s*\n/g, '\n\n').trim();
+            .replace(/\n\s*\n/g, '\n\n') // Reduce multiple blank lines
+            .trim();
         return markdown;
     }
 
