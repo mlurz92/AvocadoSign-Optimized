@@ -32,12 +32,12 @@
         <div class="container-fluid">
             <ul class="nav nav-tabs" id="mainTab" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="daten-tab" data-bs-toggle="tab" data-bs-target="#daten-tab-pane" type="button" role="tab" aria-controls="daten-tab-pane" aria-selected="true" data-tippy-content="Zeigt die Liste aller Patienten im ausgewählten Kollektiv mit Basisdaten und Status (N/AS/T2).">
+                    <button class="nav-link active" id="daten-tab" data-bs-toggle="tab" data-bs-target="#daten-tab-pane" type="button" role="tab" aria-controls="daten-tab-pane" aria-selected="true" data-tippy-content="Zeigt die Liste aller Patientendaten im ausgewählten Kollektiv mit Basisinformationen und Status (N/AS/T2).">
                         <i class="fas fa-database fa-fw me-1"></i>Daten
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="auswertung-tab" data-bs-toggle="tab" data-bs-target="#auswertung-tab-pane" type="button" role="tab" aria-controls="auswertung-tab-pane" aria-selected="false" data-tippy-content="Ermöglicht die Definition von T2-Kriterien, zeigt deskriptive Übersichten und detaillierte Auswertungsergebnisse pro Patient. Beinhaltet die Brute-Force-Optimierung.">
+                    <button class="nav-link" id="auswertung-tab" data-bs-toggle="tab" data-bs-target="#auswertung-tab-pane" type="button" role="tab" aria-controls="auswertung-tab-pane" aria-selected="false" data-tippy-content="Ermöglicht die Definition von T2-Kriterien, zeigt deskriptive Übersichten und detaillierte Auswertungsergebnisse pro Patient.">
                         <i class="fas fa-tasks fa-fw me-1"></i>Auswertung
                     </button>
                 </li>
@@ -48,12 +48,12 @@
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="praesentation-tab" data-bs-toggle="tab" data-bs-target="#praesentation-tab-pane" type="button" role="tab" aria-controls="praesentation-tab-pane" aria-selected="false" data-tippy-content="Stellt Ergebnisse in einem präsentationsfreundlichen Format dar (Publikationsdaten oder Vergleich AS vs. T2).">
-                        <i class="fas fa-person-chalkboard fa-fw me-1"></i>Präsentation
+                        <i class="fas fa-slideshare fa-fw me-1"></i>Präsentation
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="publikation-tab" data-bs-toggle="tab" data-bs-target="#publikation-tab-pane" type="button" role="tab" aria-controls="publikation-tab-pane" aria-selected="false" data-tippy-content="Bietet Textvorschläge, Tabellen und Grafiken zur Unterstützung bei der Erstellung einer neuen wissenschaftlichen Publikation zum Vergleich von Avocado Sign vs. T2-Kriterien.">
-                        <i class="fas fa-feather-pointed fa-fw me-1"></i>Publikation
+                    <button class="nav-link" id="publikation-tab" data-bs-toggle="tab" data-bs-target="#publikation-tab-pane" type="button" role="tab" aria-controls="publikation-tab-pane" aria-selected="false" data-tippy-content="Generiert Textbausteine, Tabellen und Diagramme für eine wissenschaftliche Publikation zum Vergleich von Avocado Sign und T2-Kriterien.">
+                        <i class="fas fa-feather-alt fa-fw me-1"></i>Publikation
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -84,7 +84,24 @@
             </section>
 
             <section class="tab-pane fade" id="publikation-tab-pane" role="tabpanel" aria-labelledby="publikation-tab" tabindex="0">
-                 <p class="text-center p-5 text-muted">Lade Publikationswerkzeuge...</p>
+                <div class="d-flex justify-content-between align-items-center mb-3 p-2 border-bottom sticky-top bg-light-alpha">
+                    <nav class="nav nav-pills nav-sm" id="publikationSubNav">
+                        <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#pub-methoden-pane" type="button" role="tab">Methoden</button>
+                        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#pub-ergebnisse-pane" type="button" role="tab">Ergebnisse</button>
+                    </nav>
+                    <div class="form-check form-switch" id="publikation-sprache-switch-container" data-tippy-content="Sprache der Publikationstexte wechseln.">
+                        <input class="form-check-input" type="checkbox" role="switch" id="publikation-sprache-switch">
+                        <label class="form-check-label fw-bold small" for="publikation-sprache-switch" id="publikation-sprache-label">Deutsch</label>
+                    </div>
+                </div>
+                <div class="tab-content" id="publikationSubNavContent">
+                    <div class="tab-pane fade show active" id="pub-methoden-pane" role="tabpanel">
+                        <p class="text-center p-5 text-muted">Lade Publikationsabschnitt: Methoden...</p>
+                    </div>
+                    <div class="tab-pane fade" id="pub-ergebnisse-pane" role="tabpanel">
+                        <p class="text-center p-5 text-muted">Lade Publikationsabschnitt: Ergebnisse...</p>
+                    </div>
+                </div>
             </section>
 
             <section class="tab-pane fade" id="export-tab-pane" role="tabpanel" aria-labelledby="export-tab" tabindex="0">
@@ -129,8 +146,6 @@
 
     <script src="js/config/config.js"></script>
     <script src="js/config/texts.js"></script>
-    <script src="js/config/publication_text_templates.js"></script>
-
     <script src="js/utils/utils.js"></script>
 
     <script src="js/core/data_processor.js"></script>
@@ -142,13 +157,9 @@
 
     <script src="js/ui/core/ui_helpers.js"></script>
     <script src="js/ui/core/ui_components.js"></script>
-
     <script src="js/ui/renderers/table_renderer.js"></script>
     <script src="js/ui/renderers/chart_renderer.js"></script>
     <script src="js/ui/renderers/publication_tab_renderer.js"></script>
-
-    <script src="js/ui/publication/publication_logic.js"></script>
-
     <script src="js/ui/ui_view_logic.js"></script>
     <script src="js/ui/view_renderer.js"></script>
 
