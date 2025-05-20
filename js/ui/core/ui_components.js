@@ -86,7 +86,7 @@ const uiComponents = (() => {
                         ${createCriteriaGroup('homogenitaet', 'Homogenität', 't2Homogenitaet', createButtonOptions)}
                         ${createCriteriaGroup('signal', 'Signal', 't2Signal', (key, isChecked, label) => `
                             <div>${createButtonOptions(key, isChecked, label)}</div>
-                            <small class="text-muted d-block mt-1">Hinweis: Lymphknoten mit Signal 'null' erfüllen das Signal-Kriterium nie.</small>
+                            <small class="text-muted d-block mt-1">Hinweis: Lymphknoten mit Signal 'null' (d.h. nicht beurteilbar/nicht vorhanden) erfüllen das Signal-Kriterium nie.</small>
                         `)}
                         <div class="col-12 d-flex justify-content-end align-items-center border-top pt-3 mt-3">
                             <button class="btn btn-sm btn-outline-secondary me-2" id="btn-reset-criteria" data-tippy-content="${TOOLTIP_CONTENT.t2Actions.reset}">
@@ -179,18 +179,23 @@ const uiComponents = (() => {
             ? `data-tippy-content="${TOOLTIP_CONTENT[tooltipKey].cardTitle.replace(/\[KOLLEKTIV\]/g, '{KOLLEKTIV_PLACEHOLDER}')}"`
             : '';
 
-        let headerButtonHtml = downloadButtons.map(btn => `
-            <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${id}-content" data-format="${btn.format}" data-tippy-content="${btn.tooltip}">
-                <i class="fas ${btn.icon}"></i>
-            </button>`).join('');
+        let headerButtonHtml = downloadButtons.map(btn => {
+            if (btn.tableId) { // Specific logic for table PNG download buttons within createStatistikCard
+                return `<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${btn.id}" data-table-id="${btn.tableId}" data-table-name="${btn.tableName || title.replace(/[^a-z0-9]/gi, '_').substring(0,30)}" data-tippy-content="${btn.tooltip || `Tabelle als PNG`}"><i class="fas ${btn.icon || 'fa-image'}"></i></button>`;
+            } else { // General chart download buttons
+                 return `<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${btn.chartId || id+'-content'}" data-format="${btn.format}" data-tippy-content="${btn.tooltip || `Als ${btn.format.toUpperCase()}`}"><i class="fas ${btn.icon || 'fa-download'}"></i></button>`;
+            }
+        }).join('');
 
-        if (APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT && tableId) {
-             const pngExportButton = { id: `dl-${id}-table-png`, icon: 'fa-image', tooltip: `Tabelle '${title}' als PNG herunterladen.`, format: 'png', tableId: tableId, tableName: title.replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').substring(0,30) };
+
+        if (APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT && tableId && !downloadButtons.some(b => b.tableId === tableId)) {
+             const pngExportButton = { id: `dl-card-${id}-${tableId}-png`, icon: 'fa-image', tooltip: `Tabelle '${title}' als PNG herunterladen.`, format: 'png', tableId: tableId, tableName: title.replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').substring(0,30) };
              headerButtonHtml += `
                  <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${pngExportButton.id}" data-table-id="${pngExportButton.tableId}" data-table-name="${pngExportButton.tableName}" data-tippy-content="${pngExportButton.tooltip}">
                      <i class="fas ${pngExportButton.icon}"></i>
                  </button>`;
         }
+
 
         return `
             <div class="col-12 stat-card" id="${id}-card-container">
@@ -242,7 +247,7 @@ const uiComponents = (() => {
                             ${generateButtonHTML('deskriptiv-md', 'fab fa-markdown', 'Deskriptive Statistik', 'deskriptivMD')}
                             ${generateButtonHTML('comprehensive-report-html', 'fas fa-file-invoice', 'Umfassender Bericht', 'comprehensiveReportHTML')}
                              <h6 class="mt-3 text-muted small text-uppercase mb-2">Tabellen & Rohdaten</h6>
-                             ${generateButtonHTML('patienten-md', 'fab fa-markdown', 'Patientenliste', 'patientenMD')}
+                             ${generateButtonHTML('daten-md', 'fab fa-markdown', 'Datenliste', 'datenMD')}
                              ${generateButtonHTML('auswertung-md', 'fab fa-markdown', 'Auswertungstabelle', 'auswertungMD')}
                              ${generateButtonHTML('filtered-data-csv', 'fas fa-database', 'Gefilterte Rohdaten', 'filteredDataCSV')}
                              <h6 class="mt-3 text-muted small text-uppercase mb-2">Diagramme & Tabellen (als Bilder)</h6>
@@ -265,7 +270,7 @@ const uiComponents = (() => {
                     </div>
                 </div>
                 <div class="col-lg-12 col-xl-4 mb-3">
-                   <div class="card h-100"> <div class="card-header">Hinweise zum Export</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV:** Für Statistiksoftware; Trennzeichen: Semikolon (;).</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** Für Dokumentation.</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** Brute-Force-Bericht.</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht:** Umfassend, druckbar.</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** Pixelbasiert (Diagramme/Tabellen).</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** Vektorbasiert (Diagramme), skalierbar.</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>ZIP-Exporte erfassen nur aktuell sichtbare Elemente. Einzel-Downloads sind direkt am Element möglich.</li> </ul> </div> </div>
+                   <div class="card h-100"> <div class="card-header">Hinweise zum Export</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV:** Für Statistiksoftware; Trennzeichen: Semikolon (;).</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** Für Dokumentation.</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** Brute-Force-Bericht.</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht:** Umfassend, druckbar.</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** Pixelbasiert (Diagramme/Tabellen).</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** Vektorbasiert (Diagramme), skalierbar.</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>ZIP-Exporte für Diagramme/Tabellen erfassen nur aktuell im Statistik- oder Auswertungstab sichtbare/gerenderte Elemente. Einzel-Downloads sind direkt am Element möglich (z.B. auch im Präsentationstab).</li> </ul> </div> </div>
                 </div>
             </div>
         `;
@@ -295,15 +300,20 @@ const uiComponents = (() => {
             const ciMethodStr = metricData?.method || na;
             const bewertungStr = (key === 'auc') ? getAUCBewertung(metricData?.value) : '';
 
-            const filledInterpretation = interpretationTemplate
+            let filledInterpretation = interpretationTemplate
                 .replace(/\[METHODE\]/g, 'T2')
                 .replace(/\[WERT\]/g, `<strong>${valueStr}${isPercent ? '%' : ''}</strong>`)
                 .replace(/\[LOWER\]/g, lowerStr)
                 .replace(/\[UPPER\]/g, upperStr)
                 .replace(/\[METHOD_CI\]/g, ciMethodStr)
                 .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
-                .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`)
-                .replace(/<hr.*?>.*$/, ''); // Remove second part if exists
+                .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`);
+
+            if (lowerStr === na || upperStr === na || ciMethodStr === na) {
+                 filledInterpretation = filledInterpretation.replace(/\(95% CI nach .*?: .*? - .*?\)/g, '(Keine CI-Daten verfügbar)');
+                 filledInterpretation = filledInterpretation.replace(/nach \[METHOD_CI\]:/g, '');
+            }
+            filledInterpretation = filledInterpretation.replace(/<hr.*?>.*$/, '');
 
             contentHTML += `
                 <div class="p-1 flex-fill bd-highlight ${index > 0 ? 'border-start' : ''}">
@@ -317,98 +327,128 @@ const uiComponents = (() => {
         return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)</div><div class="card-body p-2">${contentHTML}</div></div>`;
     }
 
-    function createMethodenBeschreibungContent(lang = 'de') {
-        const placeholders = { ANZAHL_GESAMT: '[ANZAHL_GESAMT]', ANZAHL_DIREKT_OP: '[ANZAHL_DIREKT_OP]', ANZAHL_NRCT: '[ANZAHL_NRCT]', T2_SIZE_MIN: '[T2_SIZE_MIN]', T2_SIZE_MAX: '[T2_SIZE_MAX]', BOOTSTRAP_REPLICATIONS: '[BOOTSTRAP_REPLICATIONS]', SIGNIFICANCE_LEVEL: '[SIGNIFICANCE_LEVEL]' };
-        const texts = {
-             de: `
-                <h3 id="methoden-studienanlage">1. Studienanlage und Software</h3>
-                <p>Diese Analyse basiert auf einer **retrospektiven Auswertung prospektiv erhobener Daten** einer monozentrischen Kohorte von Patientinnen und Patienten mit histologisch gesichertem Rektumkarzinom, die ursprünglich für die Evaluation des „Avocado Signs" rekrutiert wurde (Lurz & Schäfer, Eur Radiol 2025). Die vorliegende Untersuchung nutzt eine **speziell entwickelte, interaktive Webanwendung** (v${APP_CONFIG.APP_VERSION}, implementiert in HTML5, CSS3, JavaScript ES6+) als primäres Werkzeug für die Datenanalyse, statistische Auswertung und Visualisierung. Alle hier berichteten Ergebnisse wurden mit dieser Anwendung generiert.</p>
-
-                <h3 id="methoden-patientenkohorte">2. Patientenkollektiv und Datenbasis</h3>
-                <p>Das analysierte Kollektiv umfasst ${placeholders.ANZAHL_GESAMT} konsekutive Patienten, die zwischen Januar 2020 und November 2023 eingeschlossen wurden. Davon erhielten ${placeholders.ANZAHL_NRCT} Patienten eine neoadjuvante Radiochemotherapie (nRCT-Gruppe), während ${placeholders.ANZAHL_DIREKT_OP} Patienten primär operiert wurden (Direkt-OP-Gruppe). Die Analysen können für das Gesamtkollektiv oder separat für die Subgruppen durchgeführt werden.</p>
-                <p>Die Datenbasis ist ein fest integrierter, präprozessierter Datensatz, der dem der Avocado-Sign Publikation entspricht. Er enthält für jeden Patienten demographische Daten, Therapieinformationen, den pathologischen N-Status (N+/N-, Anzahl N+ LK, Gesamtzahl untersuchter LK) als Referenzstandard, den mittels kontrastverstärkter T1w-MRT ermittelten Avocado-Sign-Status (AS+/AS-, Anzahl AS+ LK, Gesamtzahl sichtbarer LK) sowie detaillierte morphologische Informationen zu allen im hochauflösenden T2w-MRT sichtbaren mesorektalen Lymphknoten (Kurzachsendurchmesser [mm], Form ['rund'/'oval'], Kontur ['scharf'/'irregulär'], Homogenität ['homogen'/'heterogen'], Signalintensität ['signalarm'/'intermediär'/'signalreich']).</p>
-
-                <h3 id="methoden-bildgebung-und-bewertung">3. Bildgebung und Bewertung</h3>
-                <p>Die MRT-Untersuchungen erfolgten auf einem 3.0-T System (Siemens Healthineers) unter Verwendung eines standardisierten Protokolls, das hochauflösende T2w-Sequenzen in drei Ebenen sowie axiale T1w-Sequenzen nach Gabe eines Gadolinium-basierten Kontrastmittels (Gadoteridol) umfasste. Die Bewertung des **Avocado Signs** erfolgte wie in der Originalpublikation beschrieben (hypointenser Kern in sonst homogen hyperintensem LK auf T1w KM).</p>
-                <p>Die Bewertung der **T2-gewichteten morphologischen Kriterien** erfolgte interaktiv innerhalb der Webanwendung. Der Nutzer kann folgende Kriterien aktivieren und deren spezifische Ausprägung als "suspekt" definieren:</p>
-                <ul>
-                    <li><strong>Größe:</strong> Kurzachsendurchmesser ≥ Schwellenwert (einstellbar von ${placeholders.T2_SIZE_MIN} bis ${placeholders.T2_SIZE_MAX} mm, Schrittweite 0.1 mm).</li>
-                    <li><strong>Form:</strong> 'rund' oder 'oval'.</li>
-                    <li><strong>Kontur:</strong> 'scharf' oder 'irregulär'.</li>
-                    <li><strong>Homogenität:</strong> 'homogen' oder 'heterogen'.</li>
-                    <li><strong>Signal:</strong> 'signalarm', 'intermediär' oder 'signalreich'.</li>
-                </ul>
-                <p>Die aktivierten Kriterien werden mittels einer global wählbaren **logischen Verknüpfung** ('UND' oder 'ODER') kombiniert. Ein Lymphknoten gilt als T2-positiv, wenn er die definierte Regel erfüllt (bei 'UND' müssen alle aktiven Kriterien erfüllt sein, bei 'ODER' mindestens eines). Ein Patient erhält den Status T2='+', wenn mindestens einer seiner T2-Lymphknoten positiv bewertet wird.</p>
-                <p>Zusätzlich implementiert die Anwendung **fest definierte T2-Kriteriensets aus der Literatur** für Vergleichszwecke: Barbaro et al. (2024), Koh et al. (2008), sowie die von Rutegård et al. (2025) evaluierten ESGAR 2016 Kriterien. Diese Sets werden spezifisch auf die entsprechenden Subgruppen angewendet.</p>
-
-                <h3 id="methoden-optimierung">4. Optimierung von T2-Kriterien</h3>
-                <p>Eine integrierte **Brute-Force-Optimierungsfunktion** (implementiert als Web Worker) testet systematisch alle sinnvollen Kombinationen der definierbaren T2-Kriterien (aktive Merkmale, spezifische Werte/Schwellenwert, UND/ODER-Logik). Ziel ist die Identifikation der Kriterienkombination, die eine vom Benutzer gewählte **diagnostische Zielmetrik** (Accuracy, Balanced Accuracy, F1-Score, PPV oder NPV) im Vergleich zum pathologischen N-Status für das ausgewählte Kollektiv maximiert.</p>
-
-                <h3 id="methoden-statistik">5. Statistische Analyse</h3>
-                <p>Alle statistischen Analysen wurden mittels spezifisch implementierter JavaScript-Module innerhalb der Webanwendung durchgeführt. Als Referenzstandard für den Lymphknotenstatus diente stets die Histopathologie.</p>
-                <ul>
-                    <li><strong>Deskriptive Statistik:</strong> Häufigkeiten, Median, Mittelwert ± Standardabweichung (SD), Minimum und Maximum wurden für demographische Daten und Lymphknotenanzahlen berechnet.</li>
-                    <li><strong>Diagnostische Güte:</strong> Für das Avocado Sign (AS) und die jeweils angewendeten T2-Kriterien wurden Sensitivität, Spezifität, Positiver Prädiktiver Wert (PPV), Negativer Prädiktiver Wert (NPV), Accuracy und Balanced Accuracy (BalAcc, entspricht AUC für binäre Tests) berechnet. 95% Konfidenzintervalle (CI) für Proportionen wurden mittels Wilson Score Interval Methode ermittelt. Für BalAcc und F1-Score wurden 95% CIs mittels Bootstrap Percentile Methode (mit ${placeholders.BOOTSTRAP_REPLICATIONS} Replikationen) geschätzt.</li>
-                    <li><strong>Vergleich von AS vs. T2 (gepaart):</strong> Die Accuracies von AS und den angewendeten T2-Kriterien wurden mittels McNemar-Test verglichen. Die AUCs (BalAcc) wurden mittels DeLong-Test verglichen.</li>
-                    <li><strong>Assoziationsanalysen:</strong> Der Zusammenhang zwischen AS-Status bzw. einzelnen T2-Merkmalen und dem N-Status wurde mittels Odds Ratio (OR) mit 95% CI (Woolf Logit Methode mit +0.5 Korrektur), Risk Difference (RD) mit 95% CI (Wald Methode) und Phi-Koeffizient (φ) quantifiziert. Der p-Wert für den Zusammenhang wurde mittels Fisher's Exact Test berechnet. Für den Kurzachsendurchmesser wurde der Mann-Whitney-U-Test zum Vergleich der Mediane zwischen N+ und N- Patienten verwendet.</li>
-                    <li><strong>Vergleich zwischen Kollektiven (ungepaart):</strong> Im Vergleichsmodus wurden Accuracies mittels Fisher's Exact Test und AUCs mittels eines Z-Tests verglichen.</li>
-                </ul>
-                <p>Ein p-Wert unter ${placeholders.SIGNIFICANCE_LEVEL} wurde als statistisch signifikant interpretiert.</p>
-
-                 <h3 id="methoden-software">6. Software und Bibliotheken</h3>
-                 <p>Die Webanwendung basiert auf HTML5, CSS3 und JavaScript (ES6+). Folgende externe Bibliotheken wurden genutzt: Bootstrap (v5.3) für das UI-Framework, D3.js (v7) für Datenvisualisierungen, Tippy.js (v6) für Tooltips, PapaParse (v5) für CSV-Exporte und JSZip (v3) für die Erstellung von ZIP-Archiven.</p>
-             `,
-             en: `
-                <h3 id="methoden-studienanlage">1. Study Design and Software</h3>
-                <p>This analysis is based on a **retrospective evaluation of prospectively collected data** from a single-center cohort of patients with histologically confirmed rectal cancer, originally recruited for the evaluation of the "Avocado Sign" (Lurz & Schäfer, Eur Radiol 2025). The present investigation utilizes a **custom-developed, interactive web application** (v${APP_CONFIG.APP_VERSION}, implemented in HTML5, CSS3, JavaScript ES6+) as the primary tool for data analysis, statistical evaluation, and visualization. All results reported herein were generated using this application.</p>
-
-                <h3 id="methoden-patientenkohorte">2. Patient Cohort and Data Basis</h3>
-                <p>The analyzed cohort comprises ${placeholders.ANZAHL_GESAMT} consecutive patients enrolled between January 2020 and November 2023. Of these, ${placeholders.ANZAHL_NRCT} patients received neoadjuvant chemoradiotherapy (nRCT group), while ${placeholders.ANZAHL_DIREKT_OP} patients underwent primary surgery (upfront surgery group). Analyses can be performed on the entire cohort or separately for the subgroups.</p>
-                <p>The data basis is a fixed, preprocessed dataset identical to that of the Avocado Sign publication. It includes demographic data, therapy information, pathological N-status (N+/N-, number of N+ LNs, total number of examined LNs) as the reference standard, the Avocado Sign status determined by contrast-enhanced T1w-MRI (AS+/AS-, number of AS+ LNs, total number of visible LNs), and detailed morphological information for all mesorectal lymph nodes visible on high-resolution T2w-MRI (short-axis diameter [mm], shape ['round'/'oval'], border ['sharp'/'irregular'], homogeneity ['homogeneous'/'heterogeneous'], signal intensity ['signal-poor'/'intermediate'/'signal-rich']).</p>
-
-                <h3 id="methoden-bildgebung-und-bewertung">3. Imaging and Assessment</h3>
-                <p>MRI examinations were performed on a 3.0-T system (Siemens Healthineers) using a standardized protocol including high-resolution T2w sequences in three planes and axial T1w sequences after administration of a gadolinium-based contrast agent (Gadoteridol). The **Avocado Sign** was assessed as described in the original publication (hypointense core within an otherwise homogeneously hyperintense node on T1w CE-MRI).</p>
-                <p>The assessment of **T2-weighted morphological criteria** was performed interactively within the web application. Users can activate criteria and define their specific "suspicious" characteristic:</p>
-                <ul>
-                    <li><strong>Size:</strong> Short-axis diameter ≥ threshold (adjustable from ${placeholders.T2_SIZE_MIN} to ${placeholders.T2_SIZE_MAX} mm, step 0.1 mm).</li>
-                    <li><strong>Shape:</strong> 'round' or 'oval'.</li>
-                    <li><strong>Border:</strong> 'sharp' or 'irregular'.</li>
-                    <li><strong>Homogeneity:</strong> 'homogeneous' or 'heterogeneous'.</li>
-                    <li><strong>Signal:</strong> 'signal-poor', 'intermediate', or 'signal-rich'.</li>
-                </ul>
-                <p>Activated criteria are combined using a globally selectable **logical operator** ('AND' or 'OR'). A lymph node is considered T2-positive if it meets the defined rule (for 'AND', all active criteria must be met; for 'OR', at least one must be met). A patient receives the status T2='+' if at least one of their T2 lymph nodes is rated positive.</p>
-                <p>Additionally, the application implements **predefined T2 criteria sets from the literature** for comparison: Barbaro et al. (2024), Koh et al. (2008), and the ESGAR 2016 criteria as evaluated by Rutegård et al. (2025). These sets are applied specifically to the corresponding subgroups.</p>
-
-                <h3 id="methoden-optimierung">4. Optimization of T2 Criteria</h3>
-                <p>An integrated **brute-force optimization function** (implemented as a Web Worker) systematically tests all meaningful combinations of the definable T2 criteria (active features, specific values/threshold, AND/OR logic). The objective is to identify the criteria combination that maximizes a user-selected **diagnostic target metric** (Accuracy, Balanced Accuracy, F1-Score, PPV, or NPV) compared to the pathological N-status for the selected cohort.</p>
-
-                <h3 id="methoden-statistik">5. Statistical Analysis</h3>
-                <p>All statistical analyses were performed using custom JavaScript modules implemented within the web application. Histopathology served as the reference standard for lymph node status.</p>
-                <ul>
-                    <li><strong>Descriptive Statistics:</strong> Frequencies, median, mean ± standard deviation (SD), minimum, and maximum were calculated for demographic data and lymph node counts.</li>
-                    <li><strong>Diagnostic Performance:</strong> For the Avocado Sign (AS) and the applied T2 criteria, sensitivity, specificity, Positive Predictive Value (PPV), Negative Predictive Value (NPV), Accuracy, and Balanced Accuracy (BalAcc, equivalent to AUC for binary tests) were calculated. 95% confidence intervals (CI) for proportions were determined using the Wilson Score Interval method. For BalAcc and F1-Score, 95% CIs were estimated using the Bootstrap Percentile method (with ${placeholders.BOOTSTRAP_REPLICATIONS} replications).</li>
-                    <li><strong>Comparison of AS vs. T2 (paired):</strong> Accuracies of AS and the applied T2 criteria were compared using McNemar's test. AUCs (BalAcc) were compared using DeLong's test.</li>
-                    <li><strong>Association Analyses:</strong> The association between AS status or individual T2 features and N-status was quantified using Odds Ratio (OR) with 95% CI (Woolf Logit method with +0.5 correction), Risk Difference (RD) with 95% CI (Wald method), and Phi coefficient (φ). The p-value for association was calculated using Fisher's Exact Test. For short-axis diameter, the Mann-Whitney U test was used to compare medians between N+ and N- patients.</li>
-                    <li><strong>Comparison between Cohorts (unpaired):</strong> In comparison mode, Accuracies were compared using Fisher's Exact Test, and AUCs were compared using a Z-test.</li>
-                </ul>
-                <p>A p-value below ${placeholders.SIGNIFICANCE_LEVEL} was considered statistically significant.</p>
-
-                 <h3 id="methoden-software">6. Software and Libraries</h3>
-                 <p>The web application is based on HTML5, CSS3, and JavaScript (ES6+). The following external libraries were utilized: Bootstrap (v5.3) for the UI framework, D3.js (v7) for data visualizations, Tippy.js (v6) for tooltips, PapaParse (v5) for CSV exports, and JSZip (v3) for creating ZIP archives.</p>
-             `
-        };
-        return texts[lang] || `<p>Methodology description for language '${lang}' not available.</p>`;
-    }
-
     function createBruteForceModalContent(results, metric, kollektiv, duration, totalTested) {
         if (!results || results.length === 0) return '<p class="text-muted">Keine Ergebnisse gefunden.</p>';
-        const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler'; const getKollektivNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
-        const bestResult = results[0]; const kollektivName = getKollektivNameFunc(kollektiv); const metricDisplayName = metric === 'PPV' ? 'PPV' : metric === 'NPV' ? 'NPV' : metric;
-        let tableHTML = `<div class="alert alert-light small p-2 mb-3"><p class="mb-1"><strong>Beste Kombi für '${metricDisplayName}' (Koll.: '${kollektivName}'):</strong></p><ul class="list-unstyled mb-1"><li><strong>Wert:</strong> ${formatNumber(bestResult.metricValue, 4)}</li><li><strong>Logik:</strong> ${bestResult.logic.toUpperCase()}</li><li><strong>Kriterien:</strong> ${formatCriteriaFunc(bestResult.criteria, bestResult.logic)}</li></ul><p class="mb-0 text-muted"><small>Dauer: ${formatNumber(duration / 1000, 1)}s | Getestet: ${formatNumber(totalTested, 0)}</small></p></div><h6 class="mb-2">Top 10 Ergebnisse (inkl. identischer Werte):</h6><div class="table-responsive"><table class="table table-sm table-striped table-hover small" id="bruteforce-results-table"><thead class="small"><tr><th data-tippy-content="Rang">Rang</th><th data-tippy-content="Wert der Zielmetrik (${metricDisplayName})">${metricDisplayName}</th><th data-tippy-content="Logik">Logik</th><th data-tippy-content="Kriterienkombination">Kriterien</th></tr></thead><tbody>`;
-        let rank = 1, displayedCount = 0, lastMetricValue = -Infinity; const precision = 8;
-        for (let i = 0; i < results.length; i++) { const result = results[i]; if (!result || typeof result.metricValue !== 'number' || !isFinite(result.metricValue)) continue; const currentMetricValueRounded = parseFloat(result.metricValue.toFixed(precision)); const lastMetricValueRounded = parseFloat(lastMetricValue.toFixed(precision)); let currentRank = rank; const isNewRank = Math.abs(currentMetricValueRounded - lastMetricValueRounded) > 1e-8; if (i > 0 && isNewRank) { rank = displayedCount + 1; currentRank = rank; } else if (i > 0) { currentRank = rank; } if (rank > 10 && isNewRank) break; tableHTML += `<tr><td>${currentRank}.</td><td>${formatNumber(result.metricValue, 4)}</td><td>${result.logic.toUpperCase()}</td><td>${formatCriteriaFunc(result.criteria, result.logic)}</td></tr>`; if (isNewRank || i === 0) { lastMetricValue = result.metricValue; } displayedCount++; }
-        tableHTML += `</tbody></table></div>`; return tableHTML;
+        const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
+        const getKollektivNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
+        const bestResult = results[0];
+        const kollektivName = getKollektivNameFunc(kollektiv);
+        const metricDisplayName = metric === 'PPV' ? 'PPV' : metric === 'NPV' ? 'NPV' : metric; // Keep short names as is
+
+        let tableHTML = `
+            <div class="alert alert-light small p-2 mb-3">
+                <p class="mb-1"><strong>Beste Kombi für '${metricDisplayName}' (Koll.: '${kollektivName}'):</strong></p>
+                <ul class="list-unstyled mb-1">
+                    <li><strong>Wert:</strong> ${formatNumber(bestResult.metricValue, 4)}</li>
+                    <li><strong>Logik:</strong> ${bestResult.logic.toUpperCase()}</li>
+                    <li><strong>Kriterien:</strong> ${formatCriteriaFunc(bestResult.criteria, bestResult.logic)}</li>
+                </ul>
+                <p class="mb-0 text-muted"><small>Dauer: ${formatNumber(duration / 1000, 1)}s | Getestet: ${formatNumber(totalTested, 0)}</small></p>
+            </div>
+            <h6 class="mb-2">Top 10 Ergebnisse (inkl. identischer Werte):</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped table-hover small" id="bruteforce-results-table">
+                    <thead class="small">
+                        <tr>
+                            <th data-tippy-content="Rang">Rang</th>
+                            <th data-tippy-content="Wert der Zielmetrik (${metricDisplayName})">${metricDisplayName}</th>
+                            <th data-tippy-content="Logik">Logik</th>
+                            <th data-tippy-content="Kriterienkombination">Kriterien</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+        let rank = 1, displayedCount = 0, lastMetricValue = -Infinity;
+        const precision = 8; // Precision for comparing metric values to determine rank
+
+        for (let i = 0; i < results.length; i++) {
+            const result = results[i];
+            if (!result || typeof result.metricValue !== 'number' || !isFinite(result.metricValue)) continue;
+
+            const currentMetricValueRounded = parseFloat(result.metricValue.toFixed(precision));
+            const lastMetricValueRounded = parseFloat(lastMetricValue.toFixed(precision));
+            let currentRank = rank;
+
+            const isNewRank = Math.abs(currentMetricValueRounded - lastMetricValueRounded) > 1e-8; // Using a small epsilon for float comparison
+
+            if (i > 0 && isNewRank) {
+                rank = displayedCount + 1; // Update rank based on actual displayed items
+                currentRank = rank;
+            } else if (i > 0) {
+                currentRank = rank;
+            }
+
+            if (rank > 10 && isNewRank) break; // Stop if we are past rank 10 and it's a new, lower rank
+
+            tableHTML += `
+                <tr>
+                    <td>${currentRank}.</td>
+                    <td>${formatNumber(result.metricValue, 4)}</td>
+                    <td>${result.logic.toUpperCase()}</td>
+                    <td>${formatCriteriaFunc(result.criteria, result.logic)}</td>
+                </tr>`;
+
+            if (isNewRank || i === 0) {
+                lastMetricValue = result.metricValue;
+            }
+            displayedCount++;
+        }
+        tableHTML += `</tbody></table></div>`;
+        return tableHTML;
     }
+
+    // NEU: Komponenten für den Publikation-Tab
+    function createPublikationTabHeader() {
+        const lang = state.getCurrentPublikationLang() || PUBLICATION_CONFIG.defaultLanguage;
+        const currentBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+        const sectionNavItems = PUBLICATION_CONFIG.sections.map(mainSection => {
+            let subNav = '';
+            if (mainSection.subSections && mainSection.subSections.length > 0) {
+                subNav = `<ul class="nav flex-column ms-2">`;
+                mainSection.subSections.forEach(sub => {
+                    subNav += `<li class="nav-item"><a class="nav-link py-1 publikation-section-link" href="#" data-section-id="${sub.id}">${sub.label}</a></li>`;
+                });
+                subNav += `</ul>`;
+            }
+            return `
+                <li class="nav-item">
+                    <span class="nav-link disabled text-uppercase small fw-bold pt-2 pb-1">${UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}</span>
+                    ${subNav}
+                </li>`;
+        }).join('');
+
+        const bfMetricOptions = PUBLICATION_CONFIG.bruteForceMetricsForPublication.map(opt =>
+            `<option value="${opt.value}" ${opt.value === currentBfMetric ? 'selected' : ''}>${opt.label}</option>`
+        ).join('');
+
+        return `
+            <div class="row mb-3 sticky-top bg-light py-2 shadow-sm" style="top: calc(var(--header-height) + var(--nav-height)); z-index: 1010;">
+                <div class="col-md-3">
+                    <h5 class="mb-2">Navigation</h5>
+                    <nav id="publikation-sections-nav" class="nav flex-column nav-pills">
+                        ${sectionNavItems}
+                    </nav>
+                </div>
+                <div class="col-md-9">
+                    <div class="d-flex justify-content-end align-items-center mb-2">
+                        <div class="me-3">
+                           <label for="publikation-bf-metric-select" class="form-label form-label-sm mb-0 me-1">${UI_TEXTS.publikationTab.bruteForceMetricSelectLabel}</label>
+                           <select class="form-select form-select-sm d-inline-block" id="publikation-bf-metric-select" style="width: auto;" data-tippy-content="${TOOLTIP_CONTENT.publikationTabTooltips.bruteForceMetricSelect.description}">
+                               ${bfMetricOptions}
+                           </select>
+                        </div>
+                        <div class="form-check form-switch" data-tippy-content="${TOOLTIP_CONTENT.publikationTabTooltips.spracheSwitch.description}">
+                            <input class="form-check-input" type="checkbox" role="switch" id="publikation-sprache-switch" ${lang === 'en' ? 'checked' : ''}>
+                            <label class="form-check-label fw-bold" for="publikation-sprache-switch" id="publikation-sprache-label">${UI_TEXTS.publikationTab.spracheSwitchLabel[lang]}</label>
+                        </div>
+                    </div>
+                    <div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: 70vh; overflow-y: auto;">
+                        <p class="text-muted">Bitte wählen Sie einen Abschnitt aus der Navigation.</p>
+                    </div>
+                </div>
+            </div>`;
+    }
+
 
     return Object.freeze({
         createDashboardCard,
@@ -417,8 +457,9 @@ const uiComponents = (() => {
         createStatistikCard,
         createExportOptions,
         createT2MetricsOverview,
-        createMethodenBeschreibungContent,
-        createBruteForceModalContent
+        // createMethodenBeschreibungContent, // Entfernt
+        createBruteForceModalContent,
+        createPublikationTabHeader // NEU
     });
 
 })();
