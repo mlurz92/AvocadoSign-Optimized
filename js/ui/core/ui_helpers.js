@@ -100,36 +100,33 @@ const ui_helpers = (() => {
     function updateSortIcons(tableHeaderId, sortState) {
         const tableHeader = document.getElementById(tableHeaderId);
         if (!tableHeader || !sortState) return;
-        tableHeader.querySelectorAll('th[data-sort-key]').forEach(th => {
-            const key = th.dataset.sortKey;
-            const icon = th.querySelector('i.fas');
-            if (!icon) return;
-            icon.className = 'fas fa-sort text-muted opacity-50';
-            const subSpans = th.querySelectorAll('.sortable-sub-header');
-            let isSubKeySortActive = false;
+        const tooltipKeyBase = tableHeaderId.includes('daten-table') ? 'datenTable' : 'auswertungTable';
 
+        tableHeader.querySelectorAll('th[data-sort-key]').forEach(th => {
+            const key = th.dataset.sortKey; const icon = th.querySelector('i.fas'); if (!icon) return;
+            icon.className = 'fas fa-sort'; const subSpans = th.querySelectorAll('.sortable-sub-header'); let isSubKeySortActive = false;
             if (subSpans.length > 0) {
                 subSpans.forEach(span => {
                     const subKey = span.dataset.subKey;
-                    const subKeyLabel = span.dataset.subKeyLabel || subKey.toUpperCase();
                     const isActiveSort = (key === sortState.key && subKey === sortState.subKey);
                     span.style.fontWeight = isActiveSort ? 'bold' : 'normal';
                     span.style.textDecoration = isActiveSort ? 'underline' : 'none';
                     span.style.color = isActiveSort ? 'var(--primary-color)' : 'inherit';
-                    span.setAttribute('data-tippy-content', `Sortieren nach ${key.toUpperCase()} -> ${subKeyLabel}`);
+                    const baseTooltip = TOOLTIP_CONTENT[tooltipKeyBase]?.n_as_t2 || 'Status N/AS/T2';
+                    span.setAttribute('data-tippy-content', `Sortieren nach ${baseTooltip} -> ${subKey.toUpperCase()}`);
                     if (isActiveSort) {
-                        icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
+                        icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'}`;
                         isSubKeySortActive = true;
                     }
                 });
                 if (!isSubKeySortActive && key === sortState.key && sortState.subKey === null) {
-                    icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
+                    icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'}`;
                 } else if (!isSubKeySortActive) {
-                    icon.className = 'fas fa-sort text-muted opacity-50';
+                    icon.className = 'fas fa-sort';
                 }
             } else {
                 if (key === sortState.key && sortState.subKey === null) {
-                    icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
+                    icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'}`;
                 }
             }
         });
@@ -141,18 +138,10 @@ const ui_helpers = (() => {
         const action = button.dataset.action || 'expand'; const expand = action === 'expand'; const collapseElements = tableBody.querySelectorAll('.collapse'); let changedCount = 0;
         if (typeof bootstrap === 'undefined' || !bootstrap.Collapse) { console.error("Bootstrap Collapse nicht verfügbar."); return; }
         collapseElements.forEach(el => { const instance = bootstrap.Collapse.getOrCreateInstance(el); if (instance) { if (expand && !el.classList.contains('show')) { instance.show(); changedCount++; } else if (!expand && el.classList.contains('show')) { instance.hide(); changedCount++; } } });
-        const newAction = expand ? 'collapse' : 'expand'; button.dataset.action = newAction; const iconClass = expand ? 'fa-chevron-up' : 'fa-chevron-down';
-
-        let buttonTextKeyBase = 'datenTable';
-        if (buttonId.startsWith('auswertung-')) {
-            buttonTextKeyBase = 'auswertungTable';
-        }
-
-        const tooltipContentBase = TOOLTIP_CONTENT[buttonTextKeyBase]?.[expand ? 'collapseAll' : 'expandAll'] || (expand ? 'Alle Details Ausblenden' : 'Alle Details Einblenden');
-        const buttonText = expand ? 'Alle Details Ausblenden' : 'Alle Details Einblenden';
-
-
-        updateElementHTML(buttonId, `${buttonText} <i class="fas ${iconClass} ms-1"></i>`); button.setAttribute('data-tippy-content', tooltipContentBase); if(button._tippy) { button._tippy.setContent(tooltipContentBase); } else { initializeTooltips(button.parentElement || button); }
+        const newAction = expand ? 'collapse' : 'expand'; button.dataset.action = newAction; const iconClass = expand ? 'fa-chevron-up' : 'fa-chevron-down'; const buttonText = expand ? 'Alle Details Ausblenden' : 'Alle Details Einblenden';
+        const tooltipKeyBase = (buttonId === 'daten-toggle-details') ? 'datenTable' : 'auswertungTable'; // Angepasst
+        const tooltipContentBase = TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll || 'Alle Details ein-/ausblenden'; const currentTooltipText = expand ? tooltipContentBase.replace('ein-','aus-') : tooltipContentBase.replace('aus-','ein-');
+        updateElementHTML(buttonId, `${buttonText} <i class="fas ${iconClass} ms-1"></i>`); button.setAttribute('data-tippy-content', currentTooltipText); if(button._tippy) { button._tippy.setContent(currentTooltipText); } else { initializeTooltips(button.parentElement || button); }
     }
 
     function handleCollapseEvent(event) {
@@ -206,36 +195,19 @@ const ui_helpers = (() => {
         else if (!shouldShowIndicator && existingTippy) { existingTippy.hide(); existingTippy.disable(); }
     }
 
-    function updatePublikationTabSteuerungUI(currentLang, currentSection) {
-        const sectionButtons = document.querySelectorAll('#publikation-tab-pane .pub-section-btn');
-        sectionButtons.forEach(button => {
-            const sectionId = button.dataset.sectionId;
-            const isActive = sectionId === currentSection;
-            button.classList.toggle('active', isActive);
-            button.classList.toggle('btn-primary', isActive);
-            button.classList.toggle('btn-outline-secondary', !isActive);
-            const sectionConfig = APP_CONFIG.UI_SETTINGS.PUBLIKATION_SECTIONS.find(s => s.id === sectionId);
-            if (sectionConfig) {
-                const buttonText = sectionConfig[`label_${currentLang}`] || sectionConfig.label_de || sectionId;
-                button.innerHTML = `<i class="${sectionConfig.icon || 'fas fa-file-alt'} me-1"></i>${buttonText}`;
-            }
-        });
-
-        const langSwitch = document.getElementById('publikation-sprache-switch');
-        const langLabel = document.getElementById('publikation-sprache-label');
+    function updatePublikationLangSwitchUI(currentLang) { // Umbenannt
+        const langSwitch = document.getElementById('publikation-sprache-switch'); // Angepasst
+        const langLabel = document.getElementById('publikation-sprache-label'); // Angepasst
         if (langSwitch && langLabel) {
             langSwitch.checked = currentLang === 'en';
-            langLabel.textContent = UI_TEXTS.publikationTab.spracheSwitchLabel[currentLang] || (currentLang === 'en' ? 'English' : 'Deutsch');
-        }
-        const steuerleiste = document.querySelector('#publikation-tab-pane .publication-tab-controls');
-        if (steuerleiste) {
-            initializeTooltips(steuerleiste);
+            const labelText = UI_TEXTS?.publikationTab?.langSwitchLabel?.[currentLang] || (currentLang === 'en' ? 'English' : 'Deutsch'); // Angepasst
+            langLabel.textContent = labelText;
         }
     }
 
     function updateStatistikSelectorsUI(layout, kollektiv1, kollektiv2) {
         const toggleBtn = document.getElementById('statistik-toggle-vergleich'); const container1 = document.getElementById('statistik-kollektiv-select-1-container'); const container2 = document.getElementById('statistik-kollektiv-select-2-container'); const select1 = document.getElementById('statistik-kollektiv-select-1'); const select2 = document.getElementById('statistik-kollektiv-select-2'); const isVergleich = layout === 'vergleich';
-        if (toggleBtn) { toggleBtn.classList.toggle('active', isVergleich); toggleBtn.setAttribute('aria-pressed', String(isVergleich)); updateElementHTML(toggleBtn.id, isVergleich ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv'); if(toggleBtn._tippy) toggleBtn._tippy.setContent(TOOLTIP_CONTENT.statistikLayout?.description || 'Layout umschalten'); else initializeTooltips(toggleBtn.parentElement || toggleBtn); }
+        if (toggleBtn) { toggleBtn.classList.toggle('active', isVergleich); toggleBtn.setAttribute('aria-pressed', String(isVergleich)); updateElementHTML(toggleBtn.id, isVergleich ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv'); if(toggleBtn._tippy) toggleBtn._tippy.setContent(TOOLTIP_CONTENT.statistikLayout?.description || 'Layout umschalten'); else initializeTooltips(toggleBtn.parentElement); }
         if (container1) container1.classList.toggle('d-none', !isVergleich); if (container2) container2.classList.toggle('d-none', !isVergleich);
         if (select1) select1.value = kollektiv1 || APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1; if (select2) select2.value = kollektiv2 || APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2;
     }
@@ -331,7 +303,7 @@ const ui_helpers = (() => {
                 }
                 break;
             case 'result':
-                const best = (data?.results && data.results.length > 0) ? data.results[0] : (data?.bestResult || null);
+                const best = (data?.results && data.results.length > 0) ? data.results[0] : null;
                 if (best && best.criteria && isFinite(best.metricValue)) {
                     const metricName = data.metric || 'N/A';
                     const kollektivName = getKollektivNameFunc(data.kollektiv || 'N/A');
@@ -348,7 +320,7 @@ const ui_helpers = (() => {
                     if (elements.resultDuration) updateElementText(elements.resultDuration.id, durationStr);
                     if (elements.resultTotalTested) updateElementText(elements.resultTotalTested.id, totalTestedStr);
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig.');
-                    if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, TOOLTIP_CONTENT.bruteForceResult?.description);
+                    if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, TOOLTIP_CONTENT.bruteForceResult.description);
                 } else {
                     if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true);
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig (kein Ergebnis).');
@@ -360,7 +332,10 @@ const ui_helpers = (() => {
     function updateExportButtonStates(activeTabId, hasBruteForceResults, canExportDataDependent) {
         const bfDisabled = !hasBruteForceResults; const dataDisabled = !canExportDataDependent; const trySetDisabled = (id, disabled) => { const e = document.getElementById(id); if (e) e.disabled = disabled; };
         trySetDisabled('export-bruteforce-txt', bfDisabled); trySetDisabled('export-bruteforce-modal-txt', bfDisabled);
-        trySetDisabled('export-statistik-csv', dataDisabled); trySetDisabled('export-statistik-xlsx', true); trySetDisabled('export-deskriptiv-md', dataDisabled); trySetDisabled('export-patienten-md', dataDisabled); trySetDisabled('export-patienten-xlsx', true); trySetDisabled('export-auswertung-md', dataDisabled); trySetDisabled('export-auswertung-xlsx', true); trySetDisabled('export-filtered-data-csv', dataDisabled); trySetDisabled('export-filtered-data-xlsx', true); trySetDisabled('export-comprehensive-report-html', dataDisabled);
+        trySetDisabled('export-statistik-csv', dataDisabled); trySetDisabled('export-statistik-xlsx', true); trySetDisabled('export-deskriptiv-md', dataDisabled);
+        trySetDisabled('export-daten-md', dataDisabled); // Angepasst von patienten-md
+        trySetDisabled('export-daten-xlsx', true); // Angepasst von patienten-xlsx
+        trySetDisabled('export-auswertung-md', dataDisabled); trySetDisabled('export-auswertung-xlsx', true); trySetDisabled('export-filtered-data-csv', dataDisabled); trySetDisabled('export-filtered-data-xlsx', true); trySetDisabled('export-comprehensive-report-html', dataDisabled);
         trySetDisabled('export-charts-png', dataDisabled); trySetDisabled('export-charts-svg', dataDisabled);
         trySetDisabled('export-all-zip', dataDisabled && bfDisabled); trySetDisabled('export-csv-zip', dataDisabled); trySetDisabled('export-xlsx-zip', true); trySetDisabled('export-md-zip', dataDisabled); trySetDisabled('export-png-zip', dataDisabled); trySetDisabled('export-svg-zip', dataDisabled);
         const isPresentationTabActive = activeTabId === 'praesentation-tab';
@@ -369,6 +344,26 @@ const ui_helpers = (() => {
         const isAuswertungTabActive = activeTabId === 'auswertung-tab'; trySetDisabled('dl-auswertung-table-png', !isAuswertungTabActive || dataDisabled);
         const isStatistikTabActive = activeTabId === 'statistik-tab'; document.querySelectorAll('.stat-card .table-download-png-btn').forEach(btn => { if(btn) btn.disabled = !isStatistikTabActive || dataDisabled; }); document.querySelectorAll('.stat-card .chart-download-btn').forEach(btn => { if(btn) btn.disabled = !isStatistikTabActive || dataDisabled; });
     }
+
+    function updatePublikationUI(currentLang) { // NEU
+        const langSwitch = document.getElementById('publikation-sprache-switch');
+        const langLabel = document.getElementById('publikation-sprache-label');
+        if (langSwitch && langLabel) {
+            langSwitch.checked = currentLang === 'en';
+            const labelText = UI_TEXTS?.publikationTab?.langSwitchLabel?.[currentLang] || (currentLang === 'en' ? 'English' : 'Deutsch');
+            langLabel.textContent = labelText;
+        }
+
+        const subNavContainer = document.getElementById('publikationSubNav');
+        if (subNavContainer) {
+            const currentActiveButton = subNavContainer.querySelector('.nav-link.active');
+            const currentActiveSectionKey = currentActiveButton ? currentActiveButton.dataset.sectionKey : 'methoden';
+
+            subNavContainer.innerHTML = uiComponents.createPublikationTabNavigation(currentActiveSectionKey);
+            initializeTooltips(subNavContainer); // Tooltips für neue Nav-Buttons initialisieren
+        }
+    }
+
 
     return Object.freeze({
         escapeMarkdown,
@@ -387,7 +382,7 @@ const ui_helpers = (() => {
         getT2IconSVG,
         updateT2CriteriaControlsUI,
         markCriteriaSavedIndicator,
-        updatePublikationTabSteuerungUI,
+        updatePublikationLangSwitchUI: updatePublikationUI, // Umbenannt und Logik angepasst
         updateStatistikSelectorsUI,
         updatePresentationViewSelectorUI,
         updateBruteForceUI,
