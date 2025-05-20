@@ -123,9 +123,8 @@ const studyT2CriteriaManager = (() => {
 
         if (effectiveLogic === 'KOMBINIERT') {
              if (shortFormat) {
-                 return 'ESGAR Kombi.'; // Keep short name for brevity in UI
+                 return 'ESGAR Kombi.';
              } else {
-                // Keep description accurate to the rule itself
                 return criteria.note || 'ESGAR 2016 Kriterien: Größe ≥ 9mm ODER (Größe 5-8mm UND ≥2 Merkmale [rund, irregulär, heterogen]) ODER (Größe < 5mm UND ALLE 3 Merkmale [rund, irregulär, heterogen]).';
              }
         }
