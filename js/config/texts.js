@@ -26,11 +26,20 @@ const UI_TEXTS = {
         'ODER': 'ODER',
         'KOMBINIERT': 'KOMBINIERT'
     },
-    methodenTab: {
+    publikationTab: { // NEU
         spracheSwitchLabel: {
             de: 'Deutsch',
             en: 'English'
-        }
+        },
+        sectionLabels: {
+            methoden: 'Methoden',
+            ergebnisse: 'Ergebnisse',
+            diskussion: 'Diskussion',
+            einleitung: 'Einleitung',
+            abstract: 'Abstract',
+            referenzen: 'Referenzen'
+        },
+        bruteForceMetricSelectLabel: 'Optimierungsmetrik für T2 (BF):'
     },
     chartTitles: {
         ageDistribution: 'Altersverteilung',
@@ -84,7 +93,7 @@ const UI_TEXTS = {
         showAppliedLabel: "Aktuell angewandte Kriterien anzeigen"
     },
     excelExport: {
-        patientenLabel: "Patientenliste (.xlsx)",
+        datenLabel: "Datenliste (.xlsx)", // Umbenannt
         auswertungLabel: "Auswertungstabelle (.xlsx)",
         statistikLabel: "Statistik Übersicht (.xlsx)",
         filteredDataLabel: "Gefilterte Daten (.xlsx)",
@@ -97,7 +106,7 @@ const UI_TEXTS = {
 };
 
 const TOOLTIP_CONTENT = {
-    kollektivButtons: { description: "Wählen Sie das Patientenkollektiv für die Analyse aus: Gesamt, nur primär Operierte (direkt OP) oder nur neoadjuvant Vorbehandelte (nRCT). Die Auswahl filtert die Daten für alle Tabs." },
+    kollektivButtons: { description: "Wählen Sie das Patientenkollektiv für die Analyse aus: Gesamt, nur primär Operierte (direkt OP) oder nur neoadjuvant Vorbehandelte (nRCT). Die Auswahl filtert die Datenbasis für alle Tabs." },
     headerStats: {
         kollektiv: "Aktuell betrachtetes Patientenkollektiv.",
         anzahlPatienten: "Gesamtzahl der Patienten im ausgewählten Kollektiv.",
@@ -105,7 +114,7 @@ const TOOLTIP_CONTENT = {
         statusAS: "Anteil der Patienten mit positivem (+) vs. negativem (-) Lymphknotenstatus gemäß Avocado Sign (AS) Vorhersage im ausgewählten Kollektiv.",
         statusT2: "Anteil der Patienten mit positivem (+) vs. negativem (-) Lymphknotenstatus gemäß den aktuell **angewendeten und gespeicherten** T2-Kriterien (siehe Auswertungstab) für das ausgewählte Kollektiv."
     },
-    patientTable: {
+    datenTable: { // Umbenannt von patientTable
         nr: "Fortlaufende Nummer des Patienten.",
         name: "Nachname des Patienten (anonymisiert/kodiert).",
         vorname: "Vorname des Patienten (anonymisiert/kodiert).",
@@ -244,8 +253,8 @@ const TOOLTIP_CONTENT = {
         statsXLSX: { description: "Exportiert die detaillierte Tabelle aller berechneten statistischen Metriken, Konfidenzintervalle und Testergebnisse aus dem Statistik-Tab als Excel-Datei (.xlsx).", type: 'STATISTIK_XLSX', ext: "xlsx" },
         bruteForceTXT: { description: "Exportiert den detaillierten Bericht der letzten Brute-Force-Optimierung (Top 10 Ergebnisse, Konfiguration, Laufzeit) als reine Textdatei (.txt), falls eine Optimierung durchgeführt wurde.", type: 'BRUTEFORCE_TXT', ext: "txt" },
         deskriptivMD: { description: "Exportiert die Tabelle der deskriptiven Statistik (aus dem Statistik-Tab) in einem Markdown-Format (.md), geeignet für Berichte.", type: 'DESKRIPTIV_MD', ext: "md" },
-        patientenMD: { description: "Exportiert die aktuelle Patientenliste (aus dem Patienten-Tab) als Markdown-Tabelle (.md).", type: 'PATIENTEN_MD', ext: "md" },
-        patientenXLSX: { description: "Exportiert die aktuelle Patientenliste (aus dem Patienten-Tab) als Excel-Datei (.xlsx).", type: 'PATIENTEN_XLSX', ext: "xlsx" },
+        datenMD: { description: "Exportiert die aktuelle Datenliste (aus dem Daten-Tab) als Markdown-Tabelle (.md).", type: 'DATEN_MD', ext: "md" }, // Umbenannt
+        datenXLSX: { description: "Exportiert die aktuelle Datenliste (aus dem Daten-Tab) als Excel-Datei (.xlsx).", type: 'DATEN_XLSX', ext: "xlsx" }, // Umbenannt
         auswertungMD: { description: "Exportiert die aktuelle Auswertungstabelle (aus dem Auswertung-Tab) mit den angewendeten T2-Ergebnissen als Markdown-Tabelle (.md).", type: 'AUSWERTUNG_MD', ext: "md" },
         auswertungXLSX: { description: "Exportiert die aktuelle Auswertungstabelle (aus dem Auswertung-Tab) mit den angewendeten T2-Ergebnissen als Excel-Datei (.xlsx).", type: 'AUSWERTUNG_XLSX', ext: "xlsx" },
         filteredDataCSV: { description: "Exportiert die zugrundeliegenden Rohdaten des aktuell ausgewählten und analysierten Kollektivs, inklusive der berechneten T2-Ergebnisse, als CSV-Datei (.csv).", type: 'FILTERED_DATA_CSV', ext: "csv" },
@@ -258,13 +267,31 @@ const TOOLTIP_CONTENT = {
         tableSinglePNG: { description: "Exportiert die ausgewählte Tabelle als einzelne PNG-Datei.", type: 'TABLE_PNG_EXPORT', ext: "png"},
         allZIP: { description: "Exportiert alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT, alle MDs, Gefilterte-Daten-CSV, HTML-Report) in einem einzigen ZIP-Archiv.", type: 'ALL_ZIP', ext: "zip"},
         csvZIP: { description: "Bündelt alle verfügbaren CSV-Dateien (Statistik, Gefilterte Daten) in einem ZIP-Archiv.", type: 'CSV_ZIP', ext: "zip"},
-        mdZIP: { description: "Bündelt alle verfügbaren Markdown-Dateien (Deskriptiv, Patienten, Auswertung) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "md"},
+        mdZIP: { description: "Bündelt alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "zip"}, // Angepasst
         pngZIP: { description: "Identisch zum 'Alle Diagramme & Tabellen (PNG)' Einzel-Export.", type: 'PNG_ZIP', ext: "zip"},
         svgZIP: { description: "Identisch zum 'Alle Diagramme (SVG)' Einzel-Export.", type: 'SVG_ZIP', ext: "zip"},
         xlsxZIP: { description: "Bündelt alle verfügbaren Excel-Dateien in einem ZIP-Archiv.", type: 'XLSX_ZIP', ext: "zip"}
     },
-    methodenTab: {
-        spracheSwitch: { description: "Wechselt die Sprache der Methodenbeschreibung zwischen Deutsch und Englisch."}
+    publikationTabTooltips: { // NEU
+        spracheSwitch: { description: "Wechselt die Sprache der Texte im Publikation-Tab zwischen Deutsch und Englisch." },
+        sectionSelect: { description: "Wählen Sie den Abschnitt der wissenschaftlichen Publikation aus, für den Textvorschläge und relevante Daten/Grafiken angezeigt werden sollen." },
+        bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, für deren Optimierungsergebnisse (via Brute-Force) die entsprechenden Statistiken im 'Ergebnisse'-Abschnitt des Publikation-Tabs dargestellt werden sollen." },
+        methoden: {
+            studienanlage: "Textvorschlag und relevante Informationen zum Studiendesign, der Ethik und der verwendeten Software.",
+            patientenkohorte: "Textvorschlag und relevante Informationen zum Patientenkollektiv und der Datenbasis.",
+            mrtProtokoll: "Textvorschlag und relevante Informationen zum MRT-Protokoll und zur Kontrastmittelgabe.",
+            asDefinition: "Textvorschlag und relevante Informationen zur Definition und Bewertung des Avocado Signs.",
+            t2Definition: "Textvorschlag und relevante Informationen zur Definition und Bewertung der T2-Kriterien (benutzerdefiniert, Literatur, Brute-Force optimiert).",
+            referenzstandard: "Textvorschlag und relevante Informationen zum Referenzstandard (Histopathologie).",
+            statistischeAnalyse: "Textvorschlag und relevante Informationen zu den statistischen Analysemethoden."
+        },
+        ergebnisse: {
+            patientencharakteristika: "Textvorschlag und relevante Tabellen/Diagramme zu den Patientencharakteristika.",
+            asPerformance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte des Avocado Signs.",
+            literaturT2Performance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Literatur-basierten T2-Kriterien.",
+            optimierteT2Performance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Brute-Force optimierten T2-Kriterien.",
+            vergleichPerformance: "Textvorschlag und relevante Tabellen/Diagramme zum statistischen Vergleich der diagnostischen Güte zwischen Avocado Sign und den verschiedenen T2-Kriteriensets."
+        }
     },
     statMetrics: {
         sens: { name: "Sensitivität", description: "Sensitivität ([METHODE] vs. N): Anteil der tatsächlich positiven Fälle (N+), die durch die Methode [METHODE] korrekt als positiv erkannt wurden.<br><i>Formel: RP / (RP + FN)</i>", interpretation: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N+ Patienten korrekt (95% CI nach [METHOD_CI]: [LOWER] - [UPPER]) im Kollektiv [KOLLEKTIV]."},
@@ -291,8 +318,8 @@ const TOOLTIP_CONTENT = {
         rocCurvePlot: { description: "Zeigt die ROC-Kurve für {Variable}. Die Diagonale repräsentiert zufällige Klassifikation (AUC=0.5). Eine Kurve näher an der oberen linken Ecke bedeutet bessere Leistung."},
         defaultP: { interpretation: `Der berechnete p-Wert beträgt <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Bei einem Signifikanzniveau von ${APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL} ist das Ergebnis <strong>[SIGNIFIKANZ_TEXT]</strong>.` },
         signifikanzTexte: { SIGNIFIKANT: "statistisch signifikant", NICHT_SIGNIFIKANT: "statistisch nicht signifikant" },
-        orFaktorTexte: { ERHOEHT: "erhöht", VERRINGERT: "verringert", UNVERAENDERT: "unverändert" }, // Added 'unverändert'
-        rdRichtungTexte: { HOEHER: "höher", NIEDRIGER: "niedriger", GLEICH: "gleich" }, // Added 'gleich'
+        orFaktorTexte: { ERHOEHT: "erhöht", VERRINGERT: "verringert", UNVERAENDERT: "unverändert" },
+        rdRichtungTexte: { HOEHER: "höher", NIEDRIGER: "niedriger", GLEICH: "gleich" },
         assoziationStaerkeTexte: { stark: "stark", moderat: "moderat", schwach: "schwach", sehr_schwach: "sehr schwach", nicht_bestimmbar: "nicht bestimmbar" }
     }
 };
