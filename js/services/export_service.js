@@ -18,8 +18,16 @@ const exportService = (() => {
              const safeStudyId = String(options.studyId).replace(/[^a-z0-9_-]/gi, '_');
              filenameType = filenameType.replace('{StudyID}', safeStudyId);
         } else {
-             filenameType = filenameType.replace('_{StudyID}', '').replace('{StudyID}', '');
+             filenameType = filenameType.replace('_{StudyID}', '').replace('{StudyID}', ''); // Remove placeholder if not used
         }
+        
+        if (options.sectionName && filenameType.includes('{SectionName}')) {
+            const safeSectionName = String(options.sectionName).replace(/[^a-z0-9_-]/gi, '_').substring(0,20);
+            filenameType = filenameType.replace('{SectionName}', safeSectionName);
+        } else {
+            filenameType = filenameType.replace('_{SectionName}', '').replace('{SectionName}', '');
+        }
+
 
         const filename = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TEMPLATE
             .replace('{TYPE}', filenameType)
@@ -85,30 +93,62 @@ const exportService = (() => {
                 const svgClone = svgElement.cloneNode(true);
                 svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
                 svgClone.setAttribute('version', '1.1');
-                svgClone.style.backgroundColor = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#ffffff';
+                svgClone.style.backgroundColor = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#ffffff'; // Ensure background
                 const styles = getComputedStyle(svgElement);
                 const viewBox = svgElement.viewBox?.baseVal;
                 let sourceWidth = parseFloat(svgClone.getAttribute('width')) || parseFloat(styles.width) || svgElement.width?.baseVal?.value || viewBox?.width || targetWidth;
-                let sourceHeight = parseFloat(svgClone.getAttribute('height')) || parseFloat(styles.height) || svgElement.height?.baseVal?.value || viewBox?.height || (targetWidth * 0.75);
+                let sourceHeight = parseFloat(svgClone.getAttribute('height')) || parseFloat(styles.height) || svgElement.height?.baseVal?.value || viewBox?.height || (targetWidth * 0.75); // Default aspect ratio if height unknown
+
                 if (sourceWidth <= 0 || sourceHeight <= 0) { sourceWidth = viewBox?.width || targetWidth; sourceHeight = viewBox?.height || (targetWidth * 0.75); }
                 if (sourceWidth <= 0 || sourceHeight <= 0) { return reject(new Error("SVG-Dimensionen konnten nicht ermittelt werden.")); }
-                const scaleFactor = targetWidth / sourceWidth; const targetHeight = sourceHeight * scaleFactor;
-                svgClone.setAttribute('width', String(targetWidth)); svgClone.setAttribute('height', String(targetHeight));
+
+                const scaleFactor = targetWidth / sourceWidth;
+                const targetHeight = sourceHeight * scaleFactor;
+
+                svgClone.setAttribute('width', String(targetWidth));
+                svgClone.setAttribute('height', String(targetHeight));
+
+                // Inline all computed styles to ensure correct rendering in canvas
                 const elementsToStyle = svgClone.querySelectorAll('*');
                 elementsToStyle.forEach(el => {
-                    const computed = window.getComputedStyle(el); const styleProps = ['fill', 'stroke', 'stroke-width', 'font-family', 'font-size', 'text-anchor', 'dominant-baseline', 'opacity']; let styleString = el.getAttribute('style') || '';
-                    styleProps.forEach(prop => { if (computed[prop] && computed[prop] !== 'none' && computed[prop] !== '0px' && computed[prop] !== 'auto') { styleString += `${prop}:${computed[prop]}; `; } }); if (styleString) el.setAttribute('style', styleString);
+                    const computed = window.getComputedStyle(el);
+                    const styleProps = ['fill', 'stroke', 'stroke-width', 'font-family', 'font-size', 'text-anchor', 'dominant-baseline', 'opacity', 'stroke-dasharray'];
+                    let styleString = el.getAttribute('style') || '';
+                    styleProps.forEach(prop => {
+                        if (computed[prop] && computed[prop] !== 'none' && computed[prop] !== '0px' && computed[prop] !== 'auto') {
+                            styleString += `${prop}:${computed[prop]}; `;
+                        }
+                    });
+                    if (styleString) el.setAttribute('style', styleString);
                 });
-                const svgXml = new XMLSerializer().serializeToString(svgClone); const svgDataUrl = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgXml)))}`;
+
+
+                const svgXml = new XMLSerializer().serializeToString(svgClone);
+                const svgDataUrl = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgXml)))}`;
+
                 const img = new Image();
                 img.onload = () => {
-                    const canvas = document.createElement('canvas'); canvas.width = targetWidth; canvas.height = targetHeight; const ctx = canvas.getContext('2d'); if (!ctx) { return reject(new Error("Canvas Context nicht verfügbar.")); }
-                    ctx.fillStyle = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    canvas.toBlob((blob) => { if (blob) { resolve(blob); } else { reject(new Error("Canvas toBlob fehlgeschlagen.")); } }, 'image/png');
+                    const canvas = document.createElement('canvas');
+                    canvas.width = targetWidth;
+                    canvas.height = targetHeight;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) { return reject(new Error("Canvas Context nicht verfügbar.")); }
+                    ctx.fillStyle = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#ffffff'; // Set background for canvas
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob((blob) => {
+                        if (blob) { resolve(blob); }
+                        else { reject(new Error("Canvas toBlob fehlgeschlagen.")); }
+                    }, 'image/png');
                 };
-                img.onerror = (err) => { console.error("Image load error for SVG conversion:", err); reject(new Error("Fehler beim Laden des SVG-Bildes für PNG-Konvertierung.")); };
+                img.onerror = (err) => {
+                    console.error("Image load error for SVG conversion:", err, svgDataUrl.substring(0,100));
+                    reject(new Error("Fehler beim Laden des SVG-Bildes für PNG-Konvertierung."));
+                };
                 img.src = svgDataUrl;
-            } catch (error) { reject(new Error(`Fehler bei SVG-zu-PNG Konvertierung: ${error.message}`)); }
+            } catch (error) {
+                reject(new Error(`Fehler bei SVG-zu-PNG Konvertierung: ${error.message}`));
+            }
         });
     }
 
@@ -116,9 +156,29 @@ const exportService = (() => {
          return new Promise((resolve, reject) => {
              if (!svgElement || typeof svgElement.cloneNode !== 'function') return reject(new Error("Ungültiges SVG Element für SVG Export."));
               try {
-                 const svgClone = svgElement.cloneNode(true); svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); svgClone.setAttribute('version', '1.1'); const svgXml = new XMLSerializer().serializeToString(svgClone);
-                 const blob = new Blob([svgXml], { type: 'image/svg+xml;charset=utf-8' }); resolve(blob);
-              } catch(error) { reject(new Error(`Fehler bei SVG-zu-SVG Blob Konvertierung: ${error.message}`)); }
+                 const svgClone = svgElement.cloneNode(true);
+                 svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+                 svgClone.setAttribute('version', '1.1');
+                 // Optionally inline styles here too for better standalone SVG
+                 const elementsToStyle = svgClone.querySelectorAll('*');
+                 elementsToStyle.forEach(el => {
+                    const computed = window.getComputedStyle(el);
+                    const styleProps = ['fill', 'stroke', 'stroke-width', 'font-family', 'font-size', 'text-anchor', 'dominant-baseline', 'opacity', 'stroke-dasharray'];
+                    let styleString = el.getAttribute('style') || '';
+                    styleProps.forEach(prop => {
+                        if (computed[prop] && computed[prop] !== 'none' && computed[prop] !== '0px' && computed[prop] !== 'auto') {
+                            styleString += `${prop}:${computed[prop]}; `;
+                        }
+                    });
+                    if (styleString) el.setAttribute('style', styleString);
+                });
+
+                 const svgXml = new XMLSerializer().serializeToString(svgClone);
+                 const blob = new Blob([svgXml], { type: 'image/svg+xml;charset=utf-8' });
+                 resolve(blob);
+              } catch(error) {
+                 reject(new Error(`Fehler bei SVG-zu-SVG Blob Konvertierung: ${error.message}`));
+              }
          });
      }
 
@@ -167,7 +227,7 @@ const exportService = (() => {
     function generateMarkdownTableString(dataOrStats, tableType, kollektiv, criteria = null, logic = null, options = {}) {
         try {
             let headers = [], rows = [], title = ''; const kollektivDisplayName = getKollektivDisplayName(kollektiv); const escMD = ui_helpers.escapeMarkdown; const na = '--'; const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'N/A'; const t2CriteriaLabelShort = options.t2CriteriaLabelShort || 'T2';
-            if (tableType === 'patienten') { title = 'Patientenliste'; headers = ['Nr', 'Name', 'Vorname', 'Geschl.', 'Alter', 'Therapie', 'N', 'AS', 'T2', 'Bemerkung']; if(!Array.isArray(dataOrStats)) return `# ${title}...\n\nFehler: Ungültige Daten.`; rows = dataOrStats.map(p => [p.nr, p.name || '', p.vorname || '', p.geschlecht || '', p.alter ?? '', getKollektivDisplayName(p.therapie), p.n ?? na, p.as ?? na, p.t2 ?? na, p.bemerkung || ''].map(escMD)); }
+            if (tableType === 'daten') { title = 'Datenliste'; headers = ['Nr', 'Name', 'Vorname', 'Geschl.', 'Alter', 'Therapie', 'N', 'AS', 'T2', 'Bemerkung']; if(!Array.isArray(dataOrStats)) return `# ${title}...\n\nFehler: Ungültige Daten.`; rows = dataOrStats.map(p => [p.nr, p.name || '', p.vorname || '', p.geschlecht || '', p.alter ?? '', getKollektivDisplayName(p.therapie), p.n ?? na, p.as ?? na, p.t2 ?? na, p.bemerkung || ''].map(escMD)); }
             else if (tableType === 'auswertung') { title = 'Auswertungstabelle'; headers = ['Nr', 'Name', 'Therapie', 'N', 'AS', 'T2', 'N+/N ges', 'AS+/AS ges', 'T2+/T2 ges']; if(!Array.isArray(dataOrStats)) return `# ${title}...\n\nFehler: Ungültige Daten.`; rows = dataOrStats.map(p => [p.nr, p.name || '', getKollektivDisplayName(p.therapie), p.n ?? na, p.as ?? na, p.t2 ?? na, `${formatNumber(p.anzahl_patho_n_plus_lk, 0, '-')} / ${formatNumber(p.anzahl_patho_lk, 0, '-')}`, `${formatNumber(p.anzahl_as_plus_lk, 0, '-')} / ${formatNumber(p.anzahl_as_lk, 0, '-')}`, `${formatNumber(p.anzahl_t2_plus_lk, 0, '-')} / ${formatNumber(p.anzahl_t2_lk, 0, '-')}`].map(escMD)); }
             else if (tableType === 'deskriptiv') { title = 'Deskriptive Statistik'; const stats = dataOrStats; if (!stats || !stats.anzahlPatienten) return `# ${title} (Kollektiv: ${kollektivDisplayName})\n\nKeine Daten verfügbar.`; const total = stats.anzahlPatienten; headers = ['Metrik', 'Wert']; const fLKRowMD = (lk) => `${formatNumber(lk?.median, 1, na)} (${formatNumber(lk?.min, 0, na)}-${formatNumber(lk?.max, 0, na)}) \\[Mean: ${formatNumber(lk?.mean, 1, na)} ± ${formatNumber(lk?.sd, 1, na)}\\]`; rows = [ ['Anzahl Patienten', total], ['Median Alter (Min-Max) \\[Mean ± SD\\]', `${formatNumber(stats.alter?.median, 1, na)} (${formatNumber(stats.alter?.min, 0, na)} - ${formatNumber(stats.alter?.max, 0, na)}) \\[${formatNumber(stats.alter?.mean, 1, na)} ± ${formatNumber(stats.alter?.sd, 1, na)}\\]`], ['Geschlecht (m/w) (n / %)', `${stats.geschlecht?.m ?? 0} / ${stats.geschlecht?.f ?? 0} (${formatPercent((stats.geschlecht?.m ?? 0) / total, 1)} / ${formatPercent((stats.geschlecht?.f ?? 0) / total, 1)})`], ['Therapie (direkt OP / nRCT) (n / %)', `${stats.therapie?.['direkt OP'] ?? 0} / ${stats.therapie?.nRCT ?? 0} (${formatPercent((stats.therapie?.['direkt OP'] ?? 0) / total, 1)} / ${formatPercent((stats.therapie?.nRCT ?? 0) / total, 1)})`], ['N Status (+ / -) (n / %)', `${stats.nStatus?.plus ?? 0} / ${stats.nStatus?.minus ?? 0} (${formatPercent((stats.nStatus?.plus ?? 0) / total, 1)} / ${formatPercent((stats.nStatus?.minus ?? 0) / total, 1)})`], ['AS Status (+ / -) (n / %)', `${stats.asStatus?.plus ?? 0} / ${stats.asStatus?.minus ?? 0} (${formatPercent((stats.asStatus?.plus ?? 0) / total, 1)} / ${formatPercent((stats.asStatus?.minus ?? 0) / total, 1)})`], ['T2 Status (+ / -) (n / %)', `${stats.t2Status?.plus ?? 0} / ${stats.t2Status?.minus ?? 0} (${formatPercent((stats.t2Status?.plus ?? 0) / total, 1)} / ${formatPercent((stats.t2Status?.minus ?? 0) / total, 1)})`], ['Median LK N ges. (Min-Max) \\[Mean ± SD\\]', fLKRowMD(stats.lkAnzahlen?.n?.total)], ['Median LK N+ (Min-Max) \\[Mean ± SD\\] (nur N+ Pat.)', fLKRowMD(stats.lkAnzahlen?.n?.plus)], ['Median LK AS ges. (Min-Max) \\[Mean ± SD\\]', fLKRowMD(stats.lkAnzahlen?.as?.total)], ['Median LK AS+ (Min-Max) \\[Mean ± SD\\] (nur AS+ Pat.)', fLKRowMD(stats.lkAnzahlen?.as?.plus)], ['Median LK T2 ges. (Min-Max) \\[Mean ± SD\\]', fLKRowMD(stats.lkAnzahlen?.t2?.total)], ['Median LK T2+ (Min-Max) \\[Mean ± SD\\] (nur T2+ Pat.)', fLKRowMD(stats.lkAnzahlen?.t2?.plus)] ].map(r => r.map(escMD)); }
             else if (tableType === 'praes_as_perf') { title = `Diagnostische Güte (AS) für Kollektive`; const { statsGesamt, statsDirektOP, statsNRCT } = dataOrStats || {}; if (!statsGesamt && !statsDirektOP && !statsNRCT) return `# ${title}\n\nFehler: Ungültige Daten.`; headers = ['Kollektiv', 'Sens. (95% CI)', 'Spez. (95% CI)', 'PPV (95% CI)', 'NPV (95% CI)', 'Acc. (95% CI)', 'AUC (95% CI)']; const fRow = (s, k) => { const d = getKollektivDisplayName(k); if (!s || typeof s.matrix !== 'object') return [d + ' (N=?)', na, na, na, na, na, na].map(escMD); const n = s.matrix ? (s.matrix.rp + s.matrix.fp + s.matrix.fn + s.matrix.rn) : 0; const fCI_p = (m, ky) => { const dig = (ky === 'f1' || ky === 'auc') ? 3 : 1; const isP = !(ky === 'f1' || ky === 'auc'); return formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, dig, isP, na); }; return [`${d} (N=${n})`, fCI_p(s.sens, 'sens'), fCI_p(s.spez, 'spez'), fCI_p(s.ppv, 'ppv'), fCI_p(s.npv, 'npv'), fCI_p(s.acc, 'acc'), fCI_p(s.auc, 'auc')].map(escMD); }; rows = [ fRow(statsGesamt, 'Gesamt'), fRow(statsDirektOP, 'direkt OP'), fRow(statsNRCT, 'nRCT') ]; }
@@ -176,7 +236,7 @@ const exportService = (() => {
             else if (tableType === 'criteria_comparison') { title = `Vergleich diagnostischer Güte verschiedener Methoden`; const results = dataOrStats; if (!Array.isArray(results) || results.length === 0) return `# ${title} (Kollektiv: ${kollektivDisplayName})\n\nKeine Daten verfügbar.`; headers = ['Methode/Kriteriensatz', 'Sens.', 'Spez.', 'PPV', 'NPV', 'Acc.', 'AUC/BalAcc']; rows = results.map(r => { let name = r.name || 'Unbekannt'; if (r.id === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) name = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME; else if (r.id === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID) name = APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME; return [name, formatPercent(r.sens, 1), formatPercent(r.spez, 1), formatPercent(r.ppv, 1), formatPercent(r.npv, 1), formatPercent(r.acc, 1), formatNumber(r.auc, 3)].map(escMD); }); }
             else { return `# Unbekannter Tabellentyp für Markdown: ${tableType}`; }
             const headerLine = `| ${headers.join(' | ')} |`; const separatorLine = `|${headers.map(() => '---').join('|')}|`; const bodyLines = rows.map(row => `| ${row.join(' | ')} |`).join('\n');
-            let metaInfo = `# ${title}`; if (!['patienten', 'auswertung', 'praes_as_perf', 'criteria_comparison'].includes(tableType)) metaInfo += ` (Kollektiv: ${kollektivDisplayName})`; else if (tableType === 'criteria_comparison') metaInfo += ` (für Kollektiv: ${kollektivDisplayName})`; metaInfo += '\n'; if(criteria && logic && ['auswertung', 'deskriptiv'].includes(tableType)) metaInfo += `\n_T2-Basis (angewandt): ${escMD(formatCriteriaFunc(criteria, logic))}_\n\n`; else if (options.t2CriteriaLabelFull && ['praes_as_vs_t2_perf', 'praes_as_vs_t2_tests', 'praes_as_vs_t2_comp'].includes(tableType)) metaInfo += `\n_T2-Basis (Vergleich): ${escMD(options.t2CriteriaLabelFull)}_\n\n`; else metaInfo += '\n';
+            let metaInfo = `# ${title}`; if (!['daten', 'auswertung', 'praes_as_perf', 'criteria_comparison'].includes(tableType)) metaInfo += ` (Kollektiv: ${kollektivDisplayName})`; else if (tableType === 'criteria_comparison') metaInfo += ` (für Kollektiv: ${kollektivDisplayName})`; metaInfo += '\n'; if(criteria && logic && ['auswertung', 'deskriptiv'].includes(tableType)) metaInfo += `\n_T2-Basis (angewandt): ${escMD(formatCriteriaFunc(criteria, logic))}_\n\n`; else if (options.t2CriteriaLabelFull && ['praes_as_vs_t2_perf', 'praes_as_vs_t2_tests', 'praes_as_vs_t2_comp'].includes(tableType)) metaInfo += `\n_T2-Basis (Vergleich): ${escMD(options.t2CriteriaLabelFull)}_\n\n`; else metaInfo += '\n';
             return `${metaInfo}${headerLine}\n${separatorLine}\n${bodyLines}`;
         } catch (error) {
             console.error(`Fehler in generateMarkdownTableString for type ${tableType}:`, error);
@@ -196,41 +256,56 @@ const exportService = (() => {
        }
    }
 
-    function _calculateStatsForExport(data, criteria, logic) {
-         if (!data || !criteria || !logic) return null;
-         try {
-            const evaluatedData = (typeof t2CriteriaManager !== 'undefined') ? t2CriteriaManager.evaluateDataset(cloneDeep(data), criteria, logic) : [];
-            if (!evaluatedData || evaluatedData.length === 0) return null;
-            return {
-                gueteAS: statisticsService.calculateDiagnosticPerformance(evaluatedData, 'as', 'n'),
-                gueteT2: statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n'),
-                vergleichASvsT2: statisticsService.compareDiagnosticMethods(evaluatedData, 'as', 't2', 'n'),
-                assoziation: statisticsService.calculateAssociations(evaluatedData, criteria),
-                deskriptiv: statisticsService.calculateDescriptiveStats(evaluatedData)
-            };
-         } catch(error) { console.error("Fehler bei der Statistikberechnung für Export:", error); return null; }
-     }
+    function _getPublicationSectionContentForExport(sectionId, lang) {
+        // This function needs access to the fully rendered HTML or markdown content of the publication tab sections.
+        // For now, it's a placeholder. This logic would ideally live in publikationTabLogic or be passed in.
+        // It would call publicationTextGenerator.getSectionText(...) with all necessary data.
+        // Since this function is for export, it should generate the pure text/markdown, not HTML for UI.
+        // For simplicity, this placeholder returns a basic string.
+        // The actual implementation would require access to 'allKollektivStats' and 'kollektiveData' (which is allKollektivStats)
+        // and the 'commonData' object as used in publicationRenderer.
+        const placeHolderText = `Textinhalt für Sektion '${sectionId}' in Sprache '${lang}' (Platzhalter).`;
+        try {
+            // Dummy data for placeholder - in real scenario, this would come from state or a data manager
+            const dummyPublicationData = {}; // Placeholder for allKollektivStats
+            const dummyKollektiveData = {}; // Placeholder
+            const dummyCommonData = { appName: APP_CONFIG.APP_NAME, appVersion: APP_CONFIG.APP_VERSION, /* ... other common fields */ };
+            if (typeof publicationTextGenerator !== 'undefined' && typeof publicationTextGenerator.getSectionTextAsMarkdown === 'function') {
+                 return publicationTextGenerator.getSectionTextAsMarkdown(sectionId, lang, dummyPublicationData, dummyKollektiveData, dummyCommonData);
+            }
+            return placeHolderText;
+        } catch (e) {
+            console.error(`Error generating markdown for publication section ${sectionId}:`, e);
+            return `# Fehler bei Generierung für Sektion ${sectionId}\n\n${e.message}`;
+        }
+    }
+
 
     function generateComprehensiveReportHTML(data, bfResults, kollektiv, criteria, logic) {
         try {
-            const stats = _calculateStatsForExport(data, criteria, logic);
+            const stats = statisticsService.calculateAllStatsForPublication(data, criteria, logic, bfResults ? {[kollektiv]: bfResults} : {}); // Pass bfResults specific to current kollektiv for this report
             if (!data || !stats || !criteria || !logic) return '<html><head><title>Fehler</title></head><body>Fehler: Notwendige Daten für Report fehlen.</body></html>';
+
             const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'N/A';
             const config = APP_CONFIG.REPORT_SETTINGS; const kollektivName = getKollektivDisplayName(kollektiv); const timestamp = new Date().toLocaleString('de-DE', { dateStyle: 'long', timeStyle: 'medium'}); const criteriaString = formatCriteriaFunc(criteria, logic); const appliedCriteriaDisplayName = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME; let chartSVGs = {};
-            const getChartSVG = (chartId) => { const el = document.getElementById(chartId)?.querySelector('svg'); if(!el) return `<p class="text-muted small">[Diagramm ${chartId} nicht renderbar/gefunden]</p>`; try { const clone = el.cloneNode(true); clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); clone.setAttribute('version', '1.1'); clone.style.backgroundColor = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#ffffff'; const vb = clone.getAttribute('viewBox')?.split(' '); let w = clone.getAttribute('width'), h = clone.getAttribute('height'); if (vb && vb.length === 4 && parseFloat(vb[2]) > 0 && parseFloat(vb[3]) > 0) { clone.setAttribute('width', vb[2]); clone.setAttribute('height', vb[3]); } else if (!w || !h || parseFloat(w) <= 0 || parseFloat(h) <= 0) { clone.setAttribute('width', '400'); clone.setAttribute('height', '300'); } const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style"); styleEl.textContent = `svg { font-family: ${getComputedStyle(document.body).fontFamily || 'sans-serif'}; } .axis path, .axis line { fill: none; stroke: #6c757d; shape-rendering: crispEdges; stroke-width: 1px; } .axis text { font-size: 10px; fill: #212529; } .axis-label { font-size: 11px; fill: #212529; text-anchor: middle; } .grid .tick { stroke: #dee2e6; stroke-opacity: 0.6; } .grid path { stroke-width: 0; } .legend { font-size: 10px; fill: #212529; } .bar { opacity: 0.9; } .roc-curve { fill: none; stroke-width: 2px; } .reference-line { stroke: #adb5bd; stroke-width: 1px; stroke-dasharray: 4 2; } .auc-label { font-weight: bold; font-size: 11px; }`; clone.prepend(styleEl); return clone.outerHTML; } catch (e) { return `<p class="text-danger small">[Fehler beim Einbetten von Diagramm ${chartId}]</p>`; } };
-            const chartIdsToCapture = []; if (config.INCLUDE_DESCRIPTIVES_CHARTS) { chartIdsToCapture.push('chart-stat-age-0', 'chart-stat-gender-0'); } if (config.INCLUDE_AS_VS_T2_COMPARISON_CHART) { const p = ['praes-comp-chart-container', 'stat-comp-bar-0'].find(id => document.getElementById(id)?.querySelector('svg')); if(p) chartIdsToCapture.push(p); } chartIdsToCapture.forEach(id => { const actualId = document.getElementById(id) ? id : (id.endsWith('-0') && document.getElementById(id.replace('-0','')) ? id.replace('-0','') : null); if (actualId) chartSVGs[actualId] = getChartSVG(actualId); });
+            const getChartSVG = (chartId) => { const el = document.getElementById(chartId)?.querySelector('svg'); if(!el) return `<p class="text-muted small">[Diagramm ${chartId} nicht renderbar/gefunden]</p>`; try { const clone = el.cloneNode(true); clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); clone.setAttribute('version', '1.1'); clone.style.backgroundColor = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#ffffff'; const vb = clone.getAttribute('viewBox')?.split(' '); let w = clone.getAttribute('width'), h = clone.getAttribute('height'); if (vb && vb.length === 4 && parseFloat(vb[2]) > 0 && parseFloat(vb[3]) > 0) { clone.setAttribute('width', vb[2]); clone.setAttribute('height', vb[3]); } else if (!w || !h || parseFloat(w) <= 0 || parseFloat(h) <= 0) { clone.setAttribute('width', '400'); clone.setAttribute('height', '300'); } const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style"); styleEl.textContent = `svg { font-family: ${getComputedStyle(document.body).fontFamily || 'sans-serif'}; } .axis path, .axis line { fill: none; stroke: #6c757d; shape-rendering: crispEdges; stroke-width: 1px; } .axis text { font-size: 10px; fill: #212529; } .axis-label { font-size: 11px; fill: #212529; text-anchor: middle; } .grid .tick { stroke: #dee2e6; stroke-opacity: 0.6; } .grid path { stroke-width: 0; } .legend { font-size: 10px; fill: #212529; } .bar { opacity: 0.9; } .roc-curve { fill: none; stroke-width: 2px; } .reference-line { stroke: #adb5bd; stroke-width: 1px; stroke-dasharray: 4 2; } .auc-label { font-weight: bold; font-size: 11px; }`; clone.prepend(styleEl); return clone.outerHTML; } catch (e) { return `<p class="text-danger small">[Fehler beim Einbetten von Diagramm ${chartId}: ${e.message}]</p>`; } };
+            const chartIdsToCapture = [];
+            const statsDataForCurrentKollektiv = stats[kollektiv]; // Get stats for the current global kollektiv
+
+            if (config.INCLUDE_DESCRIPTIVES_CHARTS) { chartIdsToCapture.push('chart-stat-age-0', 'chart-stat-gender-0'); } // These are usually rendered in Statistik tab for index 0
+            if (config.INCLUDE_AS_VS_T2_COMPARISON_CHART) { const p = ['praes-comp-chart-container'].find(id => document.getElementById(id)?.querySelector('svg')); if(p) chartIdsToCapture.push(p); } chartIdsToCapture.forEach(id => { const actualId = document.getElementById(id) ? id : (id.endsWith('-0') && document.getElementById(id.replace('-0','')) ? id.replace('-0','') : null); if (actualId) chartSVGs[actualId] = getChartSVG(actualId); });
             let html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>${config.REPORT_TITLE} - ${kollektivName}</title>`; html += `<style> body { font-family: sans-serif; font-size: 10pt; line-height: 1.4; padding: 25px; max-width: 800px; margin: auto; color: #212529; background-color: #fff;} h1, h2, h3 { color: #333; margin-top: 1.2em; margin-bottom: 0.6em; padding-bottom: 0.2em; border-bottom: 1px solid #ccc; page-break-after: avoid; } h1 { font-size: 16pt; border-bottom-width: 2px; } h2 { font-size: 14pt; } h3 { font-size: 12pt; font-weight: bold; border-bottom: none; margin-bottom: 0.4em; } table { border-collapse: collapse; width: 100%; margin-bottom: 1em; font-size: 9pt; page-break-inside: avoid; } th, td { border: 1px solid #ccc; padding: 5px 8px; text-align: left; vertical-align: top; word-wrap: break-word; } th { background-color: #f2f2f2; font-weight: bold; } .chart-container { text-align: center; margin: 1em 0; page-break-inside: avoid; background-color: #fff; padding: 10px; border: 1px solid #eee; max-width: 100%; overflow: hidden; } .chart-container svg { max-width: 100%; height: auto; display: block; margin: auto; } .meta-info { background-color: #f9f9f9; border: 1px solid #eee; padding: 10px 15px; margin-bottom: 1.5em; font-size: 9pt; } .meta-info ul { list-style: none; padding: 0; margin: 0; } .meta-info li { margin-bottom: 0.3em; } .small { font-size: 8pt; } .text-muted { color: #6c757d; } ul { padding-left: 20px; margin-top: 0.5em;} li { margin-bottom: 0.2em; } .report-footer { margin-top: 2em; padding-top: 1em; border-top: 1px solid #ccc; font-size: 8pt; color: #888; text-align: center; } .no-print { display: none; } @media print { body { padding: 10px; } .meta-info { background-color: #fff; border: none; padding: 0 0 1em 0;} } </style></head><body>`;
             html += `<h1>${config.REPORT_TITLE}</h1>`; if (config.INCLUDE_APP_VERSION) html += `<p class="text-muted small">Generiert mit: ${APP_CONFIG.APP_NAME} v${APP_CONFIG.APP_VERSION}</p>`; if (config.INCLUDE_GENERATION_TIMESTAMP) html += `<p class="text-muted small">Erstellt am: ${timestamp}</p>`;
-            html += `<div class="meta-info"><h3>Analysekonfiguration</h3><ul>`; if (config.INCLUDE_KOLLEKTIV_INFO) html += `<li><strong>Analysiertes Kollektiv:</strong> ${kollektivName} (N=${stats?.deskriptiv?.anzahlPatienten || 0})</li>`; if (config.INCLUDE_T2_CRITERIA) html += `<li><strong>Angewandte T2-Kriterien ('${appliedCriteriaDisplayName}'):</strong> Logik: ${logic}, Kriterien: ${criteriaString}</li>`; html += `</ul></div>`;
-            if (config.INCLUDE_DESCRIPTIVES_TABLE && stats?.deskriptiv) { html += `<h2>Deskriptive Statistik</h2>`; html += `<table><thead><tr><th>Metrik</th><th>Wert (Median)</th><th>Mean</th><th>SD</th><th>Min</th><th>Max</th></tr></thead><tbody>`; const d = stats.deskriptiv; const na = '--'; const fv = (v, dig = 1) => formatNumber(v, dig, na); const fP = (v, dig = 1) => formatPercent(v, dig, na); const addRowHTML = (l, vl=na, m=na, s=na, mn=na, mx=na) => `<tr><td>${l}</td><td>${vl}</td><td>${m}</td><td>${s}</td><td>${mn}</td><td>${mx}</td></tr>`; html += addRowHTML('Alter (Jahre)', fv(d.alter?.median, 1), fv(d.alter?.mean, 1), fv(d.alter?.sd, 1), fv(d.alter?.min, 0), fv(d.alter?.max, 0)); html += addRowHTML('Geschlecht Männlich (n / %)', `${d.geschlecht?.m ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.geschlecht?.m ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('Geschlecht Weiblich (n / %)', `${d.geschlecht?.f ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.geschlecht?.f ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('Therapie direkt OP (n / %)', `${d.therapie?.['direkt OP'] ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.therapie?.['direkt OP'] ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('Therapie nRCT (n / %)', `${d.therapie?.nRCT ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.therapie?.nRCT ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('N Status (+ / %)', `${d.nStatus?.plus ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.nStatus?.plus ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('AS Status (+ / %)', `${d.asStatus?.plus ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.asStatus?.plus ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('T2 Status (+ / %)', `${d.t2Status?.plus ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.t2Status?.plus ?? 0) / d.anzahlPatienten : NaN, 1)}`); const fLK = (lk) => `${fv(lk?.median,1)} (${fv(lk?.min,0)}-${fv(lk?.max,0)})`; html += addRowHTML('LK N gesamt (Median (Min-Max))', fLK(d.lkAnzahlen?.n?.total), fv(d.lkAnzahlen?.n?.total?.mean,1), fv(d.lkAnzahlen?.n?.total?.sd,1),fv(d.lkAnzahlen?.n?.total?.min,0), fv(d.lkAnzahlen?.n?.total?.max,0)); html += addRowHTML('LK N+ (Median (Min-Max), nur N+ Pat.)', fLK(d.lkAnzahlen?.n?.plus), fv(d.lkAnzahlen?.n?.plus?.mean,1), fv(d.lkAnzahlen?.n?.plus?.sd,1),fv(d.lkAnzahlen?.n?.plus?.min,0), fv(d.lkAnzahlen?.n?.plus?.max,0)); html += addRowHTML('LK AS gesamt (Median (Min-Max))', fLK(d.lkAnzahlen?.as?.total), fv(d.lkAnzahlen?.as?.total?.mean,1), fv(d.lkAnzahlen?.as?.total?.sd,1),fv(d.lkAnzahlen?.as?.total?.min,0), fv(d.lkAnzahlen?.as?.total?.max,0)); html += addRowHTML('LK AS+ (Median (Min-Max), nur AS+ Pat.)', fLK(d.lkAnzahlen?.as?.plus), fv(d.lkAnzahlen?.as?.plus?.mean,1), fv(d.lkAnzahlen?.as?.plus?.sd,1),fv(d.lkAnzahlen?.as?.plus?.min,0), fv(d.lkAnzahlen?.as?.plus?.max,0)); html += addRowHTML('LK T2 gesamt (Median (Min-Max))', fLK(d.lkAnzahlen?.t2?.total), fv(d.lkAnzahlen?.t2?.total?.mean,1), fv(d.lkAnzahlen?.t2?.total?.sd,1),fv(d.lkAnzahlen?.t2?.total?.min,0), fv(d.lkAnzahlen?.t2?.total?.max,0)); html += addRowHTML('LK T2+ (Median (Min-Max), nur T2+ Pat.)', fLK(d.lkAnzahlen?.t2?.plus), fv(d.lkAnzahlen?.t2?.plus?.mean,1), fv(d.lkAnzahlen?.t2?.plus?.sd,1),fv(d.lkAnzahlen?.t2?.plus?.min,0), fv(d.lkAnzahlen?.t2?.plus?.max,0)); html += `</tbody></table>`; }
+            html += `<div class="meta-info"><h3>Analysekonfiguration</h3><ul>`; if (config.INCLUDE_KOLLEKTIV_INFO) html += `<li><strong>Analysiertes Kollektiv:</strong> ${kollektivName} (N=${statsDataForCurrentKollektiv?.deskriptiv?.anzahlPatienten || 0})</li>`; if (config.INCLUDE_T2_CRITERIA) html += `<li><strong>Angewandte T2-Kriterien ('${appliedCriteriaDisplayName}'):</strong> Logik: ${logic}, Kriterien: ${criteriaString}</li>`; html += `</ul></div>`;
+            if (config.INCLUDE_DESCRIPTIVES_TABLE && statsDataForCurrentKollektiv?.deskriptiv) { html += `<h2>Deskriptive Statistik</h2>`; html += `<table><thead><tr><th>Metrik</th><th>Wert (Median)</th><th>Mean</th><th>SD</th><th>Min</th><th>Max</th></tr></thead><tbody>`; const d = statsDataForCurrentKollektiv.deskriptiv; const na = '--'; const fv = (v, dig = 1) => formatNumber(v, dig, na); const fP = (v, dig = 1) => formatPercent(v, dig, na); const addRowHTML = (l, vl=na, m=na, s=na, mn=na, mx=na) => `<tr><td>${l}</td><td>${vl}</td><td>${m}</td><td>${s}</td><td>${mn}</td><td>${mx}</td></tr>`; html += addRowHTML('Alter (Jahre)', fv(d.alter?.median, 1), fv(d.alter?.mean, 1), fv(d.alter?.sd, 1), fv(d.alter?.min, 0), fv(d.alter?.max, 0)); html += addRowHTML('Geschlecht Männlich (n / %)', `${d.geschlecht?.m ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.geschlecht?.m ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('Geschlecht Weiblich (n / %)', `${d.geschlecht?.f ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.geschlecht?.f ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('Therapie direkt OP (n / %)', `${d.therapie?.['direkt OP'] ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.therapie?.['direkt OP'] ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('Therapie nRCT (n / %)', `${d.therapie?.nRCT ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.therapie?.nRCT ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('N Status (+ / %)', `${d.nStatus?.plus ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.nStatus?.plus ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('AS Status (+ / %)', `${d.asStatus?.plus ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.asStatus?.plus ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('T2 Status (+ / %)', `${d.t2Status?.plus ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.t2Status?.plus ?? 0) / d.anzahlPatienten : NaN, 1)}`); const fLK = (lk) => `${fv(lk?.median,1)} (${fv(lk?.min,0)}-${fv(lk?.max,0)})`; html += addRowHTML('LK N gesamt (Median (Min-Max))', fLK(d.lkAnzahlen?.n?.total), fv(d.lkAnzahlen?.n?.total?.mean,1), fv(d.lkAnzahlen?.n?.total?.sd,1),fv(d.lkAnzahlen?.n?.total?.min,0), fv(d.lkAnzahlen?.n?.total?.max,0)); html += addRowHTML('LK N+ (Median (Min-Max), nur N+ Pat.)', fLK(d.lkAnzahlen?.n?.plus), fv(d.lkAnzahlen?.n?.plus?.mean,1), fv(d.lkAnzahlen?.n?.plus?.sd,1),fv(d.lkAnzahlen?.n?.plus?.min,0), fv(d.lkAnzahlen?.n?.plus?.max,0)); html += addRowHTML('LK AS gesamt (Median (Min-Max))', fLK(d.lkAnzahlen?.as?.total), fv(d.lkAnzahlen?.as?.total?.mean,1), fv(d.lkAnzahlen?.as?.total?.sd,1),fv(d.lkAnzahlen?.as?.total?.min,0), fv(d.lkAnzahlen?.as?.total?.max,0)); html += addRowHTML('LK AS+ (Median (Min-Max), nur AS+ Pat.)', fLK(d.lkAnzahlen?.as?.plus), fv(d.lkAnzahlen?.as?.plus?.mean,1), fv(d.lkAnzahlen?.as?.plus?.sd,1),fv(d.lkAnzahlen?.as?.plus?.min,0), fv(d.lkAnzahlen?.as?.plus?.max,0)); html += addRowHTML('LK T2 gesamt (Median (Min-Max))', fLK(d.lkAnzahlen?.t2?.total), fv(d.lkAnzahlen?.t2?.total?.mean,1), fv(d.lkAnzahlen?.t2?.total?.sd,1),fv(d.lkAnzahlen?.t2?.total?.min,0), fv(d.lkAnzahlen?.t2?.total?.max,0)); html += addRowHTML('LK T2+ (Median (Min-Max), nur T2+ Pat.)', fLK(d.lkAnzahlen?.t2?.plus), fv(d.lkAnzahlen?.t2?.plus?.mean,1), fv(d.lkAnzahlen?.t2?.plus?.sd,1),fv(d.lkAnzahlen?.t2?.plus?.min,0), fv(d.lkAnzahlen?.t2?.plus?.max,0)); html += `</tbody></table>`; }
             if (config.INCLUDE_DESCRIPTIVES_CHARTS) { html += `<div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 1em; justify-content: space-around;">`; if (chartSVGs['chart-stat-age-0']) html += `<div class="chart-container" style="flex: 1 1 45%; min-width: 300px;"><h3>Altersverteilung</h3>${chartSVGs['chart-stat-age-0']}</div>`; if (chartSVGs['chart-stat-gender-0']) html += `<div class="chart-container" style="flex: 1 1 45%; min-width: 300px;"><h3>Geschlechterverteilung</h3>${chartSVGs['chart-stat-gender-0']}</div>`; html += `</div>`; }
-            const addPerfSection = (title, statsObj) => { if (!statsObj) return ''; let sHtml = `<h2>${title}</h2><table><thead><tr><th>Metrik</th><th>Wert (95% CI)</th><th>CI Methode</th></tr></thead><tbody>`; const fCI = (m, d=1, p=true) => formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, d, p, '--'); const na = '--'; sHtml += `<tr><td>Sensitivität</td><td>${fCI(statsObj.sens)}</td><td>${statsObj.sens?.method || na}</td></tr>`; sHtml += `<tr><td>Spezifität</td><td>${fCI(statsObj.spez)}</td><td>${statsObj.spez?.method || na}</td></tr>`; sHtml += `<tr><td>PPV</td><td>${fCI(statsObj.ppv)}</td><td>${statsObj.ppv?.method || na}</td></tr>`; sHtml += `<tr><td>NPV</td><td>${fCI(statsObj.npv)}</td><td>${statsObj.npv?.method || na}</td></tr>`; sHtml += `<tr><td>Accuracy</td><td>${fCI(statsObj.acc)}</td><td>${statsObj.acc?.method || na}</td></tr>`; sHtml += `<tr><td>Balanced Accuracy</td><td>${fCI(statsObj.balAcc)}</td><td>${statsObj.balAcc?.method || na}</td></tr>`; sHtml += `<tr><td>F1-Score</td><td>${fCI(statsObj.f1, 3, false)}</td><td>${statsObj.f1?.method || na}</td></tr>`; sHtml += `<tr><td>AUC</td><td>${fCI(statsObj.auc, 3, false)}</td><td>${statsObj.auc?.method || na}</td></tr>`; sHtml += `</tbody></table>`; return sHtml; };
-            if (config.INCLUDE_AS_PERFORMANCE_TABLE && stats?.gueteAS) { html += addPerfSection('Diagnostische Güte: Avocado Sign (vs. N)', stats.gueteAS); }
-            if (config.INCLUDE_T2_PERFORMANCE_TABLE && stats?.gueteT2) { html += addPerfSection(`Diagnostische Güte: T2 ('${appliedCriteriaDisplayName}' vs. N)`, stats.gueteT2); }
-            if (config.INCLUDE_AS_VS_T2_COMPARISON_TABLE && stats?.vergleichASvsT2) { html += `<h2>Statistischer Vergleich: AS vs. T2 ('${appliedCriteriaDisplayName}')</h2><table><thead><tr><th>Test</th><th>Statistik</th><th>p-Wert</th><th>Methode</th></tr></thead><tbody>`; const v = stats.vergleichASvsT2; const fP = (p) => (p !== null && !isNaN(p)) ? (p < 0.001 ? '<0.001' : formatNumber(p, 3, '--')) : '--'; const na = '--'; html += `<tr><td>Accuracy (McNemar)</td><td>${formatNumber(v?.mcnemar?.statistic, 3, na)} (df=${v?.mcnemar?.df || na})</td><td>${fP(v?.mcnemar?.pValue)} ${getStatisticalSignificanceSymbol(v?.mcnemar?.pValue)}</td><td>${v?.mcnemar?.method || na}</td></tr>`; html += `<tr><td>AUC (DeLong)</td><td>Z=${formatNumber(v?.delong?.Z, 3, na)}</td><td>${fP(v?.delong?.pValue)} ${getStatisticalSignificanceSymbol(v?.delong?.pValue)}</td><td>${v?.delong?.method || na}</td></tr>`; html += `</tbody></table>`; }
+            const addPerfSectionHTML = (title, statsObj) => { if (!statsObj) return ''; let sHtml = `<h2>${title}</h2><table><thead><tr><th>Metrik</th><th>Wert (95% CI)</th><th>CI Methode</th></tr></thead><tbody>`; const fCI = (m, d=1, p=true) => formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, d, p, '--'); const na = '--'; sHtml += `<tr><td>Sensitivität</td><td>${fCI(statsObj.sens)}</td><td>${statsObj.sens?.method || na}</td></tr>`; sHtml += `<tr><td>Spezifität</td><td>${fCI(statsObj.spez)}</td><td>${statsObj.spez?.method || na}</td></tr>`; sHtml += `<tr><td>PPV</td><td>${fCI(statsObj.ppv)}</td><td>${statsObj.ppv?.method || na}</td></tr>`; sHtml += `<tr><td>NPV</td><td>${fCI(statsObj.npv)}</td><td>${statsObj.npv?.method || na}</td></tr>`; sHtml += `<tr><td>Accuracy</td><td>${fCI(statsObj.acc)}</td><td>${statsObj.acc?.method || na}</td></tr>`; sHtml += `<tr><td>Balanced Accuracy</td><td>${fCI(statsObj.balAcc)}</td><td>${statsObj.balAcc?.method || na}</td></tr>`; sHtml += `<tr><td>F1-Score</td><td>${fCI(statsObj.f1, 3, false)}</td><td>${statsObj.f1?.method || na}</td></tr>`; sHtml += `<tr><td>AUC</td><td>${fCI(statsObj.auc, 3, false)}</td><td>${statsObj.auc?.method || na}</td></tr>`; sHtml += `</tbody></table>`; return sHtml; };
+            if (config.INCLUDE_AS_PERFORMANCE_TABLE && statsDataForCurrentKollektiv?.gueteAS) { html += addPerfSectionHTML('Diagnostische Güte: Avocado Sign (vs. N)', statsDataForCurrentKollektiv.gueteAS); }
+            if (config.INCLUDE_T2_PERFORMANCE_TABLE && statsDataForCurrentKollektiv?.gueteT2_angewandt) { html += addPerfSectionHTML(`Diagnostische Güte: T2 ('${appliedCriteriaDisplayName}' vs. N)`, statsDataForCurrentKollektiv.gueteT2_angewandt); }
+            if (config.INCLUDE_AS_VS_T2_COMPARISON_TABLE && statsDataForCurrentKollektiv?.vergleichASvsT2_angewandt) { html += `<h2>Statistischer Vergleich: AS vs. T2 ('${appliedCriteriaDisplayName}')</h2><table><thead><tr><th>Test</th><th>Statistik</th><th>p-Wert</th><th>Methode</th></tr></thead><tbody>`; const v = statsDataForCurrentKollektiv.vergleichASvsT2_angewandt; const fP = (p) => (p !== null && !isNaN(p)) ? (p < 0.001 ? '<0.001' : formatNumber(p, 3, '--')) : '--'; const na = '--'; html += `<tr><td>Accuracy (McNemar)</td><td>${formatNumber(v?.mcnemar?.statistic, 3, na)} (df=${v?.mcnemar?.df || na})</td><td>${fP(v?.mcnemar?.pValue)} ${getStatisticalSignificanceSymbol(v?.mcnemar?.pValue)}</td><td>${v?.mcnemar?.method || na}</td></tr>`; html += `<tr><td>AUC (DeLong)</td><td>Z=${formatNumber(v?.delong?.Z, 3, na)}</td><td>${fP(v?.delong?.pValue)} ${getStatisticalSignificanceSymbol(v?.delong?.pValue)}</td><td>${v?.delong?.method || na}</td></tr>`; html += `</tbody></table>`; }
             if (config.INCLUDE_AS_VS_T2_COMPARISON_CHART) { const chartKey = Object.keys(chartSVGs).find(k => k.startsWith('praes-comp-chart') || k.startsWith('stat-comp-bar')); if(chartSVGs[chartKey]) { html += `<div class="chart-container"><h3>Vergleich ausgewählter Metriken (AS vs T2 - '${appliedCriteriaDisplayName}')</h3>${chartSVGs[chartKey]}</div>`; } }
-            if (config.INCLUDE_ASSOCIATIONS_TABLE && stats?.assoziation && Object.keys(stats.assoziation).length > 0) { html += `<h2>Assoziation mit N-Status</h2><table><thead><tr><th>Merkmal</th><th>OR (95% CI)</th><th>RD (%) (95% CI)</th><th>Phi</th><th>p-Wert</th><th>Test</th></tr></thead><tbody>`; const a = stats.assoziation; const na = '--'; const fP = (p) => (p !== null && !isNaN(p)) ? (p < 0.001 ? '<0.001' : formatNumber(p, 3, na)) : na; const fRow = (nm, obj) => { if (!obj) return ''; const orS = formatCI(obj.or?.value, obj.or?.ci?.lower, obj.or?.ci?.upper, 2, false, na); const rdV = formatNumber(obj.rd?.value !== null && !isNaN(obj.rd?.value) ? obj.rd.value * 100 : NaN, 1, na); const rdL = formatNumber(obj.rd?.ci?.lower !== null && !isNaN(obj.rd?.ci?.lower) ? obj.rd.ci.lower * 100 : NaN, 1, na); const rdU = formatNumber(obj.rd?.ci?.upper !== null && !isNaN(obj.rd?.ci?.upper) ? obj.rd.ci.upper * 100 : NaN, 1, na); const rdS = `${rdV} (${rdL} - ${rdU})`; const phiS = formatNumber(obj.phi?.value, 2, na); const pS = fP(obj.pValue) + ' ' + getStatisticalSignificanceSymbol(obj.pValue); const tN = obj.testName || na; return `<tr><td>${nm}</td><td>${orS}</td><td>${rdS}</td><td>${phiS}</td><td>${pS}</td><td>${tN}</td></tr>`; }; html += fRow('AS Positiv', a?.as); if (a?.size_mwu) html += `<tr><td>LK Größe (Median Vgl.)</td><td>${na}</td><td>${na}</td><td>${na}</td><td>${fP(a.size_mwu.pValue)} ${getStatisticalSignificanceSymbol(a.size_mwu.pValue)}</td><td>${a.size_mwu.testName || na}</td></tr>`; ['size', 'form', 'kontur', 'homogenitaet', 'signal'].forEach(k => { if (a && a[k]) { const isActive = criteria[k]?.active === true; html += fRow(a[k].featureName + (isActive ? '' : ' (inaktiv)'), a[k]); } }); html += `</tbody></table>`; }
-            if (config.INCLUDE_BRUTEFORCE_BEST_RESULT && bfResults?.results && bfResults.results.length > 0) { html += `<h2>Bestes Brute-Force Ergebnis</h2><div class="meta-info"><ul>`; const best = bfResults.results[0]; html += `<li><strong>Optimierte Metrik:</strong> ${bfResults.metric}</li><li><strong>Bester Wert:</strong> ${formatNumber(best.metricValue, 4)}</li><li><strong>Logik:</strong> ${best.logic?.toUpperCase()}</li><li><strong>Kriterien:</strong> ${formatCriteriaFunc(best.criteria, best.logic)}</li></ul></div>`; }
+            if (config.INCLUDE_ASSOCIATIONS_TABLE && statsDataForCurrentKollektiv?.assoziation_angewandt && Object.keys(statsDataForCurrentKollektiv.assoziation_angewandt).length > 0) { html += `<h2>Assoziation mit N-Status</h2><table><thead><tr><th>Merkmal</th><th>OR (95% CI)</th><th>RD (%) (95% CI)</th><th>Phi</th><th>p-Wert</th><th>Test</th></tr></thead><tbody>`; const a = statsDataForCurrentKollektiv.assoziation_angewandt; const na = '--'; const fP = (p) => (p !== null && !isNaN(p)) ? (p < 0.001 ? '<0.001' : formatNumber(p, 3, na)) : na; const fRowAssoc = (nm, obj) => { if (!obj) return ''; const orS = formatCI(obj.or?.value, obj.or?.ci?.lower, obj.or?.ci?.upper, 2, false, na); const rdV = formatNumber(obj.rd?.value !== null && !isNaN(obj.rd?.value) ? obj.rd.value * 100 : NaN, 1, na); const rdL = formatNumber(obj.rd?.ci?.lower !== null && !isNaN(obj.rd?.ci?.lower) ? obj.rd.ci.lower * 100 : NaN, 1, na); const rdU = formatNumber(obj.rd?.ci?.upper !== null && !isNaN(obj.rd?.ci?.upper) ? obj.rd.ci.upper * 100 : NaN, 1, na); const rdS = rdV !== na ? `${rdV}% (${rdL}% - ${rdU}%)` : na; const phiS = formatNumber(obj.phi?.value, 2, na); const pS = fP(obj.pValue) + ' ' + getStatisticalSignificanceSymbol(obj.pValue); const tN = obj.testName || na; return `<tr><td>${nm}</td><td>${orS}</td><td>${rdS}</td><td>${phiS}</td><td>${pS}</td><td>${tN}</td></tr>`; }; html += fRowAssoc('AS Positiv', a?.as); if (a?.size_mwu) html += `<tr><td>${a.size_mwu.featureName || 'LK Größe (Median Vgl.)'}</td><td>${na}</td><td>${na}</td><td>${na}</td><td>${fP(a.size_mwu.pValue)} ${getStatisticalSignificanceSymbol(a.size_mwu.pValue)}</td><td>${a.size_mwu.testName || na}</td></tr>`; ['size', 'form', 'kontur', 'homogenitaet', 'signal'].forEach(k => { if (a && a[k]) { const isActive = criteria[k]?.active === true; html += fRowAssoc(a[k].featureName + (isActive ? '' : ' (inaktiv)'), a[k]); } }); html += `</tbody></table>`; }
+            if (config.INCLUDE_BRUTEFORCE_BEST_RESULT && bfResults?.results && bfResults.results.length > 0 && bfResults.bestResult) { html += `<h2>Bestes Brute-Force Ergebnis (für Kollektiv: ${kollektivName})</h2><div class="meta-info"><ul>`; const best = bfResults.bestResult; html += `<li><strong>Optimierte Metrik:</strong> ${bfResults.metric}</li><li><strong>Bester Wert:</strong> ${formatNumber(best.metricValue, 4)}</li><li><strong>Logik:</strong> ${best.logic?.toUpperCase()}</li><li><strong>Kriterien:</strong> ${formatCriteriaFunc(best.criteria, best.logic)}</li></ul></div>`; }
             html += `<div class="report-footer">${config.REPORT_AUTHOR} - ${timestamp}</div></body></html>`; return html;
         } catch (error) {
              console.error("Fehler in generateComprehensiveReportHTML:", error);
@@ -239,31 +314,103 @@ const exportService = (() => {
     }
 
     async function convertTableToPngBlob(tableElementId, baseWidth = 800) {
-        const scale = APP_CONFIG.EXPORT_SETTINGS.TABLE_PNG_EXPORT_SCALE || 2; const targetWidth = baseWidth * scale;
+        const scale = APP_CONFIG.EXPORT_SETTINGS.TABLE_PNG_EXPORT_SCALE || 2;
+        const targetWidth = baseWidth * scale;
         return new Promise((resolve, reject) => {
-            const table = document.getElementById(tableElementId); if (!table || !(table instanceof HTMLTableElement)) return reject(new Error(`Tabelle mit ID '${tableElementId}' nicht gefunden.`));
+            const table = document.getElementById(tableElementId);
+            if (!table || !(table instanceof HTMLTableElement)) return reject(new Error(`Tabelle mit ID '${tableElementId}' nicht gefunden.`));
             try {
-                const tableBCR = table.getBoundingClientRect(); let tableRect = {width: tableBCR.width, height: tableBCR.height, left: tableBCR.left, top: tableBCR.top};
-                if(tableRect.width <= 0 || tableRect.height <= 0) { tableRect.width = table.offsetWidth; tableRect.height = table.offsetHeight; if(tableRect.width <= 0 || tableRect.height <= 0) return reject(new Error(`Tabelle '${tableElementId}' hat keine Dimensionen.`)); tableRect.left = table.offsetLeft; tableRect.top = table.offsetTop; }
-                const effectiveScale = targetWidth / tableRect.width; const canvas = document.createElement('canvas'); const targetHeight = tableRect.height * effectiveScale; canvas.width = targetWidth; canvas.height = targetHeight; const ctx = canvas.getContext('2d'); if (!ctx) return reject(new Error("Canvas Context nicht verfügbar."));
-                ctx.fillStyle = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.save(); ctx.scale(effectiveScale, effectiveScale);
-                const rows = Array.from(table.rows); rows.forEach(row => { const cells = Array.from(row.cells); cells.forEach(cell => { const cellRect = cell.getBoundingClientRect(); const computedStyle = getComputedStyle(cell); const cellX = cellRect.left - tableRect.left; const cellY = cellRect.top - tableRect.top; const cellWidth = cellRect.width; const cellHeight = cellRect.height;
-                    ctx.fillStyle = computedStyle.backgroundColor || 'transparent'; if (ctx.fillStyle && ctx.fillStyle !== 'rgba(0, 0, 0, 0)' && ctx.fillStyle !== 'transparent') ctx.fillRect(cellX, cellY, cellWidth, cellHeight);
-                    const bTop = parseFloat(computedStyle.borderTopWidth) || 0; const bRight = parseFloat(computedStyle.borderRightWidth) || 0; const bBottom = parseFloat(computedStyle.borderBottomWidth) || 0; const bLeft = parseFloat(computedStyle.borderLeftWidth) || 0;
-                    if (bTop > 0) { ctx.fillStyle = computedStyle.borderTopColor || '#ccc'; ctx.fillRect(cellX, cellY, cellWidth, bTop); } if (bRight > 0) { ctx.fillStyle = computedStyle.borderRightColor || '#ccc'; ctx.fillRect(cellX + cellWidth - bRight, cellY, bRight, cellHeight); } if (bBottom > 0) { ctx.fillStyle = computedStyle.borderBottomColor || '#ccc'; ctx.fillRect(cellX, cellY + cellHeight - bBottom, cellWidth, bBottom); } if (bLeft > 0) { ctx.fillStyle = computedStyle.borderLeftColor || '#ccc'; ctx.fillRect(cellX, cellY, bLeft, cellHeight); }
-                    ctx.fillStyle = computedStyle.color || '#000'; ctx.font = `${computedStyle.fontStyle || 'normal'} ${computedStyle.fontWeight || 'normal'} ${parseFloat(computedStyle.fontSize)}px ${computedStyle.fontFamily || 'sans-serif'}`; ctx.textAlign = computedStyle.textAlign === 'right' ? 'right' : computedStyle.textAlign === 'center' ? 'center' : 'left'; ctx.textBaseline = 'middle';
-                    const text = cell.innerText || cell.textContent || ''; const padL = parseFloat(computedStyle.paddingLeft) || 5; const padR = parseFloat(computedStyle.paddingRight) || 5;
-                    const textX = (ctx.textAlign === 'right') ? cellX + cellWidth - padR : (ctx.textAlign === 'center') ? cellX + cellWidth / 2 : cellX + padL; const textY = cellY + cellHeight / 2; ctx.fillText(text.trim(), textX, textY); }); });
+                // Ensure table is fully rendered and dimensions are available
+                 const tableBCR = table.getBoundingClientRect();
+                 let tableRect = {width: tableBCR.width, height: tableBCR.height, left: tableBCR.left, top: tableBCR.top};
+                if(tableRect.width <= 0 || tableRect.height <= 0) {
+                    // Fallback if getBoundingClientRect fails (e.g. table not visible)
+                    tableRect.width = table.offsetWidth || baseWidth;
+                    tableRect.height = table.offsetHeight || (baseWidth * 0.5); // Estimate height
+                     if(tableRect.width <= 0 || tableRect.height <= 0) return reject(new Error(`Tabelle '${tableElementId}' hat keine validen Dimensionen.`));
+                    tableRect.left = table.offsetLeft || 0;
+                    tableRect.top = table.offsetTop || 0;
+                }
+
+                const effectiveScale = Math.min(scale, targetWidth / tableRect.width); // Don't upscale beyond targetWidth
+                const canvas = document.createElement('canvas');
+                const targetHeight = tableRect.height * effectiveScale;
+                canvas.width = tableRect.width * effectiveScale; // Use actual scaled width
+                canvas.height = targetHeight;
+
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return reject(new Error("Canvas Context nicht verfügbar."));
+
+                ctx.fillStyle = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.save();
+                ctx.scale(effectiveScale, effectiveScale);
+
+                // Draw table content (simplified for this example, html2canvas or similar might be more robust)
+                const tableClone = table.cloneNode(true);
+                const tableWrapper = document.createElement('div');
+                tableWrapper.style.position = 'absolute';
+                tableWrapper.style.left = '-9999px'; // Render off-screen
+                tableWrapper.appendChild(tableClone);
+                document.body.appendChild(tableWrapper); // Needs to be in DOM for getComputedStyle
+
+                const rows = Array.from(tableClone.rows);
+                let currentY = 0;
+                rows.forEach(row => {
+                    const cells = Array.from(row.cells);
+                    let currentX = 0;
+                    let maxHeightInRow = 0;
+                    cells.forEach(cell => {
+                        const computedStyle = getComputedStyle(cell);
+                        const cellWidth = cell.offsetWidth; // Use offsetWidth from cloned, rendered table
+                        const cellHeight = cell.offsetHeight;
+                        maxHeightInRow = Math.max(maxHeightInRow, cellHeight);
+
+                        ctx.fillStyle = computedStyle.backgroundColor || 'transparent';
+                        if (ctx.fillStyle && ctx.fillStyle !== 'rgba(0, 0, 0, 0)' && ctx.fillStyle !== 'transparent') ctx.fillRect(currentX, currentY, cellWidth, cellHeight);
+
+                        // Borders (simplified)
+                        const borderWeight = 1; // Simplified
+                        ctx.strokeStyle = computedStyle.borderTopColor || '#ccc';
+                        ctx.lineWidth = borderWeight;
+                        ctx.beginPath();
+                        ctx.moveTo(currentX, currentY); ctx.lineTo(currentX + cellWidth, currentY); // Top
+                        ctx.moveTo(currentX, currentY + cellHeight); ctx.lineTo(currentX + cellWidth, currentY + cellHeight); // Bottom
+                        ctx.moveTo(currentX, currentY); ctx.lineTo(currentX, currentY + cellHeight); // Left
+                        ctx.moveTo(currentX + cellWidth, currentY); ctx.lineTo(currentX + cellWidth, currentY + cellHeight); // Right
+                        ctx.stroke();
+
+
+                        ctx.fillStyle = computedStyle.color || '#000';
+                        ctx.font = `${computedStyle.fontStyle || 'normal'} ${computedStyle.fontWeight || 'normal'} ${parseFloat(computedStyle.fontSize)}px ${computedStyle.fontFamily || 'sans-serif'}`;
+                        ctx.textAlign = computedStyle.textAlign === 'right' ? 'right' : computedStyle.textAlign === 'center' ? 'center' : 'left';
+                        ctx.textBaseline = 'middle';
+
+                        const text = cell.innerText || cell.textContent || '';
+                        const padL = parseFloat(computedStyle.paddingLeft) || 5;
+                        const padR = parseFloat(computedStyle.paddingRight) || 5;
+                        const textX = (ctx.textAlign === 'right') ? currentX + cellWidth - padR : (ctx.textAlign === 'center') ? currentX + cellWidth / 2 : currentX + padL;
+                        const textY = currentY + cellHeight / 2;
+                        ctx.fillText(text.trim(), textX, textY);
+                        currentX += cellWidth;
+                    });
+                    currentY += maxHeightInRow;
+                });
+
+                document.body.removeChild(tableWrapper); // Clean up
                 ctx.restore();
-                canvas.toBlob((blob) => { if (blob) { resolve(blob); } else { reject(new Error("Canvas toBlob für Tabelle fehlgeschlagen.")); } }, 'image/png');
+                canvas.toBlob((blob) => {
+                    if (blob) { resolve(blob); }
+                    else { reject(new Error("Canvas toBlob für Tabelle fehlgeschlagen.")); }
+                }, 'image/png');
             } catch (error) { reject(error); }
         });
     }
 
     function exportStatistikCSV(data, kollektiv, criteria, logic) {
         let stats = null, csvString = null;
-        try { stats = _calculateStatsForExport(data, criteria, logic); } catch(e) { ui_helpers.showToast("Fehler bei Statistikberechnung.", "danger"); return; }
-        if (!stats) { ui_helpers.showToast("Keine Statistikdaten zum Exportieren.", "warning"); return; }
+        try { stats = statisticsService.calculateAllStatsForPublication(data, criteria, logic, null)[kollektiv]; } catch(e) { ui_helpers.showToast("Fehler bei Statistikberechnung für CSV.", "danger"); return; }
+        if (!stats) { ui_helpers.showToast("Keine Statistikdaten zum Exportieren für dieses Kollektiv.", "warning"); return; }
         try { csvString = generateStatistikCSVString(stats, kollektiv, criteria, logic); } catch(e) { ui_helpers.showToast("Fehler bei CSV-Erstellung.", "danger"); return; }
         if (csvString === null || csvString.length === 0) { ui_helpers.showToast("CSV-Generierung ergab leere Datei.", "warning"); return; }
         const filename = generateFilename('STATS_CSV', kollektiv, 'csv');
@@ -283,7 +430,8 @@ const exportService = (() => {
         let mdString = null; let typeKey = `UnknownTable_${tableType}_MD`, title = tableType;
         try { mdString = generateMarkdownTableString(dataOrStats, tableType, kollektiv, criteria, logic, options); } catch(e) { ui_helpers.showToast(`Fehler bei MD-Erstellung (${tableType}).`, "danger"); return; }
         if (mdString === null || mdString.length === 0) { ui_helpers.showToast(`MD-Generierung ergab leere Datei (${tableType}).`, "warning"); return; }
-        if(tableType === 'patienten') { typeKey = 'PATIENTEN_MD'; title = 'Patientenliste'; }
+
+        if(tableType === 'daten') { typeKey = 'DATEN_MD'; title = 'Datenliste'; }
         else if(tableType === 'auswertung') { typeKey = 'AUSWERTUNG_MD'; title = 'Auswertungstabelle'; }
         else if(tableType === 'deskriptiv') { typeKey = 'DESKRIPTIV_MD'; title = 'Deskriptive Statistik'; }
         else if(tableType === 'praes_as_perf') { typeKey = 'PRAES_AS_PERF_MD'; title = 'AS Performance'; }
@@ -291,7 +439,11 @@ const exportService = (() => {
         else if(tableType === 'praes_as_vs_t2_tests') { typeKey = 'PRAES_AS_VS_T2_TESTS_MD'; title = 'AS vs T2 Tests'; }
         else if(tableType === 'praes_as_vs_t2_comp') { typeKey = 'PRAES_AS_VS_T2_COMP_MD'; title = 'AS vs T2 Metrics'; }
         else if(tableType === 'criteria_comparison') { typeKey = 'CRITERIA_COMPARISON_MD'; title = 'Kriterienvergleich'; }
-        const filename = generateFilename(typeKey, kollektiv, 'md', { studyId: options?.comparisonCriteriaSet?.id });
+        else if(tableType === 'publikation_methoden') { typeKey = 'PUBLIKATION_METHODEN_MD'; title = 'Publikation Methoden'; options.sectionName = 'Methoden';}
+        else if(tableType === 'publikation_ergebnisse') { typeKey = 'PUBLIKATION_ERGEBNISSE_MD'; title = 'Publikation Ergebnisse'; options.sectionName = 'Ergebnisse';}
+
+
+        const filename = generateFilename(typeKey, kollektiv, 'md', { studyId: options?.comparisonCriteriaSet?.id, sectionName: options?.sectionName });
         if(downloadFile(mdString, filename, 'text/markdown;charset=utf-8;')) ui_helpers.showToast(`${title} als Markdown exportiert: ${filename}`, 'success');
     }
 
@@ -313,7 +465,7 @@ const exportService = (() => {
 
     async function exportSingleChart(chartElementId, format, kollektiv, options = {}) {
          const svgElement = document.getElementById(chartElementId)?.querySelector('svg'); if (!svgElement) { ui_helpers.showToast(`Diagramm '${chartElementId}' für Export nicht gefunden.`, 'danger'); return; }
-         const chartName = chartElementId.replace(/^chart-/, '').replace(/-container$/, '').replace(/-content$/, '').replace(/-[0-9]+$/, '');
+         const chartName = options.chartName || chartElementId.replace(/^chart-/, '').replace(/-container$/, '').replace(/-content$/, '').replace(/-[0-9]+$/, '');
          try {
              let blob = null, filenameKey, mimeType, ext;
              if (format === 'png') { ui_helpers.showToast(`Generiere PNG für Chart ${chartName}...`, 'info', 1500); blob = await convertSvgToPngBlob(svgElement); filenameKey = 'CHART_SINGLE_PNG'; mimeType = 'image/png'; ext = 'png'; }
@@ -346,31 +498,35 @@ const exportService = (() => {
          ui_helpers.showToast(`Starte ${format.toUpperCase()}-Export für sichtbare Charts & Tabellen...`, 'info', 2000);
          if (!window.JSZip) { ui_helpers.showToast("JSZip Bibliothek nicht geladen.", "danger"); return; }
          const zip = new JSZip(); const promises = []; let successCount = 0;
-         const chartContainers = document.querySelectorAll(scopeSelector + ' [id^="chart-"]');
+         const chartContainers = document.querySelectorAll(scopeSelector + ' [id^="chart-"][style*="height"] svg'); // More specific selector for rendered charts
          const tableSelectors = [
             scopeSelector + ' table[id^="table-"]',
             scopeSelector + ' table#auswertung-table',
-            scopeSelector + ' table#patienten-table',
+            scopeSelector + ' table#daten-table', // Updated ID
             scopeSelector + ' table#bruteforce-results-table',
-            scopeSelector + ' table#praes-as-vs-t2-comp-table' // Neuer Selektor
+            scopeSelector + ' table#praes-as-vs-t2-comp-table'
          ];
          const tableContainers = (format === 'png' && APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT) ? document.querySelectorAll(tableSelectors.join(', ')) : [];
 
          if (chartContainers.length === 0 && tableContainers.length === 0) { ui_helpers.showToast('Keine Diagramme oder Tabellen im aktuellen Sichtbereich gefunden.', 'warning'); return; }
 
-         chartContainers.forEach((container, index) => {
-             const svgElement = container.querySelector('svg'); if (!svgElement) return;
-             const chartId = container.id || `chart_${index + 1}`; const chartName = chartId.replace(/^chart-/, '').replace(/-container$/, '').replace(/-content$/, '').replace(/-[0-9]+$/, ''); let filenameKey, conversionPromise, ext, mimeType;
-             if (format === 'png') { filenameKey = 'CHART_SINGLE_PNG'; ext = 'png'; mimeType = 'image/png'; conversionPromise = convertSvgToPngBlob(svgElement).catch(e => { console.error(`PNG Konvertierung für ${chartName} fehlgeschlagen:`, e); return null; }); }
-             else if (format === 'svg') { filenameKey = 'CHART_SINGLE_SVG'; ext = 'svg'; mimeType = 'image/svg+xml;charset=utf-8'; conversionPromise = convertSvgToSvgBlob(svgElement).catch(e => { console.error(`SVG Konvertierung für ${chartName} fehlgeschlagen:`, e); return null; }); }
+         chartContainers.forEach((svgElement, index) => {
+             const chartId = svgElement.closest('[id^="chart-"]')?.id || `chart_${index + 1}`;
+             const chartName = chartId.replace(/^chart-/, '').replace(/-container$/, '').replace(/-content$/, '').replace(/-[0-9]+$/, '');
+             let filenameKey, conversionPromise, ext;
+             if (format === 'png') { filenameKey = 'CHART_SINGLE_PNG'; ext = 'png'; conversionPromise = convertSvgToPngBlob(svgElement).catch(e => { console.error(`PNG Konvertierung für ${chartName} fehlgeschlagen:`, e); return null; }); }
+             else if (format === 'svg') { filenameKey = 'CHART_SINGLE_SVG'; ext = 'svg'; conversionPromise = convertSvgToSvgBlob(svgElement).catch(e => { console.error(`SVG Konvertierung für ${chartName} fehlgeschlagen:`, e); return null; }); }
              else { return; }
              const filename = generateFilename(filenameKey, kollektiv, ext, { chartName });
-             promises.push(conversionPromise.then(blob => (blob ? { blob, filename } : { error: new Error("Blob is null"), filename })));
+             promises.push(conversionPromise.then(blob => (blob ? { blob, filename } : { error: new Error("Blob is null for chart"), filename })));
          });
 
          tableContainers.forEach((table, index) => {
               if (format !== 'png') return;
-              const tableId = table.id || `exportable-table-${generateUUID()}`; table.id = tableId; let tableName = table.closest('.card')?.querySelector('.card-header')?.firstChild?.textContent?.trim() || table.id; tableName = tableName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30); const typeKey = 'TABLE_PNG_EXPORT';
+              const tableId = table.id || `exportable-table-${generateUUID()}`; table.id = tableId; // Ensure ID for lookup
+              let tableName = table.closest('.card')?.querySelector('.card-header')?.firstChild?.textContent?.trim() || table.caption?.textContent.trim() || table.id;
+              tableName = tableName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+              const typeKey = 'TABLE_PNG_EXPORT';
               const filename = generateFilename(typeKey, kollektiv, 'png', {tableName, tableId});
               const baseWidth = table.offsetWidth || 800;
               promises.push(convertTableToPngBlob(tableId, baseWidth).catch(e => { console.error(`Tabellen-PNG Konvertierung für ${tableName} fehlgeschlagen:`, e); return null; }).then(blob => (blob ? { blob, filename } : { error: new Error("Table Blob is null"), filename })));
@@ -389,20 +545,54 @@ const exportService = (() => {
      async function exportCategoryZip(category, data, bfResults, kollektiv, criteria, logic) {
          ui_helpers.showToast(`Generiere ${category.toUpperCase()} ZIP-Paket...`, 'info', 2000);
           if (!window.JSZip) { ui_helpers.showToast("JSZip Bibliothek nicht geladen.", "danger"); return; }
-         const zip = new JSZip(); let filesAdded = 0; let stats = null;
-         const needsStats = ['all-zip', 'csv-zip', 'md-zip', 'comprehensive-report-html', 'xlsx-zip'].includes(category);
-         if(needsStats && data && data.length > 0 && criteria && logic) { try { stats = _calculateStatsForExport(data, criteria, logic); } catch(e) { ui_helpers.showToast(`Fehler bei Statistikberechnung für ${category.toUpperCase()} ZIP.`, 'danger'); return; } if (!stats) { ui_helpers.showToast(`Statistikberechnung ergab keine Daten für ${category.toUpperCase()} ZIP.`, 'warning'); return; } }
+         const zip = new JSZip(); let filesAdded = 0; let statsDataForAllKollektive = null;
+
+         const needsStats = ['all-zip', 'csv-zip', 'md-zip', 'html'].includes(category); // HTML report uses stats
+         if(needsStats && data && data.length > 0 && criteria && logic) {
+             try {
+                // For ZIPs, we might want stats for the current kollektiv only, or all.
+                // For simplicity now, using the specific stats for the current kollektiv for CSV/MD.
+                // The HTML report might use more comprehensive data later.
+                statsDataForAllKollektive = statisticsService.calculateAllStatsForPublication(patientDataRaw, criteria, logic, bfResults ? {[kollektiv]: bfResults} : {});
+             } catch(e) { ui_helpers.showToast(`Fehler bei Statistikberechnung für ${category.toUpperCase()} ZIP.`, 'danger'); return; }
+             if (!statsDataForAllKollektive || !statsDataForAllKollektive[kollektiv]) {
+                 ui_helpers.showToast(`Statistikberechnung ergab keine Daten für ${category.toUpperCase()} ZIP für Kollektiv ${getKollektivDisplayName(kollektiv)}.`, 'warning');
+                 // Depending on category, we might still proceed if other files are generated
+                 if (category === 'csv-zip' || category === 'html') return;
+             }
+         }
+         const currentKollektivStats = statsDataForAllKollektive ? statsDataForAllKollektive[kollektiv] : null;
+
          const addFile = (filename, content) => { if (content !== null && content !== undefined && String(content).length > 0) { zip.file(filename, content); filesAdded++; return true; } console.warn(`Überspringe leere oder ungültige Datei: ${filename}`); return false; };
          try {
-             if (['all-zip', 'csv-zip'].includes(category)) { if (stats) addFile(generateFilename('STATS_CSV', kollektiv, 'csv'), generateStatistikCSVString(stats, kollektiv, criteria, logic)); if (data && data.length > 0) addFile(generateFilename('FILTERED_DATA_CSV', kollektiv, 'csv'), generateFilteredDataCSVString(data)); }
-             if (['all-zip', 'md-zip'].includes(category)) { if (stats?.deskriptiv) addFile(generateFilename('DESKRIPTIV_MD', kollektiv, 'md'), generateMarkdownTableString(stats.deskriptiv, 'deskriptiv', kollektiv)); if (data && data.length > 0) addFile(generateFilename('PATIENTEN_MD', kollektiv, 'md'), generateMarkdownTableString(data, 'patienten', kollektiv)); if (data && data.length > 0) addFile(generateFilename('AUSWERTUNG_MD', kollektiv, 'md'), generateMarkdownTableString(data, 'auswertung', kollektiv, criteria, logic)); }
+             if (['all-zip', 'csv-zip'].includes(category)) {
+                 if (currentKollektivStats) addFile(generateFilename('STATS_CSV', kollektiv, 'csv'), generateStatistikCSVString(currentKollektivStats, kollektiv, criteria, logic));
+                 if (data && data.length > 0) addFile(generateFilename('FILTERED_DATA_CSV', kollektiv, 'csv'), generateFilteredDataCSVString(data));
+             }
+             if (['all-zip', 'md-zip'].includes(category)) {
+                 if (currentKollektivStats?.deskriptiv) addFile(generateFilename('DESKRIPTIV_MD', kollektiv, 'md'), generateMarkdownTableString(currentKollektivStats.deskriptiv, 'deskriptiv', kollektiv));
+                 if (data && data.length > 0) addFile(generateFilename('DATEN_MD', kollektiv, 'md'), generateMarkdownTableString(data, 'daten', kollektiv)); // Updated typeKey
+                 if (data && data.length > 0) addFile(generateFilename('AUSWERTUNG_MD', kollektiv, 'md'), generateMarkdownTableString(data, 'auswertung', kollektiv, criteria, logic));
+                 // Add publication markdown exports if category is all-zip or md-zip
+                 if (typeof publicationTextGenerator !== 'undefined') {
+                     PUBLICATION_CONFIG.sections.forEach(mainSection => {
+                         mainSection.subSections.forEach(subSection => {
+                            const mdContent = publicationTextGenerator.getSectionTextAsMarkdown(subSection.id, state.getCurrentPublikationLang(), allKollektivStats, allKollektivStats, {}); // Pass allKollektivStats
+                            const typeKey = subSection.id.startsWith('methoden') ? 'PUBLIKATION_METHODEN_MD' : 'PUBLIKATION_ERGEBNISSE_MD';
+                            addFile(generateFilename(typeKey, kollektiv, 'md', {sectionName: subSection.id.replace(/^(methoden_|ergebnisse_)/, '')}), mdContent);
+                         });
+                     });
+                 }
+             }
              if (['all-zip'].includes(category) && bfResults) { addFile(generateFilename('BRUTEFORCE_TXT', kollektiv, 'txt'), generateBruteForceTXTString(bfResults, kollektiv)); }
-             if (['all-zip', 'html'].includes(category) && stats) { addFile(generateFilename('COMPREHENSIVE_REPORT_HTML', kollektiv, 'html'), generateComprehensiveReportHTML(data, bfResults, kollektiv, criteria, logic)); }
-             if (['png-zip'].includes(category)) { await exportChartsZip('#app-container', 'PNG_ZIP', kollektiv, 'png'); return; }
-             if (['svg-zip'].includes(category)) { await exportChartsZip('#app-container', 'SVG_ZIP', kollektiv, 'svg'); return; }
+             if (['all-zip', 'html'].includes(category) && data && data.length > 0 ) { addFile(generateFilename('COMPREHENSIVE_REPORT_HTML', kollektiv, 'html'), generateComprehensiveReportHTML(data, bfResults, kollektiv, criteria, logic)); }
+
+             if (['png-zip'].includes(category)) { await exportChartsZip('#app-container', 'PNG_ZIP', kollektiv, 'png'); return; } // Returns early
+             if (['svg-zip'].includes(category)) { await exportChartsZip('#app-container', 'SVG_ZIP', kollektiv, 'svg'); return; } // Returns early
+
 
             if (filesAdded > 0) {
-                const zipFilename = generateFilename(`${category.toUpperCase()}`, kollektiv, 'zip');
+                const zipFilename = generateFilename(`${category.toUpperCase()}_PAKET`, kollektiv, 'zip'); // More descriptive ZIP name
                 const content = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
                 if (downloadFile(content, zipFilename, "application/zip")) ui_helpers.showToast(`${filesAdded} Datei(en) erfolgreich im ${category.toUpperCase()} ZIP-Paket exportiert.`, 'success');
             } else { ui_helpers.showToast(`Keine Dateien für das ${category.toUpperCase()} ZIP-Paket gefunden oder generiert.`, 'warning'); }
@@ -412,18 +602,22 @@ const exportService = (() => {
      function exportPraesentationData(actionId, presentationData, kollektiv) {
             let content = null, filenameKey = null, extension = null, mimeType = null, options = {}, success = false; const na = '--';
             if (!presentationData) { ui_helpers.showToast("Keine Daten für Präsentationsexport verfügbar.", "warning"); return; }
-            const { statsAS, statsT2, vergleich, comparisonCriteriaSet, patientCount, statsGesamt, statsDirektOP, statsNRCT } = presentationData; const isAsPurView = actionId.includes('-as-pur-'); const isAsVsT2View = actionId.includes('-as-vs-t2-'); options.studyId = comparisonCriteriaSet?.id || null; if (presentationData.t2CriteriaLabelShort) options.t2CriteriaLabelShort = presentationData.t2CriteriaLabelShort; if (presentationData.t2CriteriaLabelFull) options.t2CriteriaLabelFull = presentationData.t2CriteriaLabelFull;
+            const { statsAS, statsT2, vergleich, comparisonCriteriaSet, patientCount, statsGesamt, statsDirektOP, statsNRCT } = presentationData;
+            const isAsPurView = actionId.includes('-as-pur-');
+            const isAsVsT2View = actionId.includes('-as-vs-t2-');
+            options.studyId = comparisonCriteriaSet?.id || null;
+            if (presentationData.t2CriteriaLabelShort) options.t2CriteriaLabelShort = presentationData.t2CriteriaLabelShort;
+            if (presentationData.t2CriteriaLabelFull) options.t2CriteriaLabelFull = presentationData.t2CriteriaLabelFull;
+
             try {
                 if (isAsPurView && actionId === 'download-performance-as-pur-csv') {
                      const allStatsData = { statsGesamt, statsDirektOP, statsNRCT }; const headers = ['Kollektiv', 'N', 'Sens', 'Sens CI Low', 'Sens CI High', 'Spez', 'Spez CI Low', 'Spez CI High', 'PPV', 'PPV CI Low', 'PPV CI High', 'NPV', 'NPV CI Low', 'NPV CI High', 'Acc', 'Acc CI Low', 'Acc CI High', 'BalAcc', 'BalAcc CI Low', 'BalAcc CI High', 'F1', 'F1 CI Low', 'F1 CI High', 'AUC', 'AUC CI Low', 'AUC CI High', 'CI Method']; const fVal = (v, d=1) => formatNumber(v, d, na);
-                     const rows = Object.entries(allStatsData).map(([key, stats]) => { let k = key.replace('stats',''); let dN = (k === 'DirektOP') ? 'direkt OP' : (k === 'NRCT') ? 'nRCT' : k; if (!stats || typeof stats.matrix !== 'object') return [getKollektivDisplayName(dN), 0, ...Array(21).fill(na), na]; const n = stats.matrix ? (stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn) : 0; const fRowData = (m, k) => { const d = (k === 'f1' || k === 'auc') ? 3 : 1; return [fVal(m?.value, d), fVal(m?.ci?.lower, d), fVal(m?.ci?.upper, d)]; }; return [ getKollektivDisplayName(dN), n, ...fRowData(stats.sens, 'sens'), ...fRowData(stats.spez, 'spez'), ...fRowData(stats.ppv, 'ppv'), ...fRowData(stats.npv, 'npv'), ...fRowData(stats.acc, 'acc'), ...fRowData(stats.balAcc, 'balAcc'), ...fRowData(stats.f1, 'f1'), ...fRowData(stats.auc, 'auc'), stats.sens?.method || na ]; });
+                     const rows = Object.entries(allStatsData).map(([key, stats]) => { let k = key.replace('stats',''); let dN = (k === 'DirektOP') ? 'direkt OP' : (k === 'NRCT') ? 'nRCT' : k; if (!stats || typeof stats.matrix !== 'object') return [getKollektivDisplayName(dN), 0, ...Array(21).fill(na), na]; const n = stats.matrix ? (stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn) : 0; const fRowData = (m, metric_k) => { const dig = (metric_k === 'f1' || metric_k === 'auc') ? 3 : 1; return [fVal(m?.value, dig), fVal(m?.ci?.lower, dig), fVal(m?.ci?.upper, dig)]; }; return [ getKollektivDisplayName(dN), n, ...fRowData(stats.sens, 'sens'), ...fRowData(stats.spez, 'spez'), ...fRowData(stats.ppv, 'ppv'), ...fRowData(stats.npv, 'npv'), ...fRowData(stats.acc, 'acc'), ...fRowData(stats.balAcc, 'balAcc'), ...fRowData(stats.f1, 'f1'), ...fRowData(stats.auc, 'auc'), stats.sens?.method || na ]; });
                      content = Papa.unparse([headers, ...rows], { delimiter: APP_CONFIG.EXPORT_SETTINGS.CSV_DELIMITER || ";" }); filenameKey = 'PRAES_AS_PERF_CSV'; extension = 'csv'; mimeType = 'text/csv;charset=utf-8;';
                 } else if (isAsPurView && actionId === 'download-performance-as-pur-md') { options.kollektiv = kollektiv; content = generateMarkdownTableString(presentationData, 'praes_as_perf', kollektiv, null, null, options); filenameKey = 'PRAES_AS_PERF_MD'; extension = 'md'; mimeType = 'text/markdown;charset=utf-8;';
                 } else if (isAsVsT2View && actionId === 'download-performance-as-vs-t2-csv') { if (!statsAS || !statsT2) { ui_helpers.showToast("Vergleichsdaten für CSV fehlen.", "warning"); return; } const headers = ['Metrik', 'AS (Wert)', 'AS (95% CI)', 'T2 (Wert)', 'T2 (95% CI)', 'CI Methode AS', 'CI Methode T2']; const fRow = (mKey, nm, isP = true, d = 1) => { const mAS = statsAS[mKey]; const mT2 = statsT2[mKey]; const dig = (mKey === 'auc' || mKey === 'f1') ? 3 : d; const ciAS = `(${formatNumber(mAS?.ci?.lower, dig, na)} - ${formatNumber(mAS?.ci?.upper, dig, na)})`; const ciT2 = `(${formatNumber(mT2?.ci?.lower, dig, na)} - ${formatNumber(mT2?.ci?.upper, dig, na)})`; const valAS = formatNumber(mAS?.value, dig, na); const valT2 = formatNumber(mT2?.value, dig, na); return [nm, valAS, ciAS, valT2, ciT2, mAS?.method || na, mT2?.method || na]; }; const rows = [ fRow('sens', 'Sensitivität'), fRow('spez', 'Spezifität'), fRow('ppv', 'PPV'), fRow('npv', 'NPV'), fRow('acc', 'Accuracy'), fRow('balAcc', 'Balanced Accuracy'), fRow('f1', 'F1-Score', false, 3), fRow('auc', 'AUC', false, 3) ]; content = Papa.unparse([headers, ...rows], { delimiter: APP_CONFIG.EXPORT_SETTINGS.CSV_DELIMITER || ";" }); filenameKey = 'PRAES_AS_VS_T2_PERF_CSV'; extension = 'csv'; mimeType = 'text/csv;charset=utf-8;';
-                } else if (isAsVsT2View && actionId === 'download-performance-as-vs-t2-md') { content = generateMarkdownTableString(presentationData, 'praes_as_vs_t2_perf', kollektiv, null, null, options); filenameKey = 'PRAES_AS_VS_T2_PERF_MD'; extension = 'md'; mimeType = 'text/markdown;charset=utf-8;';
+                } else if (isAsVsT2View && actionId === 'download-comp-table-as-vs-t2-md') { content = generateMarkdownTableString(presentationData, 'praes_as_vs_t2_perf', kollektiv, null, null, options); filenameKey = 'PRAES_AS_VS_T2_COMP_MD'; extension = 'md'; mimeType = 'text/markdown;charset=utf-8;';
                 } else if (isAsVsT2View && actionId === 'download-tests-as-vs-t2-md') { content = generateMarkdownTableString(presentationData, 'praes_as_vs_t2_tests', kollektiv, null, null, options); filenameKey = 'PRAES_AS_VS_T2_TESTS_MD'; extension = 'md'; mimeType = 'text/markdown;charset=utf-8;';
-                } else if (isAsVsT2View && actionId === 'download-comp-table-as-vs-t2-md') { // Hinzugefügt für MD-Export der neuen Tabelle
-                     content = generateMarkdownTableString(presentationData, 'praes_as_vs_t2_comp', kollektiv, null, null, options); filenameKey = 'PRAES_AS_VS_T2_COMP_MD'; extension = 'md'; mimeType = 'text/markdown;charset=utf-8;';
                 } else if (actionId.includes('-chart-') || actionId.startsWith('dl-praes-')) { ui_helpers.showToast("Chart-Export wird über die Buttons am Chart selbst ausgelöst.", "info"); return; }
             } catch(error) {
                 console.error(`Fehler bei Präsentationsexport ${actionId}:`, error);
