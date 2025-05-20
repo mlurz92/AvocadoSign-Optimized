@@ -1,6 +1,6 @@
 const viewRenderer = (() => {
 
-    function _renderTabContent(tabId, renderFunction) {
+    function _renderTabContent(tabId, renderFunction, ...args) {
         const containerId = `${tabId}-pane`;
         const container = document.getElementById(containerId);
         if (!container) {
@@ -9,9 +9,10 @@ const viewRenderer = (() => {
         }
         ui_helpers.updateElementHTML(containerId, '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade Inhalt...</span></div></div>');
         try {
-            const contentHTML = renderFunction();
+            // Ensure renderFunction is called with its arguments
+            const contentHTML = renderFunction(...args);
             ui_helpers.updateElementHTML(containerId, contentHTML || '<p class="text-muted p-3">Kein Inhalt generiert.</p>');
-            ui_helpers.initializeTooltips(container);
+            ui_helpers.initializeTooltips(container); // Tooltips für den neu gerenderten Inhalt initialisieren
         } catch (error) {
             console.error(`Fehler beim Rendern von Tab ${tabId}:`, error);
             const errorMessage = `<div class="alert alert-danger m-3">Fehler beim Laden des Tabs: ${error.message}</div>`;
@@ -20,21 +21,22 @@ const viewRenderer = (() => {
         }
     }
 
-    function renderPatientenTab(data, sortState) {
-        _renderTabContent('patienten-tab', () => {
-             if (!data) throw new Error("Daten für Patiententabelle nicht verfügbar.");
+    function renderDatenTab(data, sortState) { // Umbenannt von renderPatientenTab
+        _renderTabContent('daten-tab', () => { // ID angepasst
+             if (!data) throw new Error("Daten für Datentabelle nicht verfügbar."); // Text angepasst
              const toggleButtonHTML = `
-                 <div class="d-flex justify-content-end mb-3" id="patienten-toggle-button-container">
-                     <button id="patienten-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="expand" data-tippy-content="${TOOLTIP_CONTENT.patientTable.expandAll || 'Alle Details ein-/ausblenden'}">
+                 <div class="d-flex justify-content-end mb-3" id="daten-toggle-button-container">
+                     <button id="daten-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="expand" data-tippy-content="${TOOLTIP_CONTENT.datenTable.expandAll || 'Alle Details ein-/ausblenden'}">
                         Alle Details <i class="fas fa-chevron-down ms-1"></i>
                     </button>
                  </div>`;
-            const tableHTML = uiViewLogic.createPatientenTableHTML(data, sortState);
+            // dataTabLogic.createDatenTableHTML anstatt uiViewLogic.createPatientenTableHTML
+            const tableHTML = dataTabLogic.createDatenTableHTML(data, sortState);
             const finalHTML = toggleButtonHTML + `<div class="table-responsive">${tableHTML}</div>`;
 
             setTimeout(() => {
-                 const tableBody = document.getElementById('patienten-table-body');
-                 const tableHeader = document.getElementById('patienten-table-header');
+                 const tableBody = document.getElementById('daten-table-body'); // ID angepasst
+                 const tableHeader = document.getElementById('daten-table-header'); // ID angepasst
                  if (tableBody && data.length > 0) ui_helpers.attachRowCollapseListeners(tableBody);
                  if (tableHeader) ui_helpers.updateSortIcons(tableHeader.id, sortState);
             }, 0);
@@ -58,7 +60,7 @@ const viewRenderer = (() => {
             chartRenderer.renderPieChart([{label: UI_TEXTS.legendLabels.asPositive, value: stats.asStatus?.plus ?? 0}, {label: UI_TEXTS.legendLabels.asNegative, value: stats.asStatus?.minus ?? 0}], ids[4], {...pieOpts, legendItemCount: 2});
             chartRenderer.renderPieChart([{label: UI_TEXTS.legendLabels.t2Positive, value: stats.t2Status?.plus ?? 0}, {label: UI_TEXTS.legendLabels.t2Negative, value: stats.t2Status?.minus ?? 0}], ids[5], {...pieOpts, legendItemCount: 2});
         }
-        catch(error) { console.error("Fehler bei Chart-Rendering:", error); ids.forEach(id => ui_helpers.updateElementHTML(id, '<p class="text-danger small text-center p-2">Chart Fehler</p>')); }
+        catch(error) { console.error("Fehler bei Chart-Rendering im Dashboard:", error); ids.forEach(id => ui_helpers.updateElementHTML(id, '<p class="text-danger small text-center p-2">Chart Fehler</p>')); }
     }
 
      function _renderCriteriaComparisonTable(containerId, data, kollektiv) {
@@ -82,12 +84,13 @@ const viewRenderer = (() => {
                 }
             } catch (error) { console.error(`Fehler bei Berechnung für Vergleichsset ${setId}:`, error); }
 
-            if (perf && !isNaN(perf.auc?.value)) { results.push({ id: setIdUsed, name: setName, sens: perf.sens?.value, spez: perf.spez?.value, ppv: perf.ppv?.value, npv: perf.npv?.value, acc: perf.acc?.value, auc: perf.auc?.value }); }
+            if (perf && perf.auc && !isNaN(perf.auc.value)) { results.push({ id: setIdUsed, name: setName, sens: perf.sens?.value, spez: perf.spez?.value, ppv: perf.ppv?.value, npv: perf.npv?.value, acc: perf.acc?.value, auc: perf.auc?.value }); }
             else { results.push({ id: setIdUsed, name: setName, sens: NaN, spez: NaN, ppv: NaN, npv: NaN, acc: NaN, auc: NaN }); }
          });
 
          results.sort((a, b) => { if (a.id === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID) return -1; if (b.id === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID) return 1; if (a.id === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) return -1; if (b.id === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) return 1; return (a.name || '').localeCompare(b.name || ''); });
-         const tableHTML = uiViewLogic.createCriteriaComparisonTableHTML(results, getKollektivDisplayName(kollektiv));
+         // statistikTabLogic.createCriteriaComparisonTableHTML anstatt uiViewLogic...
+         const tableHTML = statistikTabLogic.createCriteriaComparisonTableHTML(results, getKollektivDisplayName(kollektiv));
          container.innerHTML = uiComponents.createStatistikCard('criteriaComparisonTable', UI_TEXTS.criteriaComparison.title, tableHTML, false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
     }
 
@@ -103,7 +106,8 @@ const viewRenderer = (() => {
 
              const criteriaControlsHTML = uiComponents.createT2CriteriaControls(currentCriteria, currentLogic);
              const bruteForceCardHTML = uiComponents.createBruteForceCard(getKollektivDisplayName(currentKollektiv), bfWorkerAvailable);
-             const auswertungTableCardHTML = uiViewLogic.createAuswertungTableCardHTML(data, sortState, currentCriteria, currentLogic);
+             // auswertungTabLogic.createAuswertungTableCardHTML anstatt uiViewLogic...
+             const auswertungTableCardHTML = auswertungTabLogic.createAuswertungTableCardHTML(data, sortState, currentCriteria, currentLogic);
 
 
              let finalHTML = `
@@ -194,7 +198,7 @@ const viewRenderer = (() => {
              if (datasets.length === 0 || datasets.every(d => !Array.isArray(d) || d.length === 0)) { return '<div class="col-12"><div class="alert alert-warning">Keine Daten für Statistik-Auswahl verfügbar.</div></div>'; }
 
              const outerRow = document.createElement('div'); outerRow.className = 'row g-4';
-             const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image':'fa-download'; const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download'; const pngTT = TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'PNG'; const svgTT = TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'SVG'; const createChartDlBtns = (baseId) => [{id:`dl-${baseId}-png`,icon:dlIconPNG,tooltip:pngTT,format:'png'},{id:`dl-${baseId}-svg`,icon:dlIconSVG,tooltip:svgTT,format:'svg'}];
+             const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image':'fa-download'; const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download'; const pngTT = TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'PNG'; const svgTT = TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'SVG'; const createChartDlBtns = (baseId) => [{id:`dl-${baseId}-png`,icon:dlIconPNG,tooltip:pngTT,format:'png', chartId: baseId},{id:`dl-${baseId}-svg`,icon:dlIconSVG,tooltip:svgTT,format:'svg', chartId: baseId}];
              const createTableDlBtn = (tableId, tableName) => ({id: `dl-${tableId}-png`, icon: 'fa-image', tooltip: `Tabelle '${tableName}' PNG`, format: 'png', tableId: tableId, tableName: tableName});
 
              datasets.forEach((data, i) => {
@@ -213,11 +217,11 @@ const viewRenderer = (() => {
 
                      if (!stats) { innerContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">Fehler bei Statistikberechnung.</div></div>'; return; }
                      const descCardId=`deskriptiveStatistik-${i}`; const gueteASCardId=`diagnostischeGueteAS-${i}`; const gueteT2CardId=`diagnostischeGueteT2-${i}`; const vergleichASvsT2CardId=`statistischerVergleichASvsT2-${i}`; const assoziationCardId=`assoziationEinzelkriterien-${i}`;
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(descCardId, `Deskriptive Statistik`, uiViewLogic.createDeskriptiveStatistikContentHTML(stats, i, kollektivName), false, 'deskriptiveStatistik', [], `table-deskriptiv-demographie-${i}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteASCardId, `Güte - Avocado Sign (vs. N)`, uiViewLogic.createGueteContentHTML(stats.gueteAS, 'AS', kollektivName), false, 'diagnostischeGueteAS', [createTableDlBtn(`table-guete-metrics-AS-${kollektivName.replace(/\s+/g, '_')}`, 'Güte_AS'), createTableDlBtn(`table-guete-matrix-AS-${kollektivName.replace(/\s+/g, '_')}`, 'Matrix_AS')], `table-guete-metrics-AS-${kollektivName.replace(/\s+/g, '_')}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteT2CardId, `Güte - T2 (angewandt vs. N)`, uiViewLogic.createGueteContentHTML(stats.gueteT2, 'T2', kollektivName), false, 'diagnostischeGueteT2', [createTableDlBtn(`table-guete-metrics-T2-${kollektivName.replace(/\s+/g, '_')}`, 'Güte_T2'), createTableDlBtn(`table-guete-matrix-T2-${kollektivName.replace(/\s+/g, '_')}`, 'Matrix_T2')], `table-guete-metrics-T2-${kollektivName.replace(/\s+/g, '_')}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(vergleichASvsT2CardId, `Vergleich - AS vs. T2 (angewandt)`, uiViewLogic.createVergleichContentHTML(stats.vergleichASvsT2, kollektivName), false, 'statistischerVergleichASvsT2', [createTableDlBtn(`table-vergleich-as-vs-t2-${kollektivName.replace(/\s+/g, '_')}`, 'Vergleich_AS_T2')], `table-vergleich-as-vs-t2-${kollektivName.replace(/\s+/g, '_')}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(assoziationCardId, `Assoziation Merkmale vs. N-Status`, uiViewLogic.createAssoziationContentHTML(stats.assoziation, kollektivName, appliedCriteria), false, 'assoziationEinzelkriterien', [createTableDlBtn(`table-assoziation-${kollektivName.replace(/\s+/g, '_')}`, 'Assoziation')], `table-assoziation-${kollektivName.replace(/\s+/g, '_')}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(descCardId, `Deskriptive Statistik`, statistikTabLogic.createDeskriptiveStatistikContentHTML(stats, i, kollektivName), false, 'deskriptiveStatistik', [], `table-deskriptiv-demographie-${i}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteASCardId, `Güte - Avocado Sign (vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteAS, 'AS', kollektivName), false, 'diagnostischeGueteAS', [createTableDlBtn(`table-guete-metrics-AS-${kollektivName.replace(/\s+/g, '_')}`, 'Güte_AS'), createTableDlBtn(`table-guete-matrix-AS-${kollektivName.replace(/\s+/g, '_')}`, 'Matrix_AS')], `table-guete-metrics-AS-${kollektivName.replace(/\s+/g, '_')}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteT2CardId, `Güte - T2 (angewandt vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteT2, 'T2', kollektivName), false, 'diagnostischeGueteT2', [createTableDlBtn(`table-guete-metrics-T2-${kollektivName.replace(/\s+/g, '_')}`, 'Güte_T2'), createTableDlBtn(`table-guete-matrix-T2-${kollektivName.replace(/\s+/g, '_')}`, 'Matrix_T2')], `table-guete-metrics-T2-${kollektivName.replace(/\s+/g, '_')}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(vergleichASvsT2CardId, `Vergleich - AS vs. T2 (angewandt)`, statistikTabLogic.createVergleichContentHTML(stats.vergleichASvsT2, kollektivName), false, 'statistischerVergleichASvsT2', [createTableDlBtn(`table-vergleich-as-vs-t2-${kollektivName.replace(/\s+/g, '_')}`, 'Vergleich_AS_T2')], `table-vergleich-as-vs-t2-${kollektivName.replace(/\s+/g, '_')}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(assoziationCardId, `Assoziation Merkmale vs. N-Status`, statistikTabLogic.createAssoziationContentHTML(stats.assoziation, kollektivName, appliedCriteria), false, 'assoziationEinzelkriterien', [createTableDlBtn(`table-assoziation-${kollektivName.replace(/\s+/g, '_')}`, 'Assoziation')], `table-assoziation-${kollektivName.replace(/\s+/g, '_')}`);
                      const ageChartId=`chart-stat-age-${i}`; const genderChartId=`chart-stat-gender-${i}`;
 
                      setTimeout(() => {
@@ -228,7 +232,7 @@ const viewRenderer = (() => {
                                  const ageBtns=createChartDlBtns(ageChartId); const genderBtns=createChartDlBtns(genderChartId);
                                  const t1PNG=createTableDlBtn(`table-deskriptiv-demographie-${i}`, 'Deskriptive_Demographie');
                                  const t2PNG=createTableDlBtn(`table-deskriptiv-lk-${i}`, 'Deskriptive_LK');
-                                 hdrBtns.innerHTML = ageBtns.map(b=>`<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${b.id}" data-chart-id="${ageChartId}" data-format="${b.format}" data-tippy-content="${b.tooltip} (Alter)"><i class="fas ${b.icon}"></i></button>`).join('')+genderBtns.map(b=>`<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${b.id}" data-chart-id="${genderChartId}" data-format="${b.format}" data-tippy-content="${b.tooltip} (Geschlecht)"><i class="fas ${b.icon}"></i></button>`).join('')+`<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${t1PNG.id}" data-table-id="${t1PNG.tableId}" data-table-name="${t1PNG.tableName}" data-tippy-content="${t1PNG.tooltip}"><i class="fas ${t1PNG.icon}"></i></button>`+`<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${t2PNG.id}" data-table-id="${t2PNG.tableId}" data-table-name="${t2PNG.tableName}" data-tippy-content="${t2PNG.tooltip}"><i class="fas ${t2PNG.icon}"></i></button>`;
+                                 hdrBtns.innerHTML = ageBtns.map(b=>`<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${b.id}" data-chart-id="${b.chartId}" data-format="${b.format}" data-tippy-content="${b.tooltip} (Alter)"><i class="fas ${b.icon}"></i></button>`).join('')+genderBtns.map(b=>`<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${b.id}" data-chart-id="${b.chartId}" data-format="${b.format}" data-tippy-content="${b.tooltip} (Geschlecht)"><i class="fas ${b.icon}"></i></button>`).join('')+`<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${t1PNG.id}" data-table-id="${t1PNG.tableId}" data-table-name="${t1PNG.tableName}" data-tippy-content="${t1PNG.tooltip}"><i class="fas ${t1PNG.icon}"></i></button>`+`<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${t2PNG.id}" data-table-id="${t2PNG.tableId}" data-table-name="${t2PNG.tableName}" data-tippy-content="${t2PNG.tooltip}"><i class="fas ${t2PNG.icon}"></i></button>`;
                              }
                          }
                         const ageChartDiv = document.getElementById(ageChartId);
@@ -249,7 +253,7 @@ const viewRenderer = (() => {
                  const comparisonCardContainer = document.createElement('div'); comparisonCardContainer.className = 'col-12 mt-4'; const title = `Vergleich ${kollektivDisplayNames[0]} vs. ${kollektivDisplayNames[1]}`;
                  const tableIdComp = `table-vergleich-kollektive-${kollektivNames[0]}-vs-${kollektivNames[1]}`;
                  const downloadBtnComp = createTableDlBtn(tableIdComp, 'Vergleich_Kollektive');
-                 comparisonCardContainer.innerHTML = uiComponents.createStatistikCard('vergleichKollektive', title, uiViewLogic.createVergleichKollektiveContentHTML(vergleichKollektiveStats, kollektivNames[0], kollektivNames[1]), false, 'vergleichKollektive', [downloadBtnComp], tableIdComp); outerRow.appendChild(comparisonCardContainer);
+                 comparisonCardContainer.innerHTML = uiComponents.createStatistikCard('vergleichKollektive', title, statistikTabLogic.createVergleichKollektiveContentHTML(vergleichKollektiveStats, kollektivNames[0], kollektivNames[1]), false, 'vergleichKollektive', [downloadBtnComp], tableIdComp); outerRow.appendChild(comparisonCardContainer);
              }
              const criteriaComparisonContainer = document.createElement('div'); criteriaComparisonContainer.className = 'col-12 mt-4'; criteriaComparisonContainer.id = 'criteria-comparison-container'; outerRow.appendChild(criteriaComparisonContainer);
 
@@ -289,8 +293,8 @@ const viewRenderer = (() => {
                     if (studySet && evaluatedDataT2) { presentationData.statsT2 = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n'); evaluatedDataT2.forEach((p, i) => { if (filteredData[i]) p.as = filteredData[i].as; }); presentationData.vergleich = statisticsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n'); presentationData.comparisonCriteriaSet = studySet; presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2'; presentationData.t2CriteriaLabelFull = `${studySet.name}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`; }
                 }
             }
-
-            const tabContentHTML = uiViewLogic.createPresentationTabContent(view, presentationData, selectedStudyId, currentGlobalKollektiv);
+            // praesentationTabLogic.createPresentationTabContent anstatt uiViewLogic...
+            const tabContentHTML = praesentationTabLogic.createPresentationTabContent(view, presentationData, selectedStudyId, currentGlobalKollektiv);
 
             setTimeout(() => {
                 if (view === 'as-pur') {
@@ -324,32 +328,62 @@ const viewRenderer = (() => {
         });
     }
 
-    function renderMethodenTab(currentLang, processedData) {
-        _renderTabContent('methoden-tab', () => {
-            const isChecked = currentLang === 'en';
-            const labelText = UI_TEXTS?.methodenTab?.spracheSwitchLabel?.[currentLang] || (currentLang === 'en' ? 'English' : 'Deutsch');
-            const switchHTML = `
-                <div class="d-flex justify-content-end mb-3">
-                    <div class="form-check form-switch" data-tippy-content="Sprache der Methodenbeschreibung wechseln.">
-                         <input class="form-check-input" type="checkbox" role="switch" id="methoden-sprache-switch" ${isChecked ? 'checked' : ''}>
-                         <label class="form-check-label fw-bold" for="methoden-sprache-switch" id="methoden-sprache-label">${labelText}</label>
-                     </div>
-                </div>`;
+    function renderPublikationTab(currentLang, currentSection, currentKollektiv, publicationData, bruteForceResultsForCurrentKollektiv) { // NEU
+        _renderTabContent('publikation-tab', () => {
+            // Initialisiere die Daten für den Publikationstab, falls noch nicht geschehen oder wenn sich relevante Daten geändert haben könnten
+            // (z.B. nach einem neuen Brute-Force-Lauf oder Anwenden neuer Kriterien).
+            // Annahme: `publicationData` enthält bereits die globalen Daten, und `bruteForceResultsForCurrentKollektiv` ist spezifisch für das aktuelle Kollektiv.
+            // Die Funktion `initializeData` in `publikationTabLogic` kümmert sich um die Aufbereitung für alle Kollektive.
+            publikationTabLogic.initializeData(
+                processedData, // Die global prozessierten Rohdaten
+                t2CriteriaManager.getAppliedCriteria(),
+                t2CriteriaManager.getAppliedLogic(),
+                typeof lastBruteForceResults !== 'undefined' ? lastBruteForceResults : null // Das Ergebnis des letzten globalen BF-Laufs
+            );
 
-            let content = uiComponents.createMethodenBeschreibungContent(currentLang);
-            const gesamtN = processedData?.length ?? 0; const direktOpN = processedData?.filter(p => p?.therapie === 'direkt OP').length ?? 0; const nRCTN = processedData?.filter(p => p?.therapie === 'nRCT').length ?? 0;
-            content = content.replace(/\[ANZAHL_GESAMT\]/g, String(gesamtN)).replace(/\[ANZAHL_DIREKT_OP\]/g, String(direktOpN)).replace(/\[ANZAHL_NRCT\]/g, String(nRCTN)).replace(/\[T2_SIZE_MIN\]/g, String(APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min)).replace(/\[T2_SIZE_MAX\]/g, String(APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max)).replace(/\[BOOTSTRAP_REPLICATIONS\]/g, String(APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS)).replace(/\[SIGNIFICANCE_LEVEL\]/g, String(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL));
+            const headerHTML = uiComponents.createPublikationTabHeader(); // Erzeugt Navigationsleiste und Container
+            const sectionContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv);
 
-            return switchHTML + content;
-        });
+            const tabContainer = document.getElementById('publikation-tab-pane'); // Holen Sie sich den Tab-Container
+            // Füllen Sie zuerst den Header
+            if (tabContainer) {
+                tabContainer.innerHTML = headerHTML; // Setzt den Header
+                const contentArea = tabContainer.querySelector('#publikation-content-area'); // Finden Sie den Inhaltsbereich im gerade gesetzten Header
+                if (contentArea) {
+                    contentArea.innerHTML = sectionContentHTML; // Füllen Sie den Inhaltsbereich
+                } else {
+                    console.error("Inhaltsbereich #publikation-content-area nicht im Header gefunden!");
+                }
+            } else {
+                console.error("Container #publikation-tab-pane nicht gefunden");
+                return '<p class="text-danger">Fehler: Hauptcontainer für Publikation-Tab nicht gefunden.</p>';
+            }
+
+            // Stelle sicher, dass die UI Controls im Header korrekt initialisiert sind
+            ui_helpers.updatePublikationUI(currentLang, currentSection, state.getCurrentPublikationBruteForceMetric());
+
+            // Dynamische Charts nach dem Einfügen des HTML rendern
+            setTimeout(() => {
+                publikationTabLogic.updateDynamicChartsForPublicationTab(currentSection, currentLang, currentKollektiv);
+                ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
+            }, 50);
+
+            // Da der Header und der Inhaltsbereich separat gesetzt werden,
+            // müssen wir sicherstellen, dass der äußere _renderTabContent-Wrapper nicht den gesamten Tab-Inhalt überschreibt,
+            // sondern dass der Header erhalten bleibt. Die _renderTabContent Funktion ist so gebaut, dass sie
+            // den gesamten Inhalt des Panes ersetzt. Daher geben wir hier leer zurück, da das Rendering oben direkt erfolgt.
+            return ""; // Wichtig, da das Rendering oben direkt im DOM erfolgt.
+        }, currentLang, currentSection, currentKollektiv, publicationData, bruteForceResultsForCurrentKollektiv);
     }
 
+
     return Object.freeze({
-        renderPatientenTab,
+        renderDatenTab, // Umbenannt
         renderAuswertungTab,
         renderStatistikTab,
         renderPresentationTab,
         renderExportTab,
-        renderMethodenTab
+        renderPublikationTab // NEU
+        // renderMethodenTab wurde entfernt
     });
 })();
