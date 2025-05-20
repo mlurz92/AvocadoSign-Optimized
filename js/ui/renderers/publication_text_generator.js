@@ -81,7 +81,7 @@ const publicationTextGenerator = (() => {
             `;
         }
     }
-    
+
     function getMethodenASDefinitionText(lang, commonData) {
         if (lang === 'de') {
             return `
@@ -95,7 +95,7 @@ const publicationTextGenerator = (() => {
     }
 
     function getMethodenT2DefinitionText(lang, commonData, publicationData, kollektiveData) {
-        const appliedCriteria = t2CriteriaManager.getAppliedCriteria(); // Holt die aktuell im Tool gesetzten Kriterien
+        const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
         const appliedLogic = t2CriteriaManager.getAppliedLogic();
         const formattedAppliedCriteria = studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic, false);
 
@@ -110,7 +110,7 @@ const publicationTextGenerator = (() => {
             }
             return `<li><strong>${kollektivName}:</strong> Keine Optimierungsergebnisse für Zielmetrik ${bfMetric} verfügbar.</li>`;
         };
-        
+
         let bfCriteriaTextDe = '<ul>';
         bfCriteriaTextDe += formatBF(bfGesamt, 'Gesamtkollektiv');
         bfCriteriaTextDe += formatBF(bfDirektOP, 'Direkt-OP Kollektiv');
@@ -164,7 +164,7 @@ const publicationTextGenerator = (() => {
             `;
         }
     }
-    
+
     function getMethodenReferenzstandardText(lang, commonData) {
          if (lang === 'de') {
             return `
@@ -211,7 +211,7 @@ const publicationTextGenerator = (() => {
             `;
         }
     }
-    
+
     function getErgebnisseASPerformanceText(lang, publicationData, commonData) {
         const asGesamt = publicationData?.Gesamt?.gueteAS;
         const asDirektOP = publicationData?.['direkt OP']?.gueteAS;
@@ -233,16 +233,14 @@ const publicationTextGenerator = (() => {
     }
 
     function getErgebnisseLiteraturT2PerformanceText(lang, publicationData, commonData) {
-        // Diese Funktion wird komplexer, da sie die Ergebnisse für jedes Literatur-Set iterieren und darstellen muss.
-        // Hier ein Beispiel für die Struktur. Die tatsächlichen Werte müssen aus publicationData geholt werden.
         let text = '';
         if (lang === 'de') {
-            text += `<p>Die diagnostische Güte der etablierten Literatur-basierten T2-Kriteriensets wurde für die jeweils relevanten Kollektive evaluiert (Tabelle 4). ";
+            text += `<p>Die diagnostische Güte der etablierten Literatur-basierten T2-Kriteriensets wurde für die jeweils relevanten Kollektive evaluiert (Tabelle 4). `;
             text += `Für das Kriterienset nach Koh et al. (2008) ergab sich im nRCT-Kollektiv (N=${commonData.nNRCT}) eine AUC von ${fCI(publicationData?.nRCT?.gueteT2_literatur?.['koh_2008_morphology']?.auc, 3, false)}. `;
             text += `Die Kriterien nach Barbaro et al. (2024) zeigten im nRCT-Kollektiv eine AUC von ${fCI(publicationData?.nRCT?.gueteT2_literatur?.['barbaro_2024_restaging']?.auc, 3, false)}. `;
             text += `Die ESGAR 2016 Kriterien (evaluiert durch Rutegård et al., 2025) erreichten im Direkt-OP-Kollektiv (N=${commonData.nDirektOP}) eine AUC von ${fCI(publicationData?.['direkt OP']?.gueteT2_literatur?.['rutegard_et_al_esgar']?.auc, 3, false)}. Detaillierte Metriken (Sensitivität, Spezifität etc.) für jedes Set und Kollektiv sind in Tabelle 4 aufgeführt.</p>`;
         } else {
-            text += `<p>The diagnostic performance of established literature-based T2 criteria sets was evaluated for the respective relevant cohorts (Table 4). ";
+            text += `<p>The diagnostic performance of established literature-based T2 criteria sets was evaluated for the respective relevant cohorts (Table 4). `;
             text += `For the criteria set according to Koh et al. (2008), an AUC of ${fCI(publicationData?.nRCT?.gueteT2_literatur?.['koh_2008_morphology']?.auc, 3, false, 'en')} was observed in the nRCT cohort (n=${commonData.nNRCT}). `;
             text += `The criteria by Barbaro et al. (2024) showed an AUC of ${fCI(publicationData?.nRCT?.gueteT2_literatur?.['barbaro_2024_restaging']?.auc, 3, false, 'en')} in the nRCT cohort. `;
             text += `The ESGAR 2016 criteria (evaluated by Rutegård et al., 2025) achieved an AUC of ${fCI(publicationData?.['direkt OP']?.gueteT2_literatur?.['rutegard_et_al_esgar']?.auc, 3, false, 'en')} in the upfront surgery cohort (n=${commonData.nDirektOP}). Detailed metrics (sensitivity, specificity, etc.) for each set and cohort are listed in Table 4.</p>`;
@@ -265,7 +263,7 @@ const publicationTextGenerator = (() => {
             `;
         }
     }
-    
+
     function getErgebnisseVergleichPerformanceText(lang, publicationData, commonData) {
         const asGesamt = publicationData?.Gesamt?.gueteAS;
         const t2AngewandtGesamt = publicationData?.Gesamt?.gueteT2_angewandt;
@@ -286,7 +284,7 @@ const publicationTextGenerator = (() => {
     function getSectionText(sectionId, lang, publicationData, kollektiveData, commonData) {
         switch (sectionId) {
             case 'methoden_studienanlage': return getMethodenStudienanlageText(lang, commonData);
-            case 'methoden_patientenkollektiv': return getMethodenPatientenkollektivText(lang, publicationData.Gesamt?.deskriptiv ? publicationData : commonData, commonData); // Pass pChar from Gesamt
+            case 'methoden_patientenkollektiv': return getMethodenPatientenkollektivText(lang, publicationData, commonData);
             case 'methoden_mrt_protokoll': return getMethodenMRTProtokollText(lang, commonData);
             case 'methoden_as_definition': return getMethodenASDefinitionText(lang, commonData);
             case 'methoden_t2_definition': return getMethodenT2DefinitionText(lang, commonData, publicationData, kollektiveData);
@@ -300,10 +298,9 @@ const publicationTextGenerator = (() => {
             default: return `<p class="text-warning">Text für Sektion '${sectionId}' (Sprache: ${lang}) noch nicht implementiert.</p>`;
         }
     }
-    
+
     function getSectionTextAsMarkdown(sectionId, lang, publicationData, kollektiveData, commonData) {
         const htmlContent = getSectionText(sectionId, lang, publicationData, kollektiveData, commonData);
-        // Simple HTML to Markdown conversion (can be improved with a library if needed)
         let markdown = htmlContent
             .replace(/<p>/g, '\n')
             .replace(/<\/p>/g, '\n')
@@ -320,12 +317,11 @@ const publicationTextGenerator = (() => {
             .replace(/<li>/g, '\n* ')
             .replace(/<\/li>/g, '')
             .replace(/<br>/g, '\n')
-            .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/g, (match, p1) => `\n${'#'.repeat(parseInt(match[2]))} ${p1}\n`) // Crude header conversion
-            .replace(/\/g, (match, p1) => `[${p1}]`) // Simplify citation for markdown
+            .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/g, (match, p1) => `\n${'#'.repeat(parseInt(match[2]))} ${p1}\n`)
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
             .replace(/&amp;/g, '&')
-            .replace(/\n\s*\n/g, '\n\n') // Reduce multiple blank lines
+            .replace(/\n\s*\n/g, '\n\n')
             .trim();
         return markdown;
     }
