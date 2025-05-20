@@ -41,7 +41,10 @@ const tableRenderer = (() => {
     }
 
     function createPatientTableRow(patient) {
-        if (!patient || typeof patient.nr !== 'number') return '';
+        if (!patient || typeof patient.nr !== 'number') { // Korrigierte Bedingung
+            console.warn("createPatientTableRow: Ungültiges oder unvollständiges Patientenobjekt empfangen:", patient);
+            return '';
+        }
         const rowId = `patient-row-${patient.nr}`;
         const detailRowId = `patient-detail-${patient.nr}`;
         const hasT2Nodes = Array.isArray(patient.lymphknoten_t2) && patient.lymphknoten_t2.length > 0;
@@ -49,16 +52,16 @@ const tableRenderer = (() => {
         const therapieText = getKollektivDisplayName(patient.therapie);
         const naPlaceholder = '--';
 
-        const tooltipNr = TOOLTIP_CONTENT.patientTable.nr || 'Nr.';
-        const tooltipName = TOOLTIP_CONTENT.patientTable.name || 'Name';
-        const tooltipVorname = TOOLTIP_CONTENT.patientTable.vorname || 'Vorname';
-        const tooltipGeschlecht = TOOLTIP_CONTENT.patientTable.geschlecht || 'Geschlecht';
-        const tooltipAlter = TOOLTIP_CONTENT.patientTable.alter || 'Alter';
-        const tooltipTherapie = TOOLTIP_CONTENT.patientTable.therapie || 'Therapie';
-        const tooltipStatus = TOOLTIP_CONTENT.patientTable.n_as_t2 || 'N/AS/T2 Status';
+        const tooltipNr = TOOLTIP_CONTENT.datenTable.nr || 'Nr.'; // Angepasst von patientTable
+        const tooltipName = TOOLTIP_CONTENT.datenTable.name || 'Name';
+        const tooltipVorname = TOOLTIP_CONTENT.datenTable.vorname || 'Vorname';
+        const tooltipGeschlecht = TOOLTIP_CONTENT.datenTable.geschlecht || 'Geschlecht';
+        const tooltipAlter = TOOLTIP_CONTENT.datenTable.alter || 'Alter';
+        const tooltipTherapie = TOOLTIP_CONTENT.datenTable.therapie || 'Therapie';
+        const tooltipStatus = TOOLTIP_CONTENT.datenTable.n_as_t2 || 'N/AS/T2 Status';
         const bemerkungText = ui_helpers.escapeMarkdown(patient.bemerkung || '');
-        const tooltipBemerkung = bemerkungText ? bemerkungText : (TOOLTIP_CONTENT.patientTable.bemerkung || 'Bemerkung');
-        const tooltipExpand = hasT2Nodes ? (TOOLTIP_CONTENT.patientTable.expandRow || 'Details anzeigen/ausblenden') : 'Keine T2-Lymphknoten Details verfügbar';
+        const tooltipBemerkung = bemerkungText ? bemerkungText : (TOOLTIP_CONTENT.datenTable.bemerkung || 'Bemerkung');
+        const tooltipExpand = hasT2Nodes ? (TOOLTIP_CONTENT.datenTable.expandRow || 'Details anzeigen/ausblenden') : 'Keine T2-Lymphknoten Details verfügbar';
 
         const t2StatusIcon = patient.t2 === '+' ? 'plus' : patient.t2 === '-' ? 'minus' : 'unknown';
         const t2StatusText = patient.t2 ?? '?';
@@ -145,7 +148,10 @@ const tableRenderer = (() => {
     }
 
     function createAuswertungTableRow(patient, appliedCriteria, appliedLogic) {
-        if (!patient || typeof patient.nr !== 'number') return '';
+        if (!patient || typeof patient.nr !== 'number') { // Korrigierte Bedingung
+            console.warn("createAuswertungTableRow: Ungültiges oder unvollständiges Patientenobjekt empfangen:", patient);
+            return '';
+        }
         const rowId = `auswertung-row-${patient.nr}`;
         const detailRowId = `auswertung-detail-${patient.nr}`;
         const hasBewerteteNodes = Array.isArray(patient.lymphknoten_t2_bewertet) && patient.lymphknoten_t2_bewertet.length > 0;
