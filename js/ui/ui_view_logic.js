@@ -163,10 +163,10 @@ const uiViewLogic = (() => {
         return headerHTML;
     }
 
-    function createDatenTableHTML(data, sortState) { // Umbenannt
-        if (!Array.isArray(data)) return '<p class="text-danger">Fehler: Ungültige Patientendaten für Tabelle.</p>';
+    function createDatenTableHTML(data, sortState) {
+        if (!Array.isArray(data)) return '<p class="text-danger">Fehler: Ungültige Daten für Tabelle.</p>';
 
-        const tableId = 'daten-table'; // Geändert
+        const tableId = 'daten-table';
         const columns = [
             { key: 'nr', label: 'Nr', tooltip: TOOLTIP_CONTENT.datenTable.nr },
             { key: 'name', label: 'Name', tooltip: TOOLTIP_CONTENT.datenTable.name },
@@ -186,7 +186,9 @@ const uiViewLogic = (() => {
             tableHTML += `<tr><td colspan="${columns.length}" class="text-center text-muted">Keine Daten im ausgewählten Kollektiv gefunden.</td></tr>`;
         } else {
             data.forEach(patient => {
-                tableHTML += tableRenderer.createPatientTableRow(patient);
+                if (patient) { // Zusätzliche Sicherheitsprüfung
+                    tableHTML += tableRenderer.createPatientTableRow(patient);
+                }
             });
         }
         tableHTML += `</tbody></table>`;
@@ -215,7 +217,9 @@ const uiViewLogic = (() => {
              tableHTML += `<tr><td colspan="${columns.length}" class="text-center text-muted">Keine Patienten im ausgewählten Kollektiv gefunden.</td></tr>`;
          } else {
              data.forEach(patient => {
-                 tableHTML += tableRenderer.createAuswertungTableRow(patient, appliedCriteria, appliedLogic);
+                 if (patient) { // Zusätzliche Sicherheitsprüfung
+                    tableHTML += tableRenderer.createAuswertungTableRow(patient, appliedCriteria, appliedLogic);
+                 }
              });
          }
          tableHTML += `</tbody></table>`;
@@ -608,7 +612,7 @@ const uiViewLogic = (() => {
     }
 
     return Object.freeze({
-        createDatenTableHTML: createDatenTableHTML, // Umbenannt
+        createDatenTableHTML: createDatenTableHTML,
         createAuswertungTableHTML,
         createAuswertungTableCardHTML,
         createDeskriptiveStatistikContentHTML,
