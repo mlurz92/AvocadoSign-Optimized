@@ -28,8 +28,8 @@ const studyT2CriteriaManager = (() => {
             id: 'koh_2008_morphology',
             name: 'Koh et al. (2008)',
             displayShortName: 'Koh et al.',
-            context: 'Primär & Restaging (Studie fokussiert auf Post-nCRT)',
-            applicableKollektiv: 'nRCT',
+            context: 'Primär & Restaging (Urspr. Studie fokussiert auf Post-nCRT)',
+            applicableKollektiv: 'Gesamt',
             criteria: Object.freeze({
                 size: Object.freeze({ active: false, threshold: null, condition: null }),
                 form: Object.freeze({ active: false, value: null }),
@@ -38,12 +38,12 @@ const studyT2CriteriaManager = (() => {
                 signal: Object.freeze({ active: false, value: null })
             }),
             logic: 'ODER',
-            description: 'Koh et al. (2008): Morphologische Kriterien - Irreguläre Kontur ODER heterogenes Binnensignal.',
+            description: 'Koh et al. (2008): Morphologische Kriterien - Irreguläre Kontur ODER heterogenes Binnensignal. In dieser Anwendung für das Gesamtkollektiv evaluiert.',
             studyInfo: Object.freeze({
                 reference: "Koh et al., Int J Radiat Oncol Biol Phys (2008)",
-                patientCohort: "N=25 (alle nCRT, 'poor-risk')",
-                investigationType: "Vor und nach nCRT (Genauigkeitsanalyse post-nCRT)",
-                focus: "Bewertung von LK vor und nach nCRT mittels Morphologie (Kontur, Signalheterogenität).",
+                patientCohort: "Ursprüngliche Studie: N=25 (alle nCRT, 'poor-risk'). Anwendung in diesem Tool: Gesamtkollektiv.",
+                investigationType: "Vor und nach nCRT (Ursprüngliche Genauigkeitsanalyse post-nCRT)",
+                focus: "Ursprünglich: Bewertung von LK vor und nach nCRT mittels Morphologie. In diesem Tool: Vergleichbarkeit mit Avocado Sign im Gesamtkollektiv.",
                 keyCriteriaSummary: "Irreguläre Kontur ODER heterogenes Signal."
             })
         }),
