@@ -1,9 +1,9 @@
 const PUBLICATION_CONFIG = Object.freeze({
     defaultLanguage: 'de',
-    defaultSection: 'methoden_studienanlage', // Eindeutiger Schlüssel für den ersten Methodenabschnitt
+    defaultSection: 'methoden', // Geändert auf Hauptsektions-ID
     sections: Object.freeze([
         Object.freeze({
-            id: 'methoden',
+            id: 'methoden', // ID für den Hauptbereich "Methoden"
             labelKey: 'methoden', // Schlüssel für UI_TEXTS.publikationTab.sectionLabels
             subSections: Object.freeze([
                 Object.freeze({ id: 'methoden_studienanlage', label: 'Studiendesign und Ethik' }),
@@ -16,7 +16,7 @@ const PUBLICATION_CONFIG = Object.freeze({
             ])
         }),
         Object.freeze({
-            id: 'ergebnisse',
+            id: 'ergebnisse', // ID für den Hauptbereich "Ergebnisse"
             labelKey: 'ergebnisse',
             subSections: Object.freeze([
                 Object.freeze({ id: 'ergebnisse_patientencharakteristika', label: 'Patientencharakteristika' }),
@@ -27,12 +27,10 @@ const PUBLICATION_CONFIG = Object.freeze({
             ])
         })
     ]),
-    // Definition der für den Publikations-Tab relevanten Literatur-Kriteriensets
-    // Die IDs müssen mit denen in study_criteria_manager.js übereinstimmen
     literatureCriteriaSets: Object.freeze([
         Object.freeze({
             id: 'koh_2008_morphology',
-            nameKey: 'Koh et al. (2008)', // Wird für die Anzeige verwendet
+            nameKey: 'Koh et al. (2008)',
             shortName: 'Koh et al.'
         }),
         Object.freeze({
@@ -46,8 +44,6 @@ const PUBLICATION_CONFIG = Object.freeze({
             shortName: 'ESGAR 2016'
         })
     ]),
-    // Mögliche Metriken für die Anzeige der Brute-Force Ergebnisse im Publikationstab
-    // Sollte mit den Optionen in ui_components.js und APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC übereinstimmen
     bruteForceMetricsForPublication: Object.freeze([
         { value: 'Balanced Accuracy', label: 'Balanced Accuracy' },
         { value: 'Accuracy', label: 'Accuracy' },
@@ -56,9 +52,6 @@ const PUBLICATION_CONFIG = Object.freeze({
         { value: 'NPV', label: 'Negativer Prädiktiver Wert (NPV)' }
     ]),
     defaultBruteForceMetricForPublication: 'Balanced Accuracy',
-
-    // Konfiguration für Tabellen und Diagramme, die im Publikations-Tab angezeigt werden sollen
-    // Dies dient als Referenz für die Logik in publikation_tab_logic.js
     publicationElements: Object.freeze({
         methoden: Object.freeze({
             literaturT2KriterienTabelle: {
@@ -92,7 +85,6 @@ const PUBLICATION_CONFIG = Object.freeze({
     })
 });
 
-// Um sicherzustellen, dass das Objekt nicht versehentlich geändert wird
 if (typeof Object.freeze === 'function') {
     Object.freeze(PUBLICATION_CONFIG);
 }
