@@ -1,54 +1,5 @@
 const praesentationTabLogic = (() => {
 
-    function _getMetricInterpretationHTMLPraes(key, metricData, methode = '', kollektivName = '') {
-        const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
-        const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: 'N/A' };
-        const na = '--';
-        const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
-        const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na, isPercent);
-        const lowerStr = formatNumber(data?.ci?.lower, digits, na, isPercent);
-        const upperStr = formatNumber(data?.ci?.upper, digits, na, isPercent);
-        const ciMethodStr = data?.method || 'N/A';
-        const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value) : '';
-
-        let interpretation = interpretationTemplate
-            .replace(/\[METHODE\]/g, methode)
-            .replace(/\[WERT\]/g, `<strong>${valueStr}${isPercent && valueStr !== na ? '%' : ''}</strong>`)
-            .replace(/\[LOWER\]/g, lowerStr)
-            .replace(/\[UPPER\]/g, upperStr)
-            .replace(/\[METHOD_CI\]/g, ciMethodStr)
-            .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
-            .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`);
-
-        if (lowerStr === na || upperStr === na || ciMethodStr === na) {
-             interpretation = interpretation.replace(/\(95% CI nach .*?: .*? - .*?\)/g, '(Keine CI-Daten verfügbar)');
-             interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
-        }
-        interpretation = interpretation.replace(/p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
-        interpretation = interpretation.replace(/<hr.*?>.*$/, '');
-        return interpretation;
-    }
-
-    function _getTestInterpretationHTMLPraes(key, testData, kollektivName = '', t2ShortName = 'T2') {
-        const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
-         if (!testData) return 'Keine Daten für Interpretation verfügbar.';
-        const na = '--';
-        const pValue = testData?.pValue;
-        const pStr = (pValue !== null && !isNaN(pValue)) ? (pValue < 0.001 ? '&lt;0.001' : formatNumber(pValue, 3, na)) : na;
-        const sigSymbol = getStatisticalSignificanceSymbol(pValue);
-        const sigText = getStatisticalSignificanceText(pValue);
-
-         return interpretationTemplate
-            .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
-            .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
-            .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
-            .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
-            .replace(/\[T2_SHORT_NAME\]/g, t2ShortName)
-            .replace(/<hr.*?>.*$/, '');
-    }
-
-
     function _createPresentationView_ASPUR_HTML(presentationData) {
         const { statsGesamt, statsDirektOP, statsNRCT, kollektiv, statsCurrentKollektiv, patientCount } = presentationData || {};
         const kollektives = ['Gesamt', 'direkt OP', 'nRCT'];
@@ -61,7 +12,7 @@ const praesentationTabLogic = (() => {
             const kollektivDisplayName = getKollektivDisplayName(kollektivKey);
             const na = '--';
             const fCI_p = (m, k) => { const d = (k === 'auc'||k==='f1') ? 3 : 1; const p = !(k === 'auc'||k==='f1'); return formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, d, p, na); };
-            const getInterpretationTT = (mk, st) => { return _getMetricInterpretationHTMLPraes(mk, st, 'AS', kollektivDisplayName); };
+            const getInterpretationTT = (mk, st) => { return ui_helpers.getMetricInterpretationHTML(mk, st, 'AS', kollektivDisplayName); };
 
             if (!stats || typeof stats.matrix !== 'object') {
                 return `<tr><td class="fw-bold" data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable?.kollektiv || 'Kollektiv'}">${kollektivDisplayName} (N=?)</td><td colspan="6" class="text-muted text-center">Daten fehlen</td></tr>`;
@@ -100,7 +51,7 @@ const praesentationTabLogic = (() => {
                         <div class="table-responsive">
                             <table class="table table-striped table-hover table-sm small mb-0" id="${tableId}">
                                 <thead class="small">
-                                    <tr>${tooltipKeys.map((key, index) => `<th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable?.[key] || _getMetricDescriptionHTML(key, 'AS') || ''}">${index === 0 ? 'Kollektiv' : (key.charAt(0).toUpperCase() + key.slice(1) + '. (95% CI)')}</th>`).join('')}</tr>
+                                    <tr>${tooltipKeys.map((key, index) => `<th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable?.[key] || ui_helpers.getMetricDescriptionHTML(key, 'AS') || ''}">${index === 0 ? 'Kollektiv' : (key.charAt(0).toUpperCase() + key.slice(1) + '. (95% CI)')}</th>`).join('')}</tr>
                                 </thead>
                                 <tbody>${kollektives.map(k => createPerfTableRow(statsMap[k], k)).join('')}</tbody>
                             </table>
@@ -206,9 +157,9 @@ const praesentationTabLogic = (() => {
                  const isRate = !(key === 'f1' || key === 'auc'); const digits = isRate ? 1 : 3;
                  const valAS = formatCI(statsAS[key]?.value, statsAS[key]?.ci?.lower, statsAS[key]?.ci?.upper, digits, isRate, na);
                  const valT2 = formatCI(statsT2[key]?.value, statsT2[key]?.ci?.lower, statsT2[key]?.ci?.upper, digits, isRate, na);
-                 const tooltipDesc = _getMetricDescriptionHTML(key, 'Wert');
-                 const tooltipAS = _getMetricInterpretationHTMLPraes(key, statsAS[key], 'AS', kollektivName);
-                 const tooltipT2 = _getMetricInterpretationHTMLPraes(key, statsT2[key], t2ShortNameEffective, kollektivName);
+                 const tooltipDesc = ui_helpers.getMetricDescriptionHTML(key, 'Wert');
+                 const tooltipAS = ui_helpers.getMetricInterpretationHTML(key, statsAS[key], 'AS', kollektivName);
+                 const tooltipT2 = ui_helpers.getMetricInterpretationHTML(key, statsT2[key], t2ShortNameEffective, kollektivName);
                  comparisonTableHTML += `<tr><td data-tippy-content="${tooltipDesc}">${metricNames[key]}</td><td data-tippy-content="${tooltipAS}">${valAS}</td><td data-tippy-content="${tooltipT2}">${valT2}</td></tr>`;
             });
             comparisonTableHTML += `</tbody></table></div>`;
@@ -216,10 +167,10 @@ const praesentationTabLogic = (() => {
             const comparisonTableCardHTML = uiComponents.createStatistikCard(perfTableId+'_card', perfTitle, comparisonTableHTML, false, 'praesentation.comparisonTableCard', compTableDownloadBtns, perfTableId);
 
             let testsTableHTML = `<table class="table table-sm table-striped small mb-0" id="${testTableId}"><thead class="small visually-hidden"><tr><th>Test</th><th>Statistik</th><th>p-Wert</th><th>Methode</th></tr></thead><tbody>`;
-            const mcNemarDesc = _getTestDescriptionHTML('mcnemar', t2ShortNameEffective);
-            const mcNemarInterp = _getTestInterpretationHTMLPraes('mcnemar', vergleich?.mcnemar, kollektivName, t2ShortNameEffective);
-            const delongDesc = _getTestDescriptionHTML('delong', t2ShortNameEffective);
-            const delongInterp = _getTestInterpretationHTMLPraes('delong', vergleich?.delong, kollektivName, t2ShortNameEffective);
+            const mcNemarDesc = ui_helpers.getTestDescriptionHTML('mcnemar', t2ShortNameEffective);
+            const mcNemarInterp = ui_helpers.getTestInterpretationHTML('mcnemar', vergleich?.mcnemar, kollektivName, t2ShortNameEffective);
+            const delongDesc = ui_helpers.getTestDescriptionHTML('delong', t2ShortNameEffective);
+            const delongInterp = ui_helpers.getTestInterpretationHTML('delong', vergleich?.delong, kollektivName, t2ShortNameEffective);
             testsTableHTML += `<tr><td data-tippy-content="${mcNemarDesc}">McNemar (Acc)</td><td>${formatNumber(vergleich?.mcnemar?.statistic, 3, '--')} (df=${vergleich?.mcnemar?.df || '--'})</td><td data-tippy-content="${mcNemarInterp}"> ${fPVal(vergleich?.mcnemar)} ${getStatisticalSignificanceSymbol(vergleich?.mcnemar?.pValue)}</td><td class="text-muted">${vergleich?.mcnemar?.method || '--'}</td></tr>`;
             testsTableHTML += `<tr><td data-tippy-content="${delongDesc}">DeLong (AUC)</td><td>Z=${formatNumber(vergleich?.delong?.Z, 3, '--')}</td><td data-tippy-content="${delongInterp}"> ${fPVal(vergleich?.delong)} ${getStatisticalSignificanceSymbol(vergleich?.delong?.pValue)}</td><td class="text-muted">${vergleich?.delong?.method || '--'}</td></tr>`;
             testsTableHTML += `</tbody></table>`;
