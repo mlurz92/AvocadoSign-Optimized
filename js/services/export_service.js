@@ -18,9 +18,9 @@ const exportService = (() => {
              const safeStudyId = String(options.studyId).replace(/[^a-z0-9_-]/gi, '_');
              filenameType = filenameType.replace('{StudyID}', safeStudyId);
         } else {
-             filenameType = filenameType.replace('_{StudyID}', '').replace('{StudyID}', ''); // Remove placeholder if not used
+             filenameType = filenameType.replace('_{StudyID}', '').replace('{StudyID}', '');
         }
-        
+
         if (options.sectionName && filenameType.includes('{SectionName}')) {
             const safeSectionName = String(options.sectionName).replace(/[^a-z0-9_-]/gi, '_').substring(0,20);
             filenameType = filenameType.replace('{SectionName}', safeSectionName);
@@ -93,11 +93,11 @@ const exportService = (() => {
                 const svgClone = svgElement.cloneNode(true);
                 svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
                 svgClone.setAttribute('version', '1.1');
-                svgClone.style.backgroundColor = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#ffffff'; // Ensure background
+                svgClone.style.backgroundColor = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#ffffff';
                 const styles = getComputedStyle(svgElement);
                 const viewBox = svgElement.viewBox?.baseVal;
                 let sourceWidth = parseFloat(svgClone.getAttribute('width')) || parseFloat(styles.width) || svgElement.width?.baseVal?.value || viewBox?.width || targetWidth;
-                let sourceHeight = parseFloat(svgClone.getAttribute('height')) || parseFloat(styles.height) || svgElement.height?.baseVal?.value || viewBox?.height || (targetWidth * 0.75); // Default aspect ratio if height unknown
+                let sourceHeight = parseFloat(svgClone.getAttribute('height')) || parseFloat(styles.height) || svgElement.height?.baseVal?.value || viewBox?.height || (targetWidth * 0.75);
 
                 if (sourceWidth <= 0 || sourceHeight <= 0) { sourceWidth = viewBox?.width || targetWidth; sourceHeight = viewBox?.height || (targetWidth * 0.75); }
                 if (sourceWidth <= 0 || sourceHeight <= 0) { return reject(new Error("SVG-Dimensionen konnten nicht ermittelt werden.")); }
@@ -108,7 +108,6 @@ const exportService = (() => {
                 svgClone.setAttribute('width', String(targetWidth));
                 svgClone.setAttribute('height', String(targetHeight));
 
-                // Inline all computed styles to ensure correct rendering in canvas
                 const elementsToStyle = svgClone.querySelectorAll('*');
                 elementsToStyle.forEach(el => {
                     const computed = window.getComputedStyle(el);
@@ -133,7 +132,7 @@ const exportService = (() => {
                     canvas.height = targetHeight;
                     const ctx = canvas.getContext('2d');
                     if (!ctx) { return reject(new Error("Canvas Context nicht verfügbar.")); }
-                    ctx.fillStyle = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#ffffff'; // Set background for canvas
+                    ctx.fillStyle = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#ffffff';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                     canvas.toBlob((blob) => {
@@ -159,7 +158,6 @@ const exportService = (() => {
                  const svgClone = svgElement.cloneNode(true);
                  svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
                  svgClone.setAttribute('version', '1.1');
-                 // Optionally inline styles here too for better standalone SVG
                  const elementsToStyle = svgClone.querySelectorAll('*');
                  elementsToStyle.forEach(el => {
                     const computed = window.getComputedStyle(el);
@@ -257,23 +255,26 @@ const exportService = (() => {
    }
 
     function _getPublicationSectionContentForExport(sectionId, lang) {
-        // This function needs access to the fully rendered HTML or markdown content of the publication tab sections.
-        // For now, it's a placeholder. This logic would ideally live in publikationTabLogic or be passed in.
-        // It would call publicationTextGenerator.getSectionText(...) with all necessary data.
-        // Since this function is for export, it should generate the pure text/markdown, not HTML for UI.
-        // For simplicity, this placeholder returns a basic string.
-        // The actual implementation would require access to 'allKollektivStats' and 'kollektiveData' (which is allKollektivStats)
-        // and the 'commonData' object as used in publicationRenderer.
-        const placeHolderText = `Textinhalt für Sektion '${sectionId}' in Sprache '${lang}' (Platzhalter).`;
+        const dummyPublicationData = {};
+        const dummyKollektiveData = {};
+        const commonData = {
+            appName: APP_CONFIG.APP_NAME,
+            appVersion: APP_CONFIG.APP_VERSION,
+            currentKollektivName: getKollektivDisplayName(state.getCurrentKollektiv()),
+            nGesamt: kollektiveDataGlobal?.Gesamt?.deskriptiv?.anzahlPatienten || 0,
+            nDirektOP: kollektiveDataGlobal?.['direkt OP']?.deskriptiv?.anzahlPatienten || 0,
+            nNRCT: kollektiveDataGlobal?.nRCT?.deskriptiv?.anzahlPatienten || 0,
+            t2SizeMin: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min,
+            t2SizeMax: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max,
+            bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
+            significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL
+        };
+
         try {
-            // Dummy data for placeholder - in real scenario, this would come from state or a data manager
-            const dummyPublicationData = {}; // Placeholder for allKollektivStats
-            const dummyKollektiveData = {}; // Placeholder
-            const dummyCommonData = { appName: APP_CONFIG.APP_NAME, appVersion: APP_CONFIG.APP_VERSION, /* ... other common fields */ };
             if (typeof publicationTextGenerator !== 'undefined' && typeof publicationTextGenerator.getSectionTextAsMarkdown === 'function') {
-                 return publicationTextGenerator.getSectionTextAsMarkdown(sectionId, lang, dummyPublicationData, dummyKollektiveData, dummyCommonData);
+                 return publicationTextGenerator.getSectionTextAsMarkdown(sectionId, lang, dummyPublicationData, dummyKollektiveData, commonData);
             }
-            return placeHolderText;
+            return `Textinhalt für Sektion '${sectionId}' in Sprache '${lang}' (Platzhalter).`;
         } catch (e) {
             console.error(`Error generating markdown for publication section ${sectionId}:`, e);
             return `# Fehler bei Generierung für Sektion ${sectionId}\n\n${e.message}`;
@@ -283,16 +284,16 @@ const exportService = (() => {
 
     function generateComprehensiveReportHTML(data, bfResults, kollektiv, criteria, logic) {
         try {
-            const stats = statisticsService.calculateAllStatsForPublication(data, criteria, logic, bfResults ? {[kollektiv]: bfResults} : {}); // Pass bfResults specific to current kollektiv for this report
+            const stats = statisticsService.calculateAllStatsForPublication(data, criteria, logic, bfResults ? {[kollektiv]: bfResults} : {});
             if (!data || !stats || !criteria || !logic) return '<html><head><title>Fehler</title></head><body>Fehler: Notwendige Daten für Report fehlen.</body></html>';
 
             const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'N/A';
             const config = APP_CONFIG.REPORT_SETTINGS; const kollektivName = getKollektivDisplayName(kollektiv); const timestamp = new Date().toLocaleString('de-DE', { dateStyle: 'long', timeStyle: 'medium'}); const criteriaString = formatCriteriaFunc(criteria, logic); const appliedCriteriaDisplayName = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME; let chartSVGs = {};
             const getChartSVG = (chartId) => { const el = document.getElementById(chartId)?.querySelector('svg'); if(!el) return `<p class="text-muted small">[Diagramm ${chartId} nicht renderbar/gefunden]</p>`; try { const clone = el.cloneNode(true); clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); clone.setAttribute('version', '1.1'); clone.style.backgroundColor = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#ffffff'; const vb = clone.getAttribute('viewBox')?.split(' '); let w = clone.getAttribute('width'), h = clone.getAttribute('height'); if (vb && vb.length === 4 && parseFloat(vb[2]) > 0 && parseFloat(vb[3]) > 0) { clone.setAttribute('width', vb[2]); clone.setAttribute('height', vb[3]); } else if (!w || !h || parseFloat(w) <= 0 || parseFloat(h) <= 0) { clone.setAttribute('width', '400'); clone.setAttribute('height', '300'); } const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style"); styleEl.textContent = `svg { font-family: ${getComputedStyle(document.body).fontFamily || 'sans-serif'}; } .axis path, .axis line { fill: none; stroke: #6c757d; shape-rendering: crispEdges; stroke-width: 1px; } .axis text { font-size: 10px; fill: #212529; } .axis-label { font-size: 11px; fill: #212529; text-anchor: middle; } .grid .tick { stroke: #dee2e6; stroke-opacity: 0.6; } .grid path { stroke-width: 0; } .legend { font-size: 10px; fill: #212529; } .bar { opacity: 0.9; } .roc-curve { fill: none; stroke-width: 2px; } .reference-line { stroke: #adb5bd; stroke-width: 1px; stroke-dasharray: 4 2; } .auc-label { font-weight: bold; font-size: 11px; }`; clone.prepend(styleEl); return clone.outerHTML; } catch (e) { return `<p class="text-danger small">[Fehler beim Einbetten von Diagramm ${chartId}: ${e.message}]</p>`; } };
             const chartIdsToCapture = [];
-            const statsDataForCurrentKollektiv = stats[kollektiv]; // Get stats for the current global kollektiv
+            const statsDataForCurrentKollektiv = stats[kollektiv];
 
-            if (config.INCLUDE_DESCRIPTIVES_CHARTS) { chartIdsToCapture.push('chart-stat-age-0', 'chart-stat-gender-0'); } // These are usually rendered in Statistik tab for index 0
+            if (config.INCLUDE_DESCRIPTIVES_CHARTS) { chartIdsToCapture.push('chart-stat-age-0', 'chart-stat-gender-0'); }
             if (config.INCLUDE_AS_VS_T2_COMPARISON_CHART) { const p = ['praes-comp-chart-container'].find(id => document.getElementById(id)?.querySelector('svg')); if(p) chartIdsToCapture.push(p); } chartIdsToCapture.forEach(id => { const actualId = document.getElementById(id) ? id : (id.endsWith('-0') && document.getElementById(id.replace('-0','')) ? id.replace('-0','') : null); if (actualId) chartSVGs[actualId] = getChartSVG(actualId); });
             let html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>${config.REPORT_TITLE} - ${kollektivName}</title>`; html += `<style> body { font-family: sans-serif; font-size: 10pt; line-height: 1.4; padding: 25px; max-width: 800px; margin: auto; color: #212529; background-color: #fff;} h1, h2, h3 { color: #333; margin-top: 1.2em; margin-bottom: 0.6em; padding-bottom: 0.2em; border-bottom: 1px solid #ccc; page-break-after: avoid; } h1 { font-size: 16pt; border-bottom-width: 2px; } h2 { font-size: 14pt; } h3 { font-size: 12pt; font-weight: bold; border-bottom: none; margin-bottom: 0.4em; } table { border-collapse: collapse; width: 100%; margin-bottom: 1em; font-size: 9pt; page-break-inside: avoid; } th, td { border: 1px solid #ccc; padding: 5px 8px; text-align: left; vertical-align: top; word-wrap: break-word; } th { background-color: #f2f2f2; font-weight: bold; } .chart-container { text-align: center; margin: 1em 0; page-break-inside: avoid; background-color: #fff; padding: 10px; border: 1px solid #eee; max-width: 100%; overflow: hidden; } .chart-container svg { max-width: 100%; height: auto; display: block; margin: auto; } .meta-info { background-color: #f9f9f9; border: 1px solid #eee; padding: 10px 15px; margin-bottom: 1.5em; font-size: 9pt; } .meta-info ul { list-style: none; padding: 0; margin: 0; } .meta-info li { margin-bottom: 0.3em; } .small { font-size: 8pt; } .text-muted { color: #6c757d; } ul { padding-left: 20px; margin-top: 0.5em;} li { margin-bottom: 0.2em; } .report-footer { margin-top: 2em; padding-top: 1em; border-top: 1px solid #ccc; font-size: 8pt; color: #888; text-align: center; } .no-print { display: none; } @media print { body { padding: 10px; } .meta-info { background-color: #fff; border: none; padding: 0 0 1em 0;} } </style></head><body>`;
             html += `<h1>${config.REPORT_TITLE}</h1>`; if (config.INCLUDE_APP_VERSION) html += `<p class="text-muted small">Generiert mit: ${APP_CONFIG.APP_NAME} v${APP_CONFIG.APP_VERSION}</p>`; if (config.INCLUDE_GENERATION_TIMESTAMP) html += `<p class="text-muted small">Erstellt am: ${timestamp}</p>`;
@@ -320,22 +321,20 @@ const exportService = (() => {
             const table = document.getElementById(tableElementId);
             if (!table || !(table instanceof HTMLTableElement)) return reject(new Error(`Tabelle mit ID '${tableElementId}' nicht gefunden.`));
             try {
-                // Ensure table is fully rendered and dimensions are available
                  const tableBCR = table.getBoundingClientRect();
                  let tableRect = {width: tableBCR.width, height: tableBCR.height, left: tableBCR.left, top: tableBCR.top};
                 if(tableRect.width <= 0 || tableRect.height <= 0) {
-                    // Fallback if getBoundingClientRect fails (e.g. table not visible)
                     tableRect.width = table.offsetWidth || baseWidth;
-                    tableRect.height = table.offsetHeight || (baseWidth * 0.5); // Estimate height
+                    tableRect.height = table.offsetHeight || (baseWidth * 0.5);
                      if(tableRect.width <= 0 || tableRect.height <= 0) return reject(new Error(`Tabelle '${tableElementId}' hat keine validen Dimensionen.`));
                     tableRect.left = table.offsetLeft || 0;
                     tableRect.top = table.offsetTop || 0;
                 }
 
-                const effectiveScale = Math.min(scale, targetWidth / tableRect.width); // Don't upscale beyond targetWidth
+                const effectiveScale = Math.min(scale, targetWidth / tableRect.width);
                 const canvas = document.createElement('canvas');
                 const targetHeight = tableRect.height * effectiveScale;
-                canvas.width = tableRect.width * effectiveScale; // Use actual scaled width
+                canvas.width = tableRect.width * effectiveScale;
                 canvas.height = targetHeight;
 
                 const ctx = canvas.getContext('2d');
@@ -346,13 +345,12 @@ const exportService = (() => {
                 ctx.save();
                 ctx.scale(effectiveScale, effectiveScale);
 
-                // Draw table content (simplified for this example, html2canvas or similar might be more robust)
                 const tableClone = table.cloneNode(true);
                 const tableWrapper = document.createElement('div');
                 tableWrapper.style.position = 'absolute';
-                tableWrapper.style.left = '-9999px'; // Render off-screen
+                tableWrapper.style.left = '-9999px';
                 tableWrapper.appendChild(tableClone);
-                document.body.appendChild(tableWrapper); // Needs to be in DOM for getComputedStyle
+                document.body.appendChild(tableWrapper);
 
                 const rows = Array.from(tableClone.rows);
                 let currentY = 0;
@@ -362,22 +360,21 @@ const exportService = (() => {
                     let maxHeightInRow = 0;
                     cells.forEach(cell => {
                         const computedStyle = getComputedStyle(cell);
-                        const cellWidth = cell.offsetWidth; // Use offsetWidth from cloned, rendered table
+                        const cellWidth = cell.offsetWidth;
                         const cellHeight = cell.offsetHeight;
                         maxHeightInRow = Math.max(maxHeightInRow, cellHeight);
 
                         ctx.fillStyle = computedStyle.backgroundColor || 'transparent';
                         if (ctx.fillStyle && ctx.fillStyle !== 'rgba(0, 0, 0, 0)' && ctx.fillStyle !== 'transparent') ctx.fillRect(currentX, currentY, cellWidth, cellHeight);
 
-                        // Borders (simplified)
-                        const borderWeight = 1; // Simplified
+                        const borderWeight = 1;
                         ctx.strokeStyle = computedStyle.borderTopColor || '#ccc';
                         ctx.lineWidth = borderWeight;
                         ctx.beginPath();
-                        ctx.moveTo(currentX, currentY); ctx.lineTo(currentX + cellWidth, currentY); // Top
-                        ctx.moveTo(currentX, currentY + cellHeight); ctx.lineTo(currentX + cellWidth, currentY + cellHeight); // Bottom
-                        ctx.moveTo(currentX, currentY); ctx.lineTo(currentX, currentY + cellHeight); // Left
-                        ctx.moveTo(currentX + cellWidth, currentY); ctx.lineTo(currentX + cellWidth, currentY + cellHeight); // Right
+                        ctx.moveTo(currentX, currentY); ctx.lineTo(currentX + cellWidth, currentY);
+                        ctx.moveTo(currentX, currentY + cellHeight); ctx.lineTo(currentX + cellWidth, currentY + cellHeight);
+                        ctx.moveTo(currentX, currentY); ctx.lineTo(currentX, currentY + cellHeight);
+                        ctx.moveTo(currentX + cellWidth, currentY); ctx.lineTo(currentX + cellWidth, currentY + cellHeight);
                         ctx.stroke();
 
 
@@ -397,7 +394,7 @@ const exportService = (() => {
                     currentY += maxHeightInRow;
                 });
 
-                document.body.removeChild(tableWrapper); // Clean up
+                document.body.removeChild(tableWrapper);
                 ctx.restore();
                 canvas.toBlob((blob) => {
                     if (blob) { resolve(blob); }
@@ -448,12 +445,12 @@ const exportService = (() => {
     }
 
     function exportFilteredDataCSV(data, kollektiv) {
-        let csvString = null;
-        try { csvString = generateFilteredDataCSVString(data); } catch(e) { ui_helpers.showToast("Fehler bei Rohdaten-CSV-Erstellung.", "danger"); return; }
-        if (csvString === null || csvString.length === 0) { ui_helpers.showToast("Rohdaten-CSV-Generierung ergab leere Datei.", "warning"); return; }
-        const filename = generateFilename('FILTERED_DATA_CSV', kollektiv, 'csv');
-        if(downloadFile(csvString, filename, 'text/csv;charset=utf-8;')) ui_helpers.showToast(`Gefilterte Daten als CSV exportiert: ${filename}`, 'success');
-    }
+       let csvString = null;
+       try { csvString = generateFilteredDataCSVString(data); } catch(e) { ui_helpers.showToast("Fehler bei Rohdaten-CSV-Erstellung.", "danger"); return; }
+       if (csvString === null || csvString.length === 0) { ui_helpers.showToast("Rohdaten-CSV-Generierung ergab leere Datei.", "warning"); return; }
+       const filename = generateFilename('FILTERED_DATA_CSV', kollektiv, 'csv');
+       if(downloadFile(csvString, filename, 'text/csv;charset=utf-8;')) ui_helpers.showToast(`Gefilterte Daten als CSV exportiert: ${filename}`, 'success');
+   }
 
     function exportComprehensiveReportHTML(data, bfResults, kollektiv, criteria, logic) {
         let htmlString = null;
@@ -498,11 +495,11 @@ const exportService = (() => {
          ui_helpers.showToast(`Starte ${format.toUpperCase()}-Export für sichtbare Charts & Tabellen...`, 'info', 2000);
          if (!window.JSZip) { ui_helpers.showToast("JSZip Bibliothek nicht geladen.", "danger"); return; }
          const zip = new JSZip(); const promises = []; let successCount = 0;
-         const chartContainers = document.querySelectorAll(scopeSelector + ' [id^="chart-"][style*="height"] svg'); // More specific selector for rendered charts
+         const chartContainers = document.querySelectorAll(scopeSelector + ' [id^="chart-"][style*="height"] svg');
          const tableSelectors = [
             scopeSelector + ' table[id^="table-"]',
             scopeSelector + ' table#auswertung-table',
-            scopeSelector + ' table#daten-table', // Updated ID
+            scopeSelector + ' table#daten-table',
             scopeSelector + ' table#bruteforce-results-table',
             scopeSelector + ' table#praes-as-vs-t2-comp-table'
          ];
@@ -523,7 +520,7 @@ const exportService = (() => {
 
          tableContainers.forEach((table, index) => {
               if (format !== 'png') return;
-              const tableId = table.id || `exportable-table-${generateUUID()}`; table.id = tableId; // Ensure ID for lookup
+              const tableId = table.id || `exportable-table-${generateUUID()}`; table.id = tableId;
               let tableName = table.closest('.card')?.querySelector('.card-header')?.firstChild?.textContent?.trim() || table.caption?.textContent.trim() || table.id;
               tableName = tableName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
               const typeKey = 'TABLE_PNG_EXPORT';
@@ -546,18 +543,15 @@ const exportService = (() => {
          ui_helpers.showToast(`Generiere ${category.toUpperCase()} ZIP-Paket...`, 'info', 2000);
           if (!window.JSZip) { ui_helpers.showToast("JSZip Bibliothek nicht geladen.", "danger"); return; }
          const zip = new JSZip(); let filesAdded = 0; let statsDataForAllKollektive = null;
+         const globalKollektivStats = typeof kollektiveDataGlobal !== 'undefined' ? kollektiveDataGlobal : null; // Fallback, wenn nicht direkt übergeben
 
-         const needsStats = ['all-zip', 'csv-zip', 'md-zip', 'html'].includes(category); // HTML report uses stats
+         const needsStats = ['all-zip', 'csv-zip', 'md-zip', 'html'].includes(category);
          if(needsStats && data && data.length > 0 && criteria && logic) {
              try {
-                // For ZIPs, we might want stats for the current kollektiv only, or all.
-                // For simplicity now, using the specific stats for the current kollektiv for CSV/MD.
-                // The HTML report might use more comprehensive data later.
-                statsDataForAllKollektive = statisticsService.calculateAllStatsForPublication(patientDataRaw, criteria, logic, bfResults ? {[kollektiv]: bfResults} : {});
+                statsDataForAllKollektive = statisticsService.calculateAllStatsForPublication(data, criteria, logic, bfResults);
              } catch(e) { ui_helpers.showToast(`Fehler bei Statistikberechnung für ${category.toUpperCase()} ZIP.`, 'danger'); return; }
              if (!statsDataForAllKollektive || !statsDataForAllKollektive[kollektiv]) {
                  ui_helpers.showToast(`Statistikberechnung ergab keine Daten für ${category.toUpperCase()} ZIP für Kollektiv ${getKollektivDisplayName(kollektiv)}.`, 'warning');
-                 // Depending on category, we might still proceed if other files are generated
                  if (category === 'csv-zip' || category === 'html') return;
              }
          }
@@ -567,32 +561,38 @@ const exportService = (() => {
          try {
              if (['all-zip', 'csv-zip'].includes(category)) {
                  if (currentKollektivStats) addFile(generateFilename('STATS_CSV', kollektiv, 'csv'), generateStatistikCSVString(currentKollektivStats, kollektiv, criteria, logic));
-                 if (data && data.length > 0) addFile(generateFilename('FILTERED_DATA_CSV', kollektiv, 'csv'), generateFilteredDataCSVString(data));
+                 if (data && data.length > 0) addFile(generateFilename('FILTERED_DATA_CSV', kollektiv, 'csv'), generateFilteredDataCSVString(dataProcessor.filterDataByKollektiv(data, kollektiv))); // Filtered data for current kollektiv
              }
              if (['all-zip', 'md-zip'].includes(category)) {
                  if (currentKollektivStats?.deskriptiv) addFile(generateFilename('DESKRIPTIV_MD', kollektiv, 'md'), generateMarkdownTableString(currentKollektivStats.deskriptiv, 'deskriptiv', kollektiv));
-                 if (data && data.length > 0) addFile(generateFilename('DATEN_MD', kollektiv, 'md'), generateMarkdownTableString(data, 'daten', kollektiv)); // Updated typeKey
-                 if (data && data.length > 0) addFile(generateFilename('AUSWERTUNG_MD', kollektiv, 'md'), generateMarkdownTableString(data, 'auswertung', kollektiv, criteria, logic));
-                 // Add publication markdown exports if category is all-zip or md-zip
-                 if (typeof publicationTextGenerator !== 'undefined') {
+                 if (data && data.length > 0) addFile(generateFilename('DATEN_MD', kollektiv, 'md'), generateMarkdownTableString(dataProcessor.filterDataByKollektiv(data, kollektiv), 'daten', kollektiv));
+                 if (data && data.length > 0) addFile(generateFilename('AUSWERTUNG_MD', kollektiv, 'md'), generateMarkdownTableString(dataProcessor.filterDataByKollektiv(data, kollektiv), 'auswertung', kollektiv, criteria, logic));
+                 if (typeof publicationTextGenerator !== 'undefined' && statsDataForAllKollektive) {
                      PUBLICATION_CONFIG.sections.forEach(mainSection => {
                          mainSection.subSections.forEach(subSection => {
-                            const mdContent = publicationTextGenerator.getSectionTextAsMarkdown(subSection.id, state.getCurrentPublikationLang(), allKollektivStats, allKollektivStats, {}); // Pass allKollektivStats
+                            const commonDataForPub = {
+                                appName: APP_CONFIG.APP_NAME, appVersion: APP_CONFIG.APP_VERSION, currentKollektivName: getKollektivDisplayName(kollektiv),
+                                nGesamt: statsDataForAllKollektive.Gesamt?.deskriptiv?.anzahlPatienten || 0,
+                                nDirektOP: statsDataForAllKollektive['direkt OP']?.deskriptiv?.anzahlPatienten || 0,
+                                nNRCT: statsDataForAllKollektive.nRCT?.deskriptiv?.anzahlPatienten || 0,
+                                significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL
+                            };
+                            const mdContent = publicationTextGenerator.getSectionTextAsMarkdown(subSection.id, state.getCurrentPublikationLang(), statsDataForAllKollektive, statsDataForAllKollektive, commonDataForPub);
                             const typeKey = subSection.id.startsWith('methoden') ? 'PUBLIKATION_METHODEN_MD' : 'PUBLIKATION_ERGEBNISSE_MD';
                             addFile(generateFilename(typeKey, kollektiv, 'md', {sectionName: subSection.id.replace(/^(methoden_|ergebnisse_)/, '')}), mdContent);
                          });
                      });
                  }
              }
-             if (['all-zip'].includes(category) && bfResults) { addFile(generateFilename('BRUTEFORCE_TXT', kollektiv, 'txt'), generateBruteForceTXTString(bfResults, kollektiv)); }
-             if (['all-zip', 'html'].includes(category) && data && data.length > 0 ) { addFile(generateFilename('COMPREHENSIVE_REPORT_HTML', kollektiv, 'html'), generateComprehensiveReportHTML(data, bfResults, kollektiv, criteria, logic)); }
+             if (['all-zip'].includes(category) && bfResults && bfResults[kollektiv]) { addFile(generateFilename('BRUTEFORCE_TXT', kollektiv, 'txt'), generateBruteForceTXTString(bfResults[kollektiv], kollektiv)); }
+             if (['all-zip', 'html'].includes(category) && data && data.length > 0 ) { addFile(generateFilename('COMPREHENSIVE_REPORT_HTML', kollektiv, 'html'), generateComprehensiveReportHTML(data, bfResults ? bfResults[kollektiv] : null, kollektiv, criteria, logic)); }
 
-             if (['png-zip'].includes(category)) { await exportChartsZip('#app-container', 'PNG_ZIP', kollektiv, 'png'); return; } // Returns early
-             if (['svg-zip'].includes(category)) { await exportChartsZip('#app-container', 'SVG_ZIP', kollektiv, 'svg'); return; } // Returns early
+             if (['png-zip'].includes(category)) { await exportChartsZip('#app-container', 'PNG_ZIP', kollektiv, 'png'); return; }
+             if (['svg-zip'].includes(category)) { await exportChartsZip('#app-container', 'SVG_ZIP', kollektiv, 'svg'); return; }
 
 
             if (filesAdded > 0) {
-                const zipFilename = generateFilename(`${category.toUpperCase()}_PAKET`, kollektiv, 'zip'); // More descriptive ZIP name
+                const zipFilename = generateFilename(`${category.toUpperCase()}_PAKET`, kollektiv, 'zip');
                 const content = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
                 if (downloadFile(content, zipFilename, "application/zip")) ui_helpers.showToast(`${filesAdded} Datei(en) erfolgreich im ${category.toUpperCase()} ZIP-Paket exportiert.`, 'success');
             } else { ui_helpers.showToast(`Keine Dateien für das ${category.toUpperCase()} ZIP-Paket gefunden oder generiert.`, 'warning'); }
@@ -616,7 +616,7 @@ const exportService = (() => {
                      content = Papa.unparse([headers, ...rows], { delimiter: APP_CONFIG.EXPORT_SETTINGS.CSV_DELIMITER || ";" }); filenameKey = 'PRAES_AS_PERF_CSV'; extension = 'csv'; mimeType = 'text/csv;charset=utf-8;';
                 } else if (isAsPurView && actionId === 'download-performance-as-pur-md') { options.kollektiv = kollektiv; content = generateMarkdownTableString(presentationData, 'praes_as_perf', kollektiv, null, null, options); filenameKey = 'PRAES_AS_PERF_MD'; extension = 'md'; mimeType = 'text/markdown;charset=utf-8;';
                 } else if (isAsVsT2View && actionId === 'download-performance-as-vs-t2-csv') { if (!statsAS || !statsT2) { ui_helpers.showToast("Vergleichsdaten für CSV fehlen.", "warning"); return; } const headers = ['Metrik', 'AS (Wert)', 'AS (95% CI)', 'T2 (Wert)', 'T2 (95% CI)', 'CI Methode AS', 'CI Methode T2']; const fRow = (mKey, nm, isP = true, d = 1) => { const mAS = statsAS[mKey]; const mT2 = statsT2[mKey]; const dig = (mKey === 'auc' || mKey === 'f1') ? 3 : d; const ciAS = `(${formatNumber(mAS?.ci?.lower, dig, na)} - ${formatNumber(mAS?.ci?.upper, dig, na)})`; const ciT2 = `(${formatNumber(mT2?.ci?.lower, dig, na)} - ${formatNumber(mT2?.ci?.upper, dig, na)})`; const valAS = formatNumber(mAS?.value, dig, na); const valT2 = formatNumber(mT2?.value, dig, na); return [nm, valAS, ciAS, valT2, ciT2, mAS?.method || na, mT2?.method || na]; }; const rows = [ fRow('sens', 'Sensitivität'), fRow('spez', 'Spezifität'), fRow('ppv', 'PPV'), fRow('npv', 'NPV'), fRow('acc', 'Accuracy'), fRow('balAcc', 'Balanced Accuracy'), fRow('f1', 'F1-Score', false, 3), fRow('auc', 'AUC', false, 3) ]; content = Papa.unparse([headers, ...rows], { delimiter: APP_CONFIG.EXPORT_SETTINGS.CSV_DELIMITER || ";" }); filenameKey = 'PRAES_AS_VS_T2_PERF_CSV'; extension = 'csv'; mimeType = 'text/csv;charset=utf-8;';
-                } else if (isAsVsT2View && actionId === 'download-comp-table-as-vs-t2-md') { content = generateMarkdownTableString(presentationData, 'praes_as_vs_t2_perf', kollektiv, null, null, options); filenameKey = 'PRAES_AS_VS_T2_COMP_MD'; extension = 'md'; mimeType = 'text/markdown;charset=utf-8;';
+                } else if (isAsVsT2View && actionId === 'download-comp-table-as-vs-t2-md') { content = generateMarkdownTableString(presentationData, 'praes_as_vs_t2_comp', kollektiv, null, null, options); filenameKey = 'PRAES_AS_VS_T2_COMP_MD'; extension = 'md'; mimeType = 'text/markdown;charset=utf-8;';
                 } else if (isAsVsT2View && actionId === 'download-tests-as-vs-t2-md') { content = generateMarkdownTableString(presentationData, 'praes_as_vs_t2_tests', kollektiv, null, null, options); filenameKey = 'PRAES_AS_VS_T2_TESTS_MD'; extension = 'md'; mimeType = 'text/markdown;charset=utf-8;';
                 } else if (actionId.includes('-chart-') || actionId.startsWith('dl-praes-')) { ui_helpers.showToast("Chart-Export wird über die Buttons am Chart selbst ausgelöst.", "info"); return; }
             } catch(error) {
