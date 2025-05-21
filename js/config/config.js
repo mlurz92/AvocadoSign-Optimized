@@ -1,20 +1,20 @@
 const APP_CONFIG = Object.freeze({
     APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
-    APP_VERSION: "2.2.0", // Version incremented
+    APP_VERSION: "2.2.0",
 
     DEFAULT_SETTINGS: Object.freeze({
         KOLLEKTIV: 'Gesamt',
         T2_LOGIC: 'UND',
-        DATEN_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }), // Renamed from PATIENT_TABLE_SORT
+        DATEN_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
         AUSWERTUNG_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
         STATS_LAYOUT: 'einzel',
         STATS_KOLLEKTIV1: 'Gesamt',
         STATS_KOLLEKTIV2: 'nRCT',
         PRESENTATION_VIEW: 'as-pur',
         PRESENTATION_STUDY_ID: null,
-        PUBLIKATION_LANG: 'de', // NEU für Publikation-Tab Sprache
-        PUBLIKATION_SECTION: 'methoden', // NEU für Publikation-Tab aktiver Abschnitt
-        PUBLIKATION_BRUTE_FORCE_METRIC: 'Balanced Accuracy', // NEU für Publikation-Tab BF Metrik
+        PUBLIKATION_LANG: 'de',
+        PUBLIKATION_SECTION: 'methoden',
+        PUBLIKATION_BRUTE_FORCE_METRIC: 'Balanced Accuracy',
         CRITERIA_COMPARISON_SETS: Object.freeze([
             'avocado_sign',
             'applied_criteria',
@@ -27,19 +27,19 @@ const APP_CONFIG = Object.freeze({
     }),
 
     STORAGE_KEYS: Object.freeze({
-        APPLIED_CRITERIA: 'appliedT2Criteria_v4.2_detailed', // Version incremented
-        APPLIED_LOGIC: 'appliedT2Logic_v4.2_detailed', // Version incremented
-        CURRENT_KOLLEKTIV: 'currentKollektiv_v4.2_detailed', // Version incremented
-        PUBLIKATION_LANG: 'currentPublikationLang_v4.2_detailed', // NEU
-        PUBLIKATION_SECTION: 'currentPublikationSection_v4.2_detailed', // NEU
-        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v4.2_detailed', // NEU
-        STATS_LAYOUT: 'currentStatsLayout_v4.2_detailed', // Version incremented
-        STATS_KOLLEKTIV1: 'currentStatsKollektiv1_v4.2_detailed', // Version incremented
-        STATS_KOLLEKTIV2: 'currentStatsKollektiv2_v4.2_detailed', // Version incremented
-        PRESENTATION_VIEW: 'currentPresentationView_v4.2_detailed', // Version incremented
-        PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed', // Version incremented
-        CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed', // Version incremented
-        CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed' // Version incremented
+        APPLIED_CRITERIA: 'appliedT2Criteria_v4.2_detailed',
+        APPLIED_LOGIC: 'appliedT2Logic_v4.2_detailed',
+        CURRENT_KOLLEKTIV: 'currentKollektiv_v4.2_detailed',
+        PUBLIKATION_LANG: 'currentPublikationLang_v4.2_detailed',
+        PUBLIKATION_SECTION: 'currentPublikationSection_v4.2_detailed',
+        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v4.2_detailed',
+        STATS_LAYOUT: 'currentStatsLayout_v4.2_detailed',
+        STATS_KOLLEKTIV1: 'currentStatsKollektiv1_v4.2_detailed',
+        STATS_KOLLEKTIV2: 'currentStatsKollektiv2_v4.2_detailed',
+        PRESENTATION_VIEW: 'currentPresentationView_v4.2_detailed',
+        PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
+        CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
+        CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed'
     }),
 
     PATHS: Object.freeze({
@@ -116,7 +116,7 @@ const APP_CONFIG = Object.freeze({
             STATS_CSV: 'StatistikCSV',
             BRUTEFORCE_TXT: 'BruteForceTXT',
             DESKRIPTIV_MD: 'DeskriptiveStatistikMD',
-            DATEN_MD: 'DatenlisteMD', // Renamed from PATIENTEN_MD
+            DATEN_MD: 'DatenlisteMD',
             AUSWERTUNG_MD: 'AuswertungTabelleMD',
             CHARTS_PNG: 'ChartsPNG',
             CHARTS_SVG: 'ChartsSVG',
@@ -130,7 +130,7 @@ const APP_CONFIG = Object.freeze({
             FILTERED_DATA_XLSX: 'GefilterteDatenXLSX',
             COMPREHENSIVE_REPORT_HTML: 'AnalyseberichtHTML',
             AUSWERTUNG_XLSX: 'AuswertungTabelleXLSX',
-            DATEN_XLSX: 'DatenlisteXLSX', // Renamed from PATIENTEN_XLSX
+            DATEN_XLSX: 'DatenlisteXLSX',
             STATISTIK_XLSX: 'StatistikUebersichtXLSX',
             CHART_SINGLE_PNG: '{ChartName}_PNG',
             CHART_SINGLE_SVG: '{ChartName}_SVG',
@@ -144,10 +144,10 @@ const APP_CONFIG = Object.freeze({
             PRAES_AS_VS_T2_CHART_SVG: 'PraesChartASvsT2_{StudyID}_SVG',
             TABLE_PNG_EXPORT: '{TableName}_PNG',
             CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
-            PUBLIKATION_METHODEN_MD: 'PublikationMethodenMD', // NEU
-            PUBLIKATION_ERGEBNISSE_MD: 'PublikationErgebnisseMD' // NEU
+            PUBLIKATION_METHODEN_MD: 'PublikationMethodenMD',
+            PUBLIKATION_ERGEBNISSE_MD: 'PublikationErgebnisseMD'
         }),
-        EXCEL_SHEET_NAME_DATEN: 'Datenliste', // Renamed from PATIENTEN
+        EXCEL_SHEET_NAME_DATEN: 'Datenliste',
         EXCEL_SHEET_NAME_AUSWERTUNG: 'Auswertung',
         EXCEL_SHEET_NAME_STATISTIK: 'Statistik Uebersicht',
         EXCEL_SHEET_NAME_FILTERED: 'Gefilterte Daten',
@@ -168,7 +168,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.2.0"}`, // Version updated
+        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.2.0"}`,
         REPORT_LOGO_ALT_TEXT: 'Institutslogo'
     }),
 
