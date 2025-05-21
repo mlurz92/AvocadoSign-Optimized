@@ -305,17 +305,77 @@ tr[aria-expanded="true"] .row-toggle-button { color: var(--primary-color); }
 .fw-500 { font-weight: 500 !important; }
 .fw-600 { font-weight: 600 !important; }
 
-#publikation-tab-pane .sticky-top { top: calc(var(--header-height) + var(--nav-height) + 1px); background-color: var(--bg-light-gray) !important; z-index: 1015; }
-#publikation-sections-nav { max-height: calc(100vh - var(--header-height) - var(--nav-height) - 4rem - 2rem); overflow-y: auto; padding-right: var(--spacing-sm); border-right: 1px solid var(--border-color); }
-#publikation-sections-nav .nav-link { padding: var(--spacing-xs) var(--spacing-sm); font-size: 0.9rem; color: var(--text-medium); border-radius: var(--border-radius-sm); margin-bottom: 2px;}
-#publikation-sections-nav .nav-link.disabled { color: var(--text-dark); background-color: transparent; cursor: default; font-weight: 600; padding-top: var(--spacing-sm);}
-#publikation-sections-nav .nav-link:not(.disabled):hover { background-color: var(--border-color-light); color: var(--primary-color-dark); }
-#publikation-sections-nav .nav-link.active { background-color: var(--primary-color); color: var(--bg-white); font-weight: 500; }
-#publikation-sections-nav .nav-link.active:hover { background-color: var(--primary-color-dark); }
-#publikation-content-area { background-color: var(--bg-white); padding: var(--spacing-lg); border-radius: var(--border-radius); min-height: 400px; max-height: calc(100vh - var(--header-height) - var(--nav-height) - 70px - 2rem); overflow-y: auto; }
-#publikation-content-area h2.display-6 { font-size: 1.8rem; color: var(--primary-color); border-bottom: 2px solid var(--primary-color-light); padding-bottom: var(--spacing-sm); margin-top: 0; margin-bottom: var(--spacing-lg); }
-#publikation-content-area h3.h4 { font-size: 1.35rem; color: var(--text-dark); font-weight: 600; margin-top: var(--spacing-lg); margin-bottom: var(--spacing-sm); padding-bottom: var(--spacing-xs); border-bottom: 1px solid var(--border-color-light); }
-#publikation-content-area h4 { font-size: 1.15rem; font-weight: 600; color: var(--text-dark); margin-top: var(--spacing-md); margin-bottom: var(--spacing-xs); }
+#publikation-tab-pane .sticky-top {
+    top: calc(var(--header-height) + var(--nav-height) + 1px); /* Account for both fixed headers */
+    background-color: var(--bg-light-gray) !important;
+    z-index: 1015; /* Below main nav, above tab content */
+    padding-top: var(--spacing-sm);
+    padding-bottom: var(--spacing-sm);
+}
+#publikation-sections-nav {
+    max-height: calc(100vh - (var(--header-height) + var(--nav-height) + 70px + 2rem)); /* 70px approx height of sticky-top controls */
+    overflow-y: auto;
+    padding-right: var(--spacing-sm);
+    border-right: 1px solid var(--border-color);
+}
+#publikation-sections-nav .nav-link {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.9rem;
+    color: var(--text-medium);
+    border-radius: var(--border-radius-sm);
+    margin-bottom: 2px;
+}
+#publikation-sections-nav .nav-link.disabled {
+    color: var(--text-dark);
+    background-color: transparent;
+    cursor: default;
+    font-weight: 600;
+    padding-top: var(--spacing-sm);
+}
+#publikation-sections-nav .nav-link:not(.disabled):hover {
+    background-color: var(--border-color-light);
+    color: var(--primary-color-dark);
+}
+#publikation-sections-nav .nav-link.active {
+    background-color: var(--primary-color);
+    color: var(--bg-white);
+    font-weight: 500;
+}
+#publikation-sections-nav .nav-link.active:hover {
+    background-color: var(--primary-color-dark);
+}
+#publikation-content-area {
+    background-color: var(--bg-white);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius);
+    min-height: 400px;
+    max-height: calc(100vh - (var(--header-height) + var(--nav-height) + 70px + 2rem)); /* Adjust based on sticky top height */
+    overflow-y: auto;
+}
+#publikation-content-area h2.display-6 { /* This targets the main section title rendered by publication_renderer */
+    font-size: 1.8rem;
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color-light);
+    padding-bottom: var(--spacing-sm);
+    margin-top: 0;
+    margin-bottom: var(--spacing-lg);
+}
+#publikation-content-area h3.h4 { /* This targets subsection titles rendered by publication_renderer */
+    font-size: 1.35rem;
+    color: var(--text-dark);
+    font-weight: 600;
+    margin-top: var(--spacing-lg);
+    margin-bottom: var(--spacing-sm);
+    padding-bottom: var(--spacing-xs);
+    border-bottom: 1px solid var(--border-color-light);
+}
+#publikation-content-area h4 { /* This targets titles for tables/charts within subsections */
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-top: var(--spacing-md);
+    margin-bottom: var(--spacing-xs);
+}
 #publikation-content-area p { margin-bottom: var(--spacing-md); line-height: 1.7; text-align: justify; }
 #publikation-content-area ul, #publikation-content-area ol { margin-bottom: var(--spacing-md); padding-left: 25px; }
 #publikation-content-area li { margin-bottom: var(--spacing-xs); }
@@ -323,6 +383,7 @@ tr[aria-expanded="true"] .row-toggle-button { color: var(--primary-color); }
 .publication-table th { background-color: #e9ecef; font-weight: 600; }
 .publication-table td { vertical-align: top; }
 .publication-table caption { caption-side: top; font-weight: bold; color: var(--text-dark); padding: var(--spacing-xs) 0; font-size: 0.9rem; }
+
 
 @media (min-width: 992px) {
     .presentation-comparison-row { display: flex; align-items: stretch; }
@@ -333,7 +394,25 @@ tr[aria-expanded="true"] .row-toggle-button { color: var(--primary-color); }
 
 @media (max-width: 1400px) { #app-container { max-width: 100%; padding-left: var(--spacing-sm); padding-right: var(--spacing-sm); } }
 @media (max-width: 1200px) { :root { --base-font-size: 13px; } .dashboard-card-col { flex-basis: 33.333%; max-width: 33.333%; } .data-table th, .data-table td { padding: var(--spacing-sm) var(--spacing-sm); } }
-@media (max-width: 991.98px) { body { padding-top: 0; } header.fixed-top { height: auto; position: static !important; } header .container-fluid { flex-wrap: wrap; } .header-meta { display: none !important; } h1.app-title { font-size: 1.2rem; margin-bottom: var(--spacing-xs); width: 100%; text-align: center; margin-top: var(--spacing-sm); } header .btn-group { width: 100%; margin-top: var(--spacing-xs); justify-content: center; } nav.navigation-tabs { top: 0; position: sticky; } .main-content { padding-top: var(--spacing-md); } .dashboard-card-col { flex-basis: 50%; max-width: 50%; } .praes-chart-container { min-height: 180px; } .stat-card .card-body { padding: var(--spacing-sm); } .presentation-comparison-row > [class*="col-"] { margin-bottom: var(--spacing-lg); } #publikation-tab-pane .sticky-top { top: var(--nav-height) !important; } #publikation-tab-pane .row > .col-md-3 { width: 100%; flex-basis: 100%; max-height: 250px; overflow-y: auto; margin-bottom: var(--spacing-md); border-right: none; border-bottom: 1px solid var(--border-color); padding-right: 0;} #publikation-tab-pane .row > .col-md-9 { width: 100%; flex-basis: 100%; } #publikation-sections-nav { border-right: none; padding-right: 0; max-height: none; } #publikation-content-area {max-height: none;} }
+@media (max-width: 991.98px) {
+    body { padding-top: 0; }
+    header.fixed-top { height: auto; position: static !important; }
+    header .container-fluid { flex-wrap: wrap; }
+    .header-meta { display: none !important; }
+    h1.app-title { font-size: 1.2rem; margin-bottom: var(--spacing-xs); width: 100%; text-align: center; margin-top: var(--spacing-sm); }
+    header .btn-group { width: 100%; margin-top: var(--spacing-xs); justify-content: center; }
+    nav.navigation-tabs { top: 0; position: sticky; }
+    .main-content { padding-top: var(--spacing-md); }
+    .dashboard-card-col { flex-basis: 50%; max-width: 50%; }
+    .praes-chart-container { min-height: 180px; }
+    .stat-card .card-body { padding: var(--spacing-sm); }
+    .presentation-comparison-row > [class*="col-"] { margin-bottom: var(--spacing-lg); }
+    #publikation-tab-pane .sticky-top { top: var(--nav-height) !important; /* Only nav-height as header is static */ }
+    #publikation-tab-pane .row > .col-md-3 { width: 100%; flex-basis: 100%; max-height: 250px; overflow-y: auto; margin-bottom: var(--spacing-md); border-right: none; border-bottom: 1px solid var(--border-color); padding-right: 0;}
+    #publikation-tab-pane .row > .col-md-9 { width: 100%; flex-basis: 100%; }
+    #publikation-sections-nav { border-right: none; padding-right: 0; max-height: none; }
+    #publikation-content-area { max-height: none; /* Allow full scroll on mobile */ }
+}
 @media (max-width: 767.98px) { :root { --base-font-size: 12px; --spacing-md: 0.75rem; --spacing-lg: 1.25rem; } .nav-tabs .nav-link { padding: var(--spacing-sm) var(--spacing-sm); font-size: 0.9rem; } .card-header { font-size: 0.95rem; } .data-table th, .data-table td { padding: var(--spacing-xs) var(--spacing-sm); font-size: 0.8rem; } .dashboard-card-col { flex-basis: 50%; max-width: 50%; } .dashboard-card .dashboard-chart-container { min-height: 110px !important; } #statistik-tab-pane > .row > .col-xl-6 { flex-basis: 100%; max-width: 100%; } .criteria-group { flex-basis: 100%; } }
 @media (max-width: 575.98px) { h1.app-title { font-size: 1.1rem; } header .btn-group .btn { font-size: 0.75rem; padding: var(--spacing-xs); } .dashboard-card-col { flex-basis: 100%; max-width: 100%; } .dashboard-card .dashboard-chart-container { min-height: 130px !important; } .praes-chart-container { min-height: 160px; } .modal-dialog { margin: var(--spacing-sm); } .export-options-container .col-lg-6 { flex-basis: 100%; max-width: 100%; } .sub-row-item { flex-direction: column; align-items: flex-start; gap: var(--spacing-xs); } #publikation-tab-pane .sticky-top .d-flex.justify-content-end { flex-direction: column; align-items: flex-start !important; } #publikation-tab-pane .sticky-top .me-3 { margin-right: 0 !important; margin-bottom: var(--spacing-sm); } }
 
@@ -368,5 +447,4 @@ tr[aria-expanded="true"] .row-toggle-button { color: var(--primary-color); }
     #publikation-content-area h2.display-6 {font-size: 16pt !important;}
     #publikation-content-area h3.h4 {font-size: 14pt !important;}
     #publikation-content-area h4 {font-size: 11pt !important;}
-
 }
