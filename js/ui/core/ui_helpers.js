@@ -11,9 +11,9 @@ const ui_helpers = (() => {
 
     function showToast(message, type = 'info', duration = APP_CONFIG.UI_SETTINGS.TOAST_DURATION_MS) {
           const toastContainer = document.getElementById('toast-container');
-          if (!toastContainer) { console.error("showToast: Toast-Container Element 'toast-container' nicht gefunden."); return; }
-          if (typeof message !== 'string' || message.trim() === '') { console.warn("showToast: Ungültige oder leere Nachricht."); return; }
-          if (typeof bootstrap === 'undefined' || !bootstrap.Toast) { console.error("showToast: Bootstrap Toast ist nicht verfügbar."); return; }
+          if (!toastContainer) { return; }
+          if (typeof message !== 'string' || message.trim() === '') { return; }
+          if (typeof bootstrap === 'undefined' || !bootstrap.Toast) { return; }
 
           const toastId = `toast-${generateUUID()}`;
           let bgClass = 'bg-secondary', iconClass = 'fa-info-circle', textClass = 'text-white';
@@ -34,11 +34,11 @@ const ui_helpers = (() => {
               const toastInstance = new bootstrap.Toast(toastElement, { delay: duration });
               toastElement.addEventListener('hidden.bs.toast', () => { if(toastContainer.contains(toastElement)) { toastElement.remove(); } }, { once: true });
               toastInstance.show();
-          } catch (e) { console.error("Fehler beim Erstellen/Anzeigen des Toasts:", e); if(toastContainer.contains(toastElement)) { toastElement.remove(); } }
+          } catch (e) { if(toastContainer.contains(toastElement)) { toastElement.remove(); } }
     }
 
     function initializeTooltips(scope = document.body) {
-        if (!window.tippy || typeof scope?.querySelectorAll !== 'function') { console.warn("Tippy.js nicht verfügbar oder ungültiger Scope für Tooltips."); return; }
+        if (!window.tippy || typeof scope?.querySelectorAll !== 'function') { return; }
 
         const elementsInScope = Array.from(scope.matches('[data-tippy-content]') ? [scope] : scope.querySelectorAll('[data-tippy-content]'));
         const elementSet = new Set(elementsInScope);
@@ -102,7 +102,8 @@ const ui_helpers = (() => {
         if (!tableHeader || !sortState) return;
         tableHeader.querySelectorAll('th[data-sort-key]').forEach(th => {
             const key = th.dataset.sortKey; const icon = th.querySelector('i.fas'); if (!icon) return;
-            icon.className = 'fas fa-sort text-muted opacity-50';
+            icon.className = 'fas fa-sort text-muted opacity-50 ms-1';
+            th.style.color = 'inherit'; // Reset main header color
             const subSpans = th.querySelectorAll('.sortable-sub-header'); let isSubKeySortActive = false;
 
             if (subSpans.length > 0) {
@@ -116,16 +117,19 @@ const ui_helpers = (() => {
                     const spanLabel = span.textContent.trim();
                     span.setAttribute('data-tippy-content', `Sortieren nach: ${thLabel} -> ${spanLabel}`);
                     if (isActiveSort) {
-                        icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
+                        icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
                         isSubKeySortActive = true;
                     }
                 });
-                if (!isSubKeySortActive && key === sortState.key && sortState.subKey === null) {
-                    icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
+                // If a subkey was active, the main icon shows its state. If no subkey is active for this TH, but the TH *key* is the sort key (meaning general sort for this complex TH)
+                if (!isSubKeySortActive && key === sortState.key && (sortState.subKey === null || sortState.subKey === undefined)) {
+                    icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
+                    th.style.color = 'var(--primary-color)';
                 }
-            } else {
+            } else { // Simple header without sub-keys
                 if (key === sortState.key && (sortState.subKey === null || sortState.subKey === undefined)) {
-                    icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
+                    icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
+                    th.style.color = 'var(--primary-color)';
                 }
             }
         });
@@ -140,31 +144,29 @@ const ui_helpers = (() => {
         const action = button.dataset.action || 'expand';
         const expand = action === 'expand';
         const collapseElements = tableBody.querySelectorAll('.collapse');
-        let changedCount = 0;
 
-        if (typeof bootstrap === 'undefined' || !bootstrap.Collapse) {
-            console.error("Bootstrap Collapse nicht verfügbar.");
-            return;
-        }
+        if (typeof bootstrap === 'undefined' || !bootstrap.Collapse) { return; }
 
         collapseElements.forEach(el => {
             const instance = bootstrap.Collapse.getOrCreateInstance(el);
             if (instance) {
-                if (expand && !el.classList.contains('show')) { instance.show(); changedCount++; }
-                else if (!expand && el.classList.contains('show')) { instance.hide(); changedCount++; }
+                if (expand && !el.classList.contains('show')) { instance.show(); }
+                else if (!expand && el.classList.contains('show')) { instance.hide(); }
             }
         });
 
         const newAction = expand ? 'collapse' : 'expand';
         button.dataset.action = newAction;
         const iconClass = expand ? 'fa-chevron-up' : 'fa-chevron-down';
-        const buttonText = expand ? 'Alle Details Ausblenden' : 'Alle Details Einblenden';
+        const buttonText = expand ? (buttonId === 'daten-toggle-details' ? 'Alle Details Ausblenden' : 'Alle Details Ausblenden')
+                                  : (buttonId === 'daten-toggle-details' ? 'Alle Details Einblenden' : 'Alle Details Einblenden');
 
         let tooltipKeyBase = '';
         if (buttonId === 'daten-toggle-details') tooltipKeyBase = 'datenTable';
         else if (buttonId === 'auswertung-toggle-details') tooltipKeyBase = 'auswertungTable';
         const tooltipContentBase = TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll || 'Alle Details ein-/ausblenden';
-        const currentTooltipText = expand ? tooltipContentBase.replace('ein-', 'aus-') : tooltipContentBase.replace('aus-', 'ein-');
+        const currentTooltipText = expand ? tooltipContentBase.replace('ein-', 'aus-').replace('Einblenden', 'Ausblenden') : tooltipContentBase.replace('aus-', 'ein-').replace('Ausblenden', 'Einblenden');
+
 
         updateElementHTML(buttonId, `${buttonText} <i class="fas ${iconClass} ms-1"></i>`);
         button.setAttribute('data-tippy-content', currentTooltipText);
@@ -184,7 +186,11 @@ const ui_helpers = (() => {
 
         if (icon) {
             icon.classList.toggle('fa-chevron-up', isShowing);
-            icon.classList.toggle('fa-chevron-down', !isShowing && isHiding);
+            icon.classList.toggle('fa-chevron-down', !isShowing && isHiding); // Only set down arrow if it's actually hiding/hidden
+            if (!isShowing && !isHiding && !collapseElement.classList.contains('show')) { // Ensure correct icon if not actively transitioning but closed
+                 icon.classList.remove('fa-chevron-up');
+                 icon.classList.add('fa-chevron-down');
+            }
         }
         triggerRow.setAttribute('aria-expanded', String(isShowing));
     }
@@ -192,7 +198,9 @@ const ui_helpers = (() => {
     function attachRowCollapseListeners(tableBodyElement) {
         if(!tableBodyElement || typeof tableBodyElement.id !== 'string' || collapseEventListenersAttached.has(tableBodyElement.id)) return;
         tableBodyElement.addEventListener('show.bs.collapse', handleCollapseEvent);
+        tableBodyElement.addEventListener('shown.bs.collapse', handleCollapseEvent);
         tableBodyElement.addEventListener('hide.bs.collapse', handleCollapseEvent);
+        tableBodyElement.addEventListener('hidden.bs.collapse', handleCollapseEvent);
         collapseEventListenersAttached.add(tableBodyElement.id);
     }
 
@@ -241,7 +249,7 @@ const ui_helpers = (() => {
                 break;
             case 'ruler-horizontal':
                 svgContent = `<path d="M${sw/2} ${c} H${s-sw/2} M${c} ${sw/2} V${s-sw/2} M${s*0.2} ${c-s*0.15} L${s*0.2} ${c+s*0.15} M${s*0.4} ${c-s*0.1} L${s*0.4} ${c+s*0.1} M${s*0.6} ${c-s*0.1} L${s*0.6} ${c+s*0.1} M${s*0.8} ${c-s*0.15} L${s*0.8} ${c+s*0.15}" stroke="${iconColor}" stroke-width="${sw/2}" stroke-linecap="round"/>`;
-                type = 'size';
+                type = 'size'; // Correct type for class
                 break;
             default:
                 svgContent = unknownIconSVG;
@@ -274,6 +282,9 @@ const ui_helpers = (() => {
                     if (el) {
                         el.disabled = !criterion.active;
                         el.classList.toggle('disabled-criterion-control', !criterion.active);
+                        if(el.classList.contains('t2-criteria-button')) {
+                            el.classList.toggle('inactive-option', !criterion.active || !el.classList.contains('active'));
+                        }
                     }
                 });
 
@@ -290,7 +301,7 @@ const ui_helpers = (() => {
                         if(button.dataset.criterion === key) {
                             const isActiveValue = criterion.active && button.dataset.value === String(criterion.value);
                             button.classList.toggle('active', isActiveValue);
-                            button.classList.toggle('inactive-option', !criterion.active || !isActiveValue);
+                             button.classList.toggle('inactive-option', !criterion.active || !isActiveValue);
                         }
                     });
                 }
@@ -332,7 +343,8 @@ const ui_helpers = (() => {
             toggleBtn.classList.toggle('active', isVergleich);
             toggleBtn.setAttribute('aria-pressed', String(isVergleich));
             updateElementHTML(toggleBtn.id, isVergleich ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv');
-            if(toggleBtn._tippy) toggleBtn._tippy.setContent(TOOLTIP_CONTENT.statistikLayout?.description || 'Layout umschalten');
+            const tooltipText = TOOLTIP_CONTENT.statistikLayout?.description || 'Layout umschalten';
+            if(toggleBtn._tippy) toggleBtn._tippy.setContent(tooltipText);
             else initializeTooltips(toggleBtn.parentElement || toggleBtn);
         }
         if (container1) container1.classList.toggle('d-none', !isVergleich);
@@ -470,14 +482,14 @@ const ui_helpers = (() => {
                 const best = data?.bestResult;
                 if (best && best.criteria && isFinite(best.metricValue)) {
                     const metricName = data.metric || 'N/A';
-                    const kollektivName = getKollektivNameFunc(data.kollektiv || 'N/A');
+                    const kollektivNameDisplay = getKollektivNameFunc(data.kollektiv || 'N/A');
                     const bestValueStr = formatNumber(best.metricValue, 4);
                     const logicStr = best.logic?.toUpperCase() || 'N/A';
                     const criteriaStr = formatCriteriaFunc(best.criteria, best.logic);
                     const durationStr = formatNumber((data.duration || 0) / 1000, 1);
                     const totalTestedStr = formatNumber(data.totalTested || 0, 0);
                     if (elements.resultMetric) updateElementText(elements.resultMetric.id, metricName);
-                    if (elements.resultKollektiv) updateElementText(elements.resultKollektiv.id, kollektivName);
+                    if (elements.resultKollektiv) updateElementText(elements.resultKollektiv.id, kollektivNameDisplay);
                     if (elements.resultValue) updateElementText(elements.resultValue.id, bestValueStr);
                     if (elements.resultLogic) updateElementText(elements.resultLogic.id, logicStr);
                     if (elements.resultCriteria) updateElementText(elements.resultCriteria.id, criteriaStr);
@@ -486,7 +498,7 @@ const ui_helpers = (() => {
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig.');
                     if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, TOOLTIP_CONTENT.bruteForceResult.description);
                 } else {
-                    if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true);
+                    if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true); // Hide if no valid best result
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig (kein valides Ergebnis).');
                 }
                 break;
@@ -504,16 +516,17 @@ const ui_helpers = (() => {
         trySetDisabled('export-daten-md', dataDisabled);
         trySetDisabled('export-auswertung-md', dataDisabled);
         trySetDisabled('export-filtered-data-csv', dataDisabled);
-        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled);
+        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled); // Report needs at least some data or BF result
         trySetDisabled('export-charts-png', dataDisabled);
         trySetDisabled('export-charts-svg', dataDisabled);
 
         trySetDisabled('export-all-zip', dataDisabled && bfDisabled);
         trySetDisabled('export-csv-zip', dataDisabled);
-        trySetDisabled('export-md-zip', dataDisabled);
+        trySetDisabled('export-md-zip', dataDisabled); // MD Zip could include publication texts even without patient data
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
 
+        // XLSX exports are currently marked as experimental/disabled in createExportOptions
         trySetDisabled('export-statistik-xlsx', true);
         trySetDisabled('export-daten-xlsx', true);
         trySetDisabled('export-auswertung-xlsx', true);
@@ -533,9 +546,12 @@ const ui_helpers = (() => {
         });
 
         document.querySelectorAll('.chart-download-btn, .table-download-png-btn').forEach(btn => {
-            if (btn.closest('#statistik-tab-pane')) btn.disabled = activeTabId !== 'statistik-tab' || dataDisabled;
-            else if (btn.closest('#auswertung-tab-pane .dashboard-card-col')) btn.disabled = activeTabId !== 'auswertung-tab' || dataDisabled;
-            else if (btn.closest('#praesentation-tab-pane')) btn.disabled = activeTabId !== 'praesentation-tab' || dataDisabled;
+            let disableCondition = dataDisabled;
+                 if (btn.closest('#statistik-tab-pane') && activeTabId !== 'statistik-tab') disableCondition = true;
+            else if (btn.closest('#auswertung-tab-pane .dashboard-card-col') && activeTabId !== 'auswertung-tab') disableCondition = true;
+            else if (btn.closest('#praesentation-tab-pane') && activeTabId !== 'praesentation-tab') disableCondition = true;
+            else if (btn.closest('#publikation-content-area') && activeTabId !== 'publikation-tab') disableCondition = true; // For publication tab charts
+            btn.disabled = disableCondition;
         });
          if(document.getElementById('export-bruteforce-modal-txt')) {
             trySetDisabled('export-bruteforce-modal-txt', bfDisabled);
@@ -561,37 +577,44 @@ const ui_helpers = (() => {
     }
 
     function getMetricDescriptionHTML(key, methode = '') {
-       const desc = TOOLTIP_CONTENT.statMetrics[key]?.description || key;
+       const metricKeyLower = key.toLowerCase().replace(/\s+/g, '').replace('-','');
+       const desc = TOOLTIP_CONTENT.statMetrics[metricKeyLower]?.description || key;
        return desc.replace(/\[METHODE\]/g, methode);
     }
 
     function getMetricInterpretationHTML(key, metricData, methode = '', kollektivName = '') {
-        const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
+        const metricKeyLower = key.toLowerCase().replace(/\s+/g, '').replace('-','');
+        const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[metricKeyLower]?.interpretation || 'Keine Interpretation verfügbar.';
         const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: 'N/A' };
         const na = '--';
-        const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
-        const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na, isPercent);
-        const lowerStr = formatNumber(data?.ci?.lower, digits, na, isPercent);
-        const upperStr = formatNumber(data?.ci?.upper, digits, na, isPercent);
+        const digits = (metricKeyLower === 'f1' || metricKeyLower === 'auc') ? 3 : 1;
+        const isPercent = !(metricKeyLower === 'f1' || metricKeyLower === 'auc');
+        const valueStr = formatNumber(data?.value, digits, na, false); // formatNumber doesn't take isPercent
+        const lowerStr = formatNumber(data?.ci?.lower, digits, na, false);
+        const upperStr = formatNumber(data?.ci?.upper, digits, na, false);
         const ciMethodStr = data?.method || 'N/A';
-        const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value) : '';
+        const bewertungStr = (metricKeyLower === 'auc') ? getAUCBewertung(data?.value) : '';
+
+        const displayValue = isPercent && valueStr !== na ? `${valueStr}%` : valueStr;
+        const displayLower = isPercent && lowerStr !== na ? `${lowerStr}%` : lowerStr;
+        const displayUpper = isPercent && upperStr !== na ? `${upperStr}%` : upperStr;
+
 
         let interpretation = interpretationTemplate
             .replace(/\[METHODE\]/g, methode)
-            .replace(/\[WERT\]/g, `<strong>${valueStr}${isPercent && valueStr !== na ? '%' : ''}</strong>`)
-            .replace(/\[LOWER\]/g, lowerStr)
-            .replace(/\[UPPER\]/g, upperStr)
+            .replace(/\[WERT\]/g, `<strong>${displayValue}</strong>`)
+            .replace(/\[LOWER\]/g, displayLower)
+            .replace(/\[UPPER\]/g, displayUpper)
             .replace(/\[METHOD_CI\]/g, ciMethodStr)
             .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
             .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`);
 
-        if (lowerStr === na || upperStr === na || ciMethodStr === na) {
-             interpretation = interpretation.replace(/\(95% CI nach .*?: .*? - .*?\)/g, '(Keine CI-Daten verfügbar)');
+        if (lowerStr === na || upperStr === na || ciMethodStr === na || lowerStr === '' || upperStr === '') {
+             interpretation = interpretation.replace(/\(95% KI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
              interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
         }
-        interpretation = interpretation.replace(/p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
-        interpretation = interpretation.replace(/<hr.*?>.*$/, '');
+        interpretation = interpretation.replace(/p=\[P_WERT\], \[SIGNIFIKANZ\]/g,''); // Clean up unused placeholders
+        interpretation = interpretation.replace(/<hr.*?>.*$/, ''); // Remove any trailing hr from templates
         return interpretation;
     }
 
@@ -621,7 +644,7 @@ const ui_helpers = (() => {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
         if (!assocObj) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
-        let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '', pVal = NaN;
+        let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '';
         const assozPValue = assocObj?.pValue;
 
         if (key === 'or') {
@@ -640,18 +663,19 @@ const ui_helpers = (() => {
         } else if (key === 'phi') {
             valueStr = formatNumber(assocObj.phi?.value, 2, na);
             bewertungStr = getPhiBewertung(assocObj.phi?.value);
-        } else if (key === 'fisher' || key === 'mannwhitney' || key === 'pvalue' || key === 'size_mwu') {
-             pVal = assocObj?.pValue;
-             pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na)) : na;
-             sigSymbol = getStatisticalSignificanceSymbol(pVal);
-             sigText = getStatisticalSignificanceText(pVal);
-             const templateToUse = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || TOOLTIP_CONTENT.statMetrics.defaultP.interpretation;
-             return templateToUse
+        } else if (key === 'fisher' || key === 'mannwhitney' || key === 'pvalue' || key === 'size_mwu' || key === 'defaultP') {
+             const pValToUse = assocObj?.pValue;
+             pStr = (pValToUse !== null && !isNaN(pValToUse)) ? (pValToUse < 0.001 ? '&lt;0.001' : formatNumber(pValToUse, 3, na)) : na;
+             sigSymbol = getStatisticalSignificanceSymbol(pValToUse);
+             sigText = getStatisticalSignificanceText(pValToUse);
+             const templateKey = TOOLTIP_CONTENT.statMetrics[key] ? key : 'defaultP';
+             const effectiveInterpretationTemplate = TOOLTIP_CONTENT.statMetrics[templateKey]?.interpretation || 'Keine Interpretation verfügbar.';
+             return effectiveInterpretationTemplate
                  .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
                  .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
                  .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
                  .replace(/\[MERKMAL\]/g, `'${merkmalName}'`)
-                 .replace(/\[VARIABLE\]/g, `'${merkmalName}'`)
+                 .replace(/\[VARIABLE\]/g, `'${merkmalName}'`) // For Mann-Whitney
                  .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
                  .replace(/<hr.*?>.*$/, '');
         }
@@ -663,21 +687,21 @@ const ui_helpers = (() => {
             .replace(/\[UPPER\]/g, upperStr)
             .replace(/\[METHOD_CI\]/g, ciMethodStr)
             .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
-            .replace(/\[FAKTOR_TEXT\]/g, assocObj?.or?.value > 1 ? UI_TEXTS.statMetrics.orFaktorTexte.ERHOEHT : (assocObj?.or?.value < 1 ? UI_TEXTS.statMetrics.orFaktorTexte.VERRINGERT : UI_TEXTS.statMetrics.orFaktorTexte.UNVERAENDERT))
-            .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.HOEHER : (assocObj?.rd?.value < 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.NIEDRIGER : UI_TEXTS.statMetrics.rdRichtungTexte.GLEICH))
+            .replace(/\[FAKTOR_TEXT\]/g, assocObj?.or?.value > 1 ? UI_TEXTS.statMetrics.orFaktorTexte.ERHOEHT : (assocObj?.or?.value < 1 && assocObj?.or?.value !== null && !isNaN(assocObj?.or?.value) ? UI_TEXTS.statMetrics.orFaktorTexte.VERRINGERT : UI_TEXTS.statMetrics.orFaktorTexte.UNVERAENDERT))
+            .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.HOEHER : (assocObj?.rd?.value < 0 && assocObj?.rd?.value !== null && !isNaN(assocObj?.rd?.value) ? UI_TEXTS.statMetrics.rdRichtungTexte.NIEDRIGER : UI_TEXTS.statMetrics.rdRichtungTexte.GLEICH))
             .replace(/\[STAERKE\]/g, `<strong>${bewertungStr}</strong>`)
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/<hr.*?>.*$/, '');
 
          if (key === 'or' || key === 'rd') {
-            if (lowerStr === na || upperStr === na || ciMethodStr === na) {
-                interpretation = interpretation.replace(/\(95% CI nach .*?: .*? - .*?\)/g, '(Keine CI-Daten verfügbar)');
+            if (lowerStr === na || upperStr === na || ciMethodStr === na || lowerStr === '' || upperStr === '') {
+                interpretation = interpretation.replace(/\(95% CI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
                 interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
             }
          }
          if (key === 'or' && pStr === na) {
-             interpretation = interpretation.replace(/, p=.*?, .*?\)/g, ')');
+             interpretation = interpretation.replace(/, p=.*?, \[SIGNIFIKANZ\]\)/g, ')');
          }
         return interpretation;
     }
