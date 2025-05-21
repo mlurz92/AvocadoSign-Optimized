@@ -45,7 +45,7 @@ const ui_helpers = (() => {
 
         globalTippyInstances = globalTippyInstances.filter(instance => {
             if (!instance || !instance.reference || !document.body.contains(instance.reference)) { try { instance?.destroy(); } catch(e){} return false; }
-            if (elementSet.has(instance.reference)) { try { instance.destroy(); } catch (e) {} return false; } // Destroy if element is being re-initialized
+            if (elementSet.has(instance.reference)) { try { instance.destroy(); } catch (e) {} return false; }
             return true;
         });
 
@@ -102,7 +102,7 @@ const ui_helpers = (() => {
         if (!tableHeader || !sortState) return;
         tableHeader.querySelectorAll('th[data-sort-key]').forEach(th => {
             const key = th.dataset.sortKey; const icon = th.querySelector('i.fas'); if (!icon) return;
-            icon.className = 'fas fa-sort text-muted opacity-50'; // Reset icon
+            icon.className = 'fas fa-sort text-muted opacity-50';
             const subSpans = th.querySelectorAll('.sortable-sub-header'); let isSubKeySortActive = false;
 
             if (subSpans.length > 0) {
@@ -120,20 +120,16 @@ const ui_helpers = (() => {
                         isSubKeySortActive = true;
                     }
                 });
-                // If a sub-key sort is active, the main TH icon reflects that.
-                // If no sub-key sort is active for THIS th, but a main sort for THIS th IS active, set its icon.
                 if (!isSubKeySortActive && key === sortState.key && sortState.subKey === null) {
                     icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
-                } else if (!isSubKeySortActive) {
-                     // If no sub-key is active for this TH, and its main key is not active either, icon remains default.
                 }
-            } else { // No sub-keys, just a main sortable header
+            } else {
                 if (key === sortState.key && (sortState.subKey === null || sortState.subKey === undefined)) {
                     icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
                 }
             }
         });
-        initializeTooltips(tableHeader); // Re-initialize tooltips if content changed
+        initializeTooltips(tableHeader);
     }
 
     function toggleAllDetails(tableBodyId, buttonId) {
@@ -165,7 +161,7 @@ const ui_helpers = (() => {
         const buttonText = expand ? 'Alle Details Ausblenden' : 'Alle Details Einblenden';
 
         let tooltipKeyBase = '';
-        if (buttonId === 'daten-toggle-details') tooltipKeyBase = 'datenTable'; // Updated ID
+        if (buttonId === 'daten-toggle-details') tooltipKeyBase = 'datenTable';
         else if (buttonId === 'auswertung-toggle-details') tooltipKeyBase = 'auswertungTable';
         const tooltipContentBase = TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll || 'Alle Details ein-/ausblenden';
         const currentTooltipText = expand ? tooltipContentBase.replace('ein-', 'aus-') : tooltipContentBase.replace('aus-', 'ein-');
@@ -183,19 +179,18 @@ const ui_helpers = (() => {
         if (!triggerRow || !triggerRow.matches('tr[data-bs-target]')) return;
 
         const icon = triggerRow.querySelector('.row-toggle-icon');
-        const isShowing = event.type === 'show.bs.collapse' || event.type === 'shown.bs.collapse'; // Consider both events
+        const isShowing = event.type === 'show.bs.collapse' || event.type === 'shown.bs.collapse';
         const isHiding = event.type === 'hide.bs.collapse' || event.type === 'hidden.bs.collapse';
 
         if (icon) {
             icon.classList.toggle('fa-chevron-up', isShowing);
-            icon.classList.toggle('fa-chevron-down', !isShowing && isHiding); // Only set to down if it's actually hiding
+            icon.classList.toggle('fa-chevron-down', !isShowing && isHiding);
         }
         triggerRow.setAttribute('aria-expanded', String(isShowing));
     }
 
     function attachRowCollapseListeners(tableBodyElement) {
         if(!tableBodyElement || typeof tableBodyElement.id !== 'string' || collapseEventListenersAttached.has(tableBodyElement.id)) return;
-        // Use show.bs.collapse and hide.bs.collapse for immediate icon change
         tableBodyElement.addEventListener('show.bs.collapse', handleCollapseEvent);
         tableBodyElement.addEventListener('hide.bs.collapse', handleCollapseEvent);
         collapseEventListenersAttached.add(tableBodyElement.id);
@@ -226,7 +221,7 @@ const ui_helpers = (() => {
                 const ksw = sw * 1.2;
                 const kr = Math.max(1, (s - ksw) / 2);
                 if (value === 'scharf') svgContent = `<circle cx="${c}" cy="${c}" r="${kr}" fill="none" stroke="${strokeColor}" stroke-width="${ksw}"/>`;
-                else if (value === 'irregulär') svgContent = `<path d="M ${c + kr} ${c} A ${kr} ${kr} 0 0 1 ${c} ${c + kr} A ${kr*0.8} ${kr*1.2} 0 0 1 ${c-kr*0.9} ${c-kr*0.3} A ${kr*1.1} ${kr*0.7} 0 0 1 ${c+kr} ${c} Z" fill="none" stroke="${strokeColor}" stroke-width="${ksw}"/>`; // More irregular shape
+                else if (value === 'irregulär') svgContent = `<path d="M ${c + kr} ${c} A ${kr} ${kr} 0 0 1 ${c} ${c + kr} A ${kr*0.8} ${kr*1.2} 0 0 1 ${c-kr*0.9} ${c-kr*0.3} A ${kr*1.1} ${kr*0.7} 0 0 1 ${c+kr} ${c} Z" fill="none" stroke="${strokeColor}" stroke-width="${ksw}"/>`;
                 else svgContent = unknownIconSVG;
                 break;
             case 'homogenitaet':
@@ -239,7 +234,7 @@ const ui_helpers = (() => {
                 else if (value === 'intermediär') fillColor = '#aaaaaa';
                 else if (value === 'signalreich') fillColor = '#f0f0f0';
                 else { svgContent = unknownIconSVG; return `<svg class="icon-t2 icon-${type} icon-value-unknown ${extraClass}" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${type}: unbekannt">${svgContent}</svg>`; }
-                strokeColor = (value === 'signalreich') ? '#333333' : 'rgba(0,0,0,0.1)'; // Lighter stroke for dark fills
+                strokeColor = (value === 'signalreich') ? '#333333' : 'rgba(0,0,0,0.1)';
                 svgContent = `<circle cx="${c}" cy="${c}" r="${r}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${sw * 0.75}"/>`;
                 if (value === 'signalreich') svgContent += `<circle cx="${c}" cy="${c}" r="${r * 0.3}" fill="${strokeColor}" stroke="none"/>`;
                 else if (value === 'intermediär') svgContent += `<line x1="${c-r*0.5}" y1="${c}" x2="${c+r*0.5}" y2="${c}" stroke="${iconColor}" stroke-width="${sw/1.5}" stroke-linecap="round"/>`;
@@ -274,7 +269,7 @@ const ui_helpers = (() => {
 
             if (checkbox && optionsContainer) {
                 checkbox.checked = criterion.active;
-                const dependentElements = optionsContainer.querySelectorAll('input, button, select, span.criteria-value-display'); // Added span for value display
+                const dependentElements = optionsContainer.querySelectorAll('input, button, select, span.criteria-value-display');
                 dependentElements.forEach(el => {
                     if (el) {
                         el.disabled = !criterion.active;
@@ -295,7 +290,6 @@ const ui_helpers = (() => {
                         if(button.dataset.criterion === key) {
                             const isActiveValue = criterion.active && button.dataset.value === String(criterion.value);
                             button.classList.toggle('active', isActiveValue);
-                            // inactive-option should also be applied if criterion itself is not active, not just button
                             button.classList.toggle('inactive-option', !criterion.active || !isActiveValue);
                         }
                     });
@@ -317,22 +311,12 @@ const ui_helpers = (() => {
             tippy(card, { content: tooltipContent, placement: 'top-start', theme: 'glass warning', trigger: 'manual', showOnCreate: true, zIndex: 1100, hideOnClick: false });
         } else if (shouldShowIndicator && existingTippy) {
             existingTippy.setContent(tooltipContent);
-            existingTippy.setProps({ theme: 'glass warning' }); // Ensure theme is correct
+            existingTippy.setProps({ theme: 'glass warning' });
             existingTippy.enable();
             existingTippy.show();
         } else if (!shouldShowIndicator && existingTippy) {
             existingTippy.hide();
             existingTippy.disable();
-        }
-    }
-
-    function updatePublikationLangSwitchUI(currentLang) { // NEU
-        const langSwitch = document.getElementById('publikation-sprache-switch');
-        const langLabel = document.getElementById('publikation-sprache-label');
-        if (langSwitch && langLabel) {
-            langSwitch.checked = currentLang === 'en';
-            const labelText = UI_TEXTS?.publikationTab?.spracheSwitchLabel?.[currentLang] || (currentLang === 'en' ? 'English' : 'Deutsch');
-            langLabel.textContent = labelText;
         }
     }
 
@@ -406,7 +390,7 @@ const ui_helpers = (() => {
         const hasResults = state === 'result' && data.results && data.results.length > 0 && data.bestResult && data.bestResult.criteria;
 
         if (elements.progressContainer) toggleElementClass(elements.progressContainer.id, 'd-none', !isRunning);
-        if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', state !== 'result' || !hasResults); // Hide if no valid results
+        if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', state !== 'result' || !hasResults);
         if (elements.cancelBtn) toggleElementClass(elements.cancelBtn.id, 'd-none', !isRunning);
         if (elements.startBtn) setElementDisabled(elements.startBtn.id, !workerAvailable || isRunning);
         if (elements.modalExportBtn) setElementDisabled(elements.modalExportBtn.id, !hasResults);
@@ -483,7 +467,7 @@ const ui_helpers = (() => {
                 }
                 break;
             case 'result':
-                const best = data?.bestResult; // payload.bestResult as defined in brute_force_worker.js
+                const best = data?.bestResult;
                 if (best && best.criteria && isFinite(best.metricValue)) {
                     const metricName = data.metric || 'N/A';
                     const kollektivName = getKollektivNameFunc(data.kollektiv || 'N/A');
@@ -502,7 +486,7 @@ const ui_helpers = (() => {
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig.');
                     if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, TOOLTIP_CONTENT.bruteForceResult.description);
                 } else {
-                    if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true); // Keep it hidden if no valid best result
+                    if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true);
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig (kein valides Ergebnis).');
                 }
                 break;
@@ -514,59 +498,51 @@ const ui_helpers = (() => {
         const dataDisabled = !canExportDataDependent;
         const trySetDisabled = (id, disabled) => { const e = document.getElementById(id); if (e) e.disabled = disabled; };
 
-        // General Exports
         trySetDisabled('export-statistik-csv', dataDisabled);
         trySetDisabled('export-bruteforce-txt', bfDisabled);
         trySetDisabled('export-deskriptiv-md', dataDisabled);
-        trySetDisabled('export-daten-md', dataDisabled); // Updated ID
+        trySetDisabled('export-daten-md', dataDisabled);
         trySetDisabled('export-auswertung-md', dataDisabled);
         trySetDisabled('export-filtered-data-csv', dataDisabled);
-        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled); // Report needs data OR bf results
+        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled);
         trySetDisabled('export-charts-png', dataDisabled);
         trySetDisabled('export-charts-svg', dataDisabled);
 
-        // ZIP Exports
         trySetDisabled('export-all-zip', dataDisabled && bfDisabled);
         trySetDisabled('export-csv-zip', dataDisabled);
         trySetDisabled('export-md-zip', dataDisabled);
-        trySetDisabled('export-png-zip', dataDisabled); // Assuming these depend on data being present for charts/tables
+        trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
 
-        // XLSX are marked as experimental/not fully implemented, keep them disabled
         trySetDisabled('export-statistik-xlsx', true);
-        trySetDisabled('export-daten-xlsx', true); // Updated ID
+        trySetDisabled('export-daten-xlsx', true);
         trySetDisabled('export-auswertung-xlsx', true);
         trySetDisabled('export-filtered-data-xlsx', true);
         trySetDisabled('export-xlsx-zip', true);
 
 
-        // Contextual button states (e.g., in Präsentation tab)
         const isPresentationTabActive = activeTabId === 'praesentation-tab';
         const praesButtons = [
             'download-performance-as-pur-csv', 'download-performance-as-pur-md',
-            'download-performance-as-vs-t2-csv', 'download-performance-as-vs-t2-md',
-            'download-tests-as-vs-t2-md',
-            'download-comp-table-as-vs-t2-md' // New MD export for comparison table
+            'download-performance-as-vs-t2-csv',
+            'download-comp-table-as-vs-t2-md',
+            'download-tests-as-vs-t2-md'
         ];
         praesButtons.forEach(id => {
             trySetDisabled(id, !isPresentationTabActive || dataDisabled);
         });
 
-        // Buttons directly on charts/tables (PNG downloads)
         document.querySelectorAll('.chart-download-btn, .table-download-png-btn').forEach(btn => {
             if (btn.closest('#statistik-tab-pane')) btn.disabled = activeTabId !== 'statistik-tab' || dataDisabled;
             else if (btn.closest('#auswertung-tab-pane .dashboard-card-col')) btn.disabled = activeTabId !== 'auswertung-tab' || dataDisabled;
             else if (btn.closest('#praesentation-tab-pane')) btn.disabled = activeTabId !== 'praesentation-tab' || dataDisabled;
-             // Brute force modal export button handled in updateBruteForceUI
         });
-         if(document.getElementById('export-bruteforce-modal-txt')) { // Ensure BF modal export button state also reflects bfDisabled
+         if(document.getElementById('export-bruteforce-modal-txt')) {
             trySetDisabled('export-bruteforce-modal-txt', bfDisabled);
          }
     }
 
-    // NEU: Funktion für Publikations-Tab UI Updates
     function updatePublikationUI(currentLang, currentSection, currentBfMetric) {
-        // Sprache-Switch
         const langSwitch = document.getElementById('publikation-sprache-switch');
         const langLabel = document.getElementById('publikation-sprache-label');
         if (langSwitch && langLabel) {
@@ -574,12 +550,10 @@ const ui_helpers = (() => {
             langLabel.textContent = UI_TEXTS?.publikationTab?.spracheSwitchLabel?.[currentLang] || (currentLang === 'en' ? 'English' : 'Deutsch');
         }
 
-        // Aktiven Abschnitt hervorheben
         document.querySelectorAll('#publikation-sections-nav .nav-link').forEach(link => {
             link.classList.toggle('active', link.dataset.sectionId === currentSection);
         });
 
-        // BF Metrik Selector
         const bfMetricSelect = document.getElementById('publikation-bf-metric-select');
         if (bfMetricSelect) {
             bfMetricSelect.value = currentBfMetric;
@@ -604,12 +578,11 @@ const ui_helpers = (() => {
         getT2IconSVG,
         updateT2CriteriaControlsUI,
         markCriteriaSavedIndicator,
-        updatePublikationLangSwitchUI, // NEU
         updateStatistikSelectorsUI,
         updatePresentationViewSelectorUI,
         updateBruteForceUI,
         updateExportButtonStates,
-        updatePublikationUI // NEU
+        updatePublikationUI
     });
 
 })();
