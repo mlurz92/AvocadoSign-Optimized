@@ -19,7 +19,7 @@ const auswertungTabLogic = (() => {
         ];
 
         let tableHTML = `<table class="table table-sm table-hover table-striped data-table" id="${tableId}">`;
-        tableHTML += _createTableHeaderHTML(tableId, sortState, columns); // Private Hilfsfunktion
+        tableHTML += _createTableHeaderHTML(tableId, sortState, columns);
         tableHTML += `<tbody id="${tableId}-body">`;
 
         if (data.length === 0) {
@@ -33,10 +33,6 @@ const auswertungTabLogic = (() => {
         return tableHTML;
     }
 
-    // Private Hilfsfunktion, da sie nur hier benötigt wird und stark an das Spalten-Setup gekoppelt ist.
-    // Diese Funktion ist identisch zu der in data_tab_logic.js und könnte in ui_helpers ausgelagert werden,
-    // aber für die Klarheit der Modul-Zuständigkeit wird sie hier vorerst dupliziert.
-    // Bei einer weiteren Refaktorisierung könnte man dies optimieren.
     function _createTableHeaderHTML(tableId, sortState, columns) {
         let headerHTML = `<thead class="small sticky-top bg-light" id="${tableId}-header"><tr>`;
         columns.forEach(col => {
@@ -69,14 +65,14 @@ const auswertungTabLogic = (() => {
                  return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="Sortieren nach ${thLabel} -> ${subLabel}">${subLabel}</span>`;
              }).join(' / ') : '';
 
-            const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys || col.key === 'details' ? '' : 'style="cursor: pointer;"'}`; // Details Spalte nicht sortierbar machen
+            const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys || col.key === 'details' ? '' : 'style="cursor: pointer;"'}`;
             const tooltip = col.tooltip && col.key !== 'details' ? `data-tippy-content="${col.tooltip}"` : '';
             const thClass = mainHeaderClass;
 
             if (col.subKeys) {
                  headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${col.label} ${subHeaders ? `(${subHeaders})` : ''} ${sortIconHTML}</th>`;
              } else {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${col.label} ${col.key === 'details' ? '' : sortIconHTML}</th>`; // Kein Icon für Details
+                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${col.label} ${col.key === 'details' ? '' : sortIconHTML}</th>`;
              }
         });
         headerHTML += `</tr></thead>`;
