@@ -17,7 +17,7 @@ const chartRenderer = (() => {
     function createSvgContainer(targetElementId, options = {}) {
         const container = d3.select(`#${targetElementId}`);
         if (container.empty() || !container.node()) { console.error(`Chart-Container #${targetElementId} nicht gefunden.`); return null; }
-        container.selectAll("svg").remove(); container.html(''); // Clear previous content
+        container.selectAll("svg").remove(); container.html('');
 
         const containerNode = container.node();
         const initialWidth = containerNode.clientWidth || parseFloat(window.getComputedStyle(containerNode).width) || 0;
@@ -31,7 +31,7 @@ const chartRenderer = (() => {
         let height = options.height || (initialHeight > 20 ? initialHeight : defaultHeight);
 
         const legendItemCount = options.legendItemCount || 0;
-        const estimatedLegendHeight = options.legendBelow ? Math.max(25, legendItemCount * 12 + 15) : 0; // Adjusted legend height estimation
+        const estimatedLegendHeight = options.legendBelow ? Math.max(25, legendItemCount * 12 + 15) : 0;
 
         if (options.useCompactMargins && options.legendBelow) {
             height = Math.max(height, (options.height || defaultHeight) + estimatedLegendHeight);
@@ -80,7 +80,7 @@ const chartRenderer = (() => {
         const tickCountX = Math.max(3, Math.min(10, Math.floor(innerWidth / 50)));
         chartArea.append("g").attr("class", "x-axis axis").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x).ticks(tickCountX).tickSizeOuter(0).tickFormat(d3.format("d"))).selectAll("text").style("font-size", TICK_LABEL_FONT_SIZE);
         svg.append("text").attr("class", "axis-label x-axis-label").attr("text-anchor", "middle").attr("x", margin.left + innerWidth / 2).attr("y", height - 5).style("font-size", AXIS_LABEL_FONT_SIZE).text(UI_TEXTS.axisLabels.age);
-        const histogram = d3.histogram().value(d => d).domain(x.domain()).thresholds(x.ticks(Math.max(5, Math.min(20, Math.floor(innerWidth / 25))))); // Adjusted thresholds
+        const histogram = d3.histogram().value(d => d).domain(x.domain()).thresholds(x.ticks(Math.max(5, Math.min(20, Math.floor(innerWidth / 25)))));
         const bins = histogram(ageData.filter(d => !isNaN(d) && isFinite(d))); const yMax = d3.max(bins, d => d.length);
         const y = d3.scaleLinear().range([innerHeight, 0]).domain([0, yMax > 0 ? yMax : 1]).nice();
         const tickCountY = Math.max(2, Math.min(6, Math.floor(innerHeight / 35)));
@@ -118,7 +118,7 @@ const chartRenderer = (() => {
                 const item = d3.select(this);
                 item.append("rect").attr("x", 0).attr("y", 0).attr("width", 10).attr("height", 10).attr("fill", color(d.label));
                 item.append("text").attr("x", 14).attr("y", 5).attr("dy", "0.35em").text(`${d.label} (${formatNumber(d.value, 0)})`);
-                const itemWidth = this.getBBox().width + 15; // Add some padding
+                const itemWidth = this.getBBox().width + 15;
                 if (i > 0 && currentX + itemWidth > legendMaxWidth) { currentX = 0; currentY += legendItemHeight; }
                 item.attr("transform", `translate(${currentX}, ${currentY})`);
                 currentX += itemWidth;
@@ -132,7 +132,7 @@ const chartRenderer = (() => {
          const { svg, chartArea, innerWidth, innerHeight, width, height, margin } = containerSetup; const tooltip = createTooltip();
          if (!Array.isArray(chartData) || chartData.length === 0) { chartArea.append('text').attr('x', innerWidth / 2).attr('y', innerHeight / 2).attr('text-anchor', 'middle').attr('class', 'text-muted small').text('Keine Vergleichsdaten.'); return; }
          const groups = chartData.map(d => d.metric); const subgroups = Object.keys(chartData[0]).filter(key => key !== 'metric');
-         const subgroupDisplayNames = { 'AS': UI_TEXTS.legendLabels.avocadoSign, 'T2': t2Label }; // Ensure T2 label is dynamic
+         const subgroupDisplayNames = { 'AS': UI_TEXTS.legendLabels.avocadoSign, 'T2': t2Label };
          const x0 = d3.scaleBand().domain(groups).range([0, innerWidth]).paddingInner(0.35); const x1 = d3.scaleBand().domain(subgroups).range([0, x0.bandwidth()]).padding(0.15); const y = d3.scaleLinear().domain([0, 1.0]).nice().range([innerHeight, 0]); const color = d3.scaleOrdinal().domain(subgroups).range([NEW_PRIMARY_COLOR_BLUE, NEW_SECONDARY_COLOR_YELLOW_GREEN]);
          const tickCountY = 5; chartArea.append("g").attr("class", "y-axis axis").call(d3.axisLeft(y).ticks(tickCountY, "%").tickSizeOuter(0)).selectAll("text").style("font-size", TICK_LABEL_FONT_SIZE);
          svg.append("text").attr("class", "axis-label y-axis-label").attr("text-anchor", "middle").attr("transform", `translate(${margin.left / 2}, ${margin.top + innerHeight / 2}) rotate(-90)`).style("font-size", AXIS_LABEL_FONT_SIZE).text(UI_TEXTS.axisLabels.metricValue);
@@ -168,7 +168,7 @@ const chartRenderer = (() => {
         svg.append("text").attr("x", width / 2).attr("y", margin.top - 10).attr("text-anchor", "middle").style("font-size", "12px").style("font-weight", "bold").text(`AS Performance für Kollektiv: ${kollektivName}`);
     }
 
-    function renderROCCurve(rocData, targetElementId, options = {}) { // rocData = [{fpr:0, tpr:0, threshold:Inf}, ..., {fpr:1, tpr:1, threshold:-Inf}]
+    function renderROCCurve(rocData, targetElementId, options = {}) {
         const setupOptions = { ...options, margin: { ...APP_CONFIG.CHART_SETTINGS.DEFAULT_MARGIN, ...options.margin } };
         const containerSetup = createSvgContainer(targetElementId, setupOptions); if (!containerSetup) return;
         const { svg, chartArea, innerWidth, innerHeight, width, height, margin } = containerSetup; const tooltip = createTooltip(); const lineColor = options.lineColor || NEW_PRIMARY_COLOR_BLUE;
@@ -185,7 +185,7 @@ const chartRenderer = (() => {
         svg.append("text").attr("class", "axis-label y-axis-label").attr("text-anchor", "middle").attr("transform", `translate(${margin.left / 2 - 10}, ${margin.top + innerHeight / 2}) rotate(-90)`).style("font-size", AXIS_LABEL_FONT_SIZE).text(UI_TEXTS.axisLabels.sensitivity);
         if (ENABLE_GRIDLINES) { chartArea.append("g").attr("class", "grid").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(xScale).ticks(tickCount).tickSize(-innerHeight).tickFormat("")); chartArea.append("g").attr("class", "grid").call(d3.axisLeft(yScale).ticks(tickCount).tickSize(-innerWidth).tickFormat("")); }
         chartArea.append("line").attr("class", "reference-line").attr("x1", 0).attr("y1", innerHeight).attr("x2", innerWidth).attr("y2", 0).style("stroke-dasharray", "3 3");
-        const rocLine = d3.line().x(d => xScale(d.fpr)).y(d => yScale(d.tpr)).curve(d3.curveLinear); // Linear curve for standard ROC
+        const rocLine = d3.line().x(d => xScale(d.fpr)).y(d => yScale(d.tpr)).curve(d3.curveLinear);
         const path = chartArea.append("path").datum(validRocData).attr("class", "roc-curve").attr("fill", "none").attr("stroke", lineColor).attr("stroke-width", LINE_STROKE_WIDTH).attr("d", rocLine);
         const totalLength = path.node()?.getTotalLength(); if(totalLength) { path.attr("stroke-dasharray", totalLength + " " + totalLength).attr("stroke-dashoffset", totalLength).transition().duration(ANIMATION_DURATION_MS * 1.5).ease(d3.easeLinear).attr("stroke-dashoffset", 0); }
         if (options.showPoints) { chartArea.selectAll(".roc-point").data(validRocData.filter((d, i) => i > 0 && i < validRocData.length - 1)).join("circle").attr("class", "roc-point").attr("cx", d => xScale(d.fpr)).attr("cy", d => yScale(d.tpr)).attr("r", POINT_RADIUS / 1.5).attr("fill", lineColor).style("opacity", 0)
