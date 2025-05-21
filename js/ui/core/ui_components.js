@@ -180,9 +180,9 @@ const uiComponents = (() => {
             : '';
 
         let headerButtonHtml = downloadButtons.map(btn => {
-            if (btn.tableId) { // Specific logic for table PNG download buttons within createStatistikCard
+            if (btn.tableId) {
                 return `<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${btn.id}" data-table-id="${btn.tableId}" data-table-name="${btn.tableName || title.replace(/[^a-z0-9]/gi, '_').substring(0,30)}" data-tippy-content="${btn.tooltip || `Tabelle als PNG`}"><i class="fas ${btn.icon || 'fa-image'}"></i></button>`;
-            } else { // General chart download buttons
+            } else {
                  return `<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${btn.chartId || id+'-content'}" data-format="${btn.format}" data-tippy-content="${btn.tooltip || `Als ${btn.format.toUpperCase()}`}"><i class="fas ${btn.icon || 'fa-download'}"></i></button>`;
             }
         }).join('');
@@ -333,7 +333,7 @@ const uiComponents = (() => {
         const getKollektivNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
         const bestResult = results[0];
         const kollektivName = getKollektivNameFunc(kollektiv);
-        const metricDisplayName = metric === 'PPV' ? 'PPV' : metric === 'NPV' ? 'NPV' : metric; // Keep short names as is
+        const metricDisplayName = metric === 'PPV' ? 'PPV' : metric === 'NPV' ? 'NPV' : metric;
 
         let tableHTML = `
             <div class="alert alert-light small p-2 mb-3">
@@ -359,7 +359,7 @@ const uiComponents = (() => {
                     <tbody>`;
 
         let rank = 1, displayedCount = 0, lastMetricValue = -Infinity;
-        const precision = 8; // Precision for comparing metric values to determine rank
+        const precision = 8;
 
         for (let i = 0; i < results.length; i++) {
             const result = results[i];
@@ -369,16 +369,16 @@ const uiComponents = (() => {
             const lastMetricValueRounded = parseFloat(lastMetricValue.toFixed(precision));
             let currentRank = rank;
 
-            const isNewRank = Math.abs(currentMetricValueRounded - lastMetricValueRounded) > 1e-8; // Using a small epsilon for float comparison
+            const isNewRank = Math.abs(currentMetricValueRounded - lastMetricValueRounded) > 1e-8;
 
             if (i > 0 && isNewRank) {
-                rank = displayedCount + 1; // Update rank based on actual displayed items
+                rank = displayedCount + 1;
                 currentRank = rank;
             } else if (i > 0) {
                 currentRank = rank;
             }
 
-            if (rank > 10 && isNewRank) break; // Stop if we are past rank 10 and it's a new, lower rank
+            if (rank > 10 && isNewRank) break;
 
             tableHTML += `
                 <tr>
@@ -397,7 +397,6 @@ const uiComponents = (() => {
         return tableHTML;
     }
 
-    // NEU: Komponenten für den Publikation-Tab
     function createPublikationTabHeader() {
         const lang = state.getCurrentPublikationLang() || PUBLICATION_CONFIG.defaultLanguage;
         const currentBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
@@ -457,9 +456,8 @@ const uiComponents = (() => {
         createStatistikCard,
         createExportOptions,
         createT2MetricsOverview,
-        // createMethodenBeschreibungContent, // Entfernt
         createBruteForceModalContent,
-        createPublikationTabHeader // NEU
+        createPublikationTabHeader
     });
 
 })();
