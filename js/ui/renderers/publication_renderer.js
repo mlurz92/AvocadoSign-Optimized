@@ -10,14 +10,14 @@ const publicationRenderer = (() => {
             appName: APP_CONFIG.APP_NAME,
             appVersion: APP_CONFIG.APP_VERSION,
             currentKollektivName: getKollektivDisplayName(currentKollektiv),
-            nGesamt: publicationData.patientenCharakteristika?.Gesamt?.anzahlPatienten || 0,
-            nDirektOP: publicationData.patientenCharakteristika?.['direkt OP']?.anzahlPatienten || 0,
-            nNRCT: publicationData.patientenCharakteristika?.nRCT?.anzahlPatienten || 0,
+            nGesamt: kollektiveData.Gesamt?.deskriptiv?.anzahlPatienten || 0,
+            nDirektOP: kollektiveData['direkt OP']?.deskriptiv?.anzahlPatienten || 0,
+            nNRCT: kollektiveData.nRCT?.deskriptiv?.anzahlPatienten || 0,
             t2SizeMin: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min,
             t2SizeMax: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max,
             bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
             significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
-            references: { // Dummy, müsste aus einer Konfigurationsdatei kommen oder dynamisch erzeugt werden
+            references: {
                 lurzSchaefer2025: "Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025;[DOI/Ahead of Print].",
                 koh2008: "Koh DM, Chau I, Tait D, et al. Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. Int J Radiat Oncol Biol Phys. 2008;71(2):456-461.",
                 barbaro2024: "Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: A single center experience. Radiother Oncol. 2024;193:110124.",
@@ -26,37 +26,47 @@ const publicationRenderer = (() => {
             }
         };
 
-        let html = `<div class="publication-section-content" id="pub-content-${sectionId}">`;
-        html += `<h2 class="mb-4">${PUBLICATION_CONFIG.sections.flatMap(s => s.subSections).find(sub => sub.id === sectionId)?.label || 'Unbekannter Abschnitt'}</h2>`;
-
-        const textContentFunction = publicationTextGenerator.getSectionText(sectionId, lang, publicationData, kollektiveData, commonData);
-        html += textContentFunction || `<p class="text-muted">Inhalt für diesen Abschnitt (ID: ${sectionId}, Sprache: ${lang}) wird noch generiert.</p>`;
-
-        // Add specific tables or charts based on sectionId
-        if (sectionId === 'methoden_t2_definition') {
-            html += _renderLiteraturT2KriterienTabelle(lang);
-        } else if (sectionId === 'ergebnisse_patientencharakteristika') {
-            html += _renderPatientenCharakteristikaTabelle(publicationData.patientenCharakteristika, lang);
-            html += '<div class="row mt-4">';
-            html += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="pub-chart-alter-${currentKollektiv.replace(/\s+/g, '-')}"><h5 class="text-center small">${UI_TEXTS.chartTitles.ageDistribution} (${getKollektivDisplayName(currentKollektiv)})</h5></div></div>`;
-            html += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="pub-chart-gender-${currentKollektiv.replace(/\s+/g, '-')}"><h5 class="text-center small">${UI_TEXTS.chartTitles.genderDistribution} (${getKollektivDisplayName(currentKollektiv)})</h5></div></div>`;
-            html += '</div>';
-        } else if (sectionId === 'ergebnisse_as_performance' || sectionId === 'ergebnisse_literatur_t2_performance' || sectionId === 'ergebnisse_optimierte_t2_performance' || sectionId === 'ergebnisse_vergleich_performance') {
-            html += _renderDiagnostischeGueteTabellen(publicationData.diagnostischeGuete, lang, sectionId, kollektiveData, currentKollektiv);
-            if (['ergebnisse_as_performance', 'ergebnisse_vergleich_performance'].includes(sectionId)) {
-                 html += '<div class="row mt-4">';
-                 html += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="pub-chart-roc-${sectionId.replace('ergebnisse_','')}"><h5 class="text-center small">ROC Kurven Vergleich</h5></div></div>`;
-                 html += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="pub-chart-bar-${sectionId.replace('ergebnisse_','')}"><h5 class="text-center small">Performance Metriken Vergleich</h5></div></div>`;
-                 html += '</div>';
-            }
+        const mainSection = PUBLICATION_CONFIG.sections.find(s => s.id === sectionId);
+        if (!mainSection || !mainSection.subSections || mainSection.subSections.length === 0) {
+            return `<p class="text-warning">Keine Unterabschnitte für Hauptabschnitt '${sectionId}' definiert.</p>`;
         }
 
-        html += `</div>`;
-        return html;
+        let combinedHtml = `<div class="publication-main-section" id="pub-main-content-${sectionId}">`;
+        combinedHtml += `<h1 class="mb-4 display-6">${UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}</h1>`;
+
+        mainSection.subSections.forEach(subSection => {
+            combinedHtml += `<div class="publication-sub-section border-bottom pb-4 mb-4" id="pub-content-${subSection.id}">`;
+            combinedHtml += `<h2 class="mb-3 h4">${subSection.label}</h2>`;
+
+            const textContentFunction = publicationTextGenerator.getSectionText(subSection.id, lang, publicationData, kollektiveData, commonData);
+            combinedHtml += textContentFunction || `<p class="text-muted">Inhalt für diesen Unterabschnitt (ID: ${subSection.id}, Sprache: ${lang}) wird noch generiert.</p>`;
+
+            if (subSection.id === 'methoden_t2_definition') {
+                combinedHtml += _renderLiteraturT2KriterienTabelle(lang);
+            } else if (subSection.id === 'ergebnisse_patientencharakteristika') {
+                combinedHtml += _renderPatientenCharakteristikaTabelle(kollektiveData, lang); // Pass kollektiveData for this specific table
+                combinedHtml += '<div class="row mt-4 g-3">';
+                combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="pub-chart-alter-${currentKollektiv.replace(/\s+/g, '-')}"><h5 class="text-center small mb-1">${UI_TEXTS.chartTitles.ageDistribution} (${getKollektivDisplayName(currentKollektiv)})</h5></div></div>`;
+                combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="pub-chart-gender-${currentKollektiv.replace(/\s+/g, '-')}"><h5 class="text-center small mb-1">${UI_TEXTS.chartTitles.genderDistribution} (${getKollektivDisplayName(currentKollektiv)})</h5></div></div>`;
+                combinedHtml += '</div>';
+            } else if (subSection.id === 'ergebnisse_as_performance' || subSection.id === 'ergebnisse_literatur_t2_performance' || subSection.id === 'ergebnisse_optimierte_t2_performance' || subSection.id === 'ergebnisse_vergleich_performance') {
+                combinedHtml += _renderDiagnostischeGueteTabellen(kollektiveData, lang, subSection.id, kollektiveData, currentKollektiv); // Pass kollektiveData for this specific table generator too
+                if (['ergebnisse_as_performance', 'ergebnisse_vergleich_performance'].includes(subSection.id)) {
+                     combinedHtml += '<div class="row mt-4 g-3">';
+                     combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="pub-chart-roc-${subSection.id.replace('ergebnisse_','')}"><h5 class="text-center small mb-1">ROC Kurven Vergleich</h5></div></div>`;
+                     combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="pub-chart-bar-${subSection.id.replace('ergebnisse_','')}"><h5 class="text-center small mb-1">Performance Metriken Vergleich</h5></div></div>`;
+                     combinedHtml += '</div>';
+                }
+            }
+            combinedHtml += `</div>`;
+        });
+
+        combinedHtml += `</div>`;
+        return combinedHtml;
     }
 
     function _renderLiteraturT2KriterienTabelle(lang) {
-        let tableHTML = `<h4 class="mt-4">${lang === 'de' ? 'Übersicht der Literatur-basierten T2-Kriteriensets' : 'Overview of Literature-Based T2 Criteria Sets'}</h4>`;
+        let tableHTML = `<h4 class="mt-4 mb-3">${lang === 'de' ? 'Tabelle: Übersicht der Literatur-basierten T2-Kriteriensets' : 'Table: Overview of Literature-Based T2 Criteria Sets'}</h4>`;
         tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle.id}">
             <thead>
                 <tr>
@@ -87,27 +97,27 @@ const publicationRenderer = (() => {
     }
 
     function _renderPatientenCharakteristikaTabelle(data, lang) {
-        if (!data) return '<p>Keine Patientendaten verfügbar.</p>';
-        let tableHTML = `<h4 class="mt-4">${lang === 'de' ? 'Patientencharakteristika' : 'Patient Characteristics'}</h4>`;
+        if (!data || !data.Gesamt || !data.Gesamt.deskriptiv) return `<p class="text-muted small">Keine ausreichenden Patientendaten für Tabelle verfügbar.</p>`;
+        let tableHTML = `<h4 class="mt-4 mb-3">${lang === 'de' ? 'Tabelle: Patientencharakteristika' : 'Table: Patient Characteristics'}</h4>`;
         tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${PUBLICATION_CONFIG.publicationElements.ergebnisse.patientenCharakteristikaTabelle.id}">
             <thead>
                 <tr>
                     <th>${lang === 'de' ? 'Merkmal' : 'Characteristic'}</th>
-                    <th>Gesamt (N=${data.Gesamt?.anzahlPatienten || 0})</th>
-                    <th>Direkt OP (N=${data['direkt OP']?.anzahlPatienten || 0})</th>
-                    <th>nRCT (N=${data.nRCT?.anzahlPatienten || 0})</th>
+                    <th>Gesamt (N=${data.Gesamt?.deskriptiv?.anzahlPatienten || 0})</th>
+                    <th>Direkt OP (N=${data['direkt OP']?.deskriptiv?.anzahlPatienten || 0})</th>
+                    <th>nRCT (N=${data.nRCT?.deskriptiv?.anzahlPatienten || 0})</th>
                 </tr>
             </thead><tbody>`;
 
         const fVal = (val, dig = 1, placeholder = 'N/A') => formatNumber(val, dig, placeholder);
-        const fPerc = (count, total, dig = 1) => total > 0 ? formatPercent(count / total, dig) : 'N/A';
+        const fPerc = (count, total, dig = 1) => (total > 0 && count !== undefined && count !== null) ? formatPercent(count / total, dig) : 'N/A';
 
         const addRow = (labelDe, labelEn, getterGesamt, getterDirektOP, getterNRCT) => {
             tableHTML += `<tr>
                             <td>${lang === 'de' ? labelDe : labelEn}</td>
-                            <td>${getterGesamt(data.Gesamt)}</td>
-                            <td>${getterDirektOP(data['direkt OP'])}</td>
-                            <td>${getterNRCT(data.nRCT)}</td>
+                            <td>${getterGesamt(data.Gesamt?.deskriptiv)}</td>
+                            <td>${getterDirektOP(data['direkt OP']?.deskriptiv)}</td>
+                            <td>${getterNRCT(data.nRCT?.deskriptiv)}</td>
                           </tr>`;
         };
 
@@ -117,30 +127,30 @@ const publicationRenderer = (() => {
             p => p ? `${fVal(p.alter?.median)} (${fVal(p.alter?.min,0)}-${fVal(p.alter?.max,0)})` : 'N/A'
         );
         addRow('Geschlecht, männlich [n (%)]', 'Sex, male [n (%)]',
-            p => p ? `${p.geschlecht?.m || 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})` : 'N/A',
-            p => p ? `${p.geschlecht?.m || 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})` : 'N/A',
-            p => p ? `${p.geschlecht?.m || 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})` : 'N/A'
+            p => p ? `${p.geschlecht?.m ?? 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})` : 'N/A',
+            p => p ? `${p.geschlecht?.m ?? 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})` : 'N/A',
+            p => p ? `${p.geschlecht?.m ?? 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})` : 'N/A'
         );
         addRow('Pathologischer N-Status, positiv [n (%)]', 'Pathological N-Status, positive [n (%)]',
-            p => p ? `${p.nStatus?.plus || 0} (${fPerc(p.nStatus?.plus, p.anzahlPatienten)})` : 'N/A',
-            p => p ? `${p.nStatus?.plus || 0} (${fPerc(p.nStatus?.plus, p.anzahlPatienten)})` : 'N/A',
-            p => p ? `${p.nStatus?.plus || 0} (${fPerc(p.nStatus?.plus, p.anzahlPatienten)})` : 'N/A'
+            p => p ? `${p.nStatus?.plus ?? 0} (${fPerc(p.nStatus?.plus, p.anzahlPatienten)})` : 'N/A',
+            p => p ? `${p.nStatus?.plus ?? 0} (${fPerc(p.nStatus?.plus, p.anzahlPatienten)})` : 'N/A',
+            p => p ? `${p.nStatus?.plus ?? 0} (${fPerc(p.nStatus?.plus, p.anzahlPatienten)})` : 'N/A'
         );
         tableHTML += `</tbody></table></div>`;
         return tableHTML;
     }
 
     function _renderDiagnostischeGueteTabellen(data, lang, sectionId, kollektiveData, currentKollektiv) {
-        if (!data) return '<p>Keine Gütedaten verfügbar.</p>';
+        if (!data) return '<p class="text-muted small">Keine Gütedaten für diese Sektion verfügbar.</p>';
         let title = '';
-        let dataSetsToDisplay = []; // Array von {name: '', statsByKollektiv: {Gesamt: {}, 'direkt OP': {}, nRCT: {}}}
+        let dataSetsToDisplay = [];
 
         const formatMetric = (m, isRate = true, digits = 1) => {
             if (!m || m.value === undefined || isNaN(m.value)) return 'N/A';
             const val = isRate ? formatPercent(m.value, digits) : formatNumber(m.value, digits);
             const ciLower = isRate ? formatPercent(m.ci?.lower, digits, '') : formatNumber(m.ci?.lower, digits, '');
             const ciUpper = isRate ? formatPercent(m.ci?.upper, digits, '') : formatNumber(m.ci?.upper, digits, '');
-            if (ciLower !== '' && ciUpper !== '') {
+            if (ciLower !== '' && ciUpper !== '' && ciLower !== 'N/A' && ciUpper !== 'N/A') {
                 return `${val} (${ciLower}–${ciUpper})`;
             }
             return val;
@@ -148,53 +158,59 @@ const publicationRenderer = (() => {
 
 
         if (sectionId === 'ergebnisse_as_performance') {
-            title = lang === 'de' ? 'Diagnostische Güte: Avocado Sign (vs. N-Status)' : 'Diagnostic Performance: Avocado Sign (vs. N-Status)';
-            dataSetsToDisplay.push({ name: 'Avocado Sign', statsByKollektiv: kollektiveData.Gesamt?.gueteAS ? { 'Gesamt': kollektiveData.Gesamt.gueteAS, 'direkt OP': kollektiveData['direkt OP']?.gueteAS, 'nRCT': kollektiveData.nRCT?.gueteAS } : {} });
+            title = lang === 'de' ? 'Tabelle: Diagnostische Güte - Avocado Sign (vs. N-Status)' : 'Table: Diagnostic Performance - Avocado Sign (vs. N-Status)';
+            dataSetsToDisplay.push({ name: 'Avocado Sign', statsByKollektiv: { 'Gesamt': kollektiveData.Gesamt?.gueteAS, 'direkt OP': kollektiveData['direkt OP']?.gueteAS, 'nRCT': kollektiveData.nRCT?.gueteAS } });
         } else if (sectionId === 'ergebnisse_literatur_t2_performance') {
-            title = lang === 'de' ? 'Diagnostische Güte: Literatur-basierte T2-Kriterien (vs. N-Status)' : 'Diagnostic Performance: Literature-Based T2 Criteria (vs. N-Status)';
+            title = lang === 'de' ? 'Tabelle: Diagnostische Güte - Literatur-basierte T2-Kriterien (vs. N-Status)' : 'Table: Diagnostic Performance - Literature-Based T2 Criteria (vs. N-Status)';
             PUBLICATION_CONFIG.literatureCriteriaSets.forEach(conf => {
                 const stats = {};
-                let hasData = false;
+                let hasDataForThisSet = false;
                 for (const kollektiv of ['Gesamt', 'direkt OP', 'nRCT']) {
-                    stats[kollektiv] = kollektiveData[kollektiv]?.gueteT2_literatur?.[conf.id];
-                    if (stats[kollektiv]) hasData = true;
+                    const perfData = kollektiveData[kollektiv]?.gueteT2_literatur?.[conf.id];
+                    if (perfData) { // Auch wenn perfData null ist (nicht anwendbar), wollen wir es evtl. zeigen
+                        stats[kollektiv] = perfData;
+                        if (perfData && perfData.matrix) hasDataForThisSet = true; // Nur wenn Matrix da ist, gibt es was zu zeigen
+                    } else {
+                        stats[kollektiv] = null;
+                    }
                 }
-                if (hasData) {
-                    dataSetsToDisplay.push({ name: conf.nameKey, statsByKollektiv: stats });
-                }
+                dataSetsToDisplay.push({ name: conf.nameKey, statsByKollektiv: stats, applicableCohort: studyT2CriteriaManager.getStudyCriteriaSetById(conf.id)?.applicableKollektiv });
             });
         } else if (sectionId === 'ergebnisse_optimierte_t2_performance') {
-            title = lang === 'de' ? 'Diagnostische Güte: Optimierte T2-Kriterien (Brute-Force, vs. N-Status)' : 'Diagnostic Performance: Optimized T2 Criteria (Brute-Force, vs. N-Status)';
+            title = lang === 'de' ? 'Tabelle: Diagnostische Güte - Optimierte T2-Kriterien (Brute-Force, vs. N-Status)' : 'Table: Diagnostic Performance - Optimized T2 Criteria (Brute-Force, vs. N-Status)';
+            const bfMetricForDisplay = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
             const stats = {};
             let hasData = false;
              for (const kollektiv of ['Gesamt', 'direkt OP', 'nRCT']) {
                 stats[kollektiv] = kollektiveData[kollektiv]?.gueteT2_bruteforce;
-                 if (stats[kollektiv]) hasData = true;
+                 if (stats[kollektiv] && stats[kollektiv].matrix) hasData = true;
             }
             if(hasData) {
-                const bfMetricForDisplay = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
                 dataSetsToDisplay.push({ name: `Optimierte T2 Kriterien (Ziel: ${bfMetricForDisplay})`, statsByKollektiv: stats });
+            } else {
+                 return `<p class="text-muted small">Keine Brute-Force Optimierungsdaten für Metrik '${bfMetricForDisplay}' in den ausgewerteten Kollektiven verfügbar.</p>`;
             }
         } else if (sectionId === 'ergebnisse_vergleich_performance') {
-            title = lang === 'de' ? 'Vergleich Diagnostische Güte: AS vs. Beste T2 (vs. N-Status)' : 'Comparison Diagnostic Performance: AS vs. Best T2 (vs. N-Status)';
-             // Hier Logik für Auswahl "Beste T2" (kann komplex werden, vorerst angewandte T2)
-            dataSetsToDisplay.push({ name: 'Avocado Sign', statsByKollektiv: kollektiveData.Gesamt?.gueteAS ? { 'Gesamt': kollektiveData.Gesamt.gueteAS, 'direkt OP': kollektiveData['direkt OP']?.gueteAS, 'nRCT': kollektiveData.nRCT?.gueteAS } : {} });
-            dataSetsToDisplay.push({ name: `Angewandte T2 Kriterien`, statsByKollektiv: kollektiveData.Gesamt?.gueteT2_angewandt ? { 'Gesamt': kollektiveData.Gesamt.gueteT2_angewandt, 'direkt OP': kollektiveData['direkt OP']?.gueteT2_angewandt, 'nRCT': kollektiveData.nRCT?.gueteT2_angewandt } : {} });
+            title = lang === 'de' ? 'Tabelle: Vergleich Diagnostische Güte - AS vs. T2 (vs. N-Status)' : 'Table: Comparison Diagnostic Performance - AS vs. T2 (vs. N-Status)';
+            dataSetsToDisplay.push({ name: 'Avocado Sign', statsByKollektiv: { 'Gesamt': kollektiveData.Gesamt?.gueteAS, 'direkt OP': kollektiveData['direkt OP']?.gueteAS, 'nRCT': kollektiveData.nRCT?.gueteAS } });
+            dataSetsToDisplay.push({ name: `Angewandte T2 Kriterien`, statsByKollektiv: { 'Gesamt': kollektiveData.Gesamt?.gueteT2_angewandt, 'direkt OP': kollektiveData['direkt OP']?.gueteT2_angewandt, 'nRCT': kollektiveData.nRCT?.gueteT2_angewandt } });
             const bfMetricForDisplay = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
             const bfStats = {};
             let hasBfData = false;
              for (const kollektiv of ['Gesamt', 'direkt OP', 'nRCT']) {
                 bfStats[kollektiv] = kollektiveData[kollektiv]?.gueteT2_bruteforce;
-                 if (bfStats[kollektiv]) hasBfData = true;
+                 if (bfStats[kollektiv] && bfStats[kollektiv].matrix) hasBfData = true;
             }
             if(hasBfData) {
                 dataSetsToDisplay.push({ name: `Optimierte T2 (${bfMetricForDisplay})`, statsByKollektiv: bfStats });
             }
-
         }
 
+        if (dataSetsToDisplay.length === 0 || dataSetsToDisplay.every(ds => Object.values(ds.statsByKollektiv).every(s => !s || !s.matrix))) {
+            return `<p class="text-muted small">${title} - Keine validen Gütedaten für die Anzeige in den ausgewerteten Kollektiven vorhanden.</p>`;
+        }
 
-        let tableHTML = `<h4 class="mt-4">${title}</h4>`;
+        let tableHTML = `<h4 class="mt-4 mb-3">${title}</h4>`;
         tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteGesamtTabelle.id}-${sectionId.replace('ergebnisse_','')}">
             <thead>
                 <tr>
@@ -211,14 +227,25 @@ const publicationRenderer = (() => {
 
         dataSetsToDisplay.forEach(dataSet => {
             if(dataSet.statsByKollektiv) {
-                for (const kollektiv of ['Gesamt', 'direkt OP', 'nRCT']) {
-                    const stats = dataSet.statsByKollektiv[kollektiv];
-                    if (stats && stats.matrix) { // Ensure stats and matrix exist
+                for (const kollektivId of ['Gesamt', 'direkt OP', 'nRCT']) {
+                    const stats = dataSet.statsByKollektiv[kollektivId];
+                    let displayName = dataSet.name;
+                    if (sectionId === 'ergebnisse_literatur_t2_performance' && dataSet.applicableCohort && dataSet.applicableCohort !== 'Gesamt' && dataSet.applicableCohort !== kollektivId) {
+                        // Für Literatursets, die nicht auf dieses Kollektiv anwendbar sind
+                         tableHTML += `<tr>
+                                <td>${displayName}</td>
+                                <td>${getKollektivDisplayName(kollektivId)}</td>
+                                <td colspan="6" class="text-center text-muted small"><em>Nicht anwendbar/evaluiert für dieses Kollektiv</em></td>
+                              </tr>`;
+                        continue;
+                    }
+
+                    if (stats && stats.matrix) {
                         const nPat = stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn;
-                        if (nPat > 0) { // Only display if there are patients
+                        if (nPat > 0) {
                              tableHTML += `<tr>
-                                <td>${dataSet.name}</td>
-                                <td>${getKollektivDisplayName(kollektiv)} (N=${nPat})</td>
+                                <td>${displayName}</td>
+                                <td>${getKollektivDisplayName(kollektivId)} (N=${nPat})</td>
                                 <td>${formatMetric(stats.sens)}</td>
                                 <td>${formatMetric(stats.spez)}</td>
                                 <td>${formatMetric(stats.ppv)}</td>
@@ -226,7 +253,19 @@ const publicationRenderer = (() => {
                                 <td>${formatMetric(stats.acc)}</td>
                                 <td>${formatMetric(stats.auc, false, 3)}</td>
                               </tr>`;
+                        } else if (sectionId === 'ergebnisse_literatur_t2_performance') {
+                             tableHTML += `<tr>
+                                <td>${displayName}</td>
+                                <td>${getKollektivDisplayName(kollektivId)}</td>
+                                <td colspan="6" class="text-center text-muted small">Keine Patienten im Kollektiv</td>
+                              </tr>`;
                         }
+                    } else if (sectionId === 'ergebnisse_literatur_t2_performance') {
+                         tableHTML += `<tr>
+                                <td>${displayName}</td>
+                                <td>${getKollektivDisplayName(kollektivId)}</td>
+                                <td colspan="6" class="text-center text-muted small">Keine Daten</td>
+                              </tr>`;
                     }
                 }
             }
