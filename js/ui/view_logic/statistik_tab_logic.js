@@ -11,7 +11,7 @@ const statistikTabLogic = (() => {
         const na = '--';
         const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
         const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na, isPercent); // useStandardFormat = isPercent for consistency
+        const valueStr = formatNumber(data?.value, digits, na, isPercent);
         const lowerStr = formatNumber(data?.ci?.lower, digits, na, isPercent);
         const upperStr = formatNumber(data?.ci?.upper, digits, na, isPercent);
         const ciMethodStr = data?.method || 'N/A';
@@ -103,8 +103,8 @@ const statistikTabLogic = (() => {
             .replace(/\[UPPER\]/g, upperStr)
             .replace(/\[METHOD_CI\]/g, ciMethodStr)
             .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
-            .replace(/\[FAKTOR_TEXT\]/g, assocObj?.or?.value > 1 ? TOOLTIP_CONTENT.statMetrics.orFaktorTexte.ERHOEHT : (assocObj?.or?.value < 1 ? TOOLTIP_CONTENT.statMetrics.orFaktorTexte.VERRINGERT : TOOLTIP_CONTENT.statMetrics.orFaktorTexte.UNVERAENDERT))
-            .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? TOOLTIP_CONTENT.statMetrics.rdRichtungTexte.HOEHER : (assocObj?.rd?.value < 0 ? TOOLTIP_CONTENT.statMetrics.rdRichtungTexte.NIEDRIGER : TOOLTIP_CONTENT.statMetrics.rdRichtungTexte.GLEICH))
+            .replace(/\[FAKTOR_TEXT\]/g, assocObj?.or?.value > 1 ? UI_TEXTS.statMetrics.orFaktorTexte.ERHOEHT : (assocObj?.or?.value < 1 ? UI_TEXTS.statMetrics.orFaktorTexte.VERRINGERT : UI_TEXTS.statMetrics.orFaktorTexte.UNVERAENDERT))
+            .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.HOEHER : (assocObj?.rd?.value < 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.NIEDRIGER : UI_TEXTS.statMetrics.rdRichtungTexte.GLEICH))
             .replace(/\[STAERKE\]/g, `<strong>${bewertungStr}</strong>`)
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
