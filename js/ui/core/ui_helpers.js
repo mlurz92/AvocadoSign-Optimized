@@ -560,6 +560,127 @@ const ui_helpers = (() => {
         }
     }
 
+    function getMetricDescriptionHTML(key, methode = '') {
+       const desc = TOOLTIP_CONTENT.statMetrics[key]?.description || key;
+       return desc.replace(/\[METHODE\]/g, methode);
+    }
+
+    function getMetricInterpretationHTML(key, metricData, methode = '', kollektivName = '') {
+        const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
+        const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: 'N/A' };
+        const na = '--';
+        const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
+        const isPercent = !(key === 'f1' || key === 'auc');
+        const valueStr = formatNumber(data?.value, digits, na, isPercent);
+        const lowerStr = formatNumber(data?.ci?.lower, digits, na, isPercent);
+        const upperStr = formatNumber(data?.ci?.upper, digits, na, isPercent);
+        const ciMethodStr = data?.method || 'N/A';
+        const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value) : '';
+
+        let interpretation = interpretationTemplate
+            .replace(/\[METHODE\]/g, methode)
+            .replace(/\[WERT\]/g, `<strong>${valueStr}${isPercent && valueStr !== na ? '%' : ''}</strong>`)
+            .replace(/\[LOWER\]/g, lowerStr)
+            .replace(/\[UPPER\]/g, upperStr)
+            .replace(/\[METHOD_CI\]/g, ciMethodStr)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
+            .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`);
+
+        if (lowerStr === na || upperStr === na || ciMethodStr === na) {
+             interpretation = interpretation.replace(/\(95% CI nach .*?: .*? - .*?\)/g, '(Keine CI-Daten verfügbar)');
+             interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
+        }
+        interpretation = interpretation.replace(/p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
+        interpretation = interpretation.replace(/<hr.*?>.*$/, '');
+        return interpretation;
+    }
+
+    function getTestDescriptionHTML(key, t2ShortName = 'T2') {
+        const desc = TOOLTIP_CONTENT.statMetrics[key]?.description || key;
+        return desc.replace(/\[T2_SHORT_NAME\]/g, t2ShortName);
+    }
+
+    function getTestInterpretationHTML(key, testData, kollektivName = '', t2ShortName = 'T2') {
+        const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
+         if (!testData) return 'Keine Daten für Interpretation verfügbar.';
+        const na = '--';
+        const pValue = testData?.pValue;
+        const pStr = (pValue !== null && !isNaN(pValue)) ? (pValue < 0.001 ? '&lt;0.001' : formatNumber(pValue, 3, na)) : na;
+        const sigSymbol = getStatisticalSignificanceSymbol(pValue);
+        const sigText = getStatisticalSignificanceText(pValue);
+         return interpretationTemplate
+            .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
+            .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
+            .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
+            .replace(/\[T2_SHORT_NAME\]/g, t2ShortName)
+            .replace(/<hr.*?>.*$/, '');
+    }
+
+    function getAssociationInterpretationHTML(key, assocObj, merkmalName, kollektivName) {
+        const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
+        if (!assocObj) return 'Keine Daten für Interpretation verfügbar.';
+        const na = '--';
+        let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '', pVal = NaN;
+        const assozPValue = assocObj?.pValue;
+
+        if (key === 'or') {
+            valueStr = formatNumber(assocObj.or?.value, 2, na);
+            lowerStr = formatNumber(assocObj.or?.ci?.lower, 2, na);
+            upperStr = formatNumber(assocObj.or?.ci?.upper, 2, na);
+            ciMethodStr = assocObj.or?.method || na;
+            pStr = (assozPValue !== null && !isNaN(assozPValue)) ? (assozPValue < 0.001 ? '&lt;0.001' : formatNumber(assozPValue, 3, na)) : na;
+            sigSymbol = getStatisticalSignificanceSymbol(assozPValue);
+            sigText = getStatisticalSignificanceText(assozPValue);
+        } else if (key === 'rd') {
+            valueStr = formatNumber(assocObj.rd?.value !== null && !isNaN(assocObj.rd?.value) ? assocObj.rd.value * 100 : NaN, 1, na);
+            lowerStr = formatNumber(assocObj.rd?.ci?.lower !== null && !isNaN(assocObj.rd?.ci?.lower) ? assocObj.rd.ci.lower * 100 : NaN, 1, na);
+            upperStr = formatNumber(assocObj.rd?.ci?.upper !== null && !isNaN(assocObj.rd?.ci?.upper) ? assocObj.rd.ci.upper * 100 : NaN, 1, na);
+            ciMethodStr = assocObj.rd?.method || na;
+        } else if (key === 'phi') {
+            valueStr = formatNumber(assocObj.phi?.value, 2, na);
+            bewertungStr = getPhiBewertung(assocObj.phi?.value);
+        } else if (key === 'fisher' || key === 'mannwhitney' || key === 'pvalue' || key === 'size_mwu') {
+             pVal = assocObj?.pValue;
+             pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na)) : na;
+             sigSymbol = getStatisticalSignificanceSymbol(pVal);
+             sigText = getStatisticalSignificanceText(pVal);
+             const templateToUse = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || TOOLTIP_CONTENT.statMetrics.defaultP.interpretation;
+             return templateToUse
+                 .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
+                 .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
+                 .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
+                 .replace(/\[MERKMAL\]/g, `'${merkmalName}'`)
+                 .replace(/\[VARIABLE\]/g, `'${merkmalName}'`)
+                 .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
+                 .replace(/<hr.*?>.*$/, '');
+        }
+
+        let interpretation = interpretationTemplate
+            .replace(/\[MERKMAL\]/g, `'${merkmalName}'`)
+            .replace(/\[WERT\]/g, `<strong>${valueStr}${key === 'rd' && valueStr !== na ? '%' : ''}</strong>`)
+            .replace(/\[LOWER\]/g, lowerStr)
+            .replace(/\[UPPER\]/g, upperStr)
+            .replace(/\[METHOD_CI\]/g, ciMethodStr)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
+            .replace(/\[FAKTOR_TEXT\]/g, assocObj?.or?.value > 1 ? UI_TEXTS.statMetrics.orFaktorTexte.ERHOEHT : (assocObj?.or?.value < 1 ? UI_TEXTS.statMetrics.orFaktorTexte.VERRINGERT : UI_TEXTS.statMetrics.orFaktorTexte.UNVERAENDERT))
+            .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.HOEHER : (assocObj?.rd?.value < 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.NIEDRIGER : UI_TEXTS.statMetrics.rdRichtungTexte.GLEICH))
+            .replace(/\[STAERKE\]/g, `<strong>${bewertungStr}</strong>`)
+            .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
+            .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
+            .replace(/<hr.*?>.*$/, '');
+
+         if (key === 'or' || key === 'rd') {
+            if (lowerStr === na || upperStr === na || ciMethodStr === na) {
+                interpretation = interpretation.replace(/\(95% CI nach .*?: .*? - .*?\)/g, '(Keine CI-Daten verfügbar)');
+                interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
+            }
+         }
+         if (key === 'or' && pStr === na) {
+             interpretation = interpretation.replace(/, p=.*?, .*?\)/g, ')');
+         }
+        return interpretation;
+    }
 
     return Object.freeze({
         escapeMarkdown,
@@ -582,7 +703,12 @@ const ui_helpers = (() => {
         updatePresentationViewSelectorUI,
         updateBruteForceUI,
         updateExportButtonStates,
-        updatePublikationUI
+        updatePublikationUI,
+        getMetricDescriptionHTML,
+        getMetricInterpretationHTML,
+        getTestDescriptionHTML,
+        getTestInterpretationHTML,
+        getAssociationInterpretationHTML
     });
 
 })();
