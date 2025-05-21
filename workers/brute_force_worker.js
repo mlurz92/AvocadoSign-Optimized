@@ -7,8 +7,8 @@ let allResults = [];
 let combinationsTested = 0;
 let totalCombinations = 0;
 let startTime = 0;
-let t2SizeRange = { min: 0.1, max: 15.0, step: 0.1 }; // Default, will be overwritten by payload
-const reportIntervalFactor = 200; // Report progress roughly 200 times or every second
+let t2SizeRange = { min: 0.1, max: 15.0, step: 0.1 };
+const reportIntervalFactor = 200;
 
 function formatNumberWorker(num, digits = 1, placeholder = '--') {
     const number = parseFloat(num);
@@ -24,7 +24,7 @@ function formatCriteriaForDisplayWorker(criteria, logic = null) {
     const activeKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active);
     if (activeKeys.length === 0) return 'Keine aktiven Kriterien';
 
-    const effectiveLogic = logic || criteria.logic || 'ODER'; // Default to ODER if not specified
+    const effectiveLogic = logic || criteria.logic || 'ODER';
     const separator = (effectiveLogic === 'UND') ? ' UND ' : ' ODER ';
 
     const formatValue = (key, criterion) => {
@@ -33,12 +33,11 @@ function formatCriteriaForDisplayWorker(criteria, logic = null) {
         return criterion.value || '?';
     };
 
-    // Ensure a consistent order for display
     const priorityOrder = ['size', 'kontur', 'homogenitaet', 'form', 'signal'];
     const sortedActiveKeys = [...activeKeys].sort((a, b) => {
         const indexA = priorityOrder.indexOf(a);
         const indexB = priorityOrder.indexOf(b);
-        if (indexA === -1 && indexB === -1) return a.localeCompare(b); // Fallback for unknown keys
+        if (indexA === -1 && indexB === -1) return a.localeCompare(b);
         if (indexA === -1) return 1;
         if (indexB === -1) return -1;
         return indexA - indexB;
@@ -61,18 +60,14 @@ function formatCriteriaForDisplayWorker(criteria, logic = null) {
 }
 
 function cloneDeepWorker(obj) {
-     // Simplified deep clone for worker context, assuming JSON-serializable objects
-     // structuredClone is preferred if available
      if (obj === null || typeof obj !== 'object') return obj;
      try {
          if (typeof self !== 'undefined' && self.structuredClone) {
              return self.structuredClone(obj);
          } else {
-             // Fallback for environments without structuredClone (like older Node.js for testing, though this is a Web Worker)
              return JSON.parse(JSON.stringify(obj));
          }
      } catch(e) {
-         // More robust manual fallback if structuredClone and JSON.parse fail (e.g., for complex objects not in this app's data)
          if (Array.isArray(obj)) {
              const arrCopy = [];
              for(let i = 0; i < obj.length; i++){
@@ -89,7 +84,7 @@ function cloneDeepWorker(obj) {
              }
              return objCopy;
          }
-         return obj; // Should not reach here for primitive types
+         return obj;
      }
 }
 
@@ -99,7 +94,7 @@ function checkSingleLymphNodeWorker(lymphNode, criteria) {
 
     if (criteria.size?.active) {
         const threshold = criteria.size.threshold;
-        const nodeSize = lymphNode.groesse; // Assuming 'groesse' is the correct property name from data.js
+        const nodeSize = lymphNode.groesse;
         const condition = criteria.size.condition || '>=';
         if (typeof nodeSize === 'number' && !isNaN(nodeSize) && typeof threshold === 'number' && !isNaN(threshold)) {
              switch(condition) {
@@ -121,28 +116,28 @@ function checkSingleLymphNodeWorker(lymphNode, criteria) {
 }
 
 function applyT2CriteriaToPatientWorker(patient, criteria, logic) {
-     if (!patient || !criteria || (logic !== 'UND' && logic !== 'ODER')) return null; // Patient T2 status is null if input invalid
-     const lymphNodes = patient.lymphknoten_t2; // Assuming 'lymphknoten_t2' is the correct property
+     if (!patient || !criteria || (logic !== 'UND' && logic !== 'ODER')) return null;
+     const lymphNodes = patient.lymphknoten_t2;
      if (!Array.isArray(lymphNodes)) return null;
 
      const activeKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true);
 
-     if (activeKeys.length === 0) return null; // If no criteria active, T2 status is undetermined (null)
-     if (lymphNodes.length === 0) return '-'; // If criteria active but no nodes, patient is T2 negative
+     if (activeKeys.length === 0) return null;
+     if (lymphNodes.length === 0) return '-';
 
      for (let k = 0; k < lymphNodes.length; k++) {
          const lk = lymphNodes[k];
-         if (!lk) continue; // Skip if a lymph node entry is somehow null/undefined
+         if (!lk) continue;
          const checkResult = checkSingleLymphNodeWorker(lk, criteria);
          let lkIsPositive = false;
          if (logic === 'UND') {
              lkIsPositive = activeKeys.every(key => checkResult[key] === true);
-         } else { // ODER
+         } else {
              lkIsPositive = activeKeys.some(key => checkResult[key] === true);
          }
-         if (lkIsPositive) return '+'; // Patient is positive if any lymph node is positive
+         if (lkIsPositive) return '+';
      }
-     return '-'; // Patient is negative if no lymph node met the criteria
+     return '-';
 }
 
 function calculateMetric(data, criteria, logic, metricName) {
@@ -152,7 +147,7 @@ function calculateMetric(data, criteria, logic, metricName) {
     data.forEach(p => {
         if(!p || typeof p !== 'object') return;
         const predictedT2 = applyT2CriteriaToPatientWorker(p, criteria, logic);
-        const actualN = p.n === '+'; // Assuming 'n' is the gold standard property
+        const actualN = p.n === '+';
         const validN = p.n === '+' || p.n === '-';
         const validT2 = predictedT2 === '+' || predictedT2 === '-';
 
@@ -166,9 +161,9 @@ function calculateMetric(data, criteria, logic, metricName) {
     });
 
     const total = rp + fp + fn + rn;
-    if (total === 0) return NaN; // Or -Infinity depending on preference for "no data"
+    if (total === 0) return NaN;
 
-    const sens = (rp + fn) > 0 ? rp / (rp + fn) : 0; // Default to 0 if denominator is 0
+    const sens = (rp + fn) > 0 ? rp / (rp + fn) : 0;
     const spez = (fp + rn) > 0 ? rn / (fp + rn) : 0;
     const ppv = (rp + fp) > 0 ? rp / (rp + fp) : 0;
     const npv = (fn + rn) > 0 ? rn / (fn + rn) : 0;
@@ -190,18 +185,17 @@ function calculateMetric(data, criteria, logic, metricName) {
         case 'NPV':
             result = npv;
             break;
-        default: // Default to Balanced Accuracy as a robust metric
+        default:
             result = (isNaN(sens) || isNaN(spez)) ? NaN : (sens + spez) / 2.0;
             break;
     }
-    return isNaN(result) ? -Infinity : result; // Return -Infinity for sorting purposes if NaN
+    return isNaN(result) ? -Infinity : result;
 }
 
 function generateCriteriaCombinations() {
     const CRITERIA_KEYS = ['size', 'form', 'kontur', 'homogenitaet', 'signal'];
-    // These values should align with APP_CONFIG.T2_CRITERIA_SETTINGS in the main app for consistency
     const VALUE_OPTIONS = {
-        size: [], // Will be populated by t2SizeRange
+        size: [],
         form: ['rund', 'oval'],
         kontur: ['scharf', 'irregulär'],
         homogenitaet: ['homogen', 'heterogen'],
@@ -209,15 +203,13 @@ function generateCriteriaCombinations() {
     };
     const LOGICS = ['UND', 'ODER'];
 
-    // Populate size options from t2SizeRange received in payload
     const { min, max, step } = t2SizeRange;
     if (min !== undefined && max !== undefined && step !== undefined && step > 0) {
         for (let s = min * 10; s <= max * 10; s += step * 10) { VALUE_OPTIONS.size.push(parseFloat((s / 10).toFixed(1))); }
-        if (!VALUE_OPTIONS.size.includes(min)) VALUE_OPTIONS.size.unshift(min); // Ensure min/max are included
+        if (!VALUE_OPTIONS.size.includes(min)) VALUE_OPTIONS.size.unshift(min);
         if (!VALUE_OPTIONS.size.includes(max)) VALUE_OPTIONS.size.push(max);
-        VALUE_OPTIONS.size = [...new Set(VALUE_OPTIONS.size)].sort((a, b) => a - b); // Deduplicate and sort
+        VALUE_OPTIONS.size = [...new Set(VALUE_OPTIONS.size)].sort((a, b) => a - b);
     } else {
-        // Fallback if t2SizeRange is not properly defined (should not happen)
         VALUE_OPTIONS.size = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         console.warn("BruteForceWorker: t2SizeRange not properly defined, using default size range.");
     }
@@ -227,7 +219,6 @@ function generateCriteriaCombinations() {
     let calculatedTotal = 0;
     const numCriteria = CRITERIA_KEYS.length;
 
-    // Iterate through all possible subsets of criteria (1 to 2^numCriteria - 1)
     for (let i = 1; i < (1 << numCriteria); i++) {
         const baseTemplate = {};
         const currentActive = [];
@@ -237,12 +228,10 @@ function generateCriteriaCombinations() {
             if (isActive) currentActive.push(key);
         });
 
-        // Recursive function to generate value combinations for active criteria
         function generateValues(keyIndex, currentCombo) {
-            if (keyIndex === currentActive.length) { // All active criteria have values assigned
+            if (keyIndex === currentActive.length) {
                 LOGICS.forEach(logic => {
                     const finalCombo = cloneDeepWorker(currentCombo);
-                    // Ensure all criteria keys are present, even if inactive
                     CRITERIA_KEYS.forEach(k => {
                         if (!finalCombo[k]) finalCombo[k] = { active: false };
                     });
@@ -254,7 +243,7 @@ function generateCriteriaCombinations() {
 
             const currentKey = currentActive[keyIndex];
             const options = VALUE_OPTIONS[currentKey];
-            if (!options || options.length === 0) { // Skip if no options for this key (e.g. size not populated)
+            if (!options || options.length === 0) {
                 generateValues(keyIndex + 1, currentCombo);
                 return;
             }
@@ -263,7 +252,7 @@ function generateCriteriaCombinations() {
                 const nextCombo = cloneDeepWorker(currentCombo);
                 if (currentKey === 'size') {
                     nextCombo[currentKey].threshold = value;
-                    nextCombo[currentKey].condition = '>='; // Default condition for brute force
+                    nextCombo[currentKey].condition = '>=';
                 } else {
                     nextCombo[currentKey].value = value;
                 }
@@ -272,7 +261,7 @@ function generateCriteriaCombinations() {
         }
         generateValues(0, baseTemplate);
     }
-    totalCombinations = calculatedTotal; // Store the actual number of combinations to be tested
+    totalCombinations = calculatedTotal;
     return combinations;
 }
 
@@ -301,16 +290,15 @@ function runBruteForce() {
     let lastReportTime = performance.now();
 
     for (let i = 0; i < allCombinations.length; i++) {
-        if (!isRunning) break; // Check for cancellation
+        if (!isRunning) break;
 
         const combo = allCombinations[i];
-        let metricValue = -Infinity; // Initialize with a very low value
+        let metricValue = -Infinity;
 
         try {
             metricValue = calculateMetric(currentData, combo.criteria, combo.logic, targetMetric);
         } catch (error) {
-            metricValue = -Infinity; // Handle potential errors during calculation
-            // console.error("Error calculating metric in worker:", error, combo);
+            metricValue = -Infinity;
         }
 
         const result = { logic: combo.logic, criteria: combo.criteria, metricValue: metricValue };
@@ -329,7 +317,7 @@ function runBruteForce() {
                     tested: combinationsTested,
                     total: totalCombinations,
                     currentBest: bestResult.criteria ? cloneDeepWorker(bestResult) : null,
-                    metric: targetMetric // Pass targetMetric for UI display
+                    metric: targetMetric
                 }
             });
             lastReportTime = now;
@@ -337,14 +325,14 @@ function runBruteForce() {
     }
     const endTime = performance.now();
 
-    if(isRunning) { // Ensure results are only sent if not cancelled
+    if(isRunning) {
         const validResults = allResults.filter(r => r && isFinite(r.metricValue));
-        validResults.sort((a, b) => b.metricValue - a.metricValue); // Sort by metric value descending
+        validResults.sort((a, b) => b.metricValue - a.metricValue);
 
         const topResults = [];
-        const precision = 1e-8; // For comparing floating point metric values
+        const precision = 1e-8;
         let rank = 0;
-        let countAtRank = 0; // Not strictly needed for top 10, but good for full ranking logic
+        let countAtRank = 0;
         let lastScore = Infinity;
 
         for(let i = 0; i < validResults.length; i++) {
@@ -352,33 +340,31 @@ function runBruteForce() {
             const isNewRank = Math.abs(currentScore - lastScore) > precision;
 
             if(isNewRank) {
-                rank = i + 1; // Rank is 1-based index of distinct scores
+                rank = i + 1;
                 countAtRank = 1;
             } else {
                 countAtRank++;
             }
             lastScore = currentScore;
 
-            if (rank <= 10) { // Get top 10 ranks
+            if (rank <= 10) {
                 topResults.push(validResults[i]);
             } else {
-                // If next item has same score as 10th, include it (tie for 10th place)
                 if(rank === 11 && Math.abs(currentScore - (topResults[topResults.length - 1]?.metricValue ?? -Infinity)) < precision) {
                     topResults.push(validResults[i]);
                 } else {
-                    break; // Stop if we are past rank 10 and it's a new lower score
+                    break;
                 }
             }
         }
-        // Ensure bestResult is indeed the top one if list is not empty
         const finalBest = bestResult.criteria ? cloneDeepWorker(bestResult) : (topResults[0] ? cloneDeepWorker(topResults[0]) : null);
 
         self.postMessage({
             type: 'result',
             payload: {
-                results: topResults.map(r => ({ // Map to ensure only necessary data is sent
+                results: topResults.map(r => ({
                     logic: r.logic,
-                    criteria: r.criteria, // Consider cloning if mutations are a concern later
+                    criteria: r.criteria,
                     metricValue: r.metricValue
                 })),
                 bestResult: finalBest,
@@ -389,7 +375,7 @@ function runBruteForce() {
             }
         });
     }
-    isRunning = false; // Reset state
+    isRunning = false;
     currentData = [];
     allResults = [];
 }
@@ -413,7 +399,7 @@ self.onmessage = function(event) {
             currentData = payload.data;
             targetMetric = payload.metric;
             kollektivName = payload.kollektiv;
-            t2SizeRange = payload.t2SizeRange; // Set the size range from payload
+            t2SizeRange = payload.t2SizeRange;
 
             if (currentData.length === 0) {
                 throw new Error("Leeres Datenset für Brute-Force erhalten.");
@@ -427,14 +413,13 @@ self.onmessage = function(event) {
         }
     } else if (action === 'cancel') {
         if (isRunning) {
-            isRunning = false; // Signal to stop the loop
+            isRunning = false;
             self.postMessage({ type: 'cancelled' });
         }
     }
 };
 
-// Generic error handler for the worker itself
 self.onerror = function(error) {
     self.postMessage({ type: 'error', payload: { message: `Worker Error: ${error.message || 'Unbekannter Fehler im Worker'}` } });
-    isRunning = false; // Ensure worker state is reset on error
+    isRunning = false;
 };
