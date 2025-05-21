@@ -31,7 +31,7 @@ const state = (() => {
             auswertungTableSort: cloneDeep(defaultState.auswertungTableSort),
             activeTabId: defaultState.activeTabId
         };
-        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) { // Veralteten Key entfernen
+        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) {
             localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
         }
     }
@@ -169,9 +169,8 @@ const state = (() => {
             currentState.currentPresentationView = newView;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW, currentState.currentPresentationView);
             if (newView === 'as-pur') {
-                setCurrentPresentationStudyId(null); // Reset study ID when switching to 'as-pur'
+                setCurrentPresentationStudyId(null);
             } else if (!currentState.currentPresentationStudyId && newView === 'as-vs-t2') {
-                 // If no study ID is set for 'as-vs-t2', default to applied criteria
                 setCurrentPresentationStudyId(APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID);
             }
             return true;
