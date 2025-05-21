@@ -1,61 +1,65 @@
-function getKollektivDisplayName(kollektivId) {
-    const displayName = UI_TEXTS?.kollektivDisplayNames?.[kollektivId] || kollektivId || 'Unbekannt';
-    return displayName;
+function getKollektivDisplayName(kollektivId, lang = 'de') {
+    const langKey = lang === 'en' ? 'en' : 'de';
+    if (UI_TEXTS && UI_TEXTS.kollektivDisplayNames && UI_TEXTS.kollektivDisplayNames[kollektivId] && UI_TEXTS.kollektivDisplayNames[kollektivId][langKey]) {
+        return UI_TEXTS.kollektivDisplayNames[kollektivId][langKey];
+    }
+    return kollektivId || (langKey === 'de' ? 'Unbekannt' : 'Unknown');
 }
 
-function formatNumber(num, digits = 1, placeholder = '--', useStandardFormat = false) {
+function formatNumber(num, digits = 1, placeholder = '--', useStandardFormat = false, lang = 'de') {
     const number = parseFloat(num);
     if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
         return placeholder;
     }
-    if (useStandardFormat) {
+    if (useStandardFormat) { // Used for inputs or worker, where locale might cause issues
         return number.toFixed(digits);
     }
     try {
-        return number.toLocaleString('de-DE', {
+        const currentLocale = lang === 'de' ? 'de-DE' : 'en-US';
+        return number.toLocaleString(currentLocale, {
             minimumFractionDigits: digits,
             maximumFractionDigits: digits
         });
     } catch (e) {
-        console.error("Fehler bei formatNumber mit de-DE Locale:", e);
-        return number.toFixed(digits);
+        return number.toFixed(digits); // Fallback
     }
 }
 
-function formatPercent(num, digits = 1, placeholder = '--%') {
+function formatPercent(num, digits = 1, placeholder = '--%', lang = 'de') {
     const number = parseFloat(num);
     if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
         return placeholder;
     }
     try {
-        return new Intl.NumberFormat('de-DE', {
+        const currentLocale = lang === 'de' ? 'de-DE' : 'en-US';
+        return new Intl.NumberFormat(currentLocale, {
             style: 'percent',
             minimumFractionDigits: digits,
             maximumFractionDigits: digits
         }).format(number);
     } catch (e) {
-        console.error("Fehler bei formatPercent mit de-DE Locale:", e);
-        return (number * 100).toFixed(digits) + '%';
+        return (number * 100).toFixed(digits) + '%'; // Fallback
     }
 }
 
-function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeholder = '--') {
+function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeholder = '--', lang = 'de') {
     const formatFn = isPercent ? formatPercent : formatNumber;
-    const formattedValue = formatFn(value, digits, placeholder);
+    const formattedValue = formatFn(value, digits, placeholder, lang);
 
     if (formattedValue === placeholder) {
         return placeholder;
     }
 
-    const formattedLower = formatFn(ciLower, digits, null);
-    const formattedUpper = formatFn(ciUpper, digits, null);
+    const formattedLower = formatFn(ciLower, digits, null, lang);
+    const formattedUpper = formatFn(ciUpper, digits, null, lang);
 
-    if (formattedLower !== null && formattedUpper !== null) {
-        const valueWithoutPercent = isPercent ? formattedValue.replace('%','') : formattedValue;
-        const lowerStr = isPercent ? formattedLower.replace('%','') : formattedLower;
-        const upperStr = isPercent ? formattedUpper.replace('%','') : formattedUpper;
-        const ciStr = `(${lowerStr}\u00A0-\u00A0${upperStr})`;
-        return `${valueWithoutPercent} ${ciStr}${isPercent ? '%' : ''}`;
+    if (formattedLower !== null && formattedUpper !== null && formattedLower !== placeholder && formattedUpper !== placeholder) {
+        const valueWithoutUnit = isPercent ? formattedValue.slice(0, -1) : formattedValue;
+        const lowerStr = isPercent ? formattedLower.slice(0, -1) : formattedLower;
+        const upperStr = isPercent ? formattedUpper.slice(0, -1) : formattedUpper;
+        const ciLabel = lang === 'de' ? '95% KI' : '95% CI';
+        const ciStr = `(${ciLabel}: ${lowerStr}\u00A0–\u00A0${upperStr})`; // Using non-breaking space
+        return `${valueWithoutUnit} ${ciStr}${isPercent ? '%' : ''}`;
     } else {
         return formattedValue;
     }
@@ -78,13 +82,11 @@ function getCurrentDateString(format = 'YYYY-MM-DD') {
 
 function saveToLocalStorage(key, value) {
     if (typeof key !== 'string' || key.length === 0) {
-        console.error("saveToLocalStorage: Ungültiger Schlüssel angegeben.");
         return;
     }
     try {
         localStorage.setItem(key, JSON.stringify(value));
     } catch (e) {
-        console.error(`Fehler beim Speichern im Local Storage (Schlüssel: ${key}):`, e);
         if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showToast === 'function') {
             ui_helpers.showToast(`Speichern der Einstellung '${key}' fehlgeschlagen.`, 'warning');
         }
@@ -93,19 +95,16 @@ function saveToLocalStorage(key, value) {
 
 function loadFromLocalStorage(key) {
     if (typeof key !== 'string' || key.length === 0) {
-        console.error("loadFromLocalStorage: Ungültiger Schlüssel angegeben.");
         return null;
     }
     try {
         const item = localStorage.getItem(key);
         return (item !== null && item !== undefined) ? JSON.parse(item) : null;
     } catch (e) {
-        console.warn(`Fehler beim Laden aus dem Local Storage (Schlüssel: ${key}): ${e.message}. Lösche ggf. Eintrag.`);
         try {
             localStorage.removeItem(key);
-            console.log(`Fehlerhafter Eintrag für Schlüssel '${key}' aus Local Storage entfernt.`);
         } catch (removeError) {
-             console.error(`Fehler beim Entfernen des fehlerhaften Eintrags (Schlüssel: ${key}):`, removeError);
+            // log if necessary
         }
         return null;
     }
@@ -139,7 +138,6 @@ function cloneDeep(obj) {
             return JSON.parse(JSON.stringify(obj));
          }
     } catch (e) {
-        console.warn("Fehler beim Deep Cloning via structuredClone/JSON, versuche Fallback:", e);
         if (Array.isArray(obj)) {
              const arrCopy = [];
              for(let i = 0; i < obj.length; i++){
@@ -178,7 +176,7 @@ function deepMerge(target, ...sources) {
                     output[key] = sourceValue;
                 }
             });
-        } else if(isObject(sourceCopy)) {
+        } else if(isObject(sourceCopy)) { // if target is not an object but source is, replace target
             output = sourceCopy;
         }
     });
@@ -192,7 +190,6 @@ function getObjectValueByPath(obj, path) {
     try {
         return path.split('.').reduce((acc, part) => acc && acc[part], obj);
     } catch (e) {
-        console.warn(`Fehler beim Zugriff auf Pfad '${path}':`, e);
         return undefined;
     }
 }
@@ -214,7 +211,7 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
                 valA = getSubStatusValue(a, subKey);
                 valB = getSubStatusValue(b, subKey);
             }
-            else if (key === 'status') {
+            else if (key === 'status') { // Combined status sort
                 const getCombinedStatusValue = (p) => {
                     if (!p) return -Infinity;
                     let value = 0;
@@ -240,9 +237,9 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
                  };
                  const countsA = getCounts(a, key);
                  const countsB = getCounts(b, key);
-                 valA = countsA.plus;
+                 valA = countsA.plus; // Primary sort by positive count
                  valB = countsB.plus;
-                 if (valA === valB || (isNaN(valA) && isNaN(valB))) {
+                 if (valA === valB || (isNaN(valA) && isNaN(valB))) { // Secondary sort by total count
                      valA = countsA.total;
                      valB = countsB.total;
                  }
@@ -256,7 +253,7 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
              const isInvalidB = valB === null || valB === undefined || (typeof valB === 'number' && isNaN(valB));
 
              if (isInvalidA && isInvalidB) return 0;
-             if (isInvalidA) return 1 * dirModifier;
+             if (isInvalidA) return 1 * dirModifier; // Invalid values last for asc, first for desc
              if (isInvalidB) return -1 * dirModifier;
 
              if (typeof valA === 'string' && typeof valB === 'string') {
@@ -269,17 +266,16 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
                  return (valA === valB ? 0 : (valA ? 1 : -1)) * dirModifier;
              }
 
+             // Fallback comparison
              try {
                  return String(valA).localeCompare(String(valB), 'de-DE', { sensitivity: 'base', numeric: true }) * dirModifier;
              } catch (e) {
-                  console.warn("Fallback string comparison failed:", e);
                   if (valA < valB) return -1 * dirModifier;
                   if (valA > valB) return 1 * dirModifier;
                   return 0;
              }
 
         } catch (error) {
-             console.error("Fehler während der Sortierung:", error, "Key:", key, "SubKey:", subKey, "A:", a, "B:", b);
              return 0;
         }
     };
@@ -291,21 +287,27 @@ function getStatisticalSignificanceSymbol(pValue, significanceLevel = APP_CONFIG
     if (pValue < 0.001) return '***';
     if (pValue < 0.01) return '**';
     if (pValue < level) return '*';
-    return 'ns';
+    return 'ns'; // Not significant
 }
 
-function getStatisticalSignificanceText(pValue, significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL) {
+function getStatisticalSignificanceText(pValue, significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, lang = 'de') {
      if (pValue === null || pValue === undefined || isNaN(pValue)) return '';
+     const langKey = lang === 'en' ? 'en' : 'de';
      const level = significanceLevel;
+     const texts = UI_TEXTS.statMetrics.signifikanzTexte || {
+         SIGNIFIKANT: { de: 'statistisch signifikant', en: 'statistically significant'},
+         NICHT_SIGNIFIKANT: { de: 'statistisch nicht signifikant', en: 'statistically not significant'}
+     };
      return pValue < level
-         ? UI_TEXTS.statMetrics.signifikanzTexte.SIGNIFIKANT || 'statistisch signifikant'
-         : UI_TEXTS.statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT || 'statistisch nicht signifikant';
+         ? (texts.SIGNIFIKANT[langKey] || texts.SIGNIFIKANT.de)
+         : (texts.NICHT_SIGNIFIKANT[langKey] || texts.NICHT_SIGNIFIKANT.de);
 }
 
 function generateUUID() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();
     } else {
+        // Fallback for environments without crypto.randomUUID
         let d = new Date().getTime();
         let d2 = (typeof performance !== 'undefined' && performance.now && (performance.now() * 1000)) || 0;
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -327,7 +329,6 @@ function clampNumber(num, min, max) {
     const minVal = parseFloat(min);
     const maxVal = parseFloat(max);
     if(isNaN(number) || isNaN(minVal) || isNaN(maxVal)) {
-        console.warn(`Ungültige Eingabe für clampNumber: num=${num}, min=${min}, max=${max}`);
         return NaN;
     };
     return Math.min(Math.max(number, minVal), maxVal);
@@ -342,23 +343,40 @@ function arraysAreEqual(arr1, arr2) {
     return true;
 }
 
-function getAUCBewertung(aucValue) {
+function getAUCBewertung(aucValue, lang = 'de') {
     const value = parseFloat(aucValue);
+    const langKey = lang === 'en' ? 'en' : 'de';
+    const bewertungen = {
+        exzellent: { de: 'exzellent', en: 'excellent' },
+        gut: { de: 'gut', en: 'good' },
+        moderat: { de: 'moderat', en: 'fair' }, // 'fair' is common for AUC 0.7-0.8
+        schwach: { de: 'schwach', en: 'poor' }, // 'poor' for AUC 0.5-0.7
+        nicht_informativ: { de: 'nicht informativ', en: 'not informative' } // AUC <= 0.5
+    };
+
     if (isNaN(value) || value < 0 || value > 1) return 'N/A';
-    if (value >= 0.9) return 'exzellent';
-    if (value >= 0.8) return 'gut';
-    if (value >= 0.7) return 'moderat';
-    if (value > 0.5) return 'schwach';
-    return 'nicht informativ';
+    if (value >= 0.9) return bewertungen.exzellent[langKey];
+    if (value >= 0.8) return bewertungen.gut[langKey];
+    if (value >= 0.7) return bewertungen.moderat[langKey];
+    if (value > 0.5) return bewertungen.schwach[langKey]; // Strictly > 0.5
+    return bewertungen.nicht_informativ[langKey]; // Covers value === 0.5
 }
 
-function getPhiBewertung(phiValue) {
+function getPhiBewertung(phiValue, lang = 'de') {
     const value = parseFloat(phiValue);
+    const langKey = lang === 'en' ? 'en' : 'de';
+    const texts = UI_TEXTS.statMetrics.assoziationStaerkeTexte || {
+        stark: { de: 'stark', en: 'strong'},
+        moderat: { de: 'moderat', en: 'moderate'},
+        schwach: { de: 'schwach', en: 'weak'},
+        sehr_schwach: { de: 'sehr schwach', en: 'very weak'}
+    };
+
     if (isNaN(value)) return 'N/A';
     const absPhi = Math.abs(value);
-    const texts = UI_TEXTS.statMetrics.assoziationStaerkeTexte || {};
-    if (absPhi >= 0.5) return texts.stark || 'stark';
-    if (absPhi >= 0.3) return texts.moderat || 'moderat';
-    if (absPhi >= 0.1) return texts.schwach || 'schwach';
-    return texts.sehr_schwach || 'sehr schwach';
+
+    if (absPhi >= 0.5) return texts.stark[langKey] || texts.stark.de;
+    if (absPhi >= 0.3) return texts.moderat[langKey] || texts.moderat.de;
+    if (absPhi >= 0.1) return texts.schwach[langKey] || texts.schwach.de;
+    return texts.sehr_schwach[langKey] || texts.sehr_schwach.de;
 }
