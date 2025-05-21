@@ -122,8 +122,8 @@ function applyT2CriteriaToPatientWorker(patient, criteria, logic) {
 
      const activeKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true);
 
-     if (activeKeys.length === 0) return null; // No active criteria, patient cannot be positive or negative based on them
-     if (lymphNodes.length === 0) return '-'; // No lymph nodes to evaluate, patient is negative
+     if (activeKeys.length === 0) return null;
+     if (lymphNodes.length === 0) return '-';
 
      for (let k = 0; k < lymphNodes.length; k++) {
          const lk = lymphNodes[k];
@@ -132,12 +132,12 @@ function applyT2CriteriaToPatientWorker(patient, criteria, logic) {
          let lkIsPositive = false;
          if (logic === 'UND') {
              lkIsPositive = activeKeys.every(key => checkResult[key] === true);
-         } else { // ODER
+         } else {
              lkIsPositive = activeKeys.some(key => checkResult[key] === true);
          }
-         if (lkIsPositive) return '+'; // If any lymph node is positive, the patient is positive
+         if (lkIsPositive) return '+';
      }
-     return '-'; // No lymph node met the criteria
+     return '-';
 }
 
 function calculateMetric(data, criteria, logic, metricName) {
@@ -161,7 +161,7 @@ function calculateMetric(data, criteria, logic, metricName) {
     });
 
     const total = rp + fp + fn + rn;
-    if (total === 0) return NaN; // No valid comparable cases
+    if (total === 0) return NaN;
 
     const sens = (rp + fn) > 0 ? rp / (rp + fn) : 0;
     const spez = (fp + rn) > 0 ? rn / (fp + rn) : 0;
@@ -185,17 +185,17 @@ function calculateMetric(data, criteria, logic, metricName) {
         case 'NPV':
             result = npv;
             break;
-        default: // Fallback to Balanced Accuracy if metricName is unknown
+        default:
             result = (isNaN(sens) || isNaN(spez)) ? NaN : (sens + spez) / 2.0;
             break;
     }
-    return isNaN(result) ? -Infinity : result; // Return -Infinity for sorting if metric is NaN
+    return isNaN(result) ? -Infinity : result;
 }
 
 function generateCriteriaCombinations() {
     const CRITERIA_KEYS = ['size', 'form', 'kontur', 'homogenitaet', 'signal'];
     const VALUE_OPTIONS = {
-        size: [], // Dynamically filled
+        size: [],
         form: ['rund', 'oval'],
         kontur: ['scharf', 'irregulär'],
         homogenitaet: ['homogen', 'heterogen'],
@@ -203,18 +203,15 @@ function generateCriteriaCombinations() {
     };
     const LOGICS = ['UND', 'ODER'];
 
-    // Populate size options based on t2SizeRange
     const { min, max, step } = t2SizeRange;
     if (min !== undefined && max !== undefined && step !== undefined && step > 0) {
         for (let s = Math.round(min * 10); s <= Math.round(max * 10); s += Math.round(step * 10)) {
             VALUE_OPTIONS.size.push(parseFloat((s / 10).toFixed(1)));
         }
-        // Ensure min and max are included if step doesn't hit them exactly
         if (!VALUE_OPTIONS.size.includes(min)) VALUE_OPTIONS.size.unshift(min);
         if (!VALUE_OPTIONS.size.includes(max) && max > (VALUE_OPTIONS.size[VALUE_OPTIONS.size.length-1] || 0) ) VALUE_OPTIONS.size.push(max);
-        VALUE_OPTIONS.size = [...new Set(VALUE_OPTIONS.size)].sort((a, b) => a - b); // Remove duplicates and sort
+        VALUE_OPTIONS.size = [...new Set(VALUE_OPTIONS.size)].sort((a, b) => a - b);
     } else {
-        // Fallback if t2SizeRange is not properly defined
         VALUE_OPTIONS.size = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
     }
 
@@ -223,7 +220,6 @@ function generateCriteriaCombinations() {
     let calculatedTotal = 0;
     const numCriteria = CRITERIA_KEYS.length;
 
-    // Iterate through all possible subsets of criteria (at least one active)
     for (let i = 1; i < (1 << numCriteria); i++) {
         const baseTemplate = {};
         const currentActiveKeys = [];
@@ -233,26 +229,23 @@ function generateCriteriaCombinations() {
             if (isActive) currentActiveKeys.push(key);
         });
 
-        // Recursive function to generate value combinations for active criteria
         function generateValues(keyIndex, currentComboInProgress) {
             if (keyIndex === currentActiveKeys.length) {
-                // All active criteria have values, now add logic combinations
                 LOGICS.forEach(logic => {
                     const finalCombo = cloneDeepWorker(currentComboInProgress);
-                    // Ensure inactive criteria are present with active: false
                     CRITERIA_KEYS.forEach(k => {
                         if (!finalCombo[k]) finalCombo[k] = { active: false };
                     });
                     combinations.push({ logic: logic, criteria: finalCombo });
                 });
-                calculatedTotal += LOGICS.length; // Each full value combo results in 2 logic combos
+                calculatedTotal += LOGICS.length;
                 return;
             }
 
             const currentKey = currentActiveKeys[keyIndex];
             const optionsForKey = VALUE_OPTIONS[currentKey];
 
-            if (!optionsForKey || optionsForKey.length === 0) { // Should not happen for defined keys if VALUE_OPTIONS is correct
+            if (!optionsForKey || optionsForKey.length === 0) {
                 generateValues(keyIndex + 1, currentComboInProgress);
                 return;
             }
@@ -261,7 +254,7 @@ function generateCriteriaCombinations() {
                 const nextCombo = cloneDeepWorker(currentComboInProgress);
                 if (currentKey === 'size') {
                     nextCombo[currentKey].threshold = value;
-                    nextCombo[currentKey].condition = '>='; // Default condition for brute force size
+                    nextCombo[currentKey].condition = '>=';
                 } else {
                     nextCombo[currentKey].value = value;
                 }
@@ -299,7 +292,7 @@ function runBruteForce() {
     let lastReportTime = performance.now();
 
     for (let i = 0; i < allCombinations.length; i++) {
-        if (!isRunning) break; // Allow cancellation
+        if (!isRunning) break;
 
         const combo = allCombinations[i];
         let metricValue = -Infinity;
@@ -307,8 +300,7 @@ function runBruteForce() {
         try {
             metricValue = calculateMetric(currentData, combo.criteria, combo.logic, targetMetric);
         } catch (error) {
-            // console.error("Worker: Fehler bei calculateMetric für Kombination", combo, error);
-            metricValue = -Infinity; // Ensure errors don't produce a high score
+            metricValue = -Infinity;
         }
 
         const result = { logic: combo.logic, criteria: combo.criteria, metricValue: metricValue };
@@ -320,7 +312,7 @@ function runBruteForce() {
         combinationsTested++;
         const now = performance.now();
 
-        if (combinationsTested % reportInterval === 0 || combinationsTested === totalCombinations || (now - lastReportTime > 1000)) { // Report every 1s at least
+        if (combinationsTested % reportInterval === 0 || combinationsTested === totalCombinations || (now - lastReportTime > 1000)) {
             self.postMessage({
                 type: 'progress',
                 payload: {
@@ -335,12 +327,12 @@ function runBruteForce() {
     }
     const endTime = performance.now();
 
-    if(isRunning) { // Check if not cancelled before sending final results
+    if(isRunning) {
         const validResults = allResults.filter(r => r && isFinite(r.metricValue) && r.metricValue !== null && r.metricValue !== undefined);
         validResults.sort((a, b) => b.metricValue - a.metricValue);
 
         const topResults = [];
-        const precision = 1e-8; // For comparing floating point metric values
+        const precision = 1e-8;
         let rank = 0;
         let lastScore = Infinity;
 
@@ -353,14 +345,13 @@ function runBruteForce() {
             }
             lastScore = currentScore;
 
-            if (rank <= 10) { // Add if within top 10 ranks
+            if (rank <= 10) {
                 topResults.push(validResults[i]);
             } else {
-                // If rank is 11 but score is same as 10th, include it
                 if(rank === 11 && topResults.length > 0 && Math.abs(currentScore - (topResults[topResults.length - 1]?.metricValue ?? -Infinity)) < precision) {
                     topResults.push(validResults[i]);
                 } else {
-                    break; // Stop if beyond top 10 distinct ranks (or tied with 10th)
+                    break;
                 }
             }
         }
@@ -369,7 +360,7 @@ function runBruteForce() {
         self.postMessage({
             type: 'result',
             payload: {
-                results: topResults.map(r => ({ // Send only necessary fields
+                results: topResults.map(r => ({
                     logic: r.logic,
                     criteria: r.criteria,
                     metricValue: r.metricValue
@@ -383,20 +374,18 @@ function runBruteForce() {
         });
     }
     isRunning = false;
-    currentData = []; // Clear data after run
+    currentData = [];
     allResults = [];
 }
 
 self.onmessage = function(event) {
     if (!event || !event.data) {
-        // console.error("Worker: Ungültige Nachricht empfangen.");
         return;
     }
     const { action, payload } = event.data;
 
     if (action === 'start') {
         if (isRunning) {
-            // console.warn("Worker läuft bereits. Startanfrage ignoriert.");
             return;
         }
         try {
@@ -406,7 +395,7 @@ self.onmessage = function(event) {
             currentData = payload.data;
             targetMetric = payload.metric;
             kollektivName = payload.kollektiv;
-            t2SizeRange = payload.t2SizeRange; // Store the passed t2SizeRange
+            t2SizeRange = payload.t2SizeRange;
 
             if (currentData.length === 0) {
                 throw new Error("Leeres Datenset für Brute-Force erhalten.");
@@ -420,13 +409,13 @@ self.onmessage = function(event) {
         }
     } else if (action === 'cancel') {
         if (isRunning) {
-            isRunning = false; // Signal to stop the loop in runBruteForce
+            isRunning = false;
             self.postMessage({ type: 'cancelled' });
         }
     }
 };
 
-self.onerror = function(error) { // Catches unhandled errors in the worker
+self.onerror = function(error) {
     self.postMessage({ type: 'error', payload: { message: `Worker Error: ${error.message || 'Unbekannter Fehler im Worker'}` } });
-    isRunning = false; // Ensure worker state is reset on error
+    isRunning = false;
 };
