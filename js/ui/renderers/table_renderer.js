@@ -1,18 +1,18 @@
 const tableRenderer = (() => {
 
-    function _createDatenDetailRowContent(patient) { // Umbenannt von _createPatientDetailRowContent
+    function _createDatenDetailRowContent(patient) {
          if (!Array.isArray(patient.lymphknoten_t2) || patient.lymphknoten_t2.length === 0) {
              return '<p class="m-0 p-2 text-muted small">Keine T2-Lymphknoten für diesen Patienten erfasst.</p>';
          }
 
          let content = '<h6 class="w-100 mb-2 ps-1">T2 Lymphknoten Merkmale:</h6>';
          patient.lymphknoten_t2.forEach((lk, index) => {
-            if (!lk) return; // Should be handled by data_processor
+            if (!lk) return;
             const groesseText = formatNumber(lk.groesse, 1, 'N/A');
             const formText = lk.form || '--';
             const konturText = lk.kontur || '--';
             const homogenitaetText = lk.homogenitaet || '--';
-            const signalText = lk.signal || 'N/A'; // 'N/A' if null, as null means not classifiable to a specific signal type
+            const signalText = lk.signal || 'N/A';
 
             const signalIcon = ui_helpers.getT2IconSVG('signal', lk.signal);
             const formIcon = ui_helpers.getT2IconSVG('form', lk.form);
@@ -39,16 +39,16 @@ const tableRenderer = (() => {
          return content;
     }
 
-    function createDatenTableRow(patient) { // Umbenannt von createPatientTableRow
+    function createDatenTableRow(patient) {
         if (!patient || typeof patient.nr !== 'number') return '';
-        const rowId = `daten-row-${patient.nr}`; // ID angepasst
-        const detailRowId = `daten-detail-${patient.nr}`; // ID angepasst
+        const rowId = `daten-row-${patient.nr}`;
+        const detailRowId = `daten-detail-${patient.nr}`;
         const hasT2Nodes = Array.isArray(patient.lymphknoten_t2) && patient.lymphknoten_t2.length > 0;
         const geschlechtText = patient.geschlecht === 'm' ? UI_TEXTS.legendLabels.male : patient.geschlecht === 'f' ? UI_TEXTS.legendLabels.female : UI_TEXTS.legendLabels.unknownGender;
         const therapieText = getKollektivDisplayName(patient.therapie);
         const naPlaceholder = '--';
 
-        const tooltipNr = TOOLTIP_CONTENT.datenTable.nr || 'Nr.'; // Angepasst an texts.js
+        const tooltipNr = TOOLTIP_CONTENT.datenTable.nr || 'Nr.';
         const tooltipName = TOOLTIP_CONTENT.datenTable.name || 'Name';
         const tooltipVorname = TOOLTIP_CONTENT.datenTable.vorname || 'Vorname';
         const tooltipGeschlecht = TOOLTIP_CONTENT.datenTable.geschlecht || 'Geschlecht';
@@ -60,7 +60,7 @@ const tableRenderer = (() => {
         const tooltipExpand = hasT2Nodes ? (TOOLTIP_CONTENT.datenTable.expandRow || 'Details anzeigen/ausblenden') : 'Keine T2-Lymphknoten Details verfügbar';
 
         const t2StatusIcon = patient.t2 === '+' ? 'plus' : patient.t2 === '-' ? 'minus' : 'unknown';
-        const t2StatusText = patient.t2 ?? '?'; // Default to '?' if null
+        const t2StatusText = patient.t2 ?? '?';
 
         return `
             <tr id="${rowId}" ${hasT2Nodes ? `class="clickable-row"` : ''} ${hasT2Nodes ? `data-bs-toggle="collapse"` : ''} data-bs-target="#${detailRowId}" aria-expanded="false" aria-controls="${detailRowId}">
@@ -82,7 +82,7 @@ const tableRenderer = (() => {
             </tr>
             ${hasT2Nodes ? `
             <tr class="sub-row">
-                 <td colspan="9" class="p-0 border-0"> {/* Colspan auf 9 angepasst (Anzahl Spalten) */}
+                 <td colspan="9" class="p-0 border-0">
                     <div class="collapse" id="${detailRowId}">
                         <div class="sub-row-content p-2 bg-light border-top border-bottom">
                             ${_createDatenDetailRowContent(patient)}
@@ -100,40 +100,34 @@ const tableRenderer = (() => {
 
         const activeCriteriaKeys = Object.keys(appliedCriteria || {}).filter(key => key !== 'logic' && appliedCriteria[key]?.active === true);
         const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
-        const criteriaFormatted = formatCriteriaFunc(appliedCriteria, appliedLogic, true); // shortFormat = true for brevity
+        const criteriaFormatted = formatCriteriaFunc(appliedCriteria, appliedLogic, true);
         const naPlaceholder = '--';
 
         let content = `<h6 class="w-100 mb-2 ps-1" data-tippy-content="Zeigt die Bewertung jedes einzelnen T2-Lymphknotens basierend auf den aktuell angewendeten Kriterien. Erfüllte Kriterien, die zur Positiv-Bewertung beitragen, sind hervorgehoben.">T2 LK Bewertung (Logik: ${appliedLogic || 'N/A'}, Kriterien: ${criteriaFormatted || 'N/A'})</h6>`;
 
         patient.lymphknoten_t2_bewertet.forEach((lk, index) => {
-            if (!lk || !lk.checkResult) { // Check if lk and checkResult exist
+            if (!lk || !lk.checkResult) {
                 content += `<div class="sub-row-item border rounded mb-1 p-1 w-100 align-items-center small fst-italic text-muted">LK ${index + 1}: Ungültige Bewertungsdaten</div>`;
                 return;
             }
 
             const baseClass = "sub-row-item border rounded mb-1 p-1 w-100 align-items-center small";
-            const highlightClass = lk.isPositive ? 'bg-status-red-light' : ''; // Highlight if node is positive
+            const highlightClass = lk.isPositive ? 'bg-status-red-light' : '';
             let itemContent = `<strong class="me-2">LK ${index + 1}: ${lk.isPositive ? '<span class="badge bg-danger text-white ms-1" data-tippy-content="Positiv bewertet">Pos.</span>' : '<span class="badge bg-success text-white ms-1" data-tippy-content="Negativ bewertet">Neg.</span>'}</strong>`;
 
             const formatCriterionCheck = (key, iconType, valueText, checkResultForLK) => {
-                if (!appliedCriteria?.[key]?.active) return ''; // Only show active criteria checks
+                if (!appliedCriteria?.[key]?.active) return '';
                 const checkMet = checkResultForLK[key] === true;
-                const checkFailed = checkResultForLK[key] === false; // Explicitly check for false, null means not applicable/not met
+                const checkFailed = checkResultForLK[key] === false;
                 let hlClass = '';
 
-                // Highlight logic for individual criteria contributing to positivity/negativity
-                if (lk.isPositive) { // If the LK as a whole is positive
-                    if (checkMet && (appliedLogic === 'ODER' || appliedLogic === 'UND')) { // Highlight met criteria
+                if (lk.isPositive) {
+                    if (checkMet && (appliedLogic === 'ODER' || appliedLogic === 'UND')) {
                         hlClass = 'highlight-suspekt-feature';
                     }
-                } else { // If the LK as a whole is negative
-                    // For 'UND' logic, a failed criterion makes the LK negative.
-                    // For 'ODER' logic, this highlighting isn't as straightforward for negativity based on individual failed criteria.
-                    // We'll keep it simple: no specific highlight for individual failed criteria if LK is negative,
-                    // as the overall negativity already conveys the outcome.
                 }
 
-                const icon = ui_helpers.getT2IconSVG(iconType || key, valueText); // Pass actual value for icon generation
+                const icon = ui_helpers.getT2IconSVG(iconType || key, valueText);
                 const text = valueText || naPlaceholder;
                 const tooltipKey = 't2' + key.charAt(0).toUpperCase() + key.slice(1);
                 const tooltipBase = TOOLTIP_CONTENT[tooltipKey]?.description || `Merkmal ${key}`;
@@ -197,7 +191,7 @@ const tableRenderer = (() => {
             </tr>
              ${hasBewerteteNodes ? `
             <tr class="sub-row">
-                 <td colspan="8" class="p-0 border-0"> {/* Colspan auf 8 angepasst */}
+                 <td colspan="8" class="p-0 border-0">
                     <div class="collapse" id="${detailRowId}">
                         <div class="sub-row-content p-2 bg-light border-top border-bottom">
                            ${_createAuswertungDetailRowContent(patient, appliedCriteria, appliedLogic)}
@@ -209,7 +203,7 @@ const tableRenderer = (() => {
     }
 
     return Object.freeze({
-        createDatenTableRow, // Umbenannt
+        createDatenTableRow,
         createAuswertungTableRow
     });
 
