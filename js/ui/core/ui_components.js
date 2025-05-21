@@ -302,7 +302,7 @@ const uiComponents = (() => {
 
             let filledInterpretation = interpretationTemplate
                 .replace(/\[METHODE\]/g, 'T2')
-                .replace(/\[WERT\]/g, `<strong>${valueStr}${isPercent ? '%' : ''}</strong>`)
+                .replace(/\[WERT\]/g, `<strong>${valueStr}${isPercent && valueStr !== na ? '%' : ''}</strong>`)
                 .replace(/\[LOWER\]/g, lowerStr)
                 .replace(/\[UPPER\]/g, upperStr)
                 .replace(/\[METHOD_CI\]/g, ciMethodStr)
@@ -400,19 +400,13 @@ const uiComponents = (() => {
     function createPublikationTabHeader() {
         const lang = state.getCurrentPublikationLang() || PUBLICATION_CONFIG.defaultLanguage;
         const currentBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+
         const sectionNavItems = PUBLICATION_CONFIG.sections.map(mainSection => {
-            let subNav = '';
-            if (mainSection.subSections && mainSection.subSections.length > 0) {
-                subNav = `<ul class="nav flex-column ms-2">`;
-                mainSection.subSections.forEach(sub => {
-                    subNav += `<li class="nav-item"><a class="nav-link py-1 publikation-section-link" href="#" data-section-id="${sub.id}">${sub.label}</a></li>`;
-                });
-                subNav += `</ul>`;
-            }
             return `
                 <li class="nav-item">
-                    <span class="nav-link disabled text-uppercase small fw-bold pt-2 pb-1">${UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}</span>
-                    ${subNav}
+                    <a class="nav-link py-2 publikation-section-link" href="#" data-section-id="${mainSection.id}">
+                        ${UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}
+                    </a>
                 </li>`;
         }).join('');
 
@@ -423,7 +417,7 @@ const uiComponents = (() => {
         return `
             <div class="row mb-3 sticky-top bg-light py-2 shadow-sm" style="top: calc(var(--header-height) + var(--nav-height)); z-index: 1010;">
                 <div class="col-md-3">
-                    <h5 class="mb-2">Navigation</h5>
+                    <h5 class="mb-2">Abschnitte</h5>
                     <nav id="publikation-sections-nav" class="nav flex-column nav-pills">
                         ${sectionNavItems}
                     </nav>
@@ -441,7 +435,7 @@ const uiComponents = (() => {
                             <label class="form-check-label fw-bold" for="publikation-sprache-switch" id="publikation-sprache-label">${UI_TEXTS.publikationTab.spracheSwitchLabel[lang]}</label>
                         </div>
                     </div>
-                    <div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: 70vh; overflow-y: auto;">
+                    <div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: calc(100vh - var(--header-height) - var(--nav-height) - 70px); overflow-y: auto;">
                         <p class="text-muted">Bitte wählen Sie einen Abschnitt aus der Navigation.</p>
                     </div>
                 </div>
