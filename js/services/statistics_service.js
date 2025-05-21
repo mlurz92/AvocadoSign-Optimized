@@ -54,23 +54,23 @@ const statisticsService = (() => {
 
         const p_low = 0.02425;
         const p_high = 1 - p_low;
-        let q, r, x;
+        let q, r, x_val;
 
         if (p < p_low) {
             q = Math.sqrt(-2 * Math.log(p));
-            x = ((((( -0.000007784894002430293 * q - 0.0003223964580411365 ) * q - 0.02400758277161838 ) * q - 0.002549732539343734 ) * q + 0.4374664141464968 ) * q + 0.2938163982698783 ) /
+            x_val = ((((( -0.000007784894002430293 * q - 0.0003223964580411365 ) * q - 0.02400758277161838 ) * q - 0.002549732539343734 ) * q + 0.4374664141464968 ) * q + 0.2938163982698783 ) /
                 (((( 0.000007784695709041462 * q + 0.0003224671290700398 ) * q + 0.02445134137142996 ) * q + 0.003754408661907416 ) * q + 1.0);
         } else if (p <= p_high) {
             q = p - 0.5;
             r = q * q;
-            x = ((((( -3.969683028665376e+01 * r + 2.209460984245205e+02 ) * r - 2.759285104469687e+02 ) * r + 1.383577518672690e+02 ) * r - 3.066479806614716e+01 ) * r + 2.506628277459239e+00 ) * q /
+            x_val = ((((( -3.969683028665376e+01 * r + 2.209460984245205e+02 ) * r - 2.759285104469687e+02 ) * r + 1.383577518672690e+02 ) * r - 3.066479806614716e+01 ) * r + 2.506628277459239e+00 ) * q /
                 ((((( -5.447609879822406e+01 * r + 1.615858368580409e+02 ) * r - 1.556989798598866e+02 ) * r + 6.680131188771972e+01 ) * r - 1.328068155288572e+01 ) * r + 1.0);
         } else {
             q = Math.sqrt(-2 * Math.log(1 - p));
-            x = -((((( -0.000007784894002430293 * q - 0.0003223964580411365 ) * q - 0.02400758277161838 ) * q - 0.002549732539343734 ) * q + 0.4374664141464968 ) * q + 0.2938163982698783 ) /
+            x_val = -((((( -0.000007784894002430293 * q - 0.0003223964580411365 ) * q - 0.02400758277161838 ) * q - 0.002549732539343734 ) * q + 0.4374664141464968 ) * q + 0.2938163982698783 ) /
                  (((( 0.000007784695709041462 * q + 0.0003224671290700398 ) * q + 0.02445134137142996 ) * q + 0.003754408661907416 ) * q + 1.0);
         }
-        const result = mean + stdDev * x;
+        const result = mean + stdDev * x_val;
         return isFinite(result) ? result : NaN;
     }
 
@@ -132,13 +132,13 @@ const statisticsService = (() => {
     function calculateWilsonScoreCI(successes, trials, alpha = APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_ALPHA) {
         const defaultReturn = { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_PROPORTION };
         if (isNaN(successes) || isNaN(trials) || isNaN(alpha) || trials <= 0 || successes < 0 || successes > trials || alpha <= 0 || alpha >= 1) return defaultReturn;
-        const p_hat = successes / trials, n = trials;
+        const p_hat = successes / trials, n_trials = trials;
         const z = Math.abs(inverseNormalCDF(alpha / 2.0));
         if (!isFinite(z)) return defaultReturn;
         const z2 = z * z;
-        const centerTerm = p_hat + z2 / (2.0 * n);
-        const variabilityTerm = z * Math.sqrt((p_hat * (1.0 - p_hat) / n) + (z2 / (4.0 * n * n)));
-        const denominator = 1.0 + z2 / n;
+        const centerTerm = p_hat + z2 / (2.0 * n_trials);
+        const variabilityTerm = z * Math.sqrt((p_hat * (1.0 - p_hat) / n_trials) + (z2 / (4.0 * n_trials * n_trials)));
+        const denominator = 1.0 + z2 / n_trials;
         if (denominator === 0) return defaultReturn;
         const lower = (centerTerm - variabilityTerm) / denominator;
         const upper = (centerTerm + variabilityTerm) / denominator;
@@ -205,7 +205,7 @@ const statisticsService = (() => {
                     sumSq += stat * stat;
                     validCount++;
                  }
-            } catch (e) { console.warn("Bootstrap-Iteration fehlgeschlagen:", e); }
+            } catch (e) { /* console.warn("Bootstrap-Iteration fehlgeschlagen:", e); */ }
         }
 
         if (validCount < Math.max(10, nBoot * 0.1)) return defaultReturn;
@@ -225,15 +225,15 @@ const statisticsService = (() => {
 
     function manualMcNemarTest(b, c) {
         if (isNaN(b) || isNaN(c) || b < 0 || c < 0) return { pValue: NaN, statistic: NaN, df: 1, method: "McNemar's Test (Invalid Input)" };
-        const n = b + c;
-        if (n === 0) return { pValue: 1.0, statistic: 0, df: 1, method: "McNemar's Test (No Discordance)" };
+        const n_discordant = b + c;
+        if (n_discordant === 0) return { pValue: 1.0, statistic: 0, df: 1, method: "McNemar's Test (No Discordance)" };
 
-        const continuityCorrection = (n < APP_CONFIG.STATISTICAL_CONSTANTS.FISHER_EXACT_THRESHOLD * 4) ? 1 : 0;
-        let statistic = Math.pow(Math.abs(b - c) - continuityCorrection, 2) / n;
+        const continuityCorrection = (n_discordant < APP_CONFIG.STATISTICAL_CONSTANTS.FISHER_EXACT_THRESHOLD * 4) ? 1 : 0; // Arbitrary threshold for Yates' correction
+        let statistic = Math.pow(Math.abs(b - c) - continuityCorrection, 2) / n_discordant;
         if (isNaN(statistic) || !isFinite(statistic)) statistic = 0;
 
         const pValue = 1.0 - chiSquareCDF(statistic, 1);
-        return { pValue: Math.max(0.0, Math.min(1.0, pValue)), statistic: statistic, df: 1, method: `McNemar's Test${continuityCorrection > 0 ? ' (continuity corrected)' : ''}` };
+        return { pValue: Math.max(0.0, Math.min(1.0, pValue)), statistic: statistic, df: 1, method: `McNemar's Test${continuityCorrection > 0 ? ' (Yates\')' : ''}` };
     }
 
     function logProbHypergeometric(k, N_pop, K_success, n_draw) {
@@ -251,7 +251,7 @@ const statisticsService = (() => {
     function manualFisherExactTest(a, b, c, d) {
         if (isNaN(a) || isNaN(b) || isNaN(c) || isNaN(d) || a < 0 || b < 0 || c < 0 || d < 0) return { pValue: NaN, method: "Fisher's Exact Test (Invalid Input)" };
         const n1 = a + b, n2 = c + d;
-        const k1 = a + c, k2 = b + d;
+        const k1 = a + c; // k2 = b + d;
         const N = a + b + c + d;
         if (N === 0) return { pValue: 1.0, method: "Fisher's Exact Test (No Data)" };
 
@@ -261,7 +261,7 @@ const statisticsService = (() => {
         let pValue = 0.0;
         const minVal = Math.max(0, k1 - n2);
         const maxVal = Math.min(k1, n1);
-        const tolerance = 1e-9;
+        const tolerance = 1e-9; // Tolerance for comparing probabilities
 
         for (let i = minVal; i <= maxVal; i++) {
             const pCurrentLog = logProbHypergeometric(i, N, k1, n1);
@@ -317,27 +317,27 @@ const statisticsService = (() => {
         const U = Math.min(U1, n1 * n2 - U1);
 
         const meanU = (n1 * n2) / 2.0;
-        const N = n1 + n2;
+        const N_total = n1 + n2;
 
         const tieGroups = {};
         const validRanks = ranks.filter(r => !isNaN(r));
         validRanks.forEach(r => { tieGroups[r] = (tieGroups[r] || 0) + 1; });
         const tieCorrectionFactor = Object.values(tieGroups).reduce((sum, t) => t > 1 ? sum + (t * t * t - t) : sum, 0);
 
-        const varU_numerator = n1 * n2 * ((N * N * N - N) - tieCorrectionFactor);
-        const varU_denominator = 12.0 * N * (N - 1);
+        const varU_numerator = n1 * n2 * ((N_total * N_total * N_total - N_total) - tieCorrectionFactor);
+        const varU_denominator = 12.0 * N_total * (N_total - 1);
 
-        if (varU_denominator <= 0 || N <= 1) return { pValue: 1.0, U: U, Z: 0, testName: "Mann-Whitney U (No Variance)" };
+        if (varU_denominator <= 1e-9 || N_total <= 1) return { pValue: 1.0, U: U, Z: 0, testName: "Mann-Whitney U (No Variance or N too small)" };
         const varU = varU_numerator / varU_denominator;
-        if (varU < 0 || isNaN(varU)) return { ...defaultReturn, U: U, testName: "Mann-Whitney U (Variance Error)" };
-        if (varU === 0) return { pValue: 1.0, U: U, Z: 0, testName: "Mann-Whitney U (Zero Variance)" };
+        if (varU < -1e-9 || isNaN(varU)) return { ...defaultReturn, U: U, testName: "Mann-Whitney U (Variance Error)" };
+        if (Math.abs(varU) < 1e-9) return { pValue: 1.0, U: U, Z: 0, testName: "Mann-Whitney U (Zero Variance)" };
 
-        const stdDevU = Math.sqrt(varU);
-        const correction = (U < meanU) ? 0.5 : (U > meanU) ? -0.5 : 0;
+        const stdDevU = Math.sqrt(Math.max(0,varU)); // Ensure non-negative for sqrt
+        const correction = (U < meanU) ? 0.5 : (U > meanU) ? -0.5 : 0; // Continuity correction
         const z = (U - meanU + correction) / stdDevU;
         if (isNaN(z) || !isFinite(z)) return { ...defaultReturn, U: U, testName: "Mann-Whitney U (Z Calculation Error)" };
 
-        const pValue = 2.0 * normalCDF(-Math.abs(z));
+        const pValue = 2.0 * normalCDF(-Math.abs(z)); // Two-tailed p-value
         return { pValue: Math.max(0.0, Math.min(1.0, pValue)), U: U, Z: z, testName: "Mann-Whitney U (Normal Approx. with Tie Correction)" };
     }
 
@@ -358,8 +358,14 @@ const statisticsService = (() => {
 
             for (let i = 0; i < n_pos; i++) {
                 for (let j = 0; j < n_neg; j++) {
-                    const val_pos = (positives[i]?.[testKey] === '+') ? 1.0 : (positives[i]?.[testKey] === '-') ? 0.0 : 0.5;
-                    const val_neg = (negatives[j]?.[testKey] === '+') ? 1.0 : (negatives[j]?.[testKey] === '-') ? 0.0 : 0.5;
+                    const val_pos_p = positives[i]?.[testKey];
+                    const val_neg_p = negatives[j]?.[testKey];
+
+                    const val_pos = (val_pos_p === '+') ? 1.0 : (val_pos_p === '-') ? 0.0 : (val_pos_p === null || val_pos_p === undefined) ? NaN : 0.5;
+                    const val_neg = (val_neg_p === '+') ? 1.0 : (val_neg_p === '-') ? 0.0 : (val_neg_p === null || val_neg_p === undefined) ? NaN : 0.5;
+
+                    if (isNaN(val_pos) || isNaN(val_neg)) continue; // Skip if prediction is NaN
+
                     let score = 0;
                     if (val_pos > val_neg) score = 1.0;
                     else if (val_pos === val_neg) score = 0.5;
@@ -387,26 +393,26 @@ const statisticsService = (() => {
 
             if (isNaN(auc1) || isNaN(auc2)) return { ...defaultReturn, method: "DeLong Test (Invalid AUCs calculated)" };
 
-            const calculateVarianceComponent = (V_arr, mean_auc, n_other) => {
-                if (n_other === 0 || V_arr.some(isNaN)) return NaN;
+            const calculateVarianceComponent = (V_arr, mean_auc) => {
+                if (V_arr.length < 2 || V_arr.some(isNaN)) return NaN;
                 let sumSqDiff = 0;
                 for(let val of V_arr) sumSqDiff += Math.pow(val - mean_auc, 2);
                 return sumSqDiff / (V_arr.length -1);
             };
-            const S10_1 = calculateVarianceComponent(V10_1, auc1, n_neg);
-            const S01_1 = calculateVarianceComponent(V01_1, auc1, n_pos);
-            const S10_2 = calculateVarianceComponent(V10_2, auc2, n_neg);
-            const S01_2 = calculateVarianceComponent(V01_2, auc2, n_pos);
+            const S10_1 = calculateVarianceComponent(V10_1, auc1);
+            const S01_1 = calculateVarianceComponent(V01_1, auc1);
+            const S10_2 = calculateVarianceComponent(V10_2, auc2);
+            const S01_2 = calculateVarianceComponent(V01_2, auc2);
 
-            const calculateCovarianceComponent = (V_X_arr, V_Y_arr, meanX, meanY, n_other) => {
-                if (n_other === 0 || V_X_arr.some(isNaN) || V_Y_arr.some(isNaN)) return NaN;
+            const calculateCovarianceComponent = (V_X_arr, V_Y_arr, meanX, meanY) => {
+                 if (V_X_arr.length < 2 || V_X_arr.some(isNaN) || V_Y_arr.some(isNaN)) return NaN;
                  let sumProdDiff = 0;
                  for (let i = 0; i < V_X_arr.length; i++) sumProdDiff += (V_X_arr[i] - meanX) * (V_Y_arr[i] - meanY);
                  return sumProdDiff / (V_X_arr.length - 1);
             };
 
-            const Cov10 = calculateCovarianceComponent(V10_1, V10_2, auc1, auc2, n_neg);
-            const Cov01 = calculateCovarianceComponent(V01_1, V01_2, auc1, auc2, n_pos);
+            const Cov10 = calculateCovarianceComponent(V10_1, V10_2, auc1, auc2);
+            const Cov01 = calculateCovarianceComponent(V01_1, V01_2, auc1, auc2);
 
             if ([S10_1, S01_1, S10_2, S01_2, Cov10, Cov01].some(isNaN)) {
                 return { ...defaultReturn, diffAUC: auc1 - auc2, method: "DeLong Test (Variance/Covariance NaN)" };
@@ -414,18 +420,18 @@ const statisticsService = (() => {
 
             const varDiff = (S10_1 / n_pos) + (S01_1 / n_neg) + (S10_2 / n_pos) + (S01_2 / n_neg) - 2 * ((Cov10 / n_pos) + (Cov01 / n_neg));
 
-            if (isNaN(varDiff) || varDiff <= 1e-12) {
-                const pVal = (Math.abs(auc1 - auc2) < 1e-9) ? 1.0 : NaN;
+            if (isNaN(varDiff) || varDiff <= 1e-12) { // Check for non-positive or extremely small variance
+                const pVal = (Math.abs(auc1 - auc2) < 1e-9) ? 1.0 : NaN; // If AUCs are virtually identical, p=1
                 return { pValue: pVal, Z: (pVal === 1.0 ? 0 : NaN), diffAUC: auc1 - auc2, method: "DeLong Test (Near Zero/Zero Variance of Difference)" };
             }
             const seDiff = Math.sqrt(varDiff);
             const z = (auc1 - auc2) / seDiff;
             if (isNaN(z) || !isFinite(z)) return { ...defaultReturn, diffAUC: auc1 - auc2, method: "DeLong Test (Z Calculation Error)" };
 
-            const pValue = 2.0 * normalCDF(-Math.abs(z));
+            const pValue = 2.0 * normalCDF(-Math.abs(z)); // Two-tailed p-value
             return { pValue: Math.max(0.0, Math.min(1.0, pValue)), Z: z, diffAUC: auc1 - auc2, method: "DeLong Test" };
         } catch (error) {
-            console.error("Error in DeLong Test:", error);
+            // console.error("Error in DeLong Test:", error);
             return { ...defaultReturn, method: "DeLong Test (Execution Error)" };
         }
     }
@@ -458,16 +464,16 @@ const statisticsService = (() => {
 
         data.forEach(p => {
             if (p && typeof p === 'object') {
-                const predicted = p[predictionKey] === '+';
-                const actual = p[referenceKey] === '+';
+                const predicted_is_plus = p[predictionKey] === '+';
+                const actual_is_plus = p[referenceKey] === '+';
                 const validPred = p[predictionKey] === '+' || p[predictionKey] === '-';
                 const validActual = p[referenceKey] === '+' || p[referenceKey] === '-';
 
                 if (validPred && validActual) {
-                    if (predicted && actual) rp++;
-                    else if (predicted && !actual) fp++;
-                    else if (!predicted && actual) fn++;
-                    else if (!predicted && !actual) rn++;
+                    if (predicted_is_plus && actual_is_plus) rp++;
+                    else if (predicted_is_plus && !actual_is_plus) fp++;
+                    else if (!predicted_is_plus && actual_is_plus) fn++;
+                    else if (!predicted_is_plus && !actual_is_plus) rn++;
                 }
             }
         });
@@ -476,12 +482,12 @@ const statisticsService = (() => {
 
     function calculatePhi(a, b, c, d) {
         if (isNaN(a) || isNaN(b) || isNaN(c) || isNaN(d) || a < 0 || b < 0 || c < 0 || d < 0) return NaN;
-        const n = a + b + c + d;
-        if (n === 0) return NaN;
+        const n_total_phi = a + b + c + d;
+        if (n_total_phi === 0) return NaN;
 
         const row1 = a + b, row2 = c + d, col1 = a + c, col2 = b + d;
         const denominator = Math.sqrt(row1 * row2 * col1 * col2);
-        if (denominator === 0 || isNaN(denominator)) return NaN;
+        if (denominator === 0 || isNaN(denominator)) return NaN; // Avoid division by zero if any margin is zero
 
         const phi = (a * d - b * c) / denominator;
         return isFinite(phi) ? phi : NaN;
@@ -489,7 +495,6 @@ const statisticsService = (() => {
 
     function calculateDiagnosticPerformance(data, predictionKey, referenceKey) {
         if (!Array.isArray(data) || data.length === 0) {
-             console.warn(`calculateDiagnosticPerformance: Keine oder ungültige Daten für ${predictionKey} vs ${referenceKey}.`);
              return null;
         }
         const matrix = calculateConfusionMatrix(data, predictionKey, referenceKey);
@@ -499,14 +504,14 @@ const statisticsService = (() => {
 
         if (total === 0) return { matrix, sens: nullMetric, spez: nullMetric, ppv: nullMetric, npv: nullMetric, acc: nullMetric, balAcc: nullMetric, f1: nullMetric, auc: nullMetric };
 
-        const sens_val = (rp + fn) > 0 ? rp / (rp + fn) : ((rp === 0 && fn === 0) ? NaN : 0) ;
-        const spez_val = (fp + rn) > 0 ? rn / (fp + rn) : ((fp === 0 && rn === 0) ? NaN : 0) ;
-        const ppv_val = (rp + fp) > 0 ? rp / (rp + fp) : ((rp === 0 && fp === 0) ? NaN : 0) ;
-        const npv_val = (fn + rn) > 0 ? rn / (fn + rn) : ((fn === 0 && rn === 0) ? NaN : 0) ;
+        const sens_val = (rp + fn) > 0 ? rp / (rp + fn) : ((rp === 0 && fn === 0 && total > 0) ? NaN : 0) ;
+        const spez_val = (fp + rn) > 0 ? rn / (fp + rn) : ((fp === 0 && rn === 0 && total > 0) ? NaN : 0) ;
+        const ppv_val = (rp + fp) > 0 ? rp / (rp + fp) : ((rp === 0 && fp === 0 && total > 0) ? NaN : 0) ;
+        const npv_val = (fn + rn) > 0 ? rn / (fn + rn) : ((fn === 0 && rn === 0 && total > 0) ? NaN : 0) ;
         const acc_val = total > 0 ? (rp + rn) / total : NaN;
         const balAcc_val = (!isNaN(sens_val) && !isNaN(spez_val)) ? (sens_val + spez_val) / 2.0 : NaN;
-        const f1_val = (!isNaN(ppv_val) && !isNaN(sens_val) && (ppv_val + sens_val) > 1e-9) ? 2.0 * (ppv_val * sens_val) / (ppv_val + sens_val) : ((ppv_val === 0 && sens_val === 0) ? 0 : NaN);
-        const auc_val = balAcc_val;
+        const f1_val = (!isNaN(ppv_val) && !isNaN(sens_val) && (ppv_val + sens_val) > 1e-9) ? 2.0 * (ppv_val * sens_val) / (ppv_val + sens_val) : ((ppv_val === 0 && sens_val === 0 && total > 0) ? 0 : NaN);
+        const auc_val = balAcc_val; // For binary classifier without variable threshold, AUC is equivalent to Balanced Accuracy.
 
         const sensCIResult = !isNaN(sens_val) ? calculateWilsonScoreCI(rp, rp + fn) : { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_PROPORTION };
         const spezCIResult = !isNaN(spez_val) ? calculateWilsonScoreCI(rn, fp + rn) : { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_PROPORTION };
@@ -526,14 +531,15 @@ const statisticsService = (() => {
             if (metric === 'balAcc' || metric === 'auc') return (se_boot + sp_boot) / 2.0;
             if (metric === 'f1') {
                 const pv_boot = (m.rp + m.fp) > 0 ? m.rp / (m.rp + m.fp) : ((m.rp === 0 && m.fp === 0) ? NaN : 0);
-                return (isNaN(pv_boot) || (pv_boot + se_boot) <= 1e-9) ? ((pv_boot === 0 && se_boot === 0) ? 0 : NaN) : 2.0 * (pv_boot * se_boot) / (pv_boot + se_boot);
+                if (isNaN(pv_boot)) return NaN;
+                return ((pv_boot + se_boot) <= 1e-9) ? ((pv_boot === 0 && se_boot === 0) ? 0 : NaN) : 2.0 * (pv_boot * se_boot) / (pv_boot + se_boot);
             }
             return NaN;
         };
 
         const balAccBootCIResult = !isNaN(balAcc_val) ? bootstrapCI(data, bootstrapStatFnFactory(predictionKey, referenceKey, 'balAcc')) : { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE, se: NaN };
         const f1BootCIResult = !isNaN(f1_val) ? bootstrapCI(data, bootstrapStatFnFactory(predictionKey, referenceKey, 'f1')) : { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE, se: NaN };
-        const aucBootCIResult = balAccBootCIResult;
+        const aucBootCIResult = balAccBootCIResult; // Same for binary tests
 
         return {
             matrix,
@@ -552,21 +558,26 @@ const statisticsService = (() => {
         const nullReturn = { mcnemar: { pValue: NaN, statistic: NaN, df: NaN, method: "McNemar's Test (Nicht berechnet)" }, delong: { pValue: NaN, Z: NaN, diffAUC: NaN, method: "DeLong Test (Nicht berechnet)" } };
         if (!Array.isArray(data) || data.length === 0 || !key1 || !key2 || !referenceKey) return nullReturn;
 
-        let b = 0, c = 0;
+        let b_mcnemar = 0, c_mcnemar = 0; // b: method1 positive, method2 negative; c: method1 negative, method2 positive
         data.forEach(p => {
             if (p && typeof p === 'object') {
                 const p1_is_plus = p[key1] === '+';
                 const p2_is_plus = p[key2] === '+';
                 const valid_p1 = p[key1] === '+' || p[key1] === '-';
                 const valid_p2 = p[key2] === '+' || p[key2] === '-';
+                const actual_is_plus = p[referenceKey] === '+'; // McNemar compares predictions on same subjects
+                const valid_actual = p[referenceKey] === '+' || p[referenceKey] === '-';
 
-                if (valid_p1 && valid_p2) {
-                    if (p1_is_plus && !p2_is_plus) b++;
-                    if (!p1_is_plus && p2_is_plus) c++;
+
+                if (valid_p1 && valid_p2 && valid_actual) { // All three must be valid for McNemar comparison
+                    const correct1 = (p1_is_plus === actual_is_plus);
+                    const correct2 = (p2_is_plus === actual_is_plus);
+                    if (correct1 && !correct2) b_mcnemar++; // Method 1 correct, Method 2 incorrect
+                    if (!correct1 && correct2) c_mcnemar++; // Method 1 incorrect, Method 2 correct
                 }
             }
         });
-        const mcnemarResult = manualMcNemarTest(b, c);
+        const mcnemarResult = manualMcNemarTest(b_mcnemar, c_mcnemar);
         const delongResult = manualDeLongTest(data, key1, key2, referenceKey);
         return { mcnemar: mcnemarResult, delong: delongResult };
     }
@@ -576,7 +587,7 @@ const statisticsService = (() => {
         if (!Array.isArray(data) || data.length === 0 || !t2Criteria) return {};
 
         const results = {};
-        const referenceKey = 'n';
+        const referenceKey = 'n'; // Pathological N-Status
 
         const matrixAS = calculateConfusionMatrix(data, 'as', referenceKey);
         const n_as_total = matrixAS.rp + matrixAS.fp + matrixAS.fn + matrixAS.rn;
@@ -586,7 +597,7 @@ const statisticsService = (() => {
                 matrix: matrixAS,
                 testName: fisherAS.method,
                 pValue: fisherAS.pValue,
-                statistic: NaN,
+                statistic: NaN, // Fisher's exact test doesn't have a single 'statistic' like chi-square
                 or: calculateORCI(matrixAS.rp, matrixAS.fp, matrixAS.fn, matrixAS.rn),
                 rd: calculateRDCI(matrixAS.rp, matrixAS.fp, matrixAS.fn, matrixAS.rn),
                 phi: { value: calculatePhi(matrixAS.rp, matrixAS.fp, matrixAS.fn, matrixAS.rn), ci: null, method: 'Phi Coefficient' },
@@ -609,68 +620,74 @@ const statisticsService = (() => {
                 });
             }
         });
-        if (sizesNplus.length > 0 && sizesNminus.length > 0) {
+
+        if (sizesNplus.length > 0 || sizesNminus.length > 0) { // Test can run even if one group is empty, though power is low.
             const mwuResult = manualMannWhitneyUTest(sizesNplus, sizesNminus);
             results.size_mwu = {
                 pValue: mwuResult.pValue,
-                statistic: mwuResult.U,
+                statistic: mwuResult.U, // U statistic
                 testName: mwuResult.testName, Z: mwuResult.Z,
                 or: null, rd: null, phi: null, matrix: null,
-                featureName: 'LK Größe (Median Vergleich)'
+                featureName: 'LK Größe (Median Vgl.)'
             };
         } else {
-            results.size_mwu = { ...nullReturn, testName: "Mann-Whitney U (Nicht genug Daten)", featureName: 'LK Größe (Median Vergleich)' };
+            results.size_mwu = { ...nullReturn, testName: "Mann-Whitney U (Nicht genug Daten)", featureName: 'LK Größe (Median Vgl.)' };
         }
+
 
         const t2Features = ['size', 'form', 'kontur', 'homogenitaet', 'signal'];
         t2Features.forEach(featureKey => {
-            let featureValue = null, threshold = null, condition = '>=';
+            let featureValueToTest = null, thresholdToTest = null, conditionToTest = '>=';
             let featureNameForDisplay = `T2: ${featureKey}`;
+            const criterionConfig = t2Criteria[featureKey];
 
-            if (t2Criteria[featureKey]) {
+            if (criterionConfig) { // Use the defined criterion, even if not active for main T2 eval, for association test
                 if (featureKey === 'size') {
-                    threshold = t2Criteria[featureKey].threshold;
-                    condition = t2Criteria[featureKey].condition || '>=';
-                    if (threshold !== null && !isNaN(threshold)) {
-                        featureNameForDisplay = `T2 Größe ${condition} ${formatNumber(threshold, 1)}`;
+                    thresholdToTest = criterionConfig.threshold;
+                    conditionToTest = criterionConfig.condition || '>=';
+                    if (thresholdToTest !== null && !isNaN(thresholdToTest)) {
+                        featureNameForDisplay = `T2 Größe ${conditionToTest} ${formatNumber(thresholdToTest, 1)}`;
                     }
                 } else {
-                    featureValue = t2Criteria[featureKey].value;
-                    if (featureValue) {
-                         featureNameForDisplay = `T2 ${featureKey}=${featureValue}`;
+                    featureValueToTest = criterionConfig.value;
+                    if (featureValueToTest) {
+                         featureNameForDisplay = `T2 ${featureKey}=${featureValueToTest}`;
                     }
                 }
             }
 
-            if ((featureKey !== 'size' && !featureValue) || (featureKey === 'size' && (threshold === null || threshold === undefined || isNaN(threshold)))) {
+            if ((featureKey !== 'size' && !featureValueToTest) || (featureKey === 'size' && (thresholdToTest === null || thresholdToTest === undefined || isNaN(thresholdToTest)))) {
                 results[featureKey] = { ...nullReturn, testName: `T2 Merkmal '${featureKey}' nicht (spezifisch genug) definiert für Assoziationstest`, featureName: featureNameForDisplay };
                 return;
             }
 
-            let a = 0, b = 0, c = 0, d = 0;
+            let a = 0, b = 0, c = 0, d = 0; // Contingency table: a=(Feature+N+), b=(Feature+N-), c=(Feature-N+), d=(Feature-N-)
             data.forEach(p => {
                 const validN = p?.[referenceKey] === '+' || p?.[referenceKey] === '-';
                 if (!validN || !Array.isArray(p.lymphknoten_t2)) return;
                 const actualN_is_Positive = p[referenceKey] === '+';
                 let patientHasFeature = false;
 
-                if (featureKey === 'size') {
-                    patientHasFeature = p.lymphknoten_t2.some(lk => {
-                        if (lk && typeof lk.groesse === 'number' && !isNaN(lk.groesse)) {
-                            switch(condition) {
-                                case '>=': return lk.groesse >= threshold;
-                                case '>': return lk.groesse > threshold;
-                                case '<=': return lk.groesse <= threshold;
-                                case '<': return lk.groesse < threshold;
-                                case '==': return lk.groesse === threshold;
-                                default: return false;
+                if (p.lymphknoten_t2.length > 0) { // Only consider patients with T2 lymph nodes for T2 feature association
+                    if (featureKey === 'size') {
+                        patientHasFeature = p.lymphknoten_t2.some(lk => {
+                            if (lk && typeof lk.groesse === 'number' && !isNaN(lk.groesse)) {
+                                switch(conditionToTest) {
+                                    case '>=': return lk.groesse >= thresholdToTest;
+                                    case '>': return lk.groesse > thresholdToTest;
+                                    case '<=': return lk.groesse <= thresholdToTest;
+                                    case '<': return lk.groesse < thresholdToTest;
+                                    case '==': return lk.groesse === thresholdToTest;
+                                    default: return false;
+                                }
                             }
-                        }
-                        return false;
-                    });
-                } else {
-                    patientHasFeature = p.lymphknoten_t2.some(lk => lk && lk[featureKey] === featureValue);
+                            return false;
+                        });
+                    } else {
+                        patientHasFeature = p.lymphknoten_t2.some(lk => lk && lk[featureKey] !== null && lk[featureKey] === featureValueToTest);
+                    }
                 }
+
 
                 if (patientHasFeature && actualN_is_Positive) a++;
                 else if (patientHasFeature && !actualN_is_Positive) b++;
@@ -708,7 +725,7 @@ const statisticsService = (() => {
 
         let evaluatedData1 = cloneDeep(data1), evaluatedData2 = cloneDeep(data2);
         let t2Evaluated = false;
-        if (t2Criteria && t2Logic && typeof t2CriteriaManager !== 'undefined') {
+        if (t2Criteria && t2Logic && typeof t2CriteriaManager !== 'undefined' && typeof t2CriteriaManager.evaluateDataset === 'function') {
             evaluatedData1 = t2CriteriaManager.evaluateDataset(evaluatedData1, t2Criteria, t2Logic);
             evaluatedData2 = t2CriteriaManager.evaluateDataset(evaluatedData2, t2Criteria, t2Logic);
             t2Evaluated = true;
@@ -717,18 +734,25 @@ const statisticsService = (() => {
             defaultReturn.aucComparison.t2 = { ...nullComp, diffAUC: NaN, testName: "T2 nicht ausgewertet oder Kriterien ungültig" };
         }
 
-        const matrix1AS = calculateConfusionMatrix(data1, 'as', 'n');
-        const matrix2AS = calculateConfusionMatrix(data2, 'as', 'n');
+        const matrix1AS = calculateConfusionMatrix(data1, 'as', 'n'); // a=TP, b=FP, c=FN, d=TN
+        const matrix2AS = calculateConfusionMatrix(data2, 'as', 'n'); // e=TP, f=FP, g=FN, h=TN
 
-        const accCompASResult = manualFisherExactTest(matrix1AS.rp + matrix1AS.rn, matrix1AS.fp + matrix1AS.fn,
-                                                    matrix2AS.rp + matrix2AS.rn, matrix2AS.fp + matrix2AS.fn);
+        const accCompASResult = manualFisherExactTest(
+            matrix1AS.rp + matrix1AS.rn, // Correctly classified in group 1
+            matrix1AS.fp + matrix1AS.fn, // Incorrectly classified in group 1
+            matrix2AS.rp + matrix2AS.rn, // Correctly classified in group 2
+            matrix2AS.fp + matrix2AS.fn  // Incorrectly classified in group 2
+        );
+
 
         let accCompT2Result = { pValue: NaN, method: "T2 nicht ausgewertet oder Kriterien ungültig"};
         if (t2Evaluated) {
             const matrix1T2 = calculateConfusionMatrix(evaluatedData1, 't2', 'n');
             const matrix2T2 = calculateConfusionMatrix(evaluatedData2, 't2', 'n');
-            accCompT2Result = manualFisherExactTest(matrix1T2.rp + matrix1T2.rn, matrix1T2.fp + matrix1T2.fn,
-                                                     matrix2T2.rp + matrix2T2.rn, matrix2T2.fp + matrix2T2.fn);
+            accCompT2Result = manualFisherExactTest(
+                matrix1T2.rp + matrix1T2.rn, matrix1T2.fp + matrix1T2.fn,
+                matrix2T2.rp + matrix2T2.rn, matrix2T2.fp + matrix2T2.fn
+            );
         }
 
         const guete1AS = calculateDiagnosticPerformance(data1, 'as', 'n');
@@ -758,11 +782,11 @@ const statisticsService = (() => {
     }
 
     function calculateDescriptiveStats(data) {
-        const n = data?.length ?? 0;
+        const n_patients = data?.length ?? 0;
         const nullMetric = { median: NaN, min: NaN, max: NaN, mean: NaN, sd: NaN, n: 0 };
-        const nullReturn = { anzahlPatienten: 0, alter: nullMetric, geschlecht: { m: 0, f: 0, unbekannt: 0 }, therapie: { 'direkt OP': 0, 'nRCT': 0, unbekannt: 0 }, nStatus: { plus: 0, minus: 0, unbekannt: 0 }, asStatus: { plus: 0, minus: 0, unbekannt: 0 }, t2Status: { plus: 0, minus: 0, unbekannt: 0 }, lkAnzahlen: null, alterData: [] };
+        const nullReturn = { anzahlPatienten: 0, alter: nullMetric, geschlecht: { m: 0, f: 0, unbekannt: 0 }, therapie: { 'direkt OP': 0, 'nRCT': 0, unbekannt: 0 }, nStatus: { plus: 0, minus: 0, unbekannt: 0 }, asStatus: { plus: 0, minus: 0, unbekannt: 0 }, t2Status: { plus: 0, minus: 0, unbekannt: 0 }, lkAnzahlen: {n: {total:nullMetric, plus:nullMetric}, as: {total:nullMetric, plus:nullMetric}, t2: {total:nullMetric, plus:nullMetric}}, alterData: [] };
 
-        if (!Array.isArray(data) || n === 0) return nullReturn;
+        if (!Array.isArray(data) || n_patients === 0) return nullReturn;
 
         const alterData = data.map(p => p?.alter).filter(a => a !== null && a !== undefined && !isNaN(a) && isFinite(a)).sort((a, b) => a - b);
         const geschlecht = data.reduce((acc, p) => { const key = (p?.geschlecht === 'm' || p?.geschlecht === 'f') ? p.geschlecht : 'unbekannt'; acc[key] = (acc[key] || 0) + 1; return acc; }, { m: 0, f: 0, unbekannt: 0 });
@@ -791,59 +815,75 @@ const statisticsService = (() => {
         };
         const alterStats = alterData.length > 0 ? { median: getMedian(alterData), mean: getMean(alterData), sd: getStdDev(alterData), min: alterData[0], max: alterData[alterData.length - 1], n: alterData.length } : nullMetric;
 
-        return { anzahlPatienten: n, alter: alterStats, geschlecht: geschlecht, therapie: therapie, nStatus: nStatus, asStatus: asStatus, t2Status: t2Status, lkAnzahlen: lkAnzahlen, alterData: alterData };
+        return { anzahlPatienten: n_patients, alter: alterStats, geschlecht: geschlecht, therapie: therapie, nStatus: nStatus, asStatus: asStatus, t2Status: t2Status, lkAnzahlen: lkAnzahlen, alterData: alterData };
     }
 
-     function calculateAllStatsForPublication(data, appliedT2Criteria, appliedT2Logic, bruteForceResultsPerKollektiv) {
-        if (!data || !Array.isArray(data)) return null;
+     function calculateAllStatsForPublication(globalRawData, appliedT2Criteria, appliedT2Logic, bruteForceResultsPerKollektiv) {
+        if (!globalRawData || !Array.isArray(globalRawData)) return null;
         const results = {
             Gesamt: {},
             'direkt OP': {},
             nRCT: {}
         };
         const kollektive = ['Gesamt', 'direkt OP', 'nRCT'];
+        const publicationBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
         kollektive.forEach(kollektivId => {
-            const filteredData = dataProcessor.filterDataByKollektiv(data, kollektivId);
-            if (filteredData.length === 0) {
-                results[kollektivId] = null;
+            const filteredDataOriginal = dataProcessor.filterDataByKollektiv(globalRawData, kollektivId);
+            if (filteredDataOriginal.length === 0) {
+                results[kollektivId] = null; // Store null if no patients in this kollektiv
                 return;
             }
 
-            const evaluatedDataApplied = t2CriteriaManager.evaluateDataset(cloneDeep(filteredData), appliedT2Criteria, appliedT2Logic);
+            // Evaluate with currently applied criteria (for "angewandt" sections)
+            const evaluatedDataApplied = t2CriteriaManager.evaluateDataset(cloneDeep(filteredDataOriginal), appliedT2Criteria, appliedT2Logic);
 
-            results[kollektivId].deskriptiv = calculateDescriptiveStats(filteredData);
-            results[kollektivId].gueteAS = calculateDiagnosticPerformance(evaluatedDataApplied, 'as', 'n');
-            results[kollektivId].gueteT2_angewandt = calculateDiagnosticPerformance(evaluatedDataApplied, 't2', 'n');
+            results[kollektivId].deskriptiv = calculateDescriptiveStats(filteredDataOriginal); // Descriptives on original filtered data
+            results[kollektivId].gueteAS = calculateDiagnosticPerformance(evaluatedDataApplied, 'as', 'n'); // AS performance
+            results[kollektivId].gueteT2_angewandt = calculateDiagnosticPerformance(evaluatedDataApplied, 't2', 'n'); // Performance of applied T2
             results[kollektivId].vergleichASvsT2_angewandt = compareDiagnosticMethods(evaluatedDataApplied, 'as', 't2', 'n');
             results[kollektivId].assoziation_angewandt = calculateAssociations(evaluatedDataApplied, appliedT2Criteria);
 
+
+            // Evaluate with literature criteria
             results[kollektivId].gueteT2_literatur = {};
             PUBLICATION_CONFIG.literatureCriteriaSets.forEach(studySetConf => {
                 const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studySetConf.id);
                 if (studySet) {
                     let isApplicable = true;
                     if (studySet.applicableKollektiv && studySet.applicableKollektiv !== 'Gesamt' && studySet.applicableKollektiv !== kollektivId) {
-                        isApplicable = false;
+                        isApplicable = false; // e.g. Barbaro only for nRCT
                     }
 
                     if (isApplicable) {
-                        const evaluatedDataStudy = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredData), studySet);
+                        const evaluatedDataStudy = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredDataOriginal), studySet);
                         results[kollektivId].gueteT2_literatur[studySetConf.id] = calculateDiagnosticPerformance(evaluatedDataStudy, 't2', 'n');
                     } else {
-                        results[kollektivId].gueteT2_literatur[studySetConf.id] = null;
+                        results[kollektivId].gueteT2_literatur[studySetConf.id] = null; // Mark as not applicable
                     }
                 }
             });
 
-            const bfResultForKollektiv = bruteForceResultsPerKollektiv?.[kollektivId];
-            if (bfResultForKollektiv && bfResultForKollektiv.bestResult && bfResultForKollektiv.bestResult.criteria) {
-                const bfCriteria = bfResultForKollektiv.bestResult.criteria;
-                const bfLogic = bfResultForKollektiv.bestResult.logic;
-                const evaluatedDataBF = t2CriteriaManager.evaluateDataset(cloneDeep(filteredData), bfCriteria, bfLogic);
+            // Evaluate with Brute-Force optimized criteria for the selected publication metric
+            const bfResultForKollektivAndMetric = bruteForceResultsPerKollektiv?.[kollektivId];
+
+            if (bfResultForKollektivAndMetric &&
+                bfResultForKollektivAndMetric.metric === publicationBfMetric && // Ensure the results are for the selected metric
+                bfResultForKollektivAndMetric.bestResult &&
+                bfResultForKollektivAndMetric.bestResult.criteria) {
+
+                const bfCriteria = bfResultForKollektivAndMetric.bestResult.criteria;
+                const bfLogic = bfResultForKollektivAndMetric.bestResult.logic;
+                const evaluatedDataBF = t2CriteriaManager.evaluateDataset(cloneDeep(filteredDataOriginal), bfCriteria, bfLogic);
+
                 results[kollektivId].gueteT2_bruteforce = calculateDiagnosticPerformance(evaluatedDataBF, 't2', 'n');
                 results[kollektivId].vergleichASvsT2_bruteforce = compareDiagnosticMethods(evaluatedDataBF, 'as', 't2', 'n');
-                results[kollektivId].bruteforce_definition = { criteria: bfCriteria, logic: bfLogic, metricValue: bfResultForKollektiv.bestResult.metricValue, metricName: bfResultForKollektiv.metric };
+                results[kollektivId].bruteforce_definition = {
+                    criteria: cloneDeep(bfCriteria),
+                    logic: bfLogic,
+                    metricValue: bfResultForKollektivAndMetric.bestResult.metricValue,
+                    metricName: bfResultForKollektivAndMetric.metric // this should be publicationBfMetric
+                };
             } else {
                 results[kollektivId].gueteT2_bruteforce = null;
                 results[kollektivId].vergleichASvsT2_bruteforce = null;
@@ -860,7 +900,16 @@ const statisticsService = (() => {
         calculateAssociations,
         compareCohorts,
         calculateDescriptiveStats,
-        calculateAllStatsForPublication
+        calculateAllStatsForPublication,
+        // Exposing some core math functions if needed by other modules, though typically not.
+        getMedian,
+        getMean,
+        getStdDev,
+        normalCDF,
+        inverseNormalCDF,
+        chiSquareCDF,
+        manualFisherExactTest,
+        manualMannWhitneyUTest
     });
 
 })();
