@@ -144,8 +144,8 @@ const APP_CONFIG = Object.freeze({
             PRAES_AS_VS_T2_CHART_SVG: 'PraesChartASvsT2_{StudyID}_SVG',
             TABLE_PNG_EXPORT: '{TableName}_PNG',
             CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
-            PUBLIKATION_METHODEN_MD: 'PublikationMethodenMD',
-            PUBLIKATION_ERGEBNISSE_MD: 'PublikationErgebnisseMD'
+            PUBLIKATION_METHODEN_MD: 'PublikationMethoden_{SectionName}_MD',
+            PUBLIKATION_ERGEBNISSE_MD: 'PublikationErgebnisse_{SectionName}_MD'
         }),
         EXCEL_SHEET_NAME_DATEN: 'Datenliste',
         EXCEL_SHEET_NAME_AUSWERTUNG: 'Auswertung',
