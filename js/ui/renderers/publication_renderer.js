@@ -19,7 +19,7 @@ const publicationRenderer = (() => {
             bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
             significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
             bruteForceMetricForPublication: bruteForceMetric || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication,
-            references: { // Diese könnten später dynamischer werden oder aus einer zentralen Quelle kommen
+            references: {
                 lurzSchaefer2025: "Lurz & Schäfer (2025)",
                 koh2008: "Koh et al. (2008)",
                 barbaro2024: "Barbaro et al. (2024)",
@@ -34,11 +34,11 @@ const publicationRenderer = (() => {
         }
 
         let combinedHtml = `<div class="publication-main-section" id="pub-main-content-${sectionId}">`;
-        combinedHtml += `<h2 class="mb-4 display-6">${UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}</h2>`; // H2 statt H1
+        combinedHtml += `<h2 class="mb-4 display-6">${UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}</h2>`;
 
         mainSection.subSections.forEach(subSection => {
             combinedHtml += `<div class="publication-sub-section border-bottom pb-4 mb-4" id="pub-content-${subSection.id}">`;
-            combinedHtml += `<h3 class="mb-3 h4">${subSection.label}</h3>`; // H3 statt H2
+            combinedHtml += `<h3 class="mb-3 h4">${subSection.label}</h3>`;
 
             const textContentFunction = publicationTextGenerator.getSectionText(subSection.id, lang, publicationData, kollektiveData, commonData);
             combinedHtml += textContentFunction || `<p class="text-muted">Inhalt für diesen Unterabschnitt (ID: ${subSection.id}, Sprache: ${lang}) wird noch generiert.</p>`;
@@ -157,9 +157,11 @@ const publicationRenderer = (() => {
         const dataSetsToDisplay = [];
         const bfMetricForDisplay = commonData.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
-        const formatMetricForTable = (m, isRate = true, digits = 1, langParam = lang) => {
-            return fCI(m, digits, isRate, langParam, '–');
+        const formatMetricForTable = (metricObj, isRate = true, digits = 1, langParam = lang) => {
+            if (!metricObj || metricObj.value === undefined || isNaN(metricObj.value)) return '–';
+            return formatCI(metricObj.value, metricObj.ci?.lower, metricObj.ci?.upper, digits, isRate, '–');
         };
+
 
         if (sectionId === 'ergebnisse_as_performance') {
             title = lang === 'de' ? 'Tabelle 3: Diagnostische Güte - Avocado Sign (vs. N-Status)' : 'Table 3: Diagnostic Performance - Avocado Sign (vs. N-Status)';
@@ -172,7 +174,7 @@ const publicationRenderer = (() => {
                 const stats = {};
                 const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(conf.id);
                 for (const kollektivId of ['Gesamt', 'direkt OP', 'nRCT']) {
-                    if (kollektiveData[kollektivId]) { // Check if data for this kollektiv exists
+                    if (kollektiveData[kollektivId]) {
                         let isApplicable = true;
                         if (studySet?.applicableKollektiv && studySet.applicableKollektiv !== 'Gesamt' && studySet.applicableKollektiv !== kollektivId) {
                             isApplicable = false;
@@ -212,7 +214,9 @@ const publicationRenderer = (() => {
             }
         }
 
-        if (dataSetsToDisplay.length === 0) return `<p class="text-muted small">${title} - Keine validen Gütedaten für die Anzeige.</p>`;
+        if (dataSetsToDisplay.length === 0 || dataSetsToDisplay.every(ds => typeof ds.statsByKollektiv === 'object' && ds.statsByKollektiv !== null && Object.values(ds.statsByKollektiv).every(s => !s || !s.matrix))) {
+            return `<p class="text-muted small">${title} - Keine validen Gütedaten für die Anzeige in den ausgewerteten Kollektiven vorhanden.</p>`;
+        }
 
         let tableHTML = `<h4 class="mt-4 mb-3">${title}</h4>`;
         const tableBaseId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteGesamtTabelle.idPrefix || 'pub-table-diagnostische-guete-'}${tableIdSuffix}`;
@@ -238,7 +242,7 @@ const publicationRenderer = (() => {
                     const stats = dataSet.statsByKollektiv[kollektivId];
                     const nPat = stats?.matrix ? (stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn) : (kollektiveData[kollektivId]?.deskriptiv?.anzahlPatienten || 0);
 
-                    if (stats === null && sectionId === 'ergebnisse_literatur_t2_performance') { // Explicitly null means not applicable
+                    if (stats === null && sectionId === 'ergebnisse_literatur_t2_performance') {
                          tableHTML += `<tr>
                                 <td>${dataSet.name}</td>
                                 <td>${getKollektivDisplayName(kollektivId)}</td>
@@ -280,7 +284,9 @@ const publicationRenderer = (() => {
                     </tr>
                 </thead><tbody>`;
             dataSetsToDisplay.forEach(compData => {
-                const nPat = kollektiveData[compData.kollektivName.toLowerCase().replace(' ','')]?.deskriptiv?.anzahlPatienten || 'N/A';
+                if (!compData || !kollektiveData[compData.kollektivName.toLowerCase().replace(' ','_')]) return; // Check if kollektivData has the key
+                const nPat = kollektiveData[compData.kollektivName.toLowerCase().replace(' ','_')]?.deskriptiv?.anzahlPatienten || 'N/A';
+
                 tableHTML += `<tr><td rowspan="2">${compData.kollektivName} (N=${nPat})</td>
                                 <td>Avocado Sign</td>
                                 <td>${formatMetricForTable(compData.asData?.auc, false, 3)}</td>
@@ -292,7 +298,7 @@ const publicationRenderer = (() => {
                                 <td>Angewandte T2</td>
                                 <td>${formatMetricForTable(compData.t2AngewandtData?.auc, false, 3)}</td>
                                 <td>${formatMetricForTable(compData.t2AngewandtData?.acc)}</td>
-                                <td colspan="2"></td>
+                                <td colspan="2" class="text-center text-muted small"><em>vs. Avocado Sign</em></td>
                               </tr>`;
                 if(compData.t2OptimiertData && compData.bfDefinition) {
                     tableHTML += `<tr><td rowspan="2">${compData.kollektivName} (N=${nPat})</td>
@@ -306,15 +312,16 @@ const publicationRenderer = (() => {
                                 <td>Optimierte T2 (${compData.bfDefinition.metricName})</td>
                                 <td>${formatMetricForTable(compData.t2OptimiertData?.auc, false, 3)}</td>
                                 <td>${formatMetricForTable(compData.t2OptimiertData?.acc)}</td>
-                                <td colspan="2"><small class="text-muted">${studyT2CriteriaManager.formatCriteriaForDisplay(compData.bfDefinition.criteria, compData.bfDefinition.logic, true)}</small></td>
+                                <td colspan="2" class="text-center text-muted small"><em>vs. Avocado Sign<br>(${studyT2CriteriaManager.formatCriteriaForDisplay(compData.bfDefinition.criteria, compData.bfDefinition.logic, true)})</em></td>
                               </tr>`;
                 }
-                 tableHTML += `<tr><td colspan="6" style="background-color: var(--border-color-light); height: 3px; padding:0;"></td></tr>`; // Separator
+                 tableHTML += `<tr><td colspan="6" style="background-color: var(--border-color-light); height: 3px; padding:0;"></td></tr>`;
             });
              tableHTML += `</tbody></table></div>`;
         }
         return tableHTML;
     }
+
 
     return Object.freeze({
         renderSectionContent
