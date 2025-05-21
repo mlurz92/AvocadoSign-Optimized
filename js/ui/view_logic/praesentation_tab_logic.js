@@ -1,6 +1,5 @@
 const praesentationTabLogic = (() => {
 
-    // Private Hilfsfunktionen zum Generieren der Tooltip-Inhalte, angepasst für den Präsentationstab
     function _getMetricInterpretationHTMLPraes(key, metricData, methode = '', kollektivName = '') {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
         const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: 'N/A' };
@@ -45,7 +44,7 @@ const praesentationTabLogic = (() => {
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
             .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
-            .replace(/\[T2_SHORT_NAME\]/g, t2ShortName) // Wichtig für McNemar/DeLong Tooltips
+            .replace(/\[T2_SHORT_NAME\]/g, t2ShortName)
             .replace(/<hr.*?>.*$/, '');
     }
 
@@ -153,7 +152,7 @@ const praesentationTabLogic = (() => {
             let logicSourceForFormatting = comparisonCriteriaSet.logic;
 
             if (comparisonCriteriaSet.id === 'rutegard_et_al_esgar' && studyInfo?.keyCriteriaSummary) {
-                 criteriaHTML = studyInfo.keyCriteriaSummary; // Use predefined summary for complex ESGAR
+                 criteriaHTML = studyInfo.keyCriteriaSummary;
             } else if (criteriaSourceForFormatting) {
                  criteriaHTML = studyT2CriteriaManager.formatCriteriaForDisplay(criteriaSourceForFormatting, logicSourceForFormatting, false);
                  if (criteriaHTML === 'Keine aktiven Kriterien' && logicSourceForFormatting) criteriaHTML += ` (Logik: ${logicSourceForFormatting})`;
@@ -185,7 +184,7 @@ const praesentationTabLogic = (() => {
             const perfCSV = TOOLTIP_CONTENT.praesentation.downloadPerformanceCSV?.description || "CSV";
             const perfMD = TOOLTIP_CONTENT.praesentation.downloadPerformanceMD?.description || "MD";
             const testsMD = TOOLTIP_CONTENT.praesentation.downloadCompTestsMD?.description || "Tests MD";
-            const compTableMD = TOOLTIP_CONTENT.praesentation.downloadCompTableMD?.description || "Metriken MD"; // Tooltip für neue MD-Taste
+            const compTableMD = TOOLTIP_CONTENT.praesentation.downloadCompTableMD?.description || "Metriken MD";
 
             const chartPNG = TOOLTIP_CONTENT.praesentation.downloadCompChartPNG?.description || "Chart PNG";
             const chartSVG = TOOLTIP_CONTENT.praesentation.downloadCompChartSVG?.description || "Chart SVG";
@@ -245,7 +244,7 @@ const praesentationTabLogic = (() => {
                             </div>
                              <div class="card-footer text-end p-1">
                                 <button class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-vs-t2-csv" data-tippy-content="${perfCSV}"><i class="fas fa-file-csv me-1"></i>Tabelle (CSV)</button>
-                                <button class="btn btn-sm btn-outline-secondary" id="download-comp-table-as-vs-t2-md" data-tippy-content="${compTableMD}"><i class="fab fa-markdown me-1"></i>Metriken (MD)</button> {/* Neuer Button */}
+                                <button class="btn btn-sm btn-outline-secondary" id="download-comp-table-as-vs-t2-md" data-tippy-content="${compTableMD}"><i class="fab fa-markdown me-1"></i>Metriken (MD)</button>
                            </div>
                         </div>
                     </div>
