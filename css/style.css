@@ -306,9 +306,9 @@ tr[aria-expanded="true"] .row-toggle-button { color: var(--primary-color); }
 .fw-600 { font-weight: 600 !important; }
 
 #publikation-tab-pane .sticky-top {
-    top: calc(var(--header-height) + var(--nav-height) + 1px); /* Account for both fixed headers */
+    top: calc(var(--header-height) + var(--nav-height) + 1px);
     background-color: var(--bg-light-gray) !important;
-    z-index: 1015; /* Below main nav, above tab content */
+    z-index: 1015;
     padding-top: var(--spacing-sm);
     padding-bottom: var(--spacing-sm);
 }
@@ -352,7 +352,7 @@ tr[aria-expanded="true"] .row-toggle-button { color: var(--primary-color); }
     max-height: calc(100vh - (var(--header-height) + var(--nav-height) + 70px + 2rem)); /* Adjust based on sticky top height */
     overflow-y: auto;
 }
-#publikation-content-area h2.display-6 { /* This targets the main section title rendered by publication_renderer */
+#publikation-content-area h2.display-6 {
     font-size: 1.8rem;
     color: var(--primary-color);
     border-bottom: 2px solid var(--primary-color-light);
@@ -360,7 +360,7 @@ tr[aria-expanded="true"] .row-toggle-button { color: var(--primary-color); }
     margin-top: 0;
     margin-bottom: var(--spacing-lg);
 }
-#publikation-content-area h3.h4 { /* This targets subsection titles rendered by publication_renderer */
+#publikation-content-area h3.h4 {
     font-size: 1.35rem;
     color: var(--text-dark);
     font-weight: 600;
@@ -369,7 +369,7 @@ tr[aria-expanded="true"] .row-toggle-button { color: var(--primary-color); }
     padding-bottom: var(--spacing-xs);
     border-bottom: 1px solid var(--border-color-light);
 }
-#publikation-content-area h4 { /* This targets titles for tables/charts within subsections */
+#publikation-content-area h4 {
     font-size: 1.15rem;
     font-weight: 600;
     color: var(--text-dark);
@@ -411,7 +411,7 @@ tr[aria-expanded="true"] .row-toggle-button { color: var(--primary-color); }
     #publikation-tab-pane .row > .col-md-3 { width: 100%; flex-basis: 100%; max-height: 250px; overflow-y: auto; margin-bottom: var(--spacing-md); border-right: none; border-bottom: 1px solid var(--border-color); padding-right: 0;}
     #publikation-tab-pane .row > .col-md-9 { width: 100%; flex-basis: 100%; }
     #publikation-sections-nav { border-right: none; padding-right: 0; max-height: none; }
-    #publikation-content-area { max-height: none; /* Allow full scroll on mobile */ }
+    #publikation-content-area {max-height: none; /* Allow full scroll on mobile */ }
 }
 @media (max-width: 767.98px) { :root { --base-font-size: 12px; --spacing-md: 0.75rem; --spacing-lg: 1.25rem; } .nav-tabs .nav-link { padding: var(--spacing-sm) var(--spacing-sm); font-size: 0.9rem; } .card-header { font-size: 0.95rem; } .data-table th, .data-table td { padding: var(--spacing-xs) var(--spacing-sm); font-size: 0.8rem; } .dashboard-card-col { flex-basis: 50%; max-width: 50%; } .dashboard-card .dashboard-chart-container { min-height: 110px !important; } #statistik-tab-pane > .row > .col-xl-6 { flex-basis: 100%; max-width: 100%; } .criteria-group { flex-basis: 100%; } }
 @media (max-width: 575.98px) { h1.app-title { font-size: 1.1rem; } header .btn-group .btn { font-size: 0.75rem; padding: var(--spacing-xs); } .dashboard-card-col { flex-basis: 100%; max-width: 100%; } .dashboard-card .dashboard-chart-container { min-height: 130px !important; } .praes-chart-container { min-height: 160px; } .modal-dialog { margin: var(--spacing-sm); } .export-options-container .col-lg-6 { flex-basis: 100%; max-width: 100%; } .sub-row-item { flex-direction: column; align-items: flex-start; gap: var(--spacing-xs); } #publikation-tab-pane .sticky-top .d-flex.justify-content-end { flex-direction: column; align-items: flex-start !important; } #publikation-tab-pane .sticky-top .me-3 { margin-right: 0 !important; margin-bottom: var(--spacing-sm); } }
@@ -447,4 +447,5 @@ tr[aria-expanded="true"] .row-toggle-button { color: var(--primary-color); }
     #publikation-content-area h2.display-6 {font-size: 16pt !important;}
     #publikation-content-area h3.h4 {font-size: 14pt !important;}
     #publikation-content-area h4 {font-size: 11pt !important;}
+
 }
