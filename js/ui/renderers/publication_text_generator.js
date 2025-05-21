@@ -1,6 +1,5 @@
 const publicationTextGenerator = (() => {
 
-    // Hilfsfunktionen für Textformatierung
     function fValue(value, digits = 1, unit = '') {
         const num = parseFloat(value);
         if (isNaN(num) || !isFinite(num)) return 'N/A';
@@ -37,7 +36,6 @@ const publicationTextGenerator = (() => {
         return `${name} ${nText}`;
     }
 
-    // METHODEN SEKTIONEN
     function getMethodenStudienanlageText(lang, commonData) {
         const appVersion = commonData.appVersion || APP_CONFIG.APP_VERSION;
         if (lang === 'de') {
@@ -57,12 +55,12 @@ const publicationTextGenerator = (() => {
         const pChar = publicationData?.Gesamt?.deskriptiv;
         if (lang === 'de') {
             return `
-                <p>Das Studienkollektiv umfasste ${commonData.nGesamt || 'N/A'} konsekutive Patienten mit histologisch gesichertem Rektumkarzinom, die zwischen Januar 2020 und November 2023 am Klinikum St. Georg, Leipzig, behandelt wurden. Davon erhielten ${commonData.nNRCT || 'N/A'} Patienten eine neoadjuvante Radiochemotherapie (nRCT-Gruppe), während ${commonData.nDirektOP || 'N/A'} Patienten primär operiert wurden (Direkt-OP-Gruppe). Die mediane Alter betrug ${fValue(pChar?.alter?.median, 1)} Jahre (Range: ${fValue(pChar?.alter?.min, 0)}–${fValue(pChar?.alter?.max, 0)} Jahre), und ${fPercent(pChar?.geschlecht?.m / pChar?.anzahlPatienten, 0)} (${pChar?.geschlecht?.m || 0}/${pChar?.anzahlPatienten || 0}) waren männlich. Detaillierte Patientencharakteristika sind in Tabelle 1 dargestellt.</p>
+                <p>Das Studienkollektiv umfasste ${commonData.nGesamt || 'N/A'} konsekutive Patienten mit histologisch gesichertem Rektumkarzinom, die zwischen Januar 2020 und November 2023 am Klinikum St. Georg, Leipzig, behandelt wurden. Davon erhielten ${commonData.nNRCT || 'N/A'} Patienten eine neoadjuvante Radiochemotherapie (nRCT-Gruppe), während ${commonData.nDirektOP || 'N/A'} Patienten primär operiert wurden (Direkt-OP-Gruppe). Die mediane Alter betrug ${fValue(pChar?.alter?.median, 1)} Jahre (Range: ${fValue(pChar?.alter?.min, 0)}–${fValue(pChar?.alter?.max, 0)} Jahre), und ${fPercent(pChar?.geschlecht?.m && pChar?.anzahlPatienten ? pChar.geschlecht.m / pChar.anzahlPatienten : NaN, 0)} (${pChar?.geschlecht?.m || 0}/${pChar?.anzahlPatienten || 0}) waren männlich. Detaillierte Patientencharakteristika sind in Tabelle 1 dargestellt.</p>
                 <p>Einschlusskriterien waren ein Alter von mindestens 18 Jahren und ein histologisch bestätigtes Rektumkarzinom. Ausschlusskriterien umfassten nicht resektable Tumoren und Kontraindikationen für eine MRT-Untersuchung.</p>
             `;
         } else {
             return `
-                <p>The study cohort comprised ${commonData.nGesamt || 'N/A'} consecutive patients with histologically confirmed rectal cancer treated at Klinikum St. Georg, Leipzig, between January 2020 and November 2023. Of these, ${commonData.nNRCT || 'N/A'} patients received neoadjuvant chemoradiotherapy (nRCT group), while ${commonData.nDirektOP || 'N/A'} patients underwent primary surgery (upfront surgery group). The median age was ${fValue(pChar?.alter?.median, 1)} years (range: ${fValue(pChar?.alter?.min, 0)}–${fValue(pChar?.alter?.max, 0)} years), and ${fPercent(pChar?.geschlecht?.m / pChar?.anzahlPatienten, 0)} (${pChar?.geschlecht?.m || 0}/${pChar?.anzahlPatienten || 0}) were male. Detailed patient characteristics are presented in Table 1.</p>
+                <p>The study cohort comprised ${commonData.nGesamt || 'N/A'} consecutive patients with histologically confirmed rectal cancer treated at Klinikum St. Georg, Leipzig, between January 2020 and November 2023. Of these, ${commonData.nNRCT || 'N/A'} patients received neoadjuvant chemoradiotherapy (nRCT group), while ${commonData.nDirektOP || 'N/A'} patients underwent primary surgery (upfront surgery group). The median age was ${fValue(pChar?.alter?.median, 1)} years (range: ${fValue(pChar?.alter?.min, 0)}–${fValue(pChar?.alter?.max, 0)} years), and ${fPercent(pChar?.geschlecht?.m && pChar?.anzahlPatienten ? pChar.geschlecht.m / pChar.anzahlPatienten : NaN, 0)} (${pChar?.geschlecht?.m || 0}/${pChar?.anzahlPatienten || 0}) were male. Detailed patient characteristics are presented in Table 1.</p>
                 <p>Inclusion criteria were an age of at least 18 years and histologically confirmed rectal cancer. Exclusion criteria included unresectable tumors and contraindications to MRI examination.</p>
             `;
         }
@@ -131,7 +129,7 @@ const publicationTextGenerator = (() => {
                     <li><strong>Benutzerdefiniert angewandte T2-Kriterien:</strong> Die über die Benutzeroberfläche der Analyseanwendung aktuell konfigurierten und angewendeten Kriterien. Aktuelle Einstellung: ${formattedAppliedCriteria}.</li>
                     <li><strong>Literatur-basierte T2-Kriteriensets:</strong>
                         <ul>
-                            <li>Koh et al. (2008): "${studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology')?.description || 'Irreguläre Kontur ODER heterogenes Signal'}". Primär angewendet auf die nRCT-Kohorte.</li>
+                            <li>Koh et al. (2008): "${studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology')?.description || 'Irreguläre Kontur ODER heterogenes Signal'}". Evaluiert für das Gesamtkollektiv in dieser Anwendung.</li>
                             <li>Barbaro et al. (2024): "${studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging')?.description || 'Kurzachse ≥ 2.3mm'}". Angewendet auf die nRCT-Kohorte für Restaging.</li>
                             <li>ESGAR Konsensus Kriterien (2016), evaluiert durch Rutegård et al. (2025): "${studyT2CriteriaManager.getStudyCriteriaSetById('rutegard_et_al_esgar')?.description || 'Komplexe größenabhängige morphologische Regeln'}". Primär angewendet auf die Direkt-OP-Kohorte für Primärstaging.</li>
                         </ul>
@@ -150,7 +148,7 @@ const publicationTextGenerator = (() => {
                     <li><strong>User-defined applied T2 criteria:</strong> The criteria currently configured and applied via the analysis application's user interface. Current setting: ${formattedAppliedCriteria}.</li>
                     <li><strong>Literature-based T2 criteria sets:</strong>
                         <ul>
-                            <li>Koh et al. (2008): "${studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology')?.description || 'Irregular border OR heterogeneous internal signal'}". Primarily applied to the nRCT cohort.</li>
+                            <li>Koh et al. (2008): "${studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology')?.description || 'Irregular border OR heterogeneous internal signal'}". Evaluated for the overall cohort in this application.</li>
                             <li>Barbaro et al. (2024): "${studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging')?.description || 'Short-axis diameter ≥ 2.3mm'}". Applied to the nRCT cohort for restaging.</li>
                             <li>ESGAR Consensus Criteria (2016), as evaluated by Rutegård et al. (2025): "${studyT2CriteriaManager.getStudyCriteriaSetById('rutegard_et_al_esgar')?.description || 'Complex size-dependent morphological rules'}". Primarily applied to the upfront surgery cohort for primary staging.</li>
                         </ul>
@@ -193,7 +191,6 @@ const publicationTextGenerator = (() => {
         }
     }
 
-    // ERGEBNISSE SEKTIONEN
     function getErgebnissePatientencharakteristikaText(lang, publicationData, commonData) {
         const pCharGesamt = publicationData?.Gesamt?.deskriptiv;
         const pCharDirektOP = publicationData?.['direkt OP']?.deskriptiv;
@@ -201,12 +198,12 @@ const publicationTextGenerator = (() => {
 
         if (lang === 'de') {
             return `
-                <p>Insgesamt wurden ${commonData.nGesamt || 'N/A'} Patienten in die Studie eingeschlossen. Davon wurden ${commonData.nDirektOP || 'N/A'} Patienten primär operiert (Direkt-OP-Gruppe) und ${commonData.nNRCT || 'N/A'} Patienten erhielten eine neoadjuvante Radiochemotherapie (nRCT-Gruppe). Das mediane Alter im Gesamtkollektiv betrug ${fValue(pCharGesamt?.alter?.median, 1)} Jahre (Range ${fValue(pCharGesamt?.alter?.min, 0)}–${fValue(pCharGesamt?.alter?.max, 0)}), ${fPercent(pCharGesamt?.geschlecht?.m / pCharGesamt?.anzahlPatienten,0)} waren männlich. Ein positiver N-Status (N+) fand sich bei ${fPercent(pCharGesamt?.nStatus?.plus / pCharGesamt?.anzahlPatienten,0)} der Patienten im Gesamtkollektiv. Die detaillierten Charakteristika der Patienten, aufgeschlüsselt nach Behandlungsgruppen, sind in Tabelle 1 zusammengefasst.</p>
+                <p>Insgesamt wurden ${commonData.nGesamt || 'N/A'} Patienten in die Studie eingeschlossen. Davon wurden ${commonData.nDirektOP || 'N/A'} Patienten primär operiert (Direkt-OP-Gruppe) und ${commonData.nNRCT || 'N/A'} Patienten erhielten eine neoadjuvante Radiochemotherapie (nRCT-Gruppe). Das mediane Alter im Gesamtkollektiv betrug ${fValue(pCharGesamt?.alter?.median, 1)} Jahre (Range ${fValue(pCharGesamt?.alter?.min, 0)}–${fValue(pCharGesamt?.alter?.max, 0)}), ${fPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} waren männlich. Ein positiver N-Status (N+) fand sich bei ${fPercent(pCharGesamt?.nStatus?.plus && pCharGesamt?.anzahlPatienten ? pCharGesamt.nStatus.plus / pCharGesamt.anzahlPatienten : NaN,0)} der Patienten im Gesamtkollektiv. Die detaillierten Charakteristika der Patienten, aufgeschlüsselt nach Behandlungsgruppen, sind in Tabelle 1 zusammengefasst.</p>
                 <p>Die Diagramme zur Alters- und Geschlechterverteilung für das aktuell im Header ausgewählte Kollektiv (${commonData.currentKollektivName}) sind in Abbildung 1a und 1b dargestellt.</p>
             `;
         } else {
             return `
-                <p>A total of ${commonData.nGesamt || 'N/A'} patients were included in the study. Of these, ${commonData.nDirektOP || 'N/A'} patients underwent upfront surgery (upfront surgery group) and ${commonData.nNRCT || 'N/A'} patients received neoadjuvant chemoradiotherapy (nRCT group). The median age in the overall cohort was ${fValue(pCharGesamt?.alter?.median, 1)} years (range ${fValue(pCharGesamt?.alter?.min, 0)}–${fValue(pCharGesamt?.alter?.max, 0)}), and ${fPercent(pCharGesamt?.geschlecht?.m / pCharGesamt?.anzahlPatienten,0)} were male. A positive N-status (N+) was found in ${fPercent(pCharGesamt?.nStatus?.plus / pCharGesamt?.anzahlPatienten,0)} of patients in the overall cohort. Detailed patient characteristics, stratified by treatment group, are summarized in Table 1.</p>
+                <p>A total of ${commonData.nGesamt || 'N/A'} patients were included in the study. Of these, ${commonData.nDirektOP || 'N/A'} patients underwent upfront surgery (upfront surgery group) and ${commonData.nNRCT || 'N/A'} patients received neoadjuvant chemoradiotherapy (nRCT group). The median age in the overall cohort was ${fValue(pCharGesamt?.alter?.median, 1)} years (range ${fValue(pCharGesamt?.alter?.min, 0)}–${fValue(pCharGesamt?.alter?.max, 0)}), and ${fPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} were male. A positive N-status (N+) was found in ${fPercent(pCharGesamt?.nStatus?.plus && pCharGesamt?.anzahlPatienten ? pCharGesamt.nStatus.plus / pCharGesamt.anzahlPatienten : NaN,0)} of patients in the overall cohort. Detailed patient characteristics, stratified by treatment group, are summarized in Table 1.</p>
                 <p>The age and gender distribution charts for the currently selected cohort in the application header (${commonData.currentKollektivName}) are shown in Figure 1a and 1b.</p>
             `;
         }
@@ -236,13 +233,13 @@ const publicationTextGenerator = (() => {
         let text = '';
         if (lang === 'de') {
             text += `<p>Die diagnostische Güte der etablierten Literatur-basierten T2-Kriteriensets wurde für die jeweils relevanten Kollektive evaluiert (Tabelle 4). `;
-            text += `Für das Kriterienset nach Koh et al. (2008) ergab sich im nRCT-Kollektiv (N=${commonData.nNRCT}) eine AUC von ${fCI(publicationData?.nRCT?.gueteT2_literatur?.['koh_2008_morphology']?.auc, 3, false)}. `;
-            text += `Die Kriterien nach Barbaro et al. (2024) zeigten im nRCT-Kollektiv eine AUC von ${fCI(publicationData?.nRCT?.gueteT2_literatur?.['barbaro_2024_restaging']?.auc, 3, false)}. `;
+            text += `Für das Kriterienset nach Koh et al. (2008) ergab sich im Gesamtkollektiv (N=${commonData.nGesamt}) eine AUC von ${fCI(publicationData?.Gesamt?.gueteT2_literatur?.['koh_2008_morphology']?.auc, 3, false)}. `;
+            text += `Die Kriterien nach Barbaro et al. (2024) zeigten im nRCT-Kollektiv (N=${commonData.nNRCT}) eine AUC von ${fCI(publicationData?.nRCT?.gueteT2_literatur?.['barbaro_2024_restaging']?.auc, 3, false)}. `;
             text += `Die ESGAR 2016 Kriterien (evaluiert durch Rutegård et al., 2025) erreichten im Direkt-OP-Kollektiv (N=${commonData.nDirektOP}) eine AUC von ${fCI(publicationData?.['direkt OP']?.gueteT2_literatur?.['rutegard_et_al_esgar']?.auc, 3, false)}. Detaillierte Metriken (Sensitivität, Spezifität etc.) für jedes Set und Kollektiv sind in Tabelle 4 aufgeführt.</p>`;
         } else {
             text += `<p>The diagnostic performance of established literature-based T2 criteria sets was evaluated for the respective relevant cohorts (Table 4). `;
-            text += `For the criteria set according to Koh et al. (2008), an AUC of ${fCI(publicationData?.nRCT?.gueteT2_literatur?.['koh_2008_morphology']?.auc, 3, false, 'en')} was observed in the nRCT cohort (n=${commonData.nNRCT}). `;
-            text += `The criteria by Barbaro et al. (2024) showed an AUC of ${fCI(publicationData?.nRCT?.gueteT2_literatur?.['barbaro_2024_restaging']?.auc, 3, false, 'en')} in the nRCT cohort. `;
+            text += `For the criteria set according to Koh et al. (2008), an AUC of ${fCI(publicationData?.Gesamt?.gueteT2_literatur?.['koh_2008_morphology']?.auc, 3, false, 'en')} was observed in the overall cohort (n=${commonData.nGesamt}). `;
+            text += `The criteria by Barbaro et al. (2024) showed an AUC of ${fCI(publicationData?.nRCT?.gueteT2_literatur?.['barbaro_2024_restaging']?.auc, 3, false, 'en')} in the nRCT cohort (n=${commonData.nNRCT}). `;
             text += `The ESGAR 2016 criteria (evaluated by Rutegård et al., 2025) achieved an AUC of ${fCI(publicationData?.['direkt OP']?.gueteT2_literatur?.['rutegard_et_al_esgar']?.auc, 3, false, 'en')} in the upfront surgery cohort (n=${commonData.nDirektOP}). Detailed metrics (sensitivity, specificity, etc.) for each set and cohort are listed in Table 4.</p>`;
         }
         return text;
