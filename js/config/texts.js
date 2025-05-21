@@ -161,7 +161,7 @@ const TOOLTIP_CONTENT = {
         expandRow: "Klicken Sie auf diese Zeile, um die detaillierte Bewertung der einzelnen T2-gewichteten Lymphknoten dieses Patienten gemäß der aktuell angewendeten Kriterien anzuzeigen oder auszublenden. Erfüllte Positiv-Kriterien werden hervorgehoben."
     },
     t2Logic: { description: `Logische Verknüpfung der aktiven T2-Kriterien: <strong>UND</strong> (Ein Lymphknoten ist nur positiv, wenn ALLE aktivierten Kriterien erfüllt sind). <strong>ODER</strong> (Ein Lymphknoten ist positiv, wenn MINDESTENS EIN aktiviertes Kriterium erfüllt ist).` },
-    t2Size: { description: `Größenkriterium: Lymphknoten mit einem Kurzachsendurchmesser <strong>größer oder gleich</strong> dem eingestellten Schwellenwert gelten als suspekt. Einstellbarer Bereich: ${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min} - ${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max} mm. Aktivieren/Deaktivieren Sie das Kriterium mit der Checkbox.` },
+    t2Size: { description: `Größenkriterium: Lymphknoten mit einem Kurzachsendurchmesser <strong>größer oder gleich</strong> dem eingestellten Schwellenwert gelten als suspekt. Einstellbarer Bereich: 0.1 - 25.0 mm. Aktivieren/Deaktivieren Sie das Kriterium mit der Checkbox.` },
     t2Form: { description: "Formkriterium: Wählen Sie, welche Form ('rund' oder 'oval') als suspekt gilt. Ein Lymphknoten gilt als 'rund', wenn das Verhältnis Kurzachse zu Langachse nahe 1 ist. Aktivieren/Deaktivieren Sie das Kriterium mit der Checkbox." },
     t2Kontur: { description: "Konturkriterium: Wählen Sie, welche Kontur ('scharf' oder 'irregulär') als suspekt gilt. Aktivieren/Deaktivieren Sie das Kriterium mit der Checkbox." },
     t2Homogenitaet: { description: "Homogenitätskriterium: Wählen Sie, ob ein 'homogenes' oder 'heterogenes' Binnensignal auf T2w als suspekt gilt. Aktivieren/Deaktivieren Sie das Kriterium mit der Checkbox." },
@@ -290,7 +290,7 @@ const TOOLTIP_CONTENT = {
         tableSinglePNG: { description: "Exportiert die ausgewählte Tabelle als einzelne PNG-Datei.", type: 'TABLE_PNG_EXPORT', ext: "png"},
         allZIP: { description: "Exportiert alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT, alle MDs, Gefilterte-Daten-CSV, HTML-Report) in einem einzigen ZIP-Archiv.", type: 'ALL_ZIP', ext: "zip"},
         csvZIP: { description: "Bündelt alle verfügbaren CSV-Dateien (Statistik, Gefilterte Daten) in einem ZIP-Archiv.", type: 'CSV_ZIP', ext: "zip"},
-        mdZIP: { description: "Bündelt alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "md"},
+        mdZIP: { description: "Bündelt alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikations-Abschnitte) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "md"},
         pngZIP: { description: "Identisch zum 'Alle Diagramme & Tabellen (PNG)' Einzel-Export.", type: 'PNG_ZIP', ext: "zip"},
         svgZIP: { description: "Identisch zum 'Alle Diagramme (SVG)' Einzel-Export.", type: 'SVG_ZIP', ext: "zip"},
         xlsxZIP: { description: "Bündelt alle verfügbaren Excel-Dateien in einem ZIP-Archiv.", type: 'XLSX_ZIP', ext: "zip"}
@@ -339,7 +339,7 @@ const TOOLTIP_CONTENT = {
         logisticRegressionFit: { name: "Modellanpassung (Log. Regression)", description: "Güte der Anpassung des logistischen Regressionsmodells an die Daten.", interpretation: "Das Modell zeigt eine [BEWERTUNG_FIT] Anpassung an die Daten."},
         logisticRegressionCoef: { name: "Koeffizient (Log. Regression)", description: "Geschätzter Koeffizient für den Prädiktor [PREDICTOR]. Gibt die Veränderung der Log-Odds für N+ pro Einheitsänderung des Prädiktors an.", interpretation: "Der Koeffizient für [PREDICTOR] beträgt <strong>[COEF_VALUE]</strong> (p=[P_WERT], [SIGNIFIKANZ]), was auf einen [SIGNIFIKANZ_TEXT] Einfluss auf die N+ Wahrscheinlichkeit hindeutet."},
         rocCurvePlot: { description: "Zeigt die ROC-Kurve für {Variable}. Die Diagonale repräsentiert zufällige Klassifikation (AUC=0.5). Eine Kurve näher an der oberen linken Ecke bedeutet bessere Leistung."},
-        defaultP: { interpretation: `Der berechnete p-Wert beträgt <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Bei einem Signifikanzniveau von ${APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL} ist das Ergebnis <strong>[SIGNIFIKANZ_TEXT]</strong>.` }
+        defaultP: { interpretation: `Der berechnete p-Wert beträgt <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Bei einem Signifikanzniveau von 0.05 ist das Ergebnis <strong>[SIGNIFIKANZ_TEXT]</strong>.` }
     }
 };
 
