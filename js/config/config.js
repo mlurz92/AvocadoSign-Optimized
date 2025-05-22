@@ -92,13 +92,15 @@ const APP_CONFIG = Object.freeze({
         TERTIARY_COLOR_GREEN: '#2ca02c',
         AS_COLOR: '#4472C4',
         T2_COLOR: '#E0DC2C',
+        PLOT_BACKGROUND_COLOR: '#ffffff',
+        COLOR_SCHEMES: Object.freeze({
+            default: Object.freeze(['#4472C4', '#E0DC2C', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'])
+        }),
         ANIMATION_DURATION_MS: 750,
         AXIS_LABEL_FONT_SIZE: '11px',
         TICK_LABEL_FONT_SIZE: '10px',
         LEGEND_FONT_SIZE: '10px',
         TOOLTIP_FONT_SIZE: '11px',
-        PLOT_BACKGROUND_COLOR: '#ffffff',
-        GRIDLINE_COLOR: '#e9ecef',
         ENABLE_GRIDLINES: true,
         POINT_RADIUS: 4,
         LINE_STROKE_WIDTH: 2
@@ -138,7 +140,7 @@ const APP_CONFIG = Object.freeze({
             PRAES_AS_PERF_CSV: 'PraesPerformanceASPUR_CSV',
             PRAES_AS_PERF_MD: 'PraesPerformanceASPUR_MD',
             PRAES_AS_VS_T2_PERF_CSV: 'PraesPerformanceASvsT2_{StudyID}_CSV',
-            PRAES_AS_VS_T2_PERF_MD: 'PraesPerformanceASvsT2_{StudyID}_MD',
+            PRAES_AS_VS_T2_COMP_MD: 'PraesPerformanceASvsT2_{StudyID}_MD',
             PRAES_AS_VS_T2_TESTS_MD: 'PraesTestsASvsT2_{StudyID}_MD',
             PRAES_AS_VS_T2_CHART_PNG: 'PraesChartASvsT2_{StudyID}_PNG',
             PRAES_AS_VS_T2_CHART_SVG: 'PraesChartASvsT2_{StudyID}_SVG',
@@ -168,7 +170,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.2.0"}`,
+        REPORT_AUTHOR: `Generiert durch Analyse-Tool v2.2.0`,
         REPORT_LOGO_ALT_TEXT: 'Institutslogo'
     }),
 
