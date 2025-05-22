@@ -30,13 +30,12 @@ const publicationTextGenerator = (() => {
     function getPValueText(pValue, lang = 'de', placeholder = 'N/A') {
         if (pValue === null || pValue === undefined || isNaN(pValue)) return placeholder;
         if (pValue < 0.001) return lang === 'de' ? 'p < 0,001' : 'P < .001';
-        // Ensure formatNumber is available or use fValue. Assuming fValue for self-containment or if formatNumber isn't passed/global.
         const pFormatted = fValue(pValue, 3, '', placeholder);
         return `p = ${pFormatted.replace('.', lang === 'de' ? ',' : '.')}`;
     }
 
     function getKollektivText(kollektivId, n, lang = 'de') {
-        const name = getKollektivDisplayName(kollektivId, lang); // Assuming getKollektivDisplayName is globally available or passed
+        const name = getKollektivDisplayName(kollektivId, lang);
         const nText = lang === 'de' ? `(N=${n})` : `(n=${n})`;
         return `${name} ${nText}`;
     }
@@ -156,9 +155,9 @@ const publicationTextGenerator = (() => {
                     <li><strong>Benutzerdefiniert angewandte T2-Kriterien:</strong> Die über die Benutzeroberfläche der Analyseanwendung (${appName} v${appVersion}) zum Zeitpunkt der finalen Auswertung global konfigurierten und auf alle Kollektive angewendeten Kriterien. Diese Einstellung war: ${formattedAppliedCriteria}. Diese werden im Folgenden als "Angewandte T2-Kriterien" bezeichnet.</li>
                     <li><strong>Literatur-basierte T2-Kriteriensets:</strong>
                         <ul>
-                            <li>Koh et al. (2008) [${commonData.references.koh2008.split('(')[1].split(')')[0]}]: "${kohDesc?.description || UI_TEXTS.t2CriteriaValues.irregulär[langKey] + ' ' + UI_TEXTS.t2LogicDisplayNames.ODER[langKey] + ' ' + UI_TEXTS.t2CriteriaValues.heterogen[langKey] + 'es Signal'}". Diese Kriterien wurden für die vorliegende Analyse auf das Gesamtkollektiv angewendet.</li>
-                            <li>Barbaro et al. (2024) [${commonData.references.barbaro2024.split('(')[1].split(')')[0]}]: "${barbaroDesc?.description || UI_TEXTS.t2CriteriaLongPrefix.size[langKey] + '≥ 2,3mm'}". Diese Kriterien wurden auf die nRCT-Kohorte für das Restaging angewendet.</li>
-                            <li>ESGAR Konsensus Kriterien (Beets-Tan et al., 2018 [${commonData.references.beetsTan2018ESGAR.split('(')[1].split(')')[0]}]), evaluiert durch Rutegård et al. (2025 [${commonData.references.rutegard2025.split('(')[1].split(')')[0]}]): "${esgarDesc?.description || 'Komplexe größenabhängige morphologische Regeln'}". Diese Kriterien wurden primär auf die Direkt-OP-Kohorte für das Primärstaging angewendet.</li>
+                            <li>Koh et al. (2008) [${commonData.references.koh2008.split('(')[1].split(')')[0]}]: "${(UI_TEXTS.literatureSetNames?.koh_2008_morphology?.[langKey] || UI_TEXTS.literatureSetNames?.koh_2008_morphology?.de || kohDisplayText).split(': ')[1] || (UI_TEXTS.t2CriteriaValues.irregulär[langKey] + ' ' + UI_TEXTS.t2LogicDisplayNames.ODER[langKey] + ' ' + UI_TEXTS.t2CriteriaValues.heterogen[langKey] + 'es Signal')}". Diese Kriterien wurden für die vorliegende Analyse auf das Gesamtkollektiv angewendet.</li>
+                            <li>Barbaro et al. (2024) [${commonData.references.barbaro2024.split('(')[1].split(')')[0]}]: "${(UI_TEXTS.literatureSetNames?.barbaro_2024_restaging?.[langKey] || UI_TEXTS.literatureSetNames?.barbaro_2024_restaging?.de || barbaroDisplayText).split(': ')[1] || (UI_TEXTS.t2CriteriaLongPrefix.size[langKey] + '≥ 2,3mm')}". Diese Kriterien wurden auf die nRCT-Kohorte für das Restaging angewendet.</li>
+                            <li>ESGAR Konsensus Kriterien (Beets-Tan et al., 2018 [${commonData.references.beetsTan2018ESGAR.split('(')[1].split(')')[0]}]), evaluiert durch Rutegård et al. (2025 [${commonData.references.rutegard2025.split('(')[1].split(')')[0]}]): "${(UI_TEXTS.literatureSetNames?.rutegard_et_al_esgar?.[langKey] || UI_TEXTS.literatureSetNames?.rutegard_et_al_esgar?.de || esgarDisplayText).split(': ')[1] || 'Komplexe größenabhängige morphologische Regeln'}". Diese Kriterien wurden primär auf die Direkt-OP-Kohorte für das Primärstaging angewendet.</li>
                         </ul>
                         Eine detaillierte Übersicht dieser Literatur-Kriterien und ihrer spezifischen Anwendungskontexte findet sich in Tabelle 2.
                     </li>
@@ -169,16 +168,16 @@ const publicationTextGenerator = (() => {
                 </ol>
                 <p>Ein Lymphknoten wurde als T2-positiv gewertet, wenn er die Bedingungen des jeweiligen Kriteriensets erfüllte. Ein Patient galt als T2-positiv für ein bestimmtes Kriterienset, wenn mindestens ein Lymphknoten dieses Patienten gemäß diesem Set als positiv bewertet wurde.</p>
             `;
-        } else {
+        } else { // lang === 'en'
             return `
                 <p>Morphological T2 criteria were evaluated on high-resolution T2-weighted sequences for each visible mesorectal lymph node on T2-weighted MRI. The assessment of individual T2 features (size, shape, border, homogeneity, signal intensity) was performed by the same experienced radiologist (ML) who also performed the Avocado Sign assessment, blinded to the AS status and histopathological results. The following criteria sets were used for diagnostic performance comparison:</p>
                 <ol>
                     <li><strong>User-defined applied T2 criteria:</strong> The criteria globally configured via the user interface of the analysis application (${appName} v${appVersion}) at the time of final analysis and applied to all cohorts. This setting was: ${formattedAppliedCriteria}. These are referred to as "Applied T2 Criteria" hereafter.</li>
                     <li><strong>Literature-based T2 criteria sets:</strong>
                         <ul>
-                            <li>Koh et al. (2008) [${commonData.references.koh2008.split('(')[1].split(')')[0]}]: "${kohDesc?.studyInfo?.keyCriteriaSummary || UI_TEXTS.t2CriteriaValues.irregulär[langKey] + ' ' + UI_TEXTS.t2LogicDisplayNames.ODER[langKey] + ' ' + UI_TEXTS.t2CriteriaValues.heterogen[langKey] + ' signal'}". These criteria were applied to the overall cohort for the present analysis.</li>
-                            <li>Barbaro et al. (2024) [${commonData.references.barbaro2024.split('(')[1].split(')')[0]}]: "${barbaroDesc?.studyInfo?.keyCriteriaSummary || UI_TEXTS.t2CriteriaLongPrefix.size[langKey] + '≥ 2.3mm'}". These criteria were applied to the nCRT cohort for restaging.</li>
-                            <li>ESGAR Consensus Criteria (Beets-Tan et al., 2018 [${commonData.references.beetsTan2018ESGAR.split('(')[1].split(')')[0]}]), as evaluated by Rutegård et al. (2025 [${commonData.references.rutegard2025.split('(')[1].split(')')[0]}]): "${esgarDesc?.studyInfo?.keyCriteriaSummary || 'Complex size-dependent morphological rules'}". These criteria were primarily applied to the upfront surgery cohort for primary staging.</li>
+                            <li>Koh et al. (2008) [${commonData.references.koh2008.split('(')[1].split(')')[0]}]: "${(UI_TEXTS.literatureSetNames?.koh_2008_morphology?.[langKey] || UI_TEXTS.literatureSetNames?.koh_2008_morphology?.de || kohDisplayText).split(': ')[1] || (UI_TEXTS.t2CriteriaValues.irregulär[langKey] + ' ' + UI_TEXTS.t2LogicDisplayNames.ODER[langKey] + ' ' + UI_TEXTS.t2CriteriaValues.heterogen[langKey] + ' signal')}". These criteria were applied to the overall cohort for the present analysis.</li>
+                            <li>Barbaro et al. (2024) [${commonData.references.barbaro2024.split('(')[1].split(')')[0]}]: "${(UI_TEXTS.literatureSetNames?.barbaro_2024_restaging?.[langKey] || UI_TEXTS.literatureSetNames?.barbaro_2024_restaging?.de || barbaroDisplayText).split(': ')[1] || (UI_TEXTS.t2CriteriaLongPrefix.size[langKey] + '≥ 2.3mm')}". These criteria were applied to the nCRT cohort for restaging.</li>
+                            <li>ESGAR Consensus Criteria (Beets-Tan et al., 2018 [${commonData.references.beetsTan2018ESGAR.split('(')[1].split(')')[0]}]), as evaluated by Rutegård et al. (2025 [${commonData.references.rutegard2025.split('(')[1].split(')')[0]}]): "${(UI_TEXTS.literatureSetNames?.rutegard_et_al_esgar?.[langKey] || UI_TEXTS.literatureSetNames?.rutegard_et_al_esgar?.de || esgarDisplayText).split(': ')[1] || 'Complex size-dependent morphological rules'}". These criteria were primarily applied to the upfront surgery cohort for primary staging.</li>
                         </ul>
                         A detailed overview of these literature-based criteria and their specific application contexts is provided in Table 2.
                     </li>
@@ -327,7 +326,6 @@ const publicationTextGenerator = (() => {
         }
     }
 
-
     function getSectionText(sectionId, lang, publicationData, kollektiveData, commonData) {
         switch (sectionId) {
             case 'methoden_studienanlage': return getMethodenStudienanlageText(lang, commonData);
@@ -383,7 +381,8 @@ const publicationTextGenerator = (() => {
 
     return Object.freeze({
         getSectionText,
-        getSectionTextAsMarkdown
+        getSectionTextAsMarkdown,
+        getPValueText // Expose getPValueText
     });
 
 })();
