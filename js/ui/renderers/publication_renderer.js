@@ -282,7 +282,6 @@ const publicationRenderer = (() => {
                     const nPat = stats?.matrix ? (stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn) : (kollektiveData[kollektivId]?.deskriptiv?.anzahlPatienten || 0);
                     const displayName = dataSet.nameKey;
 
-
                     if (stats === null && sectionId === 'ergebnisse_literatur_t2_performance') {
                          tableHTML += `<tr>
                                 <td>${displayName}</td>
