@@ -6,7 +6,7 @@ const state = (() => {
         datenTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT),
         auswertungTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT),
         currentPublikationLang: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG,
-        currentPublikationSection: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION,
+        currentPublikationSection: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION, // Wird jetzt eine Hauptsektion sein
         currentPublikationBruteForceMetric: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC,
         currentStatsLayout: APP_CONFIG.DEFAULT_SETTINGS.STATS_LAYOUT,
         currentStatsKollektiv1: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1,
@@ -31,7 +31,14 @@ const state = (() => {
             auswertungTableSort: cloneDeep(defaultState.auswertungTableSort),
             activeTabId: defaultState.activeTabId
         };
-        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) {
+        // Ensure the stored publication section is a main section, otherwise reset to default
+        const isValidStoredSection = PUBLICATION_CONFIG.sections.some(mainSection => mainSection.id === currentState.currentPublikationSection);
+        if (!isValidStoredSection) {
+            currentState.currentPublikationSection = defaultState.currentPublikationSection;
+            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION, currentState.currentPublikationSection);
+        }
+
+        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) { // Legacy key removal
             localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
         }
     }
@@ -97,13 +104,8 @@ const state = (() => {
     function setCurrentPublikationSection(newSectionId) {
         let isValidSection = false;
         if (typeof newSectionId === 'string') {
-            isValidSection = PUBLICATION_CONFIG.sections.some(mainSection => {
-                if (mainSection.id === newSectionId) return true;
-                if (mainSection.subSections && Array.isArray(mainSection.subSections)) {
-                    return mainSection.subSections.some(subSection => subSection.id === newSectionId);
-                }
-                return false;
-            });
+            // Only allow main section IDs now
+            isValidSection = PUBLICATION_CONFIG.sections.some(mainSection => mainSection.id === newSectionId);
         }
 
         if (isValidSection && currentState.currentPublikationSection !== newSectionId) {
@@ -112,7 +114,7 @@ const state = (() => {
             return true;
         }
         if (!isValidSection && typeof newSectionId === 'string') {
-            console.warn(`setCurrentPublikationSection: Ungültige Sektions-ID '${newSectionId}'`);
+            console.warn(`setCurrentPublikationSection: Ungültige Haupt-Sektions-ID '${newSectionId}'`);
         }
         return false;
     }
