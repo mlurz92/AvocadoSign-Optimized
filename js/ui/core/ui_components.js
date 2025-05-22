@@ -2,14 +2,21 @@ const uiComponents = (() => {
 
     function createDashboardCard(title, content, chartId = null, cardClasses = '', headerClasses = '', bodyClasses = '', downloadButtons = []) {
         let headerButtonHtml = '';
-         if(downloadButtons && downloadButtons.length > 0 && chartId) {
-             headerButtonHtml = downloadButtons.map(btn =>
-                 `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${chartId}" data-format="${btn.format}" data-tippy-content="${btn.tooltip || `Als ${btn.format.toUpperCase()} herunterladen`}"> <i class="fas ${btn.icon || 'fa-download'}"></i></button>`
-             ).join('');
-        }
         const langKey = state.getCurrentPublikationLang() || 'de';
-        const tooltipKeyEntry = TOOLTIP_CONTENT.deskriptiveStatistik[chartId];
-        const tooltipContent = (tooltipKeyEntry && typeof tooltipKeyEntry.description === 'object' ? tooltipKeyEntry.description[langKey] : (tooltipKeyEntry?.description || title || ''));
+
+        if (downloadButtons && downloadButtons.length > 0 && chartId) {
+            headerButtonHtml = downloadButtons.map(btn => {
+                const tooltipText = (typeof btn.tooltip === 'object' ? btn.tooltip[langKey] : btn.tooltip) || (langKey === 'de' ? `Als ${btn.format.toUpperCase()} herunterladen` : `Download as ${btn.format.toUpperCase()}`);
+                return `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${chartId}" data-format="${btn.format}" data-tippy-content="${tooltipText}"> <i class="fas ${btn.icon || 'fa-download'}"></i></button>`;
+            }).join('');
+        }
+
+        let tooltipContent = title || '';
+        if (chartId && TOOLTIP_CONTENT.deskriptiveStatistik && TOOLTIP_CONTENT.deskriptiveStatistik[chartId] && TOOLTIP_CONTENT.deskriptiveStatistik[chartId].description) {
+            const descEntry = TOOLTIP_CONTENT.deskriptiveStatistik[chartId].description;
+            tooltipContent = (typeof descEntry === 'object' ? descEntry[langKey] : descEntry) || title;
+        }
+
 
         return `
             <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 dashboard-card-col ${cardClasses}">
@@ -44,7 +51,7 @@ const uiComponents = (() => {
             return values.map(value => {
                 const isActiveValue = isChecked && currentValue === value;
                 const icon = ui_helpers.getT2IconSVG(key, value);
-                const displayValue = UI_TEXTS.t2CriteriaValues[value]?.[langKey] || value;
+                const displayValue = UI_TEXTS.t2CriteriaValues[value]?.[langKey] || UI_TEXTS.t2CriteriaValues[value]?.['de'] || value;
                 const buttonTooltipDe = `Kriterium '${criterionLabel}' auf '${displayValue}' setzen. ${isChecked ? '' : '(Kriterium ist derzeit inaktiv)'}`;
                 const buttonTooltipEn = `Set criterion '${criterionLabel}' to '${displayValue}'. ${isChecked ? '' : '(Criterion is currently inactive)'}`;
                 const buttonTooltip = langKey === 'de' ? buttonTooltipDe : buttonTooltipEn;
@@ -55,7 +62,8 @@ const uiComponents = (() => {
         const createCriteriaGroup = (key, labelDe, labelEn, tooltipKey, contentGenerator) => {
             const isChecked = initialCriteria[key]?.active === true;
             const label = langKey === 'de' ? labelDe : labelEn;
-            const tooltip = TOOLTIP_CONTENT[tooltipKey]?.description?.[langKey] || TOOLTIP_CONTENT[tooltipKey]?.description?.['de'] || label;
+            const tooltipBase = TOOLTIP_CONTENT[tooltipKey]?.description;
+            const tooltip = (typeof tooltipBase === 'object' ? tooltipBase[langKey] : tooltipBase?.[langKey]) || tooltipBase?.['de'] || label;
             return `
                 <div class="col-md-6 criteria-group">
                     <div class="form-check mb-2">
@@ -69,11 +77,15 @@ const uiComponents = (() => {
                 </div>`;
         };
         const logicLabelDe = 'Logik:'; const logicLabelEn = 'Logic:';
-        const logicTooltip = TOOLTIP_CONTENT.t2Logic.description[langKey] || TOOLTIP_CONTENT.t2Logic.description.de;
+        const logicTooltipBase = TOOLTIP_CONTENT.t2Logic.description;
+        const logicTooltip = (typeof logicTooltipBase === 'object' ? logicTooltipBase[langKey] : logicTooltipBase) || logicTooltipBase['de'];
         const resetText = langKey === 'de' ? 'Zurücksetzen (Standard)' : 'Reset (Default)';
         const applyText = langKey === 'de' ? 'Anwenden & Speichern' : 'Apply & Save';
-        const resetTooltip = TOOLTIP_CONTENT.t2Actions.reset[langKey] || TOOLTIP_CONTENT.t2Actions.reset.de;
-        const applyTooltip = TOOLTIP_CONTENT.t2Actions.apply[langKey] || TOOLTIP_CONTENT.t2Actions.apply.de;
+        const resetTooltipBase = TOOLTIP_CONTENT.t2Actions.reset;
+        const resetTooltip = (typeof resetTooltipBase === 'object' ? resetTooltipBase[langKey] : resetTooltipBase) || resetTooltipBase['de'];
+        const applyTooltipBase = TOOLTIP_CONTENT.t2Actions.apply;
+        const applyTooltip = (typeof applyTooltipBase === 'object' ? applyTooltipBase[langKey] : applyTooltipBase) || applyTooltipBase['de'];
+
         const sizeRangeTooltipDe = `Schwellenwert für Kurzachsendurchmesser (≥) einstellen. Bereich: ${sizeMin} - ${sizeMax} mm.`;
         const sizeRangeTooltipEn = `Set threshold for short axis diameter (≥). Range: ${sizeMin} - ${sizeMax} mm.`;
         const sizeRangeTooltip = langKey === 'de' ? sizeRangeTooltipDe : sizeRangeTooltipEn;
@@ -88,7 +100,7 @@ const uiComponents = (() => {
                     <div class="form-check form-switch" data-tippy-content="${logicTooltip}">
                          <label class="form-check-label small me-2" for="t2-logic-switch" id="t2-logic-label-prefix">${langKey === 'de' ? logicLabelDe : logicLabelEn}</label>
                          <input class="form-check-input" type="checkbox" role="switch" id="t2-logic-switch" ${logicChecked ? 'checked' : ''}>
-                         <label class="form-check-label fw-bold" for="t2-logic-switch" id="t2-logic-label">${UI_TEXTS.t2LogicDisplayNames[initialLogic]?.[langKey] || initialLogic}</label>
+                         <label class="form-check-label fw-bold" for="t2-logic-switch" id="t2-logic-label">${UI_TEXTS.t2LogicDisplayNames[initialLogic]?.[langKey] || UI_TEXTS.t2LogicDisplayNames[initialLogic]?.['de'] || initialLogic}</label>
                      </div>
                 </div>
                 <div class="card-body">
@@ -133,16 +145,22 @@ const uiComponents = (() => {
         const statusText = langKey === 'de' ? statusTextDe : statusTextEn;
 
         const defaultMetric = APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC || 'Balanced Accuracy';
-        const metricTooltip = TOOLTIP_CONTENT.bruteForceMetric.description[langKey] || TOOLTIP_CONTENT.bruteForceMetric.description.de;
-        const startTooltip = TOOLTIP_CONTENT.bruteForceStart.description[langKey] || TOOLTIP_CONTENT.bruteForceStart.description.de;
-        const infoTooltip = TOOLTIP_CONTENT.bruteForceInfo.description[langKey] || TOOLTIP_CONTENT.bruteForceInfo.description.de;
-        const progressTooltip = TOOLTIP_CONTENT.bruteForceProgress.description[langKey] || TOOLTIP_CONTENT.bruteForceProgress.description.de;
-        const resultTooltip = TOOLTIP_CONTENT.bruteForceResult.description[langKey] || TOOLTIP_CONTENT.bruteForceResult.description.de;
-        const detailsButtonTooltip = TOOLTIP_CONTENT.bruteForceDetailsButton.description[langKey] || TOOLTIP_CONTENT.bruteForceDetailsButton.description.de;
+        const metricTooltipBase = TOOLTIP_CONTENT.bruteForceMetric.description;
+        const metricTooltip = (typeof metricTooltipBase === 'object' ? metricTooltipBase[langKey] : metricTooltipBase) || metricTooltipBase['de'];
+        const startTooltipBase = TOOLTIP_CONTENT.bruteForceStart.description;
+        const startTooltip = (typeof startTooltipBase === 'object' ? startTooltipBase[langKey] : startTooltipBase) || startTooltipBase['de'];
+        const infoTooltipBase = TOOLTIP_CONTENT.bruteForceInfo.description;
+        const infoTooltip = (typeof infoTooltipBase === 'object' ? infoTooltipBase[langKey] : infoTooltipBase) || infoTooltipBase['de'];
+        const progressTooltipBase = TOOLTIP_CONTENT.bruteForceProgress.description;
+        const progressTooltip = (typeof progressTooltipBase === 'object' ? progressTooltipBase[langKey] : progressTooltipBase) || progressTooltipBase['de'];
+        const resultTooltipBase = TOOLTIP_CONTENT.bruteForceResult.description;
+        const resultTooltip = (typeof resultTooltipBase === 'object' ? resultTooltipBase[langKey] : resultTooltipBase) || resultTooltipBase['de'];
+        const detailsButtonTooltipBase = TOOLTIP_CONTENT.bruteForceDetailsButton.description;
+        const detailsButtonTooltip = (typeof detailsButtonTooltipBase === 'object' ? detailsButtonTooltipBase[langKey] : detailsButtonTooltipBase) || detailsButtonTooltipBase['de'];
+
         const cancelText = langKey === 'de' ? 'Abbrechen' : 'Cancel';
         const applyText = langKey === 'de' ? 'Anwenden' : 'Apply';
         const top10Text = langKey === 'de' ? 'Top 10' : 'Top 10';
-
 
         return `
         <div class="col-12">
@@ -157,8 +175,8 @@ const uiComponents = (() => {
                                 <option value="Accuracy" ${defaultMetric === 'Accuracy' ? 'selected' : ''}>Accuracy</option>
                                 <option value="Balanced Accuracy" ${defaultMetric === 'Balanced Accuracy' ? 'selected' : ''}>Balanced Accuracy</option>
                                 <option value="F1-Score" ${defaultMetric === 'F1-Score' ? 'selected' : ''}>F1-Score</option>
-                                <option value="PPV" ${defaultMetric === 'PPV' ? 'selected' : ''}>${langKey==='de' ? 'Positiver Prädiktiver Wert (PPV)' : 'Positive Predictive Value (PPV)'}</option>
-                                <option value="NPV" ${defaultMetric === 'NPV' ? 'selected' : ''}>${langKey==='de' ? 'Negativer Prädiktiver Wert (NPV)' : 'Negative Predictive Value (NPV)'}</option>
+                                <option value="PPV" ${defaultMetric === 'PPV' ? 'selected' : ''}>${langKey === 'de' ? 'Positiver Prädiktiver Wert (PPV)' : 'Positive Predictive Value (PPV)'}</option>
+                                <option value="NPV" ${defaultMetric === 'NPV' ? 'selected' : ''}>${langKey === 'de' ? 'Negativer Prädiktiver Wert (NPV)' : 'Negative Predictive Value (NPV)'}</option>
                             </select>
                         </div>
                         <div class="col-md-4">
@@ -214,28 +232,28 @@ const uiComponents = (() => {
     function createStatistikCard(id, title, content = '', addPadding = true, tooltipKey = null, downloadButtons = [], tableId = null) {
         const langKey = state.getCurrentPublikationLang() || 'de';
         const cardTooltipBase = tooltipKey && TOOLTIP_CONTENT[tooltipKey]?.cardTitle;
-        const cardTooltipText = (typeof cardTooltipBase === 'object' ? cardTooltipBase[langKey] : cardTooltipBase) || title || '';
+        let cardTooltipText = (typeof cardTooltipBase === 'object' ? cardTooltipBase?.[langKey] : cardTooltipBase) || title || '';
+        if (typeof cardTooltipText !== 'string') cardTooltipText = title || ''; // Fallback if langKey resolution fails
         const cardTooltipHtml = cardTooltipText ? `data-tippy-content="${cardTooltipText.replace(/\[KOLLEKTIV\]/g, '{KOLLEKTIV_PLACEHOLDER}')}"` : '';
-
 
         let headerButtonHtml = downloadButtons.map(btn => {
             const btnTooltipBase = btn.tooltip || '';
-            const btnTooltipText = (typeof btnTooltipBase === 'object' ? btnTooltipBase[langKey] : btnTooltipBase) || (langKey==='de' ? 'Herunterladen' : 'Download');
+            const btnTooltipText = (typeof btnTooltipBase === 'object' ? btnTooltipBase[langKey] : btnTooltipBase) || (langKey === 'de' ? 'Herunterladen' : 'Download');
 
             if (btn.tableId) {
-                return `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${btn.id}" data-table-id="${btn.tableId}" data-table-name="${btn.tableName || title.replace(/[^a-z0-9]/gi, '_').substring(0,30)}" data-tippy-content="${btnTooltipText}"><i class="fas ${btn.icon || 'fa-image'}"></i></button>`;
+                return `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${btn.id}" data-table-id="${btn.tableId}" data-table-name="${btn.tableName || title.replace(/[^a-z0-9]/gi, '_').substring(0, 30)}" data-tippy-content="${btnTooltipText}"><i class="fas ${btn.icon || 'fa-image'}"></i></button>`;
             } else if (btn.chartId) {
-                 return `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${btn.chartId}" data-format="${btn.format}" data-tippy-content="${btnTooltipText}"><i class="fas ${btn.icon || 'fa-download'}"></i></button>`;
+                return `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${btn.chartId}" data-format="${btn.format}" data-tippy-content="${btnTooltipText}"><i class="fas ${btn.icon || 'fa-download'}"></i></button>`;
             }
             return '';
         }).join('');
 
 
         if (APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT && tableId && !downloadButtons.some(b => b.tableId === tableId)) {
-             const tooltipDefaultDe = `Tabelle '${title}' als PNG herunterladen.`;
-             const tooltipDefaultEn = `Download table '${title}' as PNG.`;
-             const pngExportButton = { id: `dl-card-${id.replace(/[^a-z0-9_-]/gi, '')}-${tableId}-png`, icon: 'fa-image', tooltip: langKey==='de'? tooltipDefaultDe : tooltipDefaultEn, format: 'png', tableId: tableId, tableName: title.replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').substring(0,30) };
-             headerButtonHtml += `
+            const tooltipDefaultDe = `Tabelle '${title}' als PNG herunterladen.`;
+            const tooltipDefaultEn = `Download table '${title}' as PNG.`;
+            const pngExportButton = { id: `dl-card-${id.replace(/[^a-z0-9_-]/gi, '')}-${tableId}-png`, icon: 'fa-image', tooltip: langKey === 'de' ? tooltipDefaultDe : tooltipDefaultEn, format: 'png', tableId: tableId, tableName: title.replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').substring(0, 30) };
+            headerButtonHtml += `
                  <button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${pngExportButton.id}" data-table-id="${pngExportButton.tableId}" data-table-name="${pngExportButton.tableName}" data-tippy-content="${pngExportButton.tooltip}">
                      <i class="fas ${pngExportButton.icon}"></i>
                  </button>`;
@@ -268,21 +286,28 @@ const uiComponents = (() => {
 
         const generateButtonHTML = (idSuffix, iconClass, textDe, textEn, tooltipKey, disabled = false, experimental = false) => {
             const config = TOOLTIP_CONTENT.exportTab[tooltipKey]; if (!config || !APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]) return ``;
-            const type = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]; const ext = config.ext; const filename = fileNameTemplate.replace('{TYPE}', type).replace('{KOLLEKTIV}', safeKollektiv).replace('{DATE}', dateStr).replace('{EXT}', ext).replace('_{SectionName}','').replace('{SectionName}',''); const tooltipBase = config.description; const tooltipText = (typeof tooltipBase === 'object' ? tooltipBase[langKey] : tooltipBase) + `<br><small>File: ${filename}</small>`; const tooltipHtml = `data-tippy-content="${tooltipText}"`; const disabledAttr = disabled ? 'disabled' : ''; const experimentalBadge = experimental ? `<span class="badge bg-warning text-dark ms-1 small">${langKey==='de' ? 'Experimentell' : 'Experimental'}</span>` : ''; const buttonClass = disabled ? 'btn-outline-secondary' : 'btn-outline-primary'; const text = langKey === 'de' ? textDe : textEn;
+            const type = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]; const ext = config.ext; const filename = fileNameTemplate.replace('{TYPE}', type).replace('{KOLLEKTIV}', safeKollektiv).replace('{DATE}', dateStr).replace('{EXT}', ext).replace('_{SectionName}', '').replace('{SectionName}', '');
+            const tooltipBase = config.description;
+            const tooltipText = ((typeof tooltipBase === 'object' ? tooltipBase[langKey] : tooltipBase) || (langKey === 'de' ? 'Info nicht verfügbar' : 'Info not available')) + `<br><small>File: ${filename}</small>`;
+            const tooltipHtml = `data-tippy-content="${tooltipText}"`;
+            const disabledAttr = disabled ? 'disabled' : ''; const experimentalBadge = experimental ? `<span class="badge bg-warning text-dark ms-1 small">${langKey === 'de' ? 'Experimentell' : 'Experimental'}</span>` : ''; const buttonClass = disabled ? 'btn-outline-secondary' : 'btn-outline-primary'; const text = langKey === 'de' ? textDe : textEn;
             return `<button type="button" class="btn ${buttonClass} w-100 mb-2 d-flex justify-content-start align-items-center" id="export-${idSuffix}" ${tooltipHtml} ${disabledAttr}><i class="${iconClass} fa-fw me-2"></i> <span class="flex-grow-1 text-start">${text} (.${ext})</span> ${experimentalBadge}</button>`;
         };
 
-         const generateZipButtonHTML = (idSuffix, iconClass, textDe, textEn, tooltipKey, disabled = false) => {
+        const generateZipButtonHTML = (idSuffix, iconClass, textDe, textEn, tooltipKey, disabled = false) => {
             const config = TOOLTIP_CONTENT.exportTab[tooltipKey]; if (!config || !APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]) return ``;
-            const type = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]; const ext = config.ext; const filename = fileNameTemplate.replace('{TYPE}', type).replace('{KOLLEKTIV}', safeKollektiv).replace('{DATE}', dateStr).replace('{EXT}', ext).replace('_{SectionName}','').replace('{SectionName}',''); const tooltipBase = config.description; const tooltipText = (typeof tooltipBase === 'object' ? tooltipBase[langKey] : tooltipBase) + `<br><small>File: ${filename}</small>`; const tooltipHtml = `data-tippy-content="${tooltipText}"`; const disabledAttr = disabled ? 'disabled' : ''; const buttonClass = idSuffix === 'all-zip' ? 'btn-primary' : 'btn-outline-secondary'; const text = langKey === 'de' ? textDe : textEn;
+            const type = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]; const ext = config.ext; const filename = fileNameTemplate.replace('{TYPE}', type).replace('{KOLLEKTIV}', safeKollektiv).replace('{DATE}', dateStr).replace('{EXT}', ext).replace('_{SectionName}', '').replace('{SectionName}', '');
+            const tooltipBase = config.description;
+            const tooltipText = ((typeof tooltipBase === 'object' ? tooltipBase[langKey] : tooltipBase) || (langKey === 'de' ? 'Info nicht verfügbar' : 'Info not available')) + `<br><small>File: ${filename}</small>`;
+            const tooltipHtml = `data-tippy-content="${tooltipText}"`;
+            const disabledAttr = disabled ? 'disabled' : ''; const buttonClass = idSuffix === 'all-zip' ? 'btn-primary' : 'btn-outline-secondary'; const text = langKey === 'de' ? textDe : textEn;
             return `<button type="button" class="btn ${buttonClass} w-100 mb-2 d-flex justify-content-start align-items-center" id="export-${idSuffix}" ${tooltipHtml} ${disabledAttr}><i class="${iconClass} fa-fw me-2"></i> <span class="flex-grow-1 text-start">${text} (.${ext})</span></button>`;
-         };
+        };
 
         const exportDescBase = TOOLTIP_CONTENT.exportTab.description;
-        const exportDesc = (typeof exportDescBase === 'object' ? exportDescBase[langKey] : exportDescBase).replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(currentKollektiv, langKey)}</strong>`);
-        const singleExportsTitle = TOOLTIP_CONTENT.exportTab.singleExports[langKey] || (langKey === 'de' ? 'Einzelexporte' : 'Single Exports');
-        const exportPackagesTitle = TOOLTIP_CONTENT.exportTab.exportPackages[langKey] || (langKey === 'de' ? 'Export-Pakete (.zip)' : 'Export Packages (.zip)');
-
+        const exportDesc = ((typeof exportDescBase === 'object' ? exportDescBase[langKey] : exportDescBase) || exportDescBase['de']).replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(currentKollektiv, langKey)}</strong>`);
+        const singleExportsTitle = TOOLTIP_CONTENT.exportTab.singleExports?.[langKey] || (langKey === 'de' ? 'Einzelexporte' : 'Single Exports');
+        const exportPackagesTitle = TOOLTIP_CONTENT.exportTab.exportPackages?.[langKey] || (langKey === 'de' ? 'Export-Pakete (.zip)' : 'Export Packages (.zip)');
 
         return `
             <div class="row export-options-container">
@@ -320,7 +345,7 @@ const uiComponents = (() => {
                     </div>
                 </div>
                 <div class="col-lg-12 col-xl-4 mb-3">
-                   <div class="card h-100"> <div class="card-header">${langKey === 'de' ? 'Hinweise zum Export' : 'Export Notes'}</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>${langKey === 'de' ? 'Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.' : 'All exports are based on the currently selected cohort and the last **applied** T2 criteria.'}</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV:** ${langKey==='de'?'Für Statistiksoftware; Trennzeichen: Semikolon (;).':'For statistics software; Delimiter: Semicolon (;).'}</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** ${langKey==='de'?'Für Dokumentation. Publikations-MDs enthalten die Textblöcke aus dem Publikation-Tab.':'For documentation. Publication MDs include text blocks from the Publication tab.'}</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** ${langKey==='de'?'Brute-Force-Bericht.':'Brute-force report.'}</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht:** ${langKey==='de'?'Umfassend, druckbar.':'Comprehensive, printable.'}</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** ${langKey==='de'?'Pixelbasiert (Diagramme/Tabellen).':'Pixel-based (charts/tables).'}</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** ${langKey==='de'?'Vektorbasiert (Diagramme), skalierbar.':'Vector-based (charts), scalable.'}</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>${langKey==='de'?'ZIP-Exporte für Diagramme/Tabellen (PNG/SVG) erfassen nur aktuell im Statistik-, Auswertung- oder Präsentationstab sichtbare/gerenderte Elemente. Einzel-Downloads sind direkt am Element möglich.':'ZIP exports for charts/tables (PNG/SVG) only capture elements currently visible/rendered in the Statistics, Evaluation, or Presentation tab. Single downloads are available directly on the element.'}</li> </ul> </div> </div>
+                   <div class="card h-100"> <div class="card-header">${langKey === 'de' ? 'Hinweise zum Export' : 'Export Notes'}</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>${langKey === 'de' ? 'Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.' : 'All exports are based on the currently selected cohort and the last **applied** T2 criteria.'}</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV:** ${langKey === 'de' ? 'Für Statistiksoftware; Trennzeichen: Semikolon (;).' : 'For statistics software; Delimiter: Semicolon (;).'}</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** ${langKey === 'de' ? 'Für Dokumentation. Publikations-MDs enthalten die Textblöcke aus dem Publikation-Tab.' : 'For documentation. Publication MDs include text blocks from the Publication tab.'}</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** ${langKey === 'de' ? 'Brute-Force-Bericht.' : 'Brute-force report.'}</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht:** ${langKey === 'de' ? 'Umfassend, druckbar.' : 'Comprehensive, printable.'}</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** ${langKey === 'de' ? 'Pixelbasiert (Diagramme/Tabellen).' : 'Pixel-based (charts/tables).'}</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** ${langKey === 'de' ? 'Vektorbasiert (Diagramme), skalierbar.' : 'Vector-based (charts), scalable.'}</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>${langKey === 'de' ? 'ZIP-Exporte für Diagramme/Tabellen (PNG/SVG) erfassen nur aktuell im Statistik-, Auswertung- oder Präsentationstab sichtbare/gerenderte Elemente. Einzel-Downloads sind direkt am Element möglich.' : 'ZIP exports for charts/tables (PNG/SVG) only capture elements currently visible/rendered in the Statistics, Evaluation, or Presentation tab. Single downloads are available directly on the element.'}</li> </ul> </div> </div>
                 </div>
             </div>
         `;
@@ -329,11 +354,11 @@ const uiComponents = (() => {
     function createT2MetricsOverview(stats, kollektivName) {
         const langKey = state.getCurrentPublikationLang() || 'de';
         const cardTooltipBase = TOOLTIP_CONTENT.t2MetricsOverview.cardTitle;
-        const cardTooltip = (typeof cardTooltipBase === 'object' ? cardTooltipBase[langKey] : cardTooltipBase).replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(kollektivName, langKey)}</strong>`);
+        const cardTooltip = ((typeof cardTooltipBase === 'object' ? cardTooltipBase[langKey] : cardTooltipBase) || cardTooltipBase['de']).replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(kollektivName, langKey)}</strong>`);
 
         if (!stats || !stats.matrix || stats.matrix.rp === undefined) {
-             const noMetricsText = langKey === 'de' ? 'Metriken für T2 nicht verfügbar.' : 'Metrics for T2 not available.';
-             return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">${langKey==='de'?'Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)':'Brief Dx. Performance (T2 vs. N - applied criteria)'}</div><div class="card-body p-2"><p class="m-0 text-muted small">${noMetricsText}</p></div></div>`;
+            const noMetricsText = langKey === 'de' ? 'Metriken für T2 nicht verfügbar.' : 'Metrics for T2 not available.';
+            return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">${langKey === 'de' ? 'Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)' : 'Brief Dx. Performance (T2 vs. N - applied criteria)'}</div><div class="card-body p-2"><p class="m-0 text-muted small">${noMetricsText}</p></div></div>`;
         }
         const metrics = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'f1', 'auc'];
         const metricDisplayNames = { sens: 'Sens', spez: 'Spez', ppv: 'PPV', npv: 'NPV', acc: 'Acc', balAcc: 'BalAcc', f1: 'F1', auc: 'AUC' };
@@ -361,7 +386,7 @@ const uiComponents = (() => {
 
         contentHTML += '</div>';
 
-        return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">${langKey==='de'?'Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)':'Brief Dx. Performance (T2 vs. N - applied criteria)'}</div><div class="card-body p-2">${contentHTML}</div></div>`;
+        return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">${langKey === 'de' ? 'Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)' : 'Brief Dx. Performance (T2 vs. N - applied criteria)'}</div><div class="card-body p-2">${contentHTML}</div></div>`;
     }
 
     function createBruteForceModalContent(results, metric, kollektiv, duration, totalTested) {
@@ -375,26 +400,25 @@ const uiComponents = (() => {
         const metricKeyForDisplay = metric.toLowerCase().replace(/\s+/g, '').replace('-', '');
         const metricDisplayName = UI_TEXTS.statMetrics[metricKeyForDisplay]?.name?.[langKey] || UI_TEXTS.statMetrics[metricKeyForDisplay]?.name?.['de'] || metric;
 
-
         let tableHTML = `
             <div class="alert alert-light small p-2 mb-3">
-                <p class="mb-1"><strong>${langKey==='de'?'Beste Kombi für':'Best Combo for'} '${metricDisplayName}' (${langKey==='de'?'Koll.:':'Cohort:'} '${kollektivName}'):</strong></p>
+                <p class="mb-1"><strong>${langKey === 'de' ? 'Beste Kombi für' : 'Best Combo for'} '${metricDisplayName}' (${langKey === 'de' ? 'Koll.:' : 'Cohort:'} '${kollektivName}'):</strong></p>
                 <ul class="list-unstyled mb-1">
-                    <li><strong>${langKey==='de'?'Wert:':'Value:'}</strong> ${formatNumber(bestResult.metricValue, 4, 'N/A', false, langKey)}</li>
-                    <li><strong>${langKey==='de'?'Logik:':'Logic:'}</strong> ${UI_TEXTS.t2LogicDisplayNames[bestResult.logic.toUpperCase()]?.[langKey] || bestResult.logic.toUpperCase()}</li>
-                    <li><strong>${langKey==='de'?'Kriterien:':'Criteria:'}</strong> ${formatCriteriaFunc(bestResult.criteria, bestResult.logic)}</li>
+                    <li><strong>${langKey === 'de' ? 'Wert:' : 'Value:'}</strong> ${formatNumber(bestResult.metricValue, 4, 'N/A', false, langKey)}</li>
+                    <li><strong>${langKey === 'de' ? 'Logik:' : 'Logic:'}</strong> ${UI_TEXTS.t2LogicDisplayNames[bestResult.logic.toUpperCase()]?.[langKey] || UI_TEXTS.t2LogicDisplayNames[bestResult.logic.toUpperCase()]?.['de'] || bestResult.logic.toUpperCase()}</li>
+                    <li><strong>${langKey === 'de' ? 'Kriterien:' : 'Criteria:'}</strong> ${formatCriteriaFunc(bestResult.criteria, bestResult.logic)}</li>
                 </ul>
-                <p class="mb-0 text-muted"><small>${langKey==='de'?'Dauer:':'Duration:'} ${formatNumber((duration || 0) / 1000, 1, 'N/A', false, langKey)}s | ${langKey==='de'?'Getestet:':'Tested:'} ${formatNumber(totalTested, 0, 'N/A', false, langKey)}</small></p>
+                <p class="mb-0 text-muted"><small>${langKey === 'de' ? 'Dauer:' : 'Duration:'} ${formatNumber((duration || 0) / 1000, 1, 'N/A', false, langKey)}s | ${langKey === 'de' ? 'Getestet:' : 'Tested:'} ${formatNumber(totalTested, 0, 'N/A', false, langKey)}</small></p>
             </div>
-            <h6 class="mb-2">${langKey==='de'?'Top Ergebnisse (inkl. identischer Werte bis Rang 10+):':'Top Results (incl. identical values up to rank 10+):'}</h6>
+            <h6 class="mb-2">${langKey === 'de' ? 'Top Ergebnisse (inkl. identischer Werte bis Rang 10+):' : 'Top Results (incl. identical values up to rank 10+):'}</h6>
             <div class="table-responsive">
                 <table class="table table-sm table-striped table-hover small" id="bruteforce-results-table">
                     <thead class="small">
                         <tr>
-                            <th data-tippy-content="${langKey==='de'?'Rang':'Rank'}">${langKey==='de'?'Rang':'Rank'}</th>
-                            <th data-tippy-content="${langKey==='de'?'Wert der Zielmetrik':'Value of target metric'} (${metricDisplayName})">${metricDisplayName}</th>
-                            <th data-tippy-content="${langKey==='de'?'Logik':'Logic'}">${langKey==='de'?'Logik':'Logic'}</th>
-                            <th data-tippy-content="${langKey==='de'?'Kriterienkombination':'Criteria Combination'}">${langKey==='de'?'Kriterien':'Criteria'}</th>
+                            <th data-tippy-content="${langKey === 'de' ? 'Rang' : 'Rank'}">${langKey === 'de' ? 'Rang' : 'Rank'}</th>
+                            <th data-tippy-content="${langKey === 'de' ? 'Wert der Zielmetrik' : 'Value of target metric'} (${metricDisplayName})">${metricDisplayName}</th>
+                            <th data-tippy-content="${langKey === 'de' ? 'Logik' : 'Logic'}">${langKey === 'de' ? 'Logik' : 'Logic'}</th>
+                            <th data-tippy-content="${langKey === 'de' ? 'Kriterienkombination' : 'Criteria Combination'}">${langKey === 'de' ? 'Kriterien' : 'Criteria'}</th>
                         </tr>
                     </thead>
                     <tbody>`;
@@ -416,14 +440,14 @@ const uiComponents = (() => {
                 rank = displayedCount + 1;
                 currentRankDisplay = rank;
             } else if (i > 0) {
-                 currentRankDisplay = rank;
+                currentRankDisplay = rank;
             }
 
             tableHTML += `
                 <tr>
                     <td>${currentRankDisplay}.</td>
                     <td>${formatNumber(result.metricValue, 4, 'N/A', false, langKey)}</td>
-                    <td>${UI_TEXTS.t2LogicDisplayNames[result.logic.toUpperCase()]?.[langKey] || result.logic.toUpperCase()}</td>
+                    <td>${UI_TEXTS.t2LogicDisplayNames[result.logic.toUpperCase()]?.[langKey] || UI_TEXTS.t2LogicDisplayNames[result.logic.toUpperCase()]?.['de'] || result.logic.toUpperCase()}</td>
                     <td>${formatCriteriaFunc(result.criteria, result.logic)}</td>
                 </tr>`;
 
@@ -440,49 +464,39 @@ const uiComponents = (() => {
         const lang = state.getCurrentPublikationLang() || PUBLICATION_CONFIG.defaultLanguage;
         const langKey = lang === 'en' ? 'en' : 'de';
         const currentBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
-
         const currentActiveSectionId = state.getCurrentPublikationSection() || PUBLICATION_CONFIG.defaultSection;
-        let navTitle = langKey === 'de' ? 'Abschnitte' : 'Sections'; // Default title for the navigation column
-        const activeMainSection = PUBLICATION_CONFIG.sections.find(mainSec =>
-            mainSec.id === currentActiveSectionId || (mainSec.subSections && mainSec.subSections.some(sub => sub.id === currentActiveSectionId))
-        );
-        if (activeMainSection && UI_TEXTS.publikationTab.sectionLabels[activeMainSection.labelKey]) {
-             navTitle = UI_TEXTS.publikationTab.sectionLabels[activeMainSection.labelKey]?.[langKey] || UI_TEXTS.publikationTab.sectionLabels[activeMainSection.labelKey]?.['de'] || navTitle;
+
+        let navTitle = '';
+        const activeMainSectionConfig = PUBLICATION_CONFIG.sections.find(s => s.id === currentActiveSectionId);
+        if (activeMainSectionConfig && UI_TEXTS.publikationTab.sectionLabels[activeMainSectionConfig.labelKey]) {
+            navTitle = UI_TEXTS.publikationTab.sectionLabels[activeMainSectionConfig.labelKey]?.[langKey] || UI_TEXTS.publikationTab.sectionLabels[activeMainSectionConfig.labelKey]?.['de'] || (langKey === 'de' ? 'Abschnitte' : 'Sections');
+        } else {
+            navTitle = langKey === 'de' ? 'Abschnitte' : 'Sections';
         }
 
 
         const sectionNavItems = PUBLICATION_CONFIG.sections.map(mainSection => {
             const label = UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey]?.[langKey] || UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey]?.['de'] || mainSection.labelKey;
-            let subSectionLinks = '';
-            if(mainSection.subSections && mainSection.subSections.length > 0){
-                subSectionLinks = mainSection.subSections.map(subSection => {
-                    const subLabel = UI_TEXTS.publicationSubSectionLabels?.[subSection.labelKey]?.[langKey] || UI_TEXTS.publicationSubSectionLabels?.[subSection.labelKey]?.['de'] || subSection.label;
-                    const isActive = subSection.id === currentActiveSectionId;
-                    return `<li class="nav-item"><a class="nav-link ps-3 py-1 publikation-section-link ${isActive ? 'active' : ''}" href="#" data-section-id="${subSection.id}">${subLabel}</a></li>`;
-                }).join('');
-            }
-            // Main section link is only active if it has no subsections and its ID matches, or if one of its subsections is active.
-            // It's marked 'disabled' stylistically if it serves as a mere header for subsections.
-            const isEffectivelyActiveOrParentOfActive = mainSection.id === currentActiveSectionId || (mainSection.subSections && mainSection.subSections.some(sub => sub.id === currentActiveSectionId));
-            const mainLinkClass = `nav-link py-2 publikation-section-link fw-bold ${isEffectivelyActiveOrParentOfActive && !subSectionLinks ? 'active' : (subSectionLinks ? 'disabled' : '')}`;
+            const isActive = mainSection.id === currentActiveSectionId;
+            const mainLinkClass = `nav-link py-2 publikation-section-link fw-bold ${isActive ? 'active' : ''}`;
 
             return `
                 <li class="nav-item">
-                    <a class="${mainLinkClass}" href="${subSectionLinks ? '#' : '#'}" data-section-id="${mainSection.id}">
+                    <a class="${mainLinkClass}" href="#" data-section-id="${mainSection.id}">
                         ${label}
                     </a>
-                    ${subSectionLinks ? `<ul class="nav flex-column ps-2">${subSectionLinks}</ul>` : ''}
                 </li>`;
         }).join('');
 
         const bfMetricOptions = PUBLICATION_CONFIG.bruteForceMetricsForPublication.map(opt =>
             `<option value="${opt.value}" ${opt.value === currentBfMetric ? 'selected' : ''}>${opt.label}</option>`
         ).join('');
-        const bfMetricLabel = UI_TEXTS.publikationTab.bruteForceMetricSelectLabel[langKey] || UI_TEXTS.publikationTab.bruteForceMetricSelectLabel.de;
-        const bfMetricTooltip = TOOLTIP_CONTENT.publikationTabTooltips.bruteForceMetricSelect.description[langKey] || TOOLTIP_CONTENT.publikationTabTooltips.bruteForceMetricSelect.description.de;
+
+        const bfMetricLabelText = UI_TEXTS.publikationTab.bruteForceMetricSelectLabel?.[langKey] || UI_TEXTS.publikationTab.bruteForceMetricSelectLabel?.['de'];
+        const bfMetricTooltipBase = TOOLTIP_CONTENT.publikationTabTooltips.bruteForceMetricSelect.description;
+        const bfMetricTooltipText = (typeof bfMetricTooltipBase === 'object' ? bfMetricTooltipBase[langKey] : bfMetricTooltipBase) || bfMetricTooltipBase['de'];
 
         const initialContentText = langKey === 'de' ? 'Bitte wählen Sie einen Abschnitt aus der Navigation.' : 'Please select a section from the navigation.';
-
 
         return `
             <div class="row mb-3 sticky-top bg-light py-2 shadow-sm" id="publikation-controls-header" style="top: calc(var(--header-height) + var(--nav-height) + 1px); z-index: 1010;">
@@ -495,8 +509,8 @@ const uiComponents = (() => {
                 <div class="col-md-9">
                     <div class="d-flex justify-content-end align-items-center mb-2" id="publikation-top-controls">
                         <div class="me-3">
-                           <label for="publikation-bf-metric-select" class="form-label form-label-sm mb-0 me-1">${bfMetricLabel}</label>
-                           <select class="form-select form-select-sm d-inline-block" id="publikation-bf-metric-select" style="width: auto;" data-tippy-content="${bfMetricTooltip}">
+                           <label for="publikation-bf-metric-select" class="form-label form-label-sm mb-0 me-1">${bfMetricLabelText}</label>
+                           <select class="form-select form-select-sm d-inline-block" id="publikation-bf-metric-select" style="width: auto;" data-tippy-content="${bfMetricTooltipText}">
                                ${bfMetricOptions}
                            </select>
                         </div>
@@ -508,7 +522,6 @@ const uiComponents = (() => {
                 </div>
             </div>`;
     }
-
 
     return Object.freeze({
         createDashboardCard,
