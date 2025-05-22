@@ -84,7 +84,7 @@ const ui_helpers = (() => {
 
     function updateHeaderStatsUI(stats) {
         if (!stats) { stats = {}; }
-        const langKey = state.getCurrentPublikationLang() || 'de'; // Use current lang for display
+        const langKey = state.getCurrentPublikationLang() || 'de';
         updateElementText('header-kollektiv', getKollektivDisplayName(stats.kollektiv, langKey) || '--');
         updateElementText('header-anzahl-patienten', stats.anzahlPatienten ?? '--');
         updateElementText('header-status-n', stats.statusN || '--');
@@ -96,6 +96,28 @@ const ui_helpers = (() => {
         const buttonGroup = document.querySelector('header .btn-group[aria-label="Kollektiv Auswahl"]');
         if (!buttonGroup) return;
         buttonGroup.querySelectorAll('button[data-kollektiv]').forEach(btn => { if (btn) { btn.classList.toggle('active', btn.getAttribute('data-kollektiv') === currentKollektiv); } });
+    }
+
+    function updateGlobalLanguageSwitcherUI(currentLang) {
+        const langSwitch = document.getElementById('global-sprache-switch');
+        const langLabel = document.getElementById('global-sprache-label');
+        const langContainer = document.getElementById('global-language-switcher-container');
+        const langKey = currentLang || 'de';
+
+        if (langSwitch && langLabel) {
+            langSwitch.checked = langKey === 'en';
+            langLabel.textContent = UI_TEXTS?.publikationTab?.spracheSwitchLabel?.[langKey] || (langKey === 'en' ? 'English' : 'Deutsch');
+        }
+        if (langContainer) {
+            const tooltipBase = TOOLTIP_CONTENT.publikationTabTooltips?.spracheSwitch?.description;
+            const tooltipText = (typeof tooltipBase === 'object' ? tooltipBase[langKey] : tooltipBase) || (langKey === 'de' ? 'Sprache wechseln' : 'Switch language');
+            langContainer.setAttribute('data-tippy-content', tooltipText);
+            if (langContainer._tippy) {
+                langContainer._tippy.setContent(tooltipText);
+            } else {
+                initializeTooltips(langContainer);
+            }
+        }
     }
 
     function updateSortIcons(tableHeaderId, sortState) {
@@ -298,9 +320,9 @@ const ui_helpers = (() => {
                     const input = document.getElementById('input-size');
                     const valueDisplay = document.getElementById('value-size');
                     const thresholdValue = criterion.threshold ?? getDefaultT2Criteria().size.threshold;
-                    if (range) range.value = formatNumber(thresholdValue, 1, 'N/A', true); // standard format for input value
-                    if (input) input.value = formatNumber(thresholdValue, 1, 'N/A', true); // standard format for input value
-                    if (valueDisplay) valueDisplay.textContent = formatNumber(thresholdValue, 1, 'N/A', false, langKey); // localized for display
+                    if (range) range.value = formatNumber(thresholdValue, 1, 'N/A', true);
+                    if (input) input.value = formatNumber(thresholdValue, 1, 'N/A', true);
+                    if (valueDisplay) valueDisplay.textContent = formatNumber(thresholdValue, 1, 'N/A', false, langKey);
                 } else {
                     optionsContainer.querySelectorAll('.t2-criteria-button').forEach(button => {
                         if(button.dataset.criterion === key) {
@@ -576,15 +598,18 @@ const ui_helpers = (() => {
 
     function updatePublikationUI(currentLang, currentSection, currentBfMetric) {
         const langKey = currentLang === 'en' ? 'en' : 'de';
-        const langSwitch = document.getElementById('publikation-sprache-switch');
-        const langLabel = document.getElementById('publikation-sprache-label');
-        if (langSwitch && langLabel) {
-            langSwitch.checked = currentLang === 'en';
-            langLabel.textContent = UI_TEXTS?.publikationTab?.spracheSwitchLabel?.[langKey] || (langKey === 'en' ? 'English' : 'Deutsch');
-        }
 
         document.querySelectorAll('#publikation-sections-nav .nav-link').forEach(link => {
-            link.classList.toggle('active', link.dataset.sectionId === currentSection);
+            const linkSectionId = link.dataset.sectionId;
+            const isMainSectionLink = PUBLICATION_CONFIG.sections.some(s => s.id === linkSectionId);
+            let isActive = false;
+            if (isMainSectionLink) {
+                const mainSectionConf = PUBLICATION_CONFIG.sections.find(s => s.id === linkSectionId);
+                isActive = (linkSectionId === currentSection) || (mainSectionConf?.subSections && mainSectionConf.subSections.some(sub => sub.id === currentSection));
+            } else {
+                isActive = linkSectionId === currentSection;
+            }
+            link.classList.toggle('active', isActive);
         });
 
         const bfMetricSelect = document.getElementById('publikation-bf-metric-select');
@@ -611,7 +636,6 @@ const ui_helpers = (() => {
         const na = '--';
         const digits = (metricKeyLower === 'f1' || metricKeyLower === 'auc') ? 3 : 1;
         const isPercent = !(metricKeyLower === 'f1' || metricKeyLower === 'auc');
-        // Use langKey for formatNumber and formatPercent
         const valueStr = formatNumber(data?.value, digits, na, false, langKey);
         const lowerStr = formatNumber(data?.ci?.lower, digits, na, false, langKey);
         const upperStr = formatNumber(data?.ci?.upper, digits, na, false, langKey);
@@ -749,6 +773,7 @@ const ui_helpers = (() => {
         setElementDisabled,
         updateHeaderStatsUI,
         updateKollektivButtonsUI,
+        updateGlobalLanguageSwitcherUI,
         updateSortIcons,
         toggleAllDetails,
         attachRowCollapseListeners,
