@@ -12,6 +12,8 @@ const uiComponents = (() => {
         }
 
         let tooltipContent = title || '';
+        // Der Titel wird bereits sprachabhängig von view_renderer.js übergeben.
+        // Tooltip-Content für die Karte selbst wird hier aus TOOLTIP_CONTENT geholt, falls vorhanden.
         if (chartId && TOOLTIP_CONTENT.deskriptiveStatistik && TOOLTIP_CONTENT.deskriptiveStatistik[chartId] && TOOLTIP_CONTENT.deskriptiveStatistik[chartId].description) {
             const descEntry = TOOLTIP_CONTENT.deskriptiveStatistik[chartId].description;
             tooltipContent = (typeof descEntry === 'object' ? descEntry[langKey] : descEntry) || title;
@@ -233,27 +235,28 @@ const uiComponents = (() => {
         const langKey = state.getCurrentPublikationLang() || 'de';
         const cardTooltipBase = tooltipKey && TOOLTIP_CONTENT[tooltipKey]?.cardTitle;
         let cardTooltipText = (typeof cardTooltipBase === 'object' ? cardTooltipBase?.[langKey] : cardTooltipBase) || title || '';
-        if (typeof cardTooltipText !== 'string') cardTooltipText = title || ''; // Fallback if langKey resolution fails
+        if (typeof cardTooltipText !== 'string') cardTooltipText = title || '';
         const cardTooltipHtml = cardTooltipText ? `data-tippy-content="${cardTooltipText.replace(/\[KOLLEKTIV\]/g, '{KOLLEKTIV_PLACEHOLDER}')}"` : '';
+
 
         let headerButtonHtml = downloadButtons.map(btn => {
             const btnTooltipBase = btn.tooltip || '';
             const btnTooltipText = (typeof btnTooltipBase === 'object' ? btnTooltipBase[langKey] : btnTooltipBase) || (langKey === 'de' ? 'Herunterladen' : 'Download');
 
             if (btn.tableId) {
-                return `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${btn.id}" data-table-id="${btn.tableId}" data-table-name="${btn.tableName || title.replace(/[^a-z0-9]/gi, '_').substring(0, 30)}" data-tippy-content="${btnTooltipText}"><i class="fas ${btn.icon || 'fa-image'}"></i></button>`;
+                return `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${btn.id}" data-table-id="${btn.tableId}" data-table-name="${btn.tableName || title.replace(/[^a-z0-9]/gi, '_').substring(0,30)}" data-tippy-content="${btnTooltipText}"><i class="fas ${btn.icon || 'fa-image'}"></i></button>`;
             } else if (btn.chartId) {
-                return `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${btn.chartId}" data-format="${btn.format}" data-tippy-content="${btnTooltipText}"><i class="fas ${btn.icon || 'fa-download'}"></i></button>`;
+                 return `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${btn.chartId}" data-format="${btn.format}" data-tippy-content="${btnTooltipText}"><i class="fas ${btn.icon || 'fa-download'}"></i></button>`;
             }
             return '';
         }).join('');
 
 
         if (APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT && tableId && !downloadButtons.some(b => b.tableId === tableId)) {
-            const tooltipDefaultDe = `Tabelle '${title}' als PNG herunterladen.`;
-            const tooltipDefaultEn = `Download table '${title}' as PNG.`;
-            const pngExportButton = { id: `dl-card-${id.replace(/[^a-z0-9_-]/gi, '')}-${tableId}-png`, icon: 'fa-image', tooltip: langKey === 'de' ? tooltipDefaultDe : tooltipDefaultEn, format: 'png', tableId: tableId, tableName: title.replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').substring(0, 30) };
-            headerButtonHtml += `
+             const tooltipDefaultDe = `Tabelle '${title}' als PNG herunterladen.`;
+             const tooltipDefaultEn = `Download table '${title}' as PNG.`;
+             const pngExportButton = { id: `dl-card-${id.replace(/[^a-z0-9_-]/gi, '')}-${tableId}-png`, icon: 'fa-image', tooltip: langKey === 'de'? tooltipDefaultDe : tooltipDefaultEn, format: 'png', tableId: tableId, tableName: title.replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').substring(0,30) };
+             headerButtonHtml += `
                  <button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${pngExportButton.id}" data-table-id="${pngExportButton.tableId}" data-table-name="${pngExportButton.tableName}" data-tippy-content="${pngExportButton.tooltip}">
                      <i class="fas ${pngExportButton.icon}"></i>
                  </button>`;
@@ -294,7 +297,7 @@ const uiComponents = (() => {
             return `<button type="button" class="btn ${buttonClass} w-100 mb-2 d-flex justify-content-start align-items-center" id="export-${idSuffix}" ${tooltipHtml} ${disabledAttr}><i class="${iconClass} fa-fw me-2"></i> <span class="flex-grow-1 text-start">${text} (.${ext})</span> ${experimentalBadge}</button>`;
         };
 
-        const generateZipButtonHTML = (idSuffix, iconClass, textDe, textEn, tooltipKey, disabled = false) => {
+         const generateZipButtonHTML = (idSuffix, iconClass, textDe, textEn, tooltipKey, disabled = false) => {
             const config = TOOLTIP_CONTENT.exportTab[tooltipKey]; if (!config || !APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]) return ``;
             const type = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]; const ext = config.ext; const filename = fileNameTemplate.replace('{TYPE}', type).replace('{KOLLEKTIV}', safeKollektiv).replace('{DATE}', dateStr).replace('{EXT}', ext).replace('_{SectionName}', '').replace('{SectionName}', '');
             const tooltipBase = config.description;
@@ -302,7 +305,7 @@ const uiComponents = (() => {
             const tooltipHtml = `data-tippy-content="${tooltipText}"`;
             const disabledAttr = disabled ? 'disabled' : ''; const buttonClass = idSuffix === 'all-zip' ? 'btn-primary' : 'btn-outline-secondary'; const text = langKey === 'de' ? textDe : textEn;
             return `<button type="button" class="btn ${buttonClass} w-100 mb-2 d-flex justify-content-start align-items-center" id="export-${idSuffix}" ${tooltipHtml} ${disabledAttr}><i class="${iconClass} fa-fw me-2"></i> <span class="flex-grow-1 text-start">${text} (.${ext})</span></button>`;
-        };
+         };
 
         const exportDescBase = TOOLTIP_CONTENT.exportTab.description;
         const exportDesc = ((typeof exportDescBase === 'object' ? exportDescBase[langKey] : exportDescBase) || exportDescBase['de']).replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(currentKollektiv, langKey)}</strong>`);
@@ -400,6 +403,7 @@ const uiComponents = (() => {
         const metricKeyForDisplay = metric.toLowerCase().replace(/\s+/g, '').replace('-', '');
         const metricDisplayName = UI_TEXTS.statMetrics[metricKeyForDisplay]?.name?.[langKey] || UI_TEXTS.statMetrics[metricKeyForDisplay]?.name?.['de'] || metric;
 
+
         let tableHTML = `
             <div class="alert alert-light small p-2 mb-3">
                 <p class="mb-1"><strong>${langKey === 'de' ? 'Beste Kombi für' : 'Best Combo for'} '${metricDisplayName}' (${langKey === 'de' ? 'Koll.:' : 'Cohort:'} '${kollektivName}'):</strong></p>
@@ -464,16 +468,14 @@ const uiComponents = (() => {
         const lang = state.getCurrentPublikationLang() || PUBLICATION_CONFIG.defaultLanguage;
         const langKey = lang === 'en' ? 'en' : 'de';
         const currentBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+
         const currentActiveSectionId = state.getCurrentPublikationSection() || PUBLICATION_CONFIG.defaultSection;
+        let navTitle = langKey === 'de' ? 'Abschnitte' : 'Sections';
+        const activeMainSection = PUBLICATION_CONFIG.sections.find(mainSec => mainSec.id === currentActiveSectionId);
 
-        let navTitle = '';
-        const activeMainSectionConfig = PUBLICATION_CONFIG.sections.find(s => s.id === currentActiveSectionId);
-        if (activeMainSectionConfig && UI_TEXTS.publikationTab.sectionLabels[activeMainSectionConfig.labelKey]) {
-            navTitle = UI_TEXTS.publikationTab.sectionLabels[activeMainSectionConfig.labelKey]?.[langKey] || UI_TEXTS.publikationTab.sectionLabels[activeMainSectionConfig.labelKey]?.['de'] || (langKey === 'de' ? 'Abschnitte' : 'Sections');
-        } else {
-            navTitle = langKey === 'de' ? 'Abschnitte' : 'Sections';
+        if (activeMainSection && UI_TEXTS.publikationTab.sectionLabels[activeMainSection.labelKey]) {
+             navTitle = UI_TEXTS.publikationTab.sectionLabels[activeMainSection.labelKey]?.[langKey] || UI_TEXTS.publikationTab.sectionLabels[activeMainSection.labelKey]?.['de'] || navTitle;
         }
-
 
         const sectionNavItems = PUBLICATION_CONFIG.sections.map(mainSection => {
             const label = UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey]?.[langKey] || UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey]?.['de'] || mainSection.labelKey;
@@ -491,7 +493,6 @@ const uiComponents = (() => {
         const bfMetricOptions = PUBLICATION_CONFIG.bruteForceMetricsForPublication.map(opt =>
             `<option value="${opt.value}" ${opt.value === currentBfMetric ? 'selected' : ''}>${opt.label}</option>`
         ).join('');
-
         const bfMetricLabelText = UI_TEXTS.publikationTab.bruteForceMetricSelectLabel?.[langKey] || UI_TEXTS.publikationTab.bruteForceMetricSelectLabel?.['de'];
         const bfMetricTooltipBase = TOOLTIP_CONTENT.publikationTabTooltips.bruteForceMetricSelect.description;
         const bfMetricTooltipText = (typeof bfMetricTooltipBase === 'object' ? bfMetricTooltipBase[langKey] : bfMetricTooltipBase) || bfMetricTooltipBase['de'];
@@ -514,7 +515,6 @@ const uiComponents = (() => {
                                ${bfMetricOptions}
                            </select>
                         </div>
-                         {LANG_SWITCH_PLACEHOLDER}
                     </div>
                     <div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: calc(100vh - var(--header-height) - var(--nav-height) - 70px - 2rem); overflow-y: auto;">
                         <p class="text-muted">${initialContentText}</p>
