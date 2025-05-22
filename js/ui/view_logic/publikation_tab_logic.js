@@ -21,6 +21,7 @@ const publikationTabLogic = (() => {
     }
 
     function getRenderedSectionContent(mainSectionId, lang, currentKollektiv) {
+        const langKey = lang === 'en' ? 'en' : 'de';
         if (!allKollektivStats) {
             const fallbackAppliedCriteria = t2CriteriaManager.getAppliedCriteria();
             const fallbackAppliedLogic = t2CriteriaManager.getAppliedLogic();
@@ -33,7 +34,6 @@ const publikationTabLogic = (() => {
                 }
             }
 
-
             allKollektivStats = statisticsService.calculateAllStatsForPublication(
                 rawGlobalData || (typeof patientDataRaw !== 'undefined' ? patientDataRaw : []),
                 fallbackAppliedCriteria,
@@ -41,7 +41,8 @@ const publikationTabLogic = (() => {
                 fallbackBfResultsForAllKollektive
             );
             if (!allKollektivStats) {
-                 return `<p class="text-danger">Statistische Grunddaten für Publikations-Tab konnten nicht geladen oder berechnet werden.</p>`;
+                 const errorMsg = langKey === 'de' ? "Statistische Grunddaten für Publikations-Tab konnten nicht geladen oder berechnet werden." : "Statistical base data for Publication tab could not be loaded or calculated.";
+                 return `<p class="text-danger">${errorMsg}</p>`;
             }
         }
 
@@ -73,13 +74,17 @@ const publikationTabLogic = (() => {
                 const genderChartId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.genderChartContainerIdPrefix}${currentKollektiv.replace(/\s+/g, '-')}`;
                 const ageChartElement = document.getElementById(alterChartId);
                 const genderChartElement = document.getElementById(genderChartId);
-                const loadingText = langKey === 'de' ? 'Keine Daten verfügbar.' : 'No data available.';
+
+                const noDataTextDe = "Keine Daten verfügbar.";
+                const noDataTextEn = "No data available.";
+                const loadingText = langKey === 'de' ? noDataTextDe : noDataTextEn;
 
                 if (ageChartElement) {
                     if(dataForCurrentKollektiv.deskriptiv.alterData && dataForCurrentKollektiv.deskriptiv.alterData.length > 0){
                         chartRenderer.renderAgeDistributionChart(dataForCurrentKollektiv.deskriptiv.alterData || [], alterChartId, { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 45 } }, langKey);
                     } else {
-                        ui_helpers.updateElementHTML(alterChartId, `<p class="text-muted small text-center p-3">${loadingText.replace('Daten','Daten für Altersverteilung')} (${getKollektivDisplayName(currentKollektiv, langKey)})</p>`);
+                        const noDataSpecificText = loadingText.replace(langKey === 'de' ? 'Daten' : 'data', langKey === 'de' ? 'Daten für Altersverteilung' : 'data for Age Distribution');
+                        ui_helpers.updateElementHTML(alterChartId, `<p class="text-muted small text-center p-3">${noDataSpecificText} (${getKollektivDisplayName(currentKollektiv, langKey)})</p>`);
                     }
                 }
                 if (genderChartElement && dataForCurrentKollektiv.deskriptiv.geschlecht) {
@@ -93,58 +98,70 @@ const publikationTabLogic = (() => {
                      if(genderData.some(d => d.value > 0)) {
                         chartRenderer.renderPieChart(genderData, genderChartId, { height: 220, margin: { top: 10, right: 10, bottom: 45, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true, legendItemCount: genderData.length }, langKey);
                     } else {
-                         ui_helpers.updateElementHTML(genderChartId, `<p class="text-muted small text-center p-3">${loadingText.replace('Daten','Daten für Geschlechterverteilung')} (${getKollektivDisplayName(currentKollektiv, langKey)})</p>`);
+                        const noDataSpecificText = loadingText.replace(langKey === 'de' ? 'Daten' : 'data', langKey === 'de' ? 'Daten für Geschlechterverteilung' : 'data for Gender Distribution');
+                        ui_helpers.updateElementHTML(genderChartId, `<p class="text-muted small text-center p-3">${noDataSpecificText} (${getKollektivDisplayName(currentKollektiv, langKey)})</p>`);
                     }
                 } else if (genderChartElement) {
-                     ui_helpers.updateElementHTML(genderChartId, `<p class="text-muted small text-center p-3">${loadingText.replace('Daten','Daten für Geschlechterverteilung')} (${getKollektivDisplayName(currentKollektiv, langKey)})</p>`);
+                     const noDataSpecificText = loadingText.replace(langKey === 'de' ? 'Daten' : 'data', langKey === 'de' ? 'Daten für Geschlechterverteilung' : 'data for Gender Distribution');
+                     ui_helpers.updateElementHTML(genderChartId, `<p class="text-muted small text-center p-3">${noDataSpecificText} (${getKollektivDisplayName(currentKollektiv, langKey)})</p>`);
                 }
             } else if (['ergebnisse_as_performance', 'ergebnisse_vergleich_performance'].includes(subSectionId)) {
-                const rocChartContainerId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.rocChartContainerIdPrefix}${subSectionId.replace('ergebnisse_','')}`;
-                const barChartContainerId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichBarChartContainerIdPrefix}${subSectionId.replace('ergebnisse_','')}`;
+                const rocChartContainerId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.rocChartContainerIdPrefix}${subSection.id.replace('ergebnisse_','')}`;
+                const barChartContainerId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichBarChartContainerIdPrefix}${subSection.id.replace('ergebnisse_','')}`;
                 const rocChartElement = document.getElementById(rocChartContainerId);
                 const barChartElement = document.getElementById(barChartContainerId);
-                const loadingText = langKey === 'de' ? 'Keine Daten verfügbar.' : 'No data available.';
+
+                const noDataTextDe = "Keine Daten verfügbar.";
+                const noDataTextEn = "No data available.";
+                const loadingText = langKey === 'de' ? noDataTextDe : noDataTextEn;
 
                 const statsAS = dataForCurrentKollektiv?.gueteAS;
                 const statsT2Angewandt = dataForCurrentKollektiv?.gueteT2_angewandt;
 
                 if (rocChartElement) {
-                    if (statsAS?.auc && statsT2Angewandt?.auc) {
+                    if (statsAS?.auc && statsT2Angewandt?.auc && !isNaN(statsAS.auc.value) && !isNaN(statsT2Angewandt.auc.value)) {
                          const aucASText = formatCI(statsAS.auc.value, statsAS.auc.ci?.lower, statsAS.auc.ci?.upper, 3, false, 'N/A', langKey);
                          const aucT2Text = formatCI(statsT2Angewandt.auc.value, statsT2Angewandt.auc.ci?.lower, statsT2Angewandt.auc.ci?.upper, 3, false, 'N/A', langKey);
-                         const rocInfoTextDe = `AUC (Bal. Acc.) für ${getKollektivDisplayName(currentKollektiv, 'de')}:<br>Avocado Sign: ${aucASText}<br>Angewandte T2: ${aucT2Text}<br><small>(ROC-Kurven-Visualisierung für binäre Tests oft auf diesen Punkt reduziert)</small>`;
-                         const rocInfoTextEn = `AUC (Bal. Acc.) for ${getKollektivDisplayName(currentKollektiv, 'en')}:<br>Avocado Sign: ${aucASText}<br>Applied T2: ${aucT2Text}<br><small>(ROC curve visualization for binary tests often reduced to this point)</small>`;
+                         const asLabel = UI_TEXTS.legendLabels.avocadoSign[langKey] || UI_TEXTS.legendLabels.avocadoSign.de;
+                         const t2AppliedLabelBase = UI_TEXTS.kollektivDisplayNames.applied_criteria;
+                         const t2AppliedLabel = (typeof t2AppliedLabelBase === 'object' ? t2AppliedLabelBase[langKey] : t2AppliedLabelBase) || t2AppliedLabelBase.de;
+
+                         const rocInfoTextDe = `AUC (Bal. Acc.) für ${getKollektivDisplayName(currentKollektiv, 'de')}:<br>${asLabel}: ${aucASText}<br>${t2AppliedLabel}: ${aucT2Text}<br><small>(ROC-Kurven-Visualisierung für binäre Tests oft auf diesen Punkt reduziert)</small>`;
+                         const rocInfoTextEn = `AUC (Bal. Acc.) for ${getKollektivDisplayName(currentKollektiv, 'en')}:<br>${asLabel}: ${aucASText}<br>${t2AppliedLabel}: ${aucT2Text}<br><small>(ROC curve visualization for binary tests often reduced to this point)</small>`;
                          ui_helpers.updateElementHTML(rocChartContainerId, `<div class="p-3 text-center text-muted small">${langKey === 'de' ? rocInfoTextDe : rocInfoTextEn}</div>`);
                     } else {
-                        ui_helpers.updateElementHTML(rocChartContainerId, `<p class="text-muted small text-center p-3">${loadingText.replace('Daten','Daten für ROC Chart')} (${getKollektivDisplayName(currentKollektiv, langKey)})</p>`);
+                        const noDataSpecificText = loadingText.replace(langKey === 'de' ? 'Daten' : 'data', langKey === 'de' ? 'Daten für ROC Chart' : 'data for ROC Chart');
+                        ui_helpers.updateElementHTML(rocChartContainerId, `<p class="text-muted small text-center p-3">${noDataSpecificText} (${getKollektivDisplayName(currentKollektiv, langKey)})</p>`);
                     }
                 }
 
                 if (barChartElement) {
                     if (statsAS && statsT2Angewandt) {
                          const chartDataComp = [
-                            { metric: UI_TEXTS.publicationTableHeaders?.sens?.[langKey] || 'Sens', AS: statsAS.sens?.value ?? NaN, T2: statsT2Angewandt.sens?.value ?? NaN },
-                            { metric: UI_TEXTS.publicationTableHeaders?.spez?.[langKey] || 'Spez', AS: statsAS.spez?.value ?? NaN, T2: statsT2Angewandt.spez?.value ?? NaN },
+                            { metric: UI_TEXTS.publicationTableHeaders?.sens?.[langKey] || (langKey === 'de' ? 'Sens.' : 'Sens.'), AS: statsAS.sens?.value ?? NaN, T2: statsT2Angewandt.sens?.value ?? NaN },
+                            { metric: UI_TEXTS.publicationTableHeaders?.spez?.[langKey] || (langKey === 'de' ? 'Spez.' : 'Spec.'), AS: statsAS.spez?.value ?? NaN, T2: statsT2Angewandt.spez?.value ?? NaN },
                             { metric: 'PPV', AS: statsAS.ppv?.value ?? NaN, T2: statsT2Angewandt.ppv?.value ?? NaN },
                             { metric: 'NPV', AS: statsAS.npv?.value ?? NaN, T2: statsT2Angewandt.npv?.value ?? NaN },
-                            { metric: UI_TEXTS.publicationTableHeaders?.acc?.[langKey] || 'Acc', AS: statsAS.acc?.value ?? NaN, T2: statsT2Angewandt.acc?.value ?? NaN },
+                            { metric: UI_TEXTS.publicationTableHeaders?.acc?.[langKey] || (langKey === 'de' ? 'Acc.' : 'Acc.'), AS: statsAS.acc?.value ?? NaN, T2: statsT2Angewandt.acc?.value ?? NaN },
                             { metric: UI_TEXTS.publicationTableHeaders?.auc?.[langKey] || 'AUC', AS: statsAS.auc?.value ?? NaN, T2: statsT2Angewandt.auc?.value ?? NaN }
                         ].filter(d => !isNaN(d.AS) && !isNaN(d.T2));
 
                         if (chartDataComp.length > 0) {
-                            const t2Label = UI_TEXTS.kollektivDisplayNames.applied_criteria[langKey] || UI_TEXTS.kollektivDisplayNames.applied_criteria.de;
+                            const t2LabelBase = UI_TEXTS.kollektivDisplayNames.applied_criteria;
+                            const t2Label = (typeof t2LabelBase === 'object' ? t2LabelBase[langKey] : t2LabelBase) || t2LabelBase.de;
                             chartRenderer.renderComparisonBarChart(chartDataComp, barChartContainerId, { height: 300, margin: { top: 20, right: 20, bottom: 60, left: 55 } }, t2Label, langKey);
                         } else {
-                             ui_helpers.updateElementHTML(barChartContainerId, `<p class="text-muted small text-center p-3">${loadingText.replace('Daten','Unvollständige Daten für Vergleichs-Balkendiagramm')} (${getKollektivDisplayName(currentKollektiv, langKey)})</p>`);
+                             const noDataSpecificText = loadingText.replace(langKey === 'de' ? 'Daten' : 'data', langKey === 'de' ? 'Unvollständige Daten für Vergleichs-Balkendiagramm' : 'Incomplete data for Comparison Bar Chart');
+                             ui_helpers.updateElementHTML(barChartContainerId, `<p class="text-muted small text-center p-3">${noDataSpecificText} (${getKollektivDisplayName(currentKollektiv, langKey)})</p>`);
                         }
                     } else {
-                         ui_helpers.updateElementHTML(barChartContainerId, `<p class="text-muted small text-center p-3">${loadingText.replace('Daten','Daten für Vergleichs-Balkendiagramm')} (${getKollektivDisplayName(currentKollektiv, langKey)})</p>`);
+                         const noDataSpecificText = loadingText.replace(langKey === 'de' ? 'Daten' : 'data', langKey === 'de' ? 'Daten für Vergleichs-Balkendiagramm' : 'data for Comparison Bar Chart');
+                         ui_helpers.updateElementHTML(barChartContainerId, `<p class="text-muted small text-center p-3">${noDataSpecificText} (${getKollektivDisplayName(currentKollektiv, langKey)})</p>`);
                     }
                 }
             }
         });
     }
-
 
     return Object.freeze({
         initializeData,
