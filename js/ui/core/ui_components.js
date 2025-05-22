@@ -7,8 +7,9 @@ const uiComponents = (() => {
                  `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${chartId}" data-format="${btn.format}" data-tippy-content="${btn.tooltip || `Als ${btn.format.toUpperCase()} herunterladen`}"> <i class="fas ${btn.icon || 'fa-download'}"></i></button>`
              ).join('');
         }
-        const tooltipKey = TOOLTIP_CONTENT.deskriptiveStatistik[chartId]?.description;
-        const tooltipContent = (typeof tooltipKey === 'object' ? tooltipKey[state.getCurrentPublikationLang() || 'de'] : tooltipKey) || title || '';
+        const langKey = state.getCurrentPublikationLang() || 'de';
+        const tooltipKeyEntry = TOOLTIP_CONTENT.deskriptiveStatistik[chartId];
+        const tooltipContent = (tooltipKeyEntry && typeof tooltipKeyEntry.description === 'object' ? tooltipKeyEntry.description[langKey] : (tooltipKeyEntry?.description || title || ''));
 
         return `
             <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 dashboard-card-col ${cardClasses}">
@@ -371,7 +372,8 @@ const uiComponents = (() => {
         const getKollektivNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k, l) => k;
         const bestResult = results[0];
         const kollektivName = getKollektivNameFunc(kollektiv, langKey);
-        const metricDisplayName = UI_TEXTS.statMetrics[metric.toLowerCase().replace(/\s+/g, '').replace('-','')]?.name?.[langKey] || UI_TEXTS.statMetrics[metric.toLowerCase().replace(/\s+/g, '').replace('-','')]?.name?.['de'] || metric;
+        const metricKeyForDisplay = metric.toLowerCase().replace(/\s+/g, '').replace('-', '');
+        const metricDisplayName = UI_TEXTS.statMetrics[metricKeyForDisplay]?.name?.[langKey] || UI_TEXTS.statMetrics[metricKeyForDisplay]?.name?.['de'] || metric;
 
 
         let tableHTML = `
@@ -439,8 +441,14 @@ const uiComponents = (() => {
         const langKey = lang === 'en' ? 'en' : 'de';
         const currentBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
-        const mainSectionNav = PUBLICATION_CONFIG.sections.find(s => s.id === (state.getCurrentPublikationSection() || PUBLICATION_CONFIG.defaultSection)) || PUBLICATION_CONFIG.sections[0];
-        const navTitle = UI_TEXTS.publikationTab.sectionLabels[mainSectionNav.labelKey]?.[langKey] || (langKey === 'de' ? 'Abschnitte' : 'Sections');
+        const currentActiveSectionId = state.getCurrentPublikationSection() || PUBLICATION_CONFIG.defaultSection;
+        let navTitle = langKey === 'de' ? 'Abschnitte' : 'Sections';
+        const activeMainSection = PUBLICATION_CONFIG.sections.find(mainSec =>
+            mainSec.id === currentActiveSectionId || (mainSec.subSections && mainSec.subSections.some(sub => sub.id === currentActiveSectionId))
+        );
+        if (activeMainSection) {
+            navTitle = UI_TEXTS.publikationTab.sectionLabels[activeMainSection.labelKey]?.[langKey] || navTitle;
+        }
 
 
         const sectionNavItems = PUBLICATION_CONFIG.sections.map(mainSection => {
@@ -449,13 +457,15 @@ const uiComponents = (() => {
             if(mainSection.subSections && mainSection.subSections.length > 0){
                 subSectionLinks = mainSection.subSections.map(subSection => {
                     const subLabel = UI_TEXTS.publicationSubSectionLabels?.[subSection.labelKey]?.[langKey] || UI_TEXTS.publicationSubSectionLabels?.[subSection.labelKey]?.['de'] || subSection.label;
-                     const isActive = subSection.id === state.getCurrentPublikationSection();
+                    const isActive = subSection.id === currentActiveSectionId;
                     return `<li class="nav-item"><a class="nav-link ps-3 py-1 publikation-section-link ${isActive ? 'active' : ''}" href="#" data-section-id="${subSection.id}">${subLabel}</a></li>`;
                 }).join('');
             }
+            const isMainActive = mainSection.id === currentActiveSectionId || (mainSection.subSections && mainSection.subSections.some(sub => sub.id === currentActiveSectionId));
+
             return `
                 <li class="nav-item">
-                    <a class="nav-link py-2 publikation-section-link fw-bold disabled" href="#" data-section-id="${mainSection.id}">
+                    <a class="nav-link py-2 publikation-section-link fw-bold ${isMainActive && !subSectionLinks ? 'active' : 'disabled'}" href="${subSectionLinks ? '#' : '#'}" data-section-id="${mainSection.id}">
                         ${label}
                     </a>
                     ${subSectionLinks ? `<ul class="nav flex-column ps-2">${subSectionLinks}</ul>` : ''}
