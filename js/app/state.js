@@ -95,13 +95,23 @@ const state = (() => {
     }
 
     function setCurrentPublikationSection(newSectionId) {
-        const isValidSection = PUBLICATION_CONFIG.sections.some(section => section.id === newSectionId);
-        if (typeof newSectionId === 'string' && isValidSection && currentState.currentPublikationSection !== newSectionId) {
+        let isValidSection = false;
+        if (typeof newSectionId === 'string') {
+            isValidSection = PUBLICATION_CONFIG.sections.some(mainSection => {
+                if (mainSection.id === newSectionId) return true;
+                if (mainSection.subSections && Array.isArray(mainSection.subSections)) {
+                    return mainSection.subSections.some(subSection => subSection.id === newSectionId);
+                }
+                return false;
+            });
+        }
+
+        if (isValidSection && currentState.currentPublikationSection !== newSectionId) {
             currentState.currentPublikationSection = newSectionId;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION, currentState.currentPublikationSection);
             return true;
         }
-        if (!isValidSection) {
+        if (!isValidSection && typeof newSectionId === 'string') {
             console.warn(`setCurrentPublikationSection: Ungültige Sektions-ID '${newSectionId}'`);
         }
         return false;
