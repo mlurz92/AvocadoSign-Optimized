@@ -48,13 +48,15 @@ function initializeApp() {
         }
 
         let initialBruteForceResultsForPubTab = null;
-        if (lastBruteForceResults) {
-            if (lastBruteForceResults.kollektiv && !lastBruteForceResults[lastBruteForceResults.kollektiv]) {
+        if (lastBruteForceResults) { // lastBruteForceResults is global and might persist from previous worker runs
+            // Ensure it's in the { kollektivId: payload } structure
+            if (lastBruteForceResults.kollektiv && typeof lastBruteForceResults.results === 'object') { // Likely old format
                  initialBruteForceResultsForPubTab = { [lastBruteForceResults.kollektiv]: lastBruteForceResults };
-            } else {
+            } else if (typeof lastBruteForceResults === 'object' && Object.keys(lastBruteForceResults).length > 0) { // Likely already new format
                  initialBruteForceResultsForPubTab = lastBruteForceResults;
             }
         }
+
 
         publikationTabLogic.initializeData(
             processedData,
@@ -78,7 +80,7 @@ function initializeApp() {
              const fallbackTabElement = document.getElementById('daten-tab');
              if(fallbackTabElement && bootstrap.Tab) bootstrap.Tab.getOrCreateInstance(fallbackTabElement).show();
          }
-        handleTabShown(state.getActiveTabId());
+        handleTabShown(state.getActiveTabId()); // Ensure the active tab is rendered correctly on load
 
         ui_helpers.initializeTooltips(document.body);
         ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
@@ -159,7 +161,7 @@ function setupEventListeners() {
 
     document.body.addEventListener('change', (event) => {
         const target = event.target;
-        if (target.id === 'global-sprache-switch') return; // Already handled by its own listener
+        if (target.id === 'global-sprache-switch') return;
 
         if (target.closest('#auswertung-tab-pane')) {
              if (target.id === 'input-size') { debouncedUpdateSizeInput(target.value); }
@@ -175,8 +177,8 @@ function setupEventListeners() {
 function handleGlobalLanguageChange(event) {
     const newLang = event.target.checked ? 'en' : 'de';
     if (state.setCurrentPublikationLang(newLang)) {
-        updateUIState();
-        handleTabShown(state.getActiveTabId());
+        updateUIState(); // Update general UI elements first
+        handleTabShown(state.getActiveTabId()); // Then re-render the current tab with the new language
         const langKey = newLang;
         ui_helpers.showToast(langKey === 'de' ? 'Sprache auf Deutsch umgestellt.' : 'Language switched to English.', 'info');
     }
@@ -272,8 +274,8 @@ function handleTabShown(tabId) {
         case 'praesentation-tab': viewRenderer.renderPresentationTab(state.getCurrentPresentationView(), state.getCurrentPresentationStudyId(), currentKollektiv, processedData, appliedCriteria, appliedLogic); break;
         case 'publikation-tab':
             let bfResultsForPubTab = null;
-            if (lastBruteForceResults) {
-                bfResultsForPubTab = lastBruteForceResults;
+            if (lastBruteForceResults) { // Ensure correct structure
+                bfResultsForPubTab = (lastBruteForceResults.kollektiv && typeof lastBruteForceResults.results === 'object') ? { [lastBruteForceResults.kollektiv]: lastBruteForceResults } : lastBruteForceResults;
             }
             publikationTabLogic.initializeData(
                 processedData,
@@ -286,7 +288,7 @@ function handleTabShown(tabId) {
         case 'export-tab': viewRenderer.renderExportTab(currentKollektiv); break;
         default: const paneId = tabId.replace('-tab', '-tab-pane'); ui_helpers.updateElementHTML(paneId, `<div class="alert alert-warning m-3">${langKey === 'de' ? "Inhalt für Tab" : "Content for tab"} '${tabId}' ${langKey === 'de' ? "nicht implementiert." : "not implemented."}</div>`);
     }
-    updateUIState();
+    updateUIState(); // This ensures that language-dependent elements within the tab content are also updated after rendering.
 }
 
 function handleKollektivChange(newKollektiv) { if (state.setCurrentKollektiv(newKollektiv)) { filterAndPrepareData(); updateUIState(); handleTabShown(state.getActiveTabId()); const langKey = state.getCurrentPublikationLang() || 'de'; ui_helpers.showToast(`${langKey === 'de' ? "Kollektiv" : "Cohort"} '${getKollektivDisplayName(newKollektiv, langKey)}' ${langKey === 'de' ? "ausgewählt." : "selected."}`, 'info'); return true; } return false; }
@@ -324,7 +326,7 @@ function handleApplyBestBfCriteria() {
     });
     t2CriteriaManager.updateLogic(best.logic);
     ui_helpers.updateT2CriteriaControlsUI(t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic());
-    handleApplyCriteria();
+    handleApplyCriteria(); // This will save and re-evaluate everything
     ui_helpers.showToast(`${langKey === 'de' ? "Beste Brute-Force Kriterien für Kollektiv" : "Best brute-force criteria for cohort"} "${getKollektivDisplayName(currentActiveKollektiv, langKey)}" ${langKey === 'de' ? "angewendet & gespeichert." : "applied & saved."}`, 'success');
 }
 
@@ -333,7 +335,7 @@ function handleStatistikChange(event) { const target = event.target; let needsRe
 function handlePresentationChangeDelegation(event) { const viewRadio = event.target.closest('input[name="praesentationAnsicht"]'); const studySelect = event.target.closest('#praes-study-select'); if(viewRadio) handlePresentationViewChange(viewRadio.value); else if (studySelect) handlePresentationStudySelectChange(studySelect.value); }
 function handlePresentationViewChange(view) { if (state.setCurrentPresentationView(view)) { updateUIState(); if (state.getActiveTabId() === 'praesentation-tab') handleTabShown('praesentation-tab'); } }
 function handlePresentationStudySelectChange(studyId) { if (studyId === "" || state.getCurrentPresentationStudyId() === studyId) return; const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studyId); let kollektivChanged = false; if (studySet?.applicableKollektiv && state.getCurrentKollektiv() !== studySet.applicableKollektiv && studySet.applicableKollektiv !== 'Gesamt') { kollektivChanged = handleKollektivChange(studySet.applicableKollektiv); } const studyIdChanged = state.setCurrentPresentationStudyId(studyId); if (studyIdChanged || kollektivChanged) { updateUIState(); if (state.getActiveTabId() === 'praesentation-tab') handleTabShown('praesentation-tab'); } }
-function handlePresentationDownloadClick(button) { const actionId = button.id; const currentKollektiv = state.getCurrentKollektiv(); let presentationData = null; const filteredData = dataProcessor.filterDataByKollektiv(processedData, currentKollektiv); if (filteredData?.length > 0) { const statsAS = statisticsService.calculateDiagnosticPerformance(filteredData, 'as', 'n'); const allStatsForPub = statisticsService.calculateAllStatsForPublication(processedData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), lastBruteForceResults); const statsGesamt = allStatsForPub?.Gesamt?.gueteAS; const statsDirektOP = allStatsForPub?.['direkt OP']?.gueteAS; const statsNRCT = allStatsForPub?.nRCT?.gueteAS; presentationData = { statsAS, kollektiv: currentKollektiv, patientCount: filteredData.length, statsGesamt, statsDirektOP, statsNRCT, statsCurrentKollektiv: statsAS }; if (state.getCurrentPresentationView() === 'as-vs-t2') { const studyId = state.getCurrentPresentationStudyId(); let studySet = null, evaluatedDataT2 = null; const isApplied = studyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID; const appliedCriteria = t2CriteriaManager.getAppliedCriteria(); const appliedLogic = t2CriteriaManager.getAppliedLogic(); if(isApplied) { studySet = { criteria: appliedCriteria, logic: appliedLogic, id: studyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: 'Angewandt', studyInfo: { reference: "Benutzerdefiniert", patientCohort: `Aktuell: ${getKollektivDisplayName(currentKollektiv)} (N=${presentationData.patientCount})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } }; evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(filteredData), appliedCriteria, appliedLogic); } else { studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studyId); if(studySet) evaluatedDataT2 = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredData), studySet); } if (studySet && evaluatedDataT2) { presentationData.statsT2 = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n'); evaluatedDataT2.forEach((p, i) => { if (filteredData[i]) p.as = filteredData[i].as; }); presentationData.vergleich = statisticsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n'); presentationData.comparisonCriteriaSet = studySet; presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2'; presentationData.t2CriteriaLabelFull = `${isApplied ? (state.getCurrentPublikationLang()==='de'?'Aktuell angewandt':'Currently applied') : (studySet.name || 'Studie')}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic, false, state.getCurrentPublikationLang())}`; } } } exportService.exportPraesentationData(actionId, presentationData, currentKollektiv); }
+function handlePresentationDownloadClick(button) { const actionId = button.id; const currentKollektiv = state.getCurrentKollektiv(); let presentationData = null; const filteredData = dataProcessor.filterDataByKollektiv(processedData, currentKollektiv); const langKey = state.getCurrentPublikationLang() || 'de'; if (filteredData?.length > 0) { const statsAS = statisticsService.calculateDiagnosticPerformance(filteredData, 'as', 'n'); const allStatsForPub = statisticsService.calculateAllStatsForPublication(processedData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), lastBruteForceResults); const statsGesamt = allStatsForPub?.Gesamt?.gueteAS; const statsDirektOP = allStatsForPub?.['direkt OP']?.gueteAS; const statsNRCT = allStatsForPub?.nRCT?.gueteAS; presentationData = { statsAS, kollektiv: currentKollektiv, patientCount: filteredData.length, statsGesamt, statsDirektOP, statsNRCT, statsCurrentKollektiv: statsAS }; if (state.getCurrentPresentationView() === 'as-vs-t2') { const studyId = state.getCurrentPresentationStudyId(); let studySet = null, evaluatedDataT2 = null; const isApplied = studyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID; const appliedCriteria = t2CriteriaManager.getAppliedCriteria(); const appliedLogic = t2CriteriaManager.getAppliedLogic(); const appliedCriteriaDisplayName = UI_TEXTS.kollektivDisplayNames.applied_criteria[langKey] || APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME; const appliedCriteriaShortName = langKey === 'de' ? 'Angewandt' : 'Applied'; if(isApplied) { studySet = { criteria: appliedCriteria, logic: appliedLogic, id: studyId, name: appliedCriteriaDisplayName, displayShortName: appliedCriteriaShortName, studyInfo: { reference: (langKey === 'de' ? "Benutzerdefiniert" : "User-defined"), patientCohort: `${langKey === 'de' ? "Aktuell:" : "Current:"} ${getKollektivDisplayName(currentKollektiv, langKey)} (N=${presentationData.patientCount})`, investigationType: "N/A", focus: (langKey === 'de' ? "Benutzereinstellung" : "User Setting"), keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic, false, langKey) || (langKey === 'de' ? "Keine" : "None") } }; evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(filteredData), appliedCriteria, appliedLogic); } else { studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studyId); if(studySet) evaluatedDataT2 = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredData), studySet); } if (studySet && evaluatedDataT2) { presentationData.statsT2 = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n'); evaluatedDataT2.forEach((p, i) => { if (filteredData[i]) p.as = filteredData[i].as; }); presentationData.vergleich = statisticsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n'); presentationData.comparisonCriteriaSet = studySet; const studySetNameBase = UI_TEXTS.literatureSetNames?.[studySet.id]; const studySetName = (typeof studySetNameBase === 'object' ? studySetNameBase[langKey] : studySetNameBase) || studySet.name; presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2'; presentationData.t2CriteriaLabelFull = `${studySetName}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic, false, langKey)}`; } } } exportService.exportPraesentationData(actionId, presentationData, currentKollektiv); }
 function handleExportAction(exportType) { filterAndPrepareData(); const dataForExport = currentData; const currentKollektiv = state.getCurrentKollektiv(); const appliedCriteria = t2CriteriaManager.getAppliedCriteria(); const appliedLogic = t2CriteriaManager.getAppliedLogic(); const canExport = Array.isArray(processedData) && processedData.length > 0; const langKey = state.getCurrentPublikationLang() || 'de'; if (!canExport && !['bruteforce-txt', 'all-zip', 'png-zip', 'svg-zip', 'csv-zip', 'md-zip'].includes(exportType) && exportType !== 'comprehensive-report-html') { ui_helpers.showToast(langKey==='de'?"Keine Daten für diesen Export verfügbar.":"No data available for this export.", "warning"); return; } if (exportType === 'bruteforce-txt' && (!lastBruteForceResults || !lastBruteForceResults[currentKollektiv])) { ui_helpers.showToast(langKey==='de'?"Keine Brute-Force Ergebnisse für das aktuelle Kollektiv für Export.":"No brute-force results for the current cohort to export.", "warning"); return; } if (['all-zip', 'png-zip', 'svg-zip', 'csv-zip', 'md-zip'].includes(exportType) && !canExport && !lastBruteForceResults && exportType !== 'md-zip' ) { ui_helpers.showToast(langKey==='de'?"Keine Daten/Ergebnisse für ZIP-Export.":"No data/results for ZIP export.", "warning"); return; } if (exportType === 'comprehensive-report-html' && !canExport) { ui_helpers.showToast(langKey==='de'?"Keine Daten für HTML-Report.":"No data for HTML report.", "warning"); return; } switch (exportType) { case 'statistik-csv': exportService.exportStatistikCSV(processedData, currentKollektiv, appliedCriteria, appliedLogic); break; case 'bruteforce-txt': exportService.exportBruteForceReport(lastBruteForceResults[currentKollektiv], currentKollektiv); break; case 'deskriptiv-md': { const stats = statisticsService.calculateAllStatsForPublication(processedData, appliedCriteria, appliedLogic, lastBruteForceResults)[currentKollektiv]; exportService.exportTableMarkdown(stats?.deskriptiv, 'deskriptiv', currentKollektiv); break; } case 'daten-md': exportService.exportTableMarkdown(dataForExport, 'daten', currentKollektiv); break; case 'auswertung-md': exportService.exportTableMarkdown(dataForExport, 'auswertung', currentKollektiv, appliedCriteria, appliedLogic); break; case 'filtered-data-csv': exportService.exportFilteredDataCSV(dataForExport, currentKollektiv); break; case 'comprehensive-report-html': exportService.exportComprehensiveReportHTML(processedData, lastBruteForceResults ? lastBruteForceResults[currentKollektiv] : null, currentKollektiv, appliedCriteria, appliedLogic); break; case 'charts-png': exportService.exportChartsZip('#app-container', 'PNG_ZIP', currentKollektiv, 'png'); break; case 'charts-svg': exportService.exportChartsZip('#app-container', 'SVG_ZIP', currentKollektiv, 'svg'); break; case 'all-zip': case 'csv-zip': case 'md-zip': exportService.exportCategoryZip(exportType, processedData, lastBruteForceResults, currentKollektiv, appliedCriteria, appliedLogic); break; default: ui_helpers.showToast(`${langKey==='de'?"Export-Typ":"Export type"} '${exportType}' ${langKey==='de'?"nicht implementiert.":"not implemented."}`, 'warning'); break; } }
 function handleSingleChartDownload(button) { const chartId = button.dataset.chartId; const format = button.dataset.format; const chartName = button.dataset.chartName || chartId.replace(/^chart-/, '').replace(/-container$/, '').replace(/-content$/, '').replace(/-[0-9]+$/, ''); const langKey = state.getCurrentPublikationLang() || 'de'; if (chartId && (format === 'png' || format === 'svg')) exportService.exportSingleChart(chartId, format, state.getCurrentKollektiv(), {chartName: chartName}); else ui_helpers.showToast(langKey==='de'?"Fehler beim Chart-Download.":"Error during chart download.", "warning"); }
 function handleSingleTableDownload(button) { if (!button) return; const tableId = button.dataset.tableId; const tableName = button.dataset.tableName || 'Tabelle'; const langKey = state.getCurrentPublikationLang() || 'de'; if (tableId && APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT) exportService.exportTablePNG(tableId, state.getCurrentKollektiv(), 'TABLE_PNG_EXPORT', tableName); else if (!tableId) ui_helpers.showToast(`${langKey==='de'?"Fehler: Tabelle":"Error: Table"} '${tableName}' ${langKey==='de'?"nicht gefunden.":"not found."}`, "danger"); }
