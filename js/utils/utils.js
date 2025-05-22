@@ -11,7 +11,7 @@ function formatNumber(num, digits = 1, placeholder = '--', useStandardFormat = f
     if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
         return placeholder;
     }
-    if (useStandardFormat) { // Used for inputs or worker, where locale might cause issues
+    if (useStandardFormat) {
         return number.toFixed(digits);
     }
     try {
@@ -21,7 +21,7 @@ function formatNumber(num, digits = 1, placeholder = '--', useStandardFormat = f
             maximumFractionDigits: digits
         });
     } catch (e) {
-        return number.toFixed(digits); // Fallback
+        return number.toFixed(digits);
     }
 }
 
@@ -38,27 +38,29 @@ function formatPercent(num, digits = 1, placeholder = '--%', lang = 'de') {
             maximumFractionDigits: digits
         }).format(number);
     } catch (e) {
-        return (number * 100).toFixed(digits) + '%'; // Fallback
+        return (number * 100).toFixed(digits) + '%';
     }
 }
 
 function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeholder = '--', lang = 'de') {
     const formatFn = isPercent ? formatPercent : formatNumber;
-    const formattedValue = formatFn(value, digits, placeholder, lang);
+    const formattedValue = formatFn(value, digits, placeholder, false, lang);
 
     if (formattedValue === placeholder) {
         return placeholder;
     }
 
-    const formattedLower = formatFn(ciLower, digits, null, lang);
-    const formattedUpper = formatFn(ciUpper, digits, null, lang);
+    const formattedLower = formatFn(ciLower, digits, null, false, lang);
+    const formattedUpper = formatFn(ciUpper, digits, null, false, lang);
 
     if (formattedLower !== null && formattedUpper !== null && formattedLower !== placeholder && formattedUpper !== placeholder) {
         const valueWithoutUnit = isPercent ? formattedValue.slice(0, -1) : formattedValue;
         const lowerStr = isPercent ? formattedLower.slice(0, -1) : formattedLower;
         const upperStr = isPercent ? formattedUpper.slice(0, -1) : formattedUpper;
-        const ciLabel = lang === 'de' ? '95% KI' : '95% CI';
-        const ciStr = `(${ciLabel}: ${lowerStr}\u00A0–\u00A0${upperStr})`; // Using non-breaking space
+        const ciLabelKey = lang === 'de' ? 'KI_LABEL' : 'CI_LABEL';
+        const ciLabelText = UI_TEXTS?.statMetrics?.ci95?.name?.[lang] || (lang === 'de' ? '95% KI' : '95% CI');
+
+        const ciStr = `(${ciLabelText}: ${lowerStr}\u00A0–\u00A0${upperStr})`;
         return `${valueWithoutUnit} ${ciStr}${isPercent ? '%' : ''}`;
     } else {
         return formattedValue;
@@ -88,7 +90,9 @@ function saveToLocalStorage(key, value) {
         localStorage.setItem(key, JSON.stringify(value));
     } catch (e) {
         if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showToast === 'function') {
-            ui_helpers.showToast(`Speichern der Einstellung '${key}' fehlgeschlagen.`, 'warning');
+            const langKey = typeof state !== 'undefined' ? state.getCurrentPublikationLang() : 'de';
+            const message = langKey === 'de' ? `Speichern der Einstellung '${key}' fehlgeschlagen.` : `Failed to save setting '${key}'.`;
+            ui_helpers.showToast(message, 'warning');
         }
     }
 }
@@ -104,7 +108,7 @@ function loadFromLocalStorage(key) {
         try {
             localStorage.removeItem(key);
         } catch (removeError) {
-            // log if necessary
+            // Log if necessary
         }
         return null;
     }
@@ -144,7 +148,7 @@ function cloneDeep(obj) {
                  arrCopy[i] = cloneDeep(obj[i]);
              }
              return arrCopy;
-         };
+         }
         if (typeof obj === 'object') {
              const objCopy = {};
              for(const key in obj) {
@@ -153,7 +157,7 @@ function cloneDeep(obj) {
                  }
              }
              return objCopy;
-         };
+         }
         return obj;
     }
 }
@@ -176,7 +180,7 @@ function deepMerge(target, ...sources) {
                     output[key] = sourceValue;
                 }
             });
-        } else if(isObject(sourceCopy)) { // if target is not an object but source is, replace target
+        } else if(isObject(sourceCopy)) {
             output = sourceCopy;
         }
     });
@@ -211,7 +215,7 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
                 valA = getSubStatusValue(a, subKey);
                 valB = getSubStatusValue(b, subKey);
             }
-            else if (key === 'status') { // Combined status sort
+            else if (key === 'status') {
                 const getCombinedStatusValue = (p) => {
                     if (!p) return -Infinity;
                     let value = 0;
@@ -237,9 +241,9 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
                  };
                  const countsA = getCounts(a, key);
                  const countsB = getCounts(b, key);
-                 valA = countsA.plus; // Primary sort by positive count
+                 valA = countsA.plus;
                  valB = countsB.plus;
-                 if (valA === valB || (isNaN(valA) && isNaN(valB))) { // Secondary sort by total count
+                 if (valA === valB || (isNaN(valA) && isNaN(valB))) {
                      valA = countsA.total;
                      valB = countsB.total;
                  }
@@ -253,7 +257,7 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
              const isInvalidB = valB === null || valB === undefined || (typeof valB === 'number' && isNaN(valB));
 
              if (isInvalidA && isInvalidB) return 0;
-             if (isInvalidA) return 1 * dirModifier; // Invalid values last for asc, first for desc
+             if (isInvalidA) return 1 * dirModifier;
              if (isInvalidB) return -1 * dirModifier;
 
              if (typeof valA === 'string' && typeof valB === 'string') {
@@ -266,7 +270,6 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
                  return (valA === valB ? 0 : (valA ? 1 : -1)) * dirModifier;
              }
 
-             // Fallback comparison
              try {
                  return String(valA).localeCompare(String(valB), 'de-DE', { sensitivity: 'base', numeric: true }) * dirModifier;
              } catch (e) {
@@ -287,7 +290,7 @@ function getStatisticalSignificanceSymbol(pValue, significanceLevel = APP_CONFIG
     if (pValue < 0.001) return '***';
     if (pValue < 0.01) return '**';
     if (pValue < level) return '*';
-    return 'ns'; // Not significant
+    return 'ns';
 }
 
 function getStatisticalSignificanceText(pValue, significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, lang = 'de') {
@@ -307,7 +310,6 @@ function generateUUID() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();
     } else {
-        // Fallback for environments without crypto.randomUUID
         let d = new Date().getTime();
         let d2 = (typeof performance !== 'undefined' && performance.now && (performance.now() * 1000)) || 0;
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -330,7 +332,7 @@ function clampNumber(num, min, max) {
     const maxVal = parseFloat(max);
     if(isNaN(number) || isNaN(minVal) || isNaN(maxVal)) {
         return NaN;
-    };
+    }
     return Math.min(Math.max(number, minVal), maxVal);
 }
 
@@ -349,17 +351,17 @@ function getAUCBewertung(aucValue, lang = 'de') {
     const bewertungen = {
         exzellent: { de: 'exzellent', en: 'excellent' },
         gut: { de: 'gut', en: 'good' },
-        moderat: { de: 'moderat', en: 'fair' }, // 'fair' is common for AUC 0.7-0.8
-        schwach: { de: 'schwach', en: 'poor' }, // 'poor' for AUC 0.5-0.7
-        nicht_informativ: { de: 'nicht informativ', en: 'not informative' } // AUC <= 0.5
+        moderat: { de: 'moderat', en: 'fair' },
+        schwach: { de: 'schwach', en: 'poor' },
+        nicht_informativ: { de: 'nicht informativ', en: 'not informative' }
     };
 
-    if (isNaN(value) || value < 0 || value > 1) return 'N/A';
+    if (isNaN(value) || value < 0 || value > 1) return UI_TEXTS.statMetrics.assoziationStaerkeTexte?.nicht_bestimmbar?.[langKey] || (langKey === 'de' ? 'N/V' : 'N/A');
     if (value >= 0.9) return bewertungen.exzellent[langKey];
     if (value >= 0.8) return bewertungen.gut[langKey];
     if (value >= 0.7) return bewertungen.moderat[langKey];
-    if (value > 0.5) return bewertungen.schwach[langKey]; // Strictly > 0.5
-    return bewertungen.nicht_informativ[langKey]; // Covers value === 0.5
+    if (value > 0.5) return bewertungen.schwach[langKey];
+    return bewertungen.nicht_informativ[langKey];
 }
 
 function getPhiBewertung(phiValue, lang = 'de') {
@@ -369,10 +371,11 @@ function getPhiBewertung(phiValue, lang = 'de') {
         stark: { de: 'stark', en: 'strong'},
         moderat: { de: 'moderat', en: 'moderate'},
         schwach: { de: 'schwach', en: 'weak'},
-        sehr_schwach: { de: 'sehr schwach', en: 'very weak'}
+        sehr_schwach: { de: 'sehr schwach', en: 'very weak'},
+        nicht_bestimmbar: { de: 'nicht bestimmbar', en: 'not determinable'}
     };
 
-    if (isNaN(value)) return 'N/A';
+    if (isNaN(value)) return texts.nicht_bestimmbar[langKey] || (langKey === 'de' ? 'N/V' : 'N/A');
     const absPhi = Math.abs(value);
 
     if (absPhi >= 0.5) return texts.stark[langKey] || texts.stark.de;
