@@ -1,29 +1,29 @@
 const PUBLICATION_CONFIG = Object.freeze({
     defaultLanguage: 'de',
-    defaultSection: 'methoden',
+    defaultSection: 'methoden_studienanlage', // Default zu einer validen Untersektion
     sections: Object.freeze([
         Object.freeze({
             id: 'methoden',
-            labelKey: 'methoden',
+            labelKey: 'methoden', // Hauptsektion hat bereits einen labelKey
             subSections: Object.freeze([
-                Object.freeze({ id: 'methoden_studienanlage', label: 'Studiendesign und Ethik' }),
-                Object.freeze({ id: 'methoden_patientenkollektiv', label: 'Patientenkollektiv' }),
-                Object.freeze({ id: 'methoden_mrt_protokoll', label: 'MRT-Protokoll & Kontrastmittelgabe' }),
-                Object.freeze({ id: 'methoden_as_definition', label: 'Definition & Bewertung Avocado Sign' }),
-                Object.freeze({ id: 'methoden_t2_definition', label: 'Definition & Bewertung T2-Kriterien' }),
-                Object.freeze({ id: 'methoden_referenzstandard', label: 'Referenzstandard (Histopathologie)' }),
-                Object.freeze({ id: 'methoden_statistische_analyse', label: 'Statistische Analyse' })
+                Object.freeze({ id: 'methoden_studienanlage', label: 'Studiendesign und Ethik', labelKey: 'studienanlage' }),
+                Object.freeze({ id: 'methoden_patientenkollektiv', label: 'Patientenkollektiv', labelKey: 'patientenkollektiv' }),
+                Object.freeze({ id: 'methoden_mrt_protokoll', label: 'MRT-Protokoll & Kontrastmittelgabe', labelKey: 'mrtProtokoll' }),
+                Object.freeze({ id: 'methoden_as_definition', label: 'Definition & Bewertung Avocado Sign', labelKey: 'asDefinition' }),
+                Object.freeze({ id: 'methoden_t2_definition', label: 'Definition & Bewertung T2-Kriterien', labelKey: 't2Definition' }),
+                Object.freeze({ id: 'methoden_referenzstandard', label: 'Referenzstandard (Histopathologie)', labelKey: 'referenzstandard' }),
+                Object.freeze({ id: 'methoden_statistische_analyse', label: 'Statistische Analyse', labelKey: 'statistischeAnalyse' })
             ])
         }),
         Object.freeze({
             id: 'ergebnisse',
-            labelKey: 'ergebnisse',
+            labelKey: 'ergebnisse', // Hauptsektion hat bereits einen labelKey
             subSections: Object.freeze([
-                Object.freeze({ id: 'ergebnisse_patientencharakteristika', label: 'Patientencharakteristika' }),
-                Object.freeze({ id: 'ergebnisse_as_performance', label: 'Diagnostische Güte: Avocado Sign' }),
-                Object.freeze({ id: 'ergebnisse_literatur_t2_performance', label: 'Diagnostische Güte: Literatur-T2-Kriterien' }),
-                Object.freeze({ id: 'ergebnisse_optimierte_t2_performance', label: 'Diagnostische Güte: Optimierte T2-Kriterien (Brute-Force)' }),
-                Object.freeze({ id: 'ergebnisse_vergleich_performance', label: 'Vergleich: AS vs. T2-Kriterien' })
+                Object.freeze({ id: 'ergebnisse_patientencharakteristika', label: 'Patientencharakteristika', labelKey: 'patientencharakteristika' }),
+                Object.freeze({ id: 'ergebnisse_as_performance', label: 'Diagnostische Güte: Avocado Sign', labelKey: 'asPerformance' }),
+                Object.freeze({ id: 'ergebnisse_literatur_t2_performance', label: 'Diagnostische Güte: Literatur-T2-Kriterien', labelKey: 'literaturT2Performance' }),
+                Object.freeze({ id: 'ergebnisse_optimierte_t2_performance', label: 'Diagnostische Güte: Optimierte T2-Kriterien (Brute-Force)', labelKey: 'optimierteT2Performance' }),
+                Object.freeze({ id: 'ergebnisse_vergleich_performance', label: 'Vergleich: AS vs. T2-Kriterien', labelKey: 'vergleichPerformanceT2' }) // Eindeutiger Key
             ])
         })
     ]),
@@ -69,12 +69,12 @@ const PUBLICATION_CONFIG = Object.freeze({
             alterChartContainerIdPrefix: 'pub-chart-alter-',
             genderChartContainerIdPrefix: 'pub-chart-gender-',
             diagnostischeGueteGesamtTabelle: Object.freeze({
-                idPrefix: 'pub-table-diagnostische-guete-', // wird mit sectionId ergänzt
+                idPrefix: 'pub-table-diagnostische-guete-',
                 titleDePrefix: 'Diagnostische Güte: ',
                 titleEnPrefix: 'Diagnostic Performance: '
             }),
-            rocChartContainerIdPrefix: 'pub-chart-roc-', // wird mit subSectionId (ohne ergebnisse_) ergänzt
-            vergleichBarChartContainerIdPrefix: 'pub-chart-bar-' // wird mit subSectionId (ohne ergebnisse_) ergänzt
+            rocChartContainerIdPrefix: 'pub-chart-roc-',
+            vergleichBarChartContainerIdPrefix: 'pub-chart-bar-'
         })
     })
 });
