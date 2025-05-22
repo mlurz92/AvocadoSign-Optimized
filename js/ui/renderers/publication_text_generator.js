@@ -27,11 +27,12 @@ const publicationTextGenerator = (() => {
         return valStr;
     }
 
-    function getPValueText(pValue, lang = 'de', placeholder = 'N/A') {
+    function getPValueTextInternal(pValue, lang = 'de', placeholder = 'N/A') {
         if (pValue === null || pValue === undefined || isNaN(pValue)) return placeholder;
         if (pValue < 0.001) return lang === 'de' ? 'p < 0,001' : 'P < .001';
         const pFormatted = fValue(pValue, 3, '', placeholder);
-        return `p = ${pFormatted.replace('.', lang === 'de' ? ',' : '.')}`;
+        const currentLocaleP = pFormatted.replace('.', lang === 'de' ? ',' : '.');
+        return `p = ${currentLocaleP}`;
     }
 
     function getKollektivText(kollektivId, n, lang = 'de') {
@@ -317,14 +318,15 @@ const publicationTextGenerator = (() => {
 
         if (lang === 'de') {
             return `
-                <p>Im direkten statistischen Vergleich zwischen dem Avocado Sign und den global angewandten T2-Kriterien im Gesamtkollektiv (N=${commonData.nGesamt}) zeigte sich für die Accuracy ein ${pMcNemarGesamt !== null && !isNaN(pMcNemarGesamt) ? ( getStatisticalSignificanceText(pMcNemarGesamt, sigLevel, langKey) + " Unterschied (McNemar-Test: " + getPValueText(pMcNemarGesamt, langKey) + ")") : "nicht evaluierbarer Unterschied (McNemar-Test: N/A)"}. Für die AUC betrug der Unterschied ${pDeLongGesamt !== null && !isNaN(pDeLongGesamt) ? (getStatisticalSignificanceText(pDeLongGesamt, sigLevel, langKey) + " (DeLong-Test: " + getPValueText(pDeLongGesamt, langKey) + ")") : "nicht evaluierbar (DeLong-Test: N/A)"}. Die Abbildungen 2a und 2b visualisieren exemplarisch die ROC-Analyse bzw. einen Metrikvergleich für das ${getKollektivDisplayName(commonData.currentKollektivName, langKey)}. Ausführliche paarweise Vergleiche der diagnostischen Güte zwischen dem Avocado Sign und den verschiedenen T2-Kriteriensets (angewandt, Literatur-basiert, optimiert) für alle drei Kollektive (Gesamt, Direkt OP, nRCT) sind in Tabelle 6 dargestellt.</p>
+                <p>Im direkten statistischen Vergleich zwischen dem Avocado Sign und den global angewandten T2-Kriterien im Gesamtkollektiv (N=${commonData.nGesamt}) zeigte sich für die Accuracy ein ${pMcNemarGesamt !== null && !isNaN(pMcNemarGesamt) ? ( getStatisticalSignificanceText(pMcNemarGesamt, sigLevel, langKey) + " Unterschied (McNemar-Test: " + getPValueTextInternal(pMcNemarGesamt, langKey) + ")") : "nicht evaluierbarer Unterschied (McNemar-Test: N/A)"}. Für die AUC betrug der Unterschied ${pDeLongGesamt !== null && !isNaN(pDeLongGesamt) ? (getStatisticalSignificanceText(pDeLongGesamt, sigLevel, langKey) + " (DeLong-Test: " + getPValueTextInternal(pDeLongGesamt, langKey) + ")") : "nicht evaluierbar (DeLong-Test: N/A)"}. Die Abbildungen 2a und 2b visualisieren exemplarisch die ROC-Analyse bzw. einen Metrikvergleich für das ${getKollektivDisplayName(commonData.currentKollektivName, langKey)}. Ausführliche paarweise Vergleiche der diagnostischen Güte zwischen dem Avocado Sign und den verschiedenen T2-Kriteriensets (angewandt, Literatur-basiert, optimiert) für alle drei Kollektive (Gesamt, Direkt OP, nRCT) sind in Tabelle 6 dargestellt.</p>
             `;
         } else {
              return `
-                <p>In the direct statistical comparison between the Avocado Sign and the globally applied T2 criteria in the overall cohort (n=${commonData.nGesamt}), the difference in accuracy was ${pMcNemarGesamt !== null && !isNaN(pMcNemarGesamt) ? (getStatisticalSignificanceText(pMcNemarGesamt, sigLevel, langKey) + " (McNemar's test: " + getPValueText(pMcNemarGesamt, langKey) + ")") : "not evaluable (McNemar's test: N/A)"}. For the AUC, the difference was ${pDeLongGesamt !== null && !isNaN(pDeLongGesamt) ? (getStatisticalSignificanceText(pDeLongGesamt, sigLevel, langKey) + " (DeLong's test: " + getPValueText(pDeLongGesamt, langKey) + ")") : "not evaluable (DeLong's test: N/A)"}. Figures 2a and 2b exemplarily visualize the ROC analysis and a metric comparison, respectively, for the ${getKollektivDisplayName(commonData.currentKollektivName, langKey)}. Detailed pairwise comparisons of diagnostic performance between the Avocado Sign and the various T2 criteria sets (applied, literature-based, optimized) for all three cohorts (Overall, Upfront Surgery, nCRT) are presented in Table 6.</p>
+                <p>In the direct statistical comparison between the Avocado Sign and the globally applied T2 criteria in the overall cohort (n=${commonData.nGesamt}), the difference in accuracy was ${pMcNemarGesamt !== null && !isNaN(pMcNemarGesamt) ? (getStatisticalSignificanceText(pMcNemarGesamt, sigLevel, langKey) + " (McNemar's test: " + getPValueTextInternal(pMcNemarGesamt, langKey) + ")") : "not evaluable (McNemar's test: N/A)"}. For the AUC, the difference was ${pDeLongGesamt !== null && !isNaN(pDeLongGesamt) ? (getStatisticalSignificanceText(pDeLongGesamt, sigLevel, langKey) + " (DeLong's test: " + getPValueTextInternal(pDeLongGesamt, langKey) + ")") : "not evaluable (DeLong's test: N/A)"}. Figures 2a and 2b exemplarily visualize the ROC analysis and a metric comparison, respectively, for the ${getKollektivDisplayName(commonData.currentKollektivName, langKey)}. Detailed pairwise comparisons of diagnostic performance between the Avocado Sign and the various T2 criteria sets (applied, literature-based, optimized) for all three cohorts (Overall, Upfront Surgery, nCRT) are presented in Table 6.</p>
             `;
         }
     }
+
 
     function getSectionText(sectionId, lang, publicationData, kollektiveData, commonData) {
         switch (sectionId) {
@@ -382,7 +384,7 @@ const publicationTextGenerator = (() => {
     return Object.freeze({
         getSectionText,
         getSectionTextAsMarkdown,
-        getPValueText // Expose getPValueText
+        getPValueText: getPValueTextInternal // Expose the internal function
     });
 
 })();
