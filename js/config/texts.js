@@ -54,26 +54,26 @@ const UI_TEXTS = {
         size: { de: 'Gr.', en: 'Size' },
         form: { de: 'Fo=', en: 'Shape=' },
         kontur: { de: 'Ko=', en: 'Border=' },
-        homogenitaet: { de: 'Ho=', en: 'Signal=' }, // Note: Homogenitaet might be 'Internal Structure' or 'Signal Pattern' in English. Using 'Signal=' for consistency with current structure if it refers to signal pattern.
-        signal: { de: 'Si=', en: 'Intens.=' } // Signal Intensity
+        homogenitaet: { de: 'Ho=', en: 'Signal=' },
+        signal: { de: 'Si=', en: 'Intens.=' }
     },
     t2CriteriaLongPrefix: {
         size: { de: 'Größe ', en: 'Size ' },
         form: { de: 'Form=', en: 'Shape=' },
         kontur: { de: 'Kontur=', en: 'Border=' },
-        homogenitaet: { de: 'Homog.=', en: 'Homog.=' }, // Assuming Homogeneity is the direct translation.
+        homogenitaet: { de: 'Homog.=', en: 'Homog.=' },
         signal: { de: 'Signal=', en: 'Signal=' }
     },
     t2CriteriaValues: {
         rund: { de: 'rund', en: 'round' },
         oval: { de: 'oval', en: 'oval' },
-        scharf: { de: 'scharf', en: 'smooth' }, // Or 'well-defined'
-        irregulär: { de: 'irregulär', en: 'irregular' }, // Common spelling "irregulär" corrected
+        scharf: { de: 'scharf', en: 'smooth' },
+        irregulär: { de: 'irregulär', en: 'irregular' },
         homogen: { de: 'homogen', en: 'homogeneous' },
         heterogen: { de: 'heterogen', en: 'heterogeneous' },
-        signalarm: { de: 'signalarm', en: 'hypointense' }, // Or 'low signal'
+        signalarm: { de: 'signalarm', en: 'hypointense' },
         intermediär: { de: 'intermediär', en: 'intermediate' },
-        signalreich: { de: 'signalreich', en: 'hyperintense' } // Or 'high signal'
+        signalreich: { de: 'signalreich', en: 'hyperintense' }
     },
     t2CriteriaShortValues: {
         irregulär: { de: 'irr.', en: 'irreg.'},
@@ -106,22 +106,34 @@ const UI_TEXTS = {
         bruteForceMetricSelectLabel: {
             de: 'Optimierungsmetrik für T2 (BF):',
             en: 'Optimization Metric for T2 (BF):'
-        },
-        // Sub-section labels need to be added here if they are to be translated
-        // These are currently hardcoded in PUBLICATION_CONFIG
+        }
     },
-    chartTitles: { // Add .de and .en for each
+    publicationSubSectionLabels: {
+        studienanlage: { de: 'Studiendesign und Ethik', en: 'Study Design and Ethics' },
+        patientenkollektiv: { de: 'Patientenkollektiv', en: 'Patient Cohort' },
+        mrtProtokoll: { de: 'MRT-Protokoll & Kontrastmittelgabe', en: 'MRI Protocol & Contrast Administration' },
+        asDefinition: { de: 'Definition & Bewertung Avocado Sign', en: 'Definition & Assessment of Avocado Sign' },
+        t2Definition: { de: 'Definition & Bewertung T2-Kriterien', en: 'Definition & Assessment of T2 Criteria' },
+        referenzstandard: { de: 'Referenzstandard (Histopathologie)', en: 'Reference Standard (Histopathology)' },
+        statistischeAnalyse: { de: 'Statistische Analyse', en: 'Statistical Analysis' },
+        patientencharakteristika: { de: 'Patientencharakteristika', en: 'Patient Characteristics' },
+        asPerformance: { de: 'Diagnostische Güte: Avocado Sign', en: 'Diagnostic Performance: Avocado Sign' },
+        literaturT2Performance: { de: 'Diagnostische Güte: Literatur-T2-Kriterien', en: 'Diagnostic Performance: Literature-Based T2 Criteria' },
+        optimierteT2Performance: { de: 'Diagnostische Güte: Optimierte T2-Kriterien (Brute-Force)', en: 'Diagnostic Performance: Optimized T2 Criteria (Brute-Force)' },
+        vergleichPerformanceT2: { de: 'Vergleich: AS vs. T2-Kriterien', en: 'Comparison: AS vs. T2 Criteria' }
+    },
+    chartTitles: {
         ageDistribution: { de: 'Altersverteilung', en: 'Age Distribution' },
         genderDistribution: { de: 'Geschlecht', en: 'Gender' },
         therapyDistribution: { de: 'Therapie', en: 'Therapy' },
         statusN: { de: 'N-Status (Patho)', en: 'N-Status (Patho)' },
         statusAS: { de: 'AS-Status', en: 'AS-Status' },
         statusT2: { de: 'T2-Status', en: 'T2-Status' },
-        comparisonBar: { de: 'Vergleich AS vs. {T2Name}', en: 'Comparison AS vs. {T2Name}' }, // Placeholder will be replaced
-        rocCurve: { de: 'ROC-Kurve für {Method}', en: 'ROC Curve for {Method}' }, // Placeholder
+        comparisonBar: { de: 'Vergleich AS vs. {T2Name}', en: 'Comparison AS vs. {T2Name}' },
+        rocCurve: { de: 'ROC-Kurve für {Method}', en: 'ROC Curve for {Method}' },
         asPerformance: { de: 'AS Performance (Akt. Kollektiv)', en: 'AS Performance (Current Cohort)' }
     },
-    axisLabels: { // Add .de and .en
+    axisLabels: {
         age: { de: 'Alter (Jahre)', en: 'Age (Years)' },
         patientCount: { de: 'Anzahl Patienten', en: 'Number of Patients' },
         lymphNodeCount: { de: 'Anzahl Lymphknoten', en: 'Number of Lymph Nodes' },
@@ -132,7 +144,7 @@ const UI_TEXTS = {
         probability: { de: 'Wahrscheinlichkeit', en: 'Probability' },
         shortAxisDiameter: { de: 'Kurzachsendurchmesser (mm)', en: 'Short Axis Diameter (mm)' }
     },
-    legendLabels: { // Add .de and .en
+    legendLabels: {
         male: { de: 'Männlich', en: 'Male' },
         female: { de: 'Weiblich', en: 'Female' },
         unknownGender: { de: 'Unbekannt', en: 'Unknown' },
@@ -145,11 +157,11 @@ const UI_TEXTS = {
         t2Positive: { de: 'T2+', en: 'T2+' },
         t2Negative: { de: 'T2-', en: 'T2-' },
         avocadoSign: { de: 'Avocado Sign (AS)', en: 'Avocado Sign (AS)' },
-        currentT2: { de: '{T2ShortName}', en: '{T2ShortName}' }, // Placeholder
+        currentT2: { de: '{T2ShortName}', en: '{T2ShortName}' },
         benignLN: { de: 'Benigne LK', en: 'Benign LN' },
         malignantLN: { de: 'Maligne LK', en: 'Malignant LN' }
     },
-    criteriaComparison: { // Add .de and .en
+    criteriaComparison: {
         title: { de: "Vergleich diagnostischer Güte verschiedener Methoden", en: "Comparison of Diagnostic Performance of Different Methods"},
         selectLabel: { de: "Kriteriensätze für Vergleich auswählen:", en: "Select criteria sets for comparison:"},
         tableHeaderSet: { de: "Methode / Kriteriensatz", en: "Method / Criteria Set"},
@@ -161,7 +173,7 @@ const UI_TEXTS = {
         tableHeaderAUC: { de: "AUC/BalAcc", en: "AUC/BalAcc"},
         showAppliedLabel: { de: "Aktuell angewandte Kriterien anzeigen", en: "Show currently applied criteria"}
     },
-    excelExport: { // These are mostly button labels, could be internationalized if needed, but might be okay as is.
+    excelExport: {
         datenLabel: "Datenliste (.xlsx)",
         auswertungLabel: "Auswertungstabelle (.xlsx)",
         statistikLabel: "Statistik Übersicht (.xlsx)",
@@ -172,7 +184,29 @@ const UI_TEXTS = {
         pngLabel: { de: "Als PNG herunterladen", en: "Download as PNG"},
         svgLabel: { de: "Als SVG herunterladen", en: "Download as SVG"}
     },
-    statMetrics: { // These are used for dynamic tooltips, so each needs .de and .en
+    publicationTableTitles: {
+        asPerformance: {de: 'Tabelle 3: Diagnostische Güte - Avocado Sign (vs. N-Status)', en: 'Table 3: Diagnostic Performance - Avocado Sign (vs. N-Status)'},
+        literaturT2Performance: {de: 'Tabelle 4: Diagnostische Güte - Literatur-basierte T2-Kriterien (vs. N-Status)', en: 'Table 4: Diagnostic Performance - Literature-Based T2 Criteria (vs. N-Status)'},
+        optimierteT2Performance: {de: 'Tabelle 5: Diagnostische Güte - Optimierte T2-Kriterien (Ziel: [METRIC], vs. N-Status)', en: 'Table 5: Diagnostic Performance - Optimized T2 Criteria (Target: [METRIC], vs. N-Status)'},
+        vergleichPerformance: {de: 'Tabelle 6: Paarweiser Vergleich der diagnostischen Güte (vs. N-Status)', en: 'Table 6: Pairwise Comparison of Diagnostic Performance (vs. N-Status)'}
+    },
+    publicationTableHeaders: {
+        characteristic: {de: 'Merkmal', en: 'Characteristic'},
+        studySet: {de: 'Studie / Kriterienset', en: 'Study / Criteria Set'},
+        targetCohort: {de: 'Primäres Zielkollektiv (Anwendung)', en: 'Primary Target Cohort (Application)'},
+        coreCriteria: {de: 'Kernkriterien (Kurzfassung)', en: 'Core Criteria (Summary)'},
+        logic: {de: 'Logik', en: 'Logic'},
+        method: {de: 'Methode', en: 'Method'},
+        cohort: {de: 'Kollektiv', en: 'Cohort'},
+        comparison: {de: 'Vergleich', en: 'Comparison'},
+        pValueAUC: {de: 'p-Wert (AUC, DeLong)', en: 'p-value (AUC, DeLong)'},
+        pValueAcc: {de: 'p-Wert (Acc, McNemar)', en: 'p-value (Acc, McNemar)'},
+        sens: { de: 'Sens.', en: 'Sens.'},
+        spez: { de: 'Spez.', en: 'Spec.'},
+        acc: { de: 'Acc.', en: 'Acc.'},
+        auc: { de: 'AUC/BalAcc', en: 'AUC/BalAcc'}
+    },
+    statMetrics: {
         signifikanzTexte: {
             SIGNIFIKANT: { de: "statistisch signifikant", en: "statistically significant"},
             NICHT_SIGNIFIKANT: { de: "statistisch nicht signifikant", en: "statistically not significant"}
@@ -180,14 +214,14 @@ const UI_TEXTS = {
         orFaktorTexte: {
             ERHOEHT: { de: "erhöht", en: "increased"},
             VERRINGERT: { de: "verringert", en: "decreased"},
-            UNVERAENDERT: { de: "unchanged", en: "unchanged"}
+            UNVERAENDERT: { de: "unverändert", en: "unchanged"}
         },
         rdRichtungTexte: {
             HOEHER: { de: "höher", en: "higher"},
             NIEDRIGER: { de: "niedriger", en: "lower"},
-            GLEICH: { de: "equal", en: "equal"}
+            GLEICH: { de: "gleich", en: "equal"}
         },
-        assoziationStaerkeTexte: { // for Phi coefficient
+        assoziationStaerkeTexte: {
             stark: { de: "stark", en: "strong"},
             moderat: { de: "moderat", en: "moderate"},
             schwach: { de: "schwach", en: "weak"},
@@ -206,7 +240,7 @@ const TOOLTIP_CONTENT = {
         statusAS: {de: "Anteil der Patienten mit positivem (+) vs. negativem (-) Lymphknotenstatus gemäß Avocado Sign (AS) Vorhersage im ausgewählten Kollektiv.", en: "Proportion of patients with positive (+) vs. negative (-) lymph node status according to Avocado Sign (AS) prediction in the selected cohort."},
         statusT2: {de: "Anteil der Patienten mit positivem (+) vs. negativem (-) Lymphknotenstatus gemäß den aktuell **angewendeten und gespeicherten** T2-Kriterien (siehe Auswertungstab) für das ausgewählte Kollektiv.", en: "Proportion of patients with positive (+) vs. negative (-) lymph node status according to the currently **applied and saved** T2 criteria (see Evaluation tab) for the selected cohort."}
     },
-    datenTable: { // .de and .en for each
+    datenTable: {
         nr: { de: "Fortlaufende Nummer des Patienten.", en: "Patient identification number."},
         name: { de: "Nachname des Patienten (anonymisiert/kodiert).", en: "Patient's last name (anonymized/coded)."},
         vorname: { de: "Vorname des Patienten (anonymisiert/kodiert).", en: "Patient's first name (anonymized/coded)."},
@@ -218,7 +252,7 @@ const TOOLTIP_CONTENT = {
         expandAll: { de: "Öffnet oder schließt die Detailansicht zu den T2-gewichteten Lymphknotenmerkmalen für alle Patienten in der aktuellen Tabellenansicht.", en: "Expands or collapses the detail view for T2-weighted lymph node characteristics for all patients in the current table view."},
         expandRow: { de: "Klicken Sie auf diese Zeile, um Details zu den morphologischen Eigenschaften der T2-gewichteten Lymphknoten dieses spezifischen Patienten anzuzeigen oder auszublenden.", en: "Click this row to show or hide details about the morphological properties of this specific patient's T2-weighted lymph nodes."}
     },
-    auswertungTable: { // .de and .en for each
+    auswertungTable: {
         nr: {de: "Fortlaufende Nummer des Patienten.", en: "Patient identification number."},
         name: {de: "Nachname des Patienten (anonymisiert/kodiert).", en: "Patient's last name (anonymized/coded)."},
         therapie: {de: "Angewandte Therapie vor der Operation.", en: "Applied therapy before surgery."},
@@ -262,7 +296,7 @@ const TOOLTIP_CONTENT = {
     statistikKollektiv1: { description: {de: "Wählen Sie das erste Kollektiv für die statistische Auswertung bzw. den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv').", en: "Select the first cohort for statistical evaluation or comparison (only active in 'Comparison Active' layout)."} },
     statistikKollektiv2: { description: {de: "Wählen Sie das zweite Kollektiv für den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv').", en: "Select the second cohort for comparison (only active in 'Comparison Active' layout)."} },
     statistikToggleVergleich: { description: {de: "Schaltet zwischen der Ansicht für ein einzelnes, global gewähltes Kollektiv und der Vergleichsansicht zweier spezifisch wählbarer Kollektive um.", en: "Switches between the view for a single, globally selected cohort and the comparison view of two specifically selectable cohorts."} },
-    deskriptiveStatistik: { // Sub-tooltips for this card
+    deskriptiveStatistik: {
         cardTitle: { de: "Überblick über die demographischen Daten (Alter, Geschlecht), Therapieart und Verteilung der N-, AS- und T2-Status sowie Lymphknotenanzahlen im ausgewählten Kollektiv ([KOLLEKTIV]).", en: "Overview of demographic data (age, gender), therapy type, and distribution of N, AS, and T2 statuses, as well as lymph node counts in the selected cohort ([KOLLEKTIV])."},
         alterMedian: { description: {de: "Median des Alters: Der zentrale Wert, der die Patienten nach Alter in zwei gleich große Hälften teilt. Angegeben mit Minimum-Maximum und [Mittelwert ± Standardabweichung].", en: "Median age: The central value dividing patients by age into two equal halves. Given with Minimum-Maximum and [Mean ± Standard Deviation]."} },
         geschlecht: { description: {de: "Absolute Anzahl und prozentuale Verteilung der Geschlechter (männlich/weiblich) im Kollektiv.", en: "Absolute number and percentage distribution of genders (male/female) in the cohort."} },
@@ -283,7 +317,7 @@ const TOOLTIP_CONTENT = {
     statistischerVergleichASvsT2: { cardTitle: {de: "Direkter statistischer Vergleich der diagnostischen Leistung von AS vs. T2 (aktuell angewendete Kriterien) innerhalb desselben Kollektivs ([KOLLEKTIV]) mittels gepaarter Tests.", en: "Direct statistical comparison of diagnostic performance of AS vs. T2 (currently applied criteria) within the same cohort ([KOLLEKTIV]) using paired tests."} },
     assoziationEinzelkriterien: { cardTitle: {de: "Analyse der Assoziation zwischen dem AS-Status bzw. einzelnen T2-Merkmalen (unabhängig von Aktivierung) und dem histopathologischen N-Status (+/-) im Kollektiv [KOLLEKTIV]. Angegeben sind Odds Ratio (OR), Risk Difference (RD), Phi-Koeffizient und p-Werte aus geeigneten Tests.", en: "Analysis of the association between AS status or individual T2 features (regardless of activation) and the histopathological N status (+/-) in cohort [KOLLEKTIV]. Odds Ratio (OR), Risk Difference (RD), Phi coefficient, and p-values from appropriate tests are provided."} },
     vergleichKollektive: { cardTitle: {de: "Statistischer Vergleich der diagnostischen Leistung (Accuracy, AUC für AS und T2) zwischen Kollektiv [KOLLEKTIV1] und Kollektiv [KOLLEKTIV2] mittels Tests für unabhängige Stichproben.", en: "Statistical comparison of diagnostic performance (Accuracy, AUC for AS and T2) between cohort [KOLLEKTIV1] and cohort [KOLLEKTIV2] using tests for independent samples."} },
-    criteriaComparisonTable: { // .de and .en
+    criteriaComparisonTable: {
         cardTitle: { de: "Tabellarischer Vergleich der diagnostischen Güte verschiedener Methoden/Kriteriensätze (AS, aktuell angewandte T2, Studien) für das ausgewählte Kollektiv [KOLLEKTIV].", en: "Tabular comparison of diagnostic performance of different methods/criteria sets (AS, currently applied T2, studies) for the selected cohort [KOLLEKTIV]."},
         tableHeaderSet: { de: "Methode / Kriteriensatz", en: "Method / Criteria Set"},
         tableHeaderSens: { de: "Sensitivität: Anteil der korrekt als positiv erkannten N+ Fälle.", en: "Sensitivity: Proportion of correctly identified N+ cases."},
@@ -295,7 +329,7 @@ const TOOLTIP_CONTENT = {
     },
     logisticRegressionCard: { cardTitle: {de: "Ergebnisse der logistischen Regression zur Modellierung der N+ Wahrscheinlichkeit basierend auf ausgewählten Prädiktoren (z.B. T2-Merkmale, Alter) für das Kollektiv [KOLLEKTIV]. (Experimentell)", en: "Results of logistic regression for modeling N+ probability based on selected predictors (e.g., T2 features, age) for cohort [KOLLEKTIV]. (Experimental)"} },
     rocCurveCard: { cardTitle: {de: "Receiver Operating Characteristic (ROC) Kurve für die Unterscheidung zwischen N+ und N- basierend auf {Variable} für das Kollektiv [KOLLEKTIV]. Zeigt Sensitivität vs. 1-Spezifität über verschiedene Schwellenwerte.", en: "Receiver Operating Characteristic (ROC) curve for discriminating between N+ and N- based on {Variable} for cohort [KOLLEKTIV]. Shows sensitivity vs. 1-specificity across various thresholds."} },
-    praesentation: { // .de and .en for each
+    praesentation: {
         viewSelect: { description: {de: "Wählen Sie die Datenansicht für den Präsentations-Tab: 'Avocado Sign (Daten)' zeigt die dynamisch berechneten Kernergebnisse für AS im aktuellen Kollektiv. 'AS vs. T2 (Vergleich)' ermöglicht einen dynamischen Vergleich von AS mit T2-Kriterien für das aktuell global gewählte Kollektiv.", en: "Select the data view for the Presentation tab: 'Avocado Sign (Data)' shows dynamically calculated key results for AS in the current cohort. 'AS vs. T2 (Comparison)' allows a dynamic comparison of AS with T2 criteria for the currently globally selected cohort."} },
         studySelect: { description: {de: "Wählen Sie eine Quelle für die T2-Kriterien, die mit dem Avocado Sign verglichen werden sollen: Entweder die aktuell in der App eingestellten ('Eingestellte T2 Kriterien') oder vordefinierte Kriteriensätze aus relevanten publizierten Studien. Die Auswahl aktualisiert die Info-Karte und den Vergleichs-Chart. Der Vergleich basiert immer auf dem aktuell im Header ausgewählten Patientenkollektiv.", en: "Select a source for the T2 criteria to be compared with the Avocado Sign: Either the currently set criteria in the app ('Applied T2 Criteria') or predefined criteria sets from relevant published studies. The selection updates the info card and the comparison chart. The comparison is always based on the currently selected patient cohort in the header."} },
         t2BasisInfoCard: {
@@ -337,7 +371,7 @@ const TOOLTIP_CONTENT = {
             method: {de: "Name des verwendeten statistischen Tests.", en: "Name of the statistical test used."}
         }
     },
-    exportTab: { // All sub-objects need .de and .en if their description is language-dependent
+    exportTab: {
         singleExports: {de: "Einzelexporte", en: "Single Exports"},
         exportPackages: {de: "Export-Pakete (.zip)", en: "Export Packages (.zip)"},
         description: {de: "Ermöglicht den Export von Analyseergebnissen, Tabellen und Diagrammen basierend auf dem aktuell gewählten Kollektiv ([KOLLEKTIV]) und den aktuell angewendeten T2-Kriterien.", en: "Allows exporting analysis results, tables, and charts based on the currently selected cohort ([KOLLEKTIV]) and the currently applied T2 criteria."},
@@ -368,7 +402,7 @@ const TOOLTIP_CONTENT = {
         spracheSwitch: { description: {de: "Wechselt die Sprache der Texte im Publikation-Tab zwischen Deutsch und Englisch.", en: "Switches the language of texts in the Publication tab between German and English."} },
         sectionSelect: { description: {de: "Wählen Sie den Abschnitt der wissenschaftlichen Publikation aus, für den Textvorschläge und relevante Daten/Grafiken angezeigt werden sollen.", en: "Select the section of the scientific publication for which text suggestions and relevant data/graphics should be displayed."} },
         bruteForceMetricSelect: { description: {de: "Wählen Sie die Zielmetrik, für deren Optimierungsergebnisse (via Brute-Force) die entsprechenden Statistiken im 'Ergebnisse'-Abschnitt des Publikation-Tabs dargestellt werden sollen.", en: "Select the target metric for which the optimization results (via brute-force) will be used to display corresponding statistics in the 'Results' section of the Publication tab."} },
-        methoden: { // These could be titles for main sections if needed, or generic tooltips for the nav links
+        methoden: {
             studienanlage: {de: "Textvorschlag und relevante Informationen zum Studiendesign, der Ethik und der verwendeten Software.", en: "Text suggestion and relevant information on study design, ethics, and software used."},
             patientenkohorte: {de: "Textvorschlag und relevante Informationen zum Patientenkollektiv und der Datenbasis.", en: "Text suggestion and relevant information on the patient cohort and database."},
             mrtProtokoll: {de: "Textvorschlag und relevante Informationen zum MRT-Protokoll und zur Kontrastmittelgabe.", en: "Text suggestion and relevant information on the MRI protocol and contrast agent administration."},
@@ -385,13 +419,13 @@ const TOOLTIP_CONTENT = {
             vergleichPerformance: {de: "Textvorschlag und relevante Tabellen/Diagramme zum statistischen Vergleich der diagnostischen Güte zwischen Avocado Sign und den verschiedenen T2-Kriteriensets.", en: "Text suggestion and relevant tables/charts for the statistical comparison of diagnostic performance between the Avocado Sign and various T2 criteria sets."}
         }
     },
-    statMetrics: { // Each sub-object needs .de and .en for description and interpretation
+    statMetrics: {
         sens: { name: {de: "Sensitivität", en: "Sensitivity"}, description: {de: "Sensitivität ([METHODE] vs. N): Anteil der tatsächlich positiven Fälle (N+), die durch die Methode [METHODE] korrekt als positiv erkannt wurden.<br><i>Formel: RP / (RP + FN)</i>", en: "Sensitivity ([METHODE] vs. N): Proportion of actual positive cases (N+) correctly identified as positive by method [METHODE].<br><i>Formula: TP / (TP + FN)</i>"}, interpretation: {de: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N+ Patienten korrekt (95% KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].", en: "Method [METHODE] correctly identified <strong>[WERT]</strong> of actual N+ patients (95% CI by [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV]."} },
         spez: { name: {de: "Spezifität", en: "Specificity"}, description: {de: "Spezifität ([METHODE] vs. N): Anteil der tatsächlich negativen Fälle (N-), die durch die Methode [METHODE] korrekt als negativ erkannt wurden.<br><i>Formel: RN / (RN + FP)</i>", en: "Specificity ([METHODE] vs. N): Proportion of actual negative cases (N-) correctly identified as negative by method [METHODE].<br><i>Formula: TN / (TN + FP)</i>"}, interpretation: {de: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N- Patienten korrekt (95% KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].", en: "Method [METHODE] correctly identified <strong>[WERT]</strong> of actual N- patients (95% CI by [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV]."} },
         ppv: { name: {de: "Pos. Prädiktiver Wert (PPV)", en: "Positive Predictive Value (PPV)"}, description: {de: "PPV ([METHODE] vs. N): Wahrscheinlichkeit, dass ein Patient mit einem positiven Testergebnis durch Methode [METHODE] tatsächlich krank (N+) ist.<br><i>Formel: RP / (RP + FP)</i>", en: "PPV ([METHODE] vs. N): Probability that a patient with a positive test result from method [METHODE] is actually diseased (N+).<br><i>Formula: TP / (TP + FP)</i>"}, interpretation: {de: "Wenn die Methode [METHODE] ein positives Ergebnis lieferte, lag die Wahrscheinlichkeit für einen tatsächlichen N+ Status bei <strong>[WERT]</strong> (95% KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].", en: "If method [METHODE] yielded a positive result, the probability of an actual N+ status was <strong>[WERT]</strong> (95% CI by [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV]."} },
         npv: { name: {de: "Neg. Prädiktiver Wert (NPV)", en: "Negative Predictive Value (NPV)"}, description: {de: "NPV ([METHODE] vs. N): Wahrscheinlichkeit, dass ein Patient mit einem negativen Testergebnis durch Methode [METHODE] tatsächlich gesund (N-) ist.<br><i>Formel: RN / (RN + FN)</i>", en: "NPV ([METHODE] vs. N): Probability that a patient with a negative test result from method [METHODE] is actually healthy (N-).<br><i>Formula: TN / (TN + FN)</i>"}, interpretation: {de: "Wenn die Methode [METHODE] ein negatives Ergebnis lieferte, lag die Wahrscheinlichkeit für einen tatsächlichen N- Status bei <strong>[WERT]</strong> (95% KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].", en: "If method [METHODE] yielded a negative result, the probability of an actual N- status was <strong>[WERT]</strong> (95% CI by [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV]."} },
         acc: { name: {de: "Accuracy (Gesamtgenauigkeit)", en: "Accuracy"}, description: {de: "Accuracy ([METHODE] vs. N): Anteil aller Fälle, die durch die Methode [METHODE] korrekt klassifiziert wurden (sowohl positive als auch negative).<br><i>Formel: (RP + RN) / Gesamtanzahl</i>", en: "Accuracy ([METHODE] vs. N): Proportion of all cases correctly classified by method [METHODE] (both positive and negative).<br><i>Formula: (TP + TN) / Total Number</i>"}, interpretation: {de: "Die Methode [METHODE] klassifizierte insgesamt <strong>[WERT]</strong> aller Patienten korrekt (95% KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].", en: "Method [METHODE] correctly classified a total of <strong>[WERT]</strong> of all patients (95% CI by [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV]."} },
-        balAcc: { name: {de: "Balanced Accuracy", en: "Balanced Accuracy"}, description: {de: "Balanced Accuracy ([METHODE] vs. N): Der Mittelwert aus Sensitivität und Spezifität.<br><i>Formel: (Sensitivität + Spezifität) / 2</i>", en: "Balanced Accuracy ([METHODE] vs. N): The average of sensitivity and specificity.<br><i>Formula: (Sensitivity + Specificity) / 2</i>"}, interpretation: {de: "Die Balanced Accuracy der Methode [METHODE], die Sensitivität und Spezifität gleich gewichtet, betrug <strong>[WERT]</strong> (95% KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].", en: "The Balanced Accuracy of method [METHODE], which equally weights sensitivity and specificity, was <strong>[WERT]</strong> (95% CI by [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV]."} },
+        balacc: { name: {de: "Balanced Accuracy", en: "Balanced Accuracy"}, description: {de: "Balanced Accuracy ([METHODE] vs. N): Der Mittelwert aus Sensitivität und Spezifität.<br><i>Formel: (Sensitivität + Spezifität) / 2</i>", en: "Balanced Accuracy ([METHODE] vs. N): The average of sensitivity and specificity.<br><i>Formula: (Sensitivity + Specificity) / 2</i>"}, interpretation: {de: "Die Balanced Accuracy der Methode [METHODE], die Sensitivität und Spezifität gleich gewichtet, betrug <strong>[WERT]</strong> (95% KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].", en: "The Balanced Accuracy of method [METHODE], which equally weights sensitivity and specificity, was <strong>[WERT]</strong> (95% CI by [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV]."} },
         f1: { name: {de: "F1-Score", en: "F1-Score"}, description: {de: "F1-Score ([METHODE] vs. N): Das harmonische Mittel aus PPV (Precision) und Sensitivität (Recall).<br><i>Formel: 2 * (PPV * Sensitivität) / (PPV + Sensitivität)</i>", en: "F1-Score ([METHODE] vs. N): The harmonic mean of PPV (Precision) and Sensitivity (Recall).<br><i>Formula: 2 * (PPV * Sensitivity) / (PPV + Sensitivity)</i>"}, interpretation: {de: "Der F1-Score für die Methode [METHODE], der Präzision und Sensitivität kombiniert, beträgt <strong>[WERT]</strong> (95% KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].", en: "The F1-Score for method [METHODE], combining precision and sensitivity, is <strong>[WERT]</strong> (95% CI by [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV]."} },
         auc: { name: {de: "Area Under Curve (AUC)", en: "Area Under Curve (AUC)"}, description: {de: "AUC ([METHODE] vs. N): Fläche unter der Receiver Operating Characteristic (ROC)-Kurve. Repräsentiert die Fähigkeit der Methode [METHODE], zufällig ausgewählte N+ und N- Patienten korrekt zu rangreihen. 0.5 entspricht Zufall, 1.0 perfekter Trennung.<br><i>Für binäre Tests (wie AS oder eine feste T2-Regel) ist AUC = Balanced Accuracy.</i>", en: "AUC ([METHODE] vs. N): Area under the Receiver Operating Characteristic (ROC) curve. Represents the ability of method [METHODE] to correctly rank randomly selected N+ and N- patients. 0.5 corresponds to random chance, 1.0 to perfect separation.<br><i>For binary tests (like AS or a fixed T2 rule), AUC = Balanced Accuracy.</i>"}, interpretation: {de: "Die AUC von <strong>[WERT]</strong> (95% KI nach [METHOD_CI]: [LOWER] – [UPPER]) deutet auf eine <strong>[BEWERTUNG]</strong> generelle Trennschärfe der Methode [METHODE] zwischen N+ und N- Fällen im Kollektiv [KOLLEKTIV] hin.", en: "An AUC of <strong>[WERT]</strong> (95% CI by [METHOD_CI]: [LOWER] – [UPPER]) indicates a <strong>[BEWERTUNG]</strong> overall discriminative power of method [METHODE] between N+ and N- cases in cohort [KOLLEKTIV]."} },
         mcnemar: { name: {de: "McNemar-Test", en: "McNemar's Test"}, description: {de: "Prüft auf einen signifikanten Unterschied in den diskordanten Paaren (Fälle, bei denen AS und [T2_SHORT_NAME] unterschiedliche Ergebnisse liefern) bei gepaarten Daten.<br><i>Nullhypothese: Anzahl(AS+/[T2_SHORT_NAME]-) = Anzahl(AS-/[T2_SHORT_NAME]+)</i>", en: "Tests for a significant difference in discordant pairs (cases where AS and [T2_SHORT_NAME] yield different results) in paired data.<br><i>Null hypothesis: Count(AS+/[T2_SHORT_NAME]-) = Count(AS-/[T2_SHORT_NAME]+)</i>"}, interpretation: {de: "Der McNemar-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies deutet darauf hin, dass sich die Fehlklassifizierungsraten von AS und [T2_SHORT_NAME] im Kollektiv [KOLLEKTIV] [SIGNIFIKANZ_TEXT] unterscheiden.", en: "McNemar's test yielded a p-value of <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. This suggests that the misclassification rates of AS and [T2_SHORT_NAME] in cohort [KOLLEKTIV] differ [SIGNIFIKANZ_TEXT]."} },
