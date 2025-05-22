@@ -20,10 +20,14 @@
                 <span data-tippy-content="Anteil AS+ Patienten (Vorhersage)">AS: <strong id="header-status-as">--</strong></span>
                 <span data-tippy-content="Anteil T2+ Patienten (angew. Kriterien)">T2: <strong id="header-status-t2">--</strong></span>
             </div>
-            <div class="btn-group" role="group" aria-label="Kollektiv Auswahl" data-tippy-content="Wählen Sie das Patientenkollektiv für die Analyse aus.">
+            <div class="btn-group me-2" role="group" aria-label="Kollektiv Auswahl" data-tippy-content="Wählen Sie das Patientenkollektiv für die Analyse aus.">
                 <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-gesamt" data-kollektiv="Gesamt">Gesamt</button>
                 <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-direkt-op" data-kollektiv="direkt OP">Direkt OP</button>
                 <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-nrct" data-kollektiv="nRCT">nRCT</button>
+            </div>
+            <div class="form-check form-switch global-language-switcher" id="global-language-switcher-container" data-tippy-content="Wechselt die Sprache der Anwendung und der generierten Texte (z.B. im Publikation-Tab).">
+                <input class="form-check-input" type="checkbox" role="switch" id="global-sprache-switch">
+                <label class="form-check-label small" for="global-sprache-switch" id="global-sprache-label">Deutsch</label>
             </div>
         </div>
     </header>
