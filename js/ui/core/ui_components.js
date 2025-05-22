@@ -7,7 +7,7 @@ const uiComponents = (() => {
                  `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${chartId}" data-format="${btn.format}" data-tippy-content="${btn.tooltip || `Als ${btn.format.toUpperCase()} herunterladen`}"> <i class="fas ${btn.icon || 'fa-download'}"></i></button>`
              ).join('');
         }
-        const tooltipKey = TOOLTIP_CONTENT.deskriptiveStatistik[chartId]?.description; // This needs lang
+        const tooltipKey = TOOLTIP_CONTENT.deskriptiveStatistik[chartId]?.description;
         const tooltipContent = (typeof tooltipKey === 'object' ? tooltipKey[state.getCurrentPublikationLang() || 'de'] : tooltipKey) || title || '';
 
         return `
@@ -34,7 +34,7 @@ const uiComponents = (() => {
         const sizeMin = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min;
         const sizeMax = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max;
         const sizeStep = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step;
-        const formattedThreshold = formatNumber(sizeThreshold, 1, '5.0', true); // true for standard format for input value
+        const formattedThreshold = formatNumber(sizeThreshold, 1, '5.0', true);
 
         const createButtonOptions = (key, isChecked, criterionLabel) => {
             const valuesKey = key.toUpperCase() + '_VALUES';
@@ -335,7 +335,7 @@ const uiComponents = (() => {
              return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">${langKey==='de'?'Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)':'Brief Dx. Performance (T2 vs. N - applied criteria)'}</div><div class="card-body p-2"><p class="m-0 text-muted small">${noMetricsText}</p></div></div>`;
         }
         const metrics = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'f1', 'auc'];
-        const metricDisplayNames = { sens: 'Sens', spez: 'Spez', ppv: 'PPV', npv: 'NPV', acc: 'Acc', balAcc: 'BalAcc', f1: 'F1', auc: 'AUC' }; // These are often kept as abbr.
+        const metricDisplayNames = { sens: 'Sens', spez: 'Spez', ppv: 'PPV', npv: 'NPV', acc: 'Acc', balAcc: 'BalAcc', f1: 'F1', auc: 'AUC' };
         const na = '--';
 
         let contentHTML = '<div class="d-flex flex-wrap justify-content-around small text-center">';
@@ -438,21 +438,32 @@ const uiComponents = (() => {
         const lang = state.getCurrentPublikationLang() || PUBLICATION_CONFIG.defaultLanguage;
         const langKey = lang === 'en' ? 'en' : 'de';
         const currentBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
-        const navTitle = UI_TEXTS.publicationTab.sectionLabels.methoden[langKey] === 'Methoden' || UI_TEXTS.publicationTab.sectionLabels.methoden[langKey] === 'Methods' ? (langKey === 'de' ? 'Abschnitte' : 'Sections') : 'Navigation';
+
+        const mainSectionNav = PUBLICATION_CONFIG.sections.find(s => s.id === (state.getCurrentPublikationSection() || PUBLICATION_CONFIG.defaultSection)) || PUBLICATION_CONFIG.sections[0];
+        const navTitle = UI_TEXTS.publikationTab.sectionLabels[mainSectionNav.labelKey]?.[langKey] || (langKey === 'de' ? 'Abschnitte' : 'Sections');
 
 
         const sectionNavItems = PUBLICATION_CONFIG.sections.map(mainSection => {
             const label = UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey]?.[langKey] || UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey]?.['de'] || mainSection.labelKey;
+            let subSectionLinks = '';
+            if(mainSection.subSections && mainSection.subSections.length > 0){
+                subSectionLinks = mainSection.subSections.map(subSection => {
+                    const subLabel = UI_TEXTS.publicationSubSectionLabels?.[subSection.labelKey]?.[langKey] || UI_TEXTS.publicationSubSectionLabels?.[subSection.labelKey]?.['de'] || subSection.label;
+                     const isActive = subSection.id === state.getCurrentPublikationSection();
+                    return `<li class="nav-item"><a class="nav-link ps-3 py-1 publikation-section-link ${isActive ? 'active' : ''}" href="#" data-section-id="${subSection.id}">${subLabel}</a></li>`;
+                }).join('');
+            }
             return `
                 <li class="nav-item">
-                    <a class="nav-link py-2 publikation-section-link" href="#" data-section-id="${mainSection.id}">
+                    <a class="nav-link py-2 publikation-section-link fw-bold disabled" href="#" data-section-id="${mainSection.id}">
                         ${label}
                     </a>
+                    ${subSectionLinks ? `<ul class="nav flex-column ps-2">${subSectionLinks}</ul>` : ''}
                 </li>`;
         }).join('');
 
         const bfMetricOptions = PUBLICATION_CONFIG.bruteForceMetricsForPublication.map(opt =>
-            `<option value="${opt.value}" ${opt.value === currentBfMetric ? 'selected' : ''}>${opt.label}</option>` // Metric labels are usually lang-neutral or taken as is
+            `<option value="${opt.value}" ${opt.value === currentBfMetric ? 'selected' : ''}>${opt.label}</option>`
         ).join('');
         const bfMetricLabel = UI_TEXTS.publikationTab.bruteForceMetricSelectLabel[langKey] || UI_TEXTS.publikationTab.bruteForceMetricSelectLabel.de;
         const bfMetricTooltip = TOOLTIP_CONTENT.publikationTabTooltips.bruteForceMetricSelect.description[langKey] || TOOLTIP_CONTENT.publikationTabTooltips.bruteForceMetricSelect.description.de;
