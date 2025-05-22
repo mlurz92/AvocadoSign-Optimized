@@ -21,7 +21,7 @@ const publicationRenderer = (() => {
             significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
             bruteForceMetricForPublication: bruteForceMetric || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication,
             references: {
-                lurzSchaefer2025: "Lurz & Schäfer (2025)",
+                lurzSchaefer2025: "Lurz & Schäfer (2025)", // Placeholder, consider making these configurable
                 koh2008: "Koh et al. (2008)",
                 barbaro2024: "Barbaro et al. (2024)",
                 rutegard2025: "Rutegård et al. (2025)",
@@ -29,46 +29,56 @@ const publicationRenderer = (() => {
             }
         };
 
-        const mainSection = PUBLICATION_CONFIG.sections.find(s => s.id === sectionId);
-        if (!mainSection || !mainSection.subSections || mainSection.subSections.length === 0) {
-            return `<p class="text-warning">Keine Unterabschnitte für Hauptabschnitt '${sectionId}' definiert.</p>`;
+        const mainSectionConfig = PUBLICATION_CONFIG.sections.find(s => {
+            if (s.id === sectionId) return true;
+            return s.subSections && s.subSections.some(sub => sub.id === sectionId);
+        });
+
+        if (!mainSectionConfig) {
+            return `<p class="text-warning">Keine Konfiguration für Haupt- oder Unterabschnitt '${sectionId}' gefunden.</p>`;
         }
 
-        let combinedHtml = `<div class="publication-main-section" id="pub-main-content-${sectionId}">`;
-        const mainSectionTitle = UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey]?.[langKey] || UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey]?.['de'] || mainSection.labelKey;
+        let combinedHtml = `<div class="publication-main-section" id="pub-main-content-${mainSectionConfig.id}">`;
+        const mainSectionTitle = UI_TEXTS.publikationTab.sectionLabels[mainSectionConfig.labelKey]?.[langKey] || UI_TEXTS.publikationTab.sectionLabels[mainSectionConfig.labelKey]?.['de'] || mainSectionConfig.labelKey;
         combinedHtml += `<h2 class="mb-4 display-6">${mainSectionTitle}</h2>`;
 
-        mainSection.subSections.forEach(subSection => {
-            combinedHtml += `<div class="publication-sub-section border-bottom pb-4 mb-4" id="pub-content-${subSection.id}">`;
-            const subSectionTitle = UI_TEXTS.publicationSubSectionLabels?.[subSection.labelKey]?.[langKey] || UI_TEXTS.publicationSubSectionLabels?.[subSection.labelKey]?.['de'] || subSection.label; // Assuming subSection.labelKey exists and UI_TEXTS.publicationSubSectionLabels
+        const targetSubSection = mainSectionConfig.subSections.find(sub => sub.id === sectionId);
+
+        if (!targetSubSection) {
+             // Handle case where sectionId is a main section ID without a direct content rendering logic here,
+             // or if a subSection ID was expected but not found (though the outer find should catch this)
+            combinedHtml += `<p class="text-muted">${langKey === 'de' ? 'Bitte wählen Sie einen spezifischen Unterabschnitt aus.' : 'Please select a specific subsection.'}</p>`;
+        } else {
+            combinedHtml += `<div class="publication-sub-section border-bottom pb-4 mb-4" id="pub-content-${targetSubSection.id}">`;
+            const subSectionTitle = UI_TEXTS.publicationSubSectionLabels?.[targetSubSection.labelKey]?.[langKey] || UI_TEXTS.publicationSubSectionLabels?.[targetSubSection.labelKey]?.['de'] || targetSubSection.label;
             combinedHtml += `<h3 class="mb-3 h4">${subSectionTitle}</h3>`;
 
-            const textContentFunction = publicationTextGenerator.getSectionText(subSection.id, lang, publicationData, kollektiveData, commonData);
-            combinedHtml += textContentFunction || `<p class="text-muted">Inhalt für diesen Unterabschnitt (ID: ${subSection.id}, Sprache: ${lang}) wird noch generiert.</p>`;
+            const textContentFunction = publicationTextGenerator.getSectionText(targetSubSection.id, lang, publicationData, kollektiveData, commonData);
+            combinedHtml += textContentFunction || `<p class="text-muted">Inhalt für diesen Unterabschnitt (ID: ${targetSubSection.id}, Sprache: ${lang}) wird noch generiert.</p>`;
 
-            if (subSection.id === 'methoden_t2_definition') {
+            if (targetSubSection.id === 'methoden_t2_definition') {
                 combinedHtml += _renderLiteraturT2KriterienTabelle(lang);
-            } else if (subSection.id === 'ergebnisse_patientencharakteristika') {
+            } else if (targetSubSection.id === 'ergebnisse_patientencharakteristika') {
                 combinedHtml += _renderPatientenCharakteristikaTabelle(kollektiveData, lang);
                 combinedHtml += '<div class="row mt-4 g-3">';
                 const alterChartId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.alterChartContainerIdPrefix}${currentKollektiv.replace(/\s+/g, '-')}`;
                 const genderChartId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.genderChartContainerIdPrefix}${currentKollektiv.replace(/\s+/g, '-')}`;
                 const ageDistTitle = UI_TEXTS.chartTitles.ageDistribution[langKey] || UI_TEXTS.chartTitles.ageDistribution.de;
                 const genderDistTitle = UI_TEXTS.chartTitles.genderDistribution[langKey] || UI_TEXTS.chartTitles.genderDistribution.de;
-                const loadingText = lang === 'de' ? 'Lade Diagramm...' : 'Loading chart...';
+                const loadingText = langKey === 'de' ? 'Lade Diagramm...' : 'Loading chart...';
 
                 combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="${alterChartId}"><h5 class="text-center small mb-1">${ageDistTitle} (${getKollektivDisplayName(currentKollektiv, langKey)})</h5><p class="text-muted small text-center p-1">${loadingText}</p></div></div>`;
                 combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="${genderChartId}"><h5 class="text-center small mb-1">${genderDistTitle} (${getKollektivDisplayName(currentKollektiv, langKey)})</h5><p class="text-muted small text-center p-1">${loadingText}</p></div></div>`;
                 combinedHtml += '</div>';
-            } else if (subSection.id === 'ergebnisse_as_performance' || subSection.id === 'ergebnisse_literatur_t2_performance' || subSection.id === 'ergebnisse_optimierte_t2_performance' || subSection.id === 'ergebnisse_vergleich_performance') {
-                combinedHtml += _renderDiagnostischeGueteTabellen(kollektiveData, lang, subSection.id, commonData);
-                if (['ergebnisse_as_performance', 'ergebnisse_vergleich_performance'].includes(subSection.id)) {
+            } else if (targetSubSection.id === 'ergebnisse_as_performance' || targetSubSection.id === 'ergebnisse_literatur_t2_performance' || targetSubSection.id === 'ergebnisse_optimierte_t2_performance' || targetSubSection.id === 'ergebnisse_vergleich_performance') {
+                combinedHtml += _renderDiagnostischeGueteTabellen(kollektiveData, lang, targetSubSection.id, commonData);
+                if (['ergebnisse_as_performance', 'ergebnisse_vergleich_performance'].includes(targetSubSection.id)) {
                      combinedHtml += '<div class="row mt-4 g-3">';
-                     const rocChartId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.rocChartContainerIdPrefix}${subSection.id.replace('ergebnisse_','')}`;
-                     const barChartId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichBarChartContainerIdPrefix}${subSection.id.replace('ergebnisse_','')}`;
-                     const rocTitle = lang === 'de' ? 'ROC Kurven Vergleich' : 'ROC Curve Comparison';
-                     const barTitle = lang === 'de' ? 'Performance Metriken Vergleich' : 'Performance Metrics Comparison';
-                     const loadingText = lang === 'de' ? 'Lade Diagramm...' : 'Loading chart...';
+                     const rocChartId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.rocChartContainerIdPrefix}${targetSubSection.id.replace('ergebnisse_','')}`;
+                     const barChartId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichBarChartContainerIdPrefix}${targetSubSection.id.replace('ergebnisse_','')}`;
+                     const rocTitle = langKey === 'de' ? 'ROC Kurven Vergleich' : 'ROC Curve Comparison';
+                     const barTitle = langKey === 'de' ? 'Performance Metriken Vergleich' : 'Performance Metrics Comparison';
+                     const loadingText = langKey === 'de' ? 'Lade Diagramm...' : 'Loading chart...';
 
                      combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="${rocChartId}"><h5 class="text-center small mb-1">${rocTitle} (${getKollektivDisplayName(currentKollektiv, langKey)})</h5><p class="text-muted small text-center p-1">${loadingText}</p></div></div>`;
                      combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="${barChartId}"><h5 class="text-center small mb-1">${barTitle} (${getKollektivDisplayName(currentKollektiv, langKey)})</h5><p class="text-muted small text-center p-1">${loadingText}</p></div></div>`;
@@ -76,7 +86,7 @@ const publicationRenderer = (() => {
                 }
             }
             combinedHtml += `</div>`;
-        });
+        }
 
         combinedHtml += `</div>`;
         return combinedHtml;
@@ -84,9 +94,11 @@ const publicationRenderer = (() => {
 
     function _renderLiteraturT2KriterienTabelle(lang) {
         const langKey = lang === 'en' ? 'en' : 'de';
-        const tableTitle = PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle[`title${langKey.charAt(0).toUpperCase() + langKey.slice(1)}`] || (langKey === 'de' ? 'Tabelle 2: Übersicht der Literatur-basierten T2-Kriteriensets' : 'Table 2: Overview of Literature-Based T2 Criteria Sets');
+        const tableTitleConfig = PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle;
+        const tableTitle = tableTitleConfig[`title${langKey.charAt(0).toUpperCase() + langKey.slice(1)}`] || tableTitleConfig.titleDe;
+
         let tableHTML = `<h4 class="mt-4 mb-3">${tableTitle}</h4>`;
-        tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle.id}">
+        tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableTitleConfig.id}">
             <thead>
                 <tr>
                     <th>${UI_TEXTS.publicationTableHeaders?.studySet?.[langKey] || (langKey === 'de' ? 'Studie / Kriterienset' : 'Study / Criteria Set')}</th>
@@ -100,9 +112,9 @@ const publicationRenderer = (() => {
             const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(conf.id);
             if (studySet) {
                 const kriterienText = studySet.studyInfo?.keyCriteriaSummary || studySet.description || studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic, false, langKey);
-                const anwendungskontext = `${getKollektivDisplayName(studySet.applicableKollektiv, langKey)} (${studySet.context})`; // Context might need translation too
+                const anwendungskontext = `${getKollektivDisplayName(studySet.applicableKollektiv, langKey)} (${studySet.context})`;
                 const logicText = UI_TEXTS.t2LogicDisplayNames[studySet.logic]?.[langKey] || UI_TEXTS.t2LogicDisplayNames[studySet.logic]?.['de'] || studySet.logic;
-                const studyName = UI_TEXTS.literatureSetNames?.[conf.id]?.[langKey] || studySet.name; // Assuming names might be in UI_TEXTS
+                const studyName = UI_TEXTS.literatureSetNames?.[conf.id]?.[langKey] || studySet.name;
 
                 tableHTML += `<tr>
                                 <td>${studyName}</td>
@@ -120,9 +132,11 @@ const publicationRenderer = (() => {
         const langKey = lang === 'en' ? 'en' : 'de';
         if (!kollektiveData || !kollektiveData.Gesamt || !kollektiveData.Gesamt.deskriptiv) return `<p class="text-muted small">${langKey === 'de' ? 'Keine ausreichenden Patientendaten für Tabelle 1 verfügbar.' : 'Insufficient patient data for Table 1.'}</p>`;
 
-        const tableTitle = PUBLICATION_CONFIG.publicationElements.ergebnisse.patientenCharakteristikaTabelle[`title${langKey.charAt(0).toUpperCase() + langKey.slice(1)}`] || (langKey === 'de' ? 'Tabelle 1: Patientencharakteristika' : 'Table 1: Patient Characteristics');
+        const tableTitleConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse.patientenCharakteristikaTabelle;
+        const tableTitle = tableTitleConfig[`title${langKey.charAt(0).toUpperCase() + langKey.slice(1)}`] || tableTitleConfig.titleDe;
+
         let tableHTML = `<h4 class="mt-4 mb-3">${tableTitle}</h4>`;
-        tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${PUBLICATION_CONFIG.publicationElements.ergebnisse.patientenCharakteristikaTabelle.id}">
+        tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableTitleConfig.id}">
             <thead>
                 <tr>
                     <th>${UI_TEXTS.publicationTableHeaders?.characteristic?.[langKey] || (langKey === 'de' ? 'Merkmal' : 'Characteristic')}</th>
@@ -143,7 +157,7 @@ const publicationRenderer = (() => {
                             <td>${getterNRCT(kollektiveData.nRCT?.deskriptiv)}</td>
                           </tr>`;
         };
-        const na = langKey === 'de' ? 'N/V' : 'N/A'; // Nicht Verfügbar / Not Available
+        const na = langKey === 'de' ? 'N/V' : 'N/A';
         addRow('Alter, Median (Range) [Jahre]', 'Age, Median (Range) [Years]',
             p => p ? `${fVal(p.alter?.median)} (${fVal(p.alter?.min,0)}-${fVal(p.alter?.max,0)})` : na,
             p => p ? `${fVal(p.alter?.median)} (${fVal(p.alter?.min,0)}-${fVal(p.alter?.max,0)})` : na,
@@ -229,7 +243,7 @@ const publicationRenderer = (() => {
                 const vergleichASvsOptimiert = kollektiveData[kollektivId].vergleichASvsT2_bruteforce;
 
                 dataSetsToDisplay.push({
-                    kollektivIdentifier: kollektivId, // Store the ID for name lookup
+                    kollektivIdentifier: kollektivId,
                     asData, t2AngewandtData, t2OptimiertData,
                     vergleichASvsAngewandt, vergleichASvsOptimiert,
                     bfDefinition: kollektiveData[kollektivId].bruteforce_definition
@@ -297,7 +311,7 @@ const publicationRenderer = (() => {
                 }
             });
             tableHTML += `</tbody></table></div>`;
-        } else { // Special table for 'ergebnisse_vergleich_performance'
+        } else {
              tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableBaseId}">
                 <thead>
                     <tr>
