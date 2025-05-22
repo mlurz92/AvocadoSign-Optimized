@@ -1,10 +1,10 @@
 const PUBLICATION_CONFIG = Object.freeze({
     defaultLanguage: 'de',
-    defaultSection: 'methoden_studienanlage', // Default zu einer validen Untersektion
+    defaultSection: 'methoden_studienanlage',
     sections: Object.freeze([
         Object.freeze({
             id: 'methoden',
-            labelKey: 'methoden', // Hauptsektion hat bereits einen labelKey
+            labelKey: 'methoden',
             subSections: Object.freeze([
                 Object.freeze({ id: 'methoden_studienanlage', label: 'Studiendesign und Ethik', labelKey: 'studienanlage' }),
                 Object.freeze({ id: 'methoden_patientenkollektiv', label: 'Patientenkollektiv', labelKey: 'patientenkollektiv' }),
@@ -17,13 +17,13 @@ const PUBLICATION_CONFIG = Object.freeze({
         }),
         Object.freeze({
             id: 'ergebnisse',
-            labelKey: 'ergebnisse', // Hauptsektion hat bereits einen labelKey
+            labelKey: 'ergebnisse',
             subSections: Object.freeze([
                 Object.freeze({ id: 'ergebnisse_patientencharakteristika', label: 'Patientencharakteristika', labelKey: 'patientencharakteristika' }),
                 Object.freeze({ id: 'ergebnisse_as_performance', label: 'Diagnostische Güte: Avocado Sign', labelKey: 'asPerformance' }),
                 Object.freeze({ id: 'ergebnisse_literatur_t2_performance', label: 'Diagnostische Güte: Literatur-T2-Kriterien', labelKey: 'literaturT2Performance' }),
                 Object.freeze({ id: 'ergebnisse_optimierte_t2_performance', label: 'Diagnostische Güte: Optimierte T2-Kriterien (Brute-Force)', labelKey: 'optimierteT2Performance' }),
-                Object.freeze({ id: 'ergebnisse_vergleich_performance', label: 'Vergleich: AS vs. T2-Kriterien', labelKey: 'vergleichPerformanceT2' }) // Eindeutiger Key
+                Object.freeze({ id: 'ergebnisse_vergleich_performance', label: 'Vergleich: AS vs. T2-Kriterien', labelKey: 'vergleichPerformanceT2' })
             ])
         })
     ]),
@@ -63,8 +63,8 @@ const PUBLICATION_CONFIG = Object.freeze({
         ergebnisse: Object.freeze({
             patientenCharakteristikaTabelle: Object.freeze({
                 id: 'pub-table-patienten-charakteristika',
-                titleDe: 'Patientencharakteristika',
-                titleEn: 'Patient Characteristics'
+                titleDe: 'Tabelle 1: Patientencharakteristika',
+                titleEn: 'Table 1: Patient Characteristics'
             }),
             alterChartContainerIdPrefix: 'pub-chart-alter-',
             genderChartContainerIdPrefix: 'pub-chart-gender-',
