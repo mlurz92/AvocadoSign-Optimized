@@ -360,9 +360,12 @@ const TOOLTIP_CONTENT = {
             auc: {de: "AUC / Balanced Accuracy für AS (vs. N) in diesem Kollektiv.", en: "AUC / Balanced Accuracy for AS (vs. N) in this cohort."}
         },
         asVsT2PerfTable: {
-            metric: {de: "Diagnostische Metrik.", en: "Diagnostic Metric."},
-            asValue: {de: "Wert der Metrik für Avocado Sign (AS) (vs. N) im Kollektiv [KOLLEKTIV], inkl. 95% CI.", en: "Value of the metric for Avocado Sign (AS) (vs. N) in cohort [KOLLEKTIV], incl. 95% CI."},
-            t2Value: {de: "Wert der Metrik für die ausgewählte T2-Basis ([T2_SHORT_NAME]) (vs. N) im Kollektiv [KOLLEKTIV], inkl. 95% CI.", en: "Value of the metric for the selected T2 basis ([T2_SHORT_NAME]) (vs. N) in cohort [KOLLEKTIV], incl. 95% CI."}
+            metric: {de: 'Metrik', en: 'Metric'},
+            asValue: {de: 'AS Wert (vs. N) im Kollektiv [KOLLEKTIV], inkl. 95% CI.', en: 'AS value (vs. N) in cohort [KOLLEKTIV], incl. 95% CI.'},
+            t2Value: {
+                de: 'Wert für [T2_SHORT_NAME] (vs. N) im Kollektiv [KOLLEKTIV], inkl. 95% CI.',
+                en: 'Value for [T2_SHORT_NAME] (vs. N) in cohort [KOLLEKTIV], incl. 95% CI.'
+            }
         },
         asVsT2TestTable: {
             test: {de: "Statistischer Test zum Vergleich von AS vs. [T2_SHORT_NAME].", en: "Statistical test for comparing AS vs. [T2_SHORT_NAME]."},
@@ -420,6 +423,27 @@ const TOOLTIP_CONTENT = {
         }
     },
     statMetrics: {
+        signifikanzTexte: {
+            SIGNIFIKANT: { de: "statistisch signifikant", en: "statistically significant"},
+            NICHT_SIGNIFIKANT: { de: "statistisch nicht signifikant", en: "statistically not significant"}
+        },
+        orFaktorTexte: {
+            ERHOEHT: { de: "erhöht", en: "increased"},
+            VERRINGERT: { de: "verringert", en: "decreased"},
+            UNVERAENDERT: { de: "unverändert", en: "unchanged"}
+        },
+        rdRichtungTexte: {
+            HOEHER: { de: "höher", en: "higher"},
+            NIEDRIGER: { de: "niedriger", en: "lower"},
+            GLEICH: { de: "gleich", en: "equal"}
+        },
+        assoziationStaerkeTexte: {
+            stark: { de: "stark", en: "strong"},
+            moderat: { de: "moderat", en: "moderate"},
+            schwach: { de: "schwach", en: "weak"},
+            sehr_schwach: { de: "sehr schwach", en: "very weak"},
+            nicht_bestimmbar: { de: "nicht bestimmbar", en: "not determinable"}
+        },
         sens: { name: {de: "Sensitivität", en: "Sensitivity"}, description: {de: "Sensitivität ([METHODE] vs. N): Anteil der tatsächlich positiven Fälle (N+), die durch die Methode [METHODE] korrekt als positiv erkannt wurden.<br><i>Formel: RP / (RP + FN)</i>", en: "Sensitivity ([METHODE] vs. N): Proportion of actual positive cases (N+) correctly identified as positive by method [METHODE].<br><i>Formula: TP / (TP + FN)</i>"}, interpretation: {de: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N+ Patienten korrekt (95% KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].", en: "Method [METHODE] correctly identified <strong>[WERT]</strong> of actual N+ patients (95% CI by [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV]."} },
         spez: { name: {de: "Spezifität", en: "Specificity"}, description: {de: "Spezifität ([METHODE] vs. N): Anteil der tatsächlich negativen Fälle (N-), die durch die Methode [METHODE] korrekt als negativ erkannt wurden.<br><i>Formel: RN / (RN + FP)</i>", en: "Specificity ([METHODE] vs. N): Proportion of actual negative cases (N-) correctly identified as negative by method [METHODE].<br><i>Formula: TN / (TN + FP)</i>"}, interpretation: {de: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N- Patienten korrekt (95% KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].", en: "Method [METHODE] correctly identified <strong>[WERT]</strong> of actual N- patients (95% CI by [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV]."} },
         ppv: { name: {de: "Pos. Prädiktiver Wert (PPV)", en: "Positive Predictive Value (PPV)"}, description: {de: "PPV ([METHODE] vs. N): Wahrscheinlichkeit, dass ein Patient mit einem positiven Testergebnis durch Methode [METHODE] tatsächlich krank (N+) ist.<br><i>Formel: RP / (RP + FP)</i>", en: "PPV ([METHODE] vs. N): Probability that a patient with a positive test result from method [METHODE] is actually diseased (N+).<br><i>Formula: TP / (TP + FP)</i>"}, interpretation: {de: "Wenn die Methode [METHODE] ein positives Ergebnis lieferte, lag die Wahrscheinlichkeit für einen tatsächlichen N+ Status bei <strong>[WERT]</strong> (95% KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].", en: "If method [METHODE] yielded a positive result, the probability of an actual N+ status was <strong>[WERT]</strong> (95% CI by [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV]."} },
