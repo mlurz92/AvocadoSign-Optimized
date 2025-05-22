@@ -12,13 +12,10 @@ const uiComponents = (() => {
         }
 
         let tooltipContent = title || '';
-        // Der Titel wird bereits sprachabhängig von view_renderer.js übergeben.
-        // Tooltip-Content für die Karte selbst wird hier aus TOOLTIP_CONTENT geholt, falls vorhanden.
         if (chartId && TOOLTIP_CONTENT.deskriptiveStatistik && TOOLTIP_CONTENT.deskriptiveStatistik[chartId] && TOOLTIP_CONTENT.deskriptiveStatistik[chartId].description) {
             const descEntry = TOOLTIP_CONTENT.deskriptiveStatistik[chartId].description;
             tooltipContent = (typeof descEntry === 'object' ? descEntry[langKey] : descEntry) || title;
         }
-
 
         return `
             <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 dashboard-card-col ${cardClasses}">
@@ -493,6 +490,7 @@ const uiComponents = (() => {
         const bfMetricOptions = PUBLICATION_CONFIG.bruteForceMetricsForPublication.map(opt =>
             `<option value="${opt.value}" ${opt.value === currentBfMetric ? 'selected' : ''}>${opt.label}</option>`
         ).join('');
+
         const bfMetricLabelText = UI_TEXTS.publikationTab.bruteForceMetricSelectLabel?.[langKey] || UI_TEXTS.publikationTab.bruteForceMetricSelectLabel?.['de'];
         const bfMetricTooltipBase = TOOLTIP_CONTENT.publikationTabTooltips.bruteForceMetricSelect.description;
         const bfMetricTooltipText = (typeof bfMetricTooltipBase === 'object' ? bfMetricTooltipBase[langKey] : bfMetricTooltipBase) || bfMetricTooltipBase['de'];
