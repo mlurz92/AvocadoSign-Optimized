@@ -442,12 +442,12 @@ const uiComponents = (() => {
         const currentBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
         const currentActiveSectionId = state.getCurrentPublikationSection() || PUBLICATION_CONFIG.defaultSection;
-        let navTitle = langKey === 'de' ? 'Abschnitte' : 'Sections';
+        let navTitle = langKey === 'de' ? 'Abschnitte' : 'Sections'; // Default title for the navigation column
         const activeMainSection = PUBLICATION_CONFIG.sections.find(mainSec =>
             mainSec.id === currentActiveSectionId || (mainSec.subSections && mainSec.subSections.some(sub => sub.id === currentActiveSectionId))
         );
-        if (activeMainSection) {
-            navTitle = UI_TEXTS.publikationTab.sectionLabels[activeMainSection.labelKey]?.[langKey] || navTitle;
+        if (activeMainSection && UI_TEXTS.publikationTab.sectionLabels[activeMainSection.labelKey]) {
+             navTitle = UI_TEXTS.publikationTab.sectionLabels[activeMainSection.labelKey]?.[langKey] || UI_TEXTS.publikationTab.sectionLabels[activeMainSection.labelKey]?.['de'] || navTitle;
         }
 
 
@@ -461,11 +461,14 @@ const uiComponents = (() => {
                     return `<li class="nav-item"><a class="nav-link ps-3 py-1 publikation-section-link ${isActive ? 'active' : ''}" href="#" data-section-id="${subSection.id}">${subLabel}</a></li>`;
                 }).join('');
             }
-            const isMainActive = mainSection.id === currentActiveSectionId || (mainSection.subSections && mainSection.subSections.some(sub => sub.id === currentActiveSectionId));
+            // Main section link is only active if it has no subsections and its ID matches, or if one of its subsections is active.
+            // It's marked 'disabled' stylistically if it serves as a mere header for subsections.
+            const isEffectivelyActiveOrParentOfActive = mainSection.id === currentActiveSectionId || (mainSection.subSections && mainSection.subSections.some(sub => sub.id === currentActiveSectionId));
+            const mainLinkClass = `nav-link py-2 publikation-section-link fw-bold ${isEffectivelyActiveOrParentOfActive && !subSectionLinks ? 'active' : (subSectionLinks ? 'disabled' : '')}`;
 
             return `
                 <li class="nav-item">
-                    <a class="nav-link py-2 publikation-section-link fw-bold ${isMainActive && !subSectionLinks ? 'active' : 'disabled'}" href="${subSectionLinks ? '#' : '#'}" data-section-id="${mainSection.id}">
+                    <a class="${mainLinkClass}" href="${subSectionLinks ? '#' : '#'}" data-section-id="${mainSection.id}">
                         ${label}
                     </a>
                     ${subSectionLinks ? `<ul class="nav flex-column ps-2">${subSectionLinks}</ul>` : ''}
@@ -477,13 +480,12 @@ const uiComponents = (() => {
         ).join('');
         const bfMetricLabel = UI_TEXTS.publikationTab.bruteForceMetricSelectLabel[langKey] || UI_TEXTS.publikationTab.bruteForceMetricSelectLabel.de;
         const bfMetricTooltip = TOOLTIP_CONTENT.publikationTabTooltips.bruteForceMetricSelect.description[langKey] || TOOLTIP_CONTENT.publikationTabTooltips.bruteForceMetricSelect.description.de;
-        const langSwitchTooltip = TOOLTIP_CONTENT.publikationTabTooltips.spracheSwitch.description[langKey] || TOOLTIP_CONTENT.publikationTabTooltips.spracheSwitch.description.de;
-        const langSwitchLabelText = UI_TEXTS.publikationTab.spracheSwitchLabel[langKey] || UI_TEXTS.publikationTab.spracheSwitchLabel.de;
+
         const initialContentText = langKey === 'de' ? 'Bitte wählen Sie einen Abschnitt aus der Navigation.' : 'Please select a section from the navigation.';
 
 
         return `
-            <div class="row mb-3 sticky-top bg-light py-2 shadow-sm" style="top: calc(var(--header-height) + var(--nav-height) + 1px); z-index: 1010;">
+            <div class="row mb-3 sticky-top bg-light py-2 shadow-sm" id="publikation-controls-header" style="top: calc(var(--header-height) + var(--nav-height) + 1px); z-index: 1010;">
                 <div class="col-md-3">
                     <h5 class="mb-2">${navTitle}</h5>
                     <nav id="publikation-sections-nav" class="nav flex-column nav-pills">
@@ -491,17 +493,14 @@ const uiComponents = (() => {
                     </nav>
                 </div>
                 <div class="col-md-9">
-                    <div class="d-flex justify-content-end align-items-center mb-2">
+                    <div class="d-flex justify-content-end align-items-center mb-2" id="publikation-top-controls">
                         <div class="me-3">
                            <label for="publikation-bf-metric-select" class="form-label form-label-sm mb-0 me-1">${bfMetricLabel}</label>
                            <select class="form-select form-select-sm d-inline-block" id="publikation-bf-metric-select" style="width: auto;" data-tippy-content="${bfMetricTooltip}">
                                ${bfMetricOptions}
                            </select>
                         </div>
-                        <div class="form-check form-switch" data-tippy-content="${langSwitchTooltip}">
-                            <input class="form-check-input" type="checkbox" role="switch" id="publikation-sprache-switch" ${lang === 'en' ? 'checked' : ''}>
-                            <label class="form-check-label fw-bold" for="publikation-sprache-switch" id="publikation-sprache-label">${langSwitchLabelText}</label>
-                        </div>
+                         {LANG_SWITCH_PLACEHOLDER}
                     </div>
                     <div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: calc(100vh - var(--header-height) - var(--nav-height) - 70px - 2rem); overflow-y: auto;">
                         <p class="text-muted">${initialContentText}</p>
