@@ -81,11 +81,11 @@ const publicationRenderer = (() => {
                         combinedHtml += '</div>';
                     }
                 }
-                combinedHtml += `</div>`; // End .publication-sub-section
+                combinedHtml += `</div>`;
             });
         }
 
-        combinedHtml += `</div>`; // End .publication-main-section
+        combinedHtml += `</div>`;
         return combinedHtml;
     }
 
@@ -198,7 +198,7 @@ const publicationRenderer = (() => {
         if (sectionId === 'ergebnisse_as_performance') {
             title = UI_TEXTS.publicationTableTitles?.asPerformance?.[langKey] || (langKey === 'de' ? 'Tabelle 3: Diagnostische Güte - Avocado Sign (vs. N-Status)' : 'Table 3: Diagnostic Performance - Avocado Sign (vs. N-Status)');
             tableIdSuffix = 'as-performance';
-            dataSetsToDisplay.push({ nameKey: 'avocadoSign', statsByKollektiv: { 'Gesamt': kollektiveData.Gesamt?.gueteAS, 'direkt OP': kollektiveData['direkt OP']?.gueteAS, 'nRCT': kollektiveData.nRCT?.gueteAS } });
+            dataSetsToDisplay.push({ nameKey: UI_TEXTS.legendLabels.avocadoSign[langKey] || UI_TEXTS.legendLabels.avocadoSign.de, statsByKollektiv: { 'Gesamt': kollektiveData.Gesamt?.gueteAS, 'direkt OP': kollektiveData['direkt OP']?.gueteAS, 'nRCT': kollektiveData.nRCT?.gueteAS } });
         } else if (sectionId === 'ergebnisse_literatur_t2_performance') {
             title = UI_TEXTS.publicationTableTitles?.literaturT2Performance?.[langKey] || (langKey === 'de' ? 'Tabelle 4: Diagnostische Güte - Literatur-basierte T2-Kriterien (vs. N-Status)' : 'Table 4: Diagnostic Performance - Literature-Based T2 Criteria (vs. N-Status)');
             tableIdSuffix = 'literatur-t2-performance';
@@ -280,7 +280,8 @@ const publicationRenderer = (() => {
                 for (const kollektivId of ['Gesamt', 'direkt OP', 'nRCT']) {
                     const stats = dataSet.statsByKollektiv[kollektivId];
                     const nPat = stats?.matrix ? (stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn) : (kollektiveData[kollektivId]?.deskriptiv?.anzahlPatienten || 0);
-                    const displayName = dataSet.nameKey; // Already language-specific
+                    const displayName = dataSet.nameKey;
+
 
                     if (stats === null && sectionId === 'ergebnisse_literatur_t2_performance') {
                          tableHTML += `<tr>
@@ -338,8 +339,8 @@ const publicationRenderer = (() => {
                                 <td>${asDisplayName}</td>
                                 <td>${formatMetricForTable(compData.asData?.auc, false, 3, langKey)}</td>
                                 <td>${formatMetricForTable(compData.asData?.acc, true, 1, langKey)}</td>
-                                <td rowspan="1" class="align-middle text-center">${getPValueText(compData.vergleichASvsAngewandt?.delong?.pValue, langKey)}</td>
-                                <td rowspan="1" class="align-middle text-center">${getPValueText(compData.vergleichASvsAngewandt?.mcnemar?.pValue, langKey)}</td>
+                                <td rowspan="1" class="align-middle text-center">${publicationTextGenerator.getPValueText(compData.vergleichASvsAngewandt?.delong?.pValue, langKey)}</td>
+                                <td rowspan="1" class="align-middle text-center">${publicationTextGenerator.getPValueText(compData.vergleichASvsAngewandt?.mcnemar?.pValue, langKey)}</td>
                               </tr>
                               <tr>
                                 <td>${appliedT2DisplayName}</td>
@@ -352,8 +353,8 @@ const publicationRenderer = (() => {
                                 <td>${asDisplayName}</td>
                                 <td>${formatMetricForTable(compData.asData?.auc, false, 3, langKey)}</td>
                                 <td>${formatMetricForTable(compData.asData?.acc, true, 1, langKey)}</td>
-                                <td rowspan="1" class="align-middle text-center">${getPValueText(compData.vergleichASvsOptimiert?.delong?.pValue, langKey)}</td>
-                                <td rowspan="1" class="align-middle text-center">${getPValueText(compData.vergleichASvsOptimiert?.mcnemar?.pValue, langKey)}</td>
+                                <td rowspan="1" class="align-middle text-center">${publicationTextGenerator.getPValueText(compData.vergleichASvsOptimiert?.delong?.pValue, langKey)}</td>
+                                <td rowspan="1" class="align-middle text-center">${publicationTextGenerator.getPValueText(compData.vergleichASvsOptimiert?.mcnemar?.pValue, langKey)}</td>
                               </tr>
                               <tr>
                                 <td>${optimizedT2Name}</td>
