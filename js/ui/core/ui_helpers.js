@@ -123,6 +123,8 @@ const ui_helpers = (() => {
     function updateSortIcons(tableHeaderId, sortState) {
         const tableHeader = document.getElementById(tableHeaderId);
         if (!tableHeader || !sortState) return;
+        const langKey = state.getCurrentPublikationLang() || 'de';
+
         tableHeader.querySelectorAll('th[data-sort-key]').forEach(th => {
             const key = th.dataset.sortKey; const icon = th.querySelector('i.fas'); if (!icon) return;
             icon.className = 'fas fa-sort text-muted opacity-50 ms-1';
@@ -138,7 +140,8 @@ const ui_helpers = (() => {
                     span.style.color = isActiveSort ? 'var(--primary-color)' : 'inherit';
                     const thLabel = th.textContent.split('(')[0].trim();
                     const spanLabel = span.textContent.trim();
-                    span.setAttribute('data-tippy-content', `Sortieren nach: ${thLabel} -> ${spanLabel}`);
+                    const sortText = langKey === 'de' ? 'Sortieren nach' : 'Sort by';
+                    span.setAttribute('data-tippy-content', `${sortText}: ${thLabel} -> ${spanLabel}`);
                     if (isActiveSort) {
                         icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
                         isSubKeySortActive = true;
@@ -189,10 +192,10 @@ const ui_helpers = (() => {
         if (buttonId === 'daten-toggle-details') tooltipKeyBase = 'datenTable';
         else if (buttonId === 'auswertung-toggle-details') tooltipKeyBase = 'auswertungTable';
 
-        const tooltipContentBase = TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll?.[langKey] || TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll?.['de'] || (langKey === 'de' ? 'Alle Details ein-/ausblenden' : 'Expand/collapse all details');
-        const currentTooltipText = expand ? tooltipContentBase.replace(langKey === 'de' ? 'ein-' : 'Expand', langKey === 'de' ? 'aus-' : 'Collapse').replace(langKey === 'de' ? 'Einblenden' : 'Expand', langKey === 'de' ? 'Ausblenden' : 'Collapse')
-                                       : tooltipContentBase.replace(langKey === 'de' ? 'aus-' : 'Collapse', langKey === 'de' ? 'ein-' : 'Expand').replace(langKey === 'de' ? 'Ausblenden' : 'Collapse', langKey === 'de' ? 'Einblenden' : 'Expand');
-
+        const tooltipContentBase = TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll;
+        const tooltipContentBaseLang = (typeof tooltipContentBase === 'object' ? tooltipContentBase[langKey] : tooltipContentBase) || (langKey === 'de' ? 'Alle Details ein-/ausblenden' : 'Expand/collapse all details');
+        const currentTooltipText = expand ? tooltipContentBaseLang.replace(langKey === 'de' ? 'ein-' : 'Expand', langKey === 'de' ? 'aus-' : 'Collapse').replace(langKey === 'de' ? 'Einblenden' : 'Expand', langKey === 'de' ? 'Ausblenden' : 'Collapse')
+                                       : tooltipContentBaseLang.replace(langKey === 'de' ? 'aus-' : 'Collapse', langKey === 'de' ? 'ein-' : 'Expand').replace(langKey === 'de' ? 'Ausblenden' : 'Collapse', langKey === 'de' ? 'Einblenden' : 'Expand');
 
         updateElementHTML(buttonId, `${buttonText} <i class="fas ${iconClass} ms-1"></i>`);
         button.setAttribute('data-tippy-content', currentTooltipText);
@@ -242,6 +245,8 @@ const ui_helpers = (() => {
         let extraClass = '';
         let fillColor = 'none';
         let strokeColor = iconColor;
+        const langKey = state.getCurrentPublikationLang() || 'de';
+        const unknownText = langKey === 'de' ? 'unbekannt' : 'unknown';
 
         const unknownIconSVG = `<rect x="${sqPos}" y="${sqPos}" width="${sq}" height="${sq}" fill="none" stroke="${iconColor}" stroke-width="${sw/2}" stroke-dasharray="2 2" /><line x1="${sqPos}" y1="${sqPos}" x2="${sqPos+sq}" y2="${sqPos+sq}" stroke="${iconColor}" stroke-width="${sw/2}" stroke-linecap="round"/><line x1="${sqPos+sq}" y1="${sqPos}" x2="${sqPos}" y2="${sqPos+sq}" stroke="${iconColor}" stroke-width="${sw/2}" stroke-linecap="round"/>`;
 
@@ -267,7 +272,7 @@ const ui_helpers = (() => {
                 if (value === 'signalarm') fillColor = '#555555';
                 else if (value === 'intermediär') fillColor = '#aaaaaa';
                 else if (value === 'signalreich') fillColor = '#f0f0f0';
-                else { svgContent = unknownIconSVG; return `<svg class="icon-t2 icon-${type} icon-value-unknown ${extraClass}" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${type}: unbekannt">${svgContent}</svg>`; }
+                else { svgContent = unknownIconSVG; return `<svg class="icon-t2 icon-${type} icon-value-unknown ${extraClass}" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${type}: ${unknownText}">${svgContent}</svg>`; }
                 strokeColor = (value === 'signalreich') ? '#333333' : 'rgba(0,0,0,0.1)';
                 svgContent = `<circle cx="${c}" cy="${c}" r="${r}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${sw * 0.75}"/>`;
                 if (value === 'signalreich') svgContent += `<circle cx="${c}" cy="${c}" r="${r * 0.3}" fill="${strokeColor}" stroke="none"/>`;
@@ -281,7 +286,7 @@ const ui_helpers = (() => {
                 svgContent = unknownIconSVG;
         }
         const valueClass = (value !== null && typeof value === 'string') ? `icon-value-${value.replace(/\s+/g, '-').toLowerCase()}` : 'icon-value-unknown';
-        return `<svg class="icon-t2 icon-${type} ${valueClass} ${extraClass}" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${type}: ${value || 'unbekannt'}">${svgContent}</svg>`;
+        return `<svg class="icon-t2 icon-${type} ${valueClass} ${extraClass}" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${type}: ${value || unknownText}">${svgContent}</svg>`;
     }
 
     function updateT2CriteriaControlsUI(currentCriteria, currentLogic) {
@@ -490,7 +495,8 @@ const ui_helpers = (() => {
                 if (elements.statusText) updateElementText(elements.statusText.id, langKey==='de'?'Teste...':'Testing...');
                 if (elements.statusText) addOrUpdateTooltip(elements.statusText, `${langKey==='de'?'Aktueller Status: Teste':'Current Status: Testing'} ${totalComb} ${langKey==='de'?'Kombinationen...':'combinations...'}`);
                 const progressTooltipBase = TOOLTIP_CONTENT.bruteForceProgress?.description;
-                if (elements.progressContainer) addOrUpdateTooltip(elements.progressContainer, (typeof progressTooltipBase === 'object' ? progressTooltipBase[langKey] : progressTooltipBase).replace('[TOTAL]', totalComb));
+                const progressTooltipText = (typeof progressTooltipBase === 'object' ? progressTooltipBase[langKey] : progressTooltipBase) || (langKey === 'de' ? 'Fortschritt der Optimierung' : 'Optimization progress');
+                if (elements.progressContainer) addOrUpdateTooltip(elements.progressContainer, progressTooltipText.replace('[TOTAL]', totalComb));
                 break;
             case 'progress':
                 const percent = (data?.total && data.total > 0) ? Math.round((data.tested / data.total) * 100) : 0;
@@ -508,7 +514,7 @@ const ui_helpers = (() => {
                     const bestCritStr = formatCriteriaFunc(data.currentBest.criteria, data.currentBest.logic);
                     if (elements.metricLabel) updateElementText(elements.metricLabel.id, data.metric || (langKey==='de'?'Metrik':'Metric'));
                     if (elements.bestMetric) updateElementText(elements.bestMetric.id, bestValStr);
-                    if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, `${langKey==='de'?'Beste:':'Best:'} ${UI_TEXTS.t2LogicDisplayNames[data.currentBest.logic.toUpperCase()]?.[langKey] || data.currentBest.logic.toUpperCase()} - ${bestCritStr}`);
+                    if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, `${langKey==='de'?'Beste:':'Best:'} ${UI_TEXTS.t2LogicDisplayNames[data.currentBest.logic.toUpperCase()]?.[langKey] || UI_TEXTS.t2LogicDisplayNames[data.currentBest.logic.toUpperCase()]?.['de'] || data.currentBest.logic.toUpperCase()} - ${bestCritStr}`);
                     if (elements.bestMetric) addOrUpdateTooltip(elements.bestMetric, `${langKey==='de'?'Bester Wert für':'Best value for'} '${data.metric || (langKey==='de'?'Zielmetrik':'Target Metric')}'.`);
                     if (elements.bestCriteria) addOrUpdateTooltip(elements.bestCriteria, langKey==='de'?'Kriterien für besten Wert.':'Criteria for best value.');
                 } else {
@@ -522,7 +528,7 @@ const ui_helpers = (() => {
                     const metricName = data.metric || 'N/A';
                     const kollektivNameDisplay = getKollektivNameFunc(data.kollektiv || 'N/A', langKey);
                     const bestValueStr = formatNumber(best.metricValue, 4, 'N/A', false, langKey);
-                    const logicStr = UI_TEXTS.t2LogicDisplayNames[best.logic?.toUpperCase()]?.[langKey] || best.logic?.toUpperCase() || 'N/A';
+                    const logicStr = UI_TEXTS.t2LogicDisplayNames[best.logic?.toUpperCase()]?.[langKey] || UI_TEXTS.t2LogicDisplayNames[best.logic?.toUpperCase()]?.['de'] || best.logic?.toUpperCase() || 'N/A';
                     const criteriaStr = formatCriteriaFunc(best.criteria, best.logic);
                     const durationStr = formatNumber((data.duration || 0) / 1000, 1, 'N/A', false, langKey);
                     const totalTestedStr = formatNumber(data.totalTested || 0, 0, 'N/A', false, langKey);
@@ -535,7 +541,8 @@ const ui_helpers = (() => {
                     if (elements.resultTotalTested) updateElementText(elements.resultTotalTested.id, totalTestedStr);
                     if (elements.statusText) updateElementText(elements.statusText.id, langKey==='de'?'Fertig.':'Completed.');
                     const resultTooltipBase = TOOLTIP_CONTENT.bruteForceResult.description;
-                    if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, typeof resultTooltipBase === 'object' ? resultTooltipBase[langKey] : resultTooltipBase);
+                    const resultTooltipText = (typeof resultTooltipBase === 'object' ? resultTooltipBase[langKey] : resultTooltipBase) || (langKey === 'de' ? 'Optimierungsergebnis' : 'Optimization Result');
+                    if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, resultTooltipText);
                 } else {
                     if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true);
                     if (elements.statusText) updateElementText(elements.statusText.id, langKey==='de'?'Fertig (kein valides Ergebnis).':'Completed (no valid result).');
@@ -601,14 +608,8 @@ const ui_helpers = (() => {
 
         document.querySelectorAll('#publikation-sections-nav .nav-link').forEach(link => {
             const linkSectionId = link.dataset.sectionId;
-            const isMainSectionLink = PUBLICATION_CONFIG.sections.some(s => s.id === linkSectionId);
-            let isActive = false;
-            if (isMainSectionLink) {
-                const mainSectionConf = PUBLICATION_CONFIG.sections.find(s => s.id === linkSectionId);
-                isActive = (linkSectionId === currentSection) || (mainSectionConf?.subSections && mainSectionConf.subSections.some(sub => sub.id === currentSection));
-            } else {
-                isActive = linkSectionId === currentSection;
-            }
+            // In the new logic, currentSection is always a main section ID.
+            const isActive = linkSectionId === currentSection;
             link.classList.toggle('active', isActive);
         });
 
@@ -616,10 +617,21 @@ const ui_helpers = (() => {
         if (bfMetricSelect) {
             bfMetricSelect.value = currentBfMetric;
         }
+
+        // Update the navTitle (title of the navigation column)
+        const navTitleElement = document.querySelector('#publikation-controls-header .col-md-3 > h5');
+        if (navTitleElement) {
+            let navTitleText = langKey === 'de' ? 'Abschnitte' : 'Sections';
+            const activeMainSectionConfig = PUBLICATION_CONFIG.sections.find(s => s.id === currentSection);
+            if (activeMainSectionConfig && UI_TEXTS.publikationTab.sectionLabels[activeMainSectionConfig.labelKey]) {
+                navTitleText = UI_TEXTS.publikationTab.sectionLabels[activeMainSectionConfig.labelKey]?.[langKey] || UI_TEXTS.publikationTab.sectionLabels[activeMainSectionConfig.labelKey]?.['de'] || navTitleText;
+            }
+            navTitleElement.textContent = navTitleText;
+        }
     }
 
     function getMetricDescriptionHTML(key, methode = '', lang = 'de') {
-       const langKey = lang === 'en' ? 'en' : 'de';
+       const langKey = lang; // Parameter 'lang' wird direkt verwendet
        const metricKeyLower = key.toLowerCase().replace(/\s+/g, '').replace('-','');
        const descBase = TOOLTIP_CONTENT.statMetrics[metricKeyLower]?.description;
        const desc = (typeof descBase === 'object' ? descBase[langKey] : descBase) || key;
@@ -627,10 +639,10 @@ const ui_helpers = (() => {
     }
 
     function getMetricInterpretationHTML(key, metricData, methode = '', kollektivName = '', lang = 'de') {
-        const langKey = lang === 'en' ? 'en' : 'de';
+        const langKey = lang; // Parameter 'lang' wird direkt verwendet
         const metricKeyLower = key.toLowerCase().replace(/\s+/g, '').replace('-','');
         const interpretationTemplateBase = TOOLTIP_CONTENT.statMetrics[metricKeyLower]?.interpretation;
-        const interpretationTemplate = (typeof interpretationTemplateBase === 'object' ? interpretationTemplateBase[langKey] : interpretationTemplateBase) || 'Keine Interpretation verfügbar.';
+        const interpretationTemplate = (typeof interpretationTemplateBase === 'object' ? interpretationTemplateBase[langKey] : interpretationTemplateBase) || (langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.');
 
         const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: 'N/A' };
         const na = '--';
@@ -665,16 +677,16 @@ const ui_helpers = (() => {
     }
 
     function getTestDescriptionHTML(key, t2ShortName = 'T2', lang = 'de') {
-        const langKey = lang === 'en' ? 'en' : 'de';
+        const langKey = lang; // Parameter 'lang' wird direkt verwendet
         const descBase = TOOLTIP_CONTENT.statMetrics[key]?.description;
         const desc = (typeof descBase === 'object' ? descBase[langKey] : descBase) || key;
         return desc.replace(/\[T2_SHORT_NAME\]/g, t2ShortName);
     }
 
     function getTestInterpretationHTML(key, testData, kollektivName = '', t2ShortName = 'T2', lang = 'de') {
-        const langKey = lang === 'en' ? 'en' : 'de';
+        const langKey = lang; // Parameter 'lang' wird direkt verwendet
         const interpretationTemplateBase = TOOLTIP_CONTENT.statMetrics[key]?.interpretation;
-        const interpretationTemplate = (typeof interpretationTemplateBase === 'object' ? interpretationTemplateBase[langKey] : interpretationTemplateBase) || 'Keine Interpretation verfügbar.';
+        const interpretationTemplate = (typeof interpretationTemplateBase === 'object' ? interpretationTemplateBase[langKey] : interpretationTemplateBase) || (langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.');
          if (!testData) return langKey === 'de' ? 'Keine Daten für Interpretation verfügbar.' : 'No data available for interpretation.';
         const na = '--';
         const pValue = testData?.pValue;
@@ -691,9 +703,9 @@ const ui_helpers = (() => {
     }
 
     function getAssociationInterpretationHTML(key, assocObj, merkmalName, kollektivName, lang = 'de') {
-        const langKey = lang === 'en' ? 'en' : 'de';
+        const langKey = lang; // Parameter 'lang' wird direkt verwendet
         const interpretationTemplateBase = TOOLTIP_CONTENT.statMetrics[key]?.interpretation;
-        const interpretationTemplate = (typeof interpretationTemplateBase === 'object' ? interpretationTemplateBase[langKey] : interpretationTemplateBase) || 'Keine Interpretation verfügbar.';
+        const interpretationTemplate = (typeof interpretationTemplateBase === 'object' ? interpretationTemplateBase[langKey] : interpretationTemplateBase) || (langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.');
         if (!assocObj) return langKey === 'de' ? 'Keine Daten für Interpretation verfügbar.' : 'No data available for interpretation.';
         const na = '--';
         let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '';
@@ -704,7 +716,7 @@ const ui_helpers = (() => {
             lowerStr = formatNumber(assocObj.or?.ci?.lower, 2, na, false, langKey);
             upperStr = formatNumber(assocObj.or?.ci?.upper, 2, na, false, langKey);
             ciMethodStr = assocObj.or?.method || na;
-            pStr = (assozPValue !== null && !isNaN(assozPValue)) ? (assozPValue < 0.001 ? (langKey==='de'?'<0,001':'<.001') : formatNumber(assozPValue, 3, na, false, langKey)) : na;
+            pStr = (assozPValue !== null && !isNaN(assozPValue)) ? (assozPValue < 0.001 ? (langKey === 'de' ? '<0,001' : '<.001') : formatNumber(assozPValue, 3, na, false, langKey)) : na;
             sigSymbol = getStatisticalSignificanceSymbol(assozPValue);
             sigText = getStatisticalSignificanceText(assozPValue, APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, langKey);
         } else if (key === 'rd') {
@@ -716,22 +728,22 @@ const ui_helpers = (() => {
             valueStr = formatNumber(assocObj.phi?.value, 2, na, false, langKey);
             bewertungStr = getPhiBewertung(assocObj.phi?.value, langKey);
         } else if (key === 'fisher' || key === 'mannwhitney' || key === 'pvalue' || key === 'size_mwu' || key === 'defaultP') {
-             const pValToUse = assocObj?.pValue;
-             pStr = (pValToUse !== null && !isNaN(pValToUse)) ? (pValToUse < 0.001 ? (langKey==='de'?'<0,001':'<.001') : formatNumber(pValToUse, 3, na, false, langKey)) : na;
-             sigSymbol = getStatisticalSignificanceSymbol(pValToUse);
-             sigText = getStatisticalSignificanceText(pValToUse, APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, langKey);
-             const templateKeyToUse = TOOLTIP_CONTENT.statMetrics[key] ? key : 'defaultP';
-             const effectiveInterpretationTemplateBase = TOOLTIP_CONTENT.statMetrics[templateKeyToUse]?.interpretation;
-             const effectiveInterpretationTemplate = (typeof effectiveInterpretationTemplateBase === 'object' ? effectiveInterpretationTemplateBase[langKey] : effectiveInterpretationTemplateBase) || (langKey==='de'?'Keine Interpretation verfügbar.':'No interpretation available.');
+            const pValToUse = assocObj?.pValue;
+            pStr = (pValToUse !== null && !isNaN(pValToUse)) ? (pValToUse < 0.001 ? (langKey === 'de' ? '<0,001' : '<.001') : formatNumber(pValToUse, 3, na, false, langKey)) : na;
+            sigSymbol = getStatisticalSignificanceSymbol(pValToUse);
+            sigText = getStatisticalSignificanceText(pValToUse, APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, langKey);
+            const templateKeyToUse = TOOLTIP_CONTENT.statMetrics[key] ? key : 'defaultP';
+            const effectiveInterpretationTemplateBase = TOOLTIP_CONTENT.statMetrics[templateKeyToUse]?.interpretation;
+            const effectiveInterpretationTemplate = (typeof effectiveInterpretationTemplateBase === 'object' ? effectiveInterpretationTemplateBase[langKey] : effectiveInterpretationTemplateBase) || (langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.');
 
-             return effectiveInterpretationTemplate
-                 .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
-                 .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
-                 .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
-                 .replace(/\[MERKMAL\]/g, `'${merkmalName}'`)
-                 .replace(/\[VARIABLE\]/g, `'${merkmalName}'`)
-                 .replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektivName, langKey)}</strong>`)
-                 .replace(/<hr.*?>.*$/, '');
+            return effectiveInterpretationTemplate
+                .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
+                .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
+                .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
+                .replace(/\[MERKMAL\]/g, `'${merkmalName}'`)
+                .replace(/\[VARIABLE\]/g, `'${merkmalName}'`)
+                .replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektivName, langKey)}</strong>`)
+                .replace(/<hr.*?>.*$/, '');
         }
         const orFaktorTexte = UI_TEXTS.statMetrics.orFaktorTexte;
         const rdRichtungTexte = UI_TEXTS.statMetrics.rdRichtungTexte;
