@@ -6,7 +6,7 @@ const state = (() => {
         datenTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT),
         auswertungTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT),
         currentPublikationLang: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG,
-        currentPublikationSection: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION, // Wird jetzt eine Hauptsektion sein
+        currentPublikationSection: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION.split('_')[0], // Ensure it's a main section
         currentPublikationBruteForceMetric: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC,
         currentStatsLayout: APP_CONFIG.DEFAULT_SETTINGS.STATS_LAYOUT,
         currentStatsKollektiv1: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1,
@@ -31,14 +31,14 @@ const state = (() => {
             auswertungTableSort: cloneDeep(defaultState.auswertungTableSort),
             activeTabId: defaultState.activeTabId
         };
-        // Ensure the stored publication section is a main section, otherwise reset to default
+
         const isValidStoredSection = PUBLICATION_CONFIG.sections.some(mainSection => mainSection.id === currentState.currentPublikationSection);
         if (!isValidStoredSection) {
-            currentState.currentPublikationSection = defaultState.currentPublikationSection;
+            currentState.currentPublikationSection = defaultState.currentPublikationSection; // Default is already a main section
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION, currentState.currentPublikationSection);
         }
 
-        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) { // Legacy key removal
+        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) {
             localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
         }
     }
@@ -104,7 +104,6 @@ const state = (() => {
     function setCurrentPublikationSection(newSectionId) {
         let isValidSection = false;
         if (typeof newSectionId === 'string') {
-            // Only allow main section IDs now
             isValidSection = PUBLICATION_CONFIG.sections.some(mainSection => mainSection.id === newSectionId);
         }
 
@@ -181,8 +180,9 @@ const state = (() => {
             currentState.currentPresentationView = newView;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW, currentState.currentPresentationView);
             if (newView === 'as-pur') {
-                setCurrentPresentationStudyId(null);
+                setCurrentPresentationStudyId(null); // Reset study ID when switching to AS-PUR
             } else if (!currentState.currentPresentationStudyId && newView === 'as-vs-t2') {
+                // If switching to ASvsT2 and no study is selected, default to applied criteria
                 setCurrentPresentationStudyId(APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID);
             }
             return true;
