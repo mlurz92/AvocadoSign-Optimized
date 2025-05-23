@@ -109,15 +109,26 @@ const ui_helpers = (() => {
         if (langSwitch && langLabel) {
             langSwitch.checked = langKey === 'en';
             const labelTextBase = UI_TEXTS?.publikationTab?.spracheSwitchLabel;
-            langLabel.textContent = (typeof labelTextBase === 'object' && labelTextBase !== null ? (labelTextBase[langKey] || labelTextBase['de']) : (langKey === 'en' ? 'English' : 'Deutsch'));
+            let labelText = langKey === 'en' ? 'English' : 'Deutsch';
+            if (typeof labelTextBase === 'object' && labelTextBase !== null) {
+                labelText = labelTextBase[langKey] || labelTextBase['de'] || labelText;
+            }
+            langLabel.textContent = labelText;
         }
+
         if (langContainer) {
             const tooltipBase = TOOLTIP_CONTENT.publikationTabTooltips?.spracheSwitch?.description;
-            const tooltipText = (typeof tooltipBase === 'object' && tooltipBase !== null ? (tooltipBase[langKey] || tooltipBase['de']) : (typeof tooltipBase === 'string' ? tooltipBase : (langKey === 'de' ? 'Sprache wechseln' : 'Switch language')));
+            let tooltipText = langKey === 'de' ? 'Sprache wechseln' : 'Switch language';
+            if (typeof tooltipBase === 'object' && tooltipBase !== null) {
+                tooltipText = tooltipBase[langKey] || tooltipBase['de'] || tooltipText;
+            } else if (typeof tooltipBase === 'string') {
+                tooltipText = tooltipBase;
+            }
             langContainer.setAttribute('data-tippy-content', tooltipText);
+
             if (langContainer._tippy && langContainer._tippy.state.isEnabled) {
                 langContainer._tippy.setContent(tooltipText);
-            } else if (!langContainer._tippy) {
+            } else if (!langContainer._tippy && typeof tippy === 'function') { // Ensure tippy is defined
                 initializeTooltips(langContainer);
             }
         }
@@ -141,7 +152,7 @@ const ui_helpers = (() => {
                     span.style.fontWeight = isActiveSort ? 'bold' : 'normal';
                     span.style.textDecoration = isActiveSort ? 'underline' : 'none';
                     span.style.color = isActiveSort ? 'var(--primary-color)' : 'inherit';
-                    const thTextContent = th.childNodes[0]?.textContent?.trim() || ''; // Get text content before any sub-elements
+                    const thTextContent = th.childNodes[0]?.textContent?.trim() || '';
                     const spanLabelText = span.textContent.trim();
                     const sortText = langKey === 'de' ? 'Sortieren nach' : 'Sort by';
                     span.setAttribute('data-tippy-content', `${sortText}: ${thTextContent} -> ${spanLabelText}`);
@@ -161,7 +172,7 @@ const ui_helpers = (() => {
                 }
             }
         });
-        initializeTooltips(tableHeader);
+        if (typeof tippy === 'function') initializeTooltips(tableHeader);
     }
 
     function toggleAllDetails(tableBodyId, buttonId) {
@@ -203,7 +214,7 @@ const ui_helpers = (() => {
 
         updateElementHTML(buttonId, `${buttonText} <i class="fas ${iconClass} ms-1"></i>`);
         button.setAttribute('data-tippy-content', currentTooltipText);
-        if(button._tippy && button._tippy.state.isEnabled) { button._tippy.setContent(currentTooltipText); } else if (!button._tippy) { initializeTooltips(button.parentElement || button); }
+        if(button._tippy && button._tippy.state.isEnabled) { button._tippy.setContent(currentTooltipText); } else if (!button._tippy && typeof tippy === 'function') { initializeTooltips(button.parentElement || button); }
     }
 
     function handleCollapseEvent(event) {
@@ -278,7 +289,6 @@ const ui_helpers = (() => {
                 else if (value === 'signalreich') fillColor = '#f0f0f0';
                 else {
                     svgContent = unknownIconSVG;
-                    // Early return for unknown signal
                     return `<svg class="icon-t2 icon-${type} icon-value-unknown ${extraClass}" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${type}: ${value || unknownText}">${svgContent}</svg>`;
                 }
                 strokeColor = (value === 'signalreich') ? '#333333' : 'rgba(0,0,0,0.1)';
@@ -288,7 +298,7 @@ const ui_helpers = (() => {
                 break;
             case 'ruler-horizontal':
                 svgContent = `<path d="M${sw/2} ${c} H${s-sw/2} M${c} ${sw/2} V${s-sw/2} M${s*0.2} ${c-s*0.15} L${s*0.2} ${c+s*0.15} M${s*0.4} ${c-s*0.1} L${s*0.4} ${c+s*0.1} M${s*0.6} ${c-s*0.1} L${s*0.6} ${c+s*0.1} M${s*0.8} ${c-s*0.15} L${s*0.8} ${c+s*0.15}" stroke="${iconColor}" stroke-width="${sw/2}" stroke-linecap="round"/>`;
-                type = 'size'; // Correct type for aria-label
+                type = 'size';
                 break;
             default:
                 svgContent = unknownIconSVG;
@@ -394,7 +404,7 @@ const ui_helpers = (() => {
             const tooltipTextBase = TOOLTIP_CONTENT.statistikLayout?.description;
             const tooltipText = (typeof tooltipTextBase === 'object' && tooltipTextBase !== null ? (tooltipTextBase[langKey] || tooltipTextBase['de']) : (typeof tooltipTextBase === 'string' ? tooltipTextBase : (langKey === 'de' ? 'Layout umschalten' : 'Toggle layout')));
             if(toggleBtn._tippy && toggleBtn._tippy.state.isEnabled) toggleBtn._tippy.setContent(tooltipText);
-            else if (!toggleBtn._tippy) initializeTooltips(toggleBtn.parentElement || toggleBtn);
+            else if (!toggleBtn._tippy && typeof tippy === 'function') initializeTooltips(toggleBtn.parentElement || toggleBtn);
         }
         if (container1) container1.classList.toggle('d-none', !isVergleich);
         if (container2) container2.classList.toggle('d-none', !isVergleich);
@@ -486,7 +496,7 @@ const ui_helpers = (() => {
                     });
                     el.setAttribute('data-tippy-content', rawContent);
                     if(el._tippy && el._tippy.state.isEnabled) el._tippy.setContent(rawContent);
-                    else if (!el._tippy) initializeTooltips(el.parentElement || el);
+                    else if (!el._tippy && typeof tippy === 'function') initializeTooltips(el.parentElement || el);
                 }
             } else if (el && el._tippy && el._tippy.state.isEnabled) {
                 el._tippy.disable();
@@ -661,7 +671,14 @@ const ui_helpers = (() => {
        const langKey = lang;
        const metricKeyLower = String(key).toLowerCase().replace(/\s+/g, '').replace('-','');
        const descBase = TOOLTIP_CONTENT.statMetrics[metricKeyLower]?.description;
-       let descText = (typeof descBase === 'object' && descBase !== null ? (descBase[langKey] || descBase['de']) : (typeof descBase === 'string' ? descBase : String(key)));
+       let descText = '';
+       if (typeof descBase === 'object' && descBase !== null) {
+           descText = descBase[langKey] || descBase['de'] || String(key);
+       } else if (typeof descBase === 'string') {
+           descText = descBase;
+       } else {
+           descText = String(key);
+       }
        return descText.replace(/\[METHODE\]/g, methode);
     }
 
@@ -669,7 +686,15 @@ const ui_helpers = (() => {
         const langKey = lang;
         const metricKeyLower = String(key).toLowerCase().replace(/\s+/g, '').replace('-','');
         const interpretationTemplateBase = TOOLTIP_CONTENT.statMetrics[metricKeyLower]?.interpretation;
-        let interpretationTemplate = (typeof interpretationTemplateBase === 'object' && interpretationTemplateBase !== null ? (interpretationTemplateBase[langKey] || interpretationTemplateBase['de']) : (typeof interpretationTemplateBase === 'string' ? interpretationTemplateBase : (langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.')));
+        let interpretationTemplate = '';
+        if (typeof interpretationTemplateBase === 'object' && interpretationTemplateBase !== null) {
+            interpretationTemplate = interpretationTemplateBase[langKey] || interpretationTemplateBase['de'] || (langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.');
+        } else if (typeof interpretationTemplateBase === 'string') {
+            interpretationTemplate = interpretationTemplateBase;
+        } else {
+            interpretationTemplate = langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.';
+        }
+
 
         const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: 'N/A' };
         const na = '--';
@@ -706,14 +731,29 @@ const ui_helpers = (() => {
     function getTestDescriptionHTML(key, t2ShortName = 'T2', lang = 'de') {
         const langKey = lang;
         const descBase = TOOLTIP_CONTENT.statMetrics[key]?.description;
-        let descText = (typeof descBase === 'object' && descBase !== null ? (descBase[langKey] || descBase['de']) : (typeof descBase === 'string' ? descBase : String(key)));
+        let descText = '';
+        if (typeof descBase === 'object' && descBase !== null) {
+            descText = descBase[langKey] || descBase['de'] || String(key);
+        } else if (typeof descBase === 'string') {
+            descText = descBase;
+        } else {
+            descText = String(key);
+        }
         return descText.replace(/\[T2_SHORT_NAME\]/g, t2ShortName);
     }
 
     function getTestInterpretationHTML(key, testData, kollektivName = '', t2ShortName = 'T2', lang = 'de') {
         const langKey = lang;
         const interpretationTemplateBase = TOOLTIP_CONTENT.statMetrics[key]?.interpretation;
-        let interpretationTemplate = (typeof interpretationTemplateBase === 'object' && interpretationTemplateBase !== null ? (interpretationTemplateBase[langKey] || interpretationTemplateBase['de']) : (typeof interpretationTemplateBase === 'string' ? interpretationTemplateBase : (langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.')));
+        let interpretationTemplate = '';
+        if (typeof interpretationTemplateBase === 'object' && interpretationTemplateBase !== null) {
+            interpretationTemplate = interpretationTemplateBase[langKey] || interpretationTemplateBase['de'] || (langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.');
+        } else if (typeof interpretationTemplateBase === 'string') {
+            interpretationTemplate = interpretationTemplateBase;
+        } else {
+            interpretationTemplate = langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.';
+        }
+
          if (!testData) return langKey === 'de' ? 'Keine Daten für Interpretation verfügbar.' : 'No data available for interpretation.';
         const na = '--';
         const pValue = testData?.pValue;
@@ -732,7 +772,15 @@ const ui_helpers = (() => {
     function getAssociationInterpretationHTML(key, assocObj, merkmalName, kollektivName, lang = 'de') {
         const langKey = lang;
         const interpretationTemplateBase = TOOLTIP_CONTENT.statMetrics[key]?.interpretation;
-        let interpretationTemplate = (typeof interpretationTemplateBase === 'object' && interpretationTemplateBase !== null ? (interpretationTemplateBase[langKey] || interpretationTemplateBase['de']) : (typeof interpretationTemplateBase === 'string' ? interpretationTemplateBase : (langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.')));
+        let interpretationTemplate = '';
+        if (typeof interpretationTemplateBase === 'object' && interpretationTemplateBase !== null) {
+            interpretationTemplate = interpretationTemplateBase[langKey] || interpretationTemplateBase['de'] || (langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.');
+        } else if (typeof interpretationTemplateBase === 'string') {
+            interpretationTemplate = interpretationTemplateBase;
+        } else {
+            interpretationTemplate = langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.';
+        }
+
         if (!assocObj) return langKey === 'de' ? 'Keine Daten für Interpretation verfügbar.' : 'No data available for interpretation.';
         const na = '--';
         let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '';
@@ -761,7 +809,15 @@ const ui_helpers = (() => {
             sigText = getStatisticalSignificanceText(pValToUse, APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, langKey);
             const templateKeyToUse = TOOLTIP_CONTENT.statMetrics[key] ? key : 'defaultP';
             const effectiveInterpretationTemplateBase = TOOLTIP_CONTENT.statMetrics[templateKeyToUse]?.interpretation;
-            let effectiveInterpretationTemplate = (typeof effectiveInterpretationTemplateBase === 'object' && effectiveInterpretationTemplateBase !== null ? (effectiveInterpretationTemplateBase[langKey] || effectiveInterpretationTemplateBase['de']) : (typeof effectiveInterpretationTemplateBase === 'string' ? effectiveInterpretationTemplateBase : (langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.')));
+            let effectiveInterpretationTemplate = '';
+            if (typeof effectiveInterpretationTemplateBase === 'object' && effectiveInterpretationTemplateBase !== null) {
+                effectiveInterpretationTemplate = effectiveInterpretationTemplateBase[langKey] || effectiveInterpretationTemplateBase['de'] || (langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.');
+            } else if (typeof effectiveInterpretationTemplateBase === 'string') {
+                effectiveInterpretationTemplate = effectiveInterpretationTemplateBase;
+            } else {
+                effectiveInterpretationTemplate = langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.';
+            }
+
 
             return effectiveInterpretationTemplate
                 .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
