@@ -58,7 +58,7 @@ const t2CriteriaManager = (() => {
          }
          let isValidValue = true;
          const allowedValuesKey = key.toUpperCase() + '_VALUES';
-         if (APP_CONFIG.T2_CRITERIA_SETTINGS.hasOwnProperty(allowedValuesKey)) {
+         if (APP_CONFIG.T2_CRITERIA_SETTINGS.hasOwnProperty(allowedValuesKey) && Array.isArray(APP_CONFIG.T2_CRITERIA_SETTINGS[allowedValuesKey])) {
             isValidValue = APP_CONFIG.T2_CRITERIA_SETTINGS[allowedValuesKey].includes(value);
          } else {
              isValidValue = false;
@@ -164,19 +164,19 @@ const t2CriteriaManager = (() => {
         if (criteria.form?.active) {
             const requiredForm = criteria.form.value;
             const nodeForm = lymphNode.form;
-            checkResult.form = (typeof nodeForm === 'string' && nodeForm === requiredForm);
+            checkResult.form = (nodeForm !== null && typeof nodeForm === 'string' && nodeForm === requiredForm);
         }
 
         if (criteria.kontur?.active) {
             const requiredKontur = criteria.kontur.value;
             const nodeKontur = lymphNode.kontur;
-            checkResult.kontur = (typeof nodeKontur === 'string' && nodeKontur === requiredKontur);
+            checkResult.kontur = (nodeKontur !== null && typeof nodeKontur === 'string' && nodeKontur === requiredKontur);
         }
 
         if (criteria.homogenitaet?.active) {
             const requiredHomogenitaet = criteria.homogenitaet.value;
             const nodeHomogenitaet = lymphNode.homogenitaet;
-            checkResult.homogenitaet = (typeof nodeHomogenitaet === 'string' && nodeHomogenitaet === requiredHomogenitaet);
+            checkResult.homogenitaet = (nodeHomogenitaet !== null && typeof nodeHomogenitaet === 'string' && nodeHomogenitaet === requiredHomogenitaet);
         }
 
         if (criteria.signal?.active) {
@@ -195,27 +195,28 @@ const t2CriteriaManager = (() => {
         }
 
         const lymphNodes = patient.lymphknoten_t2;
+        const activeCriteriaKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true);
+
         if (!Array.isArray(lymphNodes)) {
-            const activeCriteriaKeysForEmpty = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true);
-            return { t2Status: activeCriteriaKeysForEmpty.length > 0 ? '-' : null, positiveLKCount: 0, bewerteteLK: [] };
+            return { t2Status: activeCriteriaKeys.length > 0 ? '-' : null, positiveLKCount: 0, bewerteteLK: [] };
         }
 
         let patientIsPositive = false;
         let positiveLKCount = 0;
         const bewerteteLK = [];
-        const activeCriteriaKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true);
 
-        if (lymphNodes.length === 0 && activeCriteriaKeys.length > 0) {
-            return { t2Status: '-', positiveLKCount: 0, bewerteteLK: [] };
-        }
-        if (lymphNodes.length === 0 && activeCriteriaKeys.length === 0) {
-            return { t2Status: null, positiveLKCount: 0, bewerteteLK: [] };
+
+        if (lymphNodes.length === 0) {
+            return { t2Status: activeCriteriaKeys.length > 0 ? '-' : null, positiveLKCount: 0, bewerteteLK: [] };
         }
 
 
         lymphNodes.forEach(lk => {
-            if (!lk) {
-                 bewerteteLK.push(null);
+            if (!lk || typeof lk !== 'object') {
+                 bewerteteLK.push({
+                    groesse: null, form: null, kontur: null, homogenitaet: null, signal: null,
+                    isPositive: false, checkResult: {size: null, form: null, kontur: null, homogenitaet: null, signal: null}
+                 });
                  return;
             }
             const checkResult = checkSingleLymphNode(lk, criteria);
@@ -224,7 +225,7 @@ const t2CriteriaManager = (() => {
             if (activeCriteriaKeys.length > 0) {
                 if (logic === 'UND') {
                     lkIsPositive = activeCriteriaKeys.every(key => checkResult[key] === true);
-                } else {
+                } else { // ODERN
                     lkIsPositive = activeCriteriaKeys.some(key => checkResult[key] === true);
                 }
             }
@@ -265,12 +266,16 @@ const t2CriteriaManager = (() => {
             return [];
         }
         if (!criteria || (logic !== 'UND' && logic !== 'ODER')) {
-             console.error("evaluateDataset: Ungültige Kriterien oder Logik.");
+             console.warn("evaluateDataset: Ungültige Kriterien oder Logik. T2-Status wird auf null gesetzt.");
              return dataset.map(p => {
-                 const pCopy = cloneDeep(p);
+                 const pCopy = cloneDeep(p || {});
                  pCopy.t2 = null;
                  pCopy.anzahl_t2_plus_lk = 0;
-                 pCopy.lymphknoten_t2_bewertet = (pCopy.lymphknoten_t2 || []).map(lk => ({...lk, isPositive: false, checkResult: {}}));
+                 pCopy.lymphknoten_t2_bewertet = ((pCopy.lymphknoten_t2 || [])).map(lk => ({
+                    ...(lk || {}),
+                    isPositive: false,
+                    checkResult: {size: null, form: null, kontur: null, homogenitaet: null, signal: null}
+                }));
                  return pCopy;
              });
         }
