@@ -272,7 +272,7 @@ const ui_helpers = (() => {
             tooltipContentBaseLang = langKey === 'de' ? 'Alle Details ein-/ausblenden' : 'Expand/collapse all details';
         }
 
-        let currentTooltipText = expand ? tooltipContentBaseLang : tooltipContentBaseLang;
+        let currentTooltipText = expand ? tooltipContentBaseLang : tooltipContentBaseLang; // Default, then replace
         if (expand) {
             currentTooltipText = tooltipContentBaseLang.replace(langKey === 'de' ? 'ein-' : 'Expand', langKey === 'de' ? 'aus-' : 'Collapse')
                                                  .replace(langKey === 'de' ? 'Einblenden' : 'Expand', langKey === 'de' ? 'Ausblenden' : 'Collapse');
