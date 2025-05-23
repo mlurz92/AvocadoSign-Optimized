@@ -3,28 +3,32 @@ const dataTabLogic = (() => {
     function createDatenTableHTML(data, sortState) {
         if (!Array.isArray(data)) {
             console.error("createDatenTableHTML: Ungültige Daten für Tabelle, Array erwartet.");
-            return '<p class="text-danger">Fehler: Ungültige Daten für Tabelle.</p>';
+            const langKey = (typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function') ? state.getCurrentPublikationLang() : 'de';
+            const errorText = langKey === 'de' ? 'Fehler: Ungültige Daten für Tabelle.' : 'Error: Invalid data for table.';
+            return `<p class="text-danger">${errorText}</p>`;
         }
+        const langKey = (typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function') ? state.getCurrentPublikationLang() : 'de';
 
         const tableId = 'daten-table';
         const columns = [
-            { key: 'nr', label: 'Nr', tooltip: TOOLTIP_CONTENT.datenTable.nr },
-            { key: 'name', label: 'Name', tooltip: TOOLTIP_CONTENT.datenTable.name },
-            { key: 'vorname', label: 'Vorname', tooltip: TOOLTIP_CONTENT.datenTable.vorname },
-            { key: 'geschlecht', label: 'Geschl.', tooltip: TOOLTIP_CONTENT.datenTable.geschlecht },
-            { key: 'alter', label: 'Alter', tooltip: TOOLTIP_CONTENT.datenTable.alter },
-            { key: 'therapie', label: 'Therapie', tooltip: TOOLTIP_CONTENT.datenTable.therapie },
-            { key: 'status', label: 'N/AS/T2', tooltip: TOOLTIP_CONTENT.datenTable.n_as_t2, subKeys: [{key: 'n', label: 'N'}, {key: 'as', label: 'AS'}, {key: 't2', label: 'T2'}] },
-            { key: 'bemerkung', label: 'Bemerkung', tooltip: TOOLTIP_CONTENT.datenTable.bemerkung },
-            { key: 'details', label: '', width: '30px'}
+            { key: 'nr', label: langKey === 'de' ? 'Nr.' : 'No.', tooltipKey: 'nr' },
+            { key: 'name', label: langKey === 'de' ? 'Name' : 'Name', tooltipKey: 'name' },
+            { key: 'vorname', label: langKey === 'de' ? 'Vorname' : 'First Name', tooltipKey: 'vorname' },
+            { key: 'geschlecht', label: langKey === 'de' ? 'Geschl.' : 'Sex', tooltipKey: 'geschlecht' },
+            { key: 'alter', label: langKey === 'de' ? 'Alter' : 'Age', tooltipKey: 'alter' },
+            { key: 'therapie', label: langKey === 'de' ? 'Therapie' : 'Therapy', tooltipKey: 'therapie' },
+            { key: 'status', label: 'N/AS/T2', tooltipKey: 'n_as_t2', subKeys: [{key: 'n', label: 'N'}, {key: 'as', label: 'AS'}, {key: 't2', label: 'T2'}] },
+            { key: 'bemerkung', label: langKey === 'de' ? 'Bemerkung' : 'Comment', tooltipKey: 'bemerkung' },
+            { key: 'details', label: '', width: '30px', tooltipKey: null } // No tooltip for the expand icon column header itself
         ];
 
         let tableHTML = `<table class="table table-sm table-hover table-striped data-table" id="${tableId}">`;
-        tableHTML += _createTableHeaderHTML(tableId, sortState, columns);
+        tableHTML += _createTableHeaderHTML(tableId, sortState, columns, langKey);
         tableHTML += `<tbody id="${tableId}-body">`;
 
         if (data.length === 0) {
-            tableHTML += `<tr><td colspan="${columns.length}" class="text-center text-muted">Keine Daten im ausgewählten Kollektiv gefunden.</td></tr>`;
+            const noDataText = langKey === 'de' ? 'Keine Daten im ausgewählten Kollektiv gefunden.' : 'No data found in the selected cohort.';
+            tableHTML += `<tr><td colspan="${columns.length}" class="text-center text-muted">${noDataText}</td></tr>`;
         } else {
             data.forEach(patient => {
                 tableHTML += tableRenderer.createDatenTableRow(patient);
@@ -34,7 +38,7 @@ const dataTabLogic = (() => {
         return tableHTML;
     }
 
-    function _createTableHeaderHTML(tableId, sortState, columns) {
+    function _createTableHeaderHTML(tableId, sortState, columns, langKey) {
         let headerHTML = `<thead class="small sticky-top bg-light" id="${tableId}-header"><tr>`;
         columns.forEach(col => {
             let sortIconHTML = '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>';
@@ -57,24 +61,26 @@ const dataTabLogic = (() => {
                     if(!thStyle.endsWith('"')) thStyle += '"';
                 }
             }
-
+            const thLabelText = col.label;
             const subHeaders = col.subKeys ? col.subKeys.map(sk => {
                  let subIconHTML = '';
                  const isActiveSubSort = activeSubKey === sk.key;
                  const style = isActiveSubSort ? 'font-weight: bold; text-decoration: underline; color: var(--primary-color);' : '';
-                 const thLabel = col.label || col.key;
                  const subLabel = sk.label || sk.key;
-                 return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="Sortieren nach ${thLabel} -> ${subLabel}">${subLabel}</span>`;
+                 const sortText = langKey === 'de' ? 'Sortieren nach' : 'Sort by';
+                 return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="${sortText} ${thLabelText} -> ${subLabel}">${subLabel}</span>`;
              }).join(' / ') : '';
 
-            const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys ? '' : 'style="cursor: pointer;"'}`;
-            const tooltip = col.tooltip ? `data-tippy-content="${col.tooltip}"` : '';
+            const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys || col.key === 'details' ? '' : 'style="cursor: pointer;"'}`;
+            const tooltipBase = col.tooltipKey ? TOOLTIP_CONTENT.datenTable[col.tooltipKey] : null;
+            const tooltipText = tooltipBase ? ((typeof tooltipBase === 'object' ? tooltipBase[langKey] : tooltipBase?.[langKey]) || tooltipBase?.['de'] || col.label) : '';
+            const tooltip = tooltipText ? `data-tippy-content="${tooltipText}"` : '';
             const thClass = mainHeaderClass;
 
             if (col.subKeys) {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${col.label} ${subHeaders ? `(${subHeaders})` : ''} ${sortIconHTML}</th>`;
+                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${thLabelText} ${subHeaders ? `(${subHeaders})` : ''} ${sortIconHTML}</th>`;
              } else {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${col.label} ${sortIconHTML}</th>`;
+                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${thLabelText} ${col.key === 'details' ? '' : sortIconHTML}</th>`;
              }
         });
         headerHTML += `</tr></thead>`;
