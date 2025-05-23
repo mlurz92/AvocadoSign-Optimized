@@ -21,7 +21,7 @@ const publicationRenderer = (() => {
             significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
             bruteForceMetricForPublication: bruteForceMetric || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication,
             references: {
-                lurzSchaefer2025: "Lurz & Schäfer (2025)",
+                lurzSchaefer2025: "Lurz & Schäfer (2025)", // Placeholder, actual citation might be more detailed
                 koh2008: "Koh et al. (2008)",
                 barbaro2024: "Barbaro et al. (2024)",
                 rutegard2025: "Rutegård et al. (2025)",
@@ -36,16 +36,16 @@ const publicationRenderer = (() => {
         }
 
         let combinedHtml = `<div class="publication-main-section" id="pub-main-content-${mainSectionConfig.id}">`;
-        const mainSectionTitle = UI_TEXTS.publikationTab.sectionLabels[mainSectionConfig.labelKey]?.[langKey] || UI_TEXTS.publikationTab.sectionLabels[mainSectionConfig.labelKey]?.['de'] || mainSectionConfig.labelKey;
-        combinedHtml += `<h2 class="mb-4 display-6">${mainSectionTitle}</h2>`;
+        const mainSectionTitleText = UI_TEXTS.publikationTab.sectionLabels[mainSectionConfig.labelKey]?.[langKey] || UI_TEXTS.publikationTab.sectionLabels[mainSectionConfig.labelKey]?.['de'] || mainSectionConfig.labelKey;
+        combinedHtml += `<h2 class="mb-4 display-6">${mainSectionTitleText}</h2>`;
 
         if (!mainSectionConfig.subSections || mainSectionConfig.subSections.length === 0) {
             combinedHtml += `<p class="text-muted">${langKey === 'de' ? 'Für diesen Hauptabschnitt sind keine Unterabschnitte definiert.' : 'No subsections defined for this main section.'}</p>`;
         } else {
             mainSectionConfig.subSections.forEach(subSection => {
                 combinedHtml += `<div class="publication-sub-section border-bottom pb-4 mb-4" id="pub-content-${subSection.id}">`;
-                const subSectionTitle = UI_TEXTS.publicationSubSectionLabels?.[subSection.labelKey]?.[langKey] || UI_TEXTS.publicationSubSectionLabels?.[subSection.labelKey]?.['de'] || subSection.label;
-                combinedHtml += `<h3 class="mb-3 h4">${subSectionTitle}</h3>`;
+                const subSectionTitleText = UI_TEXTS.publicationSubSectionLabels?.[subSection.labelKey]?.[langKey] || UI_TEXTS.publicationSubSectionLabels?.[subSection.labelKey]?.['de'] || subSection.label;
+                combinedHtml += `<h3 class="mb-3 h4">${subSectionTitleText}</h3>`;
 
                 const textContent = publicationTextGenerator.getSectionText(subSection.id, lang, publicationData, kollektiveData, commonDataForTextGen);
                 combinedHtml += textContent || `<p class="text-muted">${langKey === 'de' ? 'Inhalt für diesen Unterabschnitt wird noch generiert.' : 'Content for this subsection is being generated.'}</p>`;
@@ -58,9 +58,9 @@ const publicationRenderer = (() => {
                     const alterChartId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.alterChartContainerIdPrefix}${currentKollektiv.replace(/\s+/g, '-')}`;
                     const genderChartId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.genderChartContainerIdPrefix}${currentKollektiv.replace(/\s+/g, '-')}`;
                     const ageDistTitleBase = UI_TEXTS.chartTitles.ageDistribution;
-                    const ageDistTitle = (typeof ageDistTitleBase === 'object' ? ageDistTitleBase[langKey] : ageDistTitleBase) || (langKey === 'de' ? 'Altersverteilung' : 'Age Distribution');
+                    const ageDistTitle = (typeof ageDistTitleBase === 'object' ? ageDistTitleBase[langKey] : ageDistTitleBase?.[langKey]) || ageDistTitleBase?.['de'] || (langKey === 'de' ? 'Altersverteilung' : 'Age Distribution');
                     const genderDistTitleBase = UI_TEXTS.chartTitles.genderDistribution;
-                    const genderDistTitle = (typeof genderDistTitleBase === 'object' ? genderDistTitleBase[langKey] : genderDistTitleBase) || (langKey === 'de' ? 'Geschlecht' : 'Gender');
+                    const genderDistTitle = (typeof genderDistTitleBase === 'object' ? genderDistTitleBase[langKey] : genderDistTitleBase?.[langKey]) || genderDistTitleBase?.['de'] || (langKey === 'de' ? 'Geschlecht' : 'Gender');
                     const loadingText = langKey === 'de' ? 'Lade Diagramm...' : 'Loading chart...';
 
                     combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="${alterChartId}"><h5 class="text-center small mb-1">${ageDistTitle} (${getKollektivDisplayName(currentKollektiv, langKey)})</h5><p class="text-muted small text-center p-1">${loadingText}</p></div></div>`;
@@ -72,12 +72,12 @@ const publicationRenderer = (() => {
                         combinedHtml += '<div class="row mt-4 g-3">';
                         const rocChartId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.rocChartContainerIdPrefix}${subSection.id.replace('ergebnisse_', '')}`;
                         const barChartId = `${PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichBarChartContainerIdPrefix}${subSection.id.replace('ergebnisse_', '')}`;
-                        const rocTitle = langKey === 'de' ? 'ROC Kurven Vergleich' : 'ROC Curve Comparison';
-                        const barTitle = langKey === 'de' ? 'Performance Metriken Vergleich' : 'Performance Metrics Comparison';
+                        const rocTitleText = langKey === 'de' ? 'ROC Kurven Vergleich' : 'ROC Curve Comparison';
+                        const barTitleText = langKey === 'de' ? 'Performance Metriken Vergleich' : 'Performance Metrics Comparison';
                         const loadingText = langKey === 'de' ? 'Lade Diagramm...' : 'Loading chart...';
 
-                        combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="${rocChartId}"><h5 class="text-center small mb-1">${rocTitle} (${getKollektivDisplayName(currentKollektiv, langKey)})</h5><p class="text-muted small text-center p-1">${loadingText}</p></div></div>`;
-                        combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="${barChartId}"><h5 class="text-center small mb-1">${barTitle} (${getKollektivDisplayName(currentKollektiv, langKey)})</h5><p class="text-muted small text-center p-1">${loadingText}</p></div></div>`;
+                        combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="${rocChartId}"><h5 class="text-center small mb-1">${rocTitleText} (${getKollektivDisplayName(currentKollektiv, langKey)})</h5><p class="text-muted small text-center p-1">${loadingText}</p></div></div>`;
+                        combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="${barChartId}"><h5 class="text-center small mb-1">${barTitleText} (${getKollektivDisplayName(currentKollektiv, langKey)})</h5><p class="text-muted small text-center p-1">${loadingText}</p></div></div>`;
                         combinedHtml += '</div>';
                     }
                 }
@@ -112,7 +112,7 @@ const publicationRenderer = (() => {
                 const anwendungskontext = `${getKollektivDisplayName(studySet.applicableKollektiv, langKey)} (${studySet.context})`;
                 const logicText = UI_TEXTS.t2LogicDisplayNames[studySet.logic]?.[langKey] || UI_TEXTS.t2LogicDisplayNames[studySet.logic]?.['de'] || studySet.logic;
                 const studyNameBase = UI_TEXTS.literatureSetNames?.[conf.id];
-                const studyName = (typeof studyNameBase === 'object' ? studyNameBase[langKey] : studyNameBase) || studySet.name;
+                const studyName = (typeof studyNameBase === 'object' ? studyNameBase[langKey] : studyNameBase?.[langKey]) || studyNameBase?.['de'] || studySet.name;
 
 
                 tableHTML += `<tr>
@@ -147,16 +147,20 @@ const publicationRenderer = (() => {
 
         const fVal = (val, dig = 1, placeholder = 'N/A') => formatNumber(val, dig, placeholder, false, langKey);
         const fPerc = (count, total, dig = 0, placeholder = 'N/A') => (total > 0 && count !== undefined && count !== null && !isNaN(count)) ? formatPercent(count / total, dig, placeholder, langKey) : placeholder;
+        const na = langKey === 'de' ? 'N/V' : 'N/A';
 
         const addRow = (labelDe, labelEn, getterGesamt, getterDirektOP, getterNRCT) => {
+            const gesamtVal = getterGesamt(kollektiveData.Gesamt?.deskriptiv);
+            const direktOPVal = getterDirektOP(kollektiveData['direkt OP']?.deskriptiv);
+            const nRCTVal = getterNRCT(kollektiveData.nRCT?.deskriptiv);
             tableHTML += `<tr>
                             <td>${langKey === 'de' ? labelDe : labelEn}</td>
-                            <td>${getterGesamt(kollektiveData.Gesamt?.deskriptiv)}</td>
-                            <td>${getterDirektOP(kollektiveData['direkt OP']?.deskriptiv)}</td>
-                            <td>${getterNRCT(kollektiveData.nRCT?.deskriptiv)}</td>
+                            <td>${gesamtVal !== undefined && gesamtVal !== null ? gesamtVal : na}</td>
+                            <td>${direktOPVal !== undefined && direktOPVal !== null ? direktOPVal : na}</td>
+                            <td>${nRCTVal !== undefined && nRCTVal !== null ? nRCTVal : na}</td>
                           </tr>`;
         };
-        const na = langKey === 'de' ? 'N/V' : 'N/A';
+
         addRow('Alter, Median (Range) [Jahre]', 'Age, Median (Range) [Years]',
             p => p ? `${fVal(p.alter?.median)} (${fVal(p.alter?.min,0)}-${fVal(p.alter?.max,0)})` : na,
             p => p ? `${fVal(p.alter?.median)} (${fVal(p.alter?.min,0)}-${fVal(p.alter?.max,0)})` : na,
@@ -190,7 +194,7 @@ const publicationRenderer = (() => {
         const bfMetricForDisplay = commonData.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
         const formatMetricForTable = (metricObj, isRate = true, digits = 1, langParam = langKey) => {
-            if (!metricObj || metricObj.value === undefined || isNaN(metricObj.value)) return '–';
+            if (!metricObj || metricObj.value === undefined || metricObj.value === null || isNaN(metricObj.value) || !isFinite(metricObj.value)) return '–';
             return formatCI(metricObj.value, metricObj.ci?.lower, metricObj.ci?.upper, digits, isRate, '–', langParam);
         };
 
@@ -198,7 +202,8 @@ const publicationRenderer = (() => {
         if (sectionId === 'ergebnisse_as_performance') {
             title = UI_TEXTS.publicationTableTitles?.asPerformance?.[langKey] || (langKey === 'de' ? 'Tabelle 3: Diagnostische Güte - Avocado Sign (vs. N-Status)' : 'Table 3: Diagnostic Performance - Avocado Sign (vs. N-Status)');
             tableIdSuffix = 'as-performance';
-            dataSetsToDisplay.push({ nameKey: UI_TEXTS.legendLabels.avocadoSign[langKey] || UI_TEXTS.legendLabels.avocadoSign.de, statsByKollektiv: { 'Gesamt': kollektiveData.Gesamt?.gueteAS, 'direkt OP': kollektiveData['direkt OP']?.gueteAS, 'nRCT': kollektiveData.nRCT?.gueteAS } });
+            const asLabel = UI_TEXTS.legendLabels.avocadoSign?.[langKey] || UI_TEXTS.legendLabels.avocadoSign?.['de'] || 'Avocado Sign';
+            dataSetsToDisplay.push({ nameKey: asLabel, statsByKollektiv: { 'Gesamt': kollektiveData.Gesamt?.gueteAS, 'direkt OP': kollektiveData['direkt OP']?.gueteAS, 'nRCT': kollektiveData.nRCT?.gueteAS } });
         } else if (sectionId === 'ergebnisse_literatur_t2_performance') {
             title = UI_TEXTS.publicationTableTitles?.literaturT2Performance?.[langKey] || (langKey === 'de' ? 'Tabelle 4: Diagnostische Güte - Literatur-basierte T2-Kriterien (vs. N-Status)' : 'Table 4: Diagnostic Performance - Literature-Based T2 Criteria (vs. N-Status)');
             tableIdSuffix = 'literatur-t2-performance';
@@ -217,7 +222,7 @@ const publicationRenderer = (() => {
                     }
                 }
                 const studyNameBase = UI_TEXTS.literatureSetNames?.[conf.id];
-                const nameForKey = (typeof studyNameBase === 'object' ? studyNameBase[langKey] : studyNameBase) || studySet?.name || conf.id;
+                const nameForKey = (typeof studyNameBase === 'object' ? studyNameBase[langKey] : studyNameBase?.[langKey]) || studyNameBase?.['de'] || studySet?.name || conf.id;
                 dataSetsToDisplay.push({ nameKey: nameForKey, statsByKollektiv: stats, id: conf.id, shortName: studySet?.displayShortName });
             });
         } else if (sectionId === 'ergebnisse_optimierte_t2_performance') {
@@ -252,7 +257,12 @@ const publicationRenderer = (() => {
             }
         }
 
-        if (dataSetsToDisplay.length === 0 || dataSetsToDisplay.every(ds => typeof ds.statsByKollektiv === 'object' && ds.statsByKollektiv !== null && Object.values(ds.statsByKollektiv).every(s => !s || !s.matrix))) {
+        const allDataSetsEmpty = dataSetsToDisplay.every(ds =>
+            typeof ds.statsByKollektiv === 'object' && ds.statsByKollektiv !== null &&
+            Object.values(ds.statsByKollektiv).every(s => !s || !s.matrix || (s.matrix.rp + s.matrix.fp + s.matrix.fn + s.matrix.rn === 0))
+        );
+
+        if (dataSetsToDisplay.length === 0 || allDataSetsEmpty) {
              const fallbackText = langKey === 'de' ? 'Keine validen Gütedaten für die Anzeige in den ausgewerteten Kollektiven vorhanden.' : 'No valid performance data available for display in the evaluated cohorts.';
             return `<p class="text-muted small">${title} - ${fallbackText}</p>`;
         }
@@ -266,12 +276,12 @@ const publicationRenderer = (() => {
                     <tr>
                         <th>${UI_TEXTS.publicationTableHeaders?.method?.[langKey] || (langKey === 'de' ? 'Methode' : 'Method')}</th>
                         <th>${UI_TEXTS.publicationTableHeaders?.cohort?.[langKey] || (langKey === 'de' ? 'Kollektiv' : 'Cohort')}</th>
-                        <th>Sens. (95% CI)</th>
-                        <th>Spez. (95% CI)</th>
+                        <th>${UI_TEXTS.publicationTableHeaders?.sens?.[langKey] || 'Sens.'} (95% CI)</th>
+                        <th>${UI_TEXTS.publicationTableHeaders?.spez?.[langKey] || 'Spez.'} (95% CI)</th>
                         <th>PPV (95% CI)</th>
                         <th>NPV (95% CI)</th>
-                        <th>Acc. (95% CI)</th>
-                        <th>AUC/BalAcc (95% CI)</th>
+                        <th>${UI_TEXTS.publicationTableHeaders?.acc?.[langKey] || 'Acc.'} (95% CI)</th>
+                        <th>${UI_TEXTS.publicationTableHeaders?.auc?.[langKey] || 'AUC/BalAcc'} (95% CI)</th>
                     </tr>
                 </thead><tbody>`;
 
@@ -282,7 +292,7 @@ const publicationRenderer = (() => {
                     const nPat = stats?.matrix ? (stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn) : (kollektiveData[kollektivId]?.deskriptiv?.anzahlPatienten || 0);
                     const displayName = dataSet.nameKey;
 
-                    if (stats === null && sectionId === 'ergebnisse_literatur_t2_performance') {
+                    if (stats === null && sectionId === 'ergebnisse_literatur_t2_performance') { // Special handling for non-applicable literature sets
                          tableHTML += `<tr>
                                 <td>${displayName}</td>
                                 <td>${getKollektivDisplayName(kollektivId, langKey)}</td>
@@ -317,8 +327,8 @@ const publicationRenderer = (() => {
                     <tr>
                         <th>${UI_TEXTS.publicationTableHeaders?.cohort?.[langKey] || (langKey === 'de' ? 'Kollektiv' : 'Cohort')}</th>
                         <th>${UI_TEXTS.publicationTableHeaders?.comparison?.[langKey] || (langKey === 'de' ? 'Vergleich' : 'Comparison')}</th>
-                        <th>AUC/BalAcc (95% CI)</th>
-                        <th>Accuracy (95% CI)</th>
+                        <th>${UI_TEXTS.publicationTableHeaders?.auc?.[langKey] || 'AUC/BalAcc'} (95% CI)</th>
+                        <th>${UI_TEXTS.publicationTableHeaders?.acc?.[langKey] || 'Acc.'} (95% CI)</th>
                         <th>${UI_TEXTS.publicationTableHeaders?.pValueAUC?.[langKey] || (langKey === 'de' ? 'p-Wert (AUC, DeLong)' : 'p-value (AUC, DeLong)')}</th>
                         <th>${UI_TEXTS.publicationTableHeaders?.pValueAcc?.[langKey] || (langKey === 'de' ? 'p-Wert (Acc, McNemar)' : 'p-value (Acc, McNemar)')}</th>
                     </tr>
@@ -328,18 +338,20 @@ const publicationRenderer = (() => {
                 const kollektivDisplayName = getKollektivDisplayName(compData.kollektivIdentifier, langKey);
                 const nPat = kollektiveData[compData.kollektivIdentifier]?.deskriptiv?.anzahlPatienten || 'N/A';
                 const asDisplayNameBase = UI_TEXTS.legendLabels.avocadoSign;
-                const asDisplayName = (typeof asDisplayNameBase === 'object' ? asDisplayNameBase[langKey] : asDisplayNameBase) || asDisplayNameBase.de;
+                const asDisplayName = (typeof asDisplayNameBase === 'object' ? asDisplayNameBase[langKey] : asDisplayNameBase?.[langKey]) || asDisplayNameBase?.['de'] || 'Avocado Sign';
                 const appliedT2DisplayNameBase = UI_TEXTS.kollektivDisplayNames.applied_criteria;
-                const appliedT2DisplayName = (typeof appliedT2DisplayNameBase === 'object' ? appliedT2DisplayNameBase[langKey] : appliedT2DisplayNameBase) || appliedT2DisplayNameBase.de;
+                const appliedT2DisplayName = (typeof appliedT2DisplayNameBase === 'object' ? appliedT2DisplayNameBase[langKey] : appliedT2DisplayNameBase?.[langKey]) || appliedT2DisplayNameBase?.['de'] || 'Angewandte T2';
 
                 const optimizedT2Name = compData.bfDefinition?.metricName ? (langKey === 'de' ? `Optimierte T2 (${compData.bfDefinition.metricName})` : `Optimized T2 (${compData.bfDefinition.metricName})`) : (langKey === 'de' ? 'Optimierte T2' : 'Optimized T2');
+                const pValMcNemarASvsAngewandt = publicationTextGenerator.getPValueText(compData.vergleichASvsAngewandt?.mcnemar?.pValue, langKey) + " " + getStatisticalSignificanceSymbol(compData.vergleichASvsAngewandt?.mcnemar?.pValue);
+                const pValDeLongASvsAngewandt = publicationTextGenerator.getPValueText(compData.vergleichASvsAngewandt?.delong?.pValue, langKey) + " " + getStatisticalSignificanceSymbol(compData.vergleichASvsAngewandt?.delong?.pValue);
 
                 tableHTML += `<tr><td rowspan="2">${kollektivDisplayName} (N=${nPat})</td>
                                 <td>${asDisplayName}</td>
                                 <td>${formatMetricForTable(compData.asData?.auc, false, 3, langKey)}</td>
                                 <td>${formatMetricForTable(compData.asData?.acc, true, 1, langKey)}</td>
-                                <td rowspan="1" class="align-middle text-center">${publicationTextGenerator.getPValueText(compData.vergleichASvsAngewandt?.delong?.pValue, langKey)}</td>
-                                <td rowspan="1" class="align-middle text-center">${publicationTextGenerator.getPValueText(compData.vergleichASvsAngewandt?.mcnemar?.pValue, langKey)}</td>
+                                <td rowspan="1" class="align-middle text-center">${pValDeLongASvsAngewandt}</td>
+                                <td rowspan="1" class="align-middle text-center">${pValMcNemarASvsAngewandt}</td>
                               </tr>
                               <tr>
                                 <td>${appliedT2DisplayName}</td>
@@ -348,21 +360,25 @@ const publicationRenderer = (() => {
                                 <td colspan="2" class="text-center text-muted small"><em>${langKey === 'de' ? 'vs. Avocado Sign' : 'vs. Avocado Sign'}</em></td>
                               </tr>`;
                 if(compData.t2OptimiertData && compData.bfDefinition) {
+                    const pValMcNemarASvsOpt = publicationTextGenerator.getPValueText(compData.vergleichASvsOptimiert?.mcnemar?.pValue, langKey) + " " + getStatisticalSignificanceSymbol(compData.vergleichASvsOptimiert?.mcnemar?.pValue);
+                    const pValDeLongASvsOpt = publicationTextGenerator.getPValueText(compData.vergleichASvsOptimiert?.delong?.pValue, langKey) + " " + getStatisticalSignificanceSymbol(compData.vergleichASvsOptimiert?.delong?.pValue);
+                    const bfCriteriaFormatted = studyT2CriteriaManager.formatCriteriaForDisplay(compData.bfDefinition.criteria, compData.bfDefinition.logic, true, langKey);
+
                     tableHTML += `<tr><td rowspan="2">${kollektivDisplayName} (N=${nPat})</td>
                                 <td>${asDisplayName}</td>
                                 <td>${formatMetricForTable(compData.asData?.auc, false, 3, langKey)}</td>
                                 <td>${formatMetricForTable(compData.asData?.acc, true, 1, langKey)}</td>
-                                <td rowspan="1" class="align-middle text-center">${publicationTextGenerator.getPValueText(compData.vergleichASvsOptimiert?.delong?.pValue, langKey)}</td>
-                                <td rowspan="1" class="align-middle text-center">${publicationTextGenerator.getPValueText(compData.vergleichASvsOptimiert?.mcnemar?.pValue, langKey)}</td>
+                                <td rowspan="1" class="align-middle text-center">${pValDeLongASvsOpt}</td>
+                                <td rowspan="1" class="align-middle text-center">${pValMcNemarASvsOpt}</td>
                               </tr>
                               <tr>
                                 <td>${optimizedT2Name}</td>
                                 <td>${formatMetricForTable(compData.t2OptimiertData?.auc, false, 3, langKey)}</td>
                                 <td>${formatMetricForTable(compData.t2OptimiertData?.acc, true, 1, langKey)}</td>
-                                <td colspan="2" class="text-center text-muted small"><em>${langKey === 'de' ? 'vs. Avocado Sign' : 'vs. Avocado Sign'}<br>(${studyT2CriteriaManager.formatCriteriaForDisplay(compData.bfDefinition.criteria, compData.bfDefinition.logic, true, langKey)})</em></td>
+                                <td colspan="2" class="text-center text-muted small"><em>${langKey === 'de' ? 'vs. Avocado Sign' : 'vs. Avocado Sign'}<br>(${bfCriteriaFormatted})</em></td>
                               </tr>`;
                 }
-                 tableHTML += `<tr><td colspan="6" style="background-color: var(--border-color-light); height: 3px; padding:0;"></td></tr>`;
+                 tableHTML += `<tr><td colspan="6" style="background-color: var(--border-color-light); height: 3px; padding:0;"></td></tr>`; // Separator line
             });
              tableHTML += `</tbody></table></div>`;
         }
