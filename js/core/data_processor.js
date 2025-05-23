@@ -57,7 +57,7 @@ const dataProcessor = (() => {
                 processedLk.groesse = (typeof lk.groesse === 'number' && !isNaN(lk.groesse) && lk.groesse >= 0) ? lk.groesse : null;
 
                 const validateEnum = (value, allowedValues) => {
-                     return (typeof value === 'string' && value !== null && allowedValues.includes(value.trim().toLowerCase()))
+                     return (typeof value === 'string' && value !== null && Array.isArray(allowedValues) && allowedValues.includes(value.trim().toLowerCase()))
                          ? value.trim().toLowerCase()
                          : null;
                 };
@@ -106,7 +106,8 @@ const dataProcessor = (() => {
 
     function calculateHeaderStats(data, currentKollektiv) {
          const n = data?.length ?? 0;
-         const kollektivName = getKollektivDisplayName(currentKollektiv);
+         const langKey = (typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function') ? state.getCurrentPublikationLang() : 'de';
+         const kollektivName = getKollektivDisplayName(currentKollektiv, langKey);
          const placeholder = '--';
 
          if (!Array.isArray(data) || n === 0) {
@@ -124,7 +125,7 @@ const dataProcessor = (() => {
 
          const formatStatus = (pos, neg) => {
              const totalKnown = pos + neg;
-             return totalKnown > 0 ? `${formatPercent(pos / totalKnown, 1)} (+)` : placeholder;
+             return totalKnown > 0 ? `${formatPercent(pos / totalKnown, 1, '--', langKey)} (+)` : placeholder;
          };
 
          return {
