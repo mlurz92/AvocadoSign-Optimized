@@ -25,16 +25,28 @@ const ui_helpers = (() => {
           }
 
           const toastElement = document.createElement('div');
-          toastElement.id = toastId; toastElement.className = `toast align-items-center ${textClass} ${bgClass} border-0 fade`;
-          toastElement.setAttribute('role', 'alert'); toastElement.setAttribute('aria-live', 'assertive'); toastElement.setAttribute('aria-atomic', 'true'); toastElement.setAttribute('data-bs-delay', String(duration));
-          toastElement.innerHTML = `<div class="d-flex"><div class="toast-body"><i class="fas ${iconClass} fa-fw me-2"></i> ${escapeMarkdown(message)}</div><button type="button" class="btn-close me-2 m-auto ${textClass === 'text-white' ? 'btn-close-white' : ''}" data-bs-dismiss="toast" aria-label="Schließen"></button></div>`;
+          toastElement.id = toastId;
+          toastElement.className = `toast align-items-center ${textClass} ${bgClass} border-0 fade`;
+          toastElement.setAttribute('role', 'alert');
+          toastElement.setAttribute('aria-live', 'assertive');
+          toastElement.setAttribute('aria-atomic', 'true');
+          toastElement.setAttribute('data-bs-delay', String(duration));
+
+          let closeButtonClass = 'btn-close me-2 m-auto';
+          if (textClass === 'text-white') {
+              closeButtonClass += ' btn-close-white';
+          }
+
+          toastElement.innerHTML = `<div class="d-flex"><div class="toast-body"><i class="fas ${iconClass} fa-fw me-2"></i> ${escapeMarkdown(message)}</div><button type="button" class="${closeButtonClass}" data-bs-dismiss="toast" aria-label="Schließen"></button></div>`;
           toastContainer.appendChild(toastElement);
 
           try {
               const toastInstance = new bootstrap.Toast(toastElement, { delay: duration });
               toastElement.addEventListener('hidden.bs.toast', () => { if(toastContainer.contains(toastElement)) { toastElement.remove(); } }, { once: true });
               toastInstance.show();
-          } catch (e) { if(toastContainer.contains(toastElement)) { toastElement.remove(); } }
+          } catch (e) {
+              if(toastContainer.contains(toastElement)) { toastElement.remove(); }
+          }
     }
 
     function initializeTooltips(scope = document.body) {
@@ -44,44 +56,78 @@ const ui_helpers = (() => {
         const elementSet = new Set(elementsInScope);
 
         globalTippyInstances = globalTippyInstances.filter(instance => {
-            if (!instance || !instance.reference || !document.body.contains(instance.reference)) { try { instance?.destroy(); } catch(e){} return false; }
+            if (!instance || !instance.reference || !document.body.contains(instance.reference)) {
+                try { instance?.destroy(); } catch(e){}
+                return false;
+            }
             if (elementSet.has(instance.reference) && instance.state.isEnabled) {
-                try { instance.destroy(); } catch (e) {} return false;
+                try { instance.destroy(); } catch (e) {}
+                return false;
             }
             return true;
         });
 
         if (elementsInScope.length > 0) {
            const newInstances = tippy(elementsInScope, {
-               allowHTML: true, theme: 'glass', placement: 'top', animation: 'fade',
-               interactive: false, appendTo: () => document.body, delay: APP_CONFIG.UI_SETTINGS.TOOLTIP_DELAY || [150, 50],
-               maxWidth: 350, duration: [150, 150], zIndex: 3050,
-               onCreate(instance) { if (!instance.props.content || String(instance.props.content).trim() === '') { instance.disable(); } },
-               onShow(instance) { const content = instance.reference.getAttribute('data-tippy-content'); if (content && String(content).trim() !== '') { instance.setContent(content); return true; } else { return false; } }
+               allowHTML: true,
+               theme: 'glass',
+               placement: 'top',
+               animation: 'fade',
+               interactive: false,
+               appendTo: () => document.body,
+               delay: APP_CONFIG.UI_SETTINGS.TOOLTIP_DELAY || [150, 50],
+               maxWidth: 350,
+               duration: [150, 150],
+               zIndex: 3050,
+               onCreate(instance) {
+                   if (!instance.props.content || String(instance.props.content).trim() === '') {
+                       instance.disable();
+                   }
+               },
+               onShow(instance) {
+                   const content = instance.reference.getAttribute('data-tippy-content');
+                   if (content && String(content).trim() !== '') {
+                       instance.setContent(content);
+                       return true;
+                   } else {
+                       return false;
+                   }
+               }
            });
-           if (Array.isArray(newInstances)) { globalTippyInstances = globalTippyInstances.concat(newInstances); }
-           else if (newInstances) { globalTippyInstances.push(newInstances); }
+           if (Array.isArray(newInstances)) {
+               globalTippyInstances = globalTippyInstances.concat(newInstances);
+           } else if (newInstances) {
+               globalTippyInstances.push(newInstances);
+           }
         }
     }
 
     function updateElementText(elementId, text) {
         const element = document.getElementById(elementId);
-        if (element) { element.textContent = (text === null || text === undefined) ? '' : String(text); }
+        if (element) {
+            element.textContent = (text === null || text === undefined) ? '' : String(text);
+        }
     }
 
     function updateElementHTML(elementId, html) {
         const element = document.getElementById(elementId);
-        if (element) { element.innerHTML = (html === null || html === undefined) ? '' : String(html); }
+        if (element) {
+            element.innerHTML = (html === null || html === undefined) ? '' : String(html);
+        }
     }
 
     function toggleElementClass(elementId, className, add) {
         const element = document.getElementById(elementId);
-        if (element && className) { element.classList.toggle(className, add); }
+        if (element && className) {
+            element.classList.toggle(className, add);
+        }
     }
 
     function setElementDisabled(elementId, isDisabled) {
         const element = document.getElementById(elementId);
-        if (element) { element.disabled = !!isDisabled; }
+        if (element) {
+            element.disabled = !!isDisabled;
+        }
     }
 
     function updateHeaderStatsUI(stats) {
@@ -97,7 +143,11 @@ const ui_helpers = (() => {
     function updateKollektivButtonsUI(currentKollektiv) {
         const buttonGroup = document.querySelector('header .btn-group[aria-label="Kollektiv Auswahl"]');
         if (!buttonGroup) return;
-        buttonGroup.querySelectorAll('button[data-kollektiv]').forEach(btn => { if (btn) { btn.classList.toggle('active', btn.getAttribute('data-kollektiv') === currentKollektiv); } });
+        buttonGroup.querySelectorAll('button[data-kollektiv]').forEach(btn => {
+            if (btn) {
+                btn.classList.toggle('active', btn.getAttribute('data-kollektiv') === currentKollektiv);
+            }
+        });
     }
 
     function updateGlobalLanguageSwitcherUI(currentLang) {
@@ -128,7 +178,7 @@ const ui_helpers = (() => {
 
             if (langContainer._tippy && langContainer._tippy.state.isEnabled) {
                 langContainer._tippy.setContent(tooltipText);
-            } else if (!langContainer._tippy && typeof tippy === 'function') { // Ensure tippy is defined
+            } else if (!langContainer._tippy && typeof tippy === 'function') {
                 initializeTooltips(langContainer);
             }
         }
@@ -140,10 +190,14 @@ const ui_helpers = (() => {
         const langKey = (typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function') ? state.getCurrentPublikationLang() : 'de';
 
         tableHeader.querySelectorAll('th[data-sort-key]').forEach(th => {
-            const key = th.dataset.sortKey; const icon = th.querySelector('i.fas'); if (!icon) return;
+            const key = th.dataset.sortKey;
+            const icon = th.querySelector('i.fas');
+            if (!icon) return;
+
             icon.className = 'fas fa-sort text-muted opacity-50 ms-1';
             th.style.color = 'inherit';
-            const subSpans = th.querySelectorAll('.sortable-sub-header'); let isSubKeySortActive = false;
+            const subSpans = th.querySelectorAll('.sortable-sub-header');
+            let isSubKeySortActive = false;
 
             if (subSpans.length > 0) {
                 subSpans.forEach(span => {
@@ -152,10 +206,12 @@ const ui_helpers = (() => {
                     span.style.fontWeight = isActiveSort ? 'bold' : 'normal';
                     span.style.textDecoration = isActiveSort ? 'underline' : 'none';
                     span.style.color = isActiveSort ? 'var(--primary-color)' : 'inherit';
+
                     const thTextContent = th.childNodes[0]?.textContent?.trim() || '';
                     const spanLabelText = span.textContent.trim();
                     const sortText = langKey === 'de' ? 'Sortieren nach' : 'Sort by';
                     span.setAttribute('data-tippy-content', `${sortText}: ${thTextContent} -> ${spanLabelText}`);
+
                     if (isActiveSort) {
                         icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
                         isSubKeySortActive = true;
@@ -207,14 +263,28 @@ const ui_helpers = (() => {
         else if (buttonId === 'auswertung-toggle-details') tooltipKeyBase = 'auswertungTable';
 
         const tooltipContentBase = TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll?.description;
-        let tooltipContentBaseLang = (typeof tooltipContentBase === 'object' && tooltipContentBase !== null ? (tooltipContentBase[langKey] || tooltipContentBase['de']) : (typeof tooltipContentBase === 'string' ? tooltipContentBase : (langKey === 'de' ? 'Alle Details ein-/ausblenden' : 'Expand/collapse all details')));
+        let tooltipContentBaseLang = '';
+        if (typeof tooltipContentBase === 'object' && tooltipContentBase !== null) {
+            tooltipContentBaseLang = tooltipContentBase[langKey] || tooltipContentBase['de'] || (langKey === 'de' ? 'Alle Details ein-/ausblenden' : 'Expand/collapse all details');
+        } else if (typeof tooltipContentBase === 'string') {
+            tooltipContentBaseLang = tooltipContentBase;
+        } else {
+            tooltipContentBaseLang = langKey === 'de' ? 'Alle Details ein-/ausblenden' : 'Expand/collapse all details';
+        }
 
-        const currentTooltipText = expand ? tooltipContentBaseLang.replace(langKey === 'de' ? 'ein-' : 'Expand', langKey === 'de' ? 'aus-' : 'Collapse').replace(langKey === 'de' ? 'Einblenden' : 'Expand', langKey === 'de' ? 'Ausblenden' : 'Collapse')
-                                       : tooltipContentBaseLang.replace(langKey === 'de' ? 'aus-' : 'Collapse', langKey === 'de' ? 'ein-' : 'Expand').replace(langKey === 'de' ? 'Ausblenden' : 'Collapse', langKey === 'de' ? 'Einblenden' : 'Expand');
+        let currentTooltipText = expand ? tooltipContentBaseLang : tooltipContentBaseLang; // Default, then replace
+        if (expand) {
+            currentTooltipText = tooltipContentBaseLang.replace(langKey === 'de' ? 'ein-' : 'Expand', langKey === 'de' ? 'aus-' : 'Collapse')
+                                                 .replace(langKey === 'de' ? 'Einblenden' : 'Expand', langKey === 'de' ? 'Ausblenden' : 'Collapse');
+        } else {
+            currentTooltipText = tooltipContentBaseLang.replace(langKey === 'de' ? 'aus-' : 'Collapse', langKey === 'de' ? 'ein-' : 'Expand')
+                                                 .replace(langKey === 'de' ? 'Ausblenden' : 'Collapse', langKey === 'de' ? 'Einblenden' : 'Expand');
+        }
 
         updateElementHTML(buttonId, `${buttonText} <i class="fas ${iconClass} ms-1"></i>`);
         button.setAttribute('data-tippy-content', currentTooltipText);
-        if(button._tippy && button._tippy.state.isEnabled) { button._tippy.setContent(currentTooltipText); } else if (!button._tippy && typeof tippy === 'function') { initializeTooltips(button.parentElement || button); }
+        if(button._tippy && button._tippy.state.isEnabled) { button._tippy.setContent(currentTooltipText); }
+        else if (!button._tippy && typeof tippy === 'function') { initializeTooltips(button.parentElement || button); }
     }
 
     function handleCollapseEvent(event) {
@@ -488,7 +558,12 @@ const ui_helpers = (() => {
         const addOrUpdateTippy = (el, contentKey, contentData = {}) => {
             if(el && TOOLTIP_CONTENT[contentKey]) {
                 let rawContentBase = TOOLTIP_CONTENT[contentKey]?.description;
-                let rawContent = (typeof rawContentBase === 'object' && rawContentBase !== null ? (rawContentBase[langKey] || rawContentBase['de']) : (typeof rawContentBase === 'string' ? rawContentBase : ''));
+                let rawContent = '';
+                 if (typeof rawContentBase === 'object' && rawContentBase !== null) {
+                    rawContent = rawContentBase[langKey] || rawContentBase['de'] || '';
+                } else if (typeof rawContentBase === 'string') {
+                    rawContent = rawContentBase;
+                }
 
                 if (typeof rawContent === 'string') {
                     Object.keys(contentData).forEach(placeholder => {
@@ -817,7 +892,6 @@ const ui_helpers = (() => {
             } else {
                 effectiveInterpretationTemplate = langKey === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.';
             }
-
 
             return effectiveInterpretationTemplate
                 .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
