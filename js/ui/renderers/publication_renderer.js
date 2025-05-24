@@ -2,10 +2,24 @@ const publicationRenderer = (() => {
 
     function _formatMetricForTable(metricData, isRate = true, digits = 1, lang = 'de') {
         if (!metricData || metricData.value === undefined || metricData.value === null || isNaN(metricData.value)) return 'N/A';
-        const valStr = isRate ? fPercent(metricData.value, digits) : fValue(metricData.value, digits);
+
+        const formatSingleValue = (val, d, isP) => {
+            if (isP) {
+                return formatPercent(val, d, 'N/A');
+            } else {
+                let numStr = formatNumber(val, d, 'N/A', true);
+                if (lang === 'de' && numStr !== 'N/A' && typeof numStr === 'string') {
+                    numStr = numStr.replace('.', ',');
+                }
+                return numStr;
+            }
+        };
+
+        const valStr = formatSingleValue(metricData.value, digits, isRate);
+
         if (metricData.ci && metricData.ci.lower !== null && metricData.ci.upper !== null && !isNaN(metricData.ci.lower) && !isNaN(metricData.ci.upper)) {
-            const lowerStr = isRate ? fPercent(metricData.ci.lower, digits) : fValue(metricData.ci.lower, digits);
-            const upperStr = isRate ? fPercent(metricData.ci.upper, digits) : fValue(metricData.ci.upper, digits);
+            const lowerStr = formatSingleValue(metricData.ci.lower, digits, isRate);
+            const upperStr = formatSingleValue(metricData.ci.upper, digits, isRate);
             return `${valStr} (${lowerStr}–${upperStr})`;
         }
         return valStr;
@@ -55,7 +69,7 @@ const publicationRenderer = (() => {
                 </tr>
             </thead><tbody>`;
 
-        const fVal = (val, dig = 1, placeholder = 'N/A') => formatNumber(val, dig, placeholder);
+        const fVal = (val, dig = 1, placeholder = 'N/A') => formatNumber(val, dig, placeholder, lang === 'en');
         const fPerc = (count, total, dig = 1) => (total > 0 && count !== undefined && count !== null) ? formatPercent(count / total, dig) : 'N/A';
 
         const addRow = (labelDe, labelEn, getterGesamt, getterDirektOP, getterNRCT) => {
@@ -192,13 +206,19 @@ const publicationRenderer = (() => {
                 const vergleichASvsLit = litSetConf ? allKollektivStats?.[kolId]?.[`vergleichASvsT2_literatur_${litSetConf.id}`] : null;
                 const vergleichASvsBF = allKollektivStats?.[kolId]?.vergleichASvsT2_bruteforce;
 
+                let diffAucLitStr = formatNumber(vergleichASvsLit?.delong?.diffAUC, 3, 'N/A', true);
+                if (lang === 'de' && diffAucLitStr !== 'N/A') diffAucLitStr = diffAucLitStr.replace('.', ',');
+
+                let diffAucBfStr = formatNumber(vergleichASvsBF?.delong?.diffAUC, 3, 'N/A', true);
+                if (lang === 'de' && diffAucBfStr !== 'N/A') diffAucBfStr = diffAucBfStr.replace('.', ',');
+
                 if (asStats && litStats && vergleichASvsLit) {
                     tableHTML += `<tr>
                         <td>AS vs. Literatur (${studyT2CriteriaManager.getStudyCriteriaSetById(litSetConf.id)?.displayShortName || litSetConf.id})</td>
                         <td>${getKollektivDisplayName(kolId)}</td>
                         <td>AS (${_formatMetricForTable(asStats.auc, false, 3, lang)})</td>
                         <td>Lit. (${_formatMetricForTable(litStats.auc, false, 3, lang)})</td>
-                        <td>${fValue(vergleichASvsLit.delong?.diffAUC, 3).replace('.', lang==='de'?',':'.')}</td>
+                        <td>${diffAucLitStr}</td>
                         <td>${getPValueText(vergleichASvsLit.delong?.pValue, lang)}</td>
                         <td>${getPValueText(vergleichASvsLit.mcnemar?.pValue, lang)}</td>
                     </tr>`;
@@ -209,7 +229,7 @@ const publicationRenderer = (() => {
                         <td>${getKollektivDisplayName(kolId)}</td>
                         <td>AS (${_formatMetricForTable(asStats.auc, false, 3, lang)})</td>
                         <td>BF (${_formatMetricForTable(bfStats.auc, false, 3, lang)})</td>
-                        <td>${fValue(vergleichASvsBF.delong?.diffAUC, 3).replace('.', lang==='de'?',':'.')}</td>
+                        <td>${diffAucBfStr}</td>
                         <td>${getPValueText(vergleichASvsBF.delong?.pValue, lang)}</td>
                         <td>${getPValueText(vergleichASvsBF.mcnemar?.pValue, lang)}</td>
                     </tr>`;
@@ -276,7 +296,7 @@ const publicationRenderer = (() => {
                      combinedHtml += '<div class="row mt-4 g-3">';
                      const kollektiveForCharts = ['Gesamt', 'direkt OP', 'nRCT'];
                      kollektiveForCharts.forEach((kolId, index) => {
-                        const chartLetter = String.fromCharCode(97 + index); // a, b, c
+                        const chartLetter = String.fromCharCode(97 + index);
                         const chartId = `pub-chart-vergleich-${kolId.replace(/\s+/g, '-')}`;
                         const chartTitle = lang === 'de' ? `Vergleichsmetriken für ${getKollektivDisplayName(kolId)}` : `Comparative Metrics for ${getKollektivDisplayName(kolId)}`;
                         const figRef = lang === 'de' ? `Abb. 2${chartLetter}` : `Fig. 2${chartLetter}`;
