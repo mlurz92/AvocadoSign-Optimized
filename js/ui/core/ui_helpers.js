@@ -109,7 +109,7 @@ const ui_helpers = (() => {
         tableHeader.querySelectorAll('th[data-sort-key]').forEach(th => {
             const key = th.dataset.sortKey; const icon = th.querySelector('i.fas'); if (!icon) return;
             icon.className = 'fas fa-sort text-muted opacity-50 ms-1';
-            th.style.color = 'inherit'; // Reset main header color
+            th.style.color = 'inherit';
             const subSpans = th.querySelectorAll('.sortable-sub-header'); let isSubKeySortActive = false;
 
             if (subSpans.length > 0) {
@@ -306,7 +306,7 @@ const ui_helpers = (() => {
                         if(button.dataset.criterion === key) {
                             const isActiveValue = criterion.active && button.dataset.value === String(criterion.value);
                             button.classList.toggle('active', isActiveValue);
-                            button.classList.toggle('inactive-option', !criterion.active || !isActiveValue); // Ensure this logic is sound for initial load
+                            button.classList.toggle('inactive-option', !criterion.active || !isActiveValue);
                         }
                     });
                 }
@@ -400,7 +400,6 @@ const ui_helpers = (() => {
             applyBestBtn: document.getElementById('btn-apply-best-bf-criteria')
         };
 
-        const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
         const getKollektivNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
         const isRunning = stateUI === 'start' || stateUI === 'started' || stateUI === 'progress';
         const hasResults = stateUI === 'result' && data.results && data.results.length > 0 && data.bestResult && data.bestResult.criteria && isFinite(data.bestResult.metricValue);
@@ -422,6 +421,14 @@ const ui_helpers = (() => {
             if(el && content) { el.setAttribute('data-tippy-content', content); if(el._tippy) el._tippy.setContent(content); else initializeTooltips(el.parentElement || el); }
             else if (el && el._tippy && el._tippy.state.isEnabled) { el._tippy.disable(); }
         };
+
+        let localFormatCriteriaFunc;
+        if (typeof studyT2CriteriaManager !== 'undefined' && typeof studyT2CriteriaManager.formatCriteriaForDisplay === 'function') {
+            localFormatCriteriaFunc = studyT2CriteriaManager.formatCriteriaForDisplay;
+        } else {
+            localFormatCriteriaFunc = (c, l) => 'Formatierungsfunktion nicht verfügbar';
+        }
+
 
         switch (stateUI) {
             case 'idle': case 'cancelled': case 'error':
@@ -469,7 +476,7 @@ const ui_helpers = (() => {
                 if (elements.statusText) addOrUpdateTooltip(elements.statusText, `Aktueller Status: ${percentStr} (${testedNum}/${totalNum})`);
                 if (data?.currentBest && data.currentBest.criteria && isFinite(data.currentBest.metricValue)) {
                     const bestValStr = formatNumber(data.currentBest.metricValue, 4);
-                    const bestCritStr = formatCriteriaFunc(data.currentBest.criteria, data.currentBest.logic);
+                    const bestCritStr = localFormatCriteriaFunc(data.currentBest.criteria, data.currentBest.logic);
                     if (elements.metricLabel) updateElementText(elements.metricLabel.id, data.metric || 'Metrik');
                     if (elements.bestMetric) updateElementText(elements.bestMetric.id, bestValStr);
                     if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, `Beste: ${data.currentBest.logic?.toUpperCase()} - ${bestCritStr}`);
@@ -487,7 +494,7 @@ const ui_helpers = (() => {
                     const kollektivDisplay = getKollektivNameFunc(data.kollektiv || 'N/A');
                     const bestValueStr = formatNumber(best.metricValue, 4);
                     const logicStr = best.logic?.toUpperCase() || 'N/A';
-                    const criteriaStr = formatCriteriaFunc(best.criteria, best.logic);
+                    const criteriaStr = localFormatCriteriaFunc(best.criteria, best.logic);
                     const durationStr = formatNumber((data.duration || 0) / 1000, 1);
                     const totalTestedStr = formatNumber(data.totalTested || 0, 0);
                     if (elements.resultMetric) updateElementText(elements.resultMetric.id, metricName);
@@ -500,7 +507,7 @@ const ui_helpers = (() => {
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig.');
                     if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, TOOLTIP_CONTENT.bruteForceResult.description);
                 } else {
-                    if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true); // Hide if no valid best result
+                    if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true);
                     if (elements.statusText) updateElementText(elements.statusText.id, data?.message || 'Fertig (kein valides Ergebnis).');
                 }
                 break;
@@ -513,7 +520,7 @@ const ui_helpers = (() => {
         const trySetDisabled = (id, disabled) => { const e = document.getElementById(id); if (e) e.disabled = disabled; };
 
         trySetDisabled('export-statistik-csv', dataDisabled);
-        trySetDisabled('export-bruteforce-txt', bfDisabled); // Global BF report depends on if *any* result exists. Modal export in BF card is handled there.
+        trySetDisabled('export-bruteforce-txt', bfDisabled);
         trySetDisabled('export-deskriptiv-md', dataDisabled);
         trySetDisabled('export-daten-md', dataDisabled);
         trySetDisabled('export-auswertung-md', dataDisabled);
@@ -524,11 +531,10 @@ const ui_helpers = (() => {
 
         trySetDisabled('export-all-zip', !canExportDataDependent && !hasAnyBruteForceResults);
         trySetDisabled('export-csv-zip', dataDisabled);
-        trySetDisabled('export-md-zip', dataDisabled || !hasAnyBruteForceResults); // MD Zip includes publication texts which might use BF results
+        trySetDisabled('export-md-zip', dataDisabled || !hasAnyBruteForceResults);
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
 
-        // XLSX currently not implemented
         trySetDisabled('export-statistik-xlsx', true);
         trySetDisabled('export-daten-xlsx', true);
         trySetDisabled('export-auswertung-xlsx', true);
@@ -677,7 +683,7 @@ const ui_helpers = (() => {
                  .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
                  .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
                  .replace(/\[MERKMAL\]/g, `'${merkmalName}'`)
-                 .replace(/\[VARIABLE\]/g, `'${merkmalName}'`) // Alias for MERKMAL in some templates
+                 .replace(/\[VARIABLE\]/g, `'${merkmalName}'`)
                  .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
                  .replace(/<hr.*?>.*$/, '');
         }
@@ -693,17 +699,17 @@ const ui_helpers = (() => {
             .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? (UI_TEXTS.statMetrics.rdRichtungTexte?.HOEHER || 'höher') : (assocObj?.rd?.value < 0 ? (UI_TEXTS.statMetrics.rdRichtungTexte?.NIEDRIGER || 'niedriger') : (UI_TEXTS.statMetrics.rdRichtungTexte?.GLEICH || 'gleich')))
             .replace(/\[STAERKE\]/g, `<strong>${bewertungStr}</strong>`)
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
-            .replace(/\[SIGNIFIKANZ\]/g, sigSymbol) // sigSymbol for OR, pStr for others
+            .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/<hr.*?>.*$/, '');
 
          if (key === 'or' || key === 'rd') {
             if (lowerStr === na || upperStr === na || ciMethodStr === na || assocObj?.[key]?.ci === null || assocObj?.[key]?.ci.lower === null || assocObj?.[key]?.ci.upper === null) {
-                interpretation = interpretation.replace(/\(95% CI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
+                interpretation = interpretation.replace(/\(95% KI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
                 interpretation = interpretation.replace(/\(95% CI: \[LOWER\] – \[UPPER\]\)/g, '(Keine CI-Daten verfügbar)');
                 interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
             }
          }
-         if (key === 'or' && pStr === na) { // Remove p-value part if not available for OR
+         if (key === 'or' && pStr === na) {
              interpretation = interpretation.replace(/, Test-p=.*?, \[SIGNIFIKANZ\]\)/g, ')');
          }
         return interpretation;
