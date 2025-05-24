@@ -70,7 +70,7 @@ const auswertungTabLogic = (() => {
             const thClass = mainHeaderClass;
 
             if (col.subKeys) {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${col.label} ${subHeaders ? `(${subHeaders})` : ''} ${sortIconHTML}</th>`;
+                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${col.label} ${subHeaders ? `(${subHeaders})` : ''} ${isMainKeyActiveSort ? sortIconHTML: ''}</th>`;
              } else {
                  headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${col.label} ${col.key === 'details' ? '' : sortIconHTML}</th>`;
              }
@@ -87,7 +87,7 @@ const auswertungTabLogic = (() => {
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Patientenübersicht & Auswertungsergebnisse</span>
-                        <button id="auswertung-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="expand" data-tippy-content="${toggleButtonTooltip}">
+                        <button type="button" id="auswertung-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="expand" data-tippy-content="${toggleButtonTooltip}">
                            Alle Details <i class="fas fa-chevron-down ms-1"></i>
                        </button>
                     </div>
