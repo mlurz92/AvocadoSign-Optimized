@@ -45,7 +45,7 @@ const praesentationTabLogic = (() => {
                 <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>AS Performance vs. N für alle Kollektive</span>
-                        <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="dl-${tableId}-png" data-table-id="${tableId}" data-table-name="Praes_AS_Perf_Uebersicht" data-tippy-content="${tablePNGTooltip}"><i class="fas fa-image"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="dl-${tableId}-png" data-table-id="${tableId}" data-table-name="Praes_AS_Perf_Uebersicht" data-tippy-content="${tablePNGTooltip}"><i class="fas fa-image"></i></button>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -58,8 +58,8 @@ const praesentationTabLogic = (() => {
                         </div>
                     </div>
                     <div class="card-footer text-end p-1">
-                        <button class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-pur-csv" data-tippy-content="${perfCSVTooltip}"><i class="fas fa-file-csv me-1"></i>CSV</button>
-                        <button class="btn btn-sm btn-outline-secondary" id="download-performance-as-pur-md" data-tippy-content="${perfMDTooltip}"><i class="fab fa-markdown me-1"></i>MD</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-pur-csv" data-tippy-content="${perfCSVTooltip}"><i class="fas fa-file-csv me-1"></i>CSV</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="download-performance-as-pur-md" data-tippy-content="${perfMDTooltip}"><i class="fab fa-markdown me-1"></i>MD</button>
                     </div>
                 </div>
             </div>`;
@@ -70,8 +70,8 @@ const praesentationTabLogic = (() => {
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Visualisierung Güte (AS vs. N) - Kollektiv: ${currentKollektivName}</span>
                         <span class="card-header-buttons">
-                            <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="dl-${chartId}-png" data-chart-id="${chartId}" data-format="png" data-tippy-content="${perfChartPNGTooltip}"><i class="fas ${dlIconPNG}"></i></button>
-                            <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="dl-${chartId}-svg" data-chart-id="${chartId}" data-format="svg" data-tippy-content="${perfChartSVGTooltip}"><i class="fas ${dlIconSVG}"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="dl-${chartId}-png" data-chart-id="${chartId}" data-format="png" data-tippy-content="${perfChartPNGTooltip}"><i class="fas ${dlIconPNG}"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="dl-${chartId}-svg" data-chart-id="${chartId}" data-format="svg" data-tippy-content="${perfChartSVGTooltip}"><i class="fas ${dlIconSVG}"></i></button>
                         </span>
                     </div>
                     <div class="card-body p-1">
@@ -106,8 +106,8 @@ const praesentationTabLogic = (() => {
                  criteriaHTML = studyInfo.keyCriteriaSummary;
             } else if (criteriaSourceForFormatting) {
                  criteriaHTML = studyT2CriteriaManager.formatCriteriaForDisplay(criteriaSourceForFormatting, logicSourceForFormatting, false);
-                 if (criteriaHTML === 'Keine aktiven Kriterien' && logicSourceForFormatting) criteriaHTML += ` (Logik: ${logicSourceForFormatting})`;
-                 else if (criteriaHTML !== 'Keine aktiven Kriterien' && logicSourceForFormatting) criteriaHTML = `<strong>Logik:</strong> ${logicSourceForFormatting}<br><strong>Regel(n):</strong> ${criteriaHTML}`;
+                 if (criteriaHTML === 'Keine aktiven Kriterien' && logicSourceForFormatting && logicSourceForFormatting !== 'KOMBINIERT') criteriaHTML += ` (Logik: ${logicSourceForFormatting})`;
+                 else if (criteriaHTML !== 'Keine aktiven Kriterien' && logicSourceForFormatting && logicSourceForFormatting !== 'KOMBINIERT') criteriaHTML = `<strong>Logik:</strong> ${logicSourceForFormatting}<br><strong>Regel(n):</strong> ${criteriaHTML}`;
             }
 
 
@@ -184,8 +184,8 @@ const praesentationTabLogic = (() => {
                              <div class="card-header d-flex justify-content-between align-items-center">
                                  <span>${chartTitle}</span>
                                  <span class="card-header-buttons">
-                                     <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-vs-t2-png" data-chart-id="${chartContainerId}" data-format="png" data-tippy-content="${chartPNG}"><i class="fas ${dlIconPNG}"></i></button>
-                                     <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-vs-t2-svg" data-chart-id="${chartContainerId}" data-format="svg" data-tippy-content="${chartSVG}"><i class="fas ${dlIconSVG}"></i></button>
+                                     <button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-vs-t2-png" data-chart-id="${chartContainerId}" data-format="png" data-tippy-content="${chartPNG}"><i class="fas ${dlIconPNG}"></i></button>
+                                     <button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-vs-t2-svg" data-chart-id="${chartContainerId}" data-format="svg" data-tippy-content="${chartSVG}"><i class="fas ${dlIconSVG}"></i></button>
                                  </span>
                              </div>
                             <div class="card-body p-1 d-flex align-items-center justify-content-center">
@@ -194,8 +194,8 @@ const praesentationTabLogic = (() => {
                                  </div>
                             </div>
                              <div class="card-footer text-end p-1">
-                                <button class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-vs-t2-csv" data-tippy-content="${perfCSV}"><i class="fas fa-file-csv me-1"></i>Tabelle (CSV)</button>
-                                <button class="btn btn-sm btn-outline-secondary" id="download-comp-table-as-vs-t2-md" data-tippy-content="${compTableMD}"><i class="fab fa-markdown me-1"></i>Metriken (MD)</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-vs-t2-csv" data-tippy-content="${perfCSV}"><i class="fas fa-file-csv me-1"></i>Tabelle (CSV)</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="download-comp-table-as-vs-t2-md" data-tippy-content="${compTableMD}"><i class="fab fa-markdown me-1"></i>Metriken (MD)</button>
                            </div>
                         </div>
                     </div>
@@ -210,7 +210,7 @@ const praesentationTabLogic = (() => {
                          <div class="card flex-grow-1">
                               ${testsCardHTML}
                              <div class="card-footer text-end p-1">
-                                <button class="btn btn-sm btn-outline-secondary" id="download-tests-as-vs-t2-md" data-tippy-content="${testsMD}"><i class="fab fa-markdown me-1"></i>Tests (MD)</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="download-tests-as-vs-t2-md" data-tippy-content="${testsMD}"><i class="fab fa-markdown me-1"></i>Tests (MD)</button>
                             </div>
                          </div>
                     </div>
