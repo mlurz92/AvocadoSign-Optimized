@@ -67,14 +67,14 @@ const dataTabLogic = (() => {
                  return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="Sortieren nach ${thLabel} -> ${subLabel}">${subLabel}</span>`;
              }).join(' / ') : '';
 
-            const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys ? '' : 'style="cursor: pointer;"'}`;
-            const tooltip = col.tooltip ? `data-tippy-content="${col.tooltip}"` : '';
+            const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys || col.key === 'details' ? '' : 'style="cursor: pointer;"'}`;
+            const tooltip = col.tooltip && col.key !== 'details' ? `data-tippy-content="${col.tooltip}"` : '';
             const thClass = mainHeaderClass;
 
             if (col.subKeys) {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${col.label} ${subHeaders ? `(${subHeaders})` : ''} ${sortIconHTML}</th>`;
+                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${col.label} ${subHeaders ? `(${subHeaders})` : ''} ${isMainKeyActiveSort ? sortIconHTML: ''}</th>`;
              } else {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${col.label} ${sortIconHTML}</th>`;
+                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${col.label} ${col.key === 'details' ? '' : sortIconHTML}</th>`;
              }
         });
         headerHTML += `</tr></thead>`;
