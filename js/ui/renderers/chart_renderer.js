@@ -79,13 +79,13 @@ const chartRenderer = (() => {
         const x = d3.scaleLinear().domain(xDomain).nice().range([0, innerWidth]);
         const tickCountX = Math.max(3, Math.min(10, Math.floor(innerWidth / 50)));
         chartArea.append("g").attr("class", "x-axis axis").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x).ticks(tickCountX).tickSizeOuter(0).tickFormat(d3.format("d"))).selectAll("text").style("font-size", TICK_LABEL_FONT_SIZE);
-        svg.append("text").attr("class", "axis-label x-axis-label").attr("text-anchor", "middle").attr("x", margin.left + innerWidth / 2).attr("y", height - 5).style("font-size", AXIS_LABEL_FONT_SIZE).text(UI_TEXTS.axisLabels.age);
+        svg.append("text").attr("class", "axis-label x-axis-label").attr("text-anchor", "middle").attr("x", margin.left + innerWidth / 2).attr("y", height - margin.bottom + (options.useCompactMargins ? 15 : 25)).style("font-size", AXIS_LABEL_FONT_SIZE).text(UI_TEXTS.axisLabels.age);
         const histogram = d3.histogram().value(d => d).domain(x.domain()).thresholds(x.ticks(Math.max(5, Math.min(20, Math.floor(innerWidth / 25)))));
         const bins = histogram(ageData.filter(d => !isNaN(d) && isFinite(d))); const yMax = d3.max(bins, d => d.length);
         const y = d3.scaleLinear().range([innerHeight, 0]).domain([0, yMax > 0 ? yMax : 1]).nice();
         const tickCountY = Math.max(2, Math.min(6, Math.floor(innerHeight / 35)));
         chartArea.append("g").attr("class", "y-axis axis").call(d3.axisLeft(y).ticks(tickCountY).tickSizeOuter(0).tickFormat(d3.format("d"))).selectAll("text").style("font-size", TICK_LABEL_FONT_SIZE);
-        svg.append("text").attr("class", "axis-label y-axis-label").attr("text-anchor", "middle").attr("transform", `translate(${margin.left / 2 - 5}, ${margin.top + innerHeight / 2}) rotate(-90)`).style("font-size", AXIS_LABEL_FONT_SIZE).text(UI_TEXTS.axisLabels.patientCount);
+        svg.append("text").attr("class", "axis-label y-axis-label").attr("text-anchor", "middle").attr("transform", `translate(${margin.left / 2 - (options.useCompactMargins ? 0 : 5)}, ${margin.top + innerHeight / 2}) rotate(-90)`).style("font-size", AXIS_LABEL_FONT_SIZE).text(UI_TEXTS.axisLabels.patientCount);
         if (ENABLE_GRIDLINES) { chartArea.append("g").attr("class", "grid").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x).ticks(tickCountX).tickSize(-innerHeight).tickFormat("")); chartArea.append("g").attr("class", "grid").call(d3.axisLeft(y).ticks(tickCountY).tickSize(-innerWidth).tickFormat("")); }
         chartArea.selectAll(".bar").data(bins).join("rect").attr("class", "bar").attr("x", d => x(d.x0) + 1).attr("y", y(0)).attr("width", d => Math.max(0, x(d.x1) - x(d.x0) - 1)).attr("height", 0).style("fill", barColor).style("opacity", 0.8).attr("rx", 1).attr("ry", 1)
             .on("mouseover", (event, d) => { tooltip.transition().duration(50).style("opacity", .95); tooltip.html(`Alter: ${formatNumber(d.x0, 0)}-${formatNumber(d.x1, 0)}<br>Anzahl: ${d.length}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px"); d3.select(event.currentTarget).style("opacity", 1).style("stroke", "#333").style("stroke-width", 0.5); })
@@ -111,7 +111,7 @@ const chartRenderer = (() => {
         arcs.filter(d => (d.endAngle - d.startAngle) / (2 * Math.PI) >= labelThreshold).append("text").attr("transform", d => `translate(${labelArcGenerator.centroid(d)})`).attr("dy", "0.35em").style("text-anchor", "middle").style("font-size", labelFontSize).style("fill", "#ffffff").style("pointer-events", "none").style("opacity", 0).text(d => formatPercent(d.data.value / totalValue, 0)).transition().duration(ANIMATION_DURATION_MS).delay(ANIMATION_DURATION_MS / 2).style("opacity", 1);
         if (setupOptions.legendBelow && legendSpaceY > 0 && validData.length > 0) {
             const legendItemHeight = 18; const legendMaxWidth = innerWidth;
-            const legendGroup = svg.append("g").attr("class", "legend pie-legend").attr("transform", `translate(${margin.left}, ${margin.top + plottingHeight + 15})`).attr("font-family", "sans-serif").attr("font-size", LEGEND_FONT_SIZE).attr("text-anchor", "start");
+            const legendGroup = svg.append("g").attr("class", "legend pie-legend").attr("transform", `translate(${margin.left}, ${margin.top + plottingHeight + (options.useCompactMargins ? 10 : 15)})`).attr("font-family", "sans-serif").attr("font-size", LEGEND_FONT_SIZE).attr("text-anchor", "start");
             let currentX = 0; let currentY = 0;
             const legendItems = legendGroup.selectAll("g").data(validData).join("g").attr("class", "legend-item");
             legendItems.each(function(d, i) {
@@ -165,7 +165,7 @@ const chartRenderer = (() => {
            .on("mouseover", function(event, d) { tooltip.transition().duration(50).style("opacity", .95); const digits = (d.metric === 'AUC' || d.metric === 'F1') ? 3 : 1; const isPercent = !(d.metric === 'AUC' || d.metric === 'F1'); const formattedValue = isPercent ? formatPercent(d.value, digits) : formatNumber(d.value, digits); const metricName = TOOLTIP_CONTENT.statMetrics[d.metric.toLowerCase()]?.name || d.metric; tooltip.html(`<strong>${metricName}:</strong> ${formattedValue}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px"); d3.select(this).style("opacity", 1).style("stroke", "#333").style("stroke-width", 1); })
            .on("mouseout", function(event, d) { tooltip.transition().duration(200).style("opacity", 0); d3.select(this).style("opacity", 0.9).style("stroke", "none"); })
            .transition().duration(ANIMATION_DURATION_MS).ease(d3.easeCubicOut).attr("y", d => y(d.value ?? 0)).attr("height", d => Math.max(0, innerHeight - y(d.value ?? 0)));
-        svg.append("text").attr("x", width / 2).attr("y", margin.top - 10).attr("text-anchor", "middle").style("font-size", "12px").style("font-weight", "bold").text(`AS Performance für Kollektiv: ${kollektivName}`);
+        svg.append("text").attr("x", width / 2).attr("y", margin.top - 10).attr("text-anchor", "middle").style("font-size", "12px").style("font-weight", "bold").text(UI_TEXTS.chartTitles.asPerformance.replace('{KollektivName}', kollektivName));
     }
 
     function renderROCCurve(rocData, targetElementId, options = {}) {
@@ -175,12 +175,13 @@ const chartRenderer = (() => {
 
         const validRocData = Array.isArray(rocData) ? rocData.filter(d => d && typeof d.fpr === 'number' && typeof d.tpr === 'number' && isFinite(d.fpr) && isFinite(d.tpr)) : [];
         if (validRocData.length === 0 || validRocData[0]?.fpr !== 0 || validRocData[0]?.tpr !== 0) { validRocData.unshift({ fpr: 0, tpr: 0, threshold: Infinity }); }
-        if (validRocData.length === 0 || validRocData[validRocData.length - 1]?.fpr !== 1 || validRocData[validRocData.length - 1]?.tpr !== 1) { validRocData.push({ fpr: 1, tpr: 1, threshold: -Infinity }); }
+        if (validRocData.length > 0 && (validRocData[validRocData.length - 1]?.fpr !== 1 || validRocData[validRocData.length - 1]?.tpr !== 1)) { validRocData.push({ fpr: 1, tpr: 1, threshold: -Infinity }); }
+
 
         if (validRocData.length < 2) { chartArea.append('text').attr('x', innerWidth / 2).attr('y', innerHeight / 2).attr('text-anchor', 'middle').attr('class', 'text-muted small').text('Nicht genügend Daten für ROC.'); return; }
         const xScale = d3.scaleLinear().domain([0, 1]).range([0, innerWidth]); const yScale = d3.scaleLinear().domain([0, 1]).range([innerHeight, 0]);
         const tickCount = 5; chartArea.append("g").attr("class", "x-axis axis").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(xScale).ticks(tickCount).tickSizeOuter(0).tickFormat(d3.format(".1f"))).selectAll("text").style("font-size", TICK_LABEL_FONT_SIZE);
-        svg.append("text").attr("class", "axis-label x-axis-label").attr("text-anchor", "middle").attr("x", margin.left + innerWidth / 2).attr("y", height - 5).style("font-size", AXIS_LABEL_FONT_SIZE).text(UI_TEXTS.axisLabels.oneMinusSpecificity);
+        svg.append("text").attr("class", "axis-label x-axis-label").attr("text-anchor", "middle").attr("x", margin.left + innerWidth / 2).attr("y", height - margin.bottom + 25).style("font-size", AXIS_LABEL_FONT_SIZE).text(UI_TEXTS.axisLabels.oneMinusSpecificity);
         chartArea.append("g").attr("class", "y-axis axis").call(d3.axisLeft(yScale).ticks(tickCount).tickSizeOuter(0).tickFormat(d3.format(".1f"))).selectAll("text").style("font-size", TICK_LABEL_FONT_SIZE);
         svg.append("text").attr("class", "axis-label y-axis-label").attr("text-anchor", "middle").attr("transform", `translate(${margin.left / 2 - 10}, ${margin.top + innerHeight / 2}) rotate(-90)`).style("font-size", AXIS_LABEL_FONT_SIZE).text(UI_TEXTS.axisLabels.sensitivity);
         if (ENABLE_GRIDLINES) { chartArea.append("g").attr("class", "grid").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(xScale).ticks(tickCount).tickSize(-innerHeight).tickFormat("")); chartArea.append("g").attr("class", "grid").call(d3.axisLeft(yScale).ticks(tickCount).tickSize(-innerWidth).tickFormat("")); }
@@ -192,7 +193,7 @@ const chartRenderer = (() => {
             .on("mouseover", function(event, d) { tooltip.transition().duration(50).style("opacity", .95); const threshText = (d.threshold && isFinite(d.threshold)) ? `<br>Threshold: ${formatNumber(d.threshold, 2)}` : ''; tooltip.html(`FPR: ${formatNumber(d.fpr, 2)}<br>TPR: ${formatNumber(d.tpr, 2)}${threshText}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px"); d3.select(this).attr("r", POINT_RADIUS); })
             .on("mouseout", function(event, d) { tooltip.transition().duration(200).style("opacity", 0); d3.select(this).attr("r", POINT_RADIUS / 1.5); })
             .transition().delay(ANIMATION_DURATION_MS * 1.5).duration(ANIMATION_DURATION_MS / 2).style("opacity", 0.7); }
-         if (options.aucValue !== undefined && !isNaN(options.aucValue)) { const aucText = `AUC: ${formatCI(options.aucValue, options.aucCI?.lower, options.aucCI?.upper, 3, false, '--')}`; chartArea.append("text").attr("class", "auc-label").attr("x", innerWidth - 10).attr("y", innerHeight - 10).attr("text-anchor", "end").style("font-size", AXIS_LABEL_FONT_SIZE).style("font-weight", "bold").text(aucText); }
+         if (options.aucValue !== undefined && !isNaN(options.aucValue.value)) { const aucText = `AUC: ${formatCI(options.aucValue.value, options.aucValue.ci?.lower, options.aucValue.ci?.upper, 3, false, '--')}`; chartArea.append("text").attr("class", "auc-label").attr("x", innerWidth - 10).attr("y", innerHeight - 10).attr("text-anchor", "end").style("font-size", AXIS_LABEL_FONT_SIZE).style("font-weight", "bold").text(aucText); }
     }
 
     return Object.freeze({
