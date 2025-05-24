@@ -9,7 +9,6 @@ const viewRenderer = (() => {
         }
         ui_helpers.updateElementHTML(containerId, '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade Inhalt...</span></div></div>');
         try {
-            // Ensure renderFunction is actually a function before calling
             if (typeof renderFunction !== 'function') {
                 throw new Error(`renderFunction für Tab ${tabId} ist keine Funktion.`);
             }
@@ -77,24 +76,22 @@ const viewRenderer = (() => {
 
          const comparisonSetIds = APP_CONFIG.DEFAULT_SETTINGS.CRITERIA_COMPARISON_SETS || [];
          const results = [];
-         const baseDataClone = cloneDeep(data); // Use already filtered & evaluated data for the current kollektiv
+         const baseDataClone = cloneDeep(data);
 
          comparisonSetIds.forEach(setId => {
             let perf = null; let setName = 'Unbekannt'; let setIdUsed = setId;
-            let evaluatedDataForSet = baseDataClone; // Assume AS and Applied Criteria use this directly
+            let evaluatedDataForSet = baseDataClone;
 
             try {
                 if (setId === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID) {
                     perf = statisticsService.calculateDiagnosticPerformance(evaluatedDataForSet, 'as', 'n');
                     setName = APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME;
                 } else if (setId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) {
-                    // Data is already evaluated with applied criteria if it comes from Statistik-Tab context
                     perf = statisticsService.calculateDiagnosticPerformance(evaluatedDataForSet, 't2', 'n');
                     setName = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME;
                 } else {
                     const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(setId);
                     if (studySet) {
-                        // Re-evaluate the base data (for the specific kollektiv) with THIS study's criteria
                         evaluatedDataForSet = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(baseDataClone), studySet);
                         perf = statisticsService.calculateDiagnosticPerformance(evaluatedDataForSet, 't2', 'n');
                         setName = studySet.name;
@@ -240,8 +237,8 @@ const viewRenderer = (() => {
                      let stats = null;
                      try {
                          const currentKollektivBfResults = state.getAggregatedBruteForceResults();
-                         const allStats = statisticsService.calculateAllStatsForPublication(processedDataFull, appliedCriteria, appliedLogic, currentKollektivBfResults);
-                         stats = allStats[kollektivNameInternal]; // Use the specific kollektiv's full stats
+                         const allStatsForPub = statisticsService.calculateAllStatsForPublication(processedDataFull, appliedCriteria, appliedLogic, currentKollektivBfResults);
+                         stats = allStatsForPub[kollektivNameInternal];
                      } catch(e) { console.error(`Statistikfehler für Kollektiv ${kollektivDisplayName}:`, e); }
 
                      if (!stats) { innerContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">Fehler bei Statistikberechnung.</div></div>'; return; }
@@ -312,32 +309,50 @@ const viewRenderer = (() => {
         _renderTabContent('praesentation-tab', () => {
             if (!processedDataFull) throw new Error("Präsentations-Daten nicht verfügbar.");
 
-            let presentationData = {}; const filteredData = dataProcessor.filterDataByKollektiv(processedDataFull, currentGlobalKollektiv); presentationData.kollektiv = currentGlobalKollektiv; presentationData.patientCount = filteredData?.length ?? 0;
-            const allKollektiveStats = statisticsService.calculateAllStatsForPublication(processedDataFull, appliedCriteria, appliedLogic, state.getAggregatedBruteForceResults());
+            let presentationData = {};
+            const filteredData = dataProcessor.filterDataByKollektiv(processedDataFull, currentGlobalKollektiv);
+            presentationData.kollektiv = currentGlobalKollektiv;
+            presentationData.patientCount = filteredData?.length ?? 0;
+
+            let allStatsForPub = null;
+            try {
+                allStatsForPub = statisticsService.calculateAllStatsForPublication(
+                    processedDataFull,
+                    appliedCriteria,
+                    appliedLogic,
+                    state.getAggregatedBruteForceResults()
+                );
+            } catch (e) {
+                console.error("Fehler bei Statistikberechnung für Präsentationstab:", e);
+                throw new Error("Statistikberechnung für Präsentation fehlgeschlagen.");
+            }
+
+            if (!allStatsForPub) {
+                 throw new Error("allStatsForPub konnte nicht berechnet werden.");
+            }
 
 
             if (view === 'as-pur') {
-                presentationData.statsGesamt = allKollektiveStats.Gesamt?.gueteAS;
-                presentationData.statsDirektOP = allKollektiveStats['direkt OP']?.gueteAS;
-                presentationData.statsNRCT = allKollektivStats.nRCT?.gueteAS;
-                presentationData.statsCurrentKollektiv = allKollektiveStats[currentGlobalKollektiv]?.gueteAS;
+                presentationData.statsGesamt = allStatsForPub.Gesamt?.gueteAS;
+                presentationData.statsDirektOP = allStatsForPub['direkt OP']?.gueteAS;
+                presentationData.statsNRCT = allStatsForPub.nRCT?.gueteAS;
+                presentationData.statsCurrentKollektiv = allStatsForPub[currentGlobalKollektiv]?.gueteAS;
 
             } else if (view === 'as-vs-t2') {
-                 if (filteredData && filteredData.length > 0) {
-                    presentationData.statsAS = allKollektiveStats[currentGlobalKollektiv]?.gueteAS;
-                    let studySet = null; let evaluatedDataT2 = null; const isApplied = selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
+                 if (filteredData && filteredData.length > 0 && allStatsForPub[currentGlobalKollektiv]) {
+                    presentationData.statsAS = allStatsForPub[currentGlobalKollektiv]?.gueteAS;
+                    let studySet = null;
+                    const isApplied = selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
 
                     if(isApplied) {
-                        studySet = { criteria: appliedCriteria, logic: appliedLogic, id: selectedStudyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: "Angewandt", studyInfo: { reference: "Benutzerdefiniert", patientCohort: `Aktuell: ${getKollektivDisplayName(currentGlobalKollektiv)} (N=${presentationData.patientCount})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } };
-                        presentationData.statsT2 = allKollektiveStats[currentGlobalKollektiv]?.gueteT2_angewandt;
-                        presentationData.vergleich = allKollektiveStats[currentGlobalKollektiv]?.vergleichASvsT2_angewandt;
+                        studySet = { criteria: appliedCriteria, logic: appliedLogic, id: selectedStudyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: "Angewandt", studyInfo: { reference: "Benutzerdefiniert", patientCohort: `Aktuell: ${getKollektivDisplayName(currentGlobalKollektiv)} (N=${presentationData.patientCount})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplayStrict(appliedCriteria, appliedLogic) || "Keine" } };
+                        presentationData.statsT2 = allStatsForPub[currentGlobalKollektiv]?.gueteT2_angewandt;
+                        presentationData.vergleich = allStatsForPub[currentGlobalKollektiv]?.vergleichASvsT2_angewandt;
                     } else if (selectedStudyId) {
                         studySet = studyT2CriteriaManager.getStudyCriteriaSetById(selectedStudyId);
                         if(studySet) {
-                            // Re-evaluate specifically for this study set if not already part of allKollektivStats in a directly usable way for this view
                             const tempEvaluatedData = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredData), studySet);
                             presentationData.statsT2 = statisticsService.calculateDiagnosticPerformance(tempEvaluatedData, 't2', 'n');
-                            // For comparison, we need 'as' status on this tempEvaluatedData
                             tempEvaluatedData.forEach((p,idx) => { if(filteredData[idx]) p.as = filteredData[idx].as; });
                             presentationData.vergleich = statisticsService.compareDiagnosticMethods(tempEvaluatedData, 'as', 't2', 'n');
                         }
@@ -345,8 +360,15 @@ const viewRenderer = (() => {
                     if (studySet) {
                        presentationData.comparisonCriteriaSet = studySet;
                        presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2';
-                       presentationData.t2CriteriaLabelFull = `${studySet.name}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`;
+                       presentationData.t2CriteriaLabelFull = `${studySet.name}: ${studyT2CriteriaManager.formatCriteriaForDisplayStrict(studySet.criteria, studySet.logic)}`;
+                    } else {
+                        presentationData.statsT2 = null;
+                        presentationData.vergleich = null;
                     }
+                } else {
+                     presentationData.statsAS = null;
+                     presentationData.statsT2 = null;
+                     presentationData.vergleich = null;
                 }
             }
             const tabContentHTML = praesentationTabLogic.createPresentationTabContent(view, presentationData, selectedStudyId, currentGlobalKollektiv);
@@ -397,7 +419,7 @@ const viewRenderer = (() => {
 
             const headerHTML = uiComponents.createPublikationTabHeader();
             const initialContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv);
-            const mainContentAreaId = 'publikation-content-area'; // Diese ID wird im Header-HTML von createPublikationTabHeader definiert
+            const mainContentAreaId = 'publikation-content-area';
 
             setTimeout(() => {
                 const contentArea = document.getElementById(mainContentAreaId);
@@ -409,7 +431,7 @@ const viewRenderer = (() => {
                  ui_helpers.updatePublikationUI(currentLang, currentSection, state.getCurrentPublikationBruteForceMetric());
             }, 10);
 
-            return headerHTML; // Der Inhaltsbereich wird im Header von createPublikationTabHeader gerendert
+            return headerHTML;
         });
     }
 
