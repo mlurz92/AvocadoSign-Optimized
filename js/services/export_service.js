@@ -184,7 +184,7 @@ const exportService = (() => {
         if (!stats || !stats.deskriptiv) return null;
         const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'N/A';
         const csvData = []; const na = 'N/A'; const fv = (v, d, p) => formatNumber(v, d, na); const fp = (v, d) => formatPercent(v, d, na);
-        const fCI = (o, d, p) => !o || typeof o !== 'object' || o.lower === null || o.upper === null || isNaN(o.lower) || isNaN(o.upper) ? [na, na] : [fv(o.lower, d, p), fv(o.upper, d, p)]; const fPVal = (p) => (p !== null && !isNaN(p)) ? (p < 0.001 ? '<0.001' : fv(p, 3, false)) : na;
+        const fCIVal = (o, d, p) => !o || typeof o !== 'object' || o.lower === null || o.upper === null || isNaN(o.lower) || isNaN(o.upper) ? [na, na] : [fv(o.lower, d, p), fv(o.upper, d, p)]; const fPVal = (pv) => (pv !== null && !isNaN(pv)) ? (pv < 0.001 ? '<0.001' : fv(pv, 3, false)) : na;
         try {
             csvData.push(['Parameter', 'Wert']); csvData.push(['Kollektiv', getKollektivDisplayName(kollektiv)]); csvData.push(['Angewandte T2 Logik', logic]); csvData.push(['Angewandte T2 Kriterien', formatCriteriaFunc(criteria, logic)]); csvData.push(['Anzahl Patienten', stats.deskriptiv.anzahlPatienten]); csvData.push([]);
             csvData.push(['Metrik (Deskriptiv)', 'Wert (Median)', 'Mean', 'SD', 'Min', 'Max']); const d = stats.deskriptiv;
@@ -198,9 +198,9 @@ const exportService = (() => {
             csvData.push(['T2 Status (+ / %)', `${d.t2Status?.plus ?? 0} / ${fp(d.anzahlPatienten > 0 ? (d.t2Status?.plus ?? 0) / d.anzahlPatienten : NaN, 1)}`]);
             const fLKRow = (lk) => [fv(lk?.median, 1), fv(lk?.mean, 1), fv(lk?.sd, 1), fv(lk?.min, 0), fv(lk?.max, 0)];
             csvData.push(['LK N gesamt (Median)', ...fLKRow(d.lkAnzahlen?.n?.total)]); csvData.push(['LK N+ (Median, nur N+ Pat.)', ...fLKRow(d.lkAnzahlen?.n?.plus)]); csvData.push(['LK AS gesamt (Median)', ...fLKRow(d.lkAnzahlen?.as?.total)]); csvData.push(['LK AS+ (Median, nur AS+ Pat.)', ...fLKRow(d.lkAnzahlen?.as?.plus)]); csvData.push(['LK T2 gesamt (Median)', ...fLKRow(d.lkAnzahlen?.t2?.total)]); csvData.push(['LK T2+ (Median, nur T2+ Pat.)', ...fLKRow(d.lkAnzahlen?.t2?.plus)]); csvData.push([]);
-            csvData.push(['Metrik (Diagnostik)', 'Methode', 'Wert', '95% CI Lower', '95% CI Upper', 'SE (Bootstrap)', 'CI Methode']); const addPerfRow = (metricKey, metricName, objAS, objT2) => { const isRate = !(metricKey === 'auc' || metricKey === 'f1'); const digits = isRate ? 1 : 3; const ciAS = fCI(objAS?.ci, digits, isRate); const ciT2 = fCI(objT2?.ci, digits, isRate); const valAS = isRate ? fp(objAS?.value, digits) : fv(objAS?.value, digits, isRate); const valT2 = isRate ? fp(objT2?.value, digits) : fv(objT2?.value, digits, isRate); csvData.push([metricName, 'AS', valAS, ciAS[0], ciAS[1], fv(objAS?.se, 4, false), objAS?.method || na]); csvData.push([metricName, 'T2', valT2, ciT2[0], ciT2[1], fv(objT2?.se, 4, false), objT2?.method || na]); }; const gAS = stats.gueteAS, gT2 = stats.gueteT2; addPerfRow('sens', 'Sensitivität', gAS?.sens, gT2?.sens); addPerfRow('spez', 'Spezifität', gAS?.spez, gT2?.spez); addPerfRow('ppv', 'PPV', gAS?.ppv, gT2?.ppv); addPerfRow('npv', 'NPV', gAS?.npv, gT2?.npv); addPerfRow('acc', 'Accuracy', gAS?.acc, gT2?.acc); addPerfRow('balAcc', 'Balanced Accuracy', gAS?.balAcc, gT2?.balAcc); addPerfRow('f1', 'F1-Score', gAS?.f1, gT2?.f1); addPerfRow('auc', 'AUC', gAS?.auc, gT2?.auc); csvData.push([]);
-            csvData.push(['Vergleichstest (AS vs. T2)', 'Test Statistik', 'p-Wert', 'Methode']); const v = stats.vergleichASvsT2; csvData.push(['Accuracy (McNemar)', fv(v?.mcnemar?.statistic, 3, false), fPVal(v?.mcnemar?.pValue), v?.mcnemar?.method || na]); csvData.push(['AUC (DeLong)', fv(v?.delong?.Z, 3, false), fPVal(v?.delong?.pValue), v?.delong?.method || na]); csvData.push([]);
-            csvData.push(['Assoziation mit N-Status', 'Merkmal Key', 'Merkmal Name', 'OR', 'OR CI Lower', 'OR CI Upper', 'RD', 'RD CI Lower', 'RD CI Upper', 'Phi', 'Test Statistik', 'p-Wert', 'Test Methode']); const addAssocRow = (key, name, obj) => { if (!obj) return; const orCI = fCI(obj.or?.ci, 2, false); const rdCI = fCI(obj.rd?.ci, 3, false); csvData.push([ key, name, fv(obj.or?.value, 2, false), orCI[0], orCI[1], fv(obj.rd?.value, 3, false), rdCI[0], rdCI[1], fv(obj.phi?.value, 2, false), fv(obj.statistic ?? NaN, 2, false), fPVal(obj.pValue), obj.testName || na ]); }; const a = stats.assoziation; addAssocRow('as', 'AS Positiv', a?.as); if(a?.size_mwu) { csvData.push(['size_mwu', a.size_mwu.featureName || 'LK Größe MWU', na, na, na, na, na, na, na, fv(a.size_mwu.statistic, 2, false), fPVal(a.size_mwu.pValue), a.size_mwu.testName || na ]); } ['size', 'form', 'kontur', 'homogenitaet', 'signal'].forEach(fKey => { if(a && a[fKey]) { addAssocRow(fKey, a[fKey].featureName || `T2 ${fKey}`, a[fKey]); } });
+            csvData.push(['Metrik (Diagnostik)', 'Methode', 'Wert', '95% CI Lower', '95% CI Upper', 'SE (Bootstrap)', 'CI Methode']); const addPerfRow = (metricKey, metricName, objAS, objT2) => { const isRate = !(metricKey === 'auc' || metricKey === 'f1'); const digits = isRate ? 1 : 3; const ciAS = fCIVal(objAS?.ci, digits, isRate); const ciT2 = fCIVal(objT2?.ci, digits, isRate); const valAS = isRate ? fp(objAS?.value, digits) : fv(objAS?.value, digits, isRate); const valT2 = isRate ? fp(objT2?.value, digits) : fv(objT2?.value, digits, isRate); csvData.push([metricName, 'AS', valAS, ciAS[0], ciAS[1], fv(objAS?.se, 4, false), objAS?.method || na]); csvData.push([metricName, 'T2', valT2, ciT2[0], ciT2[1], fv(objT2?.se, 4, false), objT2?.method || na]); }; const gAS = stats.gueteAS, gT2 = stats.gueteT2_angewandt || stats.gueteT2; addPerfRow('sens', 'Sensitivität', gAS?.sens, gT2?.sens); addPerfRow('spez', 'Spezifität', gAS?.spez, gT2?.spez); addPerfRow('ppv', 'PPV', gAS?.ppv, gT2?.ppv); addPerfRow('npv', 'NPV', gAS?.npv, gT2?.npv); addPerfRow('acc', 'Accuracy', gAS?.acc, gT2?.acc); addPerfRow('balAcc', 'Balanced Accuracy', gAS?.balAcc, gT2?.balAcc); addPerfRow('f1', 'F1-Score', gAS?.f1, gT2?.f1); addPerfRow('auc', 'AUC', gAS?.auc, gT2?.auc); csvData.push([]);
+            csvData.push(['Vergleichstest (AS vs. T2)', 'Test Statistik', 'p-Wert', 'Methode']); const v = stats.vergleichASvsT2_angewandt || stats.vergleichASvsT2; csvData.push(['Accuracy (McNemar)', fv(v?.mcnemar?.statistic, 3, false), fPVal(v?.mcnemar?.pValue), v?.mcnemar?.method || na]); csvData.push(['AUC (DeLong)', fv(v?.delong?.Z, 3, false), fPVal(v?.delong?.pValue), v?.delong?.method || na]); csvData.push([]);
+            csvData.push(['Assoziation mit N-Status', 'Merkmal Key', 'Merkmal Name', 'OR', 'OR CI Lower', 'OR CI Upper', 'RD', 'RD CI Lower', 'RD CI Upper', 'Phi', 'Test Statistik', 'p-Wert', 'Test Methode']); const addAssocRow = (key, name, obj) => { if (!obj) return; const orCI = fCIVal(obj.or?.ci, 2, false); const rdCI = fCIVal(obj.rd?.ci, 3, false); csvData.push([ key, name, fv(obj.or?.value, 2, false), orCI[0], orCI[1], fv(obj.rd?.value, 3, false), rdCI[0], rdCI[1], fv(obj.phi?.value, 2, false), fv(obj.statistic ?? NaN, 2, false), fPVal(obj.pValue), obj.testName || na ]); }; const a = stats.assoziation_angewandt || stats.assoziation; addAssocRow('as', 'AS Positiv', a?.as); if(a?.size_mwu) { csvData.push(['size_mwu', a.size_mwu.featureName || 'LK Größe MWU', na, na, na, na, na, na, na, fv(a.size_mwu.statistic, 2, false), fPVal(a.size_mwu.pValue), a.size_mwu.testName || na ]); } ['size', 'form', 'kontur', 'homogenitaet', 'signal'].forEach(fKey => { if(a && a[fKey]) { addAssocRow(fKey, a[fKey].featureName || `T2 ${fKey}`, a[fKey]); } });
             return Papa.unparse(csvData, { delimiter: APP_CONFIG.EXPORT_SETTINGS.CSV_DELIMITER || ";" });
         } catch (error) {
              console.error("Fehler in generateStatistikCSVString:", error);
@@ -230,7 +230,7 @@ const exportService = (() => {
             else if (tableType === 'deskriptiv') { title = 'Deskriptive Statistik'; const stats = dataOrStats; if (!stats || !stats.anzahlPatienten) return `# ${title} (Kollektiv: ${kollektivDisplayName})\n\nKeine Daten verfügbar.`; const total = stats.anzahlPatienten; headers = ['Metrik', 'Wert']; const fLKRowMD = (lk) => `${formatNumber(lk?.median, 1, na)} (${formatNumber(lk?.min, 0, na)}-${formatNumber(lk?.max, 0, na)}) \\[Mean: ${formatNumber(lk?.mean, 1, na)} ± ${formatNumber(lk?.sd, 1, na)}\\]`; rows = [ ['Anzahl Patienten', total], ['Median Alter (Min-Max) \\[Mean ± SD\\]', `${formatNumber(stats.alter?.median, 1, na)} (${formatNumber(stats.alter?.min, 0, na)} - ${formatNumber(stats.alter?.max, 0, na)}) \\[${formatNumber(stats.alter?.mean, 1, na)} ± ${formatNumber(stats.alter?.sd, 1, na)}\\]`], ['Geschlecht (m/w) (n / %)', `${stats.geschlecht?.m ?? 0} / ${stats.geschlecht?.f ?? 0} (${formatPercent((stats.geschlecht?.m ?? 0) / total, 1)} / ${formatPercent((stats.geschlecht?.f ?? 0) / total, 1)})`], ['Therapie (direkt OP / nRCT) (n / %)', `${stats.therapie?.['direkt OP'] ?? 0} / ${stats.therapie?.nRCT ?? 0} (${formatPercent((stats.therapie?.['direkt OP'] ?? 0) / total, 1)} / ${formatPercent((stats.therapie?.nRCT ?? 0) / total, 1)})`], ['N Status (+ / -) (n / %)', `${stats.nStatus?.plus ?? 0} / ${stats.nStatus?.minus ?? 0} (${formatPercent((stats.nStatus?.plus ?? 0) / total, 1)} / ${formatPercent((stats.nStatus?.minus ?? 0) / total, 1)})`], ['AS Status (+ / -) (n / %)', `${stats.asStatus?.plus ?? 0} / ${stats.asStatus?.minus ?? 0} (${formatPercent((stats.asStatus?.plus ?? 0) / total, 1)} / ${formatPercent((stats.asStatus?.minus ?? 0) / total, 1)})`], ['T2 Status (+ / -) (n / %)', `${stats.t2Status?.plus ?? 0} / ${stats.t2Status?.minus ?? 0} (${formatPercent((stats.t2Status?.plus ?? 0) / total, 1)} / ${formatPercent((stats.t2Status?.minus ?? 0) / total, 1)})`], ['Median LK N ges. (Min-Max) \\[Mean ± SD\\]', fLKRowMD(stats.lkAnzahlen?.n?.total)], ['Median LK N+ (Min-Max) \\[Mean ± SD\\] (nur N+ Pat.)', fLKRowMD(stats.lkAnzahlen?.n?.plus)], ['Median LK AS ges. (Min-Max) \\[Mean ± SD\\]', fLKRowMD(stats.lkAnzahlen?.as?.total)], ['Median LK AS+ (Min-Max) \\[Mean ± SD\\] (nur AS+ Pat.)', fLKRowMD(stats.lkAnzahlen?.as?.plus)], ['Median LK T2 ges. (Min-Max) \\[Mean ± SD\\]', fLKRowMD(stats.lkAnzahlen?.t2?.total)], ['Median LK T2+ (Min-Max) \\[Mean ± SD\\] (nur T2+ Pat.)', fLKRowMD(stats.lkAnzahlen?.t2?.plus)] ].map(r => r.map(escMD)); }
             else if (tableType === 'praes_as_perf') { title = `Diagnostische Güte (AS) für Kollektive`; const { statsGesamt, statsDirektOP, statsNRCT } = dataOrStats || {}; if (!statsGesamt && !statsDirektOP && !statsNRCT) return `# ${title}\n\nFehler: Ungültige Daten.`; headers = ['Kollektiv', 'Sens. (95% CI)', 'Spez. (95% CI)', 'PPV (95% CI)', 'NPV (95% CI)', 'Acc. (95% CI)', 'AUC (95% CI)']; const fRow = (s, k) => { const d = getKollektivDisplayName(k); if (!s || typeof s.matrix !== 'object') return [d + ' (N=?)', na, na, na, na, na, na].map(escMD); const n = s.matrix ? (s.matrix.rp + s.matrix.fp + s.matrix.fn + s.matrix.rn) : 0; const fCI_p = (m, ky) => { const dig = (ky === 'f1' || ky === 'auc') ? 3 : 1; const isP = !(ky === 'f1' || ky === 'auc'); return formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, dig, isP, na); }; return [`${d} (N=${n})`, fCI_p(s.sens, 'sens'), fCI_p(s.spez, 'spez'), fCI_p(s.ppv, 'ppv'), fCI_p(s.npv, 'npv'), fCI_p(s.acc, 'acc'), fCI_p(s.auc, 'auc')].map(escMD); }; rows = [ fRow(statsGesamt, 'Gesamt'), fRow(statsDirektOP, 'direkt OP'), fRow(statsNRCT, 'nRCT') ]; }
             else if (tableType === 'praes_as_vs_t2_perf' || tableType === 'praes_as_vs_t2_comp') { const { statsAS, statsT2 } = dataOrStats || {}; title = `Vergleich Diagnostische Güte (AS vs. ${escMD(t2CriteriaLabelShort)})`; if (!statsAS || !statsT2) return `# ${title} (Kollektiv: ${kollektivDisplayName})\n\nFehler: Ungültige Daten für Vergleich.`; headers = ['Metrik', 'AS (Wert, 95% CI)', `${escMD(t2CriteriaLabelShort)} (Wert, 95% CI)`]; const fRow = (mKey, nm, isP = true, d = 1) => { const mAS = statsAS[mKey]; const mT2 = statsT2[mKey]; const dig = (mKey === 'auc' || mKey === 'f1') ? 3 : d; const vAS = formatCI(mAS?.value, mAS?.ci?.lower, mAS?.ci?.upper, dig, isP, na); const vT2 = formatCI(mT2?.value, mT2?.ci?.lower, mT2?.ci?.upper, dig, isP, na); return [nm, vAS, vT2]; }; rows = [ fRow('sens', 'Sensitivität'), fRow('spez', 'Spezifität'), fRow('ppv', 'PPV'), fRow('npv', 'NPV'), fRow('acc', 'Accuracy'), fRow('balAcc', 'Balanced Accuracy'), fRow('f1', 'F1-Score', false, 3), fRow('auc', 'AUC', false, 3) ].map(r => r.map(escMD)); }
-            else if (tableType === 'praes_as_vs_t2_tests') { const { vergleich } = dataOrStats || {}; title = `Statistischer Vergleich (AS vs. ${escMD(t2CriteriaLabelShort)})`; if (!vergleich) return `# ${title} (Kollektiv: ${kollektivDisplayName})\n\nFehler: Ungültige Daten für Vergleichstests.`; headers = ['Test', 'Statistikwert', 'p-Wert', 'Methode']; const fP = (p) => (p !== null && !isNaN(p)) ? (p < 0.001 ? '<0.001' : formatNumber(p, 3, na)) : na; rows = [ ['McNemar (Accuracy)', `${formatNumber(vergleich?.mcnemar?.statistic, 3, na)} (df=${vergleich?.mcnemar?.df || na})`, `${fP(vergleich?.mcnemar?.pValue)} ${getStatisticalSignificanceSymbol(vergleich?.mcnemar?.pValue)}`, `${vergleich?.mcnemar?.method || na}`], ['DeLong (AUC)', `Z=${formatNumber(vergleich?.delong?.Z, 3, na)}`, `${fP(vergleich?.delong?.pValue)} ${getStatisticalSignificanceSymbol(vergleich?.delong?.pValue)}`, `${vergleich?.delong?.method || na}`] ].map(r => r.map(escMD)); }
+            else if (tableType === 'praes_as_vs_t2_tests') { const { vergleich } = dataOrStats || {}; title = `Statistischer Vergleich (AS vs. ${escMD(t2CriteriaLabelShort)})`; if (!vergleich) return `# ${title} (Kollektiv: ${kollektivDisplayName})\n\nFehler: Ungültige Daten für Vergleichstests.`; headers = ['Test', 'Statistikwert', 'p-Wert', 'Methode']; const fPVal = (p) => (p !== null && !isNaN(p)) ? (p < 0.001 ? '<0.001' : formatNumber(p, 3, na)) : na; rows = [ ['McNemar (Accuracy)', `${formatNumber(vergleich?.mcnemar?.statistic, 3, na)} (df=${vergleich?.mcnemar?.df || na})`, `${fPVal(vergleich?.mcnemar?.pValue)} ${getStatisticalSignificanceSymbol(vergleich?.mcnemar?.pValue)}`, `${vergleich?.mcnemar?.method || na}`], ['DeLong (AUC)', `Z=${formatNumber(vergleich?.delong?.Z, 3, na)}`, `${fPVal(vergleich?.delong?.pValue)} ${getStatisticalSignificanceSymbol(vergleich?.delong?.pValue)}`, `${vergleich?.delong?.method || na}`] ].map(r => r.map(escMD)); }
             else if (tableType === 'criteria_comparison') { title = `Vergleich diagnostischer Güte verschiedener Methoden`; const results = dataOrStats; if (!Array.isArray(results) || results.length === 0) return `# ${title} (Kollektiv: ${kollektivDisplayName})\n\nKeine Daten verfügbar.`; headers = ['Methode/Kriteriensatz', 'Sens.', 'Spez.', 'PPV', 'NPV', 'Acc.', 'AUC/BalAcc']; rows = results.map(r => { let name = r.name || 'Unbekannt'; if (r.id === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) name = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME; else if (r.id === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID) name = APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME; return [name, formatPercent(r.sens, 1), formatPercent(r.spez, 1), formatPercent(r.ppv, 1), formatPercent(r.npv, 1), formatPercent(r.acc, 1), formatNumber(r.auc, 3)].map(escMD); }); }
             else { return `# Unbekannter Tabellentyp für Markdown: ${tableType}`; }
             const headerLine = `| ${headers.join(' | ')} |`; const separatorLine = `|${headers.map(() => '---').join('|')}|`; const bodyLines = rows.map(row => `| ${row.join(' | ')} |`).join('\n');
@@ -254,25 +254,10 @@ const exportService = (() => {
        }
    }
 
-    function _getPublicationSectionContentForExport(sectionId, lang) {
-        const dummyPublicationData = {};
-        const dummyKollektiveData = {};
-        const commonData = {
-            appName: APP_CONFIG.APP_NAME,
-            appVersion: APP_CONFIG.APP_VERSION,
-            currentKollektivName: getKollektivDisplayName(state.getCurrentKollektiv()),
-            nGesamt: kollektiveDataGlobal?.Gesamt?.deskriptiv?.anzahlPatienten || 0,
-            nDirektOP: kollektiveDataGlobal?.['direkt OP']?.deskriptiv?.anzahlPatienten || 0,
-            nNRCT: kollektiveDataGlobal?.nRCT?.deskriptiv?.anzahlPatienten || 0,
-            t2SizeMin: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min,
-            t2SizeMax: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max,
-            bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
-            significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL
-        };
-
+    function _getPublicationSectionContentForExport(sectionId, lang, allKollektivStats, commonData) {
         try {
             if (typeof publicationTextGenerator !== 'undefined' && typeof publicationTextGenerator.getSectionTextAsMarkdown === 'function') {
-                 return publicationTextGenerator.getSectionTextAsMarkdown(sectionId, lang, dummyPublicationData, dummyKollektiveData, commonData);
+                 return publicationTextGenerator.getSectionTextAsMarkdown(sectionId, lang, allKollektivStats, allKollektivStats, commonData);
             }
             return `Textinhalt für Sektion '${sectionId}' in Sprache '${lang}' (Platzhalter).`;
         } catch (e) {
@@ -282,31 +267,52 @@ const exportService = (() => {
     }
 
 
-    function generateComprehensiveReportHTML(data, bfResults, kollektiv, criteria, logic) {
+    function generateComprehensiveReportHTML(allProcessedData, bfResultsPerKollektiv, kollektiv, criteria, logic) {
         try {
-            const stats = statisticsService.calculateAllStatsForPublication(data, criteria, logic, bfResults ? {[kollektiv]: bfResults} : {});
-            if (!data || !stats || !criteria || !logic) return '<html><head><title>Fehler</title></head><body>Fehler: Notwendige Daten für Report fehlen.</body></html>';
+            const statsForAllKollektive = statisticsService.calculateAllStatsForPublication(allProcessedData, criteria, logic, bfResultsPerKollektiv);
+            const statsDataForCurrentKollektiv = statsForAllKollektive ? statsForAllKollektive[kollektiv] : null;
+
+            if (!allProcessedData || !statsDataForCurrentKollektiv || !criteria || !logic) return '<html><head><title>Fehler</title></head><body>Fehler: Notwendige Daten für Report fehlen.</body></html>';
 
             const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'N/A';
             const config = APP_CONFIG.REPORT_SETTINGS; const kollektivName = getKollektivDisplayName(kollektiv); const timestamp = new Date().toLocaleString('de-DE', { dateStyle: 'long', timeStyle: 'medium'}); const criteriaString = formatCriteriaFunc(criteria, logic); const appliedCriteriaDisplayName = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME; let chartSVGs = {};
             const getChartSVG = (chartId) => { const el = document.getElementById(chartId)?.querySelector('svg'); if(!el) return `<p class="text-muted small">[Diagramm ${chartId} nicht renderbar/gefunden]</p>`; try { const clone = el.cloneNode(true); clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); clone.setAttribute('version', '1.1'); clone.style.backgroundColor = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#ffffff'; const vb = clone.getAttribute('viewBox')?.split(' '); let w = clone.getAttribute('width'), h = clone.getAttribute('height'); if (vb && vb.length === 4 && parseFloat(vb[2]) > 0 && parseFloat(vb[3]) > 0) { clone.setAttribute('width', vb[2]); clone.setAttribute('height', vb[3]); } else if (!w || !h || parseFloat(w) <= 0 || parseFloat(h) <= 0) { clone.setAttribute('width', '400'); clone.setAttribute('height', '300'); } const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style"); styleEl.textContent = `svg { font-family: ${getComputedStyle(document.body).fontFamily || 'sans-serif'}; } .axis path, .axis line { fill: none; stroke: #6c757d; shape-rendering: crispEdges; stroke-width: 1px; } .axis text { font-size: 10px; fill: #212529; } .axis-label { font-size: 11px; fill: #212529; text-anchor: middle; } .grid .tick { stroke: #dee2e6; stroke-opacity: 0.6; } .grid path { stroke-width: 0; } .legend { font-size: 10px; fill: #212529; } .bar { opacity: 0.9; } .roc-curve { fill: none; stroke-width: 2px; } .reference-line { stroke: #adb5bd; stroke-width: 1px; stroke-dasharray: 4 2; } .auc-label { font-weight: bold; font-size: 11px; }`; clone.prepend(styleEl); return clone.outerHTML; } catch (e) { return `<p class="text-danger small">[Fehler beim Einbetten von Diagramm ${chartId}: ${e.message}]</p>`; } };
-            const chartIdsToCapture = [];
-            const statsDataForCurrentKollektiv = stats[kollektiv];
+            
+            const chartIdSuffixForStatistik = kollektiv === state.getCurrentStatsKollektiv1() && state.getCurrentStatsLayout() === 'einzel' ? '0' : (kollektiv === state.getCurrentStatsKollektiv2() && state.getCurrentStatsLayout() === 'vergleich' ? '1' : '0');
 
-            if (config.INCLUDE_DESCRIPTIVES_CHARTS) { chartIdsToCapture.push('chart-stat-age-0', 'chart-stat-gender-0'); }
-            if (config.INCLUDE_AS_VS_T2_COMPARISON_CHART) { const p = ['praes-comp-chart-container'].find(id => document.getElementById(id)?.querySelector('svg')); if(p) chartIdsToCapture.push(p); } chartIdsToCapture.forEach(id => { const actualId = document.getElementById(id) ? id : (id.endsWith('-0') && document.getElementById(id.replace('-0','')) ? id.replace('-0','') : null); if (actualId) chartSVGs[actualId] = getChartSVG(actualId); });
+            const chartIdsToCapture = [];
+            if (config.INCLUDE_DESCRIPTIVES_CHARTS) { chartIdsToCapture.push(`chart-stat-age-${chartIdSuffixForStatistik}`, `chart-stat-gender-${chartIdSuffixForStatistik}`); }
+            
+            let currentPresentationView = 'as-pur';
+            let currentPresentationStudyId = null;
+            if(typeof state !== 'undefined') {
+                currentPresentationView = state.getCurrentPresentationView();
+                currentPresentationStudyId = state.getCurrentPresentationStudyId();
+            }
+
+            if (config.INCLUDE_AS_VS_T2_COMPARISON_CHART && currentPresentationView === 'as-vs-t2' && currentPresentationStudyId) {
+                 const praesChartId = 'praes-comp-chart-container';
+                 if(document.getElementById(praesChartId)?.querySelector('svg')) chartIdsToCapture.push(praesChartId);
+            } else if (config.INCLUDE_AS_VS_T2_COMPARISON_CHART && currentPresentationView === 'as-pur'){
+                 const praesASChartId = 'praes-as-pur-perf-chart';
+                 if(document.getElementById(praesASChartId)?.querySelector('svg')) chartIdsToCapture.push(praesASChartId);
+            }
+
+            chartIdsToCapture.forEach(id => { chartSVGs[id] = getChartSVG(id); });
+
             let html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>${config.REPORT_TITLE} - ${kollektivName}</title>`; html += `<style> body { font-family: sans-serif; font-size: 10pt; line-height: 1.4; padding: 25px; max-width: 800px; margin: auto; color: #212529; background-color: #fff;} h1, h2, h3 { color: #333; margin-top: 1.2em; margin-bottom: 0.6em; padding-bottom: 0.2em; border-bottom: 1px solid #ccc; page-break-after: avoid; } h1 { font-size: 16pt; border-bottom-width: 2px; } h2 { font-size: 14pt; } h3 { font-size: 12pt; font-weight: bold; border-bottom: none; margin-bottom: 0.4em; } table { border-collapse: collapse; width: 100%; margin-bottom: 1em; font-size: 9pt; page-break-inside: avoid; } th, td { border: 1px solid #ccc; padding: 5px 8px; text-align: left; vertical-align: top; word-wrap: break-word; } th { background-color: #f2f2f2; font-weight: bold; } .chart-container { text-align: center; margin: 1em 0; page-break-inside: avoid; background-color: #fff; padding: 10px; border: 1px solid #eee; max-width: 100%; overflow: hidden; } .chart-container svg { max-width: 100%; height: auto; display: block; margin: auto; } .meta-info { background-color: #f9f9f9; border: 1px solid #eee; padding: 10px 15px; margin-bottom: 1.5em; font-size: 9pt; } .meta-info ul { list-style: none; padding: 0; margin: 0; } .meta-info li { margin-bottom: 0.3em; } .small { font-size: 8pt; } .text-muted { color: #6c757d; } ul { padding-left: 20px; margin-top: 0.5em;} li { margin-bottom: 0.2em; } .report-footer { margin-top: 2em; padding-top: 1em; border-top: 1px solid #ccc; font-size: 8pt; color: #888; text-align: center; } .no-print { display: none; } @media print { body { padding: 10px; } .meta-info { background-color: #fff; border: none; padding: 0 0 1em 0;} } </style></head><body>`;
             html += `<h1>${config.REPORT_TITLE}</h1>`; if (config.INCLUDE_APP_VERSION) html += `<p class="text-muted small">Generiert mit: ${APP_CONFIG.APP_NAME} v${APP_CONFIG.APP_VERSION}</p>`; if (config.INCLUDE_GENERATION_TIMESTAMP) html += `<p class="text-muted small">Erstellt am: ${timestamp}</p>`;
             html += `<div class="meta-info"><h3>Analysekonfiguration</h3><ul>`; if (config.INCLUDE_KOLLEKTIV_INFO) html += `<li><strong>Analysiertes Kollektiv:</strong> ${kollektivName} (N=${statsDataForCurrentKollektiv?.deskriptiv?.anzahlPatienten || 0})</li>`; if (config.INCLUDE_T2_CRITERIA) html += `<li><strong>Angewandte T2-Kriterien ('${appliedCriteriaDisplayName}'):</strong> Logik: ${logic}, Kriterien: ${criteriaString}</li>`; html += `</ul></div>`;
             if (config.INCLUDE_DESCRIPTIVES_TABLE && statsDataForCurrentKollektiv?.deskriptiv) { html += `<h2>Deskriptive Statistik</h2>`; html += `<table><thead><tr><th>Metrik</th><th>Wert (Median)</th><th>Mean</th><th>SD</th><th>Min</th><th>Max</th></tr></thead><tbody>`; const d = statsDataForCurrentKollektiv.deskriptiv; const na = '--'; const fv = (v, dig = 1) => formatNumber(v, dig, na); const fP = (v, dig = 1) => formatPercent(v, dig, na); const addRowHTML = (l, vl=na, m=na, s=na, mn=na, mx=na) => `<tr><td>${l}</td><td>${vl}</td><td>${m}</td><td>${s}</td><td>${mn}</td><td>${mx}</td></tr>`; html += addRowHTML('Alter (Jahre)', fv(d.alter?.median, 1), fv(d.alter?.mean, 1), fv(d.alter?.sd, 1), fv(d.alter?.min, 0), fv(d.alter?.max, 0)); html += addRowHTML('Geschlecht Männlich (n / %)', `${d.geschlecht?.m ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.geschlecht?.m ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('Geschlecht Weiblich (n / %)', `${d.geschlecht?.f ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.geschlecht?.f ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('Therapie direkt OP (n / %)', `${d.therapie?.['direkt OP'] ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.therapie?.['direkt OP'] ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('Therapie nRCT (n / %)', `${d.therapie?.nRCT ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.therapie?.nRCT ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('N Status (+ / %)', `${d.nStatus?.plus ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.nStatus?.plus ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('AS Status (+ / %)', `${d.asStatus?.plus ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.asStatus?.plus ?? 0) / d.anzahlPatienten : NaN, 1)}`); html += addRowHTML('T2 Status (+ / %)', `${d.t2Status?.plus ?? 0} / ${fP(d.anzahlPatienten > 0 ? (d.t2Status?.plus ?? 0) / d.anzahlPatienten : NaN, 1)}`); const fLK = (lk) => `${fv(lk?.median,1)} (${fv(lk?.min,0)}-${fv(lk?.max,0)})`; html += addRowHTML('LK N gesamt (Median (Min-Max))', fLK(d.lkAnzahlen?.n?.total), fv(d.lkAnzahlen?.n?.total?.mean,1), fv(d.lkAnzahlen?.n?.total?.sd,1),fv(d.lkAnzahlen?.n?.total?.min,0), fv(d.lkAnzahlen?.n?.total?.max,0)); html += addRowHTML('LK N+ (Median (Min-Max), nur N+ Pat.)', fLK(d.lkAnzahlen?.n?.plus), fv(d.lkAnzahlen?.n?.plus?.mean,1), fv(d.lkAnzahlen?.n?.plus?.sd,1),fv(d.lkAnzahlen?.n?.plus?.min,0), fv(d.lkAnzahlen?.n?.plus?.max,0)); html += addRowHTML('LK AS gesamt (Median (Min-Max))', fLK(d.lkAnzahlen?.as?.total), fv(d.lkAnzahlen?.as?.total?.mean,1), fv(d.lkAnzahlen?.as?.total?.sd,1),fv(d.lkAnzahlen?.as?.total?.min,0), fv(d.lkAnzahlen?.as?.total?.max,0)); html += addRowHTML('LK AS+ (Median (Min-Max), nur AS+ Pat.)', fLK(d.lkAnzahlen?.as?.plus), fv(d.lkAnzahlen?.as?.plus?.mean,1), fv(d.lkAnzahlen?.as?.plus?.sd,1),fv(d.lkAnzahlen?.as?.plus?.min,0), fv(d.lkAnzahlen?.as?.plus?.max,0)); html += addRowHTML('LK T2 gesamt (Median (Min-Max))', fLK(d.lkAnzahlen?.t2?.total), fv(d.lkAnzahlen?.t2?.total?.mean,1), fv(d.lkAnzahlen?.t2?.total?.sd,1),fv(d.lkAnzahlen?.t2?.total?.min,0), fv(d.lkAnzahlen?.t2?.total?.max,0)); html += addRowHTML('LK T2+ (Median (Min-Max), nur T2+ Pat.)', fLK(d.lkAnzahlen?.t2?.plus), fv(d.lkAnzahlen?.t2?.plus?.mean,1), fv(d.lkAnzahlen?.t2?.plus?.sd,1),fv(d.lkAnzahlen?.t2?.plus?.min,0), fv(d.lkAnzahlen?.t2?.plus?.max,0)); html += `</tbody></table>`; }
-            if (config.INCLUDE_DESCRIPTIVES_CHARTS) { html += `<div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 1em; justify-content: space-around;">`; if (chartSVGs['chart-stat-age-0']) html += `<div class="chart-container" style="flex: 1 1 45%; min-width: 300px;"><h3>Altersverteilung</h3>${chartSVGs['chart-stat-age-0']}</div>`; if (chartSVGs['chart-stat-gender-0']) html += `<div class="chart-container" style="flex: 1 1 45%; min-width: 300px;"><h3>Geschlechterverteilung</h3>${chartSVGs['chart-stat-gender-0']}</div>`; html += `</div>`; }
-            const addPerfSectionHTML = (title, statsObj) => { if (!statsObj) return ''; let sHtml = `<h2>${title}</h2><table><thead><tr><th>Metrik</th><th>Wert (95% CI)</th><th>CI Methode</th></tr></thead><tbody>`; const fCI = (m, d=1, p=true) => formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, d, p, '--'); const na = '--'; sHtml += `<tr><td>Sensitivität</td><td>${fCI(statsObj.sens)}</td><td>${statsObj.sens?.method || na}</td></tr>`; sHtml += `<tr><td>Spezifität</td><td>${fCI(statsObj.spez)}</td><td>${statsObj.spez?.method || na}</td></tr>`; sHtml += `<tr><td>PPV</td><td>${fCI(statsObj.ppv)}</td><td>${statsObj.ppv?.method || na}</td></tr>`; sHtml += `<tr><td>NPV</td><td>${fCI(statsObj.npv)}</td><td>${statsObj.npv?.method || na}</td></tr>`; sHtml += `<tr><td>Accuracy</td><td>${fCI(statsObj.acc)}</td><td>${statsObj.acc?.method || na}</td></tr>`; sHtml += `<tr><td>Balanced Accuracy</td><td>${fCI(statsObj.balAcc)}</td><td>${statsObj.balAcc?.method || na}</td></tr>`; sHtml += `<tr><td>F1-Score</td><td>${fCI(statsObj.f1, 3, false)}</td><td>${statsObj.f1?.method || na}</td></tr>`; sHtml += `<tr><td>AUC</td><td>${fCI(statsObj.auc, 3, false)}</td><td>${statsObj.auc?.method || na}</td></tr>`; sHtml += `</tbody></table>`; return sHtml; };
+            if (config.INCLUDE_DESCRIPTIVES_CHARTS) { html += `<div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 1em; justify-content: space-around;">`; if (chartSVGs[`chart-stat-age-${chartIdSuffixForStatistik}`]) html += `<div class="chart-container" style="flex: 1 1 45%; min-width: 300px;"><h3>Altersverteilung</h3>${chartSVGs[`chart-stat-age-${chartIdSuffixForStatistik}`]}</div>`; if (chartSVGs[`chart-stat-gender-${chartIdSuffixForStatistik}`]) html += `<div class="chart-container" style="flex: 1 1 45%; min-width: 300px;"><h3>Geschlechterverteilung</h3>${chartSVGs[`chart-stat-gender-${chartIdSuffixForStatistik}`]}</div>`; html += `</div>`; }
+            const addPerfSectionHTML = (title, statsObj) => { if (!statsObj) return ''; let sHtml = `<h2>${title}</h2><table><thead><tr><th>Metrik</th><th>Wert (95% CI)</th><th>CI Methode</th></tr></thead><tbody>`; const fCIV = (m, d=1, p=true) => formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, d, p, '--'); const naPerf = '--'; sHtml += `<tr><td>Sensitivität</td><td>${fCIV(statsObj.sens)}</td><td>${statsObj.sens?.method || naPerf}</td></tr>`; sHtml += `<tr><td>Spezifität</td><td>${fCIV(statsObj.spez)}</td><td>${statsObj.spez?.method || naPerf}</td></tr>`; sHtml += `<tr><td>PPV</td><td>${fCIV(statsObj.ppv)}</td><td>${statsObj.ppv?.method || naPerf}</td></tr>`; sHtml += `<tr><td>NPV</td><td>${fCIV(statsObj.npv)}</td><td>${statsObj.npv?.method || naPerf}</td></tr>`; sHtml += `<tr><td>Accuracy</td><td>${fCIV(statsObj.acc)}</td><td>${statsObj.acc?.method || naPerf}</td></tr>`; sHtml += `<tr><td>Balanced Accuracy</td><td>${fCIV(statsObj.balAcc)}</td><td>${statsObj.balAcc?.method || naPerf}</td></tr>`; sHtml += `<tr><td>F1-Score</td><td>${fCIV(statsObj.f1, 3, false)}</td><td>${statsObj.f1?.method || naPerf}</td></tr>`; sHtml += `<tr><td>AUC</td><td>${fCIV(statsObj.auc, 3, false)}</td><td>${statsObj.auc?.method || naPerf}</td></tr>`; sHtml += `</tbody></table>`; return sHtml; };
             if (config.INCLUDE_AS_PERFORMANCE_TABLE && statsDataForCurrentKollektiv?.gueteAS) { html += addPerfSectionHTML('Diagnostische Güte: Avocado Sign (vs. N)', statsDataForCurrentKollektiv.gueteAS); }
             if (config.INCLUDE_T2_PERFORMANCE_TABLE && statsDataForCurrentKollektiv?.gueteT2_angewandt) { html += addPerfSectionHTML(`Diagnostische Güte: T2 ('${appliedCriteriaDisplayName}' vs. N)`, statsDataForCurrentKollektiv.gueteT2_angewandt); }
-            if (config.INCLUDE_AS_VS_T2_COMPARISON_TABLE && statsDataForCurrentKollektiv?.vergleichASvsT2_angewandt) { html += `<h2>Statistischer Vergleich: AS vs. T2 ('${appliedCriteriaDisplayName}')</h2><table><thead><tr><th>Test</th><th>Statistik</th><th>p-Wert</th><th>Methode</th></tr></thead><tbody>`; const v = statsDataForCurrentKollektiv.vergleichASvsT2_angewandt; const fP = (p) => (p !== null && !isNaN(p)) ? (p < 0.001 ? '<0.001' : formatNumber(p, 3, '--')) : '--'; const na = '--'; html += `<tr><td>Accuracy (McNemar)</td><td>${formatNumber(v?.mcnemar?.statistic, 3, na)} (df=${v?.mcnemar?.df || na})</td><td>${fP(v?.mcnemar?.pValue)} ${getStatisticalSignificanceSymbol(v?.mcnemar?.pValue)}</td><td>${v?.mcnemar?.method || na}</td></tr>`; html += `<tr><td>AUC (DeLong)</td><td>Z=${formatNumber(v?.delong?.Z, 3, na)}</td><td>${fP(v?.delong?.pValue)} ${getStatisticalSignificanceSymbol(v?.delong?.pValue)}</td><td>${v?.delong?.method || na}</td></tr>`; html += `</tbody></table>`; }
-            if (config.INCLUDE_AS_VS_T2_COMPARISON_CHART) { const chartKey = Object.keys(chartSVGs).find(k => k.startsWith('praes-comp-chart') || k.startsWith('stat-comp-bar')); if(chartSVGs[chartKey]) { html += `<div class="chart-container"><h3>Vergleich ausgewählter Metriken (AS vs T2 - '${appliedCriteriaDisplayName}')</h3>${chartSVGs[chartKey]}</div>`; } }
-            if (config.INCLUDE_ASSOCIATIONS_TABLE && statsDataForCurrentKollektiv?.assoziation_angewandt && Object.keys(statsDataForCurrentKollektiv.assoziation_angewandt).length > 0) { html += `<h2>Assoziation mit N-Status</h2><table><thead><tr><th>Merkmal</th><th>OR (95% CI)</th><th>RD (%) (95% CI)</th><th>Phi</th><th>p-Wert</th><th>Test</th></tr></thead><tbody>`; const a = statsDataForCurrentKollektiv.assoziation_angewandt; const na = '--'; const fP = (p) => (p !== null && !isNaN(p)) ? (p < 0.001 ? '<0.001' : formatNumber(p, 3, na)) : na; const fRowAssoc = (nm, obj) => { if (!obj) return ''; const orS = formatCI(obj.or?.value, obj.or?.ci?.lower, obj.or?.ci?.upper, 2, false, na); const rdV = formatNumber(obj.rd?.value !== null && !isNaN(obj.rd?.value) ? obj.rd.value * 100 : NaN, 1, na); const rdL = formatNumber(obj.rd?.ci?.lower !== null && !isNaN(obj.rd?.ci?.lower) ? obj.rd.ci.lower * 100 : NaN, 1, na); const rdU = formatNumber(obj.rd?.ci?.upper !== null && !isNaN(obj.rd?.ci?.upper) ? obj.rd.ci.upper * 100 : NaN, 1, na); const rdS = rdV !== na ? `${rdV}% (${rdL}% - ${rdU}%)` : na; const phiS = formatNumber(obj.phi?.value, 2, na); const pS = fP(obj.pValue) + ' ' + getStatisticalSignificanceSymbol(obj.pValue); const tN = obj.testName || na; return `<tr><td>${nm}</td><td>${orS}</td><td>${rdS}</td><td>${phiS}</td><td>${pS}</td><td>${tN}</td></tr>`; }; html += fRowAssoc('AS Positiv', a?.as); if (a?.size_mwu) html += `<tr><td>${a.size_mwu.featureName || 'LK Größe (Median Vgl.)'}</td><td>${na}</td><td>${na}</td><td>${na}</td><td>${fP(a.size_mwu.pValue)} ${getStatisticalSignificanceSymbol(a.size_mwu.pValue)}</td><td>${a.size_mwu.testName || na}</td></tr>`; ['size', 'form', 'kontur', 'homogenitaet', 'signal'].forEach(k => { if (a && a[k]) { const isActive = criteria[k]?.active === true; html += fRowAssoc(a[k].featureName + (isActive ? '' : ' (inaktiv)'), a[k]); } }); html += `</tbody></table>`; }
-            if (config.INCLUDE_BRUTEFORCE_BEST_RESULT && bfResults?.results && bfResults.results.length > 0 && bfResults.bestResult) { html += `<h2>Bestes Brute-Force Ergebnis (für Kollektiv: ${kollektivName})</h2><div class="meta-info"><ul>`; const best = bfResults.bestResult; html += `<li><strong>Optimierte Metrik:</strong> ${bfResults.metric}</li><li><strong>Bester Wert:</strong> ${formatNumber(best.metricValue, 4)}</li><li><strong>Logik:</strong> ${best.logic?.toUpperCase()}</li><li><strong>Kriterien:</strong> ${formatCriteriaFunc(best.criteria, best.logic)}</li></ul></div>`; }
+            if (config.INCLUDE_AS_VS_T2_COMPARISON_TABLE && statsDataForCurrentKollektiv?.vergleichASvsT2_angewandt) { html += `<h2>Statistischer Vergleich: AS vs. T2 ('${appliedCriteriaDisplayName}')</h2><table><thead><tr><th>Test</th><th>Statistik</th><th>p-Wert</th><th>Methode</th></tr></thead><tbody>`; const v = statsDataForCurrentKollektiv.vergleichASvsT2_angewandt; const fP = (p) => (p !== null && !isNaN(p)) ? (p < 0.001 ? '<0.001' : formatNumber(p, 3, '--')) : '--'; const naTest = '--'; html += `<tr><td>Accuracy (McNemar)</td><td>${formatNumber(v?.mcnemar?.statistic, 3, naTest)} (df=${v?.mcnemar?.df || naTest})</td><td>${fP(v?.mcnemar?.pValue)} ${getStatisticalSignificanceSymbol(v?.mcnemar?.pValue)}</td><td>${v?.mcnemar?.method || naTest}</td></tr>`; html += `<tr><td>AUC (DeLong)</td><td>Z=${formatNumber(v?.delong?.Z, 3, naTest)}</td><td>${fP(v?.delong?.pValue)} ${getStatisticalSignificanceSymbol(v?.delong?.pValue)}</td><td>${v?.delong?.method || naTest}</td></tr>`; html += `</tbody></table>`; }
+            if (config.INCLUDE_AS_VS_T2_COMPARISON_CHART) { const chartKeyPraesComp = chartIdsToCapture.find(id => id === 'praes-comp-chart-container'); const chartKeyPraesAS = chartIdsToCapture.find(id => id === 'praes-as-pur-perf-chart'); if(chartKeyPraesComp && chartSVGs[chartKeyPraesComp]) { html += `<div class="chart-container"><h3>Vergleich ausgewählter Metriken (AS vs T2 - Details siehe Präsentation-Tab)</h3>${chartSVGs[chartKeyPraesComp]}</div>`; } else if (chartKeyPraesAS && chartSVGs[chartKeyPraesAS]) { html += `<div class="chart-container"><h3>Performance Avocado Sign</h3>${chartSVGs[chartKeyPraesAS]}</div>`;} }
+            if (config.INCLUDE_ASSOCIATIONS_TABLE && statsDataForCurrentKollektiv?.assoziation_angewandt && Object.keys(statsDataForCurrentKollektiv.assoziation_angewandt).length > 0) { html += `<h2>Assoziation mit N-Status</h2><table><thead><tr><th>Merkmal</th><th>OR (95% CI)</th><th>RD (%) (95% CI)</th><th>Phi</th><th>p-Wert</th><th>Test</th></tr></thead><tbody>`; const a = statsDataForCurrentKollektiv.assoziation_angewandt; const naAssoc = '--'; const fPValAssoc = (p) => (p !== null && !isNaN(p)) ? (p < 0.001 ? '<0.001' : formatNumber(p, 3, naAssoc)) : naAssoc; const fRowAssoc = (nm, obj) => { if (!obj) return ''; const orS = formatCI(obj.or?.value, obj.or?.ci?.lower, obj.or?.ci?.upper, 2, false, naAssoc); const rdV = formatNumber(obj.rd?.value !== null && !isNaN(obj.rd?.value) ? obj.rd.value * 100 : NaN, 1, naAssoc); const rdL = formatNumber(obj.rd?.ci?.lower !== null && !isNaN(obj.rd?.ci?.lower) ? obj.rd.ci.lower * 100 : NaN, 1, naAssoc); const rdU = formatNumber(obj.rd?.ci?.upper !== null && !isNaN(obj.rd?.ci?.upper) ? obj.rd.ci.upper * 100 : NaN, 1, naAssoc); const rdS = rdV !== naAssoc ? `${rdV}% (${rdL}% - ${rdU}%)` : naAssoc; const phiS = formatNumber(obj.phi?.value, 2, naAssoc); const pS = fPValAssoc(obj.pValue) + ' ' + getStatisticalSignificanceSymbol(obj.pValue); const tN = obj.testName || naAssoc; return `<tr><td>${nm}</td><td>${orS}</td><td>${rdS}</td><td>${phiS}</td><td>${pS}</td><td>${tN}</td></tr>`; }; html += fRowAssoc('AS Positiv', a?.as); if (a?.size_mwu) html += `<tr><td>${a.size_mwu.featureName || 'LK Größe (Median Vgl.)'}</td><td>${naAssoc}</td><td>${naAssoc}</td><td>${naAssoc}</td><td>${fPValAssoc(a.size_mwu.pValue)} ${getStatisticalSignificanceSymbol(a.size_mwu.pValue)}</td><td>${a.size_mwu.testName || naAssoc}</td></tr>`; ['size', 'form', 'kontur', 'homogenitaet', 'signal'].forEach(k => { if (a && a[k]) { const isActive = criteria[k]?.active === true; html += fRowAssoc(a[k].featureName + (isActive ? '' : ' (inaktiv)'), a[k]); } }); html += `</tbody></table>`; }
+            const bfResultForCurrentKollektivReport = bfResultsPerKollektiv ? bfResultsPerKollektiv[kollektiv] : null;
+            if (config.INCLUDE_BRUTEFORCE_BEST_RESULT && bfResultForCurrentKollektivReport?.results && bfResultForCurrentKollektivReport.results.length > 0 && bfResultForCurrentKollektivReport.bestResult) { html += `<h2>Bestes Brute-Force Ergebnis (für Kollektiv: ${kollektivName})</h2><div class="meta-info"><ul>`; const best = bfResultForCurrentKollektivReport.bestResult; html += `<li><strong>Optimierte Metrik:</strong> ${bfResultForCurrentKollektivReport.metric}</li><li><strong>Bester Wert:</strong> ${formatNumber(best.metricValue, 4)}</li><li><strong>Logik:</strong> ${best.logic?.toUpperCase()}</li><li><strong>Kriterien:</strong> ${formatCriteriaFunc(best.criteria, best.logic)}</li></ul></div>`; }
             html += `<div class="report-footer">${config.REPORT_AUTHOR} - ${timestamp}</div></body></html>`; return html;
         } catch (error) {
              console.error("Fehler in generateComprehensiveReportHTML:", error);
@@ -316,7 +322,6 @@ const exportService = (() => {
 
     async function convertTableToPngBlob(tableElementId, baseWidth = 800) {
         const scale = APP_CONFIG.EXPORT_SETTINGS.TABLE_PNG_EXPORT_SCALE || 2;
-        const targetWidth = baseWidth * scale;
         return new Promise((resolve, reject) => {
             const table = document.getElementById(tableElementId);
             if (!table || !(table instanceof HTMLTableElement)) return reject(new Error(`Tabelle mit ID '${tableElementId}' nicht gefunden.`));
@@ -331,11 +336,10 @@ const exportService = (() => {
                     tableRect.top = table.offsetTop || 0;
                 }
 
-                const effectiveScale = Math.min(scale, targetWidth / tableRect.width);
+                const effectiveScale = Math.min(scale, (baseWidth * scale) / tableRect.width);
                 const canvas = document.createElement('canvas');
-                const targetHeight = tableRect.height * effectiveScale;
                 canvas.width = tableRect.width * effectiveScale;
-                canvas.height = targetHeight;
+                canvas.height = tableRect.height * effectiveScale;
 
                 const ctx = canvas.getContext('2d');
                 if (!ctx) return reject(new Error("Canvas Context nicht verfügbar."));
@@ -349,37 +353,48 @@ const exportService = (() => {
                 const tableWrapper = document.createElement('div');
                 tableWrapper.style.position = 'absolute';
                 tableWrapper.style.left = '-9999px';
+                tableWrapper.style.width = `${tableRect.width}px`;
                 tableWrapper.appendChild(tableClone);
                 document.body.appendChild(tableWrapper);
 
+
                 const rows = Array.from(tableClone.rows);
                 let currentY = 0;
+                const defaultFontSize = parseFloat(getComputedStyle(tableClone).fontSize) || 14;
+
                 rows.forEach(row => {
                     const cells = Array.from(row.cells);
                     let currentX = 0;
                     let maxHeightInRow = 0;
+
                     cells.forEach(cell => {
                         const computedStyle = getComputedStyle(cell);
+                        const cellBCR = cell.getBoundingClientRect();
+                        const cellWrapperBCR = tableWrapper.getBoundingClientRect();
+
                         const cellWidth = cell.offsetWidth;
                         const cellHeight = cell.offsetHeight;
                         maxHeightInRow = Math.max(maxHeightInRow, cellHeight);
 
                         ctx.fillStyle = computedStyle.backgroundColor || 'transparent';
-                        if (ctx.fillStyle && ctx.fillStyle !== 'rgba(0, 0, 0, 0)' && ctx.fillStyle !== 'transparent') ctx.fillRect(currentX, currentY, cellWidth, cellHeight);
+                        if (ctx.fillStyle && ctx.fillStyle !== 'rgba(0, 0, 0, 0)' && ctx.fillStyle !== 'transparent') {
+                             ctx.fillRect(currentX, currentY, cellWidth, cellHeight);
+                        }
 
-                        const borderWeight = 1;
+                        const borderWeight = parseFloat(computedStyle.borderTopWidth) || 1;
                         ctx.strokeStyle = computedStyle.borderTopColor || '#ccc';
                         ctx.lineWidth = borderWeight;
+
                         ctx.beginPath();
-                        ctx.moveTo(currentX, currentY); ctx.lineTo(currentX + cellWidth, currentY);
-                        ctx.moveTo(currentX, currentY + cellHeight); ctx.lineTo(currentX + cellWidth, currentY + cellHeight);
-                        ctx.moveTo(currentX, currentY); ctx.lineTo(currentX, currentY + cellHeight);
-                        ctx.moveTo(currentX + cellWidth, currentY); ctx.lineTo(currentX + cellWidth, currentY + cellHeight);
+                        if (parseFloat(computedStyle.borderTopWidth) > 0) { ctx.moveTo(currentX, currentY); ctx.lineTo(currentX + cellWidth, currentY); }
+                        if (parseFloat(computedStyle.borderBottomWidth) > 0) { ctx.moveTo(currentX, currentY + cellHeight); ctx.lineTo(currentX + cellWidth, currentY + cellHeight); }
+                        if (parseFloat(computedStyle.borderLeftWidth) > 0) { ctx.moveTo(currentX, currentY); ctx.lineTo(currentX, currentY + cellHeight); }
+                        if (parseFloat(computedStyle.borderRightWidth) > 0) { ctx.moveTo(currentX + cellWidth, currentY); ctx.lineTo(currentX + cellWidth, currentY + cellHeight); }
                         ctx.stroke();
 
-
                         ctx.fillStyle = computedStyle.color || '#000';
-                        ctx.font = `${computedStyle.fontStyle || 'normal'} ${computedStyle.fontWeight || 'normal'} ${parseFloat(computedStyle.fontSize)}px ${computedStyle.fontFamily || 'sans-serif'}`;
+                        const fontSize = parseFloat(computedStyle.fontSize) || defaultFontSize;
+                        ctx.font = `${computedStyle.fontStyle || 'normal'} ${computedStyle.fontWeight || 'normal'} ${fontSize}px ${computedStyle.fontFamily || 'sans-serif'}`;
                         ctx.textAlign = computedStyle.textAlign === 'right' ? 'right' : computedStyle.textAlign === 'center' ? 'center' : 'left';
                         ctx.textBaseline = 'middle';
 
@@ -404,9 +419,10 @@ const exportService = (() => {
         });
     }
 
-    function exportStatistikCSV(data, kollektiv, criteria, logic) {
+
+    function exportStatistikCSV(allProcessedData, kollektiv, criteria, logic, bfResultsPerKollektiv) {
         let stats = null, csvString = null;
-        try { stats = statisticsService.calculateAllStatsForPublication(data, criteria, logic, null)[kollektiv]; } catch(e) { ui_helpers.showToast("Fehler bei Statistikberechnung für CSV.", "danger"); return; }
+        try { stats = statisticsService.calculateAllStatsForPublication(allProcessedData, criteria, logic, bfResultsPerKollektiv)[kollektiv]; } catch(e) { ui_helpers.showToast("Fehler bei Statistikberechnung für CSV.", "danger"); return; }
         if (!stats) { ui_helpers.showToast("Keine Statistikdaten zum Exportieren für dieses Kollektiv.", "warning"); return; }
         try { csvString = generateStatistikCSVString(stats, kollektiv, criteria, logic); } catch(e) { ui_helpers.showToast("Fehler bei CSV-Erstellung.", "danger"); return; }
         if (csvString === null || csvString.length === 0) { ui_helpers.showToast("CSV-Generierung ergab leere Datei.", "warning"); return; }
@@ -436,9 +452,6 @@ const exportService = (() => {
         else if(tableType === 'praes_as_vs_t2_tests') { typeKey = 'PRAES_AS_VS_T2_TESTS_MD'; title = 'AS vs T2 Tests'; }
         else if(tableType === 'praes_as_vs_t2_comp') { typeKey = 'PRAES_AS_VS_T2_COMP_MD'; title = 'AS vs T2 Metrics'; }
         else if(tableType === 'criteria_comparison') { typeKey = 'CRITERIA_COMPARISON_MD'; title = 'Kriterienvergleich'; }
-        else if(tableType === 'publikation_methoden') { typeKey = 'PUBLIKATION_METHODEN_MD'; title = 'Publikation Methoden'; options.sectionName = 'Methoden';}
-        else if(tableType === 'publikation_ergebnisse') { typeKey = 'PUBLIKATION_ERGEBNISSE_MD'; title = 'Publikation Ergebnisse'; options.sectionName = 'Ergebnisse';}
-
 
         const filename = generateFilename(typeKey, kollektiv, 'md', { studyId: options?.comparisonCriteriaSet?.id, sectionName: options?.sectionName });
         if(downloadFile(mdString, filename, 'text/markdown;charset=utf-8;')) ui_helpers.showToast(`${title} als Markdown exportiert: ${filename}`, 'success');
@@ -452,9 +465,9 @@ const exportService = (() => {
        if(downloadFile(csvString, filename, 'text/csv;charset=utf-8;')) ui_helpers.showToast(`Gefilterte Daten als CSV exportiert: ${filename}`, 'success');
    }
 
-    function exportComprehensiveReportHTML(data, bfResults, kollektiv, criteria, logic) {
+    function exportComprehensiveReportHTML(allProcessedData, bfResultsPerKollektiv, kollektiv, criteria, logic) {
         let htmlString = null;
-        try { htmlString = generateComprehensiveReportHTML(data, bfResults, kollektiv, criteria, logic); } catch(e) { ui_helpers.showToast("Fehler bei HTML-Report-Erstellung.", "danger"); return; }
+        try { htmlString = generateComprehensiveReportHTML(allProcessedData, bfResultsPerKollektiv, kollektiv, criteria, logic); } catch(e) { ui_helpers.showToast("Fehler bei HTML-Report-Erstellung.", "danger"); return; }
         if (htmlString === null || htmlString.length === 0) { ui_helpers.showToast("HTML-Report-Generierung ergab leere Datei.", "warning"); return; }
         const filename = generateFilename('COMPREHENSIVE_REPORT_HTML', kollektiv, 'html');
         if(downloadFile(htmlString, filename, 'text/html;charset=utf-8;')) ui_helpers.showToast(`Umfassender Bericht exportiert: ${filename}`, 'success');
@@ -539,60 +552,81 @@ const exportService = (() => {
          } catch (error) { console.error(`Fehler beim Erstellen des ${format.toUpperCase()} ZIPs:`, error); ui_helpers.showToast(`Fehler beim Erstellen des ${format.toUpperCase()} ZIPs.`, 'danger'); }
      }
 
-     async function exportCategoryZip(category, data, bfResults, kollektiv, criteria, logic) {
+     async function exportCategoryZip(category, allProcessedData, allBruteForceResults, globalCurrentKollektiv, appliedCriteria, appliedLogic) {
          ui_helpers.showToast(`Generiere ${category.toUpperCase()} ZIP-Paket...`, 'info', 2000);
           if (!window.JSZip) { ui_helpers.showToast("JSZip Bibliothek nicht geladen.", "danger"); return; }
-         const zip = new JSZip(); let filesAdded = 0; let statsDataForAllKollektive = null;
-         const globalKollektivStats = typeof kollektiveDataGlobal !== 'undefined' ? kollektiveDataGlobal : null; // Fallback, wenn nicht direkt übergeben
+         const zip = new JSZip(); let filesAdded = 0;
+         let statsDataForAllKollektive = null;
 
          const needsStats = ['all-zip', 'csv-zip', 'md-zip', 'html'].includes(category);
-         if(needsStats && data && data.length > 0 && criteria && logic) {
+         if(needsStats && allProcessedData && allProcessedData.length > 0 && appliedCriteria && appliedLogic) {
              try {
-                statsDataForAllKollektive = statisticsService.calculateAllStatsForPublication(data, criteria, logic, bfResults);
+                statsDataForAllKollektive = statisticsService.calculateAllStatsForPublication(allProcessedData, appliedCriteria, appliedLogic, allBruteForceResults);
              } catch(e) { ui_helpers.showToast(`Fehler bei Statistikberechnung für ${category.toUpperCase()} ZIP.`, 'danger'); return; }
-             if (!statsDataForAllKollektive || !statsDataForAllKollektive[kollektiv]) {
-                 ui_helpers.showToast(`Statistikberechnung ergab keine Daten für ${category.toUpperCase()} ZIP für Kollektiv ${getKollektivDisplayName(kollektiv)}.`, 'warning');
+             if (!statsDataForAllKollektive || !statsDataForAllKollektive[globalCurrentKollektiv]) {
+                 ui_helpers.showToast(`Statistikberechnung ergab keine Daten für ${category.toUpperCase()} ZIP für Kollektiv ${getKollektivDisplayName(globalCurrentKollektiv)}.`, 'warning');
                  if (category === 'csv-zip' || category === 'html') return;
              }
          }
-         const currentKollektivStats = statsDataForAllKollektive ? statsDataForAllKollektive[kollektiv] : null;
+         const currentKollektivStats = statsDataForAllKollektive ? statsDataForAllKollektive[globalCurrentKollektiv] : null;
+         const currentKollektivFilteredData = dataProcessor.filterDataByKollektiv(allProcessedData, globalCurrentKollektiv);
+         const currentKollektivBruteForceResult = allBruteForceResults ? allBruteForceResults[globalCurrentKollektiv] : null;
 
-         const addFile = (filename, content) => { if (content !== null && content !== undefined && String(content).length > 0) { zip.file(filename, content); filesAdded++; return true; } console.warn(`Überspringe leere oder ungültige Datei: ${filename}`); return false; };
+         const addFileToZip = (filename, contentProvider) => {
+             const content = contentProvider();
+             if (content !== null && content !== undefined && String(content).length > 0) {
+                 zip.file(filename, content);
+                 filesAdded++;
+                 return true;
+             }
+             console.warn(`Überspringe leere oder ungültige Datei für ZIP: ${filename}`);
+             return false;
+         };
+
          try {
              if (['all-zip', 'csv-zip'].includes(category)) {
-                 if (currentKollektivStats) addFile(generateFilename('STATS_CSV', kollektiv, 'csv'), generateStatistikCSVString(currentKollektivStats, kollektiv, criteria, logic));
-                 if (data && data.length > 0) addFile(generateFilename('FILTERED_DATA_CSV', kollektiv, 'csv'), generateFilteredDataCSVString(dataProcessor.filterDataByKollektiv(data, kollektiv))); // Filtered data for current kollektiv
+                 if (currentKollektivStats) addFileToZip(generateFilename('STATS_CSV', globalCurrentKollektiv, 'csv'), () => generateStatistikCSVString(currentKollektivStats, globalCurrentKollektiv, appliedCriteria, appliedLogic));
+                 if (currentKollektivFilteredData.length > 0) addFileToZip(generateFilename('FILTERED_DATA_CSV', globalCurrentKollektiv, 'csv'), () => generateFilteredDataCSVString(currentKollektivFilteredData));
              }
              if (['all-zip', 'md-zip'].includes(category)) {
-                 if (currentKollektivStats?.deskriptiv) addFile(generateFilename('DESKRIPTIV_MD', kollektiv, 'md'), generateMarkdownTableString(currentKollektivStats.deskriptiv, 'deskriptiv', kollektiv));
-                 if (data && data.length > 0) addFile(generateFilename('DATEN_MD', kollektiv, 'md'), generateMarkdownTableString(dataProcessor.filterDataByKollektiv(data, kollektiv), 'daten', kollektiv));
-                 if (data && data.length > 0) addFile(generateFilename('AUSWERTUNG_MD', kollektiv, 'md'), generateMarkdownTableString(dataProcessor.filterDataByKollektiv(data, kollektiv), 'auswertung', kollektiv, criteria, logic));
+                 if (currentKollektivStats?.deskriptiv) addFileToZip(generateFilename('DESKRIPTIV_MD', globalCurrentKollektiv, 'md'), () => generateMarkdownTableString(currentKollektivStats.deskriptiv, 'deskriptiv', globalCurrentKollektiv));
+                 if (currentKollektivFilteredData.length > 0) {
+                    addFileToZip(generateFilename('DATEN_MD', globalCurrentKollektiv, 'md'), () => generateMarkdownTableString(currentKollektivFilteredData, 'daten', globalCurrentKollektiv));
+                    const evaluatedCurrentData = t2CriteriaManager.evaluateDataset(cloneDeep(currentKollektivFilteredData), appliedCriteria, appliedLogic);
+                    addFileToZip(generateFilename('AUSWERTUNG_MD', globalCurrentKollektiv, 'md'), () => generateMarkdownTableString(evaluatedCurrentData, 'auswertung', globalCurrentKollektiv, appliedCriteria, appliedLogic));
+                 }
+
                  if (typeof publicationTextGenerator !== 'undefined' && statsDataForAllKollektive) {
+                     const commonDataForPub = {
+                        appName: APP_CONFIG.APP_NAME, appVersion: APP_CONFIG.APP_VERSION, currentKollektivName: getKollektivDisplayName(globalCurrentKollektiv),
+                        nGesamt: statsDataForAllKollektive.Gesamt?.deskriptiv?.anzahlPatienten || 0,
+                        nDirektOP: statsDataForAllKollektive['direkt OP']?.deskriptiv?.anzahlPatienten || 0,
+                        nNRCT: statsDataForAllKollektive.nRCT?.deskriptiv?.anzahlPatienten || 0,
+                        significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
+                        bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
+                     };
+                     let completePublicationMarkdown = `# Publikationsentwurf (${getKollektivDisplayName(globalCurrentKollektiv)} - ${getCurrentDateString('DD.MM.YYYY')})\n\n`;
                      PUBLICATION_CONFIG.sections.forEach(mainSection => {
+                        completePublicationMarkdown += `## ${UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}\n\n`;
                          mainSection.subSections.forEach(subSection => {
-                            const commonDataForPub = {
-                                appName: APP_CONFIG.APP_NAME, appVersion: APP_CONFIG.APP_VERSION, currentKollektivName: getKollektivDisplayName(kollektiv),
-                                nGesamt: statsDataForAllKollektive.Gesamt?.deskriptiv?.anzahlPatienten || 0,
-                                nDirektOP: statsDataForAllKollektive['direkt OP']?.deskriptiv?.anzahlPatienten || 0,
-                                nNRCT: statsDataForAllKollektive.nRCT?.deskriptiv?.anzahlPatienten || 0,
-                                significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL
-                            };
                             const mdContent = publicationTextGenerator.getSectionTextAsMarkdown(subSection.id, state.getCurrentPublikationLang(), statsDataForAllKollektive, statsDataForAllKollektive, commonDataForPub);
-                            const typeKey = subSection.id.startsWith('methoden') ? 'PUBLIKATION_METHODEN_MD' : 'PUBLIKATION_ERGEBNISSE_MD';
-                            addFile(generateFilename(typeKey, kollektiv, 'md', {sectionName: subSection.id.replace(/^(methoden_|ergebnisse_)/, '')}), mdContent);
+                            const filename = generateFilename(subSection.id.startsWith('methoden') ? 'PUBLIKATION_METHODEN_MD' : 'PUBLIKATION_ERGEBNISSE_MD', globalCurrentKollektiv, 'md', {sectionName: subSection.id.replace(/^(methoden_|ergebnisse_)/, '')});
+                            addFileToZip(filename, () => mdContent);
+                            completePublicationMarkdown += `### ${subSection.label}\n\n${mdContent}\n\n`;
                          });
                      });
+                      addFileToZip(generateFilename('PUBLIKATION_GESAMT_MD', globalCurrentKollektiv, 'md'), () => completePublicationMarkdown);
                  }
              }
-             if (['all-zip'].includes(category) && bfResults && bfResults[kollektiv]) { addFile(generateFilename('BRUTEFORCE_TXT', kollektiv, 'txt'), generateBruteForceTXTString(bfResults[kollektiv], kollektiv)); }
-             if (['all-zip', 'html'].includes(category) && data && data.length > 0 ) { addFile(generateFilename('COMPREHENSIVE_REPORT_HTML', kollektiv, 'html'), generateComprehensiveReportHTML(data, bfResults ? bfResults[kollektiv] : null, kollektiv, criteria, logic)); }
+             if (['all-zip'].includes(category) && currentKollektivBruteForceResult) { addFileToZip(generateFilename('BRUTEFORCE_TXT', globalCurrentKollektiv, 'txt'), () => generateBruteForceTXTString(currentKollektivBruteForceResult, globalCurrentKollektiv)); }
+             if (['all-zip', 'html'].includes(category) && currentKollektivFilteredData.length > 0 ) { addFileToZip(generateFilename('COMPREHENSIVE_REPORT_HTML', globalCurrentKollektiv, 'html'), () => generateComprehensiveReportHTML(allProcessedData, allBruteForceResults, globalCurrentKollektiv, appliedCriteria, appliedLogic)); }
 
-             if (['png-zip'].includes(category)) { await exportChartsZip('#app-container', 'PNG_ZIP', kollektiv, 'png'); return; }
-             if (['svg-zip'].includes(category)) { await exportChartsZip('#app-container', 'SVG_ZIP', kollektiv, 'svg'); return; }
+             if (['png-zip'].includes(category)) { await exportChartsZip('#app-container', 'PNG_ZIP', globalCurrentKollektiv, 'png'); return; }
+             if (['svg-zip'].includes(category)) { await exportChartsZip('#app-container', 'SVG_ZIP', globalCurrentKollektiv, 'svg'); return; }
 
 
             if (filesAdded > 0) {
-                const zipFilename = generateFilename(`${category.toUpperCase()}_PAKET`, kollektiv, 'zip');
+                const zipFilename = generateFilename(`${category.toUpperCase()}_PAKET`, globalCurrentKollektiv, 'zip');
                 const content = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
                 if (downloadFile(content, zipFilename, "application/zip")) ui_helpers.showToast(`${filesAdded} Datei(en) erfolgreich im ${category.toUpperCase()} ZIP-Paket exportiert.`, 'success');
             } else { ui_helpers.showToast(`Keine Dateien für das ${category.toUpperCase()} ZIP-Paket gefunden oder generiert.`, 'warning'); }
