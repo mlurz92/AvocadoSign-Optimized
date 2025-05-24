@@ -205,7 +205,7 @@ const statisticsService = (() => {
                     sumSq += stat * stat;
                     validCount++;
                  }
-            } catch (e) { console.warn("Bootstrap-Iteration fehlgeschlagen:", e); }
+            } catch (e) { /* console.warn("Bootstrap-Iteration fehlgeschlagen:", e); */ }
         }
 
         if (validCount < Math.max(10, nBoot * 0.1)) return defaultReturn;
@@ -261,7 +261,7 @@ const statisticsService = (() => {
         let pValue = 0.0;
         const minVal = Math.max(0, k1 - n2);
         const maxVal = Math.min(k1, n1);
-        const tolerance = 1e-9; // Tolerance for floating point comparison
+        const tolerance = 1e-9;
 
         for (let i = minVal; i <= maxVal; i++) {
             const pCurrentLog = logProbHypergeometric(i, N, k1, n1);
@@ -333,11 +333,11 @@ const statisticsService = (() => {
         if (varU === 0) return { pValue: 1.0, U: U, Z: 0, testName: "Mann-Whitney U (Zero Variance)" };
 
         const stdDevU = Math.sqrt(varU);
-        const correction = (U < meanU) ? 0.5 : (U > meanU) ? -0.5 : 0; // Continuity correction
+        const correction = (U < meanU) ? 0.5 : (U > meanU) ? -0.5 : 0;
         const z = (U - meanU + correction) / stdDevU;
         if (isNaN(z) || !isFinite(z)) return { ...defaultReturn, U: U, testName: "Mann-Whitney U (Z Calculation Error)" };
 
-        const pValue = 2.0 * normalCDF(-Math.abs(z)); // Two-tailed p-value
+        const pValue = 2.0 * normalCDF(-Math.abs(z));
         return { pValue: Math.max(0.0, Math.min(1.0, pValue)), U: U, Z: z, testName: "Mann-Whitney U (Normal Approx. with Tie Correction)" };
     }
 
@@ -389,10 +389,10 @@ const statisticsService = (() => {
 
             const calculateVarianceComponent = (V_arr, mean_auc, n_other_group_size) => {
                 if (n_other_group_size === 0 || V_arr.some(isNaN)) return NaN;
-                if (V_arr.length < 2) return NaN; // Variance requires at least 2 data points
+                if (V_arr.length < 2) return NaN;
                 let sumSqDiff = 0;
                 for(let val of V_arr) sumSqDiff += Math.pow(val - mean_auc, 2);
-                return sumSqDiff / (V_arr.length -1); // Sample variance
+                return sumSqDiff / (V_arr.length -1);
             };
             const S10_1 = calculateVarianceComponent(V10_1, auc1, n_neg);
             const S01_1 = calculateVarianceComponent(V01_1, auc1, n_pos);
@@ -401,10 +401,10 @@ const statisticsService = (() => {
 
             const calculateCovarianceComponent = (V_X_arr, V_Y_arr, meanX, meanY, n_other_group_size) => {
                 if (n_other_group_size === 0 || V_X_arr.some(isNaN) || V_Y_arr.some(isNaN)) return NaN;
-                if (V_X_arr.length < 2) return NaN; // Covariance requires at least 2 data points
+                if (V_X_arr.length < 2) return NaN;
                  let sumProdDiff = 0;
                  for (let i = 0; i < V_X_arr.length; i++) sumProdDiff += (V_X_arr[i] - meanX) * (V_Y_arr[i] - meanY);
-                 return sumProdDiff / (V_X_arr.length - 1); // Sample covariance
+                 return sumProdDiff / (V_X_arr.length - 1);
             };
 
             const Cov10 = calculateCovarianceComponent(V10_1, V10_2, auc1, auc2, n_neg);
@@ -416,15 +416,15 @@ const statisticsService = (() => {
 
             const varDiff = (S10_1 / n_pos) + (S01_1 / n_neg) + (S10_2 / n_pos) + (S01_2 / n_neg) - 2 * ((Cov10 / n_pos) + (Cov01 / n_neg));
 
-            if (isNaN(varDiff) || varDiff <= 1e-12) { // Avoid division by zero or very small SE
-                const pVal = (Math.abs(auc1 - auc2) < 1e-9) ? 1.0 : NaN; // If AUCs are virtually identical, p-value is 1
+            if (isNaN(varDiff) || varDiff <= 1e-12) {
+                const pVal = (Math.abs(auc1 - auc2) < 1e-9) ? 1.0 : NaN;
                 return { pValue: pVal, Z: (pVal === 1.0 ? 0 : NaN), diffAUC: auc1 - auc2, method: "DeLong Test (Near Zero/Zero Variance of Difference)" };
             }
             const seDiff = Math.sqrt(varDiff);
             const z = (auc1 - auc2) / seDiff;
             if (isNaN(z) || !isFinite(z)) return { ...defaultReturn, diffAUC: auc1 - auc2, method: "DeLong Test (Z Calculation Error)" };
 
-            const pValue = 2.0 * normalCDF(-Math.abs(z)); // Two-tailed p-value
+            const pValue = 2.0 * normalCDF(-Math.abs(z));
             return { pValue: Math.max(0.0, Math.min(1.0, pValue)), Z: z, diffAUC: auc1 - auc2, method: "DeLong Test" };
         } catch (error) {
             console.error("Error in DeLong Test:", error);
@@ -450,7 +450,7 @@ const statisticsService = (() => {
         const z = (auc1 - auc2) / seDiff;
         if (isNaN(z) || !isFinite(z)) return { ...defaultReturn, method: "Z-Test (AUC - Independent Samples, Z Calculation Error)" };
 
-        const pValue = 2.0 * (1.0 - normalCDF(Math.abs(z))); // Two-tailed p-value
+        const pValue = 2.0 * (1.0 - normalCDF(Math.abs(z)));
         return { pValue: Math.max(0.0, Math.min(1.0, pValue)), Z: z, method: "Z-Test (AUC - Independent Samples)" };
     }
 
@@ -535,7 +535,7 @@ const statisticsService = (() => {
 
         const balAccBootCIResult = !isNaN(balAcc_val) ? bootstrapCI(data, bootstrapStatFnFactory(predictionKey, referenceKey, 'balAcc')) : { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE, se: NaN };
         const f1BootCIResult = !isNaN(f1_val) ? bootstrapCI(data, bootstrapStatFnFactory(predictionKey, referenceKey, 'f1')) : { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE, se: NaN };
-        const aucBootCIResult = balAccBootCIResult; // AUC is treated as BalAcc for binary tests
+        const aucBootCIResult = balAccBootCIResult;
 
         return {
             matrix,
@@ -554,7 +554,7 @@ const statisticsService = (() => {
         const nullReturn = { mcnemar: { pValue: NaN, statistic: NaN, df: NaN, method: "McNemar's Test (Nicht berechnet)" }, delong: { pValue: NaN, Z: NaN, diffAUC: NaN, method: "DeLong Test (Nicht berechnet)" } };
         if (!Array.isArray(data) || data.length === 0 || !key1 || !key2 || !referenceKey) return nullReturn;
 
-        let b = 0, c = 0; // b: key1 positive, key2 negative; c: key1 negative, key2 positive
+        let b = 0, c = 0;
         data.forEach(p => {
             if (p && typeof p === 'object') {
                 const p1_is_plus = p[key1] === '+';
@@ -562,7 +562,7 @@ const statisticsService = (() => {
                 const valid_p1 = p[key1] === '+' || p[key1] === '-';
                 const valid_p2 = p[key2] === '+' || p[key2] === '-';
 
-                if (valid_p1 && valid_p2) { // Only consider cases where both tests have a valid outcome
+                if (valid_p1 && valid_p2) {
                     if (p1_is_plus && !p2_is_plus) b++;
                     if (!p1_is_plus && p2_is_plus) c++;
                 }
@@ -588,7 +588,7 @@ const statisticsService = (() => {
                 matrix: matrixAS,
                 testName: fisherAS.method,
                 pValue: fisherAS.pValue,
-                statistic: NaN, // Fisher doesn't have a single statistic like Chi2 here
+                statistic: NaN,
                 or: calculateORCI(matrixAS.rp, matrixAS.fp, matrixAS.fn, matrixAS.rn),
                 rd: calculateRDCI(matrixAS.rp, matrixAS.fp, matrixAS.fn, matrixAS.rn),
                 phi: { value: calculatePhi(matrixAS.rp, matrixAS.fp, matrixAS.fn, matrixAS.rn), ci: null, method: 'Phi Coefficient' },
@@ -649,14 +649,14 @@ const statisticsService = (() => {
                 return;
             }
 
-            let a = 0, b = 0, c = 0, d = 0; // a: feature+ AND N+; b: feature+ AND N-; c: feature- AND N+; d: feature- AND N-
+            let a = 0, b = 0, c = 0, d = 0;
             data.forEach(p => {
                 const validN = p?.[referenceKey] === '+' || p?.[referenceKey] === '-';
                 if (!validN || !Array.isArray(p.lymphknoten_t2)) return;
                 const actualN_is_Positive = p[referenceKey] === '+';
                 let patientHasFeature = false;
 
-                if (p.lymphknoten_t2.length > 0) { // Only evaluate if patient has lymph nodes for T2 features
+                if (p.lymphknoten_t2.length > 0) {
                     if (featureKey === 'size') {
                         patientHasFeature = p.lymphknoten_t2.some(lk => {
                             if (lk && typeof lk.groesse === 'number' && !isNaN(lk.groesse)) {
@@ -676,7 +676,6 @@ const statisticsService = (() => {
                     }
                 }
 
-
                 if (patientHasFeature && actualN_is_Positive) a++;
                 else if (patientHasFeature && !actualN_is_Positive) b++;
                 else if (!patientHasFeature && actualN_is_Positive) c++;
@@ -684,10 +683,10 @@ const statisticsService = (() => {
             });
 
             const n_feature_total = a + b + c + d;
-            if (n_feature_total > 0 && (a + c > 0 || b + d > 0)) { // Ensure there are N+ or N- cases
+            if (n_feature_total > 0 && (a + c > 0 || b + d > 0)) {
                 const fisherFeature = manualFisherExactTest(a, b, c, d);
                 results[featureKey] = {
-                    matrix: { rp: a, fp: b, fn: c, rn: d }, // Using diagnostic matrix keys for consistency, though context is association
+                    matrix: { rp: a, fp: b, fn: c, rn: d },
                     testName: fisherFeature.method,
                     pValue: fisherFeature.pValue,
                     statistic: NaN,
@@ -800,6 +799,11 @@ const statisticsService = (() => {
 
      function calculateAllStatsForPublication(baseData, appliedT2Criteria, appliedT2Logic, bruteForceResultsPerKollektiv) {
         if (!baseData || !Array.isArray(baseData)) return null;
+        if (typeof studyT2CriteriaManager === 'undefined' || typeof t2CriteriaManager === 'undefined' || typeof dataProcessor === 'undefined' || typeof PUBLICATION_CONFIG === 'undefined') {
+            console.error("calculateAllStatsForPublication: Kritische Module nicht verfügbar.");
+            throw new Error("Abhängige Module für Statistikberechnung fehlen.");
+        }
+
         const results = {
             Gesamt: {},
             'direkt OP': {},
@@ -844,22 +848,18 @@ const statisticsService = (() => {
                 const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studySetConf.id);
                 if (studySet) {
                     let isApplicable = false;
-                    if (studySet.applicableKollektiv === 'Gesamt') {
-                        isApplicable = true; // Kohorten wie "Gesamt" sind für alle Kollektive anwendbar (hier: Koh)
-                    } else if (studySet.applicableKollektiv === kollektivId) {
-                        isApplicable = true; // Direkt anwendbar, wenn Kollektiv-ID übereinstimmt
+                    if (studySet.applicableKollektiv === 'Gesamt' || studySet.applicableKollektiv === kollektivId) {
+                        isApplicable = true;
                     }
 
                     if (isApplicable) {
-                        const evaluatedDataStudy = study_criteria_manager.applyStudyT2CriteriaToDataset(cloneDeep(filteredDataOriginal), studySet);
+                        const evaluatedDataStudy = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredDataOriginal), studySet);
                         results[kollektivId].gueteT2_literatur[studySetConf.id] = calculateDiagnosticPerformance(evaluatedDataStudy, 't2', 'n');
                     } else {
-                         // Gemäß Anforderung 7: Nur primäre Zielkollektive anzeigen. Daher hier kein Fallback auf emptyPerformance,
-                         // sondern der Eintrag wird nicht erzeugt oder bleibt undefined.
-                         // Die Logik in publication_renderer muss dies handhaben.
-                         // Für Vollständigkeit hier als null gesetzt.
                          results[kollektivId].gueteT2_literatur[studySetConf.id] = null;
                     }
+                } else {
+                    results[kollektivId].gueteT2_literatur[studySetConf.id] = null;
                 }
             });
 
@@ -884,7 +884,6 @@ const statisticsService = (() => {
         });
         return results;
      }
-
 
     return Object.freeze({
         getMedian,
