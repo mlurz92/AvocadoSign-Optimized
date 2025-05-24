@@ -1,13 +1,13 @@
 const state = (() => {
     let currentState = {};
     let defaultAggregatedBruteForceResults = {};
-    if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.DEFAULT_SETTINGS && Array.isArray(APP_CONFIG.DEFAULT_SETTINGS.CRITERIA_COMPARISON_SETS)) {
+
+    if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.DEFAULT_SETTINGS) {
         const kollektiveKeys = ['Gesamt', 'direkt OP', 'nRCT'];
         kollektiveKeys.forEach(k => {
             defaultAggregatedBruteForceResults[k] = null;
         });
     }
-
 
     const defaultState = {
         currentKollektiv: APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV,
@@ -41,16 +41,18 @@ const state = (() => {
             activeTabId: defaultState.activeTabId,
             aggregatedBruteForceResults: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.AGGREGATED_BRUTE_FORCE_RESULTS) ?? cloneDeep(defaultState.aggregatedBruteForceResults)
         };
-        // Ensure aggregatedBruteForceResults is an object, not null from localStorage if it was never set
+
         if (currentState.aggregatedBruteForceResults === null || typeof currentState.aggregatedBruteForceResults !== 'object') {
             currentState.aggregatedBruteForceResults = cloneDeep(defaultState.aggregatedBruteForceResults);
         }
+         // Ensure each kollektiv key exists in aggregatedBruteForceResults
+        const kollektiveKeys = ['Gesamt', 'direkt OP', 'nRCT'];
+        kollektiveKeys.forEach(k => {
+            if (!currentState.aggregatedBruteForceResults.hasOwnProperty(k)) {
+                currentState.aggregatedBruteForceResults[k] = null;
+            }
+        });
 
-
-        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) { // Deprecated key
-            localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
-        }
-        console.log("State Manager initialisiert mit:", currentState);
     }
 
     function getCurrentKollektiv() {
@@ -112,7 +114,7 @@ const state = (() => {
     }
 
     function setCurrentPublikationSection(newSectionId) {
-        const isValidSection = PUBLICATION_CONFIG.sections.some(section => section.id === newSectionId);
+        const isValidSection = typeof PUBLICATION_CONFIG !== 'undefined' && PUBLICATION_CONFIG.sections.some(section => section.id === newSectionId);
         if (typeof newSectionId === 'string' && isValidSection && currentState.currentPublikationSection !== newSectionId) {
             currentState.currentPublikationSection = newSectionId;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION, currentState.currentPublikationSection);
@@ -129,7 +131,7 @@ const state = (() => {
     }
 
     function setCurrentPublikationBruteForceMetric(newMetric) {
-        const isValidMetric = PUBLICATION_CONFIG.bruteForceMetricsForPublication.some(m => m.value === newMetric);
+        const isValidMetric = typeof PUBLICATION_CONFIG !== 'undefined' && PUBLICATION_CONFIG.bruteForceMetricsForPublication.some(m => m.value === newMetric);
         if (isValidMetric && currentState.currentPublikationBruteForceMetric !== newMetric) {
             currentState.currentPublikationBruteForceMetric = newMetric;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC, currentState.currentPublikationBruteForceMetric);
@@ -226,9 +228,9 @@ const state = (() => {
     }
 
     function updateAggregatedBruteForceResultForKollektiv(kollektivId, bfResult) {
-        if (typeof kollektivId === 'string' && bfResult) {
+        if (typeof kollektivId === 'string' && bfResult && typeof bfResult === 'object') {
             if (!currentState.aggregatedBruteForceResults) {
-                currentState.aggregatedBruteForceResults = {};
+                currentState.aggregatedBruteForceResults = cloneDeep(defaultAggregatedBruteForceResults);
             }
             currentState.aggregatedBruteForceResults[kollektivId] = cloneDeep(bfResult);
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.AGGREGATED_BRUTE_FORCE_RESULTS, currentState.aggregatedBruteForceResults);
@@ -236,7 +238,6 @@ const state = (() => {
         }
         return false;
     }
-
 
     return Object.freeze({
         init,
