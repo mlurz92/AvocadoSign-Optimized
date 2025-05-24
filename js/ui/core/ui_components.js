@@ -4,7 +4,7 @@ const uiComponents = (() => {
         let headerButtonHtml = '';
          if(downloadButtons && downloadButtons.length > 0 && chartId) {
              headerButtonHtml = downloadButtons.map(btn =>
-                 `<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${chartId}" data-format="${btn.format}" data-tippy-content="${btn.tooltip || `Als ${btn.format.toUpperCase()} herunterladen`}"> <i class="fas ${btn.icon || 'fa-download'}"></i></button>`
+                 `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${chartId}" data-format="${btn.format}" data-tippy-content="${btn.tooltip || `Als ${btn.format.toUpperCase()} herunterladen`}"> <i class="fas ${btn.icon || 'fa-download'}"></i></button>`
              ).join('');
         }
         const tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik[chartId]?.description || title || '';
@@ -435,7 +435,7 @@ const uiComponents = (() => {
                             <label class="form-check-label fw-bold" for="publikation-sprache-switch" id="publikation-sprache-label">${UI_TEXTS.publikationTab.spracheSwitchLabel[lang]}</label>
                         </div>
                     </div>
-                    <div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: calc(100vh - var(--header-height) - var(--nav-height) - 70px); overflow-y: auto;">
+                    <div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: calc(100vh - var(--header-height) - var(--nav-height) - 70px - 2rem); overflow-y: auto;">
                         <p class="text-muted">Bitte wählen Sie einen Abschnitt aus der Navigation.</p>
                     </div>
                 </div>
