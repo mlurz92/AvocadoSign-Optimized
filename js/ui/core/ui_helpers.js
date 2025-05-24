@@ -27,7 +27,7 @@ const ui_helpers = (() => {
           const toastElement = document.createElement('div');
           toastElement.id = toastId; toastElement.className = `toast align-items-center ${textClass} ${bgClass} border-0 fade`;
           toastElement.setAttribute('role', 'alert'); toastElement.setAttribute('aria-live', 'assertive'); toastElement.setAttribute('aria-atomic', 'true'); toastElement.setAttribute('data-bs-delay', String(duration));
-          toastElement.innerHTML = `<div class="d-flex"><div class="toast-body"><i class="fas ${iconClass} fa-fw me-2"></i> ${escapeMarkdown(message)}</div><button type="button" class="btn-close me-2 m-auto ${textClass === 'text-white' ? 'btn-close-white' : ''}" data-bs-dismiss="toast" aria-label="Schließen"></button></div>`;
+          toastElement.innerHTML = `<div class="d-flex"><div class="toast-body"><i class="fas ${iconClass} fa-fw me-2"></i> ${escapeMarkdown(message)}</div><button type="button" class="btn-close btn-close-sm me-2 m-auto ${textClass === 'text-white' ? 'btn-close-white' : ''}" data-bs-dismiss="toast" aria-label="Schließen"></button></div>`;
           toastContainer.appendChild(toastElement);
 
           try {
@@ -44,8 +44,14 @@ const ui_helpers = (() => {
         const elementSet = new Set(elementsInScope);
 
         globalTippyInstances = globalTippyInstances.filter(instance => {
-            if (!instance || !instance.reference || !document.body.contains(instance.reference)) { try { instance?.destroy(); } catch(e){} return false; }
-            if (elementSet.has(instance.reference)) { try { instance.destroy(); } catch (e) {} return false; }
+            if (!instance || !instance.reference || !document.body.contains(instance.reference)) {
+                try { instance?.destroy(); } catch(e){}
+                return false;
+            }
+            if (elementSet.has(instance.reference)) {
+                try { instance.destroy(); } catch (e) {}
+                return false;
+            }
             return true;
         });
 
@@ -103,6 +109,7 @@ const ui_helpers = (() => {
         tableHeader.querySelectorAll('th[data-sort-key]').forEach(th => {
             const key = th.dataset.sortKey; const icon = th.querySelector('i.fas'); if (!icon) return;
             icon.className = 'fas fa-sort text-muted opacity-50 ms-1';
+            th.style.color = 'inherit'; // Reset main header color
             const subSpans = th.querySelectorAll('.sortable-sub-header'); let isSubKeySortActive = false;
 
             if (subSpans.length > 0) {
@@ -122,10 +129,12 @@ const ui_helpers = (() => {
                 });
                 if (!isSubKeySortActive && key === sortState.key && (sortState.subKey === null || sortState.subKey === undefined)) {
                     icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
+                    th.style.color = 'var(--primary-color)';
                 }
             } else {
                 if (key === sortState.key && (sortState.subKey === null || sortState.subKey === undefined)) {
                     icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
+                    th.style.color = 'var(--primary-color)';
                 }
             }
         });
@@ -140,7 +149,6 @@ const ui_helpers = (() => {
         const action = button.dataset.action || 'expand';
         const expand = action === 'expand';
         const collapseElements = tableBody.querySelectorAll('.collapse');
-        let changedCount = 0;
 
         if (typeof bootstrap === 'undefined' || !bootstrap.Collapse) {
             console.error("Bootstrap Collapse nicht verfügbar.");
@@ -150,21 +158,23 @@ const ui_helpers = (() => {
         collapseElements.forEach(el => {
             const instance = bootstrap.Collapse.getOrCreateInstance(el);
             if (instance) {
-                if (expand && !el.classList.contains('show')) { instance.show(); changedCount++; }
-                else if (!expand && el.classList.contains('show')) { instance.hide(); changedCount++; }
+                if (expand && !el.classList.contains('show')) { instance.show(); }
+                else if (!expand && el.classList.contains('show')) { instance.hide(); }
             }
         });
 
         const newAction = expand ? 'collapse' : 'expand';
         button.dataset.action = newAction;
         const iconClass = expand ? 'fa-chevron-up' : 'fa-chevron-down';
-        const buttonText = expand ? 'Alle Details Ausblenden' : 'Alle Details Einblenden';
-
+        const buttonTextKey = expand ? 'collapseAll' : 'expandAll';
+        
         let tooltipKeyBase = '';
         if (buttonId === 'daten-toggle-details') tooltipKeyBase = 'datenTable';
         else if (buttonId === 'auswertung-toggle-details') tooltipKeyBase = 'auswertungTable';
-        const tooltipContentBase = TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll || 'Alle Details ein-/ausblenden';
-        const currentTooltipText = expand ? tooltipContentBase.replace('ein-', 'aus-') : tooltipContentBase.replace('aus-', 'ein-');
+        
+        const buttonText = (TOOLTIP_CONTENT[tooltipKeyBase]?.[buttonTextKey] || (expand ? 'Alle Details Ausblenden' : 'Alle Details Einblenden'));
+        const currentTooltipText = (TOOLTIP_CONTENT[tooltipKeyBase]?.[newAction === 'expand' ? 'expandAll' : 'collapseAll'] || 'Alle Details ein-/ausblenden');
+
 
         updateElementHTML(buttonId, `${buttonText} <i class="fas ${iconClass} ms-1"></i>`);
         button.setAttribute('data-tippy-content', currentTooltipText);
@@ -183,16 +193,19 @@ const ui_helpers = (() => {
         const isHiding = event.type === 'hide.bs.collapse' || event.type === 'hidden.bs.collapse';
 
         if (icon) {
-            icon.classList.toggle('fa-chevron-up', isShowing);
-            icon.classList.toggle('fa-chevron-down', !isShowing && isHiding);
+            icon.classList.toggle('fa-chevron-up', isShowing && event.type !== 'hide.bs.collapse');
+            icon.classList.toggle('fa-chevron-down', !isShowing || event.type === 'hide.bs.collapse');
         }
-        triggerRow.setAttribute('aria-expanded', String(isShowing));
+        triggerRow.setAttribute('aria-expanded', String(isShowing && event.type !== 'hide.bs.collapse'));
     }
+
 
     function attachRowCollapseListeners(tableBodyElement) {
         if(!tableBodyElement || typeof tableBodyElement.id !== 'string' || collapseEventListenersAttached.has(tableBodyElement.id)) return;
         tableBodyElement.addEventListener('show.bs.collapse', handleCollapseEvent);
+        tableBodyElement.addEventListener('shown.bs.collapse', handleCollapseEvent);
         tableBodyElement.addEventListener('hide.bs.collapse', handleCollapseEvent);
+        tableBodyElement.addEventListener('hidden.bs.collapse', handleCollapseEvent);
         collapseEventListenersAttached.add(tableBodyElement.id);
     }
 
@@ -221,12 +234,12 @@ const ui_helpers = (() => {
                 const ksw = sw * 1.2;
                 const kr = Math.max(1, (s - ksw) / 2);
                 if (value === 'scharf') svgContent = `<circle cx="${c}" cy="${c}" r="${kr}" fill="none" stroke="${strokeColor}" stroke-width="${ksw}"/>`;
-                else if (value === 'irregulär') svgContent = `<path d="M ${c + kr} ${c} A ${kr} ${kr} 0 0 1 ${c} ${c + kr} A ${kr*0.8} ${kr*1.2} 0 0 1 ${c-kr*0.9} ${c-kr*0.3} A ${kr*1.1} ${kr*0.7} 0 0 1 ${c+kr} ${c} Z" fill="none" stroke="${strokeColor}" stroke-width="${ksw}"/>`;
+                else if (value === 'irregulär') svgContent = `<path d="M ${c + kr*0.8} ${c-kr*0.2} Q ${c+kr*1.2} ${c+kr*0.5}, ${c+kr*0.5} ${c+kr*0.9} Q ${c-kr*0.5} ${c+kr*1.1}, ${c-kr*0.9} ${c+kr*0.3} Q ${c-kr*1.2} ${c-kr*0.6}, ${c-kr*0.3} ${c-kr*0.8} Q ${c+kr*0.4} ${c-kr*1.1}, ${c + kr*0.8} ${c-kr*0.2} Z" fill="none" stroke="${strokeColor}" stroke-width="${ksw}"/>`;
                 else svgContent = unknownIconSVG;
                 break;
             case 'homogenitaet':
                 if (value === 'homogen') { fillColor = iconColor; svgContent = `<rect x="${sqPos}" y="${sqPos}" width="${sq}" height="${sq}" fill="${fillColor}" stroke="none" rx="1" ry="1"/>`; }
-                else if (value === 'heterogen') { const pSize = Math.max(1, sq / 4); svgContent = `<rect x="${sqPos}" y="${sqPos}" width="${sq}" height="${sq}" fill="none" stroke="${iconColor}" stroke-width="${sw/2}" rx="1" ry="1"/>`; for (let i=0;i<3;i++){for(let j=0;j<3;j++){if((i+j)%2===0){svgContent+=`<rect x="${sqPos+i*pSize + pSize/2}" y="${sqPos+j*pSize + pSize/2}" width="${pSize}" height="${pSize}" fill="${iconColor}" stroke="none" style="opacity: 0.6;"/>`;}}} }
+                else if (value === 'heterogen') { const pSize = Math.max(1, sq / 4); svgContent = `<rect x="${sqPos}" y="${sqPos}" width="${sq}" height="${sq}" fill="none" stroke="${iconColor}" stroke-width="${sw/2}" rx="1" ry="1"/>`; for (let i=0;i<3;i++){for(let j=0;j<3;j++){if((i*3+j)%3===0){svgContent+=`<circle cx="${sqPos+(i+0.5)*sq/3}" cy="${sqPos+(j+0.5)*sq/3}" r="${pSize*0.6}" fill="${iconColor}" style="opacity:0.6;"/>`;}}} }
                 else svgContent = unknownIconSVG;
                 break;
             case 'signal':
@@ -240,7 +253,7 @@ const ui_helpers = (() => {
                 else if (value === 'intermediär') svgContent += `<line x1="${c-r*0.5}" y1="${c}" x2="${c+r*0.5}" y2="${c}" stroke="${iconColor}" stroke-width="${sw/1.5}" stroke-linecap="round"/>`;
                 break;
             case 'ruler-horizontal':
-                svgContent = `<path d="M${sw/2} ${c} H${s-sw/2} M${c} ${sw/2} V${s-sw/2} M${s*0.2} ${c-s*0.15} L${s*0.2} ${c+s*0.15} M${s*0.4} ${c-s*0.1} L${s*0.4} ${c+s*0.1} M${s*0.6} ${c-s*0.1} L${s*0.6} ${c+s*0.1} M${s*0.8} ${c-s*0.15} L${s*0.8} ${c+s*0.15}" stroke="${iconColor}" stroke-width="${sw/2}" stroke-linecap="round"/>`;
+                svgContent = `<path d="M${sw} ${c} H${s-sw} M${sw*1.5} ${c-s*0.15} V${c+s*0.15} M${c} ${c-s*0.2} V${c+s*0.2} M${s-sw*1.5} ${c-s*0.15} V${c+s*0.15}" stroke="${iconColor}" stroke-width="${sw*0.75}" stroke-linecap="round"/>`;
                 type = 'size';
                 break;
             default:
@@ -293,7 +306,7 @@ const ui_helpers = (() => {
                         if(button.dataset.criterion === key) {
                             const isActiveValue = criterion.active && button.dataset.value === String(criterion.value);
                             button.classList.toggle('active', isActiveValue);
-                            button.classList.toggle('inactive-option', !criterion.active || !isActiveValue);
+                            button.classList.toggle('inactive-option', !criterion.active || !isActiveValue); // Ensure this logic is sound for initial load
                         }
                     });
                 }
@@ -315,9 +328,8 @@ const ui_helpers = (() => {
         } else if (shouldShowIndicator && existingTippy) {
             existingTippy.setContent(tooltipContent);
             existingTippy.setProps({ theme: 'glass warning' });
-            existingTippy.enable();
-            existingTippy.show();
-        } else if (!shouldShowIndicator && existingTippy) {
+            if(!existingTippy.state.isShown) existingTippy.show();
+        } else if (!shouldShowIndicator && existingTippy && existingTippy.state.isEnabled) {
             existingTippy.hide();
             existingTippy.disable();
         }
@@ -335,7 +347,8 @@ const ui_helpers = (() => {
             toggleBtn.classList.toggle('active', isVergleich);
             toggleBtn.setAttribute('aria-pressed', String(isVergleich));
             updateElementHTML(toggleBtn.id, isVergleich ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv');
-            if(toggleBtn._tippy) toggleBtn._tippy.setContent(TOOLTIP_CONTENT.statistikToggleVergleich?.description || 'Layout umschalten');
+            const tooltipText = (TOOLTIP_CONTENT.statistikToggleVergleich?.description || 'Layout umschalten') + (isVergleich ? ' (Aktuell: Vergleich)' : ' (Aktuell: Einzelansicht)');
+            if(toggleBtn._tippy) toggleBtn._tippy.setContent(tooltipText);
             else initializeTooltips(toggleBtn.parentElement || toggleBtn);
         }
         if (container1) container1.classList.toggle('d-none', !isVergleich);
@@ -390,10 +403,10 @@ const ui_helpers = (() => {
         const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
         const getKollektivNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
         const isRunning = stateUI === 'start' || stateUI === 'started' || stateUI === 'progress';
-        const hasResults = stateUI === 'result' && data.results && data.results.length > 0 && data.bestResult && data.bestResult.criteria;
+        const hasResults = stateUI === 'result' && data.results && data.results.length > 0 && data.bestResult && data.bestResult.criteria && isFinite(data.bestResult.metricValue);
 
         if (elements.progressContainer) toggleElementClass(elements.progressContainer.id, 'd-none', !isRunning);
-        if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', stateUI !== 'result' || !hasResults);
+        if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', !hasResults);
         if (elements.cancelBtn) toggleElementClass(elements.cancelBtn.id, 'd-none', !isRunning || stateUI === 'cancelled' || stateUI === 'error' || stateUI === 'result');
         if (elements.startBtn) setElementDisabled(elements.startBtn.id, !workerAvailable || isRunning);
         if (elements.modalExportBtn) setElementDisabled(elements.modalExportBtn.id, !hasResults);
@@ -402,10 +415,8 @@ const ui_helpers = (() => {
         const startButtonText = isRunning ? '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Läuft...' : `<i class="fas fa-cogs me-1"></i> ${workerAvailable ? 'Optimierung starten' : 'Starten (Worker fehlt)'}`;
         if (elements.startBtn) updateElementHTML(elements.startBtn.id, startButtonText);
 
-        if (elements.bfInfoKollektiv) {
-            const kollektivToDisplay = data.kollektiv || currentKollektiv || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
-            updateElementText(elements.bfInfoKollektiv.id, getKollektivNameFunc(kollektivToDisplay));
-        }
+        const kollektivToDisplay = data.kollektiv || currentKollektiv || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
+        if (elements.bfInfoKollektiv) updateElementText(elements.bfInfoKollektiv.id, getKollektivNameFunc(kollektivToDisplay));
 
         const addOrUpdateTooltip = (el, content) => {
             if(el && content) { el.setAttribute('data-tippy-content', content); if(el._tippy) el._tippy.setContent(content); else initializeTooltips(el.parentElement || el); }
@@ -473,14 +484,14 @@ const ui_helpers = (() => {
                 const best = data?.bestResult;
                 if (best && best.criteria && isFinite(best.metricValue)) {
                     const metricName = data.metric || 'N/A';
-                    const kollektivName = getKollektivNameFunc(data.kollektiv || 'N/A');
+                    const kollektivDisplay = getKollektivNameFunc(data.kollektiv || 'N/A');
                     const bestValueStr = formatNumber(best.metricValue, 4);
                     const logicStr = best.logic?.toUpperCase() || 'N/A';
                     const criteriaStr = formatCriteriaFunc(best.criteria, best.logic);
                     const durationStr = formatNumber((data.duration || 0) / 1000, 1);
                     const totalTestedStr = formatNumber(data.totalTested || 0, 0);
                     if (elements.resultMetric) updateElementText(elements.resultMetric.id, metricName);
-                    if (elements.resultKollektiv) updateElementText(elements.resultKollektiv.id, kollektivName);
+                    if (elements.resultKollektiv) updateElementText(elements.resultKollektiv.id, kollektivDisplay);
                     if (elements.resultValue) updateElementText(elements.resultValue.id, bestValueStr);
                     if (elements.resultLogic) updateElementText(elements.resultLogic.id, logicStr);
                     if (elements.resultCriteria) updateElementText(elements.resultCriteria.id, criteriaStr);
@@ -489,34 +500,35 @@ const ui_helpers = (() => {
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig.');
                     if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, TOOLTIP_CONTENT.bruteForceResult.description);
                 } else {
-                    if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true);
-                    if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig (kein valides Ergebnis).');
+                    if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true); // Hide if no valid best result
+                    if (elements.statusText) updateElementText(elements.statusText.id, data?.message || 'Fertig (kein valides Ergebnis).');
                 }
                 break;
         }
     }
 
-    function updateExportButtonStates(activeTabId, hasBruteForceResults, canExportDataDependent) {
-        const bfDisabled = !hasBruteForceResults;
+    function updateExportButtonStates(activeTabId, hasAnyBruteForceResults, canExportDataDependent) {
+        const bfDisabled = !hasAnyBruteForceResults;
         const dataDisabled = !canExportDataDependent;
         const trySetDisabled = (id, disabled) => { const e = document.getElementById(id); if (e) e.disabled = disabled; };
 
         trySetDisabled('export-statistik-csv', dataDisabled);
-        trySetDisabled('export-bruteforce-txt', bfDisabled);
+        trySetDisabled('export-bruteforce-txt', bfDisabled); // Global BF report depends on if *any* result exists. Modal export in BF card is handled there.
         trySetDisabled('export-deskriptiv-md', dataDisabled);
         trySetDisabled('export-daten-md', dataDisabled);
         trySetDisabled('export-auswertung-md', dataDisabled);
         trySetDisabled('export-filtered-data-csv', dataDisabled);
-        trySetDisabled('export-comprehensive-report-html', !canExportData && !hasBruteForceResults);
+        trySetDisabled('export-comprehensive-report-html', !canExportDataDependent && !hasAnyBruteForceResults);
         trySetDisabled('export-charts-png', dataDisabled);
         trySetDisabled('export-charts-svg', dataDisabled);
 
-        trySetDisabled('export-all-zip', !canExportData && !hasBruteForceResults);
+        trySetDisabled('export-all-zip', !canExportDataDependent && !hasAnyBruteForceResults);
         trySetDisabled('export-csv-zip', dataDisabled);
-        trySetDisabled('export-md-zip', dataDisabled); 
+        trySetDisabled('export-md-zip', dataDisabled || !hasAnyBruteForceResults); // MD Zip includes publication texts which might use BF results
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
 
+        // XLSX currently not implemented
         trySetDisabled('export-statistik-xlsx', true);
         trySetDisabled('export-daten-xlsx', true);
         trySetDisabled('export-auswertung-xlsx', true);
@@ -536,12 +548,19 @@ const ui_helpers = (() => {
         });
 
         document.querySelectorAll('.chart-download-btn, .table-download-png-btn').forEach(btn => {
-            if (btn.closest('#statistik-tab-pane')) btn.disabled = activeTabId !== 'statistik-tab' || dataDisabled;
-            else if (btn.closest('#auswertung-tab-pane .dashboard-card-col')) btn.disabled = activeTabId !== 'auswertung-tab' || dataDisabled;
-            else if (btn.closest('#praesentation-tab-pane')) btn.disabled = activeTabId !== 'praesentation-tab' || dataDisabled;
+            const closestPane = btn.closest('.tab-pane');
+            let paneActive = false;
+            if (closestPane) paneActive = closestPane.id === `${activeTabId}-pane`;
+
+            if (btn.closest('#statistik-tab-pane')) btn.disabled = !paneActive || dataDisabled;
+            else if (btn.closest('#auswertung-tab-pane .dashboard-card-col')) btn.disabled = !paneActive || dataDisabled;
+            else if (btn.closest('#praesentation-tab-pane')) btn.disabled = !paneActive || dataDisabled;
+            else if (btn.closest('#publikation-tab-pane')) btn.disabled = !paneActive || dataDisabled;
         });
          if(document.getElementById('export-bruteforce-modal-txt')) {
-            trySetDisabled('export-bruteforce-modal-txt', bfDisabled);
+            const currentKollektiv = state.getCurrentKollektiv();
+            const bfDataForModal = state.getAggregatedBruteForceResults()?.[currentKollektiv];
+            trySetDisabled('export-bruteforce-modal-txt', !bfDataForModal || !bfDataForModal.results || bfDataForModal.results.length === 0);
          }
     }
 
@@ -570,17 +589,18 @@ const ui_helpers = (() => {
 
     function getMetricInterpretationHTML(key, metricData, methode = '', kollektivName = '') {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
-        const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: 'N/A' };
+        const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: null };
         const na = '--';
-        const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
-        const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na); 
+        const digits = (key === 'f1' || key === 'auc' || key === 'balAcc') ? 3 : 1;
+        const isPercent = !(key === 'f1' || key === 'auc' || key === 'balAcc');
+        const valueStr = formatNumber(data?.value, digits, na);
         const formattedValueWithUnit = isPercent ? formatPercent(data?.value, digits, na) : valueStr;
 
         const lowerStr = formatNumber(data?.ci?.lower, digits, na);
         const upperStr = formatNumber(data?.ci?.upper, digits, na);
         const ciMethodStr = data?.method || na;
-        const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value) : '';
+        const bewertungStr = (key === 'auc' || key === 'balAcc') ? getAUCBewertung(data?.value) : (key === 'phi' ? getPhiBewertung(data?.value) : '');
+
 
         let interpretation = interpretationTemplate
             .replace(/\[METHODE\]/g, methode)
@@ -591,8 +611,9 @@ const ui_helpers = (() => {
             .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
             .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`);
 
-        if (lowerStr === na || upperStr === na || ciMethodStr === na || data?.ci === null) {
-             interpretation = interpretation.replace(/\(95% CI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
+        if (lowerStr === na || upperStr === na || ciMethodStr === na || data?.ci === null || data?.ci?.lower === null || data?.ci?.upper === null) {
+             interpretation = interpretation.replace(/\(95% KI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
+             interpretation = interpretation.replace(/\(95% CI: \[LOWER\] – \[UPPER\]\)/g, '(Keine CI-Daten verfügbar)');
              interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
         }
         interpretation = interpretation.replace(/p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
@@ -637,7 +658,6 @@ const ui_helpers = (() => {
             ciMethodStr = assocObj.or?.method || na;
             pStr = (assozPValue !== null && !isNaN(assozPValue)) ? (assozPValue < 0.001 ? '&lt;0.001' : formatNumber(assozPValue, 3, na)) : na;
             sigSymbol = getStatisticalSignificanceSymbol(assozPValue);
-            sigText = getStatisticalSignificanceText(assozPValue);
         } else if (key === 'rd') {
             valueStr = formatNumber(assocObj.rd?.value !== null && !isNaN(assocObj.rd?.value) ? assocObj.rd.value * 100 : NaN, 1, na);
             lowerStr = formatNumber(assocObj.rd?.ci?.lower !== null && !isNaN(assocObj.rd?.ci?.lower) ? assocObj.rd.ci.lower * 100 : NaN, 1, na);
@@ -657,7 +677,7 @@ const ui_helpers = (() => {
                  .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
                  .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
                  .replace(/\[MERKMAL\]/g, `'${merkmalName}'`)
-                 .replace(/\[VARIABLE\]/g, `'${merkmalName}'`)
+                 .replace(/\[VARIABLE\]/g, `'${merkmalName}'`) // Alias for MERKMAL in some templates
                  .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
                  .replace(/<hr.*?>.*$/, '');
         }
@@ -673,16 +693,17 @@ const ui_helpers = (() => {
             .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? (UI_TEXTS.statMetrics.rdRichtungTexte?.HOEHER || 'höher') : (assocObj?.rd?.value < 0 ? (UI_TEXTS.statMetrics.rdRichtungTexte?.NIEDRIGER || 'niedriger') : (UI_TEXTS.statMetrics.rdRichtungTexte?.GLEICH || 'gleich')))
             .replace(/\[STAERKE\]/g, `<strong>${bewertungStr}</strong>`)
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
-            .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
+            .replace(/\[SIGNIFIKANZ\]/g, sigSymbol) // sigSymbol for OR, pStr for others
             .replace(/<hr.*?>.*$/, '');
 
          if (key === 'or' || key === 'rd') {
-            if (lowerStr === na || upperStr === na || ciMethodStr === na || assocObj?.[key]?.ci === null) {
+            if (lowerStr === na || upperStr === na || ciMethodStr === na || assocObj?.[key]?.ci === null || assocObj?.[key]?.ci.lower === null || assocObj?.[key]?.ci.upper === null) {
                 interpretation = interpretation.replace(/\(95% CI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
+                interpretation = interpretation.replace(/\(95% CI: \[LOWER\] – \[UPPER\]\)/g, '(Keine CI-Daten verfügbar)');
                 interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
             }
          }
-         if (key === 'or' && pStr === na) {
+         if (key === 'or' && pStr === na) { // Remove p-value part if not available for OR
              interpretation = interpretation.replace(/, Test-p=.*?, \[SIGNIFIKANZ\]\)/g, ')');
          }
         return interpretation;
