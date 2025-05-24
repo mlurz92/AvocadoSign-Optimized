@@ -1,10 +1,10 @@
 const PUBLICATION_CONFIG = Object.freeze({
     defaultLanguage: 'de',
-    defaultSection: 'methoden', // Geändert auf Hauptsektions-ID
+    defaultSection: 'methoden', 
     sections: Object.freeze([
         Object.freeze({
-            id: 'methoden', // ID für den Hauptbereich "Methoden"
-            labelKey: 'methoden', // Schlüssel für UI_TEXTS.publikationTab.sectionLabels
+            id: 'methoden', 
+            labelKey: 'methoden', 
             subSections: Object.freeze([
                 Object.freeze({ id: 'methoden_studienanlage', label: 'Studiendesign und Ethik' }),
                 Object.freeze({ id: 'methoden_patientenkollektiv', label: 'Patientenkollektiv' }),
@@ -16,7 +16,7 @@ const PUBLICATION_CONFIG = Object.freeze({
             ])
         }),
         Object.freeze({
-            id: 'ergebnisse', // ID für den Hauptbereich "Ergebnisse"
+            id: 'ergebnisse', 
             labelKey: 'ergebnisse',
             subSections: Object.freeze([
                 Object.freeze({ id: 'ergebnisse_patientencharakteristika', label: 'Patientencharakteristika' }),
