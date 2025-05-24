@@ -389,6 +389,7 @@ const statisticsService = (() => {
 
             const calculateVarianceComponent = (V_arr, mean_auc, n_other) => {
                 if (n_other === 0 || V_arr.some(isNaN)) return NaN;
+                if (V_arr.length < 2) return NaN;
                 let sumSqDiff = 0;
                 for(let val of V_arr) sumSqDiff += Math.pow(val - mean_auc, 2);
                 return sumSqDiff / (V_arr.length -1);
@@ -400,6 +401,7 @@ const statisticsService = (() => {
 
             const calculateCovarianceComponent = (V_X_arr, V_Y_arr, meanX, meanY, n_other) => {
                 if (n_other === 0 || V_X_arr.some(isNaN) || V_Y_arr.some(isNaN)) return NaN;
+                if (V_X_arr.length < 2) return NaN;
                  let sumProdDiff = 0;
                  for (let i = 0; i < V_X_arr.length; i++) sumProdDiff += (V_X_arr[i] - meanX) * (V_Y_arr[i] - meanY);
                  return sumProdDiff / (V_X_arr.length - 1);
@@ -490,7 +492,8 @@ const statisticsService = (() => {
     function calculateDiagnosticPerformance(data, predictionKey, referenceKey) {
         if (!Array.isArray(data) || data.length === 0) {
              console.warn(`calculateDiagnosticPerformance: Keine oder ungültige Daten für ${predictionKey} vs ${referenceKey}.`);
-             return null;
+             const nullMetric = { value: NaN, ci: null, method: null, se: NaN };
+             return { matrix: { rp: 0, fp: 0, fn: 0, rn: 0 }, sens: nullMetric, spez: nullMetric, ppv: nullMetric, npv: nullMetric, acc: nullMetric, balAcc: nullMetric, f1: nullMetric, auc: nullMetric };
         }
         const matrix = calculateConfusionMatrix(data, predictionKey, referenceKey);
         const { rp, fp, fn, rn } = matrix;
@@ -616,10 +619,10 @@ const statisticsService = (() => {
                 statistic: mwuResult.U,
                 testName: mwuResult.testName, Z: mwuResult.Z,
                 or: null, rd: null, phi: null, matrix: null,
-                featureName: 'LK Größe (Median Vergleich)'
+                featureName: 'LK Größe (Median Vgl.)'
             };
         } else {
-            results.size_mwu = { ...nullReturn, testName: "Mann-Whitney U (Nicht genug Daten)", featureName: 'LK Größe (Median Vergleich)' };
+            results.size_mwu = { ...nullReturn, testName: "Mann-Whitney U (Nicht genug Daten)", featureName: 'LK Größe (Median Vgl.)' };
         }
 
         const t2Features = ['size', 'form', 'kontur', 'homogenitaet', 'signal'];
@@ -804,15 +807,16 @@ const statisticsService = (() => {
         const kollektive = ['Gesamt', 'direkt OP', 'nRCT'];
 
         kollektive.forEach(kollektivId => {
-            const filteredData = dataProcessor.filterDataByKollektiv(data, kollektivId);
-            if (filteredData.length === 0) {
-                results[kollektivId] = null;
+            const filteredDataOriginal = dataProcessor.filterDataByKollektiv(data, kollektivId);
+            if (filteredDataOriginal.length === 0) {
+                results[kollektivId] = null; // Store null if no data for this cohort
                 return;
             }
 
-            const evaluatedDataApplied = t2CriteriaManager.evaluateDataset(cloneDeep(filteredData), appliedT2Criteria, appliedT2Logic);
+            const filteredDataCloned = cloneDeep(filteredDataOriginal);
+            const evaluatedDataApplied = t2CriteriaManager.evaluateDataset(filteredDataCloned, appliedT2Criteria, appliedT2Logic);
 
-            results[kollektivId].deskriptiv = calculateDescriptiveStats(filteredData);
+            results[kollektivId].deskriptiv = calculateDescriptiveStats(filteredDataOriginal); // Use original filtered data for descriptives
             results[kollektivId].gueteAS = calculateDiagnosticPerformance(evaluatedDataApplied, 'as', 'n');
             results[kollektivId].gueteT2_angewandt = calculateDiagnosticPerformance(evaluatedDataApplied, 't2', 'n');
             results[kollektivId].vergleichASvsT2_angewandt = compareDiagnosticMethods(evaluatedDataApplied, 'as', 't2', 'n');
@@ -823,27 +827,28 @@ const statisticsService = (() => {
                 const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studySetConf.id);
                 if (studySet) {
                     let isApplicable = true;
+                    // Only calculate if the studySet is for "Gesamt" or matches the current kollektivId, or if no specific applicableKollektiv is defined for the study
                     if (studySet.applicableKollektiv && studySet.applicableKollektiv !== 'Gesamt' && studySet.applicableKollektiv !== kollektivId) {
                         isApplicable = false;
                     }
 
                     if (isApplicable) {
-                        const evaluatedDataStudy = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredData), studySet);
+                        const evaluatedDataStudy = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredDataOriginal), studySet);
                         results[kollektivId].gueteT2_literatur[studySetConf.id] = calculateDiagnosticPerformance(evaluatedDataStudy, 't2', 'n');
                     } else {
-                        results[kollektivId].gueteT2_literatur[studySetConf.id] = null;
+                        results[kollektivId].gueteT2_literatur[studySetConf.id] = null; // Mark as not primarily applicable/calculated
                     }
                 }
             });
 
-            const bfResultForKollektiv = bruteForceResultsPerKollektiv?.[kollektivId];
-            if (bfResultForKollektiv && bfResultForKollektiv.bestResult && bfResultForKollektiv.bestResult.criteria) {
-                const bfCriteria = bfResultForKollektiv.bestResult.criteria;
-                const bfLogic = bfResultForKollektiv.bestResult.logic;
-                const evaluatedDataBF = t2CriteriaManager.evaluateDataset(cloneDeep(filteredData), bfCriteria, bfLogic);
+            const bfResultForCurrentKollektiv = bruteForceResultsPerKollektiv?.[kollektivId];
+            if (bfResultForCurrentKollektiv && bfResultForCurrentKollektiv.bestResult && bfResultForCurrentKollektiv.bestResult.criteria) {
+                const bfCriteria = bfResultForCurrentKollektiv.bestResult.criteria;
+                const bfLogic = bfResultForCurrentKollektiv.bestResult.logic;
+                const evaluatedDataBF = t2CriteriaManager.evaluateDataset(cloneDeep(filteredDataOriginal), bfCriteria, bfLogic);
                 results[kollektivId].gueteT2_bruteforce = calculateDiagnosticPerformance(evaluatedDataBF, 't2', 'n');
                 results[kollektivId].vergleichASvsT2_bruteforce = compareDiagnosticMethods(evaluatedDataBF, 'as', 't2', 'n');
-                results[kollektivId].bruteforce_definition = { criteria: bfCriteria, logic: bfLogic, metricValue: bfResultForKollektiv.bestResult.metricValue, metricName: bfResultForKollektiv.metric };
+                results[kollektivId].bruteforce_definition = { criteria: bfCriteria, logic: bfLogic, metricValue: bfResultForCurrentKollektiv.bestResult.metricValue, metricName: bfResultForCurrentKollektiv.metric };
             } else {
                 results[kollektivId].gueteT2_bruteforce = null;
                 results[kollektivId].vergleichASvsT2_bruteforce = null;
