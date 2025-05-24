@@ -148,15 +148,19 @@ const publicationTextGenerator = (() => {
         const homogenitaetValuesText = APP_CONFIG.T2_CRITERIA_SETTINGS.HOMOGENITAET_VALUES.join(lang === 'de' ? ' oder ' : ' or ');
         const signalValuesText = APP_CONFIG.T2_CRITERIA_SETTINGS.SIGNAL_VALUES.join(lang === 'de' ? ' oder ' : ' or ');
 
-
         const getOptimizedCriteriaTextForKollektiv = (kollektivId) => {
             const bfData = allKollektivStats?.[kollektivId]?.bruteforce_definition;
-            if (bfData && bfData.criteria && bfData.metricName === bfOptimizedMetric) {
-                const criteriaText = studyT2CriteriaManager.formatCriteriaForDisplay(bfData.criteria, bfData.logic, false);
+            if (bfData && bfData.criteria && typeof studyT2CriteriaManager !== 'undefined' && typeof studyT2CriteriaManager.formatCriteriaForDisplayStrict === 'function') {
+                const criteriaText = studyT2CriteriaManager.formatCriteriaForDisplayStrict(bfData.criteria, bfData.logic, false);
                 const metricValFormatted = fValue(bfData.metricValue, (bfData.metricName === 'F1-Score' || bfData.metricName === 'Balanced Accuracy' || bfData.metricName === 'AUC') ? 3 : 1);
-                return `${criteriaText} (${lang === 'de' ? 'erreichte' : 'achieved'} ${bfData.metricName}: ${metricValFormatted})`;
-            } else if (bfData && bfData.criteria && bfData.metricName !== bfOptimizedMetric) {
-                 return lang === 'de' ? `Optimierung für '${bfOptimizedMetric}' nicht verfügbar (Ergebnis für '${bfData.metricName}' mit Wert ${fValue(bfData.metricValue,3)} für die Kriterien '${studyT2CriteriaManager.formatCriteriaForDisplay(bfData.criteria, bfData.logic, false)}' vorhanden)` : `Optimization for '${bfOptimizedMetric}' not available (result for '${bfData.metricName}' with value ${fValue(bfData.metricValue,3)} for criteria '${studyT2CriteriaManager.formatCriteriaForDisplay(bfData.criteria, bfData.logic, false)}' present)`;
+                if (bfData.metricName === bfOptimizedMetric) {
+                    return `${criteriaText} (${lang === 'de' ? 'erreichte' : 'achieved'} ${bfData.metricName}: ${metricValFormatted})`;
+                } else {
+                    return lang === 'de' ? `Optimierung für '${bfOptimizedMetric}' nicht primär für diesen Text verwendet (Ergebnis für '${bfData.metricName}' mit Wert ${metricValFormatted} für Kriterien '${criteriaText}' vorhanden)`
+                                          : `Optimization for '${bfOptimizedMetric}' not primarily used for this text (result for '${bfData.metricName}' with value ${metricValFormatted} for criteria '${criteriaText}' present)`;
+                }
+            } else if (bfData && bfData.criteria) {
+                 return lang === 'de' ? `Formatierungsfunktion für Kriterien nicht verfügbar.` : `Criteria formatting function not available.`;
             }
             return lang === 'de' ? `Keine validen Optimierungsergebnisse für '${bfOptimizedMetric}' in diesem Kollektiv.` : `No valid optimization results for '${bfOptimizedMetric}' in this cohort.`;
         };
@@ -166,13 +170,19 @@ const publicationTextGenerator = (() => {
         const rutegardRef = getReference('rutegard2025', commonData, lang);
         const esgarRef = getReference('beetsTan2018ESGAR', commonData, lang);
 
-        const kohSet = studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology');
-        const barbaroSet = studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging');
-        const esgarSet = studyT2CriteriaManager.getStudyCriteriaSetById('rutegard_et_al_esgar');
+        let kohSet = null, barbaroSet = null, esgarSet = null;
+        let kohDesc = 'N/A', barbaroDesc = 'N/A', esgarDesc = 'N/A';
 
-        const kohDesc = kohSet?.studyInfo?.keyCriteriaSummary || studyT2CriteriaManager.formatCriteriaForDisplay(kohSet?.criteria, kohSet?.logic, false) || 'N/A';
-        const barbaroDesc = barbaroSet?.studyInfo?.keyCriteriaSummary || studyT2CriteriaManager.formatCriteriaForDisplay(barbaroSet?.criteria, barbaroSet?.logic, false) || 'N/A';
-        const esgarDesc = esgarSet?.studyInfo?.keyCriteriaSummary || esgarSet?.description || 'N/A';
+        if (typeof studyT2CriteriaManager !== 'undefined') {
+            kohSet = studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology');
+            barbaroSet = studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging');
+            esgarSet = studyT2CriteriaManager.getStudyCriteriaSetById('rutegard_et_al_esgar');
+
+            kohDesc = kohSet?.studyInfo?.keyCriteriaSummary || (kohSet ? studyT2CriteriaManager.formatCriteriaForDisplayStrict(kohSet.criteria, kohSet.logic, false) : 'N/A');
+            barbaroDesc = barbaroSet?.studyInfo?.keyCriteriaSummary || (barbaroSet ? studyT2CriteriaManager.formatCriteriaForDisplayStrict(barbaroSet.criteria, barbaroSet.logic, false) : 'N/A');
+            esgarDesc = esgarSet?.studyInfo?.keyCriteriaSummary || esgarSet?.description || 'N/A';
+        }
+
         const radiologenErfahrung = lang === 'de' ? "(M.L.: 7 Jahre Erfahrung; A.O.S.: 29 Jahre Erfahrung)" : "(M.L.: 7 years of experience; A.O.S.: 29 years of experience)";
 
 
@@ -338,18 +348,20 @@ const publicationTextGenerator = (() => {
             const bfStats = allKollektivStats?.[kollektivId]?.gueteT2_bruteforce;
             const nKollektiv = allKollektivStats?.[kollektivId]?.deskriptiv?.anzahlPatienten || 'N/A';
 
-            if (bfDef && bfStats && bfDef.metricName === bfOptimizedMetric) {
-                const criteriaDisplay = studyT2CriteriaManager.formatCriteriaForDisplay(bfDef.criteria, bfDef.logic, false);
+            if (bfDef && bfStats && typeof studyT2CriteriaManager !== 'undefined' && typeof studyT2CriteriaManager.formatCriteriaForDisplayStrict === 'function') {
+                const criteriaDisplay = studyT2CriteriaManager.formatCriteriaForDisplayStrict(bfDef.criteria, bfDef.logic, false);
                 const aucFormatted = fCI(bfStats.auc, 3, false, lang);
                 const optimizedMetricValueFormatted = fValue(bfDef.metricValue, (bfDef.metricName === 'F1-Score' || bfDef.metricName === 'Balanced Accuracy' || bfDef.metricName === 'AUC') ? 3 : 1);
-                return lang === 'de' ? `Für das ${kollektivDisplayName}-Kollektiv (N=${nKollektiv}) wurden mit den Kriterien "${criteriaDisplay}" eine AUC von ${aucFormatted} (optimierte ${bfDef.metricName}: ${optimizedMetricValueFormatted}) erreicht.`
-                                      : `For the ${kollektivDisplayName} cohort (n=${nKollektiv}), the criteria "${criteriaDisplay}" achieved an AUC of ${aucFormatted} (optimized ${bfDef.metricName}: ${optimizedMetricValueFormatted}).`;
-            } else if (bfDef && bfDef.criteria && bfDef.metricName !== bfOptimizedMetric) {
-                 const criteriaDisplay = studyT2CriteriaManager.formatCriteriaForDisplay(bfDef.criteria, bfDef.logic, false);
-                 const achievedMetricValue = fValue(bfDef.metricValue, (bfDef.metricName === 'F1-Score' || bfDef.metricName === 'Balanced Accuracy' || bfDef.metricName === 'AUC') ? 3 : 1);
-                 const aucForTheseCriteria = fCI(bfStats?.auc, 3, false, lang);
-                 return lang === 'de' ? `Für das ${kollektivDisplayName}-Kollektiv (N=${nKollektiv}) wurde die Optimierung primär für die Metrik '${bfDef.metricName}' (erreicht: ${achievedMetricValue} mit Kriterien "${criteriaDisplay}") durchgeführt (Details siehe Tabelle 5), nicht für '${bfOptimizedMetric}'. Die AUC für diese spezifischen Kriterien betrug ${aucForTheseCriteria}.`
-                                      : `For the ${kollektivDisplayName} cohort (n=${nKollektiv}), optimization was primarily performed for the metric '${bfDef.metricName}' (achieved: ${achievedMetricValue} with criteria "${criteriaDisplay}") (see Table 5 for details), not for '${bfOptimizedMetric}'. The AUC for these specific criteria was ${aucForTheseCriteria}.`;
+
+                if (bfDef.metricName === bfOptimizedMetric) {
+                    return lang === 'de' ? `Für das ${kollektivDisplayName}-Kollektiv (N=${nKollektiv}) wurden mit den Kriterien "${criteriaDisplay}" eine AUC von ${aucFormatted} (optimierte ${bfDef.metricName}: ${optimizedMetricValueFormatted}) erreicht.`
+                                          : `For the ${kollektivDisplayName} cohort (n=${nKollektiv}), the criteria "${criteriaDisplay}" achieved an AUC of ${aucFormatted} (optimized ${bfDef.metricName}: ${optimizedMetricValueFormatted}).`;
+                } else {
+                     return lang === 'de' ? `Für das ${kollektivDisplayName}-Kollektiv (N=${nKollektiv}) wurde die Optimierung primär für die Metrik '${bfDef.metricName}' (erreicht: ${optimizedMetricValueFormatted} mit Kriterien "${criteriaDisplay}") durchgeführt (Details siehe Tabelle 5), nicht für '${bfOptimizedMetric}'. Die AUC für diese spezifischen Kriterien betrug ${aucFormatted}.`
+                                          : `For the ${kollektivDisplayName} cohort (n=${nKollektiv}), optimization was primarily performed for the metric '${bfDef.metricName}' (achieved: ${optimizedMetricValueFormatted} with criteria "${criteriaDisplay}") (see Table 5 for details), not for '${bfOptimizedMetric}'. The AUC for these specific criteria was ${aucFormatted}.`;
+                }
+            } else if (bfDef && bfDef.criteria) {
+                return lang === 'de' ? `Formatierungsfunktion für Kriterien nicht verfügbar für ${kollektivDisplayName}-Kollektiv (N=${nKollektiv}).` : `Criteria formatting function not available for ${kollektivDisplayName} cohort (n=${nKollektiv}).`;
             }
             return lang === 'de' ? `Für das ${kollektivDisplayName}-Kollektiv (N=${nKollektiv}) konnten keine validen Optimierungsergebnisse für die Zielmetrik '${bfOptimizedMetric}' erzielt oder dargestellt werden.`
                                   : `For the ${kollektivDisplayName} cohort (n=${nKollektiv}), no valid optimization results for the target metric '${bfOptimizedMetric}' could be achieved or displayed.`;
@@ -377,12 +389,10 @@ const publicationTextGenerator = (() => {
             let sentences = [];
             const gueteAS = allKollektivStats?.[kollektivId]?.gueteAS;
 
-            // 1. AS vs. Literatur
             const literaturSetsToCompare = [];
             if (kollektivId === 'Gesamt') {
                 literaturSetsToCompare.push({id: 'rutegard_et_al_esgar', name: getReference('rutegard2025', commonData, lang) + ' (ESGAR)'});
                 literaturSetsToCompare.push({id: 'koh_2008_morphology', name: getReference('koh2008', commonData, lang)});
-                // Barbaro wurde im Nutzerfeedback für Gesamt gefordert.
                 literaturSetsToCompare.push({id: 'barbaro_2024_restaging', name: getReference('barbaro2024', commonData, lang)});
             } else if (kollektivId === 'direkt OP') {
                 literaturSetsToCompare.push({id: 'rutegard_et_al_esgar', name: getReference('rutegard2025', commonData, lang) + ' (ESGAR)'});
@@ -393,9 +403,6 @@ const publicationTextGenerator = (() => {
             literaturSetsToCompare.forEach(litSetConf => {
                 const gueteT2_Lit = allKollektivStats?.[kollektivId]?.gueteT2_literatur?.[litSetConf.id];
                 if (gueteAS && gueteT2_Lit) {
-                    // Ad-hoc Vergleichsdaten holen oder berechnen - für den Text hier fokussieren wir auf AUC.
-                    // Die p-Werte müssten im statistics_service berechnet und in allKollektivStats hinterlegt werden.
-                    // Hier als Beispiel: Nur Nennung der AUCs und Verweis auf Tabelle.
                     const aucAStext = fCI(gueteAS.auc, 3, false, lang);
                     const aucLitText = fCI(gueteT2_Lit.auc, 3, false, lang);
                     if (lang === 'de') {
@@ -406,15 +413,14 @@ const publicationTextGenerator = (() => {
                 }
             });
 
-            // 2. AS vs. BF-optimierte Kriterien
             const bfDef = allKollektivStats?.[kollektivId]?.bruteforce_definition;
             const gueteT2_BF = allKollektivStats?.[kollektivId]?.gueteT2_bruteforce;
             const vergleichASvsBF = allKollektivStats?.[kollektivId]?.vergleichASvsT2_bruteforce;
 
-            if (gueteAS && gueteT2_BF && vergleichASvsBF && bfDef && bfDef.metricName === bfOptimizedMetric) {
+            if (gueteAS && gueteT2_BF && vergleichASvsBF && bfDef && bfDef.metricName === bfOptimizedMetric && typeof studyT2CriteriaManager !== 'undefined' && typeof studyT2CriteriaManager.formatCriteriaForDisplayStrict === 'function') {
                 const pMcNemarBF = vergleichASvsBF?.mcnemar?.pValue;
                 const pDeLongBF = vergleichASvsBF?.delong?.pValue;
-                const bfKriterienDesc = studyT2CriteriaManager.formatCriteriaForDisplay(bfDef.criteria, bfDef.logic, true);
+                const bfKriterienDesc = studyT2CriteriaManager.formatCriteriaForDisplayStrict(bfDef.criteria, bfDef.logic, true);
                 const aucAStext = fCI(gueteAS.auc, 3, false, lang);
                 const aucBFtext = fCI(gueteT2_BF.auc, 3, false, lang);
 
@@ -451,7 +457,7 @@ const publicationTextGenerator = (() => {
         if (!allKollektivStats && (sectionId.startsWith('ergebnisse') || sectionId === 'methoden_t2_definition' || sectionId === 'methoden_patientenkollektiv')) {
              return `<p class="text-danger">${lang === 'de' ? 'Fehler: Statistische Grunddaten nicht verfügbar, um diesen Abschnitt zu generieren.' : 'Error: Basic statistical data not available to generate this section.'}</p>`;
         }
-        if (!commonData && sectionId !== 'methoden_referenzstandard') { // Referenzstandard hat keine commonData-Abhängigkeit
+        if (!commonData && sectionId !== 'methoden_referenzstandard') {
              return `<p class="text-danger">${lang === 'de' ? 'Fehler: Allgemeine Konfigurationsdaten nicht verfügbar.' : 'Error: General configuration data not available.'}</p>`;
         }
 
