@@ -302,6 +302,18 @@ function getStatisticalSignificanceText(pValue, significanceLevel = APP_CONFIG.S
          : UI_TEXTS.statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT || 'statistisch nicht signifikant';
 }
 
+function getPValueText(pValue, lang = 'de') {
+    if (pValue === null || pValue === undefined || isNaN(pValue)) return 'N/A';
+    if (pValue < 0.001) return lang === 'de' ? 'p < 0,001' : 'P < .001';
+
+    let pFormatted = formatNumber(pValue, 3, 'N/A', true);
+    if (pFormatted === '0.000') return lang === 'de' ? 'p < 0,001' : 'P < .001';
+    if (lang === 'de' && pFormatted !== 'N/A') {
+        pFormatted = pFormatted.replace('.', ',');
+    }
+    return `p = ${pFormatted}`;
+}
+
 function generateUUID() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();
