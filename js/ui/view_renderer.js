@@ -9,12 +9,16 @@ const viewRenderer = (() => {
         }
         ui_helpers.updateElementHTML(containerId, '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade Inhalt...</span></div></div>');
         try {
+            // Ensure renderFunction is actually a function before calling
+            if (typeof renderFunction !== 'function') {
+                throw new Error(`renderFunction für Tab ${tabId} ist keine Funktion.`);
+            }
             const contentHTML = renderFunction(...args);
             ui_helpers.updateElementHTML(containerId, contentHTML || '<p class="text-muted p-3">Kein Inhalt generiert.</p>');
             ui_helpers.initializeTooltips(container);
         } catch (error) {
             console.error(`Fehler beim Rendern von Tab ${tabId}:`, error);
-            const errorMessage = `<div class="alert alert-danger m-3">Fehler beim Laden des Tabs: ${error.message}</div>`;
+            const errorMessage = `<div class="alert alert-danger m-3">Fehler beim Laden des Tabs: ${error.message}<br><pre>${error.stack || ''}</pre></div>`;
             ui_helpers.updateElementHTML(containerId, errorMessage);
             ui_helpers.showToast(`Fehler beim Laden des Tabs '${tabId}'.`, 'danger');
         }
@@ -47,12 +51,12 @@ const viewRenderer = (() => {
         if (!stats || stats.anzahlPatienten === 0) { ids.forEach(id => ui_helpers.updateElementHTML(id, '<p class="text-muted small text-center p-2">N/A</p>')); return; };
         const histOpts = { height: 130, margin: { top: 5, right: 10, bottom: 25, left: 35 }, useCompactMargins: true };
         const pieOpts = { height: 130, margin: { top: 5, right: 5, bottom: 35, left: 5 }, innerRadiusFactor: 0.45, outerRadiusFactor: 0.95, fontSize: '8px', useCompactMargins: true, legendBelow: true };
-        
+
         const genderData = [{label: UI_TEXTS.legendLabels.male, value: stats.geschlecht?.m ?? 0}, {label: UI_TEXTS.legendLabels.female, value: stats.geschlecht?.f ?? 0}];
         if(stats.geschlecht?.unbekannt > 0) genderData.push({label: UI_TEXTS.legendLabels.unknownGender, value: stats.geschlecht.unbekannt });
-        
+
         const therapyData = [{label: UI_TEXTS.legendLabels.direktOP, value: stats.therapie?.['direkt OP'] ?? 0}, {label: UI_TEXTS.legendLabels.nRCT, value: stats.therapie?.nRCT ?? 0}];
-        
+
         try {
             chartRenderer.renderAgeDistributionChart(stats.alterData || [], ids[0], histOpts);
             chartRenderer.renderPieChart(genderData, ids[1], {...pieOpts, legendItemCount: genderData.length});
@@ -66,30 +70,57 @@ const viewRenderer = (() => {
 
      function _renderCriteriaComparisonTable(containerId, data, kollektiv) {
          const container = document.getElementById(containerId); if (!container) return;
-         if (!Array.isArray(data)) { container.innerHTML = uiComponents.createStatistikCard('criteriaComparisonTable', UI_TEXTS.criteriaComparison.title, '<p class="p-3 text-muted small">Ungültige Daten für Vergleich.</p>', false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich'); return; }
+         if (!Array.isArray(data) || data.length === 0) {
+            container.innerHTML = uiComponents.createStatistikCard('criteriaComparisonTable', UI_TEXTS.criteriaComparison.title, '<p class="p-3 text-muted small">Keine Daten für Vergleich vorhanden.</p>', false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
+            return;
+         }
 
          const comparisonSetIds = APP_CONFIG.DEFAULT_SETTINGS.CRITERIA_COMPARISON_SETS || [];
-         const results = []; const baseDataClone = cloneDeep(data);
+         const results = [];
+         const baseDataClone = cloneDeep(data); // Use already filtered & evaluated data for the current kollektiv
 
          comparisonSetIds.forEach(setId => {
             let perf = null; let setName = 'Unbekannt'; let setIdUsed = setId;
+            let evaluatedDataForSet = baseDataClone; // Assume AS and Applied Criteria use this directly
+
             try {
                 if (setId === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID) {
-                    perf = statisticsService.calculateDiagnosticPerformance(baseDataClone, 'as', 'n'); setName = APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME;
+                    perf = statisticsService.calculateDiagnosticPerformance(evaluatedDataForSet, 'as', 'n');
+                    setName = APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME;
                 } else if (setId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) {
-                    perf = statisticsService.calculateDiagnosticPerformance(baseDataClone, 't2', 'n'); setName = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME;
+                    // Data is already evaluated with applied criteria if it comes from Statistik-Tab context
+                    perf = statisticsService.calculateDiagnosticPerformance(evaluatedDataForSet, 't2', 'n');
+                    setName = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME;
                 } else {
                     const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(setId);
-                    if (studySet) { const evaluatedData = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(baseDataClone), studySet); perf = statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n'); setName = studySet.name; }
-                    else { console.warn(`Kriterienset ${setId} für Vergleich nicht gefunden.`); }
+                    if (studySet) {
+                        // Re-evaluate the base data (for the specific kollektiv) with THIS study's criteria
+                        evaluatedDataForSet = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(baseDataClone), studySet);
+                        perf = statisticsService.calculateDiagnosticPerformance(evaluatedDataForSet, 't2', 'n');
+                        setName = studySet.name;
+                    } else {
+                        console.warn(`Kriterienset ${setId} für Vergleich nicht gefunden.`);
+                    }
                 }
             } catch (error) { console.error(`Fehler bei Berechnung für Vergleichsset ${setId}:`, error); }
 
-            if (perf && perf.auc && !isNaN(perf.auc.value)) { results.push({ id: setIdUsed, name: setName, sens: perf.sens?.value, spez: perf.spez?.value, ppv: perf.ppv?.value, npv: perf.npv?.value, acc: perf.acc?.value, auc: perf.auc?.value }); }
-            else { results.push({ id: setIdUsed, name: setName, sens: NaN, spez: NaN, ppv: NaN, npv: NaN, acc: NaN, auc: NaN }); }
+            if (perf && perf.auc && !isNaN(perf.auc.value)) {
+                results.push({ id: setIdUsed, name: setName, sens: perf.sens?.value, spez: perf.spez?.value, ppv: perf.ppv?.value, npv: perf.npv?.value, acc: perf.acc?.value, auc: perf.auc?.value });
+            } else {
+                results.push({ id: setIdUsed, name: setName, sens: NaN, spez: NaN, ppv: NaN, npv: NaN, acc: NaN, auc: NaN });
+            }
          });
 
-         results.sort((a, b) => { if (a.id === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID) return -1; if (b.id === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID) return 1; if (a.id === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) return -1; if (b.id === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) return 1; return (a.name || '').localeCompare(b.name || ''); });
+         results.sort((a, b) => {
+             const order = [APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID, APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID];
+             const indexA = order.indexOf(a.id);
+             const indexB = order.indexOf(b.id);
+
+             if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+             if (indexA !== -1) return -1;
+             if (indexB !== -1) return 1;
+             return (a.name || '').localeCompare(b.name || '');
+         });
          const tableHTML = statistikTabLogic.createCriteriaComparisonTableHTML(results, getKollektivDisplayName(kollektiv));
          container.innerHTML = uiComponents.createStatistikCard('criteriaComparisonTable', UI_TEXTS.criteriaComparison.title, tableHTML, false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
     }
@@ -173,7 +204,8 @@ const viewRenderer = (() => {
 
                  ui_helpers.updateT2CriteriaControlsUI(currentCriteria, currentLogic);
                  ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
-                 ui_helpers.updateBruteForceUI('idle', {}, bfWorkerAvailable, currentKollektiv);
+                 ui_helpers.updateBruteForceUI('idle', {kollektiv: currentKollektiv}, bfWorkerAvailable, currentKollektiv);
+
 
              }, 10);
 
@@ -198,50 +230,53 @@ const viewRenderer = (() => {
 
              const outerRow = document.createElement('div'); outerRow.className = 'row g-4';
              const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image':'fa-download'; const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download'; const pngTT = TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'PNG'; const svgTT = TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'SVG'; const createChartDlBtns = (baseId) => [{id:`dl-${baseId}-png`,icon:dlIconPNG,tooltip:pngTT,format:'png', chartId: baseId},{id:`dl-${baseId}-svg`,icon:dlIconSVG,tooltip:svgTT,format:'svg', chartId: baseId}];
-             const createTableDlBtn = (tableId, tableName) => ({id: `dl-${tableId}-png`, icon: 'fa-image', tooltip: `Tabelle '${tableName}' PNG`, format: 'png', tableId: tableId, tableName: tableName});
+             const createTableDlBtn = (tableId, tableName) => ({id: `dl-table-${tableId.replace(/[^a-z0-9_-]/gi, '')}-png`, icon: 'fa-image', tooltip: `Tabelle '${tableName}' PNG`, format: 'png', tableId: tableId, tableName: tableName});
 
              datasets.forEach((data, i) => {
-                 const kollektivName = kollektivDisplayNames[i]; const col = document.createElement('div'); col.className = layout === 'vergleich' ? 'col-xl-6' : 'col-12'; const innerRowId = `inner-stat-row-${i}`; col.innerHTML = `<h4 class="mb-3">Kollektiv: ${kollektivName} (N=${data.length})</h4><div class="row g-3" id="${innerRowId}"></div>`; outerRow.appendChild(col); const innerContainer = col.querySelector(`#${innerRowId}`);
+                 const kollektivNameInternal = kollektivNames[i];
+                 const kollektivDisplayName = kollektivDisplayNames[i];
+                 const col = document.createElement('div'); col.className = layout === 'vergleich' ? 'col-xl-6' : 'col-12'; const innerRowId = `inner-stat-row-${i}`; col.innerHTML = `<h4 class="mb-3">Kollektiv: ${kollektivDisplayName} (N=${data.length})</h4><div class="row g-3" id="${innerRowId}"></div>`; outerRow.appendChild(col); const innerContainer = col.querySelector(`#${innerRowId}`);
                  if (data.length > 0) {
                      let stats = null;
                      try {
-                         stats = {
-                             deskriptiv: statisticsService.calculateDescriptiveStats(data),
-                             gueteAS: statisticsService.calculateDiagnosticPerformance(data, 'as', 'n'),
-                             gueteT2: statisticsService.calculateDiagnosticPerformance(data, 't2', 'n'),
-                             vergleichASvsT2: statisticsService.compareDiagnosticMethods(data, 'as', 't2', 'n'),
-                             assoziation: statisticsService.calculateAssociations(data, appliedCriteria)
-                         };
-                     } catch(e) { console.error(`Statistikfehler für Kollektiv ${i}:`, e); }
+                         const currentKollektivBfResults = state.getAggregatedBruteForceResults();
+                         const allStats = statisticsService.calculateAllStatsForPublication(processedDataFull, appliedCriteria, appliedLogic, currentKollektivBfResults);
+                         stats = allStats[kollektivNameInternal]; // Use the specific kollektiv's full stats
+                     } catch(e) { console.error(`Statistikfehler für Kollektiv ${kollektivDisplayName}:`, e); }
 
                      if (!stats) { innerContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">Fehler bei Statistikberechnung.</div></div>'; return; }
                      const descCardId=`deskriptiveStatistik-${i}`; const gueteASCardId=`diagnostischeGueteAS-${i}`; const gueteT2CardId=`diagnostischeGueteT2-${i}`; const vergleichASvsT2CardId=`statistischerVergleichASvsT2-${i}`; const assoziationCardId=`assoziationEinzelkriterien-${i}`;
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(descCardId, `Deskriptive Statistik`, statistikTabLogic.createDeskriptiveStatistikContentHTML(stats, i, kollektivName), false, 'deskriptiveStatistik', [], `table-deskriptiv-demographie-${i}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteASCardId, `Güte - Avocado Sign (vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteAS, 'AS', kollektivName), false, 'diagnostischeGueteAS', [createTableDlBtn(`table-guete-metrics-AS-${kollektivName.replace(/\s+/g, '_')}`, 'Guete_AS'), createTableDlBtn(`table-guete-matrix-AS-${kollektivName.replace(/\s+/g, '_')}`, 'Matrix_AS')], `table-guete-metrics-AS-${kollektivName.replace(/\s+/g, '_')}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteT2CardId, `Güte - T2 (angewandt vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteT2, 'T2', kollektivName), false, 'diagnostischeGueteT2', [createTableDlBtn(`table-guete-metrics-T2-${kollektivName.replace(/\s+/g, '_')}`, 'Guete_T2'), createTableDlBtn(`table-guete-matrix-T2-${kollektivName.replace(/\s+/g, '_')}`, 'Matrix_T2')], `table-guete-metrics-T2-${kollektivName.replace(/\s+/g, '_')}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(vergleichASvsT2CardId, `Vergleich - AS vs. T2 (angewandt)`, statistikTabLogic.createVergleichContentHTML(stats.vergleichASvsT2, kollektivName), false, 'statistischerVergleichASvsT2', [createTableDlBtn(`table-vergleich-as-vs-t2-${kollektivName.replace(/\s+/g, '_')}`, 'Vergleich_AS_T2')], `table-vergleich-as-vs-t2-${kollektivName.replace(/\s+/g, '_')}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(assoziationCardId, `Assoziation Merkmale vs. N-Status`, statistikTabLogic.createAssoziationContentHTML(stats.assoziation, kollektivName, appliedCriteria), false, 'assoziationEinzelkriterien', [createTableDlBtn(`table-assoziation-${kollektivName.replace(/\s+/g, '_')}`, 'Assoziation')], `table-assoziation-${kollektivName.replace(/\s+/g, '_')}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(descCardId, `Deskriptive Statistik`, statistikTabLogic.createDeskriptiveStatistikContentHTML(stats, i, kollektivDisplayName), false, 'deskriptiveStatistik', [], `table-deskriptiv-demographie-${i}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteASCardId, `Güte - Avocado Sign (vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteAS, 'AS', kollektivDisplayName), false, 'diagnostischeGueteAS', [createTableDlBtn(`table-guete-metrics-AS-${kollektivNameInternal.replace(/\s+/g, '_')}`, 'Guete_AS'), createTableDlBtn(`table-guete-matrix-AS-${kollektivNameInternal.replace(/\s+/g, '_')}`, 'Matrix_AS')], `table-guete-metrics-AS-${kollektivNameInternal.replace(/\s+/g, '_')}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteT2CardId, `Güte - T2 (angewandt vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteT2_angewandt, 'T2', kollektivDisplayName), false, 'diagnostischeGueteT2', [createTableDlBtn(`table-guete-metrics-T2-${kollektivNameInternal.replace(/\s+/g, '_')}`, 'Guete_T2'), createTableDlBtn(`table-guete-matrix-T2-${kollektivNameInternal.replace(/\s+/g, '_')}`, 'Matrix_T2')], `table-guete-metrics-T2-${kollektivNameInternal.replace(/\s+/g, '_')}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(vergleichASvsT2CardId, `Vergleich - AS vs. T2 (angewandt)`, statistikTabLogic.createVergleichContentHTML(stats.vergleichASvsT2_angewandt, kollektivDisplayName), false, 'statistischerVergleichASvsT2', [createTableDlBtn(`table-vergleich-as-vs-t2-${kollektivNameInternal.replace(/\s+/g, '_')}`, 'Vergleich_AS_T2')], `table-vergleich-as-vs-t2-${kollektivNameInternal.replace(/\s+/g, '_')}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(assoziationCardId, `Assoziation Merkmale vs. N-Status`, statistikTabLogic.createAssoziationContentHTML(stats.assoziation_angewandt, kollektivDisplayName, appliedCriteria), false, 'assoziationEinzelkriterien', [createTableDlBtn(`table-assoziation-${kollektivNameInternal.replace(/\s+/g, '_')}`, 'Assoziation')], `table-assoziation-${kollektivNameInternal.replace(/\s+/g, '_')}`);
                      const ageChartId=`chart-stat-age-${i}`; const genderChartId=`chart-stat-gender-${i}`;
 
                      setTimeout(() => {
                          const descCardCont = document.getElementById(`${descCardId}-card-container`);
                          if (descCardCont) {
-                             const hdrBtns = descCardCont.querySelector('.card-header-buttons');
-                             if (hdrBtns) {
+                             const hdrBtnsContainer = descCardCont.querySelector('.card-header-buttons');
+                             if (hdrBtnsContainer) {
                                  const ageBtns=createChartDlBtns(ageChartId); const genderBtns=createChartDlBtns(genderChartId);
                                  const t1PNG=createTableDlBtn(`table-deskriptiv-demographie-${i}`, 'Deskriptive_Demographie');
                                  const t2PNG=createTableDlBtn(`table-deskriptiv-lk-${i}`, 'Deskriptive_LK');
-                                 hdrBtns.innerHTML = ageBtns.map(b=>`<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${b.id}" data-chart-id="${b.chartId}" data-format="${b.format}" data-tippy-content="${b.tooltip} (Alter)"><i class="fas ${b.icon}"></i></button>`).join('')+genderBtns.map(b=>`<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${b.id}" data-chart-id="${b.chartId}" data-format="${b.format}" data-tippy-content="${b.tooltip} (Geschlecht)"><i class="fas ${b.icon}"></i></button>`).join('')+`<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${t1PNG.id}" data-table-id="${t1PNG.tableId}" data-table-name="${t1PNG.tableName}" data-tippy-content="${t1PNG.tooltip}"><i class="fas ${t1PNG.icon}"></i></button>`+`<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${t2PNG.id}" data-table-id="${t2PNG.tableId}" data-table-name="${t2PNG.tableName}" data-tippy-content="${t2PNG.tooltip}"><i class="fas ${t2PNG.icon}"></i></button>`;
+                                 hdrBtnsContainer.innerHTML = ageBtns.map(b=>`<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${b.id}" data-chart-id="${b.chartId}" data-format="${b.format}" data-tippy-content="${b.tooltip} (Alter)"><i class="fas ${b.icon}"></i></button>`).join('')+genderBtns.map(b=>`<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${b.id}" data-chart-id="${b.chartId}" data-format="${b.format}" data-tippy-content="${b.tooltip} (Geschlecht)"><i class="fas ${b.icon}"></i></button>`).join('')+`<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${t1PNG.id}" data-table-id="${t1PNG.tableId}" data-table-name="${t1PNG.tableName}" data-tippy-content="${t1PNG.tooltip}"><i class="fas ${t1PNG.icon}"></i></button>`+`<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${t2PNG.id}" data-table-id="${t2PNG.tableId}" data-table-name="${t2PNG.tableName}" data-tippy-content="${t2PNG.tooltip}"><i class="fas ${t2PNG.icon}"></i></button>`;
+                                 ui_helpers.initializeTooltips(hdrBtnsContainer);
                              }
                          }
                         const ageChartDiv = document.getElementById(ageChartId);
-                        if (ageChartDiv) {
+                        if (ageChartDiv && stats.deskriptiv?.alterData) {
                            chartRenderer.renderAgeDistributionChart(stats.deskriptiv.alterData || [], ageChartId, { height: 180, margin: { top: 10, right: 10, bottom: 35, left: 40 } });
+                        } else if(ageChartDiv) {
+                            ui_helpers.updateElementHTML(ageChartId, '<p class="text-muted small text-center p-3">Keine Daten für Altersverteilung.</p>');
                         }
                          const genderChartDiv = document.getElementById(genderChartId);
-                         if (genderChartDiv) {
+                         if (genderChartDiv && stats.deskriptiv?.geschlecht) {
                             const genderData = [{label: UI_TEXTS.legendLabels.male, value: stats.deskriptiv.geschlecht?.m ?? 0}, {label: UI_TEXTS.legendLabels.female, value: stats.deskriptiv.geschlecht?.f ?? 0}]; if(stats.deskriptiv.geschlecht?.unbekannt > 0) genderData.push({label: UI_TEXTS.legendLabels.unknownGender, value: stats.deskriptiv.geschlecht.unbekannt });
                             chartRenderer.renderPieChart(genderData, genderChartId, { height: 180, margin: { top: 10, right: 10, bottom: 35, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true, legendItemCount: genderData.length });
+                        } else if(genderChartDiv) {
+                            ui_helpers.updateElementHTML(genderChartId, '<p class="text-muted small text-center p-3">Keine Daten für Geschlechtsverteilung.</p>');
                         }
                      }, 50);
                  } else { innerContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning small p-2">Keine Daten für dieses Kollektiv.</div></div>'; }
@@ -257,16 +292,15 @@ const viewRenderer = (() => {
              const criteriaComparisonContainer = document.createElement('div'); criteriaComparisonContainer.className = 'col-12 mt-4'; criteriaComparisonContainer.id = 'criteria-comparison-container'; outerRow.appendChild(criteriaComparisonContainer);
 
              setTimeout(() => {
-                  const globalKollektivData = dataProcessor.filterDataByKollektiv(baseEvaluatedData, currentGlobalKollektiv);
-                 _renderCriteriaComparisonTable(criteriaComparisonContainer.id, globalKollektivData, currentGlobalKollektiv);
+                  const globalKollektivDataForComparison = dataProcessor.filterDataByKollektiv(baseEvaluatedData, currentGlobalKollektiv);
+                 _renderCriteriaComparisonTable(criteriaComparisonContainer.id, globalKollektivDataForComparison, currentGlobalKollektiv);
                  document.querySelectorAll('#statistik-tab-pane [data-tippy-content]').forEach(el => {
                      let currentContent = el.getAttribute('data-tippy-content') || '';
                      const kollektivToDisplay = layout === 'vergleich' ? `${kollektivDisplayNames[0]} vs. ${kollektivDisplayNames[1]}` : kollektivDisplayNames[0];
-                     currentContent = currentContent.replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivToDisplay}</strong>`);
-                     currentContent = currentContent.replace(/\[KOLLEKTIV1\]/g, `<strong>${kollektivDisplayNames[0]}</strong>`);
-                     currentContent = currentContent.replace(/\[KOLLEKTIV2\]/g, `<strong>${kollektivDisplayNames[1]}</strong>`);
+                     currentContent = currentContent.replace(/\[KOLLEKTIV_PLACEHOLDER\]/g, `<strong>${kollektivToDisplay}</strong>`);
+                     currentContent = currentContent.replace(/\[KOLLEKTIV_PLACEHOLDER1\]/g, `<strong>${kollektivDisplayNames[0]}</strong>`);
+                     currentContent = currentContent.replace(/\[KOLLEKTIV_PLACEHOLDER2\]/g, `<strong>${kollektivDisplayNames[1]}</strong>`);
                      el.setAttribute('data-tippy-content', currentContent);
-                     if (el._tippy) { el._tippy.setContent(currentContent); }
                  });
                  ui_helpers.initializeTooltips(document.getElementById('statistik-tab-pane'));
              }, 50);
@@ -279,17 +313,40 @@ const viewRenderer = (() => {
             if (!processedDataFull) throw new Error("Präsentations-Daten nicht verfügbar.");
 
             let presentationData = {}; const filteredData = dataProcessor.filterDataByKollektiv(processedDataFull, currentGlobalKollektiv); presentationData.kollektiv = currentGlobalKollektiv; presentationData.patientCount = filteredData?.length ?? 0;
+            const allKollektiveStats = statisticsService.calculateAllStatsForPublication(processedDataFull, appliedCriteria, appliedLogic, state.getAggregatedBruteForceResults());
+
 
             if (view === 'as-pur') {
-                const kollektivesToCalc = ['Gesamt', 'direkt OP', 'nRCT']; let statsCurrent = null;
-                kollektivesToCalc.forEach(kollektivId => { const filtered = dataProcessor.filterDataByKollektiv(processedDataFull, kollektivId); let stats = null; if (filtered && filtered.length > 0) stats = statisticsService.calculateDiagnosticPerformance(filtered, 'as', 'n'); let keyName = `stats${kollektivId.replace(/\s+/g, '')}`; presentationData[keyName] = stats; if (kollektivId === currentGlobalKollektiv) statsCurrent = stats; });
-                presentationData.statsCurrentKollektiv = statsCurrent;
+                presentationData.statsGesamt = allKollektiveStats.Gesamt?.gueteAS;
+                presentationData.statsDirektOP = allKollektiveStats['direkt OP']?.gueteAS;
+                presentationData.statsNRCT = allKollektivStats.nRCT?.gueteAS;
+                presentationData.statsCurrentKollektiv = allKollektiveStats[currentGlobalKollektiv]?.gueteAS;
+
             } else if (view === 'as-vs-t2') {
                  if (filteredData && filteredData.length > 0) {
-                    presentationData.statsAS = statisticsService.calculateDiagnosticPerformance(filteredData, 'as', 'n'); let studySet = null; let evaluatedDataT2 = null; const isApplied = selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
-                    if(isApplied) { studySet = { criteria: appliedCriteria, logic: appliedLogic, id: selectedStudyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: "Angewandt", studyInfo: { reference: "Benutzerdefiniert", patientCohort: `Aktuell: ${getKollektivDisplayName(currentGlobalKollektiv)} (N=${presentationData.patientCount})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } }; evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(filteredData), studySet.criteria, studySet.logic); }
-                    else if (selectedStudyId) { studySet = studyT2CriteriaManager.getStudyCriteriaSetById(selectedStudyId); if(studySet) evaluatedDataT2 = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredData), studySet); }
-                    if (studySet && evaluatedDataT2) { presentationData.statsT2 = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n'); evaluatedDataT2.forEach((p, i) => { if (filteredData[i]) p.as = filteredData[i].as; }); presentationData.vergleich = statisticsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n'); presentationData.comparisonCriteriaSet = studySet; presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2'; presentationData.t2CriteriaLabelFull = `${studySet.name}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`; }
+                    presentationData.statsAS = allKollektiveStats[currentGlobalKollektiv]?.gueteAS;
+                    let studySet = null; let evaluatedDataT2 = null; const isApplied = selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
+
+                    if(isApplied) {
+                        studySet = { criteria: appliedCriteria, logic: appliedLogic, id: selectedStudyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: "Angewandt", studyInfo: { reference: "Benutzerdefiniert", patientCohort: `Aktuell: ${getKollektivDisplayName(currentGlobalKollektiv)} (N=${presentationData.patientCount})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } };
+                        presentationData.statsT2 = allKollektiveStats[currentGlobalKollektiv]?.gueteT2_angewandt;
+                        presentationData.vergleich = allKollektiveStats[currentGlobalKollektiv]?.vergleichASvsT2_angewandt;
+                    } else if (selectedStudyId) {
+                        studySet = studyT2CriteriaManager.getStudyCriteriaSetById(selectedStudyId);
+                        if(studySet) {
+                            // Re-evaluate specifically for this study set if not already part of allKollektivStats in a directly usable way for this view
+                            const tempEvaluatedData = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredData), studySet);
+                            presentationData.statsT2 = statisticsService.calculateDiagnosticPerformance(tempEvaluatedData, 't2', 'n');
+                            // For comparison, we need 'as' status on this tempEvaluatedData
+                            tempEvaluatedData.forEach((p,idx) => { if(filteredData[idx]) p.as = filteredData[idx].as; });
+                            presentationData.vergleich = statisticsService.compareDiagnosticMethods(tempEvaluatedData, 'as', 't2', 'n');
+                        }
+                    }
+                    if (studySet) {
+                       presentationData.comparisonCriteriaSet = studySet;
+                       presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2';
+                       presentationData.t2CriteriaLabelFull = `${studySet.name}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`;
+                    }
                 }
             }
             const tabContentHTML = praesentationTabLogic.createPresentationTabContent(view, presentationData, selectedStudyId, currentGlobalKollektiv);
@@ -328,6 +385,9 @@ const viewRenderer = (() => {
 
     function renderPublikationTab(currentLang, currentSection, currentKollektiv, globalProcessedData, bruteForceResults) {
         _renderTabContent('publikation-tab', () => {
+            if (typeof publikationTabLogic === 'undefined' || typeof publikationTabLogic.initializeData !== 'function') {
+                return '<p class="text-danger">Publikationsmodul nicht korrekt geladen.</p>';
+            }
             publikationTabLogic.initializeData(
                 globalProcessedData,
                 t2CriteriaManager.getAppliedCriteria(),
@@ -337,21 +397,19 @@ const viewRenderer = (() => {
 
             const headerHTML = uiComponents.createPublikationTabHeader();
             const initialContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv);
-            const mainContentAreaId = 'publikation-content-area';
-
+            const mainContentAreaId = 'publikation-content-area'; // Diese ID wird im Header-HTML von createPublikationTabHeader definiert
 
             setTimeout(() => {
                 const contentArea = document.getElementById(mainContentAreaId);
                 if (contentArea) {
-                    ui_helpers.updateElementHTML(contentArea.id, initialContentHTML); // Initial text content
+                    ui_helpers.updateElementHTML(contentArea.id, initialContentHTML);
                     publikationTabLogic.updateDynamicChartsForPublicationTab(currentSection, currentLang, currentKollektiv);
                     ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
                 }
                  ui_helpers.updatePublikationUI(currentLang, currentSection, state.getCurrentPublikationBruteForceMetric());
             }, 10);
 
-            // Return header HTML first, content area will be filled by setTimeout
-            return headerHTML + `<div id="${mainContentAreaId}" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: calc(100vh - var(--header-height) - var(--nav-height) - 70px - 2rem); overflow-y: auto;"><p class="text-muted">Lade Publikationsinhalt...</p></div>`;
+            return headerHTML; // Der Inhaltsbereich wird im Header von createPublikationTabHeader gerendert
         });
     }
 
