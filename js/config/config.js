@@ -39,7 +39,8 @@ const APP_CONFIG = Object.freeze({
         PRESENTATION_VIEW: 'currentPresentationView_v4.2_detailed',
         PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
         CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
-        CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed'
+        CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
+        AGGREGATED_BRUTE_FORCE_RESULTS: 'aggregatedBruteForceResults_v2.2_optimized'
     }),
 
     PATHS: Object.freeze({
@@ -144,8 +145,9 @@ const APP_CONFIG = Object.freeze({
             PRAES_AS_VS_T2_CHART_SVG: 'PraesChartASvsT2_{StudyID}_SVG',
             TABLE_PNG_EXPORT: '{TableName}_PNG',
             CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
-            PUBLIKATION_METHODEN_MD: 'PublikationMethodenMD',
-            PUBLIKATION_ERGEBNISSE_MD: 'PublikationErgebnisseMD'
+            PUBLIKATION_METHODEN_MD: 'Publikation_Methoden_{SectionName}_MD',
+            PUBLIKATION_ERGEBNISSE_MD: 'Publikation_Ergebnisse_{SectionName}_MD',
+            PUBLIKATION_GESAMT_MD: 'Publikation_Gesamttext_MD'
         }),
         EXCEL_SHEET_NAME_DATEN: 'Datenliste',
         EXCEL_SHEET_NAME_AUSWERTUNG: 'Auswertung',
