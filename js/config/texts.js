@@ -24,7 +24,7 @@ const UI_TEXTS = {
     t2LogicDisplayNames: {
         'UND': 'UND',
         'ODER': 'ODER',
-        'KOMBINIERT': 'KOMBINIERT'
+        'KOMBINIERT': 'KOMBINIERT (ESGAR-Logik)'
     },
     publikationTab: {
         spracheSwitchLabel: {
@@ -34,10 +34,10 @@ const UI_TEXTS = {
         sectionLabels: {
             methoden: 'Methoden',
             ergebnisse: 'Ergebnisse',
-            diskussion: 'Diskussion (Entwurf)',
-            einleitung: 'Einleitung (Entwurf)',
-            abstract: 'Abstract (Entwurf)',
-            referenzen: 'Referenzen (Beispielhaft)'
+            diskussion: 'Diskussion',
+            einleitung: 'Einleitung',
+            abstract: 'Abstract',
+            referenzen: 'Referenzen'
         },
         bruteForceMetricSelectLabel: 'Optimierungsmetrik für T2 (BF):'
     },
@@ -54,7 +54,10 @@ const UI_TEXTS = {
         publicationAgeDistribution: 'Abb. 1a: Altersverteilung im Kollektiv {KollektivName}',
         publicationGenderDistribution: 'Abb. 1b: Geschlechterverteilung im Kollektiv {KollektivName}',
         publicationROCasVsT2: 'Abb. 2: ROC-Kurven Vergleich (AS vs. Angew. T2) im Kollektiv {KollektivName}',
-        publicationPerfBarAsVsT2: 'Abb. 3: Performance Metriken (AS vs. Angew. T2) im Kollektiv {KollektivName}'
+        publicationPerfBarAsVsT2: 'Abb. 3: Performance Metriken (AS vs. Angew. T2) im Kollektiv {KollektivName}',
+        publicationASPerformanceAllKollektive: 'Abb. X: Performance Avocado Sign (alle Kollektive)',
+        publicationLitT2Performance: 'Abb. Y: Performance Literatur-T2 Kriterien (selektiert)',
+        publicationBFT2Performance: 'Abb. Z: Performance BF-optimierte T2 Kriterien (pro Kollektiv)'
     },
     axisLabels: {
         age: 'Alter (Jahre)',
@@ -138,7 +141,7 @@ const TOOLTIP_CONTENT = {
         kollektiv: "Aktuell betrachtetes Patientenkollektiv.",
         anzahlPatienten: "Gesamtzahl der Patienten im ausgewählten Kollektiv.",
         statusN: "Anteil der Patienten mit positivem (+) vs. negativem (-) histopathologischem Lymphknotenstatus (Referenzstandard) im ausgewählten Kollektiv.",
-        statusAS: "Anteil der Patienten mit positivem (+) vs. negativem (-) Lymphknotenstatus gemäß Avocado Sign (AS) Vorhersage im ausgewählten Kollektiv.",
+        statusAS: "Anteil der Patienten mit positivem (+) vs. negativem (-) Avocado Sign Status (Vorhersage) im ausgewählten Kollektiv.",
         statusT2: "Anteil der Patienten mit positivem (+) vs. negativem (-) Lymphknotenstatus gemäß den aktuell **angewendeten und gespeicherten** T2-Kriterien (siehe Auswertungstab) für das ausgewählte Kollektiv."
     },
     datenTable: {
@@ -164,8 +167,8 @@ const TOOLTIP_CONTENT = {
         expandAll: "Öffnet oder schließt die Detailansicht der bewerteten T2-gewichteten Lymphknoten und der erfüllten Kriterien für alle Patienten in der aktuellen Tabellenansicht.",
         expandRow: "Klicken Sie auf diese Zeile, um die detaillierte Bewertung der einzelnen T2-gewichteten Lymphknoten dieses Patienten gemäß der aktuell angewendeten Kriterien anzuzeigen oder auszublenden. Erfüllte Positiv-Kriterien werden hervorgehoben."
     },
-    t2Logic: { description: `Logische Verknüpfung der aktiven T2-Kriterien: <strong>UND</strong> (Ein Lymphknoten ist nur positiv, wenn ALLE aktivierten Kriterien erfüllt sind). <strong>ODER</strong> (Ein Lymphknoten ist positiv, wenn MINDESTENS EIN aktiviertes Kriterium erfüllt ist).` },
-    t2Size: { description: `Größenkriterium: Lymphknoten mit einem Kurzachsendurchmesser <strong>größer oder gleich</strong> dem eingestellten Schwellenwert gelten als suspekt. Einstellbarer Bereich: ${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min} - ${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max} mm. Aktivieren/Deaktivieren Sie das Kriterium mit der Checkbox.` },
+    t2Logic: { description: `Logische Verknüpfung der aktiven T2-Kriterien: <strong>UND</strong> (Ein Lymphknoten ist nur positiv, wenn ALLE aktivierten Kriterien erfüllt sind). <strong>ODER</strong> (Ein Lymphknoten ist positiv, wenn MINDESTENS EIN aktiviertes Kriterium erfüllt ist). <strong>KOMBINIERT</strong> bezieht sich auf spezifische Logiken wie die der ESGAR-Kriterien, die nicht einfach UND/ODER sind.` },
+    t2Size: { description: `Größenkriterium: Lymphknoten mit einem Kurzachsendurchmesser, der die Bedingung (z.B. <strong>größer oder gleich</strong>) im Vergleich zum eingestellten Schwellenwert erfüllt, gelten als suspekt. Einstellbarer Bereich: ${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min} - ${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max} mm. Aktivieren/Deaktivieren Sie das Kriterium mit der Checkbox.` },
     t2Form: { description: "Formkriterium: Wählen Sie, welche Form ('rund' oder 'oval') als suspekt gilt. Ein Lymphknoten gilt als 'rund', wenn das Verhältnis Kurzachse zu Langachse nahe 1 ist. Aktivieren/Deaktivieren Sie das Kriterium mit der Checkbox." },
     t2Kontur: { description: "Konturkriterium: Wählen Sie, welche Kontur ('scharf' oder 'irregulär') als suspekt gilt. Aktivieren/Deaktivieren Sie das Kriterium mit der Checkbox." },
     t2Homogenitaet: { description: "Homogenitätskriterium: Wählen Sie, ob ein 'homogenes' oder 'heterogenes' Binnensignal auf T2w als suspekt gilt. Aktivieren/Deaktivieren Sie das Kriterium mit der Checkbox." },
@@ -275,20 +278,20 @@ const TOOLTIP_CONTENT = {
         exportPackages: "Export-Pakete (.zip)",
         description: "Ermöglicht den Export von Analyseergebnissen, Tabellen und Diagrammen basierend auf dem aktuell gewählten Kollektiv ([KOLLEKTIV]) und den aktuell angewendeten T2-Kriterien.",
         statsCSV: { description: "Exportiert eine detaillierte Tabelle aller berechneten statistischen Metriken, Konfidenzintervalle und Testergebnisse aus dem Statistik-Tab als kommaseparierte Datei (.csv).", type: 'STATS_CSV', ext: "csv" },
-        bruteForceTXT: { description: "Exportiert den detaillierten Bericht der letzten Brute-Force-Optimierung (Top 10 Ergebnisse, Konfiguration, Laufzeit) als reine Textdatei (.txt), falls eine Optimierung durchgeführt wurde.", type: 'BRUTEFORCE_TXT', ext: "txt" },
+        bruteForceTXT: { description: "Exportiert den detaillierten Bericht der letzten Brute-Force-Optimierung (Top 10 Ergebnisse, Konfiguration, Laufzeit) für das aktuelle Kollektiv als reine Textdatei (.txt), falls eine Optimierung für dieses Kollektiv durchgeführt wurde.", type: 'BRUTEFORCE_TXT', ext: "txt" },
         deskriptivMD: { description: "Exportiert die Tabelle der deskriptiven Statistik (aus dem Statistik-Tab) in einem Markdown-Format (.md), geeignet für Berichte.", type: 'DESKRIPTIV_MD', ext: "md" },
         datenMD: { description: "Exportiert die aktuelle Datenliste (aus dem Daten-Tab) als Markdown-Tabelle (.md).", type: 'DATEN_MD', ext: "md" },
         auswertungMD: { description: "Exportiert die aktuelle Auswertungstabelle (aus dem Auswertung-Tab) mit den angewendeten T2-Ergebnissen als Markdown-Tabelle (.md).", type: 'AUSWERTUNG_MD', ext: "md" },
         filteredDataCSV: { description: "Exportiert die zugrundeliegenden Rohdaten des aktuell ausgewählten und analysierten Kollektivs, inklusive der berechneten T2-Ergebnisse, als CSV-Datei (.csv).", type: 'FILTERED_DATA_CSV', ext: "csv" },
-        comprehensiveReportHTML: { description: "Generiert einen umfassenden Analysebericht als HTML-Datei, die alle wichtigen Statistiken, Konfigurationen und Diagramme zusammenfasst. Kann im Browser geöffnet und gedruckt werden.", type: 'COMPREHENSIVE_REPORT_HTML', ext: "html" },
+        comprehensiveReportHTML: { description: "Generiert einen umfassenden Analysebericht als HTML-Datei, die alle wichtigen Statistiken, Konfigurationen und Diagramme für das aktuelle Kollektiv zusammenfasst. Kann im Browser geöffnet und gedruckt werden.", type: 'COMPREHENSIVE_REPORT_HTML', ext: "html" },
         chartsPNG: { description: "Exportiert alle aktuell sichtbaren Diagramme aus dem Statistik-, Auswertung- und Präsentationstab sowie ausgewählte Tabellen als einzelne, hochauflösende PNG-Bilddateien, gebündelt in einem ZIP-Archiv.", type: 'PNG_ZIP', ext: "zip" },
         chartsSVG: { description: "Exportiert alle aktuell sichtbaren Diagramme aus dem Statistik-, Auswertung- und Präsentationstab als einzelne, skalierbare Vektorgrafik-Dateien (SVG), gebündelt in einem ZIP-Archiv.", type: 'SVG_ZIP', ext: "zip" },
         chartSinglePNG: { description: "Exportiert das ausgewählte Diagramm als einzelne PNG-Datei.", type: 'CHART_SINGLE_PNG', ext: "png"},
         chartSingleSVG: { description: "Exportiert das ausgewählte Diagramm als einzelne SVG-Datei.", type: 'CHART_SINGLE_SVG', ext: "svg"},
         tableSinglePNG: { description: "Exportiert die ausgewählte Tabelle als einzelne PNG-Datei.", type: 'TABLE_PNG_EXPORT', ext: "png"},
-        allZIP: { description: "Exportiert alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT, alle MDs, Gefilterte-Daten-CSV, HTML-Report) in einem einzigen ZIP-Archiv.", type: 'ALL_ZIP', ext: "zip"},
-        csvZIP: { description: "Bündelt alle verfügbaren CSV-Dateien (Statistik, Gefilterte Daten) in einem ZIP-Archiv.", type: 'CSV_ZIP', ext: "zip"},
-        mdZIP: { description: "Bündelt alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikations-Abschnitte) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "md"},
+        allZIP: { description: "Exportiert alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT für aktuelles Kollektiv, alle MDs, Gefilterte-Daten-CSV, HTML-Report für aktuelles Kollektiv) in einem einzigen ZIP-Archiv.", type: 'ALL_ZIP', ext: "zip"},
+        csvZIP: { description: "Bündelt alle verfügbaren CSV-Dateien (Statistik für aktuelles Kollektiv, Gefilterte Daten für aktuelles Kollektiv) in einem ZIP-Archiv.", type: 'CSV_ZIP', ext: "zip"},
+        mdZIP: { description: "Bündelt alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikations-Abschnitte) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "zip"},
         pngZIP: { description: "Identisch zum 'Alle Diagramme & Tabellen (PNG)' Einzel-Export.", type: 'PNG_ZIP', ext: "zip"},
         svgZIP: { description: "Identisch zum 'Alle Diagramme (SVG)' Einzel-Export.", type: 'SVG_ZIP', ext: "zip"},
         xlsxZIP: { description: "Bündelt alle verfügbaren Excel-Dateien in einem ZIP-Archiv.", type: 'XLSX_ZIP', ext: "zip"}
@@ -296,7 +299,7 @@ const TOOLTIP_CONTENT = {
     publikationTabTooltips: {
         spracheSwitch: { description: "Wechselt die Sprache der Texte im Publikation-Tab zwischen Deutsch und Englisch." },
         sectionSelect: { description: "Wählen Sie den Abschnitt der wissenschaftlichen Publikation aus, für den Textvorschläge und relevante Daten/Grafiken angezeigt werden sollen." },
-        bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, für deren Optimierungsergebnisse (via Brute-Force) die entsprechenden Statistiken im 'Ergebnisse'-Abschnitt des Publikation-Tabs dargestellt werden sollen." },
+        bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, für deren Optimierungsergebnisse (via Brute-Force) die entsprechenden Statistiken im 'Ergebnisse'-Abschnitt des Publikation-Tabs dargestellt werden sollen. Die hier gewählte Metrik beeinflusst, welche spezifischen Brute-Force optimierten Kriterien und deren Performance-Daten in den Texten und Tabellen des Publikation-Tabs hervorgehoben werden." },
         methoden_studienanlage: {description: "Textvorschlag und relevante Informationen zum Studiendesign, der Ethik und der verwendeten Software."},
         methoden_patientenkollektiv: {description: "Textvorschlag und relevante Informationen zum Patientenkollektiv und der Datenbasis."},
         methoden_mrt_protokoll: {description: "Textvorschlag und relevante Informationen zum MRT-Protokoll und zur Kontrastmittelgabe."},
@@ -307,7 +310,7 @@ const TOOLTIP_CONTENT = {
         ergebnisse_patientencharakteristika: {description: "Textvorschlag und relevante Tabellen/Diagramme zu den Patientencharakteristika."},
         ergebnisse_as_performance: {description: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte des Avocado Signs."},
         ergebnisse_literatur_t2_performance: {description: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Literatur-basierten T2-Kriterien."},
-        ergebnisse_optimierte_t2_performance: {description: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Brute-Force optimierten T2-Kriterien."},
+        ergebnisse_optimierte_t2_performance: {description: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Brute-Force optimierten T2-Kriterien für die oben ausgewählte Zielmetrik."},
         ergebnisse_vergleich_performance: {description: "Textvorschlag und relevante Tabellen/Diagramme zum statistischen Vergleich der diagnostischen Güte zwischen Avocado Sign und den verschiedenen T2-Kriteriensets."}
     },
     statMetrics: {
