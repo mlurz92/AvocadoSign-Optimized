@@ -151,7 +151,7 @@ function cloneDeep(obj) {
              const objCopy = {};
              for(const key in obj) {
                  if(Object.prototype.hasOwnProperty.call(obj, key)) {
-                     objCopy[key] = cloneDeep(obj[key]);
+                     objCopy[key] = cloneDeep(obj[i]);
                  }
              }
              return objCopy;
@@ -297,9 +297,10 @@ function getStatisticalSignificanceSymbol(pValue, significanceLevel = APP_CONFIG
 function getStatisticalSignificanceText(pValue, significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL) {
      if (pValue === null || pValue === undefined || isNaN(pValue)) return '';
      const level = significanceLevel;
+     const uiTextsSignifikanz = UI_TEXTS?.statMetrics?.signifikanzTexte;
      return pValue < level
-         ? UI_TEXTS.statMetrics.signifikanzTexte.SIGNIFIKANT || 'statistisch signifikant'
-         : UI_TEXTS.statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT || 'statistisch nicht signifikant';
+         ? uiTextsSignifikanz?.SIGNIFIKANT || 'statistisch signifikant'
+         : uiTextsSignifikanz?.NICHT_SIGNIFIKANT || 'statistisch nicht signifikant';
 }
 
 function generateUUID() {
@@ -356,9 +357,9 @@ function getPhiBewertung(phiValue) {
     const value = parseFloat(phiValue);
     if (isNaN(value)) return 'N/A';
     const absPhi = Math.abs(value);
-    const texts = UI_TEXTS.statMetrics.assoziationStaerkeTexte || {};
+    const texts = UI_TEXTS?.statMetrics?.assoziationStaerkeTexte || {};
     if (absPhi >= 0.5) return texts.stark || 'stark';
     if (absPhi >= 0.3) return texts.moderat || 'moderat';
     if (absPhi >= 0.1) return texts.schwach || 'schwach';
-    return texts.sehr_schwach || 'sehr schwach';
+    return texts.sehr_schwach || 'sehr schwach oder nicht vorhanden';
 }
