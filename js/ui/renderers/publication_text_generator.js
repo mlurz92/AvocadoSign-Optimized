@@ -330,25 +330,24 @@ const publicationTextGenerator = (() => {
             const statsAS = allKollektivStats?.[k.id]?.gueteAS;
             const statsLit = allKollektivStats?.[k.id]?.gueteT2_literatur?.[k.litSetId];
             const statsBF = allKollektivStats?.[k.id]?.gueteT2_bruteforce;
+            const bfDef = allKollektivStats?.[k.id]?.bruteforce_definition;
 
-            // Diese Vergleichsdaten müssten von statistics_service.calculateAllStatsForPublication bereitgestellt werden.
-            // Annahme: allKollektivStats[k.id] enthält Objekte wie 'vergleichASvsT2_literatur_[k.litSetId]' und 'vergleichASvsT2_bruteforce'
             const vergleichASvsLit = allKollektivStats?.[k.id]?.[`vergleichASvsT2_literatur_${k.litSetId}`];
             const vergleichASvsBF = allKollektivStats?.[k.id]?.vergleichASvsT2_bruteforce;
 
             if (lang === 'de') {
                 text += `<h4>Vergleich im ${name}</h4>`;
                 if (statsAS && statsLit && vergleichASvsLit) {
-                    text += `<p>Im Vergleich des AS (AUC ${fCI(statsAS.auc, 3, false, 'de')}) mit den Kriterien nach ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'de')}) zeigte sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsLit.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${fValue(vergleichASvsLit.delong?.diffAUC, 3) точку lang === 'de' ? ',' : '.'}.</p>`;
+                    text += `<p>Im Vergleich des AS (AUC ${fCI(statsAS.auc, 3, false, 'de')}) mit den Kriterien nach ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'de')}) zeigte sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsLit.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${fValue(vergleichASvsLit.delong?.diffAUC, 3).replace(/\./g, ',')}.</p>`;
                 } else {
                     text += `<p>Ein Vergleich zwischen AS und den Kriterien nach ${k.litSetName} konnte nicht vollständig durchgeführt werden (fehlende Daten).</p>`;
                 }
                 if (statsAS && statsBF && vergleichASvsBF) {
-                    text += `<p>Gegenüber den für die ${bfZielMetric} optimierten T2-Kriterien (AUC ${fCI(statsBF.auc, 3, false, 'de')}) ergab sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsBF.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${fValue(vergleichASvsBF.delong?.diffAUC, 3).replace('.', lang === 'de' ? ',' : '.')}.</p>`;
+                    text += `<p>Gegenüber den für die ${bfZielMetric} optimierten T2-Kriterien (AUC ${fCI(statsBF.auc, 3, false, 'de')}) ergab sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsBF.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${fValue(vergleichASvsBF.delong?.diffAUC, 3).replace(/\./g, ',')}.</p>`;
                 } else {
                     text += `<p>Ein Vergleich zwischen AS und den Brute-Force-optimierten Kriterien konnte nicht vollständig durchgeführt werden (fehlende Daten oder keine BF-Optimierung für dieses Kollektiv für die Zielmetrik ${bfZielMetric}).</p>`;
                 }
-            } else {
+            } else { // lang === 'en'
                 text += `<h4>Comparison in the ${name}</h4>`;
                 if (statsAS && statsLit && vergleichASvsLit) {
                     text += `<p>Comparing AS (AUC ${fCI(statsAS.auc, 3, false, 'en')}) with the criteria by ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'en')}), the p-value for accuracy was ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'en')} (McNemar) and for AUC was ${getPValueText(vergleichASvsLit.delong?.pValue, 'en')} (DeLong). The difference in AUC was ${fValue(vergleichASvsLit.delong?.diffAUC, 3)}.</p>`;
