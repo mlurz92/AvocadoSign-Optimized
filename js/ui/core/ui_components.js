@@ -7,7 +7,9 @@ const uiComponents = (() => {
                  `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${chartId}" data-format="${btn.format}" data-tippy-content="${btn.tooltip || `Als ${btn.format.toUpperCase()} herunterladen`}"> <i class="fas ${btn.icon || 'fa-download'}"></i></button>`
              ).join('');
         }
-        const tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik[chartId]?.description || title || '';
+        const tooltipKey = chartId && TOOLTIP_CONTENT.deskriptiveStatistik[chartId] ? chartId : (title ? title.toLowerCase().replace(/\s+/g, '') : null);
+        const tooltipContent = (tooltipKey && TOOLTIP_CONTENT.deskriptiveStatistik[tooltipKey]?.description) || title || '';
+
         return `
             <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 dashboard-card-col ${cardClasses}">
                 <div class="card h-100 dashboard-card">
@@ -135,7 +137,7 @@ const uiComponents = (() => {
                              </div>
                          </div>
                     </div>
-                     <div id="brute-force-progress-container" class="mt-3 d-none" data-tippy-content="${TOOLTIP_CONTENT.bruteForceProgress.description}">
+                     <div id="brute-force-progress-container" class="mt-3 d-none" data-tippy-content="${TOOLTIP_CONTENT.bruteForceProgress.description || ''}">
                          <div class="d-flex justify-content-between mb-1 small">
                             <span>Fortschritt: <span id="bf-tested-count">0</span> / <span id="bf-total-count">0</span></span>
                             <span id="bf-progress-percent">0%</span>
@@ -176,15 +178,16 @@ const uiComponents = (() => {
 
     function createStatistikCard(id, title, content = '', addPadding = true, tooltipKey = null, downloadButtons = [], tableIdForDefaultPNG = null) {
         const cardTooltipHtml = tooltipKey && TOOLTIP_CONTENT[tooltipKey]?.cardTitle
-            ? `data-tippy-content="${TOOLTIP_CONTENT[tooltipKey].cardTitle.replace(/\[KOLLEKTIV\]/g, '{KOLLEKTIV_PLACEHOLDER}')}"`
+            ? `data-tippy-content="${TOOLTIP_CONTENT[tooltipKey].cardTitle.replace(/\[KOLLEKTIV\]/g, '{KOLLEKTIV_PLACEHOLDER}').replace(/\[KOLLEKTIV1\]/g, '{KOLLEKTIV_PLACEHOLDER1}').replace(/\[KOLLEKTIV2\]/g, '{KOLLEKTIV_PLACEHOLDER2}')}"`
             : '';
 
         let headerButtonHtml = downloadButtons.map(btn => {
             if (btn.tableId) {
                 return `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${btn.id}" data-table-id="${btn.tableId}" data-table-name="${btn.tableName || title.replace(/[^a-z0-9]/gi, '_').substring(0,30)}" data-tippy-content="${btn.tooltip || `Tabelle als PNG`}"><i class="fas ${btn.icon || 'fa-image'}"></i></button>`;
-            } else {
-                 return `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${btn.chartId || id+'-content'}" data-format="${btn.format}" data-tippy-content="${btn.tooltip || `Als ${btn.format.toUpperCase()}`}"><i class="fas ${btn.icon || 'fa-download'}"></i></button>`;
+            } else if (btn.chartId) {
+                 return `<button type="button" class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${btn.chartId}" data-format="${btn.format}" data-tippy-content="${btn.tooltip || `Als ${btn.format.toUpperCase()}`}"><i class="fas ${btn.icon || 'fa-download'}"></i></button>`;
             }
+            return '';
         }).join('');
 
 
@@ -201,8 +204,8 @@ const uiComponents = (() => {
             <div class="col-12 stat-card" id="${id}-card-container">
                 <div class="card h-100">
                     <div class="card-header" ${cardTooltipHtml}>
-                         ${title}
-                         <span class="float-end card-header-buttons">
+                         <span class="text-truncate">${title}</span>
+                         <span class="float-end card-header-buttons ms-2">
                             ${headerButtonHtml}
                          </span>
                      </div>
@@ -263,14 +266,14 @@ const uiComponents = (() => {
                              <p class="small text-muted mb-3">Bündelt mehrere thematisch zusammengehörige Exportdateien in einem ZIP-Archiv für das Kollektiv <strong>${safeKollektiv}</strong>.</p>
                             ${generateZipButtonHTML('all-zip', 'fas fa-file-archive', 'Gesamtpaket (Alle Dateien)', 'allZIP')}
                             ${generateZipButtonHTML('csv-zip', 'fas fa-file-csv', 'Nur CSVs', 'csvZIP')}
-                            ${generateZipButtonHTML('md-zip', 'fab fa-markdown', 'Nur Markdown', 'mdZIP')}
+                            ${generateZipButtonHTML('md-zip', 'fab fa-markdown', 'Nur Markdown (inkl. Publikationstexte)', 'mdZIP')}
                             ${generateZipButtonHTML('png-zip', 'fas fa-images', 'Nur Diagramm/Tabellen-PNGs', 'pngZIP')}
                             ${generateZipButtonHTML('svg-zip', 'fas fa-file-code', 'Nur Diagramm-SVGs', 'svgZIP')}
                         </div>
                     </div>
                 </div>
                 <div class="col-lg-12 col-xl-4 mb-3">
-                   <div class="card h-100"> <div class="card-header">Hinweise zum Export</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV:** Für Statistiksoftware; Trennzeichen: Semikolon (;).</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** Für Dokumentation.</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** Brute-Force-Bericht.</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht:** Umfassend, druckbar.</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** Pixelbasiert (Diagramme/Tabellen).</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** Vektorbasiert (Diagramme), skalierbar.</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>ZIP-Exporte für Diagramme/Tabellen erfassen nur aktuell im Statistik- oder Auswertungstab sichtbare/gerenderte Elemente. Einzel-Downloads sind direkt am Element möglich (z.B. auch im Präsentationstab).</li> </ul> </div> </div>
+                   <div class="card h-100"> <div class="card-header">Hinweise zum Export</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV:** Für Statistiksoftware; Trennzeichen: Semikolon (;).</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** Für Dokumentation. Der MD-ZIP enthält auch die Textbausteine aus dem Publikation-Tab.</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** Brute-Force-Bericht.</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht:** Umfassend, druckbar.</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** Pixelbasiert (Diagramme/Tabellen).</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** Vektorbasiert (Diagramme), skalierbar.</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>ZIP-Exporte für Diagramme/Tabellen erfassen nur aktuell im Statistik- oder Auswertungstab sichtbare/gerenderte Elemente. Einzel-Downloads sind direkt am Element möglich (z.B. auch im Präsentation- oder Publikationstab).</li> </ul> </div> </div>
                 </div>
             </div>
         `;
@@ -313,6 +316,7 @@ const uiComponents = (() => {
                  filledInterpretation = filledInterpretation.replace(/\(95% CI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
                  filledInterpretation = filledInterpretation.replace(/nach \[METHOD_CI\]:/g, '');
             }
+            filledInterpretation = filledInterpretation.replace(/p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'').replace(/, Test-p=.*?, \[SIGNIFIKANZ\]\)/g,')');
             filledInterpretation = filledInterpretation.replace(/<hr.*?>.*$/, '');
 
             contentHTML += `
@@ -358,39 +362,36 @@ const uiComponents = (() => {
                     </thead>
                     <tbody>`;
 
-        let rank = 1, displayedCount = 0, lastMetricValue = -Infinity;
-        const precision = 8;
+        let rank = 1, displayedCount = 0;
+        let lastMetricValueRounded = -Infinity;
+        const precision = 8; // For comparing floating point metric values
 
         for (let i = 0; i < results.length; i++) {
             const result = results[i];
             if (!result || typeof result.metricValue !== 'number' || !isFinite(result.metricValue)) continue;
 
             const currentMetricValueRounded = parseFloat(result.metricValue.toFixed(precision));
-            const lastMetricValueRounded = parseFloat(lastMetricValue.toFixed(precision));
-            let currentRank = rank;
+            let currentRankToDisplay = rank;
 
-            const isNewRank = Math.abs(currentMetricValueRounded - lastMetricValueRounded) > 1e-8;
-
-            if (i > 0 && isNewRank) {
-                rank = displayedCount + 1;
-                currentRank = rank;
-            } else if (i > 0) {
-                currentRank = rank;
+            if (i > 0) {
+                if (Math.abs(currentMetricValueRounded - lastMetricValueRounded) > (1 / Math.pow(10, precision +1)) ) { // If different beyond precision
+                    rank = displayedCount + 1;
+                }
+                currentRankToDisplay = rank;
             }
 
-            if (rank > 10 && isNewRank) break;
+
+            if (rank > 10 && Math.abs(currentMetricValueRounded - lastMetricValueRounded) > (1 / Math.pow(10, precision+1))) break; // Stop if rank is beyond 10 and score is different
 
             tableHTML += `
                 <tr>
-                    <td>${currentRank}.</td>
+                    <td>${currentRankToDisplay}.</td>
                     <td>${formatNumber(result.metricValue, 4)}</td>
                     <td>${result.logic.toUpperCase()}</td>
                     <td>${formatCriteriaFunc(result.criteria, result.logic)}</td>
                 </tr>`;
-
-            if (isNewRank || i === 0) {
-                lastMetricValue = result.metricValue;
-            }
+            
+            lastMetricValueRounded = currentMetricValueRounded;
             displayedCount++;
         }
         tableHTML += `</tbody></table></div>`;
@@ -435,13 +436,12 @@ const uiComponents = (() => {
                             <label class="form-check-label fw-bold" for="publikation-sprache-switch" id="publikation-sprache-label">${UI_TEXTS.publikationTab.spracheSwitchLabel[lang]}</label>
                         </div>
                     </div>
-                    <div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: calc(100vh - var(--header-height) - var(--nav-height) - 70px - 2rem); overflow-y: auto;">
+                    <div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: calc(100vh - var(--header-height) - var(--nav-height) - 70px - 2rem - 38px); overflow-y: auto;">
                         <p class="text-muted">Bitte wählen Sie einen Abschnitt aus der Navigation.</p>
                     </div>
                 </div>
             </div>`;
     }
-
 
     return Object.freeze({
         createDashboardCard,
