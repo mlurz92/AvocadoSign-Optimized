@@ -1,23 +1,25 @@
 const publicationTextGenerator = (() => {
 
-    function fValue(value, digits = 1, unit = '') {
-        const num = parseFloat(value);
-        if (isNaN(num) || !isFinite(num)) return 'N/A';
-        return `${num.toFixed(digits)}${unit}`;
-    }
-
-    function fPercent(value, digits = 1) {
-        const num = parseFloat(value);
-        if (isNaN(num) || !isFinite(num)) return 'N/A';
-        return `${(num * 100).toFixed(digits)}%`;
-    }
-
     function fCI(metric, digits = 1, isPercent = true, lang = 'de') {
         if (!metric || metric.value === undefined || metric.value === null || isNaN(metric.value)) return 'N/A';
-        const valStr = isPercent ? fPercent(metric.value, digits) : fValue(metric.value, digits);
+
+        const formatSingleValue = (val, d, isP) => {
+            if (isP) {
+                return formatPercent(val, d);
+            } else {
+                let numStr = formatNumber(val, d, 'N/A', true);
+                if (lang === 'de' && numStr !== 'N/A') {
+                    numStr = numStr.replace('.', ',');
+                }
+                return numStr;
+            }
+        };
+
+        const valStr = formatSingleValue(metric.value, digits, isPercent);
+
         if (metric.ci && metric.ci.lower !== null && metric.ci.upper !== null && !isNaN(metric.ci.lower) && !isNaN(metric.ci.upper)) {
-            const lowerStr = isPercent ? fPercent(metric.ci.lower, digits) : fValue(metric.ci.lower, digits);
-            const upperStr = isPercent ? fPercent(metric.ci.upper, digits) : fValue(metric.ci.upper, digits);
+            const lowerStr = formatSingleValue(metric.ci.lower, digits, isPercent);
+            const upperStr = formatSingleValue(metric.ci.upper, digits, isPercent);
             const ciText = lang === 'de' ? '95% KI' : '95% CI';
             return `${valStr} (${ciText}: ${lowerStr} – ${upperStr})`;
         }
@@ -27,9 +29,12 @@ const publicationTextGenerator = (() => {
     function getPValueText(pValue, lang = 'de') {
         if (pValue === null || pValue === undefined || isNaN(pValue)) return 'N/A';
         if (pValue < 0.001) return lang === 'de' ? 'p < 0,001' : 'P < .001';
-        const pFormatted = pValue.toFixed(3);
+        let pFormatted = pValue.toFixed(3);
         if (pFormatted === "0.000") return lang === 'de' ? 'p < 0,001' : 'P < .001';
-        return `p = ${pFormatted.replace('.', lang === 'de' ? ',' : '.')}`;
+        if (lang === 'de') {
+            pFormatted = pFormatted.replace('.', ',');
+        }
+        return `p = ${pFormatted}`;
     }
 
     function getKollektivText(kollektivId, n, lang = 'de') {
@@ -63,10 +68,10 @@ const publicationTextGenerator = (() => {
         const anzahlNRCT = commonData.nNRCT || allKollektivStats?.nRCT?.deskriptiv?.anzahlPatienten || 'N/A';
         const anzahlDirektOP = commonData.nDirektOP || allKollektivStats?.['direkt OP']?.deskriptiv?.anzahlPatienten || 'N/A';
 
-        const alterMedian = fValue(pCharGesamt?.alter?.median, 1);
-        const alterMin = fValue(pCharGesamt?.alter?.min, 0);
-        const alterMax = fValue(pCharGesamt?.alter?.max, 0);
-        const anteilMaennerProzent = fPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN, 0);
+        const alterMedian = formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', lang === 'en');
+        const alterMin = formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', lang === 'en');
+        const alterMax = formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', lang === 'en');
+        const anteilMaennerProzent = formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN, 0);
         const anzahlMaenner = pCharGesamt?.geschlecht?.m || 0;
         const anzahlPatientenChar = pCharGesamt?.anzahlPatienten || 0;
 
@@ -118,7 +123,11 @@ const publicationTextGenerator = (() => {
         const formatBFDefinition = (kollektivId, displayName) => {
             const bfDef = allKollektivStats?.[kollektivId]?.bruteforce_definition;
             if (bfDef && bfDef.criteria) {
-                return `<li><strong>${displayName}:</strong> ${studyT2CriteriaManager.formatCriteriaForDisplay(bfDef.criteria, bfDef.logic, false)} (Zielmetrik: ${bfDef.metricName}, Erreichter Wert: ${fValue(bfDef.metricValue,4)})</li>`;
+                let metricValueStr = formatNumber(bfDef.metricValue, 4, 'N/A', true);
+                if (lang === 'de' && metricValueStr !== 'N/A') {
+                    metricValueStr = metricValueStr.replace('.', ',');
+                }
+                return `<li><strong>${displayName}:</strong> ${studyT2CriteriaManager.formatCriteriaForDisplay(bfDef.criteria, bfDef.logic, false)} (Zielmetrik: ${bfDef.metricName}, Erreichter Wert: ${metricValueStr})</li>`;
             }
             return `<li><strong>${displayName}:</strong> Keine Optimierungsergebnisse für Zielmetrik '${bfZielMetric}' verfügbar oder nicht berechnet.</li>`;
         };
@@ -197,7 +206,8 @@ const publicationTextGenerator = (() => {
     }
 
     function getMethodenStatistischeAnalyseText(lang, commonData) {
-        const alpha = (commonData.significanceLevel * 100) || 5;
+        const alphaLevel = commonData.significanceLevel || 0.05;
+        const alphaText = formatNumber(alphaLevel, 2, '0.05', true).replace('.', lang === 'de' ? ',' : '.');
         const bootstrapN = commonData.bootstrapReplications || 1000;
         const appName = commonData.appName || "Analyse-Tool";
         const appVersion = commonData.appVersion || "";
@@ -205,12 +215,12 @@ const publicationTextGenerator = (() => {
         if (lang === 'de') {
             return `
                 <p>Die deskriptive Statistik umfasste die Berechnung von Medianen, Mittelwerten, Standardabweichungen (SD), Minima und Maxima für kontinuierliche Variablen sowie absolute Häufigkeiten und Prozentanteile für kategoriale Daten. Die diagnostische Güte des Avocado Signs sowie der verschiedenen T2-Kriteriensets (Literatur-basiert und Brute-Force-optimiert) wurde anhand von Sensitivität, Spezifität, positivem prädiktiven Wert (PPV), negativem prädiktiven Wert (NPV), Accuracy (ACC), Balanced Accuracy (BalAcc) und der Fläche unter der Receiver Operating Characteristic-Kurve (AUC) – bei binären Tests äquivalent zur BalAcc – evaluiert. Für diese Metriken wurden zweiseitige 95%-Konfidenzintervalle (KI) berechnet. Für Proportionen (Sensitivität, Spezifität, PPV, NPV, Accuracy) wurde das Wilson-Score-Intervall verwendet. Für BalAcc (AUC) und den F1-Score wurde die Bootstrap-Perzentil-Methode mit ${bootstrapN} Replikationen angewendet.</p>
-                <p>Der statistische Vergleich der diagnostischen Leistung (Accuracy, AUC) zwischen dem Avocado Sign und den jeweiligen T2-Kriteriensets innerhalb derselben Patientengruppe (gepaarte Daten) erfolgte mittels des McNemar-Tests für gepaarte nominale Daten bzw. des DeLong-Tests für den Vergleich von AUC-Werten. Der Vergleich von Performance-Metriken zwischen unabhängigen Kollektiven (z.B. Direkt-OP vs. nRCT-Gruppe) erfolgte mittels Fisher's Exact Test für Raten (wie Accuracy) und mittels Z-Test für den Vergleich von AUC-Werten basierend auf deren Bootstrap-Standardfehlern. Ein p-Wert < ${fValue(commonData.significanceLevel,2).replace('.',',')} wurde als statistisch signifikant interpretiert. Alle statistischen Analysen wurden mit der oben genannten, speziell entwickelten Webanwendung (${appName} v${appVersion}) durchgeführt, die auf Standardbibliotheken für statistische Berechnungen und JavaScript basiert.</p>
+                <p>Der statistische Vergleich der diagnostischen Leistung (Accuracy, AUC) zwischen dem Avocado Sign und den jeweiligen T2-Kriteriensets innerhalb derselben Patientengruppe (gepaarte Daten) erfolgte mittels des McNemar-Tests für gepaarte nominale Daten bzw. des DeLong-Tests für den Vergleich von AUC-Werten. Der Vergleich von Performance-Metriken zwischen unabhängigen Kollektiven (z.B. Direkt-OP vs. nRCT-Gruppe) erfolgte mittels Fisher's Exact Test für Raten (wie Accuracy) und mittels Z-Test für den Vergleich von AUC-Werten basierend auf deren Bootstrap-Standardfehlern. Ein p-Wert < ${alphaText} wurde als statistisch signifikant interpretiert. Alle statistischen Analysen wurden mit der oben genannten, speziell entwickelten Webanwendung (${appName} v${appVersion}) durchgeführt, die auf Standardbibliotheken für statistische Berechnungen und JavaScript basiert.</p>
             `;
         } else {
             return `
                 <p>Descriptive statistics included the calculation of medians, means, standard deviations (SD), minima, and maxima for continuous variables, as well as absolute frequencies and percentages for categorical data. The diagnostic performance of the Avocado Sign and the various T2 criteria sets (literature-based and brute-force optimized) was evaluated using sensitivity, specificity, positive predictive value (PPV), negative predictive value (NPV), accuracy (ACC), balanced accuracy (BalAcc), and the area under the Receiver Operating Characteristic curve (AUC)—equivalent to BalAcc for binary tests. Two-sided 95% confidence intervals (CI) were calculated for these metrics. The Wilson score interval was used for proportions (sensitivity, specificity, PPV, NPV, accuracy). For BalAcc (AUC) and F1-score, the bootstrap percentile method with ${bootstrapN} replications was applied.</p>
-                <p>Statistical comparison of diagnostic performance (accuracy, AUC) between the Avocado Sign and the respective T2 criteria sets within the same patient group (paired data) was performed using McNemar's test for paired nominal data and DeLong's test for AUC comparison. Comparison of performance metrics between independent cohorts (e.g., upfront surgery vs. nRCT group) was conducted using Fisher's exact test for rates (such as accuracy) and a Z-test for AUC comparison based on their bootstrap standard errors. A p-value < ${fValue(commonData.significanceLevel,2)} was considered statistically significant. All statistical analyses were conducted using the aforementioned custom-developed web application (${appName} v${appVersion}), which is based on standard libraries for statistical computations and JavaScript.</p>
+                <p>Statistical comparison of diagnostic performance (accuracy, AUC) between the Avocado Sign and the respective T2 criteria sets within the same patient group (paired data) was performed using McNemar's test for paired nominal data and DeLong's test for AUC comparison. Comparison of performance metrics between independent cohorts (e.g., upfront surgery vs. nRCT group) was conducted using Fisher's exact test for rates (such as accuracy) and a Z-test for AUC comparison based on their bootstrap standard errors. A p-value < ${alphaText} was considered statistically significant. All statistical analyses were conducted using the aforementioned custom-developed web application (${appName} v${appVersion}), which is based on standard libraries for statistical computations and JavaScript.</p>
             `;
         }
     }
@@ -220,15 +230,15 @@ const publicationTextGenerator = (() => {
         const anzahlGesamt = commonData.nGesamt || pCharGesamt?.anzahlPatienten || 'N/A';
         const anzahlDirektOP = commonData.nDirektOP || allKollektivStats?.['direkt OP']?.deskriptiv?.anzahlPatienten || 'N/A';
         const anzahlNRCT = commonData.nNRCT || allKollektivStats?.nRCT?.deskriptiv?.anzahlPatienten || 'N/A';
-        const anteilNplusGesamt = fPercent(pCharGesamt?.nStatus?.plus && pCharGesamt?.anzahlPatienten ? pCharGesamt.nStatus.plus / pCharGesamt.anzahlPatienten : NaN, 1);
+        const anteilNplusGesamt = formatPercent(pCharGesamt?.nStatus?.plus && pCharGesamt?.anzahlPatienten ? pCharGesamt.nStatus.plus / pCharGesamt.anzahlPatienten : NaN, 1);
 
         if (lang === 'de') {
             return `
-                <p>Die Charakteristika der ${anzahlGesamt} in die Studie eingeschlossenen Patienten sind in Tabelle 1 zusammengefasst. Das Gesamtkollektiv bestand aus ${anzahlDirektOP} Patienten, die primär operiert wurden (Direkt-OP-Gruppe), und ${anzahlNRCT} Patienten, die eine neoadjuvante Radiochemotherapie erhielten (nRCT-Gruppe). Das mediane Alter im Gesamtkollektiv betrug ${fValue(pCharGesamt?.alter?.median, 1)} Jahre (Range ${fValue(pCharGesamt?.alter?.min, 0)}–${fValue(pCharGesamt?.alter?.max, 0)}), und ${fPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} waren männlich. Ein histopathologisch gesicherter positiver Lymphknotenstatus (N+) fand sich bei ${pCharGesamt?.nStatus?.plus || 'N/A'} von ${anzahlGesamt} Patienten (${anteilNplusGesamt}) im Gesamtkollektiv. Die Verteilung von Alter und Geschlecht im Gesamtkollektiv ist in Abbildung 1a und 1b dargestellt.</p>
+                <p>Die Charakteristika der ${anzahlGesamt} in die Studie eingeschlossenen Patienten sind in Tabelle 1 zusammengefasst. Das Gesamtkollektiv bestand aus ${anzahlDirektOP} Patienten, die primär operiert wurden (Direkt-OP-Gruppe), und ${anzahlNRCT} Patienten, die eine neoadjuvante Radiochemotherapie erhielten (nRCT-Gruppe). Das mediane Alter im Gesamtkollektiv betrug ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', false)} Jahre (Range ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', false)}–${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', false)}), und ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} waren männlich. Ein histopathologisch gesicherter positiver Lymphknotenstatus (N+) fand sich bei ${pCharGesamt?.nStatus?.plus || 'N/A'} von ${anzahlGesamt} Patienten (${anteilNplusGesamt}) im Gesamtkollektiv. Die Verteilung von Alter und Geschlecht im Gesamtkollektiv ist in Abbildung 1a und 1b dargestellt.</p>
             `;
         } else {
             return `
-                <p>The characteristics of the ${anzahlGesamt} patients included in the study are summarized in Table 1. The overall cohort consisted of ${anzahlDirektOP} patients who underwent upfront surgery (upfront surgery group) and ${anzahlNRCT} patients who received neoadjuvant chemoradiotherapy (nRCT group). The median age in the overall cohort was ${fValue(pCharGesamt?.alter?.median, 1)} years (range ${fValue(pCharGesamt?.alter?.min, 0)}–${fValue(pCharGesamt?.alter?.max, 0)}), and ${fPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} were male. A histopathologically confirmed positive lymph node status (N+) was found in ${pCharGesamt?.nStatus?.plus || 'N/A'} of ${anzahlGesamt} patients (${anteilNplusGesamt}) in the overall cohort. The age and gender distribution in the overall cohort is shown in Figure 1a and 1b.</p>
+                <p>The characteristics of the ${anzahlGesamt} patients included in the study are summarized in Table 1. The overall cohort consisted of ${anzahlDirektOP} patients who underwent upfront surgery (upfront surgery group) and ${anzahlNRCT} patients who received neoadjuvant chemoradiotherapy (nRCT group). The median age in the overall cohort was ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', true)} years (range ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', true)}–${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', true)}), and ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} were male. A histopathologically confirmed positive lymph node status (N+) was found in ${pCharGesamt?.nStatus?.plus || 'N/A'} of ${anzahlGesamt} patients (${anteilNplusGesamt}) in the overall cohort. The age and gender distribution in the overall cohort is shown in Figure 1a and 1b.</p>
             `;
         }
     }
@@ -335,27 +345,30 @@ const publicationTextGenerator = (() => {
             const vergleichASvsLit = allKollektivStats?.[k.id]?.[`vergleichASvsT2_literatur_${k.litSetId}`];
             const vergleichASvsBF = allKollektivStats?.[k.id]?.vergleichASvsT2_bruteforce;
 
+            const diffAucLitStr = formatNumber(vergleichASvsLit?.delong?.diffAUC, 3, 'N/A', true);
+            const diffAucBfStr = formatNumber(vergleichASvsBF?.delong?.diffAUC, 3, 'N/A', true);
+
             if (lang === 'de') {
                 text += `<h4>Vergleich im ${name}</h4>`;
                 if (statsAS && statsLit && vergleichASvsLit) {
-                    text += `<p>Im Vergleich des AS (AUC ${fCI(statsAS.auc, 3, false, 'de')}) mit den Kriterien nach ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'de')}) zeigte sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsLit.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${fValue(vergleichASvsLit.delong?.diffAUC, 3).replace(/\./g, ',')}.</p>`;
+                    text += `<p>Im Vergleich des AS (AUC ${fCI(statsAS.auc, 3, false, 'de')}) mit den Kriterien nach ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'de')}) zeigte sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsLit.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${diffAucLitStr.replace('.', ',')}.</p>`;
                 } else {
                     text += `<p>Ein Vergleich zwischen AS und den Kriterien nach ${k.litSetName} konnte nicht vollständig durchgeführt werden (fehlende Daten).</p>`;
                 }
-                if (statsAS && statsBF && vergleichASvsBF) {
-                    text += `<p>Gegenüber den für die ${bfZielMetric} optimierten T2-Kriterien (AUC ${fCI(statsBF.auc, 3, false, 'de')}) ergab sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsBF.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${fValue(vergleichASvsBF.delong?.diffAUC, 3).replace(/\./g, ',')}.</p>`;
+                if (statsAS && statsBF && vergleichASvsBF && bfDef ) {
+                    text += `<p>Gegenüber den für die ${bfDef.metricName} optimierten T2-Kriterien (AUC ${fCI(statsBF.auc, 3, false, 'de')}) ergab sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsBF.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${diffAucBfStr.replace('.', ',')}.</p>`;
                 } else {
                     text += `<p>Ein Vergleich zwischen AS und den Brute-Force-optimierten Kriterien konnte nicht vollständig durchgeführt werden (fehlende Daten oder keine BF-Optimierung für dieses Kollektiv für die Zielmetrik ${bfZielMetric}).</p>`;
                 }
             } else { // lang === 'en'
                 text += `<h4>Comparison in the ${name}</h4>`;
                 if (statsAS && statsLit && vergleichASvsLit) {
-                    text += `<p>Comparing AS (AUC ${fCI(statsAS.auc, 3, false, 'en')}) with the criteria by ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'en')}), the p-value for accuracy was ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'en')} (McNemar) and for AUC was ${getPValueText(vergleichASvsLit.delong?.pValue, 'en')} (DeLong). The difference in AUC was ${fValue(vergleichASvsLit.delong?.diffAUC, 3)}.</p>`;
+                    text += `<p>Comparing AS (AUC ${fCI(statsAS.auc, 3, false, 'en')}) with the criteria by ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'en')}), the p-value for accuracy was ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'en')} (McNemar) and for AUC was ${getPValueText(vergleichASvsLit.delong?.pValue, 'en')} (DeLong). The difference in AUC was ${diffAucLitStr}.</p>`;
                 } else {
                     text += `<p>A full comparison between AS and the criteria by ${k.litSetName} could not be performed (missing data).</p>`;
                 }
-                if (statsAS && statsBF && vergleichASvsBF) {
-                    text += `<p>Compared to the T2 criteria optimized for ${bfZielMetric} (AUC ${fCI(statsBF.auc, 3, false, 'en')}), the p-value for accuracy was ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'en')} (McNemar) and for AUC was ${getPValueText(vergleichASvsBF.delong?.pValue, 'en')} (DeLong). The difference in AUC was ${fValue(vergleichASvsBF.delong?.diffAUC, 3)}.</p>`;
+                if (statsAS && statsBF && vergleichASvsBF && bfDef) {
+                    text += `<p>Compared to the T2 criteria optimized for ${bfDef.metricName} (AUC ${fCI(statsBF.auc, 3, false, 'en')}), the p-value for accuracy was ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'en')} (McNemar) and for AUC was ${getPValueText(vergleichASvsBF.delong?.pValue, 'en')} (DeLong). The difference in AUC was ${diffAucBfStr}.</p>`;
                 } else {
                     text += `<p>A full comparison between AS and the brute-force optimized criteria could not be performed (missing data or no BF optimization for this cohort for the target metric ${bfZielMetric}).</p>`;
                 }
