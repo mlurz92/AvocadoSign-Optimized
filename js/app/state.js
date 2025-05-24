@@ -1,5 +1,13 @@
 const state = (() => {
     let currentState = {};
+    let defaultAggregatedBruteForceResults = {};
+    if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.DEFAULT_SETTINGS && Array.isArray(APP_CONFIG.DEFAULT_SETTINGS.CRITERIA_COMPARISON_SETS)) {
+        const kollektiveKeys = ['Gesamt', 'direkt OP', 'nRCT'];
+        kollektiveKeys.forEach(k => {
+            defaultAggregatedBruteForceResults[k] = null;
+        });
+    }
+
 
     const defaultState = {
         currentKollektiv: APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV,
@@ -13,7 +21,8 @@ const state = (() => {
         currentStatsKollektiv2: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2,
         currentPresentationView: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW,
         currentPresentationStudyId: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID,
-        activeTabId: 'daten-tab'
+        activeTabId: 'daten-tab',
+        aggregatedBruteForceResults: cloneDeep(defaultAggregatedBruteForceResults)
     };
 
     function init() {
@@ -29,9 +38,16 @@ const state = (() => {
             currentPresentationStudyId: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID) ?? defaultState.currentPresentationStudyId,
             datenTableSort: cloneDeep(defaultState.datenTableSort),
             auswertungTableSort: cloneDeep(defaultState.auswertungTableSort),
-            activeTabId: defaultState.activeTabId
+            activeTabId: defaultState.activeTabId,
+            aggregatedBruteForceResults: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.AGGREGATED_BRUTE_FORCE_RESULTS) ?? cloneDeep(defaultState.aggregatedBruteForceResults)
         };
-        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) {
+        // Ensure aggregatedBruteForceResults is an object, not null from localStorage if it was never set
+        if (currentState.aggregatedBruteForceResults === null || typeof currentState.aggregatedBruteForceResults !== 'object') {
+            currentState.aggregatedBruteForceResults = cloneDeep(defaultState.aggregatedBruteForceResults);
+        }
+
+
+        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) { // Deprecated key
             localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
         }
         console.log("State Manager initialisiert mit:", currentState);
@@ -205,6 +221,23 @@ const state = (() => {
         return false;
     }
 
+    function getAggregatedBruteForceResults() {
+        return cloneDeep(currentState.aggregatedBruteForceResults);
+    }
+
+    function updateAggregatedBruteForceResultForKollektiv(kollektivId, bfResult) {
+        if (typeof kollektivId === 'string' && bfResult) {
+            if (!currentState.aggregatedBruteForceResults) {
+                currentState.aggregatedBruteForceResults = {};
+            }
+            currentState.aggregatedBruteForceResults[kollektivId] = cloneDeep(bfResult);
+            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.AGGREGATED_BRUTE_FORCE_RESULTS, currentState.aggregatedBruteForceResults);
+            return true;
+        }
+        return false;
+    }
+
+
     return Object.freeze({
         init,
         getCurrentKollektiv,
@@ -230,7 +263,9 @@ const state = (() => {
         getCurrentPresentationStudyId,
         setCurrentPresentationStudyId,
         getActiveTabId,
-        setActiveTabId
+        setActiveTabId,
+        getAggregatedBruteForceResults,
+        updateAggregatedBruteForceResultForKollektiv
     });
 
 })();
