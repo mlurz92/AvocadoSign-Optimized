@@ -8,7 +8,7 @@ const studyT2CriteriaManager = (() => {
             context: 'Primär-Staging (Baseline-MRT)',
             applicableKollektiv: 'direkt OP',
             criteria: Object.freeze({
-                size: Object.freeze({ active: true, threshold: 9.0, condition: '>=' }),
+                size: Object.freeze({ active: true, threshold: 9.0, condition: '>=' }), // Wird in der KOMBINIERT-Logik speziell behandelt
                 form: Object.freeze({ active: true, value: 'rund' }),
                 kontur: Object.freeze({ active: true, value: 'irregulär' }),
                 homogenitaet: Object.freeze({ active: true, value: 'heterogen' }),
@@ -34,8 +34,8 @@ const studyT2CriteriaManager = (() => {
                 size: Object.freeze({ active: false, threshold: null, condition: null }),
                 form: Object.freeze({ active: false, value: null }),
                 kontur: Object.freeze({ active: true, value: 'irregulär' }),
-                homogenitaet: Object.freeze({ active: true, value: 'heterogen' }),
-                signal: Object.freeze({ active: false, value: null })
+                homogenitaet: Object.freeze({ active: true, value: 'heterogen' }), // Im Paper als "internal signal heterogeneity"
+                signal: Object.freeze({ active: false, value: null }) // Signal an sich nicht, aber Heterogenität des Signals
             }),
             logic: 'ODER',
             description: 'Koh et al. (2008): Morphologische Kriterien - Irreguläre Kontur ODER heterogenes Binnensignal. In dieser Anwendung für das Gesamtkollektiv evaluiert.',
@@ -54,14 +54,14 @@ const studyT2CriteriaManager = (() => {
             context: 'Restaging nach nCRT',
             applicableKollektiv: 'nRCT',
             criteria: Object.freeze({
-                size: Object.freeze({ active: true, threshold: 2.3, condition: '>=' }),
+                size: Object.freeze({ active: true, threshold: 2.3, condition: '>=' }), // Im Paper 2.2mm, hier auf 2.3mm wegen Schrittweite
                 form: Object.freeze({ active: false, value: null }),
                 kontur: Object.freeze({ active: false, value: null }),
                 homogenitaet: Object.freeze({ active: false, value: null }),
                 signal: Object.freeze({ active: false, value: null })
             }),
-            logic: 'ODER',
-            description: 'Barbaro et al. (2024): Optimaler Cut-off für Kurzachse im Restaging nach nRCT: ≥ 2.3mm (Original 2.2mm).',
+            logic: 'ODER', // Da nur ein Kriterium aktiv ist, ist die Logik effektiv "ODER" mit sich selbst
+            description: 'Barbaro et al. (2024): Optimaler Cut-off für Kurzachse im Restaging nach nRCT: ≥ 2.3mm (Originalstudie 2.2mm).',
              studyInfo: Object.freeze({
                 reference: "Barbaro et al., Radiother Oncol (2024)",
                 patientCohort: "N=191 (alle nCRT, LARC)",
@@ -113,7 +113,15 @@ const studyT2CriteriaManager = (() => {
         };
 
         const priorityOrder = ['size', 'kontur', 'homogenitaet', 'form', 'signal'];
-        const sortedActiveKeys = [...activeKeys].sort((a, b) => priorityOrder.indexOf(a) - priorityOrder.indexOf(b));
+        const sortedActiveKeys = [...activeKeys].sort((a, b) => {
+            const indexA = priorityOrder.indexOf(a);
+            const indexB = priorityOrder.indexOf(b);
+            if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+        });
+
 
         sortedActiveKeys.forEach(key => {
              parts.push(formatValue(key, criteria[key], shortFormat));
@@ -122,7 +130,7 @@ const studyT2CriteriaManager = (() => {
         const effectiveLogic = logic || criteria.logic || 'ODER';
 
         if (effectiveLogic === 'KOMBINIERT') {
-             const studySet = studyT2CriteriaSets.find(s => s.logic === 'KOMBINIERT' && JSON.stringify(s.criteria) === JSON.stringify(criteria));
+             const studySet = studyT2CriteriaSets.find(s => s.logic === 'KOMBINIERT' && JSON.stringify(s.criteria) === JSON.stringify(criteria)); // Simple check
              if (studySet?.description) {
                  return shortFormat ? (studySet.displayShortName || studySet.name) : studySet.description;
              }
@@ -155,14 +163,14 @@ const studyT2CriteriaManager = (() => {
         if (!lymphNode || typeof lymphNode !== 'object' || !criteria || typeof criteria !== 'object') return checkResult;
 
         const nodeSize = (typeof lymphNode.groesse === 'number' && !isNaN(lymphNode.groesse)) ? lymphNode.groesse : -1;
-        const hasRoundShape = lymphNode.form === criteria.form?.value;
-        const hasIrregularBorder = lymphNode.kontur === criteria.kontur?.value;
-        const hasHeterogeneousSignal = lymphNode.homogenitaet === criteria.homogenitaet?.value;
+        const hasRoundShape = criteria.form?.active && lymphNode.form === criteria.form.value;
+        const hasIrregularBorder = criteria.kontur?.active && lymphNode.kontur === criteria.kontur.value;
+        const hasHeterogeneousSignal = criteria.homogenitaet?.active && lymphNode.homogenitaet === criteria.homogenitaet.value;
 
         let morphologyCount = 0;
-        if (criteria.form?.active && hasRoundShape) morphologyCount++;
-        if (criteria.kontur?.active && hasIrregularBorder) morphologyCount++;
-        if (criteria.homogenitaet?.active && hasHeterogeneousSignal) morphologyCount++;
+        if (hasRoundShape) morphologyCount++;
+        if (hasIrregularBorder) morphologyCount++;
+        if (hasHeterogeneousSignal) morphologyCount++;
 
         checkResult.size_val = nodeSize >=0 ? nodeSize : null;
         checkResult.form_val = lymphNode.form;
@@ -170,10 +178,10 @@ const studyT2CriteriaManager = (() => {
         checkResult.homogenitaet_val = lymphNode.homogenitaet;
         checkResult.signal_val = lymphNode.signal;
 
-        checkResult.size = (criteria.size?.active && nodeSize >= (criteria.size.threshold || 9.0));
-        checkResult.form = (criteria.form?.active && hasRoundShape);
-        checkResult.kontur = (criteria.kontur?.active && hasIrregularBorder);
-        checkResult.homogenitaet = (criteria.homogenitaet?.active && hasHeterogeneousSignal);
+        checkResult.size = (nodeSize >= (criteria.size?.threshold || 9.0)); // Using 9mm as the default for > comparison as per ESGAR direct malignant
+        checkResult.form = hasRoundShape;
+        checkResult.kontur = hasIrregularBorder;
+        checkResult.homogenitaet = hasHeterogeneousSignal;
         checkResult.esgarMorphologyCount = morphologyCount;
 
         if (nodeSize >= 9.0) {
@@ -184,15 +192,14 @@ const studyT2CriteriaManager = (() => {
             if (morphologyCount >= 2) {
                 checkResult.isPositive = true;
             }
-        } else if (nodeSize >= 0 && nodeSize < 5.0) {
+        } else if (nodeSize >= 0 && nodeSize < 5.0) { // Assuming size >= 0 for valid nodes
              checkResult.esgarCategory = '<5mm';
              if (morphologyCount >= 3) {
                  checkResult.isPositive = true;
              }
         } else {
-            checkResult.esgarCategory = 'N/A (Größe ungültig)';
+            checkResult.esgarCategory = 'N/A (Größe ungültig/fehlt)';
         }
-
         return checkResult;
     }
 
@@ -251,7 +258,7 @@ const studyT2CriteriaManager = (() => {
         if (lymphNodes.length === 0 && activeCriteriaKeys.length === 0 && logic !== 'KOMBINIERT') {
             return { t2Status: null, positiveLKCount: 0, bewerteteLK: [] };
         }
-         if (lymphNodes.length === 0 && logic === 'KOMBINIERT') {
+         if (lymphNodes.length === 0 && logic === 'KOMBINIERT') { // ESGAR implies criteria are active even if LNs are absent
             return { t2Status: '-', positiveLKCount: 0, bewerteteLK: [] };
         }
 
@@ -273,7 +280,7 @@ const studyT2CriteriaManager = (() => {
                 if (activeCriteriaKeys.length > 0) {
                    if (logic === 'UND') {
                        lkIsPositive = activeCriteriaKeys.every(key => checkResult[key] === true);
-                   } else {
+                   } else { // ODER logic
                        lkIsPositive = activeCriteriaKeys.some(key => checkResult[key] === true);
                    }
                 }
