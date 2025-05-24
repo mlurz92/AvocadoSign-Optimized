@@ -241,7 +241,7 @@ const ui_helpers = (() => {
                 break;
             case 'ruler-horizontal':
                 svgContent = `<path d="M${sw/2} ${c} H${s-sw/2} M${c} ${sw/2} V${s-sw/2} M${s*0.2} ${c-s*0.15} L${s*0.2} ${c+s*0.15} M${s*0.4} ${c-s*0.1} L${s*0.4} ${c+s*0.1} M${s*0.6} ${c-s*0.1} L${s*0.6} ${c+s*0.1} M${s*0.8} ${c-s*0.15} L${s*0.8} ${c+s*0.15}" stroke="${iconColor}" stroke-width="${sw/2}" stroke-linecap="round"/>`;
-                type = 'size'; // Ensure type consistency for class naming
+                type = 'size';
                 break;
             default:
                 svgContent = unknownIconSVG;
@@ -361,7 +361,7 @@ const ui_helpers = (() => {
         }
     }
 
-    function updateBruteForceUI(state, data = {}, workerAvailable = true, currentKollektiv = null) {
+    function updateBruteForceUI(stateUI, data = {}, workerAvailable = true, currentKollektiv = null) {
         const elements = {
             startBtn: document.getElementById('btn-start-brute-force'),
             cancelBtn: document.getElementById('btn-cancel-brute-force'),
@@ -389,12 +389,12 @@ const ui_helpers = (() => {
 
         const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
         const getKollektivNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
-        const isRunning = state === 'start' || state === 'started' || state === 'progress';
-        const hasResults = state === 'result' && data.results && data.results.length > 0 && data.bestResult && data.bestResult.criteria;
+        const isRunning = stateUI === 'start' || stateUI === 'started' || stateUI === 'progress';
+        const hasResults = stateUI === 'result' && data.results && data.results.length > 0 && data.bestResult && data.bestResult.criteria;
 
         if (elements.progressContainer) toggleElementClass(elements.progressContainer.id, 'd-none', !isRunning);
-        if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', state !== 'result' || !hasResults);
-        if (elements.cancelBtn) toggleElementClass(elements.cancelBtn.id, 'd-none', !isRunning || (isRunning && type === 'cancelled'));
+        if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', stateUI !== 'result' || !hasResults);
+        if (elements.cancelBtn) toggleElementClass(elements.cancelBtn.id, 'd-none', !isRunning || stateUI === 'cancelled' || stateUI === 'error' || stateUI === 'result');
         if (elements.startBtn) setElementDisabled(elements.startBtn.id, !workerAvailable || isRunning);
         if (elements.modalExportBtn) setElementDisabled(elements.modalExportBtn.id, !hasResults);
         if (elements.applyBestBtn) setElementDisabled(elements.applyBestBtn.id, !hasResults);
@@ -412,7 +412,7 @@ const ui_helpers = (() => {
             else if (el && el._tippy && el._tippy.state.isEnabled) { el._tippy.disable(); }
         };
 
-        switch (state) {
+        switch (stateUI) {
             case 'idle': case 'cancelled': case 'error':
                 if (elements.progressBar) { elements.progressBar.style.width = '0%'; elements.progressBar.setAttribute('aria-valuenow', '0'); }
                 if (elements.progressPercent) updateElementText(elements.progressPercent.id, '0%');
@@ -421,9 +421,9 @@ const ui_helpers = (() => {
                 if (elements.bestMetric) updateElementText(elements.bestMetric.id, '--');
                 if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, 'Beste Kriterien: --');
                 let statusMsg = '';
-                if (state === 'idle') statusMsg = workerAvailable ? 'Bereit.' : 'Worker nicht verfügbar.';
-                else if (state === 'cancelled') statusMsg = 'Abgebrochen.';
-                else if (state === 'error') statusMsg = `Fehler: ${data?.message || 'Unbekannt.'}`;
+                if (stateUI === 'idle') statusMsg = workerAvailable ? 'Bereit.' : 'Worker nicht verfügbar.';
+                else if (stateUI === 'cancelled') statusMsg = 'Abgebrochen.';
+                else if (stateUI === 'error') statusMsg = `Fehler: ${data?.message || 'Unbekannt.'}`;
                 if (elements.statusText) updateElementText(elements.statusText.id, statusMsg);
                 if (elements.statusText) addOrUpdateTooltip(elements.statusText, `Aktueller Status: ${statusMsg}`);
                 break;
@@ -507,13 +507,13 @@ const ui_helpers = (() => {
         trySetDisabled('export-daten-md', dataDisabled);
         trySetDisabled('export-auswertung-md', dataDisabled);
         trySetDisabled('export-filtered-data-csv', dataDisabled);
-        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled); // Report needs data, BF results are optional
+        trySetDisabled('export-comprehensive-report-html', !canExportData && !hasBruteForceResults);
         trySetDisabled('export-charts-png', dataDisabled);
         trySetDisabled('export-charts-svg', dataDisabled);
 
-        trySetDisabled('export-all-zip', dataDisabled && bfDisabled);
+        trySetDisabled('export-all-zip', !canExportData && !hasBruteForceResults);
         trySetDisabled('export-csv-zip', dataDisabled);
-        trySetDisabled('export-md-zip', dataDisabled); // MD Zip could include publication texts even without data
+        trySetDisabled('export-md-zip', dataDisabled); 
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
 
@@ -574,12 +574,12 @@ const ui_helpers = (() => {
         const na = '--';
         const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
         const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na); // Removed isPercent flag here
+        const valueStr = formatNumber(data?.value, digits, na); 
         const formattedValueWithUnit = isPercent ? formatPercent(data?.value, digits, na) : valueStr;
 
         const lowerStr = formatNumber(data?.ci?.lower, digits, na);
         const upperStr = formatNumber(data?.ci?.upper, digits, na);
-        const ciMethodStr = data?.method || 'N/A';
+        const ciMethodStr = data?.method || na;
         const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value) : '';
 
         let interpretation = interpretationTemplate
