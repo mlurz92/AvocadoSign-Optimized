@@ -20,7 +20,7 @@ const statistikTabLogic = (() => {
                             <thead class="visually-hidden"><tr><th>Metrik</th><th>Wert</th></tr></thead>
                             <tbody>
                                 <tr data-tippy-content="${TOOLTIP_CONTENT.deskriptiveStatistik.alterMedian?.description || 'Alter'}"><td>Alter Median (Min-Max) [Mean ± SD]</td><td>${fv(d.alter?.median, 1)} (${fv(d.alter?.min, 0)} - ${fv(d.alter?.max, 0)}) [${fv(d.alter?.mean, 1)} ± ${fv(d.alter?.sd, 1)}]</td></tr>
-                                <tr data-tippy-content="${TOOLTIP_CONTENT.deskriptiveStatistik.geschlecht?.description || 'Geschlecht'}"><td>Geschlecht (m / w) (n / %)</td><td>${d.geschlecht?.m ?? 0} / ${d.geschlecht?.f ?? 0} (${fP(d.anzahlPatienten > 0 ? (d.geschlecht?.m ?? 0) / d.anzahlPatienten : NaN, 1)} / ${fP(d.anzahlPatienten > 0 ? (d.geschlecht?.f ?? 0) / d.anzahlPatienten : NaN, 1)})</td></tr>
+                                <tr data-tippy-content="${TOOLTIP_CONTENT.deskriptiveStatistik.geschlecht?.description || 'Geschlecht'}"><td>Geschlecht (m / w / u) (n / %)</td><td>${d.geschlecht?.m ?? 0} / ${d.geschlecht?.f ?? 0} / ${d.geschlecht?.unbekannt ?? 0} (${fP(d.anzahlPatienten > 0 ? (d.geschlecht?.m ?? 0) / d.anzahlPatienten : NaN, 1)} / ${fP(d.anzahlPatienten > 0 ? (d.geschlecht?.f ?? 0) / d.anzahlPatienten : NaN, 1)} / ${fP(d.anzahlPatienten > 0 ? (d.geschlecht?.unbekannt ?? 0) / d.anzahlPatienten : NaN, 1)})</td></tr>
                                 <tr data-tippy-content="${TOOLTIP_CONTENT.datenTable.therapie || 'Therapie'}"><td>Therapie (direkt OP / nRCT) (n / %)</td><td>${d.therapie?.['direkt OP'] ?? 0} / ${d.therapie?.nRCT ?? 0} (${fP(d.anzahlPatienten > 0 ? (d.therapie?.['direkt OP'] ?? 0) / d.anzahlPatienten : NaN, 1)} / ${fP(d.anzahlPatienten > 0 ? (d.therapie?.nRCT ?? 0) / d.anzahlPatienten : NaN, 1)})</td></tr>
                                 <tr data-tippy-content="${TOOLTIP_CONTENT.deskriptiveStatistik.nStatus?.description || 'N Status'}"><td>N Status (+ / -) (n / %)</td><td>${d.nStatus?.plus ?? 0} / ${d.nStatus?.minus ?? 0} (${fP(d.anzahlPatienten > 0 ? (d.nStatus?.plus ?? 0) / d.anzahlPatienten : NaN, 1)} / ${fP(d.anzahlPatienten > 0 ? (d.nStatus?.minus ?? 0) / d.anzahlPatienten : NaN, 1)})</td></tr>
                                 <tr data-tippy-content="${TOOLTIP_CONTENT.deskriptiveStatistik.asStatus?.description || 'AS Status'}"><td>AS Status (+ / -) (n / %)</td><td>${d.asStatus?.plus ?? 0} / ${d.asStatus?.minus ?? 0} (${fP(d.anzahlPatienten > 0 ? (d.asStatus?.plus ?? 0) / d.anzahlPatienten : NaN, 1)} / ${fP(d.anzahlPatienten > 0 ? (d.asStatus?.minus ?? 0) / d.anzahlPatienten : NaN, 1)})</td></tr>
@@ -36,9 +36,9 @@ const statistikTabLogic = (() => {
                                 <tr data-tippy-content="${TOOLTIP_CONTENT.deskriptiveStatistik.lkAnzahlPatho?.description || 'LK N gesamt'}"><td>LK N gesamt</td><td>${fLK(d.lkAnzahlen?.n?.total)}</td></tr>
                                 <tr data-tippy-content="${TOOLTIP_CONTENT.deskriptiveStatistik.lkAnzahlPathoPlus?.description || 'LK N+'}"><td>LK N+ <sup>*</sup></td><td>${fLK(d.lkAnzahlen?.n?.plus)}</td></tr>
                                 <tr data-tippy-content="${TOOLTIP_CONTENT.deskriptiveStatistik.lkAnzahlAS?.description || 'LK AS gesamt'}"><td>LK AS gesamt</td><td>${fLK(d.lkAnzahlen?.as?.total)}</td></tr>
-                                <tr data-tippy-content="${TOOLTIP_CONTENT.deskriptiveStatistik.lkAnzahlASPlus?.description || 'LK AS+'}"><td>LK AS+ <sup>**</sup></td><td>${fLK(d.lkAnzahlen?.as?.plus)}</td></tr>
+                                <tr data-tippy-content="${TOOLTIP_CONTENT.deskriptiveStatistik.lkAnzahlASPlus?.description || 'LK AS+'}"><td>LK AS+ <h5>Schlagworte:</h5>**</td><td>${fLK(d.lkAnzahlen?.as?.plus)}</td></tr>
                                 <tr data-tippy-content="${TOOLTIP_CONTENT.deskriptiveStatistik.lkAnzahlT2?.description || 'LK T2 gesamt'}"><td>LK T2 gesamt</td><td>${fLK(d.lkAnzahlen?.t2?.total)}</td></tr>
-                                <tr data-tippy-content="${TOOLTIP_CONTENT.deskriptiveStatistik.lkAnzahlT2Plus?.description || 'LK T2+'}"><td>LK T2+ <sup>***</sup></td><td>${fLK(d.lkAnzahlen?.t2?.plus)}</td></tr>
+                                <tr data-tippy-content="${TOOLTIP_CONTENT.deskriptiveStatistik.lkAnzahlT2Plus?.description || 'LK T2+'}"><td>LK T2+ <h3>Schlagworte:</h3>**</td><td>${fLK(d.lkAnzahlen?.t2?.plus)}</td></tr>
                              </tbody>
                         </table>
                      </div>
@@ -97,13 +97,16 @@ const statistikTabLogic = (() => {
         };
         const getTestDescriptionAssoc = (assocObj) => {
              const testName = assocObj?.testName || '';
-             const pTooltipKey = testName.includes("Fisher") ? 'fisher' : (testName.includes("Mann-Whitney") ? 'mannwhitney' : 'defaultP');
-             const merkmalName = assocObj?.featureName || '';
-             return (TOOLTIP_CONTENT.statMetrics[pTooltipKey]?.description || '').replace('[MERKMAL]', `'${merkmalName}'`).replace('[VARIABLE]', `'${merkmalName}'`);
+             let defaultDesc = 'Informationen zum Test hier.';
+             if (testName.includes("Fisher")) defaultDesc = TOOLTIP_CONTENT.statMetrics.fisher?.description || defaultDesc;
+             else if (testName.includes("Mann-Whitney")) defaultDesc = TOOLTIP_CONTENT.statMetrics.mannwhitney?.description || defaultDesc;
+
+             return defaultDesc.replace('[MERKMAL]', `'${assocObj?.featureName || ''}'`).replace('[VARIABLE]', `'${assocObj?.featureName || ''}'`);
         };
         const getMerkmalDescriptionHTMLAssoc = (key, assocObj) => {
              const baseName = TOOLTIP_CONTENT.statMetrics[key]?.name || assocObj?.featureName || key;
-             return `Merkmal: ${baseName}`;
+             const desc = TOOLTIP_CONTENT.statMetrics[key]?.description || `Statistische Assoziation des Merkmals '${baseName}' mit dem N-Status.`;
+             return `${desc}`;
         };
 
         const addRow = (key, assocObj, isActive = true) => {
@@ -177,10 +180,10 @@ const statistikTabLogic = (() => {
         };
 
         let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped small mb-0" id="table-vergleich-kollektive-${kollektiv1Name.replace(/\s+/g, '_')}-vs-${kollektiv2Name.replace(/\s+/g, '_')}"><thead><tr><th>Vergleich</th><th>Methode</th><th>p-Wert</th><th>Test</th></tr></thead><tbody>`;
-        tableHTML += `<tr><td>Accuracy</td><td>AS</td><td data-tippy-content="${getPValueInterpretationComp(accAS?.pValue, 'accComp', 'AS')}">${fP(accAS?.pValue)} ${getStatisticalSignificanceSymbol(accAS?.pValue)}</td><td data-tippy-content="${TOOLTIP_CONTENT.statMetrics.accComp?.description.replace('[METHODE]','AS')}">${accAS?.testName || na}</td></tr>`;
-        tableHTML += `<tr><td>Accuracy</td><td>T2</td><td data-tippy-content="${getPValueInterpretationComp(accT2?.pValue, 'accComp', 'T2')}">${fP(accT2?.pValue)} ${getStatisticalSignificanceSymbol(accT2?.pValue)}</td><td data-tippy-content="${TOOLTIP_CONTENT.statMetrics.accComp?.description.replace('[METHODE]','T2')}">${accT2?.testName || na}</td></tr>`;
-        tableHTML += `<tr><td>AUC</td><td>AS</td><td data-tippy-content="${getPValueInterpretationComp(aucAS?.pValue, 'aucComp', 'AS')}">${fP(aucAS?.pValue)} ${getStatisticalSignificanceSymbol(aucAS?.pValue)} (Diff: ${formatNumber(aucAS?.diffAUC, 3, na)}, Z=${formatNumber(aucAS?.Z, 2, na)})</td><td data-tippy-content="${TOOLTIP_CONTENT.statMetrics.aucComp?.description.replace('[METHODE]','AS')}">${aucAS?.method || na}</td></tr>`;
-        tableHTML += `<tr><td>AUC</td><td>T2</td><td data-tippy-content="${getPValueInterpretationComp(aucT2?.pValue, 'aucComp', 'T2')}">${fP(aucT2?.pValue)} ${getStatisticalSignificanceSymbol(aucT2?.pValue)} (Diff: ${formatNumber(aucT2?.diffAUC, 3, na)}, Z=${formatNumber(aucT2?.Z, 2, na)})</td><td data-tippy-content="${TOOLTIP_CONTENT.statMetrics.aucComp?.description.replace('[METHODE]','T2')}">${aucT2?.method || na}</td></tr>`;
+        tableHTML += `<tr><td>Accuracy</td><td>AS</td><td data-tippy-content="${getPValueInterpretationComp(accAS?.pValue, 'accComp', 'AS')}">${fP(accAS?.pValue)} ${getStatisticalSignificanceSymbol(accAS?.pValue)}</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.accComp?.description || '').replace('[METHODE]','AS')}">${accAS?.testName || na}</td></tr>`;
+        tableHTML += `<tr><td>Accuracy</td><td>T2</td><td data-tippy-content="${getPValueInterpretationComp(accT2?.pValue, 'accComp', 'T2')}">${fP(accT2?.pValue)} ${getStatisticalSignificanceSymbol(accT2?.pValue)}</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.accComp?.description || '').replace('[METHODE]','T2')}">${accT2?.testName || na}</td></tr>`;
+        tableHTML += `<tr><td>AUC</td><td>AS</td><td data-tippy-content="${getPValueInterpretationComp(aucAS?.pValue, 'aucComp', 'AS')}">${fP(aucAS?.pValue)} ${getStatisticalSignificanceSymbol(aucAS?.pValue)} (Diff: ${formatNumber(aucAS?.diffAUC, 3, na)}, Z=${formatNumber(aucAS?.Z, 2, na)})</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.aucComp?.description || '').replace('[METHODE]','AS')}">${aucAS?.method || na}</td></tr>`;
+        tableHTML += `<tr><td>AUC</td><td>T2</td><td data-tippy-content="${getPValueInterpretationComp(aucT2?.pValue, 'aucComp', 'T2')}">${fP(aucT2?.pValue)} ${getStatisticalSignificanceSymbol(aucT2?.pValue)} (Diff: ${formatNumber(aucT2?.diffAUC, 3, na)}, Z=${formatNumber(aucT2?.Z, 2, na)})</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.aucComp?.description || '').replace('[METHODE]','T2')}">${aucT2?.method || na}</td></tr>`;
         tableHTML += `</tbody></table></div>`;
         return tableHTML;
     }
