@@ -99,11 +99,18 @@ const tableRenderer = (() => {
         }
 
         const activeCriteriaKeys = Object.keys(appliedCriteria || {}).filter(key => key !== 'logic' && appliedCriteria[key]?.active === true);
-        const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
-        const criteriaFormatted = formatCriteriaFunc(appliedCriteria, appliedLogic, true);
+
+        let criteriaFormatted = 'N/A';
+        if (typeof studyT2CriteriaManager !== 'undefined' && typeof studyT2CriteriaManager.formatCriteriaForDisplay === 'function') {
+            criteriaFormatted = studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic, true);
+        } else {
+            console.warn("_createAuswertungDetailRowContent: studyT2CriteriaManager.formatCriteriaForDisplay nicht verfügbar.");
+            criteriaFormatted = (appliedLogic || 'N/A') + (activeCriteriaKeys.length > 0 ? ` (${activeCriteriaKeys.join(', ')})` : ' (Keine aktiven Kriterien)');
+        }
+
         const naPlaceholder = '--';
 
-        let content = `<h6 class="w-100 mb-2 ps-1" data-tippy-content="Zeigt die Bewertung jedes einzelnen T2-Lymphknotens basierend auf den aktuell angewendeten Kriterien. Erfüllte Kriterien, die zur Positiv-Bewertung beitragen, sind hervorgehoben.">T2 LK Bewertung (Logik: ${appliedLogic || 'N/A'}, Kriterien: ${criteriaFormatted || 'N/A'})</h6>`;
+        let content = `<h6 class="w-100 mb-2 ps-1" data-tippy-content="Zeigt die Bewertung jedes einzelnen T2-Lymphknotens basierend auf den aktuell angewendeten Kriterien. Erfüllte Kriterien, die zur Positiv-Bewertung beitragen, sind hervorgehoben.">T2 LK Bewertung (Logik: ${appliedLogic || 'N/A'}, Kriterien: ${criteriaFormatted})</h6>`;
 
         patient.lymphknoten_t2_bewertet.forEach((lk, index) => {
             if (!lk || !lk.checkResult) {
@@ -118,23 +125,22 @@ const tableRenderer = (() => {
             const formatCriterionCheck = (key, iconType, valueText, checkResultForLK) => {
                 if (!appliedCriteria?.[key]?.active) return '';
                 const checkMet = checkResultForLK[key] === true;
-                const checkFailed = checkResultForLK[key] === false;
+                // const checkFailed = checkResultForLK[key] === false; // Not directly used for highlighting
                 let hlClass = '';
 
                 if (lk.isPositive) {
-                    if (checkMet && (appliedLogic === 'ODER' || activeCriteriaKeys.length === 1)) { // Highlight if it's OR logic and this one criterion made it positive, or if it's the only active criterion.
+                    if (checkMet && (appliedLogic === 'ODER' || activeCriteriaKeys.length === 1)) {
                         hlClass = 'highlight-suspekt-feature';
-                    } else if (checkMet && appliedLogic === 'UND' && activeCriteriaKeys.every(k => checkResultForLK[k] === true) ) { // Highlight if it's AND logic and ALL criteria are met (so this contributes)
+                    } else if (checkMet && appliedLogic === 'UND' && activeCriteriaKeys.every(k => checkResultForLK[k] === true) ) {
                          hlClass = 'highlight-suspekt-feature';
                     }
                 }
-
 
                 const icon = ui_helpers.getT2IconSVG(iconType || key, valueText);
                 const text = valueText || naPlaceholder;
                 const tooltipKey = 't2' + key.charAt(0).toUpperCase() + key.slice(1);
                 const tooltipBase = TOOLTIP_CONTENT[tooltipKey]?.description || `Merkmal ${key}`;
-                const statusText = checkMet ? 'Erfüllt' : (checkFailed ? 'Nicht erfüllt' : (checkResultForLK[key] === null ? 'Nicht anwendbar/geprüft' : 'Unbekannt'));
+                const statusText = checkMet ? 'Erfüllt' : (checkResultForLK[key] === false ? 'Nicht erfüllt' : (checkResultForLK[key] === null ? 'Nicht anwendbar/geprüft' : 'Unbekannt'));
                 const tooltip = `${tooltipBase} | Status: ${statusText}`;
 
                 return `<span class="me-2 text-nowrap ${hlClass}" data-tippy-content="${tooltip}">${icon} ${text}</span>`;
