@@ -102,7 +102,7 @@ const ui_helpers = (() => {
         if (!tableHeader || !sortState) return;
         tableHeader.querySelectorAll('th[data-sort-key]').forEach(th => {
             const key = th.dataset.sortKey; const icon = th.querySelector('i.fas'); if (!icon) return;
-            icon.className = 'fas fa-sort text-muted opacity-50';
+            icon.className = 'fas fa-sort text-muted opacity-50 ms-1';
             const subSpans = th.querySelectorAll('.sortable-sub-header'); let isSubKeySortActive = false;
 
             if (subSpans.length > 0) {
