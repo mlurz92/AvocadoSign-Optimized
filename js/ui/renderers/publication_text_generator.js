@@ -8,7 +8,7 @@ const publicationTextGenerator = (() => {
                 return formatPercent(val, d);
             } else {
                 let numStr = formatNumber(val, d, 'N/A', true);
-                if (lang === 'de' && numStr !== 'N/A') {
+                if (lang === 'de' && numStr !== 'N/A' && typeof numStr === 'string') {
                     numStr = numStr.replace('.', ',');
                 }
                 return numStr;
@@ -24,17 +24,6 @@ const publicationTextGenerator = (() => {
             return `${valStr} (${ciText}: ${lowerStr} – ${upperStr})`;
         }
         return valStr;
-    }
-
-    function getPValueText(pValue, lang = 'de') {
-        if (pValue === null || pValue === undefined || isNaN(pValue)) return 'N/A';
-        if (pValue < 0.001) return lang === 'de' ? 'p < 0,001' : 'P < .001';
-        let pFormatted = pValue.toFixed(3);
-        if (pFormatted === "0.000") return lang === 'de' ? 'p < 0,001' : 'P < .001';
-        if (lang === 'de') {
-            pFormatted = pFormatted.replace('.', ',');
-        }
-        return `p = ${pFormatted}`;
     }
 
     function getKollektivText(kollektivId, n, lang = 'de') {
@@ -124,7 +113,7 @@ const publicationTextGenerator = (() => {
             const bfDef = allKollektivStats?.[kollektivId]?.bruteforce_definition;
             if (bfDef && bfDef.criteria) {
                 let metricValueStr = formatNumber(bfDef.metricValue, 4, 'N/A', true);
-                if (lang === 'de' && metricValueStr !== 'N/A') {
+                if (lang === 'de' && metricValueStr !== 'N/A' && typeof metricValueStr === 'string') {
                     metricValueStr = metricValueStr.replace('.', ',');
                 }
                 return `<li><strong>${displayName}:</strong> ${studyT2CriteriaManager.formatCriteriaForDisplay(bfDef.criteria, bfDef.logic, false)} (Zielmetrik: ${bfDef.metricName}, Erreichter Wert: ${metricValueStr})</li>`;
@@ -345,18 +334,26 @@ const publicationTextGenerator = (() => {
             const vergleichASvsLit = allKollektivStats?.[k.id]?.[`vergleichASvsT2_literatur_${k.litSetId}`];
             const vergleichASvsBF = allKollektivStats?.[k.id]?.vergleichASvsT2_bruteforce;
 
-            const diffAucLitStr = formatNumber(vergleichASvsLit?.delong?.diffAUC, 3, 'N/A', true);
-            const diffAucBfStr = formatNumber(vergleichASvsBF?.delong?.diffAUC, 3, 'N/A', true);
+            let diffAucLitStr = formatNumber(vergleichASvsLit?.delong?.diffAUC, 3, 'N/A', true);
+            if (lang === 'de' && diffAucLitStr !== 'N/A' && typeof diffAucLitStr === 'string') {
+                diffAucLitStr = diffAucLitStr.replace('.', ',');
+            }
+
+            let diffAucBfStr = formatNumber(vergleichASvsBF?.delong?.diffAUC, 3, 'N/A', true);
+            if (lang === 'de' && diffAucBfStr !== 'N/A' && typeof diffAucBfStr === 'string') {
+                diffAucBfStr = diffAucBfStr.replace('.', ',');
+            }
+
 
             if (lang === 'de') {
                 text += `<h4>Vergleich im ${name}</h4>`;
                 if (statsAS && statsLit && vergleichASvsLit) {
-                    text += `<p>Im Vergleich des AS (AUC ${fCI(statsAS.auc, 3, false, 'de')}) mit den Kriterien nach ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'de')}) zeigte sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsLit.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${diffAucLitStr.replace('.', ',')}.</p>`;
+                    text += `<p>Im Vergleich des AS (AUC ${fCI(statsAS.auc, 3, false, 'de')}) mit den Kriterien nach ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'de')}) zeigte sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsLit.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${diffAucLitStr}.</p>`;
                 } else {
                     text += `<p>Ein Vergleich zwischen AS und den Kriterien nach ${k.litSetName} konnte nicht vollständig durchgeführt werden (fehlende Daten).</p>`;
                 }
-                if (statsAS && statsBF && vergleichASvsBF && bfDef ) {
-                    text += `<p>Gegenüber den für die ${bfDef.metricName} optimierten T2-Kriterien (AUC ${fCI(statsBF.auc, 3, false, 'de')}) ergab sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsBF.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${diffAucBfStr.replace('.', ',')}.</p>`;
+                if (statsAS && statsBF && vergleichASvsBF && bfDef) {
+                    text += `<p>Gegenüber den für die ${bfDef.metricName} optimierten T2-Kriterien (AUC ${fCI(statsBF.auc, 3, false, 'de')}) ergab sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsBF.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${diffAucBfStr}.</p>`;
                 } else {
                     text += `<p>Ein Vergleich zwischen AS und den Brute-Force-optimierten Kriterien konnte nicht vollständig durchgeführt werden (fehlende Daten oder keine BF-Optimierung für dieses Kollektiv für die Zielmetrik ${bfZielMetric}).</p>`;
                 }
