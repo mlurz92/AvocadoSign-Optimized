@@ -101,10 +101,12 @@ const tableRenderer = (() => {
         const activeCriteriaKeys = Object.keys(appliedCriteria || {}).filter(key => key !== 'logic' && appliedCriteria[key]?.active === true);
 
         let criteriaFormatted = 'N/A';
-        if (typeof studyT2CriteriaManager !== 'undefined' && typeof studyT2CriteriaManager.formatCriteriaForDisplay === 'function') {
-            criteriaFormatted = studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic, true);
+        if (typeof studyT2CriteriaManager !== 'undefined' && typeof studyT2CriteriaManager.formatCriteriaForDisplayStrict === 'function') {
+            criteriaFormatted = studyT2CriteriaManager.formatCriteriaForDisplayStrict(appliedCriteria, appliedLogic, true);
+        } else if (typeof studyT2CriteriaManager !== 'undefined' && typeof studyT2CriteriaManager.formatCriteriaForDisplay === 'function') {
+             criteriaFormatted = studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic, true);
         } else {
-            console.warn("_createAuswertungDetailRowContent: studyT2CriteriaManager.formatCriteriaForDisplay nicht verfügbar.");
+            console.warn("_createAuswertungDetailRowContent: studyT2CriteriaManager.formatCriteriaForDisplay oder formatCriteriaForDisplayStrict nicht verfügbar.");
             criteriaFormatted = (appliedLogic || 'N/A') + (activeCriteriaKeys.length > 0 ? ` (${activeCriteriaKeys.join(', ')})` : ' (Keine aktiven Kriterien)');
         }
 
@@ -125,7 +127,6 @@ const tableRenderer = (() => {
             const formatCriterionCheck = (key, iconType, valueText, checkResultForLK) => {
                 if (!appliedCriteria?.[key]?.active) return '';
                 const checkMet = checkResultForLK[key] === true;
-                // const checkFailed = checkResultForLK[key] === false; // Not directly used for highlighting
                 let hlClass = '';
 
                 if (lk.isPositive) {
