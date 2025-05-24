@@ -26,7 +26,9 @@ const auswertungTabLogic = (() => {
             tableHTML += `<tr><td colspan="${columns.length}" class="text-center text-muted">Keine Patienten im ausgewählten Kollektiv gefunden.</td></tr>`;
         } else {
             data.forEach(patient => {
-                tableHTML += tableRenderer.createAuswertungTableRow(patient, appliedCriteria, appliedLogic);
+                if (patient) { // Zusätzliche Prüfung auf null/undefined Patientenobjekte
+                    tableHTML += tableRenderer.createAuswertungTableRow(patient, appliedCriteria, appliedLogic);
+                }
             });
         }
         tableHTML += `</tbody></table>`;
@@ -62,7 +64,8 @@ const auswertungTabLogic = (() => {
                  const style = isActiveSubSort ? 'font-weight: bold; text-decoration: underline; color: var(--primary-color);' : '';
                  const thLabel = col.label || col.key;
                  const subLabel = sk.label || sk.key;
-                 return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="Sortieren nach ${thLabel} -> ${subLabel}">${subLabel}</span>`;
+                 const tooltipText = TOOLTIP_CONTENT.auswertungTable.n_as_t2_subkey?.replace('{SUBKEY_LABEL}', subLabel) || `Sortieren nach ${thLabel} -> ${subLabel}`;
+                 return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="${tooltipText}">${subLabel}</span>`;
              }).join(' / ') : '';
 
             const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys || col.key === 'details' ? '' : 'style="cursor: pointer;"'}`;
