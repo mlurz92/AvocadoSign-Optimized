@@ -77,7 +77,7 @@ const tableRenderer = (() => {
                 </td>
                 <td data-label="Bemerkung" class="text-truncate" style="max-width: 150px;" data-tippy-content="${tooltipBemerkung}">${bemerkungText || naPlaceholder}</td>
                  <td class="text-center p-1" style="width: 30px;" data-tippy-content="${tooltipExpand}">
-                     ${hasT2Nodes ? '<button class="btn btn-sm btn-outline-secondary p-1 row-toggle-button" aria-label="Details ein-/ausklappen"><i class="fas fa-chevron-down row-toggle-icon"></i></button>' : ''}
+                     ${hasT2Nodes ? '<button type="button" class="btn btn-sm btn-outline-secondary p-1 row-toggle-button" aria-label="Details ein-/ausklappen"><i class="fas fa-chevron-down row-toggle-icon"></i></button>' : ''}
                  </td>
             </tr>
             ${hasT2Nodes ? `
@@ -122,10 +122,13 @@ const tableRenderer = (() => {
                 let hlClass = '';
 
                 if (lk.isPositive) {
-                    if (checkMet && (appliedLogic === 'ODER' || appliedLogic === 'UND')) {
+                    if (checkMet && (appliedLogic === 'ODER' || activeCriteriaKeys.length === 1)) { // Highlight if it's OR logic and this one criterion made it positive, or if it's the only active criterion.
                         hlClass = 'highlight-suspekt-feature';
+                    } else if (checkMet && appliedLogic === 'UND' && activeCriteriaKeys.every(k => checkResultForLK[k] === true) ) { // Highlight if it's AND logic and ALL criteria are met (so this contributes)
+                         hlClass = 'highlight-suspekt-feature';
                     }
                 }
+
 
                 const icon = ui_helpers.getT2IconSVG(iconType || key, valueText);
                 const text = valueText || naPlaceholder;
@@ -186,7 +189,7 @@ const tableRenderer = (() => {
                 <td data-label="AS+/AS ges." class="text-center" data-tippy-content="${tooltipASCounts}">${asCountsText}</td>
                 <td data-label="T2+/T2 ges." class="text-center" id="t2-counts-${patient.nr}" data-tippy-content="${tooltipT2Counts}">${t2CountsText}</td>
                  <td class="text-center p-1" style="width: 30px;" data-tippy-content="${tooltipExpand}">
-                     ${hasBewerteteNodes ? '<button class="btn btn-sm btn-outline-secondary p-1 row-toggle-button" aria-label="Details ein-/ausklappen"><i class="fas fa-chevron-down row-toggle-icon"></i></button>' : ''}
+                     ${hasBewerteteNodes ? '<button type="button" class="btn btn-sm btn-outline-secondary p-1 row-toggle-button" aria-label="Details ein-/ausklappen"><i class="fas fa-chevron-down row-toggle-icon"></i></button>' : ''}
                  </td>
             </tr>
              ${hasBewerteteNodes ? `
