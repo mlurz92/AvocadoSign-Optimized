@@ -102,7 +102,7 @@ const ui_helpers = (() => {
         if (!tableHeader || !sortState) return;
         tableHeader.querySelectorAll('th[data-sort-key]').forEach(th => {
             const key = th.dataset.sortKey; const icon = th.querySelector('i.fas'); if (!icon) return;
-            icon.className = 'fas fa-sort text-muted opacity-50';
+            icon.className = 'fas fa-sort text-muted opacity-50 ms-1';
             const subSpans = th.querySelectorAll('.sortable-sub-header'); let isSubKeySortActive = false;
 
             if (subSpans.length > 0) {
@@ -116,16 +116,16 @@ const ui_helpers = (() => {
                     const spanLabel = span.textContent.trim();
                     span.setAttribute('data-tippy-content', `Sortieren nach: ${thLabel} -> ${spanLabel}`);
                     if (isActiveSort) {
-                        icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
+                        icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
                         isSubKeySortActive = true;
                     }
                 });
-                if (!isSubKeySortActive && key === sortState.key && sortState.subKey === null) {
-                    icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
+                if (!isSubKeySortActive && key === sortState.key && (sortState.subKey === null || sortState.subKey === undefined)) {
+                    icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
                 }
             } else {
                 if (key === sortState.key && (sortState.subKey === null || sortState.subKey === undefined)) {
-                    icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
+                    icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
                 }
             }
         });
@@ -241,7 +241,7 @@ const ui_helpers = (() => {
                 break;
             case 'ruler-horizontal':
                 svgContent = `<path d="M${sw/2} ${c} H${s-sw/2} M${c} ${sw/2} V${s-sw/2} M${s*0.2} ${c-s*0.15} L${s*0.2} ${c+s*0.15} M${s*0.4} ${c-s*0.1} L${s*0.4} ${c+s*0.1} M${s*0.6} ${c-s*0.1} L${s*0.6} ${c+s*0.1} M${s*0.8} ${c-s*0.15} L${s*0.8} ${c+s*0.15}" stroke="${iconColor}" stroke-width="${sw/2}" stroke-linecap="round"/>`;
-                type = 'size';
+                type = 'size'; // Ensure type consistency for class naming
                 break;
             default:
                 svgContent = unknownIconSVG;
@@ -274,6 +274,9 @@ const ui_helpers = (() => {
                     if (el) {
                         el.disabled = !criterion.active;
                         el.classList.toggle('disabled-criterion-control', !criterion.active);
+                        if (el.classList.contains('t2-criteria-button')) {
+                             el.classList.toggle('inactive-option', !criterion.active || (el.classList.contains('active') && !criterion.active));
+                        }
                     }
                 });
 
@@ -332,7 +335,7 @@ const ui_helpers = (() => {
             toggleBtn.classList.toggle('active', isVergleich);
             toggleBtn.setAttribute('aria-pressed', String(isVergleich));
             updateElementHTML(toggleBtn.id, isVergleich ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv');
-            if(toggleBtn._tippy) toggleBtn._tippy.setContent(TOOLTIP_CONTENT.statistikLayout?.description || 'Layout umschalten');
+            if(toggleBtn._tippy) toggleBtn._tippy.setContent(TOOLTIP_CONTENT.statistikToggleVergleich?.description || 'Layout umschalten');
             else initializeTooltips(toggleBtn.parentElement || toggleBtn);
         }
         if (container1) container1.classList.toggle('d-none', !isVergleich);
@@ -391,7 +394,7 @@ const ui_helpers = (() => {
 
         if (elements.progressContainer) toggleElementClass(elements.progressContainer.id, 'd-none', !isRunning);
         if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', state !== 'result' || !hasResults);
-        if (elements.cancelBtn) toggleElementClass(elements.cancelBtn.id, 'd-none', !isRunning);
+        if (elements.cancelBtn) toggleElementClass(elements.cancelBtn.id, 'd-none', !isRunning || (isRunning && type === 'cancelled'));
         if (elements.startBtn) setElementDisabled(elements.startBtn.id, !workerAvailable || isRunning);
         if (elements.modalExportBtn) setElementDisabled(elements.modalExportBtn.id, !hasResults);
         if (elements.applyBestBtn) setElementDisabled(elements.applyBestBtn.id, !hasResults);
@@ -504,13 +507,13 @@ const ui_helpers = (() => {
         trySetDisabled('export-daten-md', dataDisabled);
         trySetDisabled('export-auswertung-md', dataDisabled);
         trySetDisabled('export-filtered-data-csv', dataDisabled);
-        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled);
+        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled); // Report needs data, BF results are optional
         trySetDisabled('export-charts-png', dataDisabled);
         trySetDisabled('export-charts-svg', dataDisabled);
 
         trySetDisabled('export-all-zip', dataDisabled && bfDisabled);
         trySetDisabled('export-csv-zip', dataDisabled);
-        trySetDisabled('export-md-zip', dataDisabled);
+        trySetDisabled('export-md-zip', dataDisabled); // MD Zip could include publication texts even without data
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
 
@@ -571,29 +574,32 @@ const ui_helpers = (() => {
         const na = '--';
         const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
         const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na, isPercent);
-        const lowerStr = formatNumber(data?.ci?.lower, digits, na, isPercent);
-        const upperStr = formatNumber(data?.ci?.upper, digits, na, isPercent);
+        const valueStr = formatNumber(data?.value, digits, na); // Removed isPercent flag here
+        const formattedValueWithUnit = isPercent ? formatPercent(data?.value, digits, na) : valueStr;
+
+        const lowerStr = formatNumber(data?.ci?.lower, digits, na);
+        const upperStr = formatNumber(data?.ci?.upper, digits, na);
         const ciMethodStr = data?.method || 'N/A';
         const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value) : '';
 
         let interpretation = interpretationTemplate
             .replace(/\[METHODE\]/g, methode)
-            .replace(/\[WERT\]/g, `<strong>${valueStr}${isPercent && valueStr !== na ? '%' : ''}</strong>`)
-            .replace(/\[LOWER\]/g, lowerStr)
-            .replace(/\[UPPER\]/g, upperStr)
+            .replace(/\[WERT\]/g, `<strong>${formattedValueWithUnit}</strong>`)
+            .replace(/\[LOWER\]/g, isPercent ? formatPercent(data?.ci?.lower, digits, na) : lowerStr)
+            .replace(/\[UPPER\]/g, isPercent ? formatPercent(data?.ci?.upper, digits, na) : upperStr)
             .replace(/\[METHOD_CI\]/g, ciMethodStr)
             .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
             .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`);
 
-        if (lowerStr === na || upperStr === na || ciMethodStr === na) {
-             interpretation = interpretation.replace(/\(95% CI nach .*?: .*? - .*?\)/g, '(Keine CI-Daten verfügbar)');
+        if (lowerStr === na || upperStr === na || ciMethodStr === na || data?.ci === null) {
+             interpretation = interpretation.replace(/\(95% CI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
              interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
         }
         interpretation = interpretation.replace(/p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
         interpretation = interpretation.replace(/<hr.*?>.*$/, '');
         return interpretation;
     }
+
 
     function getTestDescriptionHTML(key, t2ShortName = 'T2') {
         const desc = TOOLTIP_CONTENT.statMetrics[key]?.description || key;
@@ -640,7 +646,7 @@ const ui_helpers = (() => {
         } else if (key === 'phi') {
             valueStr = formatNumber(assocObj.phi?.value, 2, na);
             bewertungStr = getPhiBewertung(assocObj.phi?.value);
-        } else if (key === 'fisher' || key === 'mannwhitney' || key === 'pvalue' || key === 'size_mwu') {
+        } else if (key === 'fisher' || key === 'mannwhitney' || key === 'pvalue' || key === 'size_mwu' || key === 'defaultP') {
              pVal = assocObj?.pValue;
              pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na)) : na;
              sigSymbol = getStatisticalSignificanceSymbol(pVal);
@@ -659,25 +665,25 @@ const ui_helpers = (() => {
         let interpretation = interpretationTemplate
             .replace(/\[MERKMAL\]/g, `'${merkmalName}'`)
             .replace(/\[WERT\]/g, `<strong>${valueStr}${key === 'rd' && valueStr !== na ? '%' : ''}</strong>`)
-            .replace(/\[LOWER\]/g, lowerStr)
-            .replace(/\[UPPER\]/g, upperStr)
+            .replace(/\[LOWER\]/g, `${lowerStr}${key === 'rd' && lowerStr !== na ? '%' : ''}`)
+            .replace(/\[UPPER\]/g, `${upperStr}${key === 'rd' && upperStr !== na ? '%' : ''}`)
             .replace(/\[METHOD_CI\]/g, ciMethodStr)
             .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
-            .replace(/\[FAKTOR_TEXT\]/g, assocObj?.or?.value > 1 ? UI_TEXTS.statMetrics.orFaktorTexte.ERHOEHT : (assocObj?.or?.value < 1 ? UI_TEXTS.statMetrics.orFaktorTexte.VERRINGERT : UI_TEXTS.statMetrics.orFaktorTexte.UNVERAENDERT))
-            .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.HOEHER : (assocObj?.rd?.value < 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.NIEDRIGER : UI_TEXTS.statMetrics.rdRichtungTexte.GLEICH))
+            .replace(/\[FAKTOR_TEXT\]/g, assocObj?.or?.value > 1 ? (UI_TEXTS.statMetrics.orFaktorTexte?.ERHOEHT || 'erhöht') : (assocObj?.or?.value < 1 ? (UI_TEXTS.statMetrics.orFaktorTexte?.VERRINGERT || 'verringert') : (UI_TEXTS.statMetrics.orFaktorTexte?.UNVERAENDERT || 'unverändert')))
+            .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? (UI_TEXTS.statMetrics.rdRichtungTexte?.HOEHER || 'höher') : (assocObj?.rd?.value < 0 ? (UI_TEXTS.statMetrics.rdRichtungTexte?.NIEDRIGER || 'niedriger') : (UI_TEXTS.statMetrics.rdRichtungTexte?.GLEICH || 'gleich')))
             .replace(/\[STAERKE\]/g, `<strong>${bewertungStr}</strong>`)
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/<hr.*?>.*$/, '');
 
          if (key === 'or' || key === 'rd') {
-            if (lowerStr === na || upperStr === na || ciMethodStr === na) {
-                interpretation = interpretation.replace(/\(95% CI nach .*?: .*? - .*?\)/g, '(Keine CI-Daten verfügbar)');
+            if (lowerStr === na || upperStr === na || ciMethodStr === na || assocObj?.[key]?.ci === null) {
+                interpretation = interpretation.replace(/\(95% CI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
                 interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
             }
          }
          if (key === 'or' && pStr === na) {
-             interpretation = interpretation.replace(/, p=.*?, .*?\)/g, ')');
+             interpretation = interpretation.replace(/, Test-p=.*?, \[SIGNIFIKANZ\]\)/g, ')');
          }
         return interpretation;
     }
