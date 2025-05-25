@@ -8,13 +8,13 @@ const auswertungTabLogic = (() => {
 
         const tableId = 'auswertung-table';
         const columns = [
-            { key: 'nr', label: 'Nr', tooltip: TOOLTIP_CONTENT?.de?.auswertungTable?.nr || 'Nr.' },
-            { key: 'name', label: 'Name', tooltip: TOOLTIP_CONTENT?.de?.auswertungTable?.name || 'Name' },
-            { key: 'therapie', label: 'Therapie', tooltip: TOOLTIP_CONTENT?.de?.auswertungTable?.therapie || 'Therapie' },
-            { key: 'status', label: 'N/AS/T2', tooltip: TOOLTIP_CONTENT?.de?.auswertungTable?.n_as_t2 || 'N/AS/T2 Status', subKeys: [{key: 'n', label: 'N'}, {key: 'as', label: 'AS'}, {key: 't2', label: 'T2'}]},
-            { key: 'anzahl_patho_lk', label: 'N+/N ges.', tooltip: TOOLTIP_CONTENT?.de?.auswertungTable?.n_counts || 'N+ LKs / N gesamt LKs (Pathologie)', textAlign: 'center' },
-            { key: 'anzahl_as_lk', label: 'AS+/AS ges.', tooltip: TOOLTIP_CONTENT?.de?.auswertungTable?.as_counts || 'AS+ LKs / AS gesamt LKs (T1KM)', textAlign: 'center' },
-            { key: 'anzahl_t2_lk', label: 'T2+/T2 ges.', tooltip: TOOLTIP_CONTENT?.de?.auswertungTable?.t2_counts || 'T2+ LKs / T2 gesamt LKs (angew. Kriterien)', textAlign: 'center' },
+            { key: 'nr', label: 'Nr', tooltip: TOOLTIP_CONTENT.auswertungTable.nr },
+            { key: 'name', label: 'Name', tooltip: TOOLTIP_CONTENT.auswertungTable.name },
+            { key: 'therapie', label: 'Therapie', tooltip: TOOLTIP_CONTENT.auswertungTable.therapie },
+            { key: 'status', label: 'N/AS/T2', tooltip: TOOLTIP_CONTENT.auswertungTable.n_as_t2, subKeys: [{key: 'n', label: 'N'}, {key: 'as', label: 'AS'}, {key: 't2', label: 'T2'}]},
+            { key: 'anzahl_patho_lk', label: 'N+/N ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.n_counts, textAlign: 'center' },
+            { key: 'anzahl_as_lk', label: 'AS+/AS ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.as_counts, textAlign: 'center' },
+            { key: 'anzahl_t2_lk', label: 'T2+/T2 ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.t2_counts, textAlign: 'center' },
             { key: 'details', label: '', width: '30px'}
         ];
 
@@ -79,22 +79,16 @@ const auswertungTabLogic = (() => {
         return headerHTML;
     }
 
-    function createAuswertungTableCardHTML(data, sortState, appliedCriteria, appliedLogic, lang = 'de') {
-        const effectiveLang = UI_TEXTS?.auswertungTab?.tableCard?.[lang] ? lang : 'de';
-        const uiStrings = UI_TEXTS.auswertungTab?.tableCard?.[effectiveLang] || UI_TEXTS.auswertungTab?.tableCard?.de || {};
-
-        const tableHTML = createAuswertungTableHTML(data, sortState, appliedCriteria, appliedLogic); // Lang not needed as table content is mostly data/icons
-        const toggleButtonTooltip = TOOLTIP_CONTENT?.[effectiveLang]?.auswertungTable?.expandAll || TOOLTIP_CONTENT?.de?.auswertungTable?.expandAll || 'Alle Details ein-/ausblenden';
-        const cardTitle = uiStrings.title || "Patientenübersicht & Auswertungsergebnisse";
-        const toggleButtonText = uiStrings.expandAllButton || "Alle Details";
-
+    function createAuswertungTableCardHTML(data, sortState, appliedCriteria, appliedLogic) {
+        const tableHTML = createAuswertungTableHTML(data, sortState, appliedCriteria, appliedLogic);
+        const toggleButtonTooltip = TOOLTIP_CONTENT.auswertungTable.expandAll || 'Alle Details ein-/ausblenden';
         return `
             <div class="col-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>${cardTitle}</span>
+                        <span>Patientenübersicht & Auswertungsergebnisse</span>
                         <button id="auswertung-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="expand" data-tippy-content="${toggleButtonTooltip}">
-                           ${toggleButtonText} <i class="fas fa-chevron-down ms-1"></i>
+                           Alle Details <i class="fas fa-chevron-down ms-1"></i>
                        </button>
                     </div>
                     <div class="card-body p-0">

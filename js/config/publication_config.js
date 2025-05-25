@@ -4,103 +4,82 @@ const PUBLICATION_CONFIG = Object.freeze({
     sections: Object.freeze([
         Object.freeze({
             id: 'methoden',
-            labelKey: 'methoden', // Schlüssel für UI_TEXTS.publikationTab.sectionLabels.methoden
+            labelKey: 'methoden',
             subSections: Object.freeze([
-                Object.freeze({ id: 'methoden_studienanlage', labelKey: 'methoden_studienanlage' }), // UI_TEXTS.publikationTab.sectionLabels.methoden_studienanlage
-                Object.freeze({ id: 'methoden_patientenkollektiv', labelKey: 'methoden_patientenkollektiv' }),
-                Object.freeze({ id: 'methoden_mrt_protokoll', labelKey: 'methoden_mrt_protokoll' }),
-                Object.freeze({ id: 'methoden_as_definition', labelKey: 'methoden_as_definition' }),
-                Object.freeze({ id: 'methoden_t2_definition', labelKey: 'methoden_t2_definition' }),
-                Object.freeze({ id: 'methoden_referenzstandard', labelKey: 'methoden_referenzstandard' }),
-                Object.freeze({ id: 'methoden_statistische_analyse', labelKey: 'methoden_statistische_analyse' })
+                Object.freeze({ id: 'methoden_studienanlage', label: 'Studiendesign und Ethik' }),
+                Object.freeze({ id: 'methoden_patientenkollektiv', label: 'Patientenkollektiv' }),
+                Object.freeze({ id: 'methoden_mrt_protokoll', label: 'MRT-Protokoll & Kontrastmittelgabe' }),
+                Object.freeze({ id: 'methoden_as_definition', label: 'Definition & Bewertung Avocado Sign' }),
+                Object.freeze({ id: 'methoden_t2_definition', label: 'Definition & Bewertung T2-Kriterien' }),
+                Object.freeze({ id: 'methoden_referenzstandard', label: 'Referenzstandard (Histopathologie)' }),
+                Object.freeze({ id: 'methoden_statistische_analyse', label: 'Statistische Analyse' })
             ])
         }),
         Object.freeze({
             id: 'ergebnisse',
-            labelKey: 'ergebnisse', // Schlüssel für UI_TEXTS.publikationTab.sectionLabels.ergebnisse
+            labelKey: 'ergebnisse',
             subSections: Object.freeze([
-                Object.freeze({ id: 'ergebnisse_patientencharakteristika', labelKey: 'ergebnisse_patientencharakteristika' }),
-                Object.freeze({ id: 'ergebnisse_as_performance', labelKey: 'ergebnisse_as_performance' }),
-                Object.freeze({ id: 'ergebnisse_literatur_t2_performance', labelKey: 'ergebnisse_literatur_t2_performance' }),
-                Object.freeze({ id: 'ergebnisse_optimierte_t2_performance', labelKey: 'ergebnisse_optimierte_t2_performance' }),
-                Object.freeze({ id: 'ergebnisse_vergleich_performance', labelKey: 'ergebnisse_vergleich_performance' })
+                Object.freeze({ id: 'ergebnisse_patientencharakteristika', label: 'Patientencharakteristika' }),
+                Object.freeze({ id: 'ergebnisse_as_performance', label: 'Diagnostische Güte: Avocado Sign' }),
+                Object.freeze({ id: 'ergebnisse_literatur_t2_performance', label: 'Diagnostische Güte: Literatur-T2-Kriterien' }),
+                Object.freeze({ id: 'ergebnisse_optimierte_t2_performance', label: 'Diagnostische Güte: Optimierte T2-Kriterien (Brute-Force)' }),
+                Object.freeze({ id: 'ergebnisse_vergleich_performance', label: 'Vergleich: AS vs. T2-Kriterien' })
             ])
         })
     ]),
     literatureCriteriaSets: Object.freeze([
         Object.freeze({
             id: 'koh_2008_morphology',
-            nameKey: 'koh2008', // Verweist auf UI_TEXTS.publikationTab.literatureCriteria.koh2008.name
-            shortNameKey: 'koh2008_short' // Verweist auf UI_TEXTS.publikationTab.literatureCriteria.koh2008.shortName
+            nameKey: 'Koh et al. (2008)',
+            shortName: 'Koh et al.'
         }),
         Object.freeze({
             id: 'barbaro_2024_restaging',
-            nameKey: 'barbaro2024', // Verweist auf UI_TEXTS.publikationTab.literatureCriteria.barbaro2024.name
-            shortNameKey: 'barbaro2024_short' // Verweist auf UI_TEXTS.publikationTab.literatureCriteria.barbaro2024.shortName
+            nameKey: 'Barbaro et al. (2024)',
+            shortName: 'Barbaro et al.'
         }),
         Object.freeze({
             id: 'rutegard_et_al_esgar',
-            nameKey: 'rutegardESGAR', // Verweist auf UI_TEXTS.publikationTab.literatureCriteria.rutegardESGAR.name
-            shortNameKey: 'rutegardESGAR_short' // Verweist auf UI_TEXTS.publikationTab.literatureCriteria.rutegardESGAR.shortName
+            nameKey: 'Rutegård et al. (2025) / ESGAR 2016',
+            shortName: 'ESGAR 2016'
         })
     ]),
     bruteForceMetricsForPublication: Object.freeze([
-        // Die 'labelKey' verweist auf UI_TEXTS.publicationTab.bfMetrics.<value>
-        { value: 'Balanced Accuracy', labelKey: 'balancedAccuracy' },
-        { value: 'Accuracy', labelKey: 'accuracy' },
-        { value: 'F1-Score', labelKey: 'f1Score' },
-        { value: 'PPV', labelKey: 'ppv' },
-        { value: 'NPV', labelKey: 'npv' }
+        { value: 'Balanced Accuracy', label: 'Balanced Accuracy' },
+        { value: 'Accuracy', label: 'Accuracy' },
+        { value: 'F1-Score', label: 'F1-Score' },
+        { value: 'PPV', label: 'Positiver Prädiktiver Wert (PPV)' },
+        { value: 'NPV', label: 'Negativer Prädiktiver Wert (NPV)' }
     ]),
     defaultBruteForceMetricForPublication: 'Balanced Accuracy',
     publicationElements: Object.freeze({
         methoden: Object.freeze({
             literaturT2KriterienTabelle: {
                 id: 'pub-table-literatur-t2-kriterien',
-                titleKey: 'table2LiteratureT2Criteria' // Verweist auf UI_TEXTS.publikationTab.tableTitles.table2LiteratureT2Criteria
+                titleDe: 'Übersicht der Literatur-basierten T2-Kriteriensets',
+                titleEn: 'Overview of Literature-Based T2 Criteria Sets'
             }
         }),
         ergebnisse: Object.freeze({
             patientenCharakteristikaTabelle: {
                 id: 'pub-table-patienten-charakteristika',
-                titleKey: 'table1PatientCharacteristics' // Verweist auf UI_TEXTS.publikationTab.tableTitles.table1PatientCharacteristics
+                titleDe: 'Patientencharakteristika',
+                titleEn: 'Patient Characteristics'
             },
-            diagnostischeGueteASTabelle: { // Früher diagnostischeGueteGesamtTabelle, spezifischer benannt
-                id: 'pub-table-diagnostische-guete-as',
-                titleKey: 'table3ASPerformance' // Verweist auf UI_TEXTS.publikationTab.tableTitles.table3ASPerformance
+            diagnostischeGueteGesamtTabelle: {
+                id: 'pub-table-diagnostische-guete',
+                titleDe: 'Diagnostische Güte: Avocado Sign und T2-Kriterien',
+                titleEn: 'Diagnostic Performance: Avocado Sign and T2 Criteria'
             },
-            diagnostischeGueteLiteraturT2Tabelle: {
-                id: 'pub-table-diagnostische-guete-literatur',
-                titleKey: 'table4LiteratureT2Performance'
+            rocChartAsVsT2: {
+                id: 'pub-chart-roc-as-vs-t2',
+                titleDe: 'ROC-Kurven: Avocado Sign vs. Beste T2-Kriterien (pro Kollektiv)',
+                titleEn: 'ROC Curves: Avocado Sign vs. Best T2 Criteria (per Cohort)'
             },
-            diagnostischeGueteOptimierteT2Tabelle: {
-                id: 'pub-table-diagnostische-guete-optimiert',
-                titleKey: 'table5OptimizedT2Performance' // Platzhalter [METRIC] wird später ersetzt
-            },
-            vergleichPerformanceTabelle: {
-                id: 'pub-table-vergleich-performance',
-                titleKey: 'table6ComparisonPerformance'
-            },
-            // Chart-Titel werden dynamisch aus UI_TEXTS.publikationTab.figureCaptions bezogen
-            alterVerteilungChart: {
-                id: 'pub-chart-alter-Gesamt',
-                captionKey: 'figure1aAgeDistribution'
-            },
-            geschlechtVerteilungChart: {
-                id: 'pub-chart-gender-Gesamt',
-                captionKey: 'figure1bGenderDistribution'
-            },
-            vergleichChartGesamt: {
-                id: 'pub-chart-vergleich-Gesamt',
-                captionKey: 'figure2aComparisonGesamt'
-            },
-            vergleichChartDirektOP: {
-                id: 'pub-chart-vergleich-direkt-OP',
-                captionKey: 'figure2bComparisonDirektOP'
-            },
-            vergleichChartNRCT: {
-                id: 'pub-chart-vergleich-nRCT',
-                captionKey: 'figure2cComparisonNRCT'
+            sensSpezBarChart: {
+                id: 'pub-chart-sens-spez-bar',
+                titleDe: 'Sensitivität & Spezifität: AS vs. T2-Kriterien (pro Kollektiv)',
+                titleEn: 'Sensitivity & Specificity: AS vs. T2 Criteria (per Cohort)'
             }
         })
     })
