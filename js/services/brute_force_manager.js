@@ -2,7 +2,7 @@ const bruteForceManager = (() => {
     let worker = null;
     let isRunningState = false;
     let currentKollektivRunning = null;
-    let allKollektivResults = {};
+    let allKollektivResults = {}; // Stores results per kollektivId
 
     let onProgressCallback = null;
     let onResultCallback = null;
@@ -13,26 +13,40 @@ const bruteForceManager = (() => {
     function initializeWorker() {
         if (!window.Worker) {
             console.error("BruteForceManager: Web Worker nicht unterstützt.");
-            if (onErrorCallback) onErrorCallback({ message: 'Web Worker nicht unterstützt.' });
+            if (onErrorCallback) {
+                const lang = typeof state !== 'undefined' ? state.getCurrentPublikationLang() : 'de';
+                const errorMsg = lang === 'de' ? 'Web Worker nicht unterstützt.' : 'Web Workers not supported.';
+                onErrorCallback({ message: errorMsg });
+            }
             return false;
         }
         try {
             if (worker) {
                 worker.terminate();
+                worker = null;
             }
             worker = new Worker(APP_CONFIG.PATHS.BRUTE_FORCE_WORKER);
             worker.onmessage = handleWorkerMessage;
             worker.onerror = handleWorkerError;
             worker.onmessageerror = (e) => {
                 console.error("BruteForceManager: Worker messageerror:", e);
-                if (onErrorCallback) onErrorCallback({ message: 'Worker-Kommunikationsfehler (messageerror).' });
+                if (onErrorCallback) {
+                    const lang = typeof state !== 'undefined' ? state.getCurrentPublikationLang() : 'de';
+                    const errorMsg = lang === 'de' ? 'Worker-Kommunikationsfehler (messageerror).' : 'Worker communication error (messageerror).';
+                    onErrorCallback({ message: errorMsg });
+                }
+                 isRunningState = false; // Ensure state is reset on message error
+                 currentKollektivRunning = null;
             };
-            console.log("BruteForceManager: Worker erfolgreich initialisiert.");
             return true;
         } catch (e) {
             console.error("BruteForceManager: Fehler bei der Worker-Initialisierung:", e);
             worker = null;
-            if (onErrorCallback) onErrorCallback({ message: `Worker-Initialisierungsfehler: ${e.message}` });
+            if (onErrorCallback) {
+                const lang = typeof state !== 'undefined' ? state.getCurrentPublikationLang() : 'de';
+                const errorMsg = lang === 'de' ? `Worker-Initialisierungsfehler: ${e.message}` : `Worker initialization error: ${e.message}`;
+                onErrorCallback({ message: errorMsg });
+            }
             return false;
         }
     }
@@ -46,7 +60,7 @@ const bruteForceManager = (() => {
 
         switch (type) {
             case 'started':
-                isRunningState = true;
+                isRunningState = true; // isRunningState is correctly set here
                 if (onStartedCallback) onStartedCallback(payload);
                 break;
             case 'progress':
@@ -56,11 +70,8 @@ const bruteForceManager = (() => {
                 isRunningState = false;
                 if (payload && payload.kollektiv && payload.bestResult) {
                     allKollektivResults[payload.kollektiv] = cloneDeep(payload);
-                } else if (payload && currentKollektivRunning && payload.bestResult) {
+                } else if (payload && currentKollektivRunning && payload.bestResult) { // Fallback if worker doesn't send kollektiv
                     allKollektivResults[currentKollektivRunning] = cloneDeep(payload);
-                     console.warn("BruteForceManager: Ergebnis vom Worker ohne Kollektiv-Info, verwende currentKollektivRunning:", currentKollektivRunning);
-                } else {
-                    console.warn("BruteForceManager: Unvollständiges Ergebnis vom Worker, Kollektiv-Info fehlt oder kein bestResult.");
                 }
                 currentKollektivRunning = null;
                 if (onResultCallback) onResultCallback(payload);
@@ -84,10 +95,12 @@ const bruteForceManager = (() => {
         console.error("BruteForceManager: Fehler im Brute Force Worker:", error);
         isRunningState = false;
         currentKollektivRunning = null;
-        if (onErrorCallback) onErrorCallback({ message: error.message || 'Unbekannter Worker-Fehler' });
-        // Optional: Versuchen, den Worker neu zu initialisieren oder ihn als nicht verfügbar zu markieren
-        // initializeWorker(); // Könnte zu Endlosschleifen führen, wenn der Worker-Code selbst fehlerhaft ist.
-        worker = null; // Markiert den Worker als nicht verfügbar nach einem Fehler.
+        if (onErrorCallback) {
+            const lang = typeof state !== 'undefined' ? state.getCurrentPublikationLang() : 'de';
+            const errorMsg = error.message || (lang === 'de' ? 'Unbekannter Worker-Fehler' : 'Unknown worker error');
+            onErrorCallback({ message: errorMsg });
+        }
+        worker = null; 
     }
 
     function init(callbacks = {}) {
@@ -96,40 +109,48 @@ const bruteForceManager = (() => {
         onErrorCallback = callbacks.onError || null;
         onCancelledCallback = callbacks.onCancelled || null;
         onStartedCallback = callbacks.onStarted || null;
-        allKollektivResults = {};
+        allKollektivResults = {}; // Reset results on init
         return initializeWorker();
     }
 
     function startAnalysis(data, metric, kollektiv) {
+        const lang = typeof state !== 'undefined' ? state.getCurrentPublikationLang() : 'de';
         if (isRunningState) {
+            const errorMsg = lang === 'de' ? "Eine Optimierung läuft bereits." : "An optimization is already running.";
             console.warn("BruteForceManager: Analyse läuft bereits. Startanfrage ignoriert.");
-            if (onErrorCallback) onErrorCallback({ message: "Eine Optimierung läuft bereits."});
+            if (onErrorCallback) onErrorCallback({ message: errorMsg});
             return false;
         }
         if (!worker) {
+            const errorMsg = lang === 'de' ? "Worker nicht verfügbar." : "Worker not available.";
             console.error("BruteForceManager: Worker nicht verfügbar. Start abgebrochen.");
-            if (onErrorCallback) onErrorCallback({ message: "Worker nicht verfügbar."});
+            if (onErrorCallback) onErrorCallback({ message: errorMsg});
             return false;
         }
         if (!data || data.length === 0) {
+            const errorMsg = lang === 'de' ? "Keine Daten für Optimierung übergeben." : "No data provided for optimization.";
             console.warn("BruteForceManager: Keine Daten für die Analyse übergeben.");
-             if (onErrorCallback) onErrorCallback({ message: "Keine Daten für Optimierung übergeben."});
+             if (onErrorCallback) onErrorCallback({ message: errorMsg});
             return false;
         }
 
         currentKollektivRunning = kollektiv;
-        isRunningState = true;
+        // isRunningState will be set to true by the 'started' message from the worker.
+        // Setting it here prematurely might lead to race conditions if worker init fails immediately.
+        // However, to prevent immediate re-starts, we can set a "pending start" flag or rely on the UI to disable start.
+        // For simplicity here, we trust the worker will send 'started' or 'error'.
+        // The UI handler should already disable the start button.
 
         worker.postMessage({
             action: 'start',
             payload: {
-                data: data,
+                data: data, // Ensure data is structured as the worker expects
                 metric: metric,
                 kollektiv: kollektiv,
-                t2SizeRange: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE
+                t2SizeRange: cloneDeep(APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE) // Pass a clone
             }
         });
-        console.log(`BruteForceManager: Analyse gestartet für Kollektiv '${kollektiv}' mit Metrik '${metric}'.`);
+        // isRunningState is set in 'started' handler.
         return true;
     }
 
@@ -139,8 +160,7 @@ const bruteForceManager = (() => {
             return false;
         }
         worker.postMessage({ action: 'cancel' });
-        // isRunningState wird im Handler für 'cancelled' oder 'error' gesetzt
-        console.log("BruteForceManager: Abbruchanfrage an Worker gesendet.");
+        // State (isRunningState, currentKollektivRunning) is reset in 'cancelled' or 'error' handlers
         return true;
     }
 
@@ -166,7 +186,6 @@ const bruteForceManager = (() => {
             worker = null;
             isRunningState = false;
             currentKollektivRunning = null;
-            console.log("BruteForceManager: Worker terminiert.");
         }
     }
 
