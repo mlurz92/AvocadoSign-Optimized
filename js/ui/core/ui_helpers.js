@@ -83,8 +83,12 @@ const ui_helpers = (() => {
     }
 
     function updateHeaderStatsUI(stats) {
+        const lang = state.getCurrentPublikationLang() || 'de'; // Assuming global lang or default to 'de'
+        const localizedTexts = getLocalizedUITexts(lang);
+
         if (!stats) { stats = {}; }
-        updateElementText('header-kollektiv', stats.kollektiv || '--');
+        const kollektivDisplayName = getKollektivDisplayName(stats.kollektiv, lang, localizedTexts);
+        updateElementText('header-kollektiv', kollektivDisplayName || '--');
         updateElementText('header-anzahl-patienten', stats.anzahlPatienten ?? '--');
         updateElementText('header-status-n', stats.statusN || '--');
         updateElementText('header-status-as', stats.statusAS || '--');
@@ -100,6 +104,8 @@ const ui_helpers = (() => {
     function updateSortIcons(tableHeaderId, sortState) {
         const tableHeader = document.getElementById(tableHeaderId);
         if (!tableHeader || !sortState) return;
+        const lang = state.getCurrentPublikationLang() || 'de'; // Assuming global lang for tooltips
+
         tableHeader.querySelectorAll('th[data-sort-key]').forEach(th => {
             const key = th.dataset.sortKey; const icon = th.querySelector('i.fas'); if (!icon) return;
             icon.className = 'fas fa-sort text-muted opacity-50 ms-1';
@@ -114,7 +120,8 @@ const ui_helpers = (() => {
                     span.style.color = isActiveSort ? 'var(--primary-color)' : 'inherit';
                     const thLabel = th.textContent.split('(')[0].trim();
                     const spanLabel = span.textContent.trim();
-                    span.setAttribute('data-tippy-content', `Sortieren nach: ${thLabel} -> ${spanLabel}`);
+                    const sortTooltipText = lang === 'de' ? `Sortieren nach: ${thLabel} -> ${spanLabel}` : `Sort by: ${thLabel} -> ${spanLabel}`;
+                    span.setAttribute('data-tippy-content', sortTooltipText);
                     if (isActiveSort) {
                         icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
                         isSubKeySortActive = true;
@@ -137,6 +144,7 @@ const ui_helpers = (() => {
         const tableBody = document.getElementById(tableBodyId);
         if (!button || !tableBody) return;
 
+        const lang = state.getCurrentPublikationLang() || 'de';
         const action = button.dataset.action || 'expand';
         const expand = action === 'expand';
         const collapseElements = tableBody.querySelectorAll('.collapse');
@@ -158,15 +166,23 @@ const ui_helpers = (() => {
         const newAction = expand ? 'collapse' : 'expand';
         button.dataset.action = newAction;
         const iconClass = expand ? 'fa-chevron-up' : 'fa-chevron-down';
-        const buttonText = expand ? 'Alle Details Ausblenden' : 'Alle Details Einblenden';
+        
+        let buttonTextKey = expand ? 'collapseAll' : 'expandAll';
+        let buttonTextBase = lang === 'de' ? 'Alle Details Ausblenden' : 'Collapse All Details';
+        if (buttonTextKey === 'expandAll') {
+            buttonTextBase = lang === 'de' ? 'Alle Details Einblenden' : 'Expand All Details';
+        }
 
-        let tooltipKeyBase = '';
-        if (buttonId === 'daten-toggle-details') tooltipKeyBase = 'datenTable';
-        else if (buttonId === 'auswertung-toggle-details') tooltipKeyBase = 'auswertungTable';
-        const tooltipContentBase = TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll || 'Alle Details ein-/ausblenden';
-        const currentTooltipText = expand ? tooltipContentBase.replace('ein-', 'aus-') : tooltipContentBase.replace('aus-', 'ein-');
+        let tooltipContentBase = TOOLTIP_CONTENT.datenTable?.expandAll || 'Alle Details ein-/ausblenden';
+        if (buttonId === 'auswertung-toggle-details') {
+             tooltipContentBase = TOOLTIP_CONTENT.auswertungTable?.expandAll || 'Alle Details ein-/ausblenden';
+        }
+        const currentTooltipText = expand ? 
+            (lang === 'de' ? tooltipContentBase.replace('ein-', 'aus-') : 'Hide all details') : 
+            (lang === 'de' ? tooltipContentBase.replace('aus-', 'ein-') : 'Show all details');
 
-        updateElementHTML(buttonId, `${buttonText} <i class="fas ${iconClass} ms-1"></i>`);
+
+        updateElementHTML(buttonId, `${buttonTextBase} <i class="fas ${iconClass} ms-1"></i>`);
         button.setAttribute('data-tippy-content', currentTooltipText);
         if(button._tippy) { button._tippy.setContent(currentTooltipText); } else { initializeTooltips(button.parentElement || button); }
     }
@@ -210,6 +226,9 @@ const ui_helpers = (() => {
         let strokeColor = iconColor;
 
         const unknownIconSVG = `<rect x="${sqPos}" y="${sqPos}" width="${sq}" height="${sq}" fill="none" stroke="${iconColor}" stroke-width="${sw/2}" stroke-dasharray="2 2" /><line x1="${sqPos}" y1="${sqPos}" x2="${sqPos+sq}" y2="${sqPos+sq}" stroke="${iconColor}" stroke-width="${sw/2}" stroke-linecap="round"/><line x1="${sqPos+sq}" y1="${sqPos}" x2="${sqPos}" y2="${sqPos+sq}" stroke="${iconColor}" stroke-width="${sw/2}" stroke-linecap="round"/>`;
+        const ariaLabelBase = type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Merkmal';
+        const valueDisplay = value || (state.getCurrentPublikationLang() === 'de' ? 'unbekannt' : 'unknown');
+        let ariaLabel = `${ariaLabelBase}: ${valueDisplay}`;
 
         switch (type) {
             case 'form':
@@ -233,7 +252,7 @@ const ui_helpers = (() => {
                 if (value === 'signalarm') fillColor = '#555555';
                 else if (value === 'intermediär') fillColor = '#aaaaaa';
                 else if (value === 'signalreich') fillColor = '#f0f0f0';
-                else { svgContent = unknownIconSVG; return `<svg class="icon-t2 icon-${type} icon-value-unknown ${extraClass}" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${type}: unbekannt">${svgContent}</svg>`; }
+                else { svgContent = unknownIconSVG; return `<svg class="icon-t2 icon-${type} icon-value-unknown ${extraClass}" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${ariaLabel}">${svgContent}</svg>`; }
                 strokeColor = (value === 'signalreich') ? '#333333' : 'rgba(0,0,0,0.1)';
                 svgContent = `<circle cx="${c}" cy="${c}" r="${r}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${sw * 0.75}"/>`;
                 if (value === 'signalreich') svgContent += `<circle cx="${c}" cy="${c}" r="${r * 0.3}" fill="${strokeColor}" stroke="none"/>`;
@@ -241,22 +260,31 @@ const ui_helpers = (() => {
                 break;
             case 'ruler-horizontal':
                 svgContent = `<path d="M${sw/2} ${c} H${s-sw/2} M${c} ${sw/2} V${s-sw/2} M${s*0.2} ${c-s*0.15} L${s*0.2} ${c+s*0.15} M${s*0.4} ${c-s*0.1} L${s*0.4} ${c+s*0.1} M${s*0.6} ${c-s*0.1} L${s*0.6} ${c+s*0.1} M${s*0.8} ${c-s*0.15} L${s*0.8} ${c+s*0.15}" stroke="${iconColor}" stroke-width="${sw/2}" stroke-linecap="round"/>`;
-                type = 'size';
+                ariaLabel = state.getCurrentPublikationLang() === 'de' ? 'Größenmessung' : 'Size Measurement';
+                type = 'size'; // Ensure correct class for styling if needed
                 break;
             default:
                 svgContent = unknownIconSVG;
         }
         const valueClass = (value !== null && typeof value === 'string') ? `icon-value-${value.replace(/\s+/g, '-').toLowerCase()}` : 'icon-value-unknown';
-        return `<svg class="icon-t2 icon-${type} ${valueClass} ${extraClass}" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${type}: ${value || 'unbekannt'}">${svgContent}</svg>`;
+        return `<svg class="icon-t2 icon-${type} ${valueClass} ${extraClass}" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${ariaLabel}">${svgContent}</svg>`;
     }
 
     function updateT2CriteriaControlsUI(currentCriteria, currentLogic) {
+        const lang = state.getCurrentPublikationLang() || 'de';
+        const localizedTexts = getLocalizedUITexts(lang);
+
         const logicSwitch = document.getElementById('t2-logic-switch');
         const logicLabel = document.getElementById('t2-logic-label');
+        const logicLabelPrefix = document.getElementById('t2-logic-label-prefix');
+
         if (logicSwitch && logicLabel) {
             logicSwitch.checked = currentLogic === 'ODER';
-            logicLabel.textContent = currentLogic;
+            logicLabel.textContent = (localizedTexts.t2LogicDisplayNames || {})[currentLogic] || currentLogic;
         }
+        if(logicLabelPrefix) logicLabelPrefix.textContent = lang === 'de' ? 'Logik:' : 'Logic:';
+
+
         if (!currentCriteria) return;
 
         Object.keys(currentCriteria).forEach(key => {
@@ -282,9 +310,10 @@ const ui_helpers = (() => {
                     const input = document.getElementById('input-size');
                     const valueDisplay = document.getElementById('value-size');
                     const thresholdValue = criterion.threshold ?? getDefaultT2Criteria().size.threshold;
-                    if (range) range.value = formatNumber(thresholdValue, 1, '', true);
-                    if (input) input.value = formatNumber(thresholdValue, 1, '', true);
-                    if (valueDisplay) valueDisplay.textContent = formatNumber(thresholdValue, 1);
+                    const formattedForInput = formatNumber(thresholdValue, 1, '', true); // standard for input
+                    if (range) range.value = formattedForInput;
+                    if (input) input.value = formattedForInput;
+                    if (valueDisplay) valueDisplay.textContent = formatNumber(thresholdValue, 1, '--', lang === 'en'); // localized for display
                 } else {
                     optionsContainer.querySelectorAll('.t2-criteria-button').forEach(button => {
                         if(button.dataset.criterion === key) {
@@ -305,7 +334,9 @@ const ui_helpers = (() => {
         card.classList.toggle('criteria-unsaved-indicator', shouldShowIndicator);
 
         const existingTippy = card._tippy;
-        const tooltipContent = TOOLTIP_CONTENT?.t2CriteriaCard?.unsavedIndicator || "Ungespeicherte Änderungen vorhanden.";
+        const lang = state.getCurrentPublikationLang() || 'de';
+        const tooltipContent = (TOOLTIP_CONTENT?.t2CriteriaCard?.unsavedIndicator ? (TOOLTIP_CONTENT.t2CriteriaCard.unsavedIndicator[lang] || TOOLTIP_CONTENT.t2CriteriaCard.unsavedIndicator) : null) || (lang === 'de' ? "Ungespeicherte Änderungen vorhanden." : "Unsaved changes present.");
+
 
         if (shouldShowIndicator && (!existingTippy || !existingTippy.state.isEnabled)) {
             tippy(card, { content: tooltipContent, placement: 'top-start', theme: 'glass warning', trigger: 'manual', showOnCreate: true, zIndex: 1100, hideOnClick: false });
@@ -321,6 +352,7 @@ const ui_helpers = (() => {
     }
 
     function updateStatistikSelectorsUI(layout, kollektiv1, kollektiv2) {
+        const lang = state.getCurrentPublikationLang() || 'de';
         const toggleBtn = document.getElementById('statistik-toggle-vergleich');
         const container1 = document.getElementById('statistik-kollektiv-select-1-container');
         const container2 = document.getElementById('statistik-kollektiv-select-2-container');
@@ -331,8 +363,12 @@ const ui_helpers = (() => {
         if (toggleBtn) {
             toggleBtn.classList.toggle('active', isVergleich);
             toggleBtn.setAttribute('aria-pressed', String(isVergleich));
-            updateElementHTML(toggleBtn.id, isVergleich ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv');
-            if(toggleBtn._tippy) toggleBtn._tippy.setContent(TOOLTIP_CONTENT.statistikLayout?.description || 'Layout umschalten');
+            const buttonText = isVergleich ? 
+                (lang === 'de' ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-users-cog me-1"></i> Comparison Active') :
+                (lang === 'de' ? '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv' : '<i class="fas fa-user-cog me-1"></i> Single View Active');
+            updateElementHTML(toggleBtn.id, buttonText);
+            const tooltipText = (TOOLTIP_CONTENT.statistikLayout?.description ? (TOOLTIP_CONTENT.statistikLayout.description[lang] || TOOLTIP_CONTENT.statistikLayout.description) : null) || (lang === 'de' ? 'Layout umschalten' : 'Toggle Layout');
+            if(toggleBtn._tippy) toggleBtn._tippy.setContent(tooltipText);
             else initializeTooltips(toggleBtn.parentElement || toggleBtn);
         }
         if (container1) container1.classList.toggle('d-none', !isVergleich);
@@ -358,7 +394,11 @@ const ui_helpers = (() => {
         }
     }
 
-    function updateBruteForceUI(state, data = {}, workerAvailable = true, currentKollektiv = null) {
+    function updateBruteForceUI(status, data = {}, workerAvailable = true, currentKollektiv = null) {
+        const lang = state.getCurrentPublikationLang() || 'de';
+        const localizedTexts = getLocalizedUITexts(lang);
+        const generalTexts = localizedTexts.general || {};
+
         const elements = {
             startBtn: document.getElementById('btn-start-brute-force'),
             cancelBtn: document.getElementById('btn-cancel-brute-force'),
@@ -385,97 +425,117 @@ const ui_helpers = (() => {
         };
 
         const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
-        const getKollektivNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
-        const isRunning = state === 'start' || state === 'started' || state === 'progress';
-        const hasResults = state === 'result' && data.results && data.results.length > 0 && data.bestResult && data.bestResult.criteria;
+        const getKollektivNameFunc = (kId) => getKollektivDisplayName(kId, lang, localizedTexts);
+        const isRunning = status === 'start' || status === 'started' || status === 'progress';
+        const hasResults = status === 'result' && data.results && data.results.length > 0 && data.bestResult && data.bestResult.criteria;
 
         if (elements.progressContainer) toggleElementClass(elements.progressContainer.id, 'd-none', !isRunning);
-        if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', state !== 'result' || !hasResults);
+        if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', status !== 'result' || !hasResults);
         if (elements.cancelBtn) toggleElementClass(elements.cancelBtn.id, 'd-none', !isRunning);
         if (elements.startBtn) setElementDisabled(elements.startBtn.id, !workerAvailable || isRunning);
         if (elements.modalExportBtn) setElementDisabled(elements.modalExportBtn.id, !hasResults);
         if (elements.applyBestBtn) setElementDisabled(elements.applyBestBtn.id, !hasResults);
 
-        const startButtonText = isRunning ? '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Läuft...' : `<i class="fas fa-cogs me-1"></i> ${workerAvailable ? 'Optimierung starten' : 'Starten (Worker fehlt)'}`;
+        let startButtonTextContent = lang === 'de' ? 'Optimierung starten' : 'Start Optimization';
+        if (!workerAvailable) startButtonTextContent = lang === 'de' ? 'Starten (Worker fehlt)' : 'Start (Worker missing)';
+        const startButtonText = isRunning ? `<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> ${lang === 'de' ? 'Läuft...' : 'Running...'}` : `<i class="fas fa-cogs me-1"></i> ${startButtonTextContent}`;
         if (elements.startBtn) updateElementHTML(elements.startBtn.id, startButtonText);
 
         if (elements.bfInfoKollektiv) {
             const kollektivToDisplay = data.kollektiv || currentKollektiv || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
             updateElementText(elements.bfInfoKollektiv.id, getKollektivNameFunc(kollektivToDisplay));
         }
+        
+        const statusLabel = lang === 'de' ? 'Status:' : 'Status:';
+        const kollektivLabel = lang === 'de' ? 'Kollektiv:' : 'Cohort:';
+        if(document.getElementById('brute-force-info')){
+            const infoEl = document.getElementById('brute-force-info');
+            const currentStatusText = infoEl.querySelector('#bf-status-text')?.textContent || '';
+            const currentKollektivText = infoEl.querySelector('#bf-kollektiv-info')?.textContent || '';
+            infoEl.innerHTML = `${statusLabel} <span id="bf-status-text" class="fw-bold">${currentStatusText}</span><br>${kollektivLabel} <strong id="bf-kollektiv-info">${currentKollektivText}</strong>`;
+        }
 
-        const addOrUpdateTooltip = (el, content) => {
+
+        const addOrUpdateTooltip = (el, contentKey, replacements = {}) => {
+            let content = (TOOLTIP_CONTENT[contentKey]?.description ? (TOOLTIP_CONTENT[contentKey].description[lang] || TOOLTIP_CONTENT[contentKey].description) : null) || contentKey;
+            Object.keys(replacements).forEach(key => {
+                content = content.replace(`[${key.toUpperCase()}]`, replacements[key]);
+            });
             if(el && content) { el.setAttribute('data-tippy-content', content); if(el._tippy) el._tippy.setContent(content); else initializeTooltips(el.parentElement || el); }
             else if (el && el._tippy && el._tippy.state.isEnabled) { el._tippy.disable(); }
         };
 
-        switch (state) {
+        switch (status) {
             case 'idle': case 'cancelled': case 'error':
                 if (elements.progressBar) { elements.progressBar.style.width = '0%'; elements.progressBar.setAttribute('aria-valuenow', '0'); }
                 if (elements.progressPercent) updateElementText(elements.progressPercent.id, '0%');
                 if (elements.testedCount) updateElementText(elements.testedCount.id, '0');
                 if (elements.totalCount) updateElementText(elements.totalCount.id, '0');
                 if (elements.bestMetric) updateElementText(elements.bestMetric.id, '--');
-                if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, 'Beste Kriterien: --');
+                if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, `${lang === 'de' ? 'Beste Kriterien' : 'Best Criteria'}: --`);
                 let statusMsg = '';
-                if (state === 'idle') statusMsg = workerAvailable ? 'Bereit.' : 'Worker nicht verfügbar.';
-                else if (state === 'cancelled') statusMsg = 'Abgebrochen.';
-                else if (state === 'error') statusMsg = `Fehler: ${data?.message || 'Unbekannt.'}`;
+                if (status === 'idle') statusMsg = workerAvailable ? (lang === 'de' ? 'Bereit.' : 'Ready.') : (lang === 'de' ? 'Worker nicht verfügbar.' : 'Worker not available.');
+                else if (status === 'cancelled') statusMsg = lang === 'de' ? 'Abgebrochen.' : 'Cancelled.';
+                else if (status === 'error') statusMsg = `${lang === 'de' ? 'Fehler' : 'Error'}: ${data?.message || (lang === 'de' ? 'Unbekannt.' : 'Unknown.')}`;
                 if (elements.statusText) updateElementText(elements.statusText.id, statusMsg);
-                if (elements.statusText) addOrUpdateTooltip(elements.statusText, `Aktueller Status: ${statusMsg}`);
+                if (elements.statusText) addOrUpdateTooltip(elements.statusText, 'bruteForceInfo', { STATUS: statusMsg });
                 break;
             case 'start':
                 if (elements.progressBar) { elements.progressBar.style.width = '0%'; elements.progressBar.setAttribute('aria-valuenow', '0'); }
                 if (elements.progressPercent) updateElementText(elements.progressPercent.id, '0%');
                 if (elements.testedCount) updateElementText(elements.testedCount.id, '0');
-                if (elements.totalCount) updateElementText(elements.totalCount.id, 'berechne...');
-                if (elements.metricLabel) updateElementText(elements.metricLabel.id, data?.metric || 'Metrik');
+                if (elements.totalCount) updateElementText(elements.totalCount.id, lang === 'de' ? 'berechne...' : 'calculating...');
+                if (elements.metricLabel) updateElementText(elements.metricLabel.id, data?.metric || (lang === 'de' ? 'Metrik' : 'Metric'));
                 if (elements.bestMetric) updateElementText(elements.bestMetric.id, '--');
-                if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, 'Beste Kriterien: --');
-                if (elements.statusText) updateElementText(elements.statusText.id, 'Initialisiere...');
-                if (elements.statusText) addOrUpdateTooltip(elements.statusText, 'Aktueller Status: Initialisiere...');
+                if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, `${lang === 'de' ? 'Beste Kriterien' : 'Best Criteria'}: --`);
+                if (elements.statusText) updateElementText(elements.statusText.id, lang === 'de' ? 'Initialisiere...' : 'Initializing...');
+                if (elements.statusText) addOrUpdateTooltip(elements.statusText, 'bruteForceInfo', { STATUS: (lang === 'de' ? 'Initialisiere...' : 'Initializing...') });
                 break;
             case 'started':
-                const totalComb = formatNumber(data?.totalCombinations || 0, 0, 'N/A');
+                const totalComb = formatNumber(data?.totalCombinations || 0, 0, generalTexts.notApplicable || 'N/A', lang === 'en');
                 if (elements.totalCount) updateElementText(elements.totalCount.id, totalComb);
-                if (elements.statusText) updateElementText(elements.statusText.id, 'Teste...');
-                if (elements.statusText) addOrUpdateTooltip(elements.statusText, `Aktueller Status: Teste ${totalComb} Kombinationen...`);
-                if (elements.progressContainer) addOrUpdateTooltip(elements.progressContainer, (TOOLTIP_CONTENT.bruteForceProgress?.description || '').replace('[TOTAL]', totalComb));
+                if (elements.statusText) updateElementText(elements.statusText.id, lang === 'de' ? 'Teste...' : 'Testing...');
+                if (elements.statusText) addOrUpdateTooltip(elements.statusText, 'bruteForceInfo', { STATUS: `${lang === 'de' ? 'Teste' : 'Testing'} ${totalComb} ${lang === 'de' ? 'Kombinationen...' : 'combinations...'}`});
+                if (elements.progressContainer) addOrUpdateTooltip(elements.progressContainer, 'bruteForceProgress', { TOTAL: totalComb });
                 break;
             case 'progress':
                 const percent = (data?.total && data.total > 0) ? Math.round((data.tested / data.total) * 100) : 0;
                 const percentStr = `${percent}%`;
                 if (elements.progressBar) { elements.progressBar.style.width = percentStr; elements.progressBar.setAttribute('aria-valuenow', String(percent)); }
                 if (elements.progressPercent) updateElementText(elements.progressPercent.id, percentStr);
-                const testedNum = formatNumber(data?.tested || 0, 0);
-                const totalNum = formatNumber(data?.total || 0, 0);
+                const testedNum = formatNumber(data?.tested || 0, 0, '0', lang === 'en');
+                const totalNum = formatNumber(data?.total || 0, 0, '0', lang === 'en');
                 if (elements.testedCount) updateElementText(elements.testedCount.id, testedNum);
                 if (elements.totalCount) updateElementText(elements.totalCount.id, totalNum);
-                if (elements.statusText) updateElementText(elements.statusText.id, 'Läuft...');
-                if (elements.statusText) addOrUpdateTooltip(elements.statusText, `Aktueller Status: ${percentStr} (${testedNum}/${totalNum})`);
+                if (elements.statusText) updateElementText(elements.statusText.id, lang === 'de' ? 'Läuft...' : 'Running...');
+                if (elements.statusText) addOrUpdateTooltip(elements.statusText, 'bruteForceInfo', {STATUS: `${percentStr} (${testedNum}/${totalNum})`});
+                
+                const bestLabel = lang === 'de' ? 'Beste' : 'Best';
+                const criteriaLabel = lang === 'de' ? 'Kriterien' : 'Criteria';
+
                 if (data?.currentBest && data.currentBest.criteria && isFinite(data.currentBest.metricValue)) {
-                    const bestValStr = formatNumber(data.currentBest.metricValue, 4);
+                    const bestValStr = formatNumber(data.currentBest.metricValue, 4, '--', lang === 'en');
                     const bestCritStr = formatCriteriaFunc(data.currentBest.criteria, data.currentBest.logic);
-                    if (elements.metricLabel) updateElementText(elements.metricLabel.id, data.metric || 'Metrik');
+                    if (elements.metricLabel) updateElementText(elements.metricLabel.id, data.metric || (lang === 'de' ? 'Metrik' : 'Metric'));
                     if (elements.bestMetric) updateElementText(elements.bestMetric.id, bestValStr);
-                    if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, `Beste: ${data.currentBest.logic?.toUpperCase()} - ${bestCritStr}`);
-                    if (elements.bestMetric) addOrUpdateTooltip(elements.bestMetric, `Bester Wert für '${data.metric || 'Zielmetrik'}'.`);
-                    if (elements.bestCriteria) addOrUpdateTooltip(elements.bestCriteria, `Kriterien für besten Wert.`);
+                    if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, `${bestLabel} ${data.currentBest.logic?.toUpperCase()} - ${bestCritStr}`);
+                    if (elements.bestMetric) addOrUpdateTooltip(elements.bestMetric, 'bruteForceBestMetric', {METRIC: (data.metric || (lang === 'de' ? 'Zielmetrik' : 'Target Metric'))});
+                    if (elements.bestCriteria) addOrUpdateTooltip(elements.bestCriteria, 'bruteForceBestCriteria');
                 } else {
                     if (elements.bestMetric) updateElementText(elements.bestMetric.id, '--');
-                    if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, 'Beste Kriterien: --');
+                    if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, `${bestLabel} ${criteriaLabel}: --`);
                 }
                 break;
             case 'result':
                 const best = data?.bestResult;
                 if (best && best.criteria && isFinite(best.metricValue)) {
-                    const metricName = data.metric || 'N/A';
-                    const kollektivName = getKollektivNameFunc(data.kollektiv || 'N/A');
-                    const bestValueStr = formatNumber(best.metricValue, 4);
-                    const logicStr = best.logic?.toUpperCase() || 'N/A';
+                    const metricName = data.metric || generalTexts.notApplicable || 'N/A';
+                    const kollektivName = getKollektivNameFunc(data.kollektiv || generalTexts.notApplicable || 'N/A');
+                    const bestValueStr = formatNumber(best.metricValue, 4, '--', lang === 'en');
+                    const logicStr = best.logic?.toUpperCase() || generalTexts.notApplicable || 'N/A';
                     const criteriaStr = formatCriteriaFunc(best.criteria, best.logic);
-                    const durationStr = formatNumber((data.duration || 0) / 1000, 1);
-                    const totalTestedStr = formatNumber(data.totalTested || 0, 0);
+                    const durationStr = formatNumber((data.duration || 0) / 1000, 1, '--', lang === 'en');
+                    const totalTestedStr = formatNumber(data.totalTested || 0, 0, '--', lang === 'en');
                     if (elements.resultMetric) updateElementText(elements.resultMetric.id, metricName);
                     if (elements.resultKollektiv) updateElementText(elements.resultKollektiv.id, kollektivName);
                     if (elements.resultValue) updateElementText(elements.resultValue.id, bestValueStr);
@@ -483,11 +543,11 @@ const ui_helpers = (() => {
                     if (elements.resultCriteria) updateElementText(elements.resultCriteria.id, criteriaStr);
                     if (elements.resultDuration) updateElementText(elements.resultDuration.id, durationStr);
                     if (elements.resultTotalTested) updateElementText(elements.resultTotalTested.id, totalTestedStr);
-                    if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig.');
-                    if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, TOOLTIP_CONTENT.bruteForceResult.description);
+                    if (elements.statusText) updateElementText(elements.statusText.id, lang === 'de' ? 'Fertig.' : 'Finished.');
+                    if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, 'bruteForceResult');
                 } else {
                     if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true);
-                    if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig (kein valides Ergebnis).');
+                    if (elements.statusText) updateElementText(elements.statusText.id, lang === 'de' ? 'Fertig (kein valides Ergebnis).' : 'Finished (no valid result).');
                 }
                 break;
         }
@@ -504,7 +564,7 @@ const ui_helpers = (() => {
         trySetDisabled('export-daten-md', dataDisabled);
         trySetDisabled('export-auswertung-md', dataDisabled);
         trySetDisabled('export-filtered-data-csv', dataDisabled);
-        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled);
+        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled); // Only enable if at least one data type is available
         trySetDisabled('export-charts-png', dataDisabled);
         trySetDisabled('export-charts-svg', dataDisabled);
 
@@ -514,18 +574,10 @@ const ui_helpers = (() => {
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
 
-        trySetDisabled('export-statistik-xlsx', true);
-        trySetDisabled('export-daten-xlsx', true);
-        trySetDisabled('export-auswertung-xlsx', true);
-        trySetDisabled('export-filtered-data-xlsx', true);
-        trySetDisabled('export-xlsx-zip', true);
-
-
         const isPresentationTabActive = activeTabId === 'praesentation-tab';
         const praesButtons = [
             'download-performance-as-pur-csv', 'download-performance-as-pur-md',
-            'download-performance-as-vs-t2-csv',
-            'download-comp-table-as-vs-t2-md',
+            'download-performance-as-vs-t2-csv', 'download-comp-table-as-vs-t2-md',
             'download-tests-as-vs-t2-md'
         ];
         praesButtons.forEach(id => {
@@ -543,11 +595,14 @@ const ui_helpers = (() => {
     }
 
     function updatePublikationUI(currentLang, currentSection, currentBfMetric) {
+        const localizedTexts = getLocalizedUITexts(currentLang);
+        const pubTabTexts = localizedTexts.publikationTab || {};
+
         const langSwitch = document.getElementById('publikation-sprache-switch');
         const langLabel = document.getElementById('publikation-sprache-label');
         if (langSwitch && langLabel) {
             langSwitch.checked = currentLang === 'en';
-            langLabel.textContent = UI_TEXTS?.publikationTab?.spracheSwitchLabel?.[currentLang] || (currentLang === 'en' ? 'English' : 'Deutsch');
+            langLabel.textContent = pubTabTexts.spracheSwitchLabel || (currentLang === 'en' ? 'English' : 'Deutsch');
         }
 
         document.querySelectorAll('#publikation-sections-nav .nav-link').forEach(link => {
@@ -560,22 +615,35 @@ const ui_helpers = (() => {
         }
     }
 
-    function getMetricDescriptionHTML(key, methode = '') {
-       const desc = TOOLTIP_CONTENT.statMetrics[key]?.description || key;
-       return desc.replace(/\[METHODE\]/g, methode);
+    function _getLocalizedTooltipField(baseTooltipObject, fieldKey, lang, defaultText = '') {
+        if (!baseTooltipObject || !baseTooltipObject[fieldKey]) return defaultText;
+        const fieldContent = baseTooltipObject[fieldKey];
+        if (typeof fieldContent === 'string') return fieldContent; // Already simple or non-localized
+        return fieldContent[lang] || fieldContent['de'] || defaultText; // Access localized string
     }
 
-    function getMetricInterpretationHTML(key, metricData, methode = '', kollektivName = '') {
-        const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
-        const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: 'N/A' };
-        const na = '--';
+    function getMetricDescriptionHTML(key, methode = '', lang = 'de') {
+       const localizedTooltipSubObject = (TOOLTIP_CONTENT.statMetrics || {})[key];
+       if (!localizedTooltipSubObject) return key;
+       const descTemplate = _getLocalizedTooltipField(localizedTooltipSubObject, 'description', lang, key);
+       return descTemplate.replace(/\[METHODE\]/g, methode);
+    }
+
+    function getMetricInterpretationHTML(key, metricData, methode = '', kollektivName = '', lang = 'de') {
+        const localizedTooltipSubObject = (TOOLTIP_CONTENT.statMetrics || {})[key];
+        if (!localizedTooltipSubObject) return lang === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.';
+        const interpretationTemplate = _getLocalizedTooltipField(localizedTooltipSubObject, 'interpretation', lang, lang === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.');
+
+        const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: null };
+        const na = (getLocalizedUITexts(lang).general || {}).notApplicable || 'N/A';
         const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
         const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na, isPercent);
-        const lowerStr = formatNumber(data?.ci?.lower, digits, na, isPercent);
-        const upperStr = formatNumber(data?.ci?.upper, digits, na, isPercent);
-        const ciMethodStr = data?.method || 'N/A';
-        const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value) : '';
+
+        const valueStr = formatNumber(data?.value, digits, na, lang === 'en');
+        const lowerStr = formatNumber(data?.ci?.lower, digits, na, lang === 'en');
+        const upperStr = formatNumber(data?.ci?.upper, digits, na, lang === 'en');
+        const ciMethodStr = data?.method || na;
+        const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value, lang) : ((key === 'phi') ? getPhiBewertung(data?.value, lang) : '');
 
         let interpretation = interpretationTemplate
             .replace(/\[METHODE\]/g, methode)
@@ -587,73 +655,104 @@ const ui_helpers = (() => {
             .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`);
 
         if (lowerStr === na || upperStr === na || ciMethodStr === na) {
-             interpretation = interpretation.replace(/\(95% CI nach .*?: .*? - .*?\)/g, '(Keine CI-Daten verfügbar)');
+             const noCIDataText = lang === 'de' ? '(Keine CI-Daten verfügbar)' : '(No CI data available)';
+             interpretation = interpretation.replace(/\(95% CI nach .*?: .*? - .*?\)/g, noCIDataText);
              interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
+             interpretation = interpretation.replace(/\(95% CI: .*? - .*?\)/g, noCIDataText); // Simpler CI format
         }
-        interpretation = interpretation.replace(/p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
-        interpretation = interpretation.replace(/<hr.*?>.*$/, '');
+        interpretation = interpretation.replace(/p=\[P_WERT\], \[SIGNIFIKANZ\]/g,''); // Clean up unused p-value placeholders
+        interpretation = interpretation.replace(/<hr.*?>.*$/s, ''); // Remove HR and anything after
         return interpretation;
     }
 
-    function getTestDescriptionHTML(key, t2ShortName = 'T2') {
-        const desc = TOOLTIP_CONTENT.statMetrics[key]?.description || key;
-        return desc.replace(/\[T2_SHORT_NAME\]/g, t2ShortName);
+    function getTestDescriptionHTML(key, t2ShortName = 'T2', lang = 'de') {
+        const localizedTooltipSubObject = (TOOLTIP_CONTENT.statMetrics || {})[key];
+        if (!localizedTooltipSubObject) return key;
+        const descTemplate = _getLocalizedTooltipField(localizedTooltipSubObject, 'description', lang, key);
+        return descTemplate.replace(/\[T2_SHORT_NAME\]/g, t2ShortName);
     }
 
-    function getTestInterpretationHTML(key, testData, kollektivName = '', t2ShortName = 'T2') {
-        const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
-         if (!testData) return 'Keine Daten für Interpretation verfügbar.';
-        const na = '--';
+    function getTestInterpretationHTML(key, testData, kollektivName = '', t2ShortName = 'T2', lang = 'de') {
+        const localizedTooltipSubObject = (TOOLTIP_CONTENT.statMetrics || {})[key];
+        const defaultNoInterp = lang === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.';
+        if (!localizedTooltipSubObject && key !== 'defaultP') return defaultNoInterp;
+
+        let interpretationTemplate;
+        if(key === 'defaultP' && TOOLTIP_CONTENT.statMetrics?.defaultP) {
+            interpretationTemplate = _getLocalizedTooltipField(TOOLTIP_CONTENT.statMetrics.defaultP, 'interpretation', lang, defaultNoInterp);
+        } else if (localizedTooltipSubObject) {
+            interpretationTemplate = _getLocalizedTooltipField(localizedTooltipSubObject, 'interpretation', lang, defaultNoInterp);
+        } else {
+            return defaultNoInterp;
+        }
+
+        if (!testData) return lang === 'de' ? 'Keine Daten für Interpretation verfügbar.' : 'No data available for interpretation.';
+        const na = (getLocalizedUITexts(lang).general || {}).notApplicable || 'N/A';
         const pValue = testData?.pValue;
-        const pStr = (pValue !== null && !isNaN(pValue)) ? (pValue < 0.001 ? '&lt;0.001' : formatNumber(pValue, 3, na)) : na;
-        const sigSymbol = getStatisticalSignificanceSymbol(pValue);
-        const sigText = getStatisticalSignificanceText(pValue);
+        const pStr = getPValueText(pValue, lang).replace('p = ', '').replace('P = ', '').replace('p < ','<').replace('P < ', '<'); // Use existing helper and trim
+        const sigSymbol = getStatisticalSignificanceSymbol(pValue, APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL);
+        const sigText = getStatisticalSignificanceText(pValue, APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, lang);
+
          return interpretationTemplate
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
             .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
             .replace(/\[T2_SHORT_NAME\]/g, t2ShortName)
-            .replace(/<hr.*?>.*$/, '');
+            .replace(/<hr.*?>.*$/s, ''); // Remove HR and anything after
     }
 
-    function getAssociationInterpretationHTML(key, assocObj, merkmalName, kollektivName) {
-        const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
-        if (!assocObj) return 'Keine Daten für Interpretation verfügbar.';
-        const na = '--';
+    function getAssociationInterpretationHTML(key, assocObj, merkmalName, kollektivName, lang = 'de') {
+        const localizedTooltipSubObject = (TOOLTIP_CONTENT.statMetrics || {})[key];
+        const defaultNoInterp = lang === 'de' ? 'Keine Interpretation verfügbar.' : 'No interpretation available.';
+        if (!localizedTooltipSubObject && !['fisher', 'mannwhitney', 'size_mwu', 'defaultP'].includes(key)) return defaultNoInterp;
+
+
+        let interpretationTemplate;
+        if (['fisher', 'mannwhitney', 'size_mwu', 'defaultP'].includes(key)) {
+             const effectiveKey = TOOLTIP_CONTENT.statMetrics?.[key] ? key : 'defaultP';
+             interpretationTemplate = _getLocalizedTooltipField(TOOLTIP_CONTENT.statMetrics[effectiveKey], 'interpretation', lang, defaultNoInterp);
+        } else if (localizedTooltipSubObject) {
+             interpretationTemplate = _getLocalizedTooltipField(localizedTooltipSubObject, 'interpretation', lang, defaultNoInterp);
+        } else {
+             return defaultNoInterp;
+        }
+
+        if (!assocObj) return lang === 'de' ? 'Keine Daten für Interpretation verfügbar.' : 'No data available for interpretation.';
+        const na = (getLocalizedUITexts(lang).general || {}).notApplicable || 'N/A';
         let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '', pVal = NaN;
         const assozPValue = assocObj?.pValue;
+        const localizedStatTexts = getLocalizedUITexts(lang).statMetrics || {};
+
 
         if (key === 'or') {
-            valueStr = formatNumber(assocObj.or?.value, 2, na);
-            lowerStr = formatNumber(assocObj.or?.ci?.lower, 2, na);
-            upperStr = formatNumber(assocObj.or?.ci?.upper, 2, na);
+            valueStr = formatNumber(assocObj.or?.value, 2, na, lang === 'en');
+            lowerStr = formatNumber(assocObj.or?.ci?.lower, 2, na, lang === 'en');
+            upperStr = formatNumber(assocObj.or?.ci?.upper, 2, na, lang === 'en');
             ciMethodStr = assocObj.or?.method || na;
-            pStr = (assozPValue !== null && !isNaN(assozPValue)) ? (assozPValue < 0.001 ? '&lt;0.001' : formatNumber(assozPValue, 3, na)) : na;
+            pStr = getPValueText(assozPValue, lang).replace('p = ', '').replace('P = ', '').replace('p < ','<').replace('P < ', '<');
             sigSymbol = getStatisticalSignificanceSymbol(assozPValue);
-            sigText = getStatisticalSignificanceText(assozPValue);
         } else if (key === 'rd') {
-            valueStr = formatNumber(assocObj.rd?.value !== null && !isNaN(assocObj.rd?.value) ? assocObj.rd.value * 100 : NaN, 1, na);
-            lowerStr = formatNumber(assocObj.rd?.ci?.lower !== null && !isNaN(assocObj.rd?.ci?.lower) ? assocObj.rd.ci.lower * 100 : NaN, 1, na);
-            upperStr = formatNumber(assocObj.rd?.ci?.upper !== null && !isNaN(assocObj.rd?.ci?.upper) ? assocObj.rd.ci.upper * 100 : NaN, 1, na);
+            valueStr = formatNumber(assocObj.rd?.value !== null && !isNaN(assocObj.rd?.value) ? assocObj.rd.value * 100 : NaN, 1, na, lang === 'en');
+            lowerStr = formatNumber(assocObj.rd?.ci?.lower !== null && !isNaN(assocObj.rd?.ci?.lower) ? assocObj.rd.ci.lower * 100 : NaN, 1, na, lang === 'en');
+            upperStr = formatNumber(assocObj.rd?.ci?.upper !== null && !isNaN(assocObj.rd?.ci?.upper) ? assocObj.rd.ci.upper * 100 : NaN, 1, na, lang === 'en');
             ciMethodStr = assocObj.rd?.method || na;
         } else if (key === 'phi') {
-            valueStr = formatNumber(assocObj.phi?.value, 2, na);
-            bewertungStr = getPhiBewertung(assocObj.phi?.value);
-        } else if (key === 'fisher' || key === 'mannwhitney' || key === 'pvalue' || key === 'size_mwu') {
+            valueStr = formatNumber(assocObj.phi?.value, 2, na, lang === 'en');
+            bewertungStr = getPhiBewertung(assocObj.phi?.value, lang);
+        } else if (['fisher', 'mannwhitney', 'size_mwu', 'defaultP'].includes(key)) {
              pVal = assocObj?.pValue;
-             pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na)) : na;
+             pStr = getPValueText(pVal, lang).replace('p = ', '').replace('P = ', '').replace('p < ','<').replace('P < ', '<');
              sigSymbol = getStatisticalSignificanceSymbol(pVal);
-             sigText = getStatisticalSignificanceText(pVal);
-             const templateToUse = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || TOOLTIP_CONTENT.statMetrics.defaultP.interpretation;
-             return templateToUse
+             sigText = getStatisticalSignificanceText(pVal, APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, lang);
+             return interpretationTemplate
                  .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
                  .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
                  .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
                  .replace(/\[MERKMAL\]/g, `'${merkmalName}'`)
-                 .replace(/\[VARIABLE\]/g, `'${merkmalName}'`)
+                 .replace(/\[VARIABLE\]/g, `'${merkmalName}'`) // For Mann-Whitney
                  .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
-                 .replace(/<hr.*?>.*$/, '');
+                 .replace(/<hr.*?>.*$/s, '');
         }
 
         let interpretation = interpretationTemplate
@@ -663,21 +762,23 @@ const ui_helpers = (() => {
             .replace(/\[UPPER\]/g, upperStr)
             .replace(/\[METHOD_CI\]/g, ciMethodStr)
             .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
-            .replace(/\[FAKTOR_TEXT\]/g, assocObj?.or?.value > 1 ? UI_TEXTS.statMetrics.orFaktorTexte.ERHOEHT : (assocObj?.or?.value < 1 ? UI_TEXTS.statMetrics.orFaktorTexte.VERRINGERT : UI_TEXTS.statMetrics.orFaktorTexte.UNVERAENDERT))
-            .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.HOEHER : (assocObj?.rd?.value < 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.NIEDRIGER : UI_TEXTS.statMetrics.rdRichtungTexte.GLEICH))
+            .replace(/\[FAKTOR_TEXT\]/g, (localizedStatTexts.orFaktorTexte || {})[assocObj?.or?.value > 1 ? 'ERHOEHT' : (assocObj?.or?.value < 1 ? 'VERRINGERT' : 'UNVERAENDERT')] || '')
+            .replace(/\[HOEHER_NIEDRIGER\]/g, (localizedStatTexts.rdRichtungTexte || {})[assocObj?.rd?.value > 0 ? 'HOEHER' : (assocObj?.rd?.value < 0 ? 'NIEDRIGER' : 'GLEICH')] || '')
             .replace(/\[STAERKE\]/g, `<strong>${bewertungStr}</strong>`)
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
-            .replace(/<hr.*?>.*$/, '');
+            .replace(/<hr.*?>.*$/s, '');
 
          if (key === 'or' || key === 'rd') {
             if (lowerStr === na || upperStr === na || ciMethodStr === na) {
-                interpretation = interpretation.replace(/\(95% CI nach .*?: .*? - .*?\)/g, '(Keine CI-Daten verfügbar)');
+                const noCIDataText = lang === 'de' ? '(Keine CI-Daten verfügbar)' : '(No CI data available)';
+                interpretation = interpretation.replace(/\(95% CI nach .*?: .*? - .*?\)/g, noCIDataText);
                 interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
+                interpretation = interpretation.replace(/\(95% CI: .*? - .*?\)/g, noCIDataText);
             }
          }
-         if (key === 'or' && pStr === na) {
-             interpretation = interpretation.replace(/, p=.*?, .*?\)/g, ')');
+         if (key === 'or' && (pStr === na || sigSymbol === '')) { // If p-value not applicable or not significant for OR in this context
+             interpretation = interpretation.replace(/, p=.*?, \[SIGNIFIKANZ\]\)/g, ')');
          }
         return interpretation;
     }
