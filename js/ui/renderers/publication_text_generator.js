@@ -2,51 +2,30 @@ const publicationTextGenerator = (() => {
 
     function fCI(metric, digits = 1, isPercent = true, lang = 'de') {
         if (!metric || metric.value === undefined || metric.value === null || isNaN(metric.value)) return 'N/A';
-
-        const formatSingleValue = (val, d, isP) => {
-            if (isP) {
-                return formatPercent(val, d);
-            } else {
-                let numStr = formatNumber(val, d, 'N/A', true);
-                if (lang === 'de' && numStr !== 'N/A' && typeof numStr === 'string') {
-                    numStr = numStr.replace('.', ',');
-                }
-                return numStr;
-            }
-        };
-
-        const valStr = formatSingleValue(metric.value, digits, isPercent);
-
-        if (metric.ci && metric.ci.lower !== null && metric.ci.upper !== null && !isNaN(metric.ci.lower) && !isNaN(metric.ci.upper)) {
-            const lowerStr = formatSingleValue(metric.ci.lower, digits, isPercent);
-            const upperStr = formatSingleValue(metric.ci.upper, digits, isPercent);
-            const ciText = lang === 'de' ? '95% KI' : '95% CI';
-            return `${valStr} (${ciText}: ${lowerStr} – ${upperStr})`;
-        }
-        return valStr;
+        return formatCI(metric.value, metric.ci?.lower, metric.ci?.upper, digits, isPercent, 'N/A', lang);
     }
 
-    function getKollektivText(kollektivId, n, lang = 'de') {
-        const name = getKollektivDisplayName(kollektivId);
+    function getKollektivPubText(kollektivId, n, lang = 'de') {
+        const name = getKollektivDisplayName(kollektivId, lang);
         const nText = lang === 'de' ? `(N=${n})` : `(n=${n})`;
         return `${name} ${nText}`;
     }
 
     function getMethodenStudienanlageText(lang, commonData) {
         const appVersion = commonData.appVersion || APP_CONFIG.APP_VERSION;
-        const studyReference = commonData.references?.lurzSchaefer2025 || "Lurz & Schäfer (2025)";
-        const ethicsVote = "Ethikvotum Nr. XYZ/2020, Klinikum St. Georg, Leipzig";
-
+        const studyReferenceLurzSchaefer = commonData.references?.lurzSchaefer2025 || "Lurz & Schäfer (2025)";
+        const ethicsVote = commonData.ethicsVote || "Ethics vote No. XYZ/2020, St. Georg Hospital, Leipzig";
+        const appName = commonData.appName || APP_CONFIG.APP_NAME;
 
         if (lang === 'de') {
             return `
-                <p>Diese Studie wurde als retrospektive Analyse prospektiv erhobener Daten eines monozentrischen Patientenkollektivs mit histologisch gesichertem Rektumkarzinom konzipiert. Das Studienkollektiv und die zugrundeliegenden Bilddatensätze sind identisch mit jenen der initialen "Avocado Sign" Studie (${studyReference}). Primäres Ziel der vorliegenden Untersuchung war der Vergleich der diagnostischen Güte des Avocado Signs mit etablierten und optimierten T2-gewichteten morphologischen Kriterien zur Prädiktion des mesorektalen Lymphknotenstatus (N-Status).</p>
-                <p>Alle Analysen wurden mittels einer speziell für diese und zukünftige Studien entwickelten, interaktiven Webanwendung (AvocadoSign Analyse Tool v${appVersion}, ${APP_CONFIG.APP_NAME}) durchgeführt. Dieses Werkzeug ermöglicht die flexible Definition und Anwendung von T2-Kriteriensets, eine automatisierte Optimierung von Kriterienkombinationen mittels eines Brute-Force-Algorithmus sowie eine umfassende statistische Auswertung und Visualisierung der Ergebnisse. Die Studie wurde in Übereinstimmung mit den Grundsätzen der Deklaration von Helsinki durchgeführt. Das Studienprotokoll wurde von der lokalen Ethikkommission genehmigt (${ethicsVote}). Aufgrund des retrospektiven Charakters der Analyse auf anonymisierten Daten wurde von der Ethikkommission auf ein erneutes Einholen eines schriftlichen Einverständnisses der Patienten für diese spezifische Analyse verzichtet, da dieses bereits im Rahmen der Primärstudie erteilt wurde.</p>
+                <p>Diese Studie wurde als retrospektive Analyse prospektiv erhobener Daten eines monozentrischen Patientenkollektivs mit histologisch gesichertem Rektumkarzinom konzipiert. Das Studienkollektiv und die zugrundeliegenden Bilddatensätze sind identisch mit jenen der initialen "Avocado Sign" Studie (${studyReferenceLurzSchaefer}). Primäres Ziel der vorliegenden Untersuchung war der Vergleich der diagnostischen Güte des Avocado Signs mit etablierten und optimierten T2-gewichteten morphologischen Kriterien zur Prädiktion des mesorektalen Lymphknotenstatus (N-Status).</p>
+                <p>Alle Analysen wurden mittels einer speziell für diese und zukünftige Studien entwickelten, interaktiven Webanwendung (${appName} v${appVersion}) durchgeführt. Dieses Werkzeug ermöglicht die flexible Definition und Anwendung von T2-Kriteriensets, eine automatisierte Optimierung von Kriterienkombinationen mittels eines Brute-Force-Algorithmus sowie eine umfassende statistische Auswertung und Visualisierung der Ergebnisse. Die Studie wurde in Übereinstimmung mit den Grundsätzen der Deklaration von Helsinki durchgeführt. Das Studienprotokoll wurde von der lokalen Ethikkommission genehmigt (${ethicsVote}). Aufgrund des retrospektiven Charakters der Analyse auf anonymisierten Daten wurde von der Ethikkommission auf ein erneutes Einholen eines schriftlichen Einverständnisses der Patienten für diese spezifische Analyse verzichtet, da dieses bereits im Rahmen der Primärstudie erteilt wurde.</p>
             `;
         } else {
             return `
-                <p>This study was designed as a retrospective analysis of prospectively collected data from a single-center patient cohort with histologically confirmed rectal cancer. The study cohort and the underlying imaging datasets are identical to those used in the initial "Avocado Sign" study (${studyReference}). The primary objective of the present investigation was to compare the diagnostic performance of the Avocado Sign with established and optimized T2-weighted morphological criteria for predicting mesorectal lymph node status (N-status).</p>
-                <p>All analyses were performed using a custom-developed interactive web application (AvocadoSign Analysis Tool v${appVersion}, ${APP_CONFIG.APP_NAME}), specifically enhanced for this and future studies. This tool allows for the flexible definition and application of T2 criteria sets, automated optimization of criteria combinations using a brute-force algorithm, and comprehensive statistical evaluation and visualization of results. The study was conducted in accordance with the principles of the Declaration of Helsinki. The study protocol was approved by the local ethics committee (${ethicsVote}). Given the retrospective nature of this analysis on anonymized data, the ethics committee waived the need for re-obtaining written informed consent from patients for this specific analysis, as consent had already been provided as part of the primary study.</p>
+                <p>This study was designed as a retrospective analysis of prospectively collected data from a single-center patient cohort with histologically confirmed rectal cancer. The study cohort and the underlying imaging datasets are identical to those used in the initial "Avocado Sign" study (${studyReferenceLurzSchaefer}). The primary objective of the present investigation was to compare the diagnostic performance of the Avocado Sign with established and optimized T2-weighted morphological criteria for predicting mesorectal lymph node status (N-status).</p>
+                <p>All analyses were performed using a custom-developed interactive web application (${appName} v${appVersion}), specifically enhanced for this and future studies. This tool allows for the flexible definition and application of T2 criteria sets, automated optimization of criteria combinations using a brute-force algorithm, and comprehensive statistical evaluation and visualization of results. The study was conducted in accordance with the principles of the Declaration of Helsinki. The study protocol was approved by the local ethics committee (${ethicsVote}). Given the retrospective nature of this analysis on anonymized data, the ethics committee waived the need for re-obtaining written informed consent from patients for this specific analysis, as consent had already been provided as part of the primary study.</p>
             `;
         }
     }
@@ -57,21 +36,22 @@ const publicationTextGenerator = (() => {
         const anzahlNRCT = commonData.nNRCT || allKollektivStats?.nRCT?.deskriptiv?.anzahlPatienten || 'N/A';
         const anzahlDirektOP = commonData.nDirektOP || allKollektivStats?.['direkt OP']?.deskriptiv?.anzahlPatienten || 'N/A';
 
-        const alterMedian = formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', lang === 'en');
-        const alterMin = formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', lang === 'en');
-        const alterMax = formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', lang === 'en');
-        const anteilMaennerProzent = formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN, 0);
+        const alterMedian = formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', false, lang);
+        const alterMin = formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', false, lang);
+        const alterMax = formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', false, lang);
+        const anteilMaennerProzent = formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN, 0, lang);
         const anzahlMaenner = pCharGesamt?.geschlecht?.m || 0;
         const anzahlPatientenChar = pCharGesamt?.anzahlPatienten || 0;
+        const rangeSeparator = lang === 'de' ? '–' : '–'; // Or use specific locale-based range separators if needed
 
         if (lang === 'de') {
             return `
-                <p>Das Studienkollektiv umfasste ${anzahlGesamt} konsekutive Patienten mit histologisch gesichertem Rektumkarzinom, die zwischen Januar 2020 und November 2023 am Klinikum St. Georg, Leipzig, behandelt und in die initiale Avocado-Sign-Studie eingeschlossen wurden. Davon erhielten ${anzahlNRCT} Patienten eine neoadjuvante Radiochemotherapie (nRCT-Gruppe), während ${anzahlDirektOP} Patienten primär operiert wurden (Direkt-OP-Gruppe). Das mediane Alter im Gesamtkollektiv betrug ${alterMedian} Jahre (Range: ${alterMin}–${alterMax} Jahre), und ${anteilMaennerProzent} (${anzahlMaenner}/${anzahlPatientenChar}) der Patienten waren männlich. Detaillierte Patientencharakteristika, stratifiziert nach Behandlungsgruppen, sind in Tabelle 1 dargestellt.</p>
+                <p>Das Studienkollektiv umfasste ${anzahlGesamt} konsekutive Patienten mit histologisch gesichertem Rektumkarzinom, die zwischen Januar 2020 und November 2023 am Klinikum St. Georg, Leipzig, behandelt und in die initiale Avocado-Sign-Studie eingeschlossen wurden. Davon erhielten ${anzahlNRCT} Patienten eine neoadjuvante Radiochemotherapie (nRCT-Gruppe), während ${anzahlDirektOP} Patienten primär operiert wurden (Direkt-OP-Gruppe). Das mediane Alter im Gesamtkollektiv betrug ${alterMedian} Jahre (Range: ${alterMin}${rangeSeparator}${alterMax} Jahre), und ${anteilMaennerProzent} (${anzahlMaenner}/${anzahlPatientenChar}) der Patienten waren männlich. Detaillierte Patientencharakteristika, stratifiziert nach Behandlungsgruppen, sind in Tabelle 1 dargestellt.</p>
                 <p>Die Einschlusskriterien für die Primärstudie waren ein Alter von mindestens 18 Jahren und ein histologisch bestätigtes Rektumkarzinom. Ausschlusskriterien umfassten nicht resektable Tumoren und Kontraindikationen für eine MRT-Untersuchung. Für die vorliegende Analyse wurden alle Patienten der Primärstudie berücksichtigt, für die vollständige Datensätze bezüglich der T2-Lymphknotenmerkmale vorlagen.</p>
             `;
         } else {
             return `
-                <p>The study cohort comprised ${anzahlGesamt} consecutive patients with histologically confirmed rectal cancer who were treated at Klinikum St. Georg, Leipzig, between January 2020 and November 2023 and included in the initial Avocado Sign study. Of these, ${anzahlNRCT} patients received neoadjuvant chemoradiotherapy (nRCT group), while ${anzahlDirektOP} patients underwent upfront surgery (upfront surgery group). The median age in the overall cohort was ${alterMedian} years (range: ${alterMin}–${alterMax} years), and ${anteilMaennerProzent} (${anzahlMaenner}/${anzahlPatientenChar}) were male. Detailed patient characteristics, stratified by treatment group, are presented in Table 1.</p>
+                <p>The study cohort comprised ${anzahlGesamt} consecutive patients with histologically confirmed rectal cancer who were treated at St. Georg Hospital, Leipzig, between January 2020 and November 2023 and included in the initial Avocado Sign study. Of these, ${anzahlNRCT} patients received neoadjuvant chemoradiotherapy (nRCT group), while ${anzahlDirektOP} patients underwent upfront surgery (upfront surgery group). The median age in the overall cohort was ${alterMedian} years (range: ${alterMin}${rangeSeparator}${alterMax} years), and ${anteilMaennerProzent} (${anzahlMaenner}/${anzahlPatientenChar}) were male. Detailed patient characteristics, stratified by treatment group, are presented in Table 1.</p>
                 <p>Inclusion criteria for the primary study were an age of at least 18 years and histologically confirmed rectal cancer. Exclusion criteria included unresectable tumors and contraindications to MRI examination. For the present analysis, all patients from the primary study for whom complete datasets regarding T2-weighted lymph node characteristics were available were included.</p>
             `;
         }
@@ -92,53 +72,62 @@ const publicationTextGenerator = (() => {
     }
 
     function getMethodenASDefinitionText(lang, commonData) {
+        const lurzSchaeferRef = commonData.references?.lurzSchaefer2025 || "Lurz & Schäfer (2025)";
         if (lang === 'de') {
             return `
-                <p>Das Avocado Sign wurde, wie in der Originalstudie (${commonData.references?.lurzSchaefer2025 || "Lurz & Schäfer, 2025"}) definiert, auf den kontrastmittelverstärkten T1-gewichteten Bildern evaluiert. Es ist charakterisiert als ein klar abgrenzbarer, hypointenser Kern innerhalb eines ansonsten homogen hyperintensen Lymphknotens, unabhängig von dessen Größe oder Form. Die Bewertung erfolgte für alle im T1KM-MRT sichtbaren mesorektalen Lymphknoten. Ein Patient wurde als Avocado-Sign-positiv (AS+) eingestuft, wenn mindestens ein Lymphknoten dieses Zeichen aufwies. Die Bildanalyse wurde von denselben zwei Radiologen (ML, Radiologe mit 7 Jahren Erfahrung in der abdominellen MRT; AOS, Radiologe mit 29 Jahren Erfahrung in der abdominellen MRT), die bereits die Primärstudie durchführten, unabhängig und verblindet gegenüber den histopathologischen Ergebnissen und den T2-Merkmalen vorgenommen. Diskrepanzen wurden im Konsens mit einem dritten, ebenfalls erfahrenen Radiologen gelöst.</p>
+                <p>Das Avocado Sign wurde, wie in der Originalstudie (${lurzSchaeferRef}) definiert, auf den kontrastmittelverstärkten T1-gewichteten Bildern evaluiert. Es ist charakterisiert als ein klar abgrenzbarer, hypointenser Kern innerhalb eines ansonsten homogen hyperintensen Lymphknotens, unabhängig von dessen Größe oder Form. Die Bewertung erfolgte für alle im T1KM-MRT sichtbaren mesorektalen Lymphknoten. Ein Patient wurde als Avocado-Sign-positiv (AS+) eingestuft, wenn mindestens ein Lymphknoten dieses Zeichen aufwies. Die Bildanalyse wurde von denselben zwei Radiologen (ML, Radiologe mit 7 Jahren Erfahrung in der abdominellen MRT; AOS, Radiologe mit 29 Jahren Erfahrung in der abdominellen MRT), die bereits die Primärstudie durchführten, unabhängig und verblindet gegenüber den histopathologischen Ergebnissen und den T2-Merkmalen vorgenommen. Diskrepanzen wurden im Konsens mit einem dritten, ebenfalls erfahrenen Radiologen gelöst.</p>
             `;
         } else {
             return `
-                <p>The Avocado Sign, as defined in the original study (${commonData.references?.lurzSchaefer2025 || "Lurz & Schäfer, 2025"}), was evaluated on contrast-enhanced T1-weighted images. It is characterized as a clearly demarcated, hypointense core within an otherwise homogeneously hyperintense lymph node, irrespective of node size or shape. Assessment was performed for all mesorectal lymph nodes visible on T1-weighted contrast-enhanced MRI. A patient was classified as Avocado-Sign-positive (AS+) if at least one lymph node exhibited this sign. Image analysis was performed by the same two radiologists (ML, radiologist with 7 years of experience in abdominal MRI; AOS, radiologist with 29 years of experience in abdominal MRI) who conducted the primary study, independently and blinded to histopathological results and T2-weighted features. Discrepancies were resolved by consensus with a third, similarly experienced radiologist.</p>
+                <p>The Avocado Sign, as defined in the original study (${lurzSchaeferRef}), was evaluated on contrast-enhanced T1-weighted images. It is characterized as a clearly demarcated, hypointense core within an otherwise homogeneously hyperintense lymph node, irrespective of node size or shape. Assessment was performed for all mesorectal lymph nodes visible on T1-weighted contrast-enhanced MRI. A patient was classified as Avocado-Sign-positive (AS+) if at least one lymph node exhibited this sign. Image analysis was performed by the same two radiologists (ML, radiologist with 7 years of experience in abdominal MRI; AOS, radiologist with 29 years of experience in abdominal MRI) who conducted the primary study, independently and blinded to histopathological results and T2-weighted features. Discrepancies were resolved by consensus with a third, similarly experienced radiologist.</p>
             `;
         }
     }
 
-    function getMethodenT2DefinitionText(lang, commonData, allKollektivStats) {
-        const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
-        const appliedLogic = t2CriteriaManager.getAppliedLogic();
-        const formattedAppliedCriteria = studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic, false);
+    function getMethodenT2DefinitionText(lang, commonData, allKollektivStats, appliedCriteria, appliedLogic) {
+        const formattedAppliedCriteria = studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic, false, lang);
         const bfZielMetric = PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+        const bfMetricLabelKey = PUBLICATION_CONFIG.bruteForceMetricsForPublication.find(m => m.value === bfZielMetric)?.labelKey || bfZielMetric;
+        const bfMetricDisplayName = UI_TEXTS?.publikationTab?.bfMetrics?.[lang]?.[bfMetricLabelKey] || UI_TEXTS?.publikationTab?.bfMetrics?.de?.[bfMetricLabelKey] || bfZielMetric;
 
-        const formatBFDefinition = (kollektivId, displayName) => {
+
+        const formatBFDefinition = (kollektivId) => {
             const bfDef = allKollektivStats?.[kollektivId]?.bruteforce_definition;
+            const kollektivDisplayName = getKollektivDisplayName(kollektivId, lang);
             if (bfDef && bfDef.criteria) {
-                let metricValueStr = formatNumber(bfDef.metricValue, 4, 'N/A', true);
-                if (lang === 'de' && metricValueStr !== 'N/A' && typeof metricValueStr === 'string') {
-                    metricValueStr = metricValueStr.replace('.', ',');
-                }
-                return `<li><strong>${displayName}:</strong> ${studyT2CriteriaManager.formatCriteriaForDisplay(bfDef.criteria, bfDef.logic, false)} (Zielmetrik: ${bfDef.metricName}, Erreichter Wert: ${metricValueStr})</li>`;
+                let metricValueStr = formatNumber(bfDef.metricValue, 4, 'N/A', true, lang);
+                const metricName = UI_TEXTS?.publikationTab?.bfMetrics?.[lang]?.[bfDef.metricName.replace(/ /g,'').toLowerCase()] || UI_TEXTS?.publikationTab?.bfMetrics?.de?.[bfDef.metricName.replace(/ /g,'').toLowerCase()] || bfDef.metricName;
+
+                const textParts = {
+                    de: `<li><strong>${kollektivDisplayName}:</strong> ${studyT2CriteriaManager.formatCriteriaForDisplay(bfDef.criteria, bfDef.logic, false, lang)} (Zielmetrik: ${metricName}, Erreichter Wert: ${metricValueStr})</li>`,
+                    en: `<li><strong>${kollektivDisplayName}:</strong> ${studyT2CriteriaManager.formatCriteriaForDisplay(bfDef.criteria, bfDef.logic, false, lang)} (Target metric: ${metricName}, Achieved value: ${metricValueStr})</li>`
+                };
+                return textParts[lang];
             }
-            return `<li><strong>${displayName}:</strong> Keine Optimierungsergebnisse für Zielmetrik '${bfZielMetric}' verfügbar oder nicht berechnet.</li>`;
+            const textPartsNoData = {
+                de: `<li><strong>${kollektivDisplayName}:</strong> Keine Optimierungsergebnisse für Zielmetrik '${bfMetricDisplayName}' verfügbar oder nicht berechnet.</li>`,
+                en: `<li><strong>${kollektivDisplayName}:</strong> No optimization results available or not calculated for target metric '${bfMetricDisplayName}'.</li>`
+            };
+            return textPartsNoData[lang];
         };
 
-        let bfCriteriaTextDe = '<ul>';
-        bfCriteriaTextDe += formatBFDefinition('Gesamt', 'Gesamtkollektiv');
-        bfCriteriaTextDe += formatBFDefinition('direkt OP', 'Direkt-OP Kollektiv');
-        bfCriteriaTextDe += formatBFDefinition('nRCT', 'nRCT Kollektiv');
-        bfCriteriaTextDe += '</ul>';
+        let bfCriteriaText = '<ul>';
+        bfCriteriaText += formatBFDefinition('Gesamt');
+        bfCriteriaText += formatBFDefinition('direkt OP');
+        bfCriteriaText += formatBFDefinition('nRCT');
+        bfCriteriaText += '</ul>';
 
-        let bfCriteriaTextEn = '<ul>';
-        bfCriteriaTextEn += formatBFDefinition('Gesamt', 'Overall cohort');
-        bfCriteriaTextEn += formatBFDefinition('direkt OP', 'Upfront surgery cohort');
-        bfCriteriaTextEn += formatBFDefinition('nRCT', 'nRCT cohort');
-        bfCriteriaTextEn += '</ul>';
-
-        const kohDesc = studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology')?.description || 'Irreguläre Kontur ODER heterogenes Signal';
+        const kohStudySet = studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology');
+        const kohDesc = kohStudySet ? (kohStudySet.studyInfo?.keyCriteriaSummary || studyT2CriteriaManager.formatCriteriaForDisplay(kohStudySet.criteria, kohStudySet.logic, false, lang)) : (lang === 'de' ? 'Irreguläre Kontur ODER heterogenes Signal' : 'Irregular border OR heterogeneous signal');
         const kohRef = commonData.references?.koh2008 || "Koh et al. (2008)";
-        const barbaroDesc = studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging')?.description || 'Kurzachse ≥ 2,3mm';
+
+        const barbaroStudySet = studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging');
+        const barbaroDesc = barbaroStudySet ? (barbaroStudySet.studyInfo?.keyCriteriaSummary || studyT2CriteriaManager.formatCriteriaForDisplay(barbaroStudySet.criteria, barbaroStudySet.logic, false, lang)) : (lang === 'de' ? 'Kurzachse ≥ 2,3mm' : 'Short-axis ≥ 2.3mm');
         const barbaroRef = commonData.references?.barbaro2024 || "Barbaro et al. (2024)";
-        const esgarDesc = studyT2CriteriaManager.getStudyCriteriaSetById('rutegard_et_al_esgar')?.description || 'Komplexe größenabhängige morphologische Regeln';
-        const esgarRef = commonData.references?.rutegard2025 ? `${commonData.references.rutegard2025} / ${commonData.references.beetsTan2018ESGAR}` : "Rutegård et al. (2025) / ESGAR 2016";
+
+        const esgarStudySet = studyT2CriteriaManager.getStudyCriteriaSetById('rutegard_et_al_esgar');
+        const esgarDesc = esgarStudySet ? (esgarStudySet.studyInfo?.keyCriteriaSummary || studyT2CriteriaManager.formatCriteriaForDisplay(esgarStudySet.criteria, esgarStudySet.logic, false, lang)) : (lang === 'de' ? 'Komplexe größenabhängige morphologische Regeln' : 'Complex size-dependent morphological rules');
+        const esgarRef = commonData.references?.rutegard2025 && commonData.references?.beetsTan2018ESGAR ? `${commonData.references.rutegard2025} / ${commonData.references.beetsTan2018ESGAR}` : "Rutegård et al. (2025) / ESGAR 2016";
 
 
         if (lang === 'de') {
@@ -153,8 +142,8 @@ const publicationTextGenerator = (() => {
                             <li>ESGAR Konsensus Kriterien (2016), evaluiert durch Rutegård et al. (${esgarRef}): "${esgarDesc}". Dieses Set wurde primär auf das Direkt-OP-Kollektiv (Primärstaging) angewendet.</li>
                         </ul>
                     </li>
-                    <li><strong>Brute-Force optimierte T2-Kriterien:</strong> Mittels eines im Analyse-Tool implementierten Brute-Force-Algorithmus wurden für jedes der drei Hauptkollektive (Gesamt, Direkt OP, nRCT) diejenigen Kombinationen aus den fünf T2-Merkmalen und einer UND/ODER-Logik identifiziert, welche die primäre Zielmetrik dieser Studie – die <strong>${bfZielMetric}</strong> – maximieren. Die resultierenden, für jedes Kollektiv spezifisch optimierten Kriteriensets waren:
-                        ${bfCriteriaTextDe}
+                    <li><strong>Brute-Force optimierte T2-Kriterien:</strong> Mittels eines im Analyse-Tool implementierten Brute-Force-Algorithmus wurden für jedes der drei Hauptkollektive (Gesamt, Direkt OP, nRCT) diejenigen Kombinationen aus den fünf T2-Merkmalen und einer UND/ODER-Logik identifiziert, welche die primäre Zielmetrik dieser Studie – die <strong>${bfMetricDisplayName}</strong> – maximieren. Die resultierenden, für jedes Kollektiv spezifisch optimierten Kriteriensets waren:
+                        ${bfCriteriaText}
                     </li>
                     <li><strong>Im Analyse-Tool aktuell eingestellte T2-Kriterien:</strong> Für explorative Zwecke und zur Demonstration der Flexibilität des Analyse-Tools können benutzerdefinierte Kriterien konfiguriert werden. Für die vorliegende Publikation sind die unter Punkt 1 und 2 genannten Kriterien maßgeblich. Die aktuell im Tool eingestellten Kriterien zum Zeitpunkt der finalen Analyse waren: ${formattedAppliedCriteria}.</li>
                 </ol>
@@ -172,8 +161,8 @@ const publicationTextGenerator = (() => {
                             <li>ESGAR Consensus Criteria (2016), as evaluated by Rutegård et al. (${esgarRef}): "${esgarDesc}". This set was primarily applied to the upfront surgery cohort (primary staging).</li>
                         </ul>
                     </li>
-                    <li><strong>Brute-force optimized T2 criteria:</strong> Using a brute-force algorithm implemented in the analysis tool, combinations of the five T2 features and AND/OR logic that maximize the primary endpoint of this study – <strong>${bfZielMetric}</strong> – were identified for each of the three main cohorts (Overall, Upfront Surgery, nRCT). The resulting cohort-specific optimized criteria sets were:
-                        ${bfCriteriaTextEn}
+                    <li><strong>Brute-force optimized T2 criteria:</strong> Using a brute-force algorithm implemented in the analysis tool, combinations of the five T2 features and AND/OR logic that maximize the primary endpoint of this study – <strong>${bfMetricDisplayName}</strong> – were identified for each of the three main cohorts (Overall, Upfront Surgery, nRCT). The resulting cohort-specific optimized criteria sets were:
+                        ${bfCriteriaText}
                     </li>
                     <li><strong>Currently set T2 criteria in the analysis tool:</strong> For exploratory purposes and to demonstrate the flexibility of the analysis tool, user-defined criteria can be configured. For the present publication, the criteria mentioned under points 1 and 2 are authoritative. The criteria currently set in the tool at the time of final analysis were: ${formattedAppliedCriteria}.</li>
                 </ol>
@@ -196,9 +185,9 @@ const publicationTextGenerator = (() => {
 
     function getMethodenStatistischeAnalyseText(lang, commonData) {
         const alphaLevel = commonData.significanceLevel || 0.05;
-        const alphaText = formatNumber(alphaLevel, 2, '0.05', true).replace('.', lang === 'de' ? ',' : '.');
+        const alphaText = formatNumber(alphaLevel, 2, '0.05', true, lang);
         const bootstrapN = commonData.bootstrapReplications || 1000;
-        const appName = commonData.appName || "Analyse-Tool";
+        const appName = commonData.appName || "Analysis Tool";
         const appVersion = commonData.appVersion || "";
 
         if (lang === 'de') {
@@ -219,15 +208,20 @@ const publicationTextGenerator = (() => {
         const anzahlGesamt = commonData.nGesamt || pCharGesamt?.anzahlPatienten || 'N/A';
         const anzahlDirektOP = commonData.nDirektOP || allKollektivStats?.['direkt OP']?.deskriptiv?.anzahlPatienten || 'N/A';
         const anzahlNRCT = commonData.nNRCT || allKollektivStats?.nRCT?.deskriptiv?.anzahlPatienten || 'N/A';
-        const anteilNplusGesamt = formatPercent(pCharGesamt?.nStatus?.plus && pCharGesamt?.anzahlPatienten ? pCharGesamt.nStatus.plus / pCharGesamt.anzahlPatienten : NaN, 1);
+        const anteilNplusGesamt = formatPercent(pCharGesamt?.nStatus?.plus && pCharGesamt?.anzahlPatienten ? pCharGesamt.nStatus.plus / pCharGesamt.anzahlPatienten : NaN, 1, lang);
+        const alterMedianText = formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', false, lang);
+        const alterMinText = formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', false, lang);
+        const alterMaxText = formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', false, lang);
+        const rangeSeparator = lang === 'de' ? '–' : '–';
+        const anteilMaennerText = formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0, lang);
 
         if (lang === 'de') {
             return `
-                <p>Die Charakteristika der ${anzahlGesamt} in die Studie eingeschlossenen Patienten sind in Tabelle 1 zusammengefasst. Das Gesamtkollektiv bestand aus ${anzahlDirektOP} Patienten, die primär operiert wurden (Direkt-OP-Gruppe), und ${anzahlNRCT} Patienten, die eine neoadjuvante Radiochemotherapie erhielten (nRCT-Gruppe). Das mediane Alter im Gesamtkollektiv betrug ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', false)} Jahre (Range ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', false)}–${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', false)}), und ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} waren männlich. Ein histopathologisch gesicherter positiver Lymphknotenstatus (N+) fand sich bei ${pCharGesamt?.nStatus?.plus || 'N/A'} von ${anzahlGesamt} Patienten (${anteilNplusGesamt}) im Gesamtkollektiv. Die Verteilung von Alter und Geschlecht im Gesamtkollektiv ist in Abbildung 1a und 1b dargestellt.</p>
+                <p>Die Charakteristika der ${anzahlGesamt} in die Studie eingeschlossenen Patienten sind in Tabelle 1 zusammengefasst. Das Gesamtkollektiv bestand aus ${anzahlDirektOP} Patienten, die primär operiert wurden (Direkt-OP-Gruppe), und ${anzahlNRCT} Patienten, die eine neoadjuvante Radiochemotherapie erhielten (nRCT-Gruppe). Das mediane Alter im Gesamtkollektiv betrug ${alterMedianText} Jahre (Range ${alterMinText}${rangeSeparator}${alterMaxText}), und ${anteilMaennerText} waren männlich. Ein histopathologisch gesicherter positiver Lymphknotenstatus (N+) fand sich bei ${pCharGesamt?.nStatus?.plus || 'N/A'} von ${anzahlGesamt} Patienten (${anteilNplusGesamt}) im Gesamtkollektiv. Die Verteilung von Alter und Geschlecht im Gesamtkollektiv ist in Abbildung 1a und 1b dargestellt.</p>
             `;
         } else {
             return `
-                <p>The characteristics of the ${anzahlGesamt} patients included in the study are summarized in Table 1. The overall cohort consisted of ${anzahlDirektOP} patients who underwent upfront surgery (upfront surgery group) and ${anzahlNRCT} patients who received neoadjuvant chemoradiotherapy (nRCT group). The median age in the overall cohort was ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', true)} years (range ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', true)}–${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', true)}), and ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} were male. A histopathologically confirmed positive lymph node status (N+) was found in ${pCharGesamt?.nStatus?.plus || 'N/A'} of ${anzahlGesamt} patients (${anteilNplusGesamt}) in the overall cohort. The age and gender distribution in the overall cohort is shown in Figure 1a and 1b.</p>
+                <p>The characteristics of the ${anzahlGesamt} patients included in the study are summarized in Table 1. The overall cohort consisted of ${anzahlDirektOP} patients who underwent upfront surgery (upfront surgery group) and ${anzahlNRCT} patients who received neoadjuvant chemoradiotherapy (nRCT group). The median age in the overall cohort was ${alterMedianText} years (range ${alterMinText}${rangeSeparator}${alterMaxText}), and ${anteilMaennerText} were male. A histopathologically confirmed positive lymph node status (N+) was found in ${pCharGesamt?.nStatus?.plus || 'N/A'} of ${anzahlGesamt} patients (${anteilNplusGesamt}) in the overall cohort. The age and gender distribution in the overall cohort is shown in Figure 1a and 1b.</p>
             `;
         }
     }
@@ -249,15 +243,23 @@ const publicationTextGenerator = (() => {
         } else {
             return `
                 <p>The diagnostic performance of the Avocado Sign (AS) for predicting pathological N-status is detailed in Table 3 for the overall cohort and subgroups. In the overall cohort (n=${nGesamt}), the AS achieved a sensitivity of ${fCI(asGesamt?.sens, 1, true, 'en')}, a specificity of ${fCI(asGesamt?.spez, 1, true, 'en')}, a positive predictive value (PPV) of ${fCI(asGesamt?.ppv, 1, true, 'en')}, a negative predictive value (NPV) of ${fCI(asGesamt?.npv, 1, true, 'en')}, and an accuracy of ${fCI(asGesamt?.acc, 1, true, 'en')}. The AUC (Balanced Accuracy) was ${fCI(asGesamt?.auc, 3, false, 'en')}.</p>
-                <p>In the subgroup of patients undergoing upfront surgery (Direct OP group, n=${nDirektOP}), the AS showed a sensitivity of ${fCI(asDirektOP?.sens, 1, true, 'en')} and a specificity of ${fCI(asDirektOP?.spez, 1, true, 'en')} (AUC: ${fCI(asDirektOP?.auc, 3, false, 'en')}). For patients after nRCT (nRCT group, n=${nNRCT}), the sensitivity was ${fCI(asNRCT?.sens, 1, true, 'en')} and the specificity was ${fCI(asNRCT?.spez, 1, true, 'en')} (AUC: ${fCI(asNRCT?.auc, 3, false, 'en')}).</p>
+                <p>In the subgroup of patients undergoing upfront surgery (upfront surgery group, n=${nDirektOP}), the AS showed a sensitivity of ${fCI(asDirektOP?.sens, 1, true, 'en')} and a specificity of ${fCI(asDirektOP?.spez, 1, true, 'en')} (AUC: ${fCI(asDirektOP?.auc, 3, false, 'en')}). For patients after nRCT (nRCT group, n=${nNRCT}), the sensitivity was ${fCI(asNRCT?.sens, 1, true, 'en')} and the specificity was ${fCI(asNRCT?.spez, 1, true, 'en')} (AUC: ${fCI(asNRCT?.auc, 3, false, 'en')}).</p>
             `;
         }
     }
 
     function getErgebnisseLiteraturT2PerformanceText(lang, allKollektivStats, commonData) {
-        const kohData = allKollektivStats?.Gesamt?.gueteT2_literatur?.['koh_2008_morphology'];
-        const barbaroData = allKollektivStats?.nRCT?.gueteT2_literatur?.['barbaro_2024_restaging'];
-        const esgarData = allKollektivStats?.['direkt OP']?.gueteT2_literatur?.['rutegard_et_al_esgar'];
+        const kohStudySet = studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology');
+        const barbaroStudySet = studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging');
+        const esgarStudySet = studyT2CriteriaManager.getStudyCriteriaSetById('rutegard_et_al_esgar');
+
+        const kohData = allKollektivStats?.Gesamt?.gueteT2_literatur?.[kohStudySet?.id];
+        const barbaroData = allKollektivStats?.nRCT?.gueteT2_literatur?.[barbaroStudySet?.id];
+        const esgarData = allKollektivStats?.['direkt OP']?.gueteT2_literatur?.[esgarStudySet?.id];
+
+        const kohName = kohStudySet?.name || (lang === 'de' ? 'Koh et al. (2008)' : 'Koh et al. (2008)');
+        const barbaroName = barbaroStudySet?.name || (lang === 'de' ? 'Barbaro et al. (2024)' : 'Barbaro et al. (2024)');
+        const esgarName = esgarStudySet?.name || (lang === 'de' ? 'ESGAR 2016 (Rutegård et al.)' : 'ESGAR 2016 (Rutegård et al.)');
 
         const nGesamt = commonData.nGesamt || 'N/A';
         const nNRCT = commonData.nNRCT || 'N/A';
@@ -265,43 +267,53 @@ const publicationTextGenerator = (() => {
 
         if (lang === 'de') {
             let text = `<p>Die diagnostische Güte der evaluierten Literatur-basierten T2-Kriteriensets ist in Tabelle 4 zusammengefasst. `;
-            text += `Für das Kriterienset nach Koh et al. (2008), angewendet auf das Gesamtkollektiv (N=${nGesamt}), ergab sich eine Sensitivität von ${fCI(kohData?.sens, 1, true, 'de')} und eine Spezifität von ${fCI(kohData?.spez, 1, true, 'de')} (AUC ${fCI(kohData?.auc, 3, false, 'de')}). `;
-            text += `Die Kriterien nach Barbaro et al. (2024), angewendet auf das nRCT-Kollektiv (N=${nNRCT}), zeigten eine Sensitivität von ${fCI(barbaroData?.sens, 1, true, 'de')} und eine Spezifität von ${fCI(barbaroData?.spez, 1, true, 'de')} (AUC ${fCI(barbaroData?.auc, 3, false, 'de')}). `;
-            text += `Die ESGAR 2016 Kriterien (evaluiert durch Rutegård et al., 2025), angewendet auf das Direkt-OP-Kollektiv (N=${nDirektOP}), erreichten eine Sensitivität von ${fCI(esgarData?.sens, 1, true, 'de')} und eine Spezifität von ${fCI(esgarData?.spez, 1, true, 'de')} (AUC ${fCI(esgarData?.auc, 3, false, 'de')}).</p>`;
+            text += `Für das Kriterienset nach ${kohName}, angewendet auf das Gesamtkollektiv (N=${nGesamt}), ergab sich eine Sensitivität von ${fCI(kohData?.sens, 1, true, 'de')} und eine Spezifität von ${fCI(kohData?.spez, 1, true, 'de')} (AUC ${fCI(kohData?.auc, 3, false, 'de')}). `;
+            text += `Die Kriterien nach ${barbaroName}, angewendet auf das nRCT-Kollektiv (N=${nNRCT}), zeigten eine Sensitivität von ${fCI(barbaroData?.sens, 1, true, 'de')} und eine Spezifität von ${fCI(barbaroData?.spez, 1, true, 'de')} (AUC ${fCI(barbaroData?.auc, 3, false, 'de')}). `;
+            text += `Die ${esgarName} Kriterien, angewendet auf das Direkt-OP-Kollektiv (N=${nDirektOP}), erreichten eine Sensitivität von ${fCI(esgarData?.sens, 1, true, 'de')} und eine Spezifität von ${fCI(esgarData?.spez, 1, true, 'de')} (AUC ${fCI(esgarData?.auc, 3, false, 'de')}).</p>`;
             return text;
         } else {
             let text = `<p>The diagnostic performance of the evaluated literature-based T2 criteria sets is summarized in Table 4. `;
-            text += `For the criteria set according to Koh et al. (2008), applied to the overall cohort (n=${nGesamt}), a sensitivity of ${fCI(kohData?.sens, 1, true, 'en')} and a specificity of ${fCI(kohData?.spez, 1, true, 'en')} (AUC ${fCI(kohData?.auc, 3, false, 'en')}) were observed. `;
-            text += `The criteria by Barbaro et al. (2024), applied to the nRCT cohort (n=${nNRCT}), showed a sensitivity of ${fCI(barbaroData?.sens, 1, true, 'en')} and a specificity of ${fCI(barbaroData?.spez, 1, true, 'en')} (AUC ${fCI(barbaroData?.auc, 3, false, 'en')}). `;
-            text += `The ESGAR 2016 criteria (evaluated by Rutegård et al., 2025), applied to the upfront surgery cohort (n=${nDirektOP}), achieved a sensitivity of ${fCI(esgarData?.sens, 1, true, 'en')} and a specificity of ${fCI(esgarData?.spez, 1, true, 'en')} (AUC ${fCI(esgarData?.auc, 3, false, 'en')}).</p>`;
+            text += `For the criteria set according to ${kohName}, applied to the overall cohort (n=${nGesamt}), a sensitivity of ${fCI(kohData?.sens, 1, true, 'en')} and a specificity of ${fCI(kohData?.spez, 1, true, 'en')} (AUC ${fCI(kohData?.auc, 3, false, 'en')}) were observed. `;
+            text += `The criteria by ${barbaroName}, applied to the nRCT cohort (n=${nNRCT}), showed a sensitivity of ${fCI(barbaroData?.sens, 1, true, 'en')} and a specificity of ${fCI(barbaroData?.spez, 1, true, 'en')} (AUC ${fCI(barbaroData?.auc, 3, false, 'en')}). `;
+            text += `The ${esgarName} criteria, applied to the upfront surgery cohort (n=${nDirektOP}), achieved a sensitivity of ${fCI(esgarData?.sens, 1, true, 'en')} and a specificity of ${fCI(esgarData?.spez, 1, true, 'en')} (AUC ${fCI(esgarData?.auc, 3, false, 'en')}).</p>`;
             return text;
         }
     }
 
     function getErgebnisseOptimierteT2PerformanceText(lang, allKollektivStats, commonData) {
         const bfZielMetric = PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+        const bfMetricLabelKey = PUBLICATION_CONFIG.bruteForceMetricsForPublication.find(m => m.value === bfZielMetric)?.labelKey || bfZielMetric;
+        const bfMetricDisplayName = UI_TEXTS?.publikationTab?.bfMetrics?.[lang]?.[bfMetricLabelKey] || UI_TEXTS?.publikationTab?.bfMetrics?.de?.[bfMetricLabelKey] || bfZielMetric;
         let text = '';
 
         if (lang === 'de') {
-            text += `<p>Mittels eines Brute-Force-Algorithmus wurden für jedes der drei Kollektive spezifische T2-Kriteriensets identifiziert, welche die ${bfZielMetric} maximieren. Die Definition dieser optimierten Kriteriensets ist im Methodenteil (Abschnitt 2.5) und Tabelle 2 aufgeführt. Die diagnostische Güte dieser optimierten Sets ist in Tabelle 5 dargestellt.</p><ul>`;
+            text += `<p>Mittels eines Brute-Force-Algorithmus wurden für jedes der drei Kollektive spezifische T2-Kriteriensets identifiziert, welche die ${bfMetricDisplayName} maximieren. Die Definition dieser optimierten Kriteriensets ist im Methodenteil (Abschnitt 2.5) und Tabelle 2 aufgeführt. Die diagnostische Güte dieser optimierten Sets ist in Tabelle 5 dargestellt.</p><ul>`;
         } else {
-            text += `<p>Using a brute-force algorithm, specific T2 criteria sets maximizing ${bfZielMetric} were identified for each of the three cohorts. The definition of these optimized criteria sets is detailed in the Methods section (Section 2.5) and Table 2. The diagnostic performance of these optimized sets is presented in Table 5.</p><ul>`;
+            text += `<p>Using a brute-force algorithm, specific T2 criteria sets maximizing ${bfMetricDisplayName} were identified for each of the three cohorts. The definition of these optimized criteria sets is detailed in the Methods section (Section 2.5) and Table 2. The diagnostic performance of these optimized sets is presented in Table 5.</p><ul>`;
         }
 
         const kollektive = [
-            { id: 'Gesamt', nameDe: 'Gesamtkollektiv', nameEn: 'Overall cohort', n: commonData.nGesamt },
-            { id: 'direkt OP', nameDe: 'Direkt-OP-Kollektiv', nameEn: 'Upfront surgery cohort', n: commonData.nDirektOP },
-            { id: 'nRCT', nameDe: 'nRCT-Kollektiv', nameEn: 'nRCT cohort', n: commonData.nNRCT }
+            { id: 'Gesamt', n: commonData.nGesamt },
+            { id: 'direkt OP', n: commonData.nDirektOP },
+            { id: 'nRCT', n: commonData.nNRCT }
         ];
 
         kollektive.forEach(k => {
             const bfStats = allKollektivStats?.[k.id]?.gueteT2_bruteforce;
-            const name = lang === 'de' ? k.nameDe : k.nameEn;
+            const name = getKollektivDisplayName(k.id, lang);
             const nPat = k.n || 'N/A';
             if (bfStats && bfStats.matrix) {
-                text += `<li>Für das ${name} (N=${nPat}) erreichten die optimierten Kriterien eine Sensitivität von ${fCI(bfStats?.sens, 1, true, lang)}, eine Spezifität von ${fCI(bfStats?.spez, 1, true, lang)} und eine AUC von ${fCI(bfStats?.auc, 3, false, lang)}.</li>`;
+                 const liText = {
+                     de: `<li>Für das ${name} (N=${nPat}) erreichten die optimierten Kriterien eine Sensitivität von ${fCI(bfStats?.sens, 1, true, lang)}, eine Spezifität von ${fCI(bfStats?.spez, 1, true, lang)} und eine AUC von ${fCI(bfStats?.auc, 3, false, lang)}.</li>`,
+                     en: `<li>For the ${name} (n=${nPat}), the optimized criteria achieved a sensitivity of ${fCI(bfStats?.sens, 1, true, lang)}, a specificity of ${fCI(bfStats?.spez, 1, true, lang)}, and an AUC of ${fCI(bfStats?.auc, 3, false, lang)}.</li>`
+                 };
+                 text += liText[lang];
             } else {
-                text += `<li>Für das ${name} (N=${nPat}) konnten keine validen optimierten Kriterien für die Zielmetrik ${bfZielMetric} ermittelt oder deren Performance berechnet werden.</li>`;
+                 const liNoDataText = {
+                     de: `<li>Für das ${name} (N=${nPat}) konnten keine validen optimierten Kriterien für die Zielmetrik ${bfMetricDisplayName} ermittelt oder deren Performance berechnet werden.</li>`,
+                     en: `<li>For the ${name} (n=${nPat}), no valid optimized criteria could be determined for the target metric ${bfMetricDisplayName}, or their performance could not be calculated.</li>`
+                 };
+                text += liNoDataText[lang];
             }
         });
         text += `</ul>`;
@@ -311,6 +323,9 @@ const publicationTextGenerator = (() => {
     function getErgebnisseVergleichPerformanceText(lang, allKollektivStats, commonData) {
         let text = '';
         const bfZielMetric = PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+        const bfMetricLabelKey = PUBLICATION_CONFIG.bruteForceMetricsForPublication.find(m => m.value === bfZielMetric)?.labelKey || bfZielMetric;
+        const bfMetricDisplayName = UI_TEXTS?.publikationTab?.bfMetrics?.[lang]?.[bfMetricLabelKey] || UI_TEXTS?.publikationTab?.bfMetrics?.de?.[bfMetricLabelKey] || bfZielMetric;
+
 
         if (lang === 'de') {
             text += `<p>Der direkte statistische Vergleich der diagnostischen Güte zwischen dem Avocado Sign (AS) und den ausgewählten T2-Kriteriensets (Literatur-basiert und Brute-Force-optimiert) ist in Tabelle 6 zusammengefasst. Abbildung 2 visualisiert die Schlüsselmetriken vergleichend für die drei Kollektive.</p>`;
@@ -319,14 +334,15 @@ const publicationTextGenerator = (() => {
         }
 
         const kollektive = [
-            { id: 'Gesamt', nameDe: 'Gesamtkollektiv', nameEn: 'Overall cohort', litSetId: 'koh_2008_morphology', litSetName: 'Koh et al.' },
-            { id: 'direkt OP', nameDe: 'Direkt-OP-Kollektiv', nameEn: 'Upfront surgery cohort', litSetId: 'rutegard_et_al_esgar', litSetName: 'ESGAR 2016 (Rutegård et al.)' },
-            { id: 'nRCT', nameDe: 'nRCT-Kollektiv', nameEn: 'nRCT cohort', litSetId: 'barbaro_2024_restaging', litSetName: 'Barbaro et al.' }
+            { id: 'Gesamt', litSetId: 'koh_2008_morphology', litSetNameKey: 'koh2008' },
+            { id: 'direkt OP', litSetId: 'rutegard_et_al_esgar', litSetNameKey: 'rutegardESGAR' },
+            { id: 'nRCT', litSetId: 'barbaro_2024_restaging', litSetNameKey: 'barbaro2024' }
         ];
 
         kollektive.forEach(k => {
-            const name = lang === 'de' ? k.nameDe : k.nameEn;
+            const name = getKollektivDisplayName(k.id, lang);
             const statsAS = allKollektivStats?.[k.id]?.gueteAS;
+            const litSetName = UI_TEXTS?.publikationTab?.literatureCriteria?.[lang]?.[k.litSetNameKey]?.name || UI_TEXTS?.publikationTab?.literatureCriteria?.de?.[k.litSetNameKey]?.name || k.litSetNameKey;
             const statsLit = allKollektivStats?.[k.id]?.gueteT2_literatur?.[k.litSetId];
             const statsBF = allKollektivStats?.[k.id]?.gueteT2_bruteforce;
             const bfDef = allKollektivStats?.[k.id]?.bruteforce_definition;
@@ -334,67 +350,70 @@ const publicationTextGenerator = (() => {
             const vergleichASvsLit = allKollektivStats?.[k.id]?.[`vergleichASvsT2_literatur_${k.litSetId}`];
             const vergleichASvsBF = allKollektivStats?.[k.id]?.vergleichASvsT2_bruteforce;
 
-            let diffAucLitStr = formatNumber(vergleichASvsLit?.delong?.diffAUC, 3, 'N/A', true);
-            if (lang === 'de' && diffAucLitStr !== 'N/A' && typeof diffAucLitStr === 'string') {
-                diffAucLitStr = diffAucLitStr.replace('.', ',');
-            }
+            let diffAucLitStr = formatNumber(vergleichASvsLit?.delong?.diffAUC, 3, 'N/A', true, lang);
+            let diffAucBfStr = formatNumber(vergleichASvsBF?.delong?.diffAUC, 3, 'N/A', true, lang);
 
-            let diffAucBfStr = formatNumber(vergleichASvsBF?.delong?.diffAUC, 3, 'N/A', true);
-            if (lang === 'de' && diffAucBfStr !== 'N/A' && typeof diffAucBfStr === 'string') {
-                diffAucBfStr = diffAucBfStr.replace('.', ',');
-            }
-
+            const pvalMcNemarLit = getPValueText(vergleichASvsLit?.mcnemar?.pValue, lang);
+            const pvalDeLongLit = getPValueText(vergleichASvsLit?.delong?.pValue, lang);
+            const pvalMcNemarBF = getPValueText(vergleichASvsBF?.mcnemar?.pValue, lang);
+            const pvalDeLongBF = getPValueText(vergleichASvsBF?.delong?.pValue, lang);
 
             if (lang === 'de') {
                 text += `<h4>Vergleich im ${name}</h4>`;
                 if (statsAS && statsLit && vergleichASvsLit) {
-                    text += `<p>Im Vergleich des AS (AUC ${fCI(statsAS.auc, 3, false, 'de')}) mit den Kriterien nach ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'de')}) zeigte sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsLit.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${diffAucLitStr}.</p>`;
+                    text += `<p>Im Vergleich des AS (AUC ${fCI(statsAS.auc, 3, false, 'de')}) mit den Kriterien nach ${litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'de')}) zeigte sich für die Accuracy ein p-Wert von ${pvalMcNemarLit} (McNemar) und für die AUC ein p-Wert von ${pvalDeLongLit} (DeLong). Der Unterschied in der AUC betrug ${diffAucLitStr}.</p>`;
                 } else {
-                    text += `<p>Ein Vergleich zwischen AS und den Kriterien nach ${k.litSetName} konnte nicht vollständig durchgeführt werden (fehlende Daten).</p>`;
+                    text += `<p>Ein Vergleich zwischen AS und den Kriterien nach ${litSetName} konnte nicht vollständig durchgeführt werden (fehlende Daten).</p>`;
                 }
                 if (statsAS && statsBF && vergleichASvsBF && bfDef) {
-                    text += `<p>Gegenüber den für die ${bfDef.metricName} optimierten T2-Kriterien (AUC ${fCI(statsBF.auc, 3, false, 'de')}) ergab sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsBF.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${diffAucBfStr}.</p>`;
+                     const bfTargetMetricName = UI_TEXTS?.publikationTab?.bfMetrics?.[lang]?.[bfDef.metricName.replace(/ /g,'').toLowerCase()] || UI_TEXTS?.publikationTab?.bfMetrics?.de?.[bfDef.metricName.replace(/ /g,'').toLowerCase()] || bfDef.metricName;
+                    text += `<p>Gegenüber den für die ${bfTargetMetricName} optimierten T2-Kriterien (AUC ${fCI(statsBF.auc, 3, false, 'de')}) ergab sich für die Accuracy ein p-Wert von ${pvalMcNemarBF} (McNemar) und für die AUC ein p-Wert von ${pvalDeLongBF} (DeLong). Der Unterschied in der AUC betrug ${diffAucBfStr}.</p>`;
                 } else {
-                    text += `<p>Ein Vergleich zwischen AS und den Brute-Force-optimierten Kriterien konnte nicht vollständig durchgeführt werden (fehlende Daten oder keine BF-Optimierung für dieses Kollektiv für die Zielmetrik ${bfZielMetric}).</p>`;
+                    text += `<p>Ein Vergleich zwischen AS und den Brute-Force-optimierten Kriterien konnte nicht vollständig durchgeführt werden (fehlende Daten oder keine BF-Optimierung für dieses Kollektiv für die Zielmetrik ${bfMetricDisplayName}).</p>`;
                 }
-            } else { // lang === 'en'
+            } else {
                 text += `<h4>Comparison in the ${name}</h4>`;
                 if (statsAS && statsLit && vergleichASvsLit) {
-                    text += `<p>Comparing AS (AUC ${fCI(statsAS.auc, 3, false, 'en')}) with the criteria by ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'en')}), the p-value for accuracy was ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'en')} (McNemar) and for AUC was ${getPValueText(vergleichASvsLit.delong?.pValue, 'en')} (DeLong). The difference in AUC was ${diffAucLitStr}.</p>`;
+                    text += `<p>Comparing AS (AUC ${fCI(statsAS.auc, 3, false, 'en')}) with the criteria by ${litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'en')}), the p-value for accuracy was ${pvalMcNemarLit} (McNemar) and for AUC was ${pvalDeLongLit} (DeLong). The difference in AUC was ${diffAucLitStr}.</p>`;
                 } else {
-                    text += `<p>A full comparison between AS and the criteria by ${k.litSetName} could not be performed (missing data).</p>`;
+                    text += `<p>A full comparison between AS and the criteria by ${litSetName} could not be performed (missing data).</p>`;
                 }
                 if (statsAS && statsBF && vergleichASvsBF && bfDef) {
-                    text += `<p>Compared to the T2 criteria optimized for ${bfDef.metricName} (AUC ${fCI(statsBF.auc, 3, false, 'en')}), the p-value for accuracy was ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'en')} (McNemar) and for AUC was ${getPValueText(vergleichASvsBF.delong?.pValue, 'en')} (DeLong). The difference in AUC was ${diffAucBfStr}.</p>`;
+                    const bfTargetMetricName = UI_TEXTS?.publikationTab?.bfMetrics?.[lang]?.[bfDef.metricName.replace(/ /g,'').toLowerCase()] || UI_TEXTS?.publikationTab?.bfMetrics?.de?.[bfDef.metricName.replace(/ /g,'').toLowerCase()] || bfDef.metricName;
+                    text += `<p>Compared to the T2 criteria optimized for ${bfTargetMetricName} (AUC ${fCI(statsBF.auc, 3, false, 'en')}), the p-value for accuracy was ${pvalMcNemarBF} (McNemar) and for AUC was ${pvalDeLongBF} (DeLong). The difference in AUC was ${diffAucBfStr}.</p>`;
                 } else {
-                    text += `<p>A full comparison between AS and the brute-force optimized criteria could not be performed (missing data or no BF optimization for this cohort for the target metric ${bfZielMetric}).</p>`;
+                    text += `<p>A full comparison between AS and the brute-force optimized criteria could not be performed (missing data or no BF optimization for this cohort for the target metric ${bfMetricDisplayName}).</p>`;
                 }
             }
         });
         return text;
     }
 
-
-    function getSectionText(sectionId, lang, publicationData, kollektiveData, commonData) {
+    function getSectionText(sectionId, lang, publicationData, kollektiveData, commonData, appliedCriteria = null, appliedLogic = null) {
+        const effectiveLang = (UI_TEXTS?.kollektivDisplayNames?.[lang]) ? lang : 'de';
         switch (sectionId) {
-            case 'methoden_studienanlage': return getMethodenStudienanlageText(lang, commonData);
-            case 'methoden_patientenkollektiv': return getMethodenPatientenkollektivText(lang, publicationData, commonData);
-            case 'methoden_mrt_protokoll': return getMethodenMRTProtokollText(lang, commonData);
-            case 'methoden_as_definition': return getMethodenASDefinitionText(lang, commonData);
-            case 'methoden_t2_definition': return getMethodenT2DefinitionText(lang, commonData, kollektiveData);
-            case 'methoden_referenzstandard': return getMethodenReferenzstandardText(lang, commonData);
-            case 'methoden_statistische_analyse': return getMethodenStatistischeAnalyseText(lang, commonData);
-            case 'ergebnisse_patientencharakteristika': return getErgebnissePatientencharakteristikaText(lang, publicationData, commonData);
-            case 'ergebnisse_as_performance': return getErgebnisseASPerformanceText(lang, publicationData, commonData);
-            case 'ergebnisse_literatur_t2_performance': return getErgebnisseLiteraturT2PerformanceText(lang, publicationData, commonData);
-            case 'ergebnisse_optimierte_t2_performance': return getErgebnisseOptimierteT2PerformanceText(lang, publicationData, commonData);
-            case 'ergebnisse_vergleich_performance': return getErgebnisseVergleichPerformanceText(lang, publicationData, commonData);
-            default: return `<p class="text-warning">Text für Sektion '${sectionId}' (Sprache: ${lang}) noch nicht implementiert.</p>`;
+            case 'methoden_studienanlage': return getMethodenStudienanlageText(effectiveLang, commonData);
+            case 'methoden_patientenkollektiv': return getMethodenPatientenkollektivText(effectiveLang, publicationData, commonData);
+            case 'methoden_mrt_protokoll': return getMethodenMRTProtokollText(effectiveLang, commonData);
+            case 'methoden_as_definition': return getMethodenASDefinitionText(effectiveLang, commonData);
+            case 'methoden_t2_definition': return getMethodenT2DefinitionText(effectiveLang, commonData, kollektiveData, appliedCriteria, appliedLogic);
+            case 'methoden_referenzstandard': return getMethodenReferenzstandardText(effectiveLang, commonData);
+            case 'methoden_statistische_analyse': return getMethodenStatistischeAnalyseText(effectiveLang, commonData);
+            case 'ergebnisse_patientencharakteristika': return getErgebnissePatientencharakteristikaText(effectiveLang, publicationData, commonData);
+            case 'ergebnisse_as_performance': return getErgebnisseASPerformanceText(effectiveLang, publicationData, commonData);
+            case 'ergebnisse_literatur_t2_performance': return getErgebnisseLiteraturT2PerformanceText(effectiveLang, publicationData, commonData);
+            case 'ergebnisse_optimierte_t2_performance': return getErgebnisseOptimierteT2PerformanceText(effectiveLang, publicationData, commonData);
+            case 'ergebnisse_vergleich_performance': return getErgebnisseVergleichPerformanceText(effectiveLang, publicationData, commonData);
+            default:
+                 const fallbackTextKey = UI_TEXTS?.publikationTab?.sectionLabels?.[effectiveLang]?.[sectionId] || sectionId;
+                 const fallbackTextDe = `<p class="text-warning">Text für Sektion '${fallbackTextKey}' (Sprache: Deutsch) noch nicht implementiert.</p>`;
+                 const fallbackTextEn = `<p class="text-warning">Text for section '${fallbackTextKey}' (Language: English) not yet implemented.</p>`;
+                 return effectiveLang === 'en' ? fallbackTextEn : fallbackTextDe;
         }
     }
 
-    function getSectionTextAsMarkdown(sectionId, lang, publicationData, kollektiveData, commonData) {
-        const htmlContent = getSectionText(sectionId, lang, publicationData, kollektiveData, commonData);
+    function getSectionTextAsMarkdown(sectionId, lang, publicationData, kollektiveData, commonData, appliedCriteria = null, appliedLogic = null) {
+        const htmlContent = getSectionText(sectionId, lang, publicationData, kollektiveData, commonData, appliedCriteria, appliedLogic);
         let markdown = htmlContent
             .replace(/<p>/g, '\n')
             .replace(/<\/p>/g, '\n')
@@ -411,7 +430,10 @@ const publicationTextGenerator = (() => {
             .replace(/<li>/g, '\n* ')
             .replace(/<\/li>/g, '')
             .replace(/<br>/g, '\n')
-            .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/g, (match, p1) => `\n${'#'.repeat(parseInt(match[2] || (match[0].match(/<h(\d)/)?.[1] || 1) ))} ${p1}\n`)
+            .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/g, (match, p1) => {
+                 const headingLevel = parseInt(match.match(/<h(\d)/)?.[1] || '1');
+                 return `\n${'#'.repeat(headingLevel)} ${p1}\n`;
+            })
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
             .replace(/&amp;/g, '&')
@@ -420,7 +442,6 @@ const publicationTextGenerator = (() => {
             .trim();
         return markdown;
     }
-
 
     return Object.freeze({
         getSectionText,
