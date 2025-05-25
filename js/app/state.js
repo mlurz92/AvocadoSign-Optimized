@@ -13,7 +13,7 @@ const state = (() => {
         currentStatsKollektiv2: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2,
         currentPresentationView: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW,
         currentPresentationStudyId: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID,
-        activeTabId: 'daten-tab'
+        activeTabId: 'daten-tab' // Default active tab
     };
 
     function init() {
@@ -27,12 +27,13 @@ const state = (() => {
             currentStatsKollektiv2: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2) ?? defaultState.currentStatsKollektiv2,
             currentPresentationView: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW) ?? defaultState.currentPresentationView,
             currentPresentationStudyId: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID) ?? defaultState.currentPresentationStudyId,
-            datenTableSort: cloneDeep(defaultState.datenTableSort),
-            auswertungTableSort: cloneDeep(defaultState.auswertungTableSort),
-            activeTabId: defaultState.activeTabId
+            datenTableSort: cloneDeep(defaultState.datenTableSort), // Sort states are not typically persisted
+            auswertungTableSort: cloneDeep(defaultState.auswertungTableSort), // Sort states are not typically persisted
+            activeTabId: defaultState.activeTabId // Active tab is transient for the session
         };
-        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) {
-            localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
+        // Cleanup for any old keys if necessary, e.g., from previous versions
+        if (localStorage.getItem('currentMethodenLang')) { // Example of an old key
+            localStorage.removeItem('currentMethodenLang');
         }
         console.log("State Manager initialisiert mit:", currentState);
     }
@@ -170,8 +171,10 @@ const state = (() => {
             currentState.currentPresentationView = newView;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW, currentState.currentPresentationView);
             if (newView === 'as-pur') {
+                // When switching to 'as-pur', reset the study ID for comparison if it was set
                 setCurrentPresentationStudyId(null);
             } else if (!currentState.currentPresentationStudyId && newView === 'as-vs-t2') {
+                // If switching to 'as-vs-t2' and no study ID is set, default to applied criteria
                 setCurrentPresentationStudyId(APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID);
             }
             return true;
@@ -184,6 +187,7 @@ const state = (() => {
     }
 
     function setCurrentPresentationStudyId(newStudyId) {
+        // Allow null to be explicitly set to clear the selection
         const newStudyIdValue = newStudyId === undefined ? null : newStudyId;
         if (currentState.currentPresentationStudyId !== newStudyIdValue) {
             currentState.currentPresentationStudyId = newStudyIdValue;
@@ -200,6 +204,7 @@ const state = (() => {
     function setActiveTabId(newTabId) {
         if (typeof newTabId === 'string' && currentState.activeTabId !== newTabId) {
             currentState.activeTabId = newTabId;
+            // Active tab is typically not persisted to localStorage as it's session-specific
             return true;
         }
         return false;
