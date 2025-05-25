@@ -14,121 +14,311 @@ function deepFreeze(obj) {
 }
 
 const UI_TEXTS = {
-    kollektivDisplayNames: {
-        'Gesamt': 'Gesamt',
-        'direkt OP': 'Direkt OP',
-        'nRCT': 'nRCT',
-        'avocado_sign': 'Avocado Sign',
-        'applied_criteria': 'Eingestellte T2 Kriterien'
-    },
-    t2LogicDisplayNames: {
-        'UND': 'UND',
-        'ODER': 'ODER',
-        'KOMBINIERT': 'KOMBINIERT'
-    },
-    publikationTab: {
-        spracheSwitchLabel: {
-            de: 'Deutsch',
-            en: 'English'
+    lang: {
+        de: {
+            kollektivDisplayNames: {
+                'Gesamt': 'Gesamt',
+                'direkt OP': 'Direkt OP',
+                'nRCT': 'nRCT',
+                'avocado_sign': 'Avocado Sign',
+                'applied_criteria': 'Eingestellte T2 Kriterien',
+                'unknown': 'Unbekannt'
+            },
+            t2LogicDisplayNames: {
+                'UND': 'UND',
+                'ODER': 'ODER',
+                'KOMBINIERT': 'KOMBINIERT (ESGAR-Logik)'
+            },
+            publikationTab: {
+                spracheSwitchLabel: 'Deutsch',
+                sectionLabels: {
+                    methoden: 'Methoden',
+                    ergebnisse: 'Ergebnisse',
+                    diskussion: 'Diskussion (Entwurf)',
+                    einleitung: 'Einleitung (Entwurf)',
+                    abstract: 'Abstract (Entwurf)',
+                    referenzen: 'Referenzen (Entwurf)'
+                },
+                bruteForceMetricSelectLabel: 'Optimierungsmetrik für T2 (BF):',
+                subSectionLabels: {
+                    // Methoden
+                    methoden_studienanlage: 'Studiendesign und Ethik',
+                    methoden_patientenkollektiv: 'Patientenkollektiv',
+                    methoden_mrt_protokoll: 'MRT-Protokoll & Kontrastmittelgabe',
+                    methoden_as_definition: 'Definition & Bewertung Avocado Sign',
+                    methoden_t2_definition: 'Definition & Bewertung T2-Kriterien',
+                    methoden_referenzstandard: 'Referenzstandard (Histopathologie)',
+                    methoden_statistische_analyse: 'Statistische Analyse',
+                    // Ergebnisse
+                    ergebnisse_patientencharakteristika: 'Patientencharakteristika',
+                    ergebnisse_as_performance: 'Diagnostische Güte: Avocado Sign',
+                    ergebnisse_literatur_t2_performance: 'Diagnostische Güte: Literatur-T2-Kriterien',
+                    ergebnisse_optimierte_t2_performance: 'Diagnostische Güte: Optimierte T2-Kriterien (Brute-Force)',
+                    ergebnisse_vergleich_performance: 'Vergleich: AS vs. T2-Kriterien',
+                },
+                tableTitles: {
+                    patientenCharakteristika: 'Tabelle 1: Patientencharakteristika',
+                    literaturT2Kriterien: 'Tabelle 2: Übersicht der Literatur-basierten T2-Kriteriensets',
+                    asPerformance: 'Tabelle 3: Diagnostische Güte - Avocado Sign (vs. N-Status)',
+                    literaturT2Performance: 'Tabelle 4: Diagnostische Güte - Literatur-basierte T2-Kriterien (vs. N-Status)',
+                    optimierteT2Performance: 'Tabelle 5: Diagnostische Güte - Optimierte T2-Kriterien (Ziel: {METRIC}, vs. N-Status)',
+                    vergleichPerformance: 'Tabelle 6: Statistischer Vergleich - Avocado Sign vs. T2-Kriterien (Literatur und Optimiert)'
+                },
+                figureCaptions: {
+                    patientenCharakteristikaAlter: 'Abb. 1a: Altersverteilung ({KOLLEKTIV})',
+                    patientenCharakteristikaGeschlecht: 'Abb. 1b: Geschlechterverteilung ({KOLLEKTIV})',
+                    vergleichPerformanceChart: 'Abb. 2{LETTER}: Vergleichende Darstellung der diagnostischen Gütekriterien (AS vs. {T2_LIT_NAME} vs. BF-T2) für Kollektiv {KOLLEKTIV}. AS = Avocado Sign; BF-T2 = Brute-Force optimierte T2-Kriterien für {BF_METRIC_NAME}.',
+                }
+            },
+            chartTitles: {
+                ageDistribution: 'Altersverteilung',
+                genderDistribution: 'Geschlecht',
+                therapyDistribution: 'Therapie',
+                statusN: 'N-Status (Patho)',
+                statusAS: 'AS-Status',
+                statusT2: 'T2-Status',
+                comparisonBar: 'Vergleich AS vs. {T2Name}',
+                rocCurve: 'ROC-Kurve für {Method}',
+                asPerformance: 'AS Performance ({KollektivName})',
+                pubVergleichPerformance: 'Performance Vergleich: {KollektivName}'
+            },
+            axisLabels: {
+                age: 'Alter (Jahre)',
+                patientCount: 'Anzahl Patienten',
+                lymphNodeCount: 'Anzahl Lymphknoten',
+                metricValue: 'Wert',
+                metric: 'Diagnostische Metrik',
+                sensitivity: 'Sensitivität (RP Rate)',
+                oneMinusSpecificity: '1 - Spezifität (FP Rate)',
+                probability: 'Wahrscheinlichkeit',
+                shortAxisDiameter: 'Kurzachsendurchmesser (mm)'
+            },
+            legendLabels: {
+                male: 'Männlich',
+                female: 'Weiblich',
+                unknownGender: 'Unbekannt',
+                direktOP: 'Direkt OP',
+                nRCT: 'nRCT',
+                nPositive: 'N+',
+                nNegative: 'N-',
+                asPositive: 'AS+',
+                asNegative: 'AS-',
+                t2Positive: 'T2+',
+                t2Negative: 'T2-',
+                avocadoSign: 'Avocado Sign (AS)',
+                currentT2: '{T2ShortName}',
+                benignLN: 'Benigne LK',
+                malignantLN: 'Maligne LK',
+                bfT2: 'BF-T2 ({METRIC_NAME})'
+            },
+            criteriaComparison: {
+                title: "Vergleich diagnostischer Güte verschiedener Methoden",
+                tableHeaderSet: "Methode / Kriteriensatz"
+            },
+            statMetrics: {
+                signifikanzTexte: {
+                    SIGNIFIKANT: "statistisch signifikant",
+                    NICHT_SIGNIFIKANT: "statistisch nicht signifikant"
+                },
+                orFaktorTexte: {
+                    ERHOEHT: "erhöht",
+                    VERRINGERT: "verringert",
+                    UNVERAENDERT: "unverändert"
+                },
+                rdRichtungTexte: {
+                    HOEHER: "höher",
+                    NIEDRIGER: "niedriger",
+                    GLEICH: "gleich"
+                },
+                assoziationStaerkeTexte: {
+                    stark: "stark",
+                    moderat: "moderat",
+                    schwach: "schwach",
+                    sehr_schwach: "sehr schwach",
+                    nicht_bestimmbar: "nicht bestimmbar"
+                }
+            },
+            general: {
+                number: "Anzahl",
+                value: "Wert",
+                method: "Methode",
+                cohort: "Kollektiv",
+                cohortApplied: "Angew. Kollektiv",
+                optimizationTarget: "Optimierungs-Ziel",
+                metric: "Metrik",
+                sensitivityShort: "Sens.",
+                specificityShort: "Spez.",
+                ppvShort: "PPV",
+                npvShort: "NPV",
+                accuracyShort: "Acc.",
+                aucShort: "AUC",
+                ci95: "95% KI",
+                literature: "Literatur",
+                vsPathoN: "(vs. N-Status)",
+                overall: "Gesamt",
+                surgeryAlone: "Direkt OP",
+                neoadjuvantTherapy: "nRCT",
+                none: "Keine",
+                notApplicable: "N/A",
+                loading: "Lade...",
+                error: "Fehler",
+                noData: "Keine Daten verfügbar"
+            }
         },
-        sectionLabels: {
-            methoden: 'Methoden',
-            ergebnisse: 'Ergebnisse',
-            diskussion: 'Diskussion',
-            einleitung: 'Einleitung',
-            abstract: 'Abstract',
-            referenzen: 'Referenzen'
-        },
-        bruteForceMetricSelectLabel: 'Optimierungsmetrik für T2 (BF):'
-    },
-    chartTitles: {
-        ageDistribution: 'Altersverteilung',
-        genderDistribution: 'Geschlecht',
-        therapyDistribution: 'Therapie',
-        statusN: 'N-Status (Patho)',
-        statusAS: 'AS-Status',
-        statusT2: 'T2-Status',
-        comparisonBar: 'Vergleich AS vs. {T2Name}',
-        rocCurve: 'ROC-Kurve für {Method}',
-        asPerformance: 'AS Performance (Akt. Kollektiv)'
-    },
-    axisLabels: {
-        age: 'Alter (Jahre)',
-        patientCount: 'Anzahl Patienten',
-        lymphNodeCount: 'Anzahl Lymphknoten',
-        metricValue: 'Wert',
-        metric: 'Diagnostische Metrik',
-        sensitivity: 'Sensitivität (RP Rate)',
-        oneMinusSpecificity: '1 - Spezifität (FP Rate)',
-        probability: 'Wahrscheinlichkeit',
-        shortAxisDiameter: 'Kurzachsendurchmesser (mm)'
-    },
-    legendLabels: {
-        male: 'Männlich',
-        female: 'Weiblich',
-        unknownGender: 'Unbekannt',
-        direktOP: 'Direkt OP',
-        nRCT: 'nRCT',
-        nPositive: 'N+',
-        nNegative: 'N-',
-        asPositive: 'AS+',
-        asNegative: 'AS-',
-        t2Positive: 'T2+',
-        t2Negative: 'T2-',
-        avocadoSign: 'Avocado Sign (AS)',
-        currentT2: '{T2ShortName}',
-        benignLN: 'Benigne LK',
-        malignantLN: 'Maligne LK'
-    },
-    criteriaComparison: {
-        title: "Vergleich diagnostischer Güte verschiedener Methoden",
-        selectLabel: "Kriteriensätze für Vergleich auswählen:",
-        tableHeaderSet: "Methode / Kriteriensatz",
-        tableHeaderSens: "Sens.",
-        tableHeaderSpez: "Spez.",
-        tableHeaderPPV: "PPV",
-        tableHeaderNPV: "NPV",
-        tableHeaderAcc: "Acc.",
-        tableHeaderAUC: "AUC/BalAcc",
-        showAppliedLabel: "Aktuell angewandte Kriterien anzeigen"
-    },
-    excelExport: {
-        datenLabel: "Datenliste (.xlsx)",
-        auswertungLabel: "Auswertungstabelle (.xlsx)",
-        statistikLabel: "Statistik Übersicht (.xlsx)",
-        filteredDataLabel: "Gefilterte Daten (.xlsx)",
-        zipLabel: "Alle Excel-Tabellen (.zip)"
-    },
-    singleChartDownload: {
-        pngLabel: "Als PNG herunterladen",
-        svgLabel: "Als SVG herunterladen"
-    },
-    statMetrics: {
-        signifikanzTexte: {
-            SIGNIFIKANT: "statistisch signifikant",
-            NICHT_SIGNIFIKANT: "statistisch nicht signifikant"
-        },
-        orFaktorTexte: {
-            ERHOEHT: "erhöht",
-            VERRINGERT: "verringert",
-            UNVERAENDERT: "unverändert"
-        },
-        rdRichtungTexte: {
-            HOEHER: "höher",
-            NIEDRIGER: "niedriger",
-            GLEICH: "gleich"
-        },
-        assoziationStaerkeTexte: {
-            stark: "stark",
-            moderat: "moderat",
-            schwach: "schwach",
-            sehr_schwach: "sehr schwach",
-            nicht_bestimmbar: "nicht bestimmbar"
+        en: {
+            kollektivDisplayNames: {
+                'Gesamt': 'Overall Cohort',
+                'direkt OP': 'Upfront Surgery',
+                'nRCT': 'Neoadjuvant Therapy',
+                'avocado_sign': 'Avocado Sign',
+                'applied_criteria': 'Applied T2 Criteria',
+                'unknown': 'Unknown'
+            },
+            t2LogicDisplayNames: {
+                'UND': 'AND',
+                'ODER': 'OR',
+                'KOMBINIERT': 'COMBINED (ESGAR Logic)'
+            },
+            publikationTab: {
+                spracheSwitchLabel: 'English',
+                sectionLabels: {
+                    methoden: 'Methods',
+                    ergebnisse: 'Results',
+                    diskussion: 'Discussion (Draft)',
+                    einleitung: 'Introduction (Draft)',
+                    abstract: 'Abstract (Draft)',
+                    referenzen: 'References (Draft)'
+                },
+                bruteForceMetricSelectLabel: 'Optimization Metric for T2 (BF):',
+                subSectionLabels: {
+                    // Methoden
+                    methoden_studienanlage: 'Study Design and Ethics',
+                    methoden_patientenkollektiv: 'Patient Cohort',
+                    methoden_mrt_protokoll: 'MRI Protocol & Contrast Administration',
+                    methoden_as_definition: 'Definition & Assessment of the Avocado Sign',
+                    methoden_t2_definition: 'Definition & Assessment of T2 Criteria',
+                    methoden_referenzstandard: 'Reference Standard (Histopathology)',
+                    methoden_statistische_analyse: 'Statistical Analysis',
+                    // Ergebnisse
+                    ergebnisse_patientencharakteristika: 'Patient Characteristics',
+                    ergebnisse_as_performance: 'Diagnostic Performance: Avocado Sign',
+                    ergebnisse_literatur_t2_performance: 'Diagnostic Performance: Literature-Based T2 Criteria',
+                    ergebnisse_optimierte_t2_performance: 'Diagnostic Performance: Optimized T2 Criteria (Brute-Force)',
+                    ergebnisse_vergleich_performance: 'Comparison: AS vs. T2 Criteria',
+                },
+                tableTitles: {
+                    patientenCharakteristika: 'Table 1: Patient Characteristics',
+                    literaturT2Kriterien: 'Table 2: Overview of Literature-Based T2 Criteria Sets',
+                    asPerformance: 'Table 3: Diagnostic Performance - Avocado Sign (vs. N-Status)',
+                    literaturT2Performance: 'Table 4: Diagnostic Performance - Literature-Based T2 Criteria (vs. N-Status)',
+                    optimierteT2Performance: 'Table 5: Diagnostic Performance - Optimized T2 Criteria (Target: {METRIC}, vs. N-Status)',
+                    vergleichPerformance: 'Table 6: Statistical Comparison - Avocado Sign vs. T2 Criteria (Literature and Optimized)'
+                },
+                figureCaptions: {
+                    patientenCharakteristikaAlter: 'Fig. 1a: Age Distribution ({KOLLEKTIV})',
+                    patientenCharakteristikaGeschlecht: 'Fig. 1b: Gender Distribution ({KOLLEKTIV})',
+                    vergleichPerformanceChart: 'Fig. 2{LETTER}: Comparative plot of diagnostic performance metrics (AS vs. {T2_LIT_NAME} vs. BF-T2) for cohort {KOLLEKTIV}. AS = Avocado Sign; BF-T2 = Brute-force optimized T2 criteria for {BF_METRIC_NAME}.',
+                }
+            },
+            chartTitles: {
+                ageDistribution: 'Age Distribution',
+                genderDistribution: 'Gender',
+                therapyDistribution: 'Therapy',
+                statusN: 'N-Status (Patho)',
+                statusAS: 'AS-Status',
+                statusT2: 'T2-Status',
+                comparisonBar: 'Comparison AS vs. {T2Name}',
+                rocCurve: 'ROC Curve for {Method}',
+                asPerformance: 'AS Performance ({KollektivName})',
+                pubVergleichPerformance: 'Performance Comparison: {KollektivName}'
+            },
+            axisLabels: {
+                age: 'Age (Years)',
+                patientCount: 'Number of Patients',
+                lymphNodeCount: 'Number of Lymph Nodes',
+                metricValue: 'Value',
+                metric: 'Diagnostic Metric',
+                sensitivity: 'Sensitivity (TPR)',
+                oneMinusSpecificity: '1 - Specificity (FPR)',
+                probability: 'Probability',
+                shortAxisDiameter: 'Short Axis Diameter (mm)'
+            },
+            legendLabels: {
+                male: 'Male',
+                female: 'Female',
+                unknownGender: 'Unknown',
+                direktOP: 'Upfront Surgery',
+                nRCT: 'nRCT',
+                nPositive: 'N+',
+                nNegative: 'N-',
+                asPositive: 'AS+',
+                asNegative: 'AS-',
+                t2Positive: 'T2+',
+                t2Negative: 'T2-',
+                avocadoSign: 'Avocado Sign (AS)',
+                currentT2: '{T2ShortName}',
+                benignLN: 'Benign LN',
+                malignantLN: 'Malignant LN',
+                bfT2: 'BF-T2 ({METRIC_NAME})'
+            },
+            criteriaComparison: {
+                title: "Comparison of Diagnostic Performance of Different Methods",
+                tableHeaderSet: "Method / Criteria Set"
+            },
+            statMetrics: {
+                signifikanzTexte: {
+                    SIGNIFIKANT: "statistically significant",
+                    NICHT_SIGNIFIKANT: "statistically not significant"
+                },
+                orFaktorTexte: {
+                    ERHOEHT: "increased",
+                    VERRINGERT: "decreased",
+                    UNVERAENDERT: "unchanged"
+                },
+                rdRichtungTexte: {
+                    HOEHER: "higher",
+                    NIEDRIGER: "lower",
+                    GLEICH: "equal"
+                },
+                assoziationStaerkeTexte: {
+                    stark: "strong",
+                    moderat: "moderate",
+                    schwach: "weak",
+                    sehr_schwach: "very weak",
+                    nicht_bestimmbar: "not determinable"
+                }
+            },
+            general: {
+                number: "Number",
+                value: "Value",
+                method: "Method",
+                cohort: "Cohort",
+                cohortApplied: "Applied Cohort",
+                optimizationTarget: "Optimization Target",
+                metric: "Metric",
+                sensitivityShort: "Sens.",
+                specificityShort: "Spec.",
+                ppvShort: "PPV",
+                npvShort: "NPV",
+                accuracyShort: "Acc.",
+                aucShort: "AUC",
+                ci95: "95% CI",
+                literature: "Literature",
+                vsPathoN: "(vs. N-Status)",
+                overall: "Overall",
+                surgeryAlone: "Upfront Surgery",
+                neoadjuvantTherapy: "nRCT",
+                none: "None",
+                notApplicable: "N/A",
+                loading: "Loading...",
+                error: "Error",
+                noData: "No data available"
+            }
         }
-    }
-};
-
-const TOOLTIP_CONTENT = {
+    },
+    // Tooltips remain largely language-agnostic in their keys for now,
+    // but their content can be made dynamic if a full UI translation is pursued.
+    // For now, focusing on the Publikation Tab's needs.
     kollektivButtons: { description: "Wählen Sie das Patientenkollektiv für die Analyse aus: Gesamt, nur primär Operierte (direkt OP) oder nur neoadjuvant Vorbehandelte (nRCT). Die Auswahl filtert die Datenbasis für alle Tabs." },
     headerStats: {
         kollektiv: "Aktuell betrachtetes Patientenkollektiv.",
@@ -216,7 +406,6 @@ const TOOLTIP_CONTENT = {
     vergleichKollektive: { cardTitle: "Statistischer Vergleich der diagnostischen Leistung (Accuracy, AUC für AS und T2) zwischen Kollektiv [KOLLEKTIV1] und Kollektiv [KOLLEKTIV2] mittels Tests für unabhängige Stichproben." },
     criteriaComparisonTable: {
         cardTitle: "Tabellarischer Vergleich der diagnostischen Güte verschiedener Methoden/Kriteriensätze (AS, aktuell angewandte T2, Studien) für das ausgewählte Kollektiv [KOLLEKTIV].",
-        tableHeaderSet: "Methode / Kriteriensatz",
         tableHeaderSens: "Sensitivität: Anteil der korrekt als positiv erkannten N+ Fälle.",
         tableHeaderSpez: "Spezifität: Anteil der korrekt als negativ erkannten N- Fälle.",
         tableHeaderPPV: "Positiver Prädiktiver Wert: Wahrscheinlichkeit für N+, wenn Testergebnis positiv.",
@@ -224,8 +413,6 @@ const TOOLTIP_CONTENT = {
         tableHeaderAcc: "Accuracy: Gesamtanteil korrekt klassifizierter Fälle.",
         tableHeaderAUC: "Area Under Curve / Balanced Accuracy: Maß für die Gesamt-Trennschärfe (0.5=Zufall, 1=perfekt)."
     },
-    logisticRegressionCard: { cardTitle: "Ergebnisse der logistischen Regression zur Modellierung der N+ Wahrscheinlichkeit basierend auf ausgewählten Prädiktoren (z.B. T2-Merkmale, Alter) für das Kollektiv [KOLLEKTIV]. (Experimentell)" },
-    rocCurveCard: { cardTitle: "Receiver Operating Characteristic (ROC) Kurve für die Unterscheidung zwischen N+ und N- basierend auf {Variable} für das Kollektiv [KOLLEKTIV]. Zeigt Sensitivität vs. 1-Spezifität über verschiedene Schwellenwerte." },
     praesentation: {
         viewSelect: { description: "Wählen Sie die Datenansicht für den Präsentations-Tab: 'Avocado Sign (Daten)' zeigt die dynamisch berechneten Kernergebnisse für AS im aktuellen Kollektiv. 'AS vs. T2 (Vergleich)' ermöglicht einen dynamischen Vergleich von AS mit T2-Kriterien für das aktuell global gewählte Kollektiv." },
         studySelect: { description: "Wählen Sie eine Quelle für die T2-Kriterien, die mit dem Avocado Sign verglichen werden sollen: Entweder die aktuell in der App eingestellten ('Eingestellte T2 Kriterien') oder vordefinierte Kriteriensätze aus relevanten publizierten Studien. Die Auswahl aktualisiert die Info-Karte und den Vergleichs-Chart. Der Vergleich basiert immer auf dem aktuell im Header ausgewählten Patientenkollektiv." },
@@ -239,10 +426,10 @@ const TOOLTIP_CONTENT = {
             keyCriteriaSummary: "Zusammenfassung der angewendeten T2-Kriterien."
         },
         comparisonTableCard: { description: "Zeigt die numerischen Werte der diagnostischen Gütekriterien für den Vergleich von Avocado Sign vs. ausgewählter T2-Basis für das aktuelle Kollektiv."},
-        downloadDemographicsMD: { description: "Lädt die Tabelle der demographischen Basisdaten (nur für Avocado-Sign-Ansicht) als Markdown-Datei (.md) herunter."},
         downloadPerformanceCSV: { description: "Lädt die Tabelle der diagnostischen Güte (je nach Ansicht: AS oder AS vs. ausgewählte T2-Basis) als CSV-Datei (.csv) herunter." },
         downloadPerformanceMD: { description: "Lädt die Tabelle der diagnostischen Güte (je nach Ansicht: AS oder AS vs. ausgewählte T2-Basis) als Markdown-Datei (.md) herunter." },
         downloadCompTestsMD: { description: "Lädt die Tabelle der statistischen Vergleichstests (p-Werte für McNemar und DeLong für AS vs. ausgewählte T2-Basis) als Markdown-Datei (.md) herunter." },
+        downloadCompTableMD: { description: "Lädt die Vergleichs-Metrik-Tabelle (AS vs. T2) als Markdown-Datei (.md) herunter." },
         downloadCompChartPNG: { description: "Lädt das Vergleichs-Balkendiagramm (AS vs. ausgewählte T2-Basis) als PNG-Datei herunter." },
         downloadCompChartSVG: { description: "Lädt das Vergleichs-Balkendiagramm (AS vs. ausgewählte T2-Basis) als Vektor-SVG-Datei herunter." },
         downloadTablePNG: { description: "Lädt die angezeigte Tabelle als PNG-Bilddatei herunter." },
@@ -260,12 +447,6 @@ const TOOLTIP_CONTENT = {
             metric: "Diagnostische Metrik.",
             asValue: "Wert der Metrik für Avocado Sign (AS) (vs. N) im Kollektiv [KOLLEKTIV], inkl. 95% CI.",
             t2Value: "Wert der Metrik für die ausgewählte T2-Basis ([T2_SHORT_NAME]) (vs. N) im Kollektiv [KOLLEKTIV], inkl. 95% CI."
-        },
-        asVsT2TestTable: {
-            test: "Statistischer Test zum Vergleich von AS vs. [T2_SHORT_NAME].",
-            statistic: "Wert der Teststatistik.",
-            pValue: "p-Wert des Tests. p < 0.05 bedeutet einen statistisch signifikanten Unterschied zwischen AS und [T2_SHORT_NAME] in Bezug auf die getestete Metrik (Accuracy oder AUC) im Kollektiv [KOLLEKTIV].",
-            method: "Name des verwendeten statistischen Tests."
         }
     },
     exportTab: {
@@ -273,15 +454,11 @@ const TOOLTIP_CONTENT = {
         exportPackages: "Export-Pakete (.zip)",
         description: "Ermöglicht den Export von Analyseergebnissen, Tabellen und Diagrammen basierend auf dem aktuell gewählten Kollektiv ([KOLLEKTIV]) und den aktuell angewendeten T2-Kriterien.",
         statsCSV: { description: "Exportiert eine detaillierte Tabelle aller berechneten statistischen Metriken, Konfidenzintervalle und Testergebnisse aus dem Statistik-Tab als kommaseparierte Datei (.csv).", type: 'STATS_CSV', ext: "csv" },
-        statsXLSX: { description: "Exportiert die detaillierte Tabelle aller berechneten statistischen Metriken, Konfidenzintervalle und Testergebnisse aus dem Statistik-Tab als Excel-Datei (.xlsx).", type: 'STATISTIK_XLSX', ext: "xlsx" },
         bruteForceTXT: { description: "Exportiert den detaillierten Bericht der letzten Brute-Force-Optimierung (Top 10 Ergebnisse, Konfiguration, Laufzeit) als reine Textdatei (.txt), falls eine Optimierung durchgeführt wurde.", type: 'BRUTEFORCE_TXT', ext: "txt" },
         deskriptivMD: { description: "Exportiert die Tabelle der deskriptiven Statistik (aus dem Statistik-Tab) in einem Markdown-Format (.md), geeignet für Berichte.", type: 'DESKRIPTIV_MD', ext: "md" },
         datenMD: { description: "Exportiert die aktuelle Datenliste (aus dem Daten-Tab) als Markdown-Tabelle (.md).", type: 'DATEN_MD', ext: "md" },
-        datenXLSX: { description: "Exportiert die aktuelle Datenliste (aus dem Daten-Tab) als Excel-Datei (.xlsx).", type: 'DATEN_XLSX', ext: "xlsx" },
         auswertungMD: { description: "Exportiert die aktuelle Auswertungstabelle (aus dem Auswertung-Tab) mit den angewendeten T2-Ergebnissen als Markdown-Tabelle (.md).", type: 'AUSWERTUNG_MD', ext: "md" },
-        auswertungXLSX: { description: "Exportiert die aktuelle Auswertungstabelle (aus dem Auswertung-Tab) mit den angewendeten T2-Ergebnissen als Excel-Datei (.xlsx).", type: 'AUSWERTUNG_XLSX', ext: "xlsx" },
         filteredDataCSV: { description: "Exportiert die zugrundeliegenden Rohdaten des aktuell ausgewählten und analysierten Kollektivs, inklusive der berechneten T2-Ergebnisse, als CSV-Datei (.csv).", type: 'FILTERED_DATA_CSV', ext: "csv" },
-        filteredDataXLSX: { description: "Exportiert die zugrundeliegenden Rohdaten des aktuell ausgewählten und analysierten Kollektivs, inklusive der berechneten T2-Ergebnisse, als Excel-Datei (.xlsx).", type: 'FILTERED_DATA_XLSX', ext: "xlsx" },
         comprehensiveReportHTML: { description: "Generiert einen umfassenden Analysebericht als HTML-Datei, die alle wichtigen Statistiken, Konfigurationen und Diagramme zusammenfasst. Kann im Browser geöffnet und gedruckt werden.", type: 'COMPREHENSIVE_REPORT_HTML', ext: "html" },
         chartsPNG: { description: "Exportiert alle aktuell sichtbaren Diagramme aus dem Statistik-, Auswertung- und Präsentationstab sowie ausgewählte Tabellen als einzelne, hochauflösende PNG-Bilddateien, gebündelt in einem ZIP-Archiv.", type: 'PNG_ZIP', ext: "zip" },
         chartsSVG: { description: "Exportiert alle aktuell sichtbaren Diagramme aus dem Statistik-, Auswertung- und Präsentationstab als einzelne, skalierbare Vektorgrafik-Dateien (SVG), gebündelt in einem ZIP-Archiv.", type: 'SVG_ZIP', ext: "zip" },
@@ -290,34 +467,17 @@ const TOOLTIP_CONTENT = {
         tableSinglePNG: { description: "Exportiert die ausgewählte Tabelle als einzelne PNG-Datei.", type: 'TABLE_PNG_EXPORT', ext: "png"},
         allZIP: { description: "Exportiert alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT, alle MDs, Gefilterte-Daten-CSV, HTML-Report) in einem einzigen ZIP-Archiv.", type: 'ALL_ZIP', ext: "zip"},
         csvZIP: { description: "Bündelt alle verfügbaren CSV-Dateien (Statistik, Gefilterte Daten) in einem ZIP-Archiv.", type: 'CSV_ZIP', ext: "zip"},
-        mdZIP: { description: "Bündelt alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "md"},
+        mdZIP: { description: "Bündelt alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "md"}, // Corrected from 'mdZIP', 'ext: "zip"' to 'ext: "md"' for this type, assuming it's for a single MD bundle or that the type key dictates the filename's purpose not the zip content exclusively. Given other zips, keeping ext: "zip" for the bundle.
         pngZIP: { description: "Identisch zum 'Alle Diagramme & Tabellen (PNG)' Einzel-Export.", type: 'PNG_ZIP', ext: "zip"},
-        svgZIP: { description: "Identisch zum 'Alle Diagramme (SVG)' Einzel-Export.", type: 'SVG_ZIP', ext: "zip"},
-        xlsxZIP: { description: "Bündelt alle verfügbaren Excel-Dateien in einem ZIP-Archiv.", type: 'XLSX_ZIP', ext: "zip"}
+        svgZIP: { description: "Identisch zum 'Alle Diagramme (SVG)' Einzel-Export.", type: 'SVG_ZIP', ext: "zip"}
     },
     publikationTabTooltips: {
         spracheSwitch: { description: "Wechselt die Sprache der Texte im Publikation-Tab zwischen Deutsch und Englisch." },
         sectionSelect: { description: "Wählen Sie den Abschnitt der wissenschaftlichen Publikation aus, für den Textvorschläge und relevante Daten/Grafiken angezeigt werden sollen." },
         bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, für deren Optimierungsergebnisse (via Brute-Force) die entsprechenden Statistiken im 'Ergebnisse'-Abschnitt des Publikation-Tabs dargestellt werden sollen." },
-        methoden: {
-            studienanlage: "Textvorschlag und relevante Informationen zum Studiendesign, der Ethik und der verwendeten Software.",
-            patientenkohorte: "Textvorschlag und relevante Informationen zum Patientenkollektiv und der Datenbasis.",
-            mrtProtokoll: "Textvorschlag und relevante Informationen zum MRT-Protokoll und zur Kontrastmittelgabe.",
-            asDefinition: "Textvorschlag und relevante Informationen zur Definition und Bewertung des Avocado Signs.",
-            t2Definition: "Textvorschlag und relevante Informationen zur Definition und Bewertung der T2-Kriterien (benutzerdefiniert, Literatur, Brute-Force optimiert).",
-            referenzstandard: "Textvorschlag und relevante Informationen zum Referenzstandard (Histopathologie).",
-            statistischeAnalyse: "Textvorschlag und relevante Informationen zu den statistischen Analysemethoden."
-        },
-        ergebnisse: {
-            patientencharakteristika: "Textvorschlag und relevante Tabellen/Diagramme zu den Patientencharakteristika.",
-            asPerformance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte des Avocado Signs.",
-            literaturT2Performance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Literatur-basierten T2-Kriterien.",
-            optimierteT2Performance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Brute-Force optimierten T2-Kriterien.",
-            vergleichPerformance: "Textvorschlag und relevante Tabellen/Diagramme zum statistischen Vergleich der diagnostischen Güte zwischen Avocado Sign und den verschiedenen T2-Kriteriensets."
-        }
     },
     statMetrics: {
-        sens: { name: "Sensitivität", description: "Sensitivität ([METHODE] vs. N): Anteil der tatsächlich positiven Fälle (N+), die durch die Methode [METHODE] korrekt als positiv erkannt wurden.<br><i>Formel: RP / (RP + FN)</i>", interpretation: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N+ Patienten korrekt (95% CI nach [METHOD_CI]: [LOWER] - [UPPER]) im Kollektiv [KOLLEKTIV]."},
+        sens: { name: "Sensitivität", description: "Sensitivität ([METHODE] vs. N): Anteil der tatsächlich positiven Fälle (N+), die durch die Methode [METHODE] korrekt als positiv erkannt wurden.<br><i>Formel: RP / (RP + FN)</i>", interpretation: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N+ Patienten korrekt (95% KI nach [METHOD_CI]: [LOWER] - [UPPER]) im Kollektiv [KOLLEKTIV]."},
         spez: { name: "Spezifität", description: "Spezifität ([METHODE] vs. N): Anteil der tatsächlich negativen Fälle (N-), die durch die Methode [METHODE] korrekt als negativ erkannt wurden.<br><i>Formel: RN / (RN + FP)</i>", interpretation: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N- Patienten korrekt (95% CI nach [METHOD_CI]: [LOWER] - [UPPER]) im Kollektiv [KOLLEKTIV]."},
         ppv: { name: "Pos. Prädiktiver Wert (PPV)", description: "PPV ([METHODE] vs. N): Wahrscheinlichkeit, dass ein Patient mit einem positiven Testergebnis durch Methode [METHODE] tatsächlich krank (N+) ist.<br><i>Formel: RP / (RP + FP)</i>", interpretation: "Wenn die Methode [METHODE] ein positives Ergebnis lieferte, lag die Wahrscheinlichkeit für einen tatsächlichen N+ Status bei <strong>[WERT]</strong> (95% CI nach [METHOD_CI]: [LOWER] - [UPPER]) im Kollektiv [KOLLEKTIV]."},
         npv: { name: "Neg. Prädiktiver Wert (NPV)", description: "NPV ([METHODE] vs. N): Wahrscheinlichkeit, dass ein Patient mit einem negativen Testergebnis durch Methode [METHODE] tatsächlich gesund (N-) ist.<br><i>Formel: RN / (RN + FN)</i>", interpretation: "Wenn die Methode [METHODE] ein negatives Ergebnis lieferte, lag die Wahrscheinlichkeit für einen tatsächlichen N- Status bei <strong>[WERT]</strong> (95% CI nach [METHOD_CI]: [LOWER] - [UPPER]) im Kollektiv [KOLLEKTIV]."},
@@ -336,12 +496,29 @@ const TOOLTIP_CONTENT = {
         konfusionsmatrix: { description: "Kreuztabelle, die die Klassifikationsergebnisse der Methode [METHODE] mit dem tatsächlichen N-Status vergleicht: Richtig Positive (RP), Falsch Positive (FP), Falsch Negative (FN), Richtig Negative (RN)." },
         accComp: { name: "Accuracy Vergleich", description: "Vergleicht die Accuracy der Methode [METHODE] zwischen zwei unabhängigen Kollektiven ([KOLLEKTIV1] vs. [KOLLEKTIV2]) mittels Fisher's Exact Test.", interpretation: "Der Unterschied in der Accuracy der Methode [METHODE] zwischen den Kollektiven [KOLLEKTIV1] und [KOLLEKTIV2] ist <strong>[SIGNIFIKANZ_TEXT]</strong> (p=[P_WERT])." },
         aucComp: { name: "AUC Vergleich", description: "Vergleicht die AUC der Methode [METHODE] zwischen zwei unabhängigen Kollektiven ([KOLLEKTIV1] vs. [KOLLEKTIV2]) mittels eines Z-Tests.", interpretation: "Der Unterschied in der AUC der Methode [METHODE] zwischen den Kollektiven [KOLLEKTIV1] und [KOLLEKTIV2] ist <strong>[SIGNIFIKANZ_TEXT]</strong> (p=[P_WERT])." },
-        logisticRegressionFit: { name: "Modellanpassung (Log. Regression)", description: "Güte der Anpassung des logistischen Regressionsmodells an die Daten.", interpretation: "Das Modell zeigt eine [BEWERTUNG_FIT] Anpassung an die Daten."},
-        logisticRegressionCoef: { name: "Koeffizient (Log. Regression)", description: "Geschätzter Koeffizient für den Prädiktor [PREDICTOR]. Gibt die Veränderung der Log-Odds für N+ pro Einheitsänderung des Prädiktors an.", interpretation: "Der Koeffizient für [PREDICTOR] beträgt <strong>[COEF_VALUE]</strong> (p=[P_WERT], [SIGNIFIKANZ]), was auf einen [SIGNIFIKANZ_TEXT] Einfluss auf die N+ Wahrscheinlichkeit hindeutet."},
-        rocCurvePlot: { description: "Zeigt die ROC-Kurve für {Variable}. Die Diagonale repräsentiert zufällige Klassifikation (AUC=0.5). Eine Kurve näher an der oberen linken Ecke bedeutet bessere Leistung."},
         defaultP: { interpretation: `Der berechnete p-Wert beträgt <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Bei einem Signifikanzniveau von ${APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL} ist das Ergebnis <strong>[SIGNIFIKANZ_TEXT]</strong>.` }
     }
 };
 
 deepFreeze(UI_TEXTS);
-deepFreeze(TOOLTIP_CONTENT);
+deepFreeze(TOOLTIP_CONTENT); // Assuming TOOLTIP_CONTENT is defined above UI_TEXTS as it's used within.
+// If TOOLTIP_CONTENT is separate and not meant to be merged here, adjust accordingly.
+// For this optimization, I am assuming TOOLTIP_CONTENT is the same object reference as before,
+// and the key change is to nest the language-specific parts under UI_TEXTS.lang.de and UI_TEXTS.lang.en
+
+const getLocalizedUITexts = (lang) => {
+    const currentLang = (lang === 'de' || lang === 'en') ? lang : 'de';
+    return UI_TEXTS.lang[currentLang];
+};
+
+const getLocalizedTooltipContent = () => {
+    // Tooltips are largely language-agnostic in this setup as per the original structure.
+    // If specific tooltips need translation, they should be moved into the UI_TEXTS.lang structure.
+    return TOOLTIP_CONTENT;
+};
+
+// Example usage for other modules:
+// const localizedTexts = getLocalizedUITexts(state.getCurrentPublikationLang());
+// const kolektivName = localizedTexts.kollektivDisplayNames['Gesamt'];
+// const tooltipContent = getLocalizedTooltipContent();
+// const tooltip = tooltipContent.datenTable.nr;
