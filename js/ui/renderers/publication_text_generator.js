@@ -5,14 +5,14 @@ const publicationTextGenerator = (() => {
         let text = 'N/A Text Key: ' + textObjPath;
 
         if (textObj) {
-            if (typeof textObj === 'string') { // Fallback für nicht-sprachspezifische Texte
+            if (typeof textObj === 'string') {
                 text = textObj;
             } else if (textObj[lang]) {
                 text = textObj[lang];
             } else if (textObj['de']) {
-                text = textObj['de']; // Fallback auf Deutsch
+                text = textObj['de'];
             } else if (typeof Object.values(textObj)[0] === 'string') {
-                text = Object.values(textObj)[0]; // Fallback auf den ersten verfügbaren String
+                text = Object.values(textObj)[0];
             }
         }
         for (const key in replacements) {
@@ -29,7 +29,7 @@ const publicationTextGenerator = (() => {
             if (isP) {
                 return formatPercent(val, d, placeholder);
             } else {
-                let numStr = formatNumber(val, d, placeholder, true); // true für standard . als Dezimal
+                let numStr = formatNumber(val, d, placeholder, true);
                 if (lang === 'de' && numStr !== placeholder && typeof numStr === 'string') {
                     numStr = numStr.replace('.', ',');
                 }
@@ -43,7 +43,7 @@ const publicationTextGenerator = (() => {
             const lowerStr = formatSingleValue(metric.ci.lower, digits, isPercent);
             const upperStr = formatSingleValue(metric.ci.upper, digits, isPercent);
             const ciLabel = lang === 'de' ? '95% KI' : '95% CI';
-            if (lowerStr === placeholder || upperStr === placeholder) return valStr; // Wenn CI-Teile fehlen, nur Wert
+            if (lowerStr === placeholder || upperStr === placeholder) return valStr;
             return `${valStr} (${ciLabel}: ${lowerStr} – ${upperStr})`;
         }
         return valStr;
@@ -59,7 +59,6 @@ const publicationTextGenerator = (() => {
         const appVersion = commonData.appVersion || APP_CONFIG.APP_VERSION;
         const studyReferenceLurzSchaefer = commonData.references?.lurzSchaefer2025 || "Lurz & Schäfer (2025)";
         const appName = commonData.appName || APP_CONFIG.APP_NAME;
-        // Der Ethikvotum-Text ist spezifisch und sollte bei Bedarf angepasst werden
         const ethicsVotePlaceholder = {
             de: "Ethikvotum Nr. XYZ/2020, Klinikum St. Georg, Leipzig",
             en: "Ethics vote No. XYZ/2020, Klinikum St. Georg, Leipzig"
@@ -138,8 +137,9 @@ const publicationTextGenerator = (() => {
     function getMethodenT2DefinitionText(lang, commonData, allKollektivStats) {
         const appliedCriteria = typeof t2CriteriaManager !== 'undefined' ? t2CriteriaManager.getAppliedCriteria() : getDefaultT2Criteria();
         const appliedLogic = typeof t2CriteriaManager !== 'undefined' ? t2CriteriaManager.getCurrentT2Logic() : getDefaultT2Criteria().logic;
-        const formattedAppliedCriteria = studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic, false);
+        const formattedAppliedCriteria = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic, false) : 'N/A';
         const bfZielMetric = (commonData.bruteForceMetricForPublicationName || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication);
+        const table2Ref = lang === 'de' ? 'Tabelle 2' : 'Table 2';
 
         const formatBFDefinition = (kollektivId, displayName) => {
             const bfDef = allKollektivStats?.[kollektivId]?.bruteforce_definition;
@@ -152,7 +152,8 @@ const publicationTextGenerator = (() => {
                 if (lang === 'de' && metricValueStr !== 'N/A' && typeof metricValueStr === 'string') {
                     metricValueStr = metricValueStr.replace('.', ',');
                 }
-                return `<li><strong>${displayName}:</strong> ${studyT2CriteriaManager.formatCriteriaForDisplay(bfDef.criteria, bfDef.logic, false)} (${metricNameText}: ${bfDef.metricName}, ${achievedValueText}: ${metricValueStr})</li>`;
+                const criteriaDisplay = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay(bfDef.criteria, bfDef.logic, false) : 'N/A';
+                return `<li><strong>${displayName}:</strong> ${criteriaDisplay} (${metricNameText}: ${bfDef.metricName}, ${achievedValueText}: ${metricValueStr})</li>`;
             }
             return `<li><strong>${displayName}:</strong> ${noOptimizedResultsText}</li>`;
         };
@@ -163,11 +164,16 @@ const publicationTextGenerator = (() => {
         bfCriteriaText += formatBFDefinition('nRCT', getKollektivDisplayName('nRCT', lang));
         bfCriteriaText += '</ul>';
 
-        const kohDesc = studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology')?.description || (lang === 'de' ? 'Irreguläre Kontur ODER heterogenes Signal' : 'Irregular border OR heterogeneous signal');
+        const kohStudySet = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology') : null;
+        const kohDesc = kohStudySet?.description || (lang === 'de' ? 'Irreguläre Kontur ODER heterogenes Signal' : 'Irregular border OR heterogeneous signal');
         const kohRef = commonData.references?.koh2008 || "Koh et al. (2008)";
-        const barbaroDesc = studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging')?.description || (lang === 'de' ? 'Kurzachse ≥ 2,3mm' : 'Short axis ≥ 2.3mm');
+
+        const barbaroStudySet = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging') : null;
+        const barbaroDesc = barbaroStudySet?.description || (lang === 'de' ? 'Kurzachse ≥ 2,3mm' : 'Short axis ≥ 2.3mm');
         const barbaroRef = commonData.references?.barbaro2024 || "Barbaro et al. (2024)";
-        const esgarDesc = studyT2CriteriaManager.getStudyCriteriaSetById('rutegard_et_al_esgar')?.description || (lang === 'de' ? 'Komplexe größenabhängige morphologische Regeln' : 'Complex size-dependent morphological rules');
+
+        const esgarStudySet = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.getStudyCriteriaSetById('rutegard_et_al_esgar') : null;
+        const esgarDesc = esgarStudySet?.description || (lang === 'de' ? 'Komplexe größenabhängige morphologische Regeln' : 'Complex size-dependent morphological rules');
         const esgarRef = commonData.references?.rutegard2025 && commonData.references?.beetsTan2018ESGAR ? `${commonData.references.rutegard2025} / ${commonData.references.beetsTan2018ESGAR}` : (lang === 'de' ? "Rutegård et al. (2025) / ESGAR 2016" : "Rutegård et al. (2025) / ESGAR 2016");
 
 
@@ -176,7 +182,7 @@ const publicationTextGenerator = (() => {
                 <p>Die morphologischen T2-gewichteten Kriterien (Größe [Kurzachse in mm], Form ['rund', 'oval'], Kontur ['scharf', 'irregulär'], Homogenität ['homogen', 'heterogen'] und Signalintensität ['signalarm', 'intermediär', 'signalreich']) wurden für jeden im hochauflösenden T2w-MRT sichtbaren mesorektalen Lymphknoten von denselben zwei Radiologen (ML, AOS) erfasst, die auch das Avocado Sign bewerteten. Die Bewertung erfolgte konsensbasiert und verblindet gegenüber dem pathologischen N-Status und dem Avocado-Sign-Status.</p>
                 <p>Für den Vergleich der diagnostischen Güte wurden folgende T2-Kriteriensets herangezogen:</p>
                 <ol>
-                    <li><strong>Literatur-basierte T2-Kriteriensets:</strong> Eine Auswahl etablierter Kriterien aus der Fachliteratur wurde implementiert und auf die entsprechenden Subgruppen bzw. das Gesamtkollektiv unseres Datensatzes angewendet (Details siehe Tabelle 2):
+                    <li><strong>Literatur-basierte T2-Kriteriensets:</strong> Eine Auswahl etablierter Kriterien aus der Fachliteratur wurde implementiert und auf die entsprechenden Subgruppen bzw. das Gesamtkollektiv unseres Datensatzes angewendet (Details siehe ${table2Ref}):
                         <ul>
                             <li>Koh et al. (${kohRef}): "${kohDesc}". Dieses Set wurde in unserer Analyse auf das Gesamtkollektiv angewendet.</li>
                             <li>Barbaro et al. (${barbaroRef}): "${barbaroDesc}". Dieses Set wurde spezifisch für das nRCT-Kollektiv (Restaging) evaluiert.</li>
@@ -195,7 +201,7 @@ const publicationTextGenerator = (() => {
                 <p>The morphological T2-weighted criteria (size [short-axis diameter in mm], shape ['round', 'oval'], border ['smooth', 'irregular'], homogeneity ['homogeneous', 'heterogeneous'], and signal intensity ['low', 'intermediate', 'high']) were assessed for every mesorectal lymph node visible on high-resolution T2w-MRI by the same two radiologists (ML, AOS) who evaluated the Avocado Sign. The assessment was performed by consensus and blinded to the pathological N-status and the Avocado Sign status.</p>
                 <p>For the comparison of diagnostic performance, the following T2 criteria sets were utilized:</p>
                 <ol>
-                    <li><strong>Literature-based T2 criteria sets:</strong> A selection of established criteria from the literature was implemented and applied to the respective subgroups or the entire cohort of our dataset (details see Table 2):
+                    <li><strong>Literature-based T2 criteria sets:</strong> A selection of established criteria from the literature was implemented and applied to the respective subgroups or the entire cohort of our dataset (details see ${table2Ref}):
                         <ul>
                             <li>Koh et al. (${kohRef}): "${kohDesc}". In our analysis, this set was applied to the overall cohort.</li>
                             <li>Barbaro et al. (${barbaroRef}): "${barbaroDesc}". This set was specifically evaluated for the nRCT cohort (restaging).</li>
@@ -383,7 +389,7 @@ const publicationTextGenerator = (() => {
             const statsLit = allKollektivStats?.[k.id]?.gueteT2_literatur?.[k.litSetId];
             const statsBF = allKollektivStats?.[k.id]?.gueteT2_bruteforce;
             const bfDef = allKollektivStats?.[k.id]?.bruteforce_definition;
-            const litSetName = k.litSetNameKey; // Der Key wird hier für Klarheit genutzt, der eigentliche Name kommt aus der Studie
+            const litSetName = k.litSetNameKey;
 
             const vergleichASvsLit = allKollektivStats?.[k.id]?.[`vergleichASvsT2_literatur_${k.litSetId}`];
             const vergleichASvsBF = allKollektivStats?.[k.id]?.vergleichASvsT2_bruteforce;
@@ -398,44 +404,34 @@ const publicationTextGenerator = (() => {
                 diffAucBfStr = diffAucBfStr.replace('.', ',');
             }
 
+            const h4Title = lang === 'de' ? `Vergleich im ${name}` : `Comparison in the ${name}`;
+            text += `<h4>${h4Title}</h4>`;
 
-            if (lang === 'de') {
-                text += `<h4>Vergleich im ${name}</h4>`;
-                if (statsAS && statsLit && vergleichASvsLit) {
-                    text += `<p>Im Vergleich des AS (AUC ${fCI(statsAS.auc, 3, false, 'de')}) mit den Kriterien nach ${litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'de')}) zeigte sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsLit.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${diffAucLitStr}.</p>`;
-                } else {
-                    text += `<p>Ein Vergleich zwischen AS und den Kriterien nach ${litSetName} konnte nicht vollständig durchgeführt werden (fehlende Daten).</p>`;
-                }
-                if (statsAS && statsBF && vergleichASvsBF && bfDef) {
-                    text += `<p>Gegenüber den für die ${bfDef.metricName} optimierten T2-Kriterien (AUC ${fCI(statsBF.auc, 3, false, 'de')}) ergab sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsBF.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${diffAucBfStr}.</p>`;
-                } else {
-                    text += `<p>Ein Vergleich zwischen AS und den Brute-Force-optimierten Kriterien konnte nicht vollständig durchgeführt werden (fehlende Daten oder keine BF-Optimierung für dieses Kollektiv für die Zielmetrik ${bfZielMetric}).</p>`;
-                }
+            if (statsAS && statsLit && vergleichASvsLit) {
+                const textDe = `<p>Im Vergleich des AS (AUC ${fCI(statsAS.auc, 3, false, 'de')}) mit den Kriterien nach ${litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'de')}) zeigte sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsLit.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${diffAucLitStr}.</p>`;
+                const textEn = `<p>Comparing AS (AUC ${fCI(statsAS.auc, 3, false, 'en')}) with the criteria by ${litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'en')}), the p-value for accuracy was ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'en')} (McNemar) and for AUC was ${getPValueText(vergleichASvsLit.delong?.pValue, 'en')} (DeLong). The difference in AUC was ${diffAucLitStr}.</p>`;
+                text += lang === 'de' ? textDe : textEn;
             } else {
-                text += `<h4>Comparison in the ${name}</h4>`;
-                if (statsAS && statsLit && vergleichASvsLit) {
-                    text += `<p>Comparing AS (AUC ${fCI(statsAS.auc, 3, false, 'en')}) with the criteria by ${litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'en')}), the p-value for accuracy was ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'en')} (McNemar) and for AUC was ${getPValueText(vergleichASvsLit.delong?.pValue, 'en')} (DeLong). The difference in AUC was ${diffAucLitStr}.</p>`;
-                } else {
-                    text += `<p>A full comparison between AS and the criteria by ${litSetName} could not be performed (missing data).</p>`;
-                }
-                if (statsAS && statsBF && vergleichASvsBF && bfDef) {
-                    text += `<p>Compared to the T2 criteria optimized for ${bfDef.metricName} (AUC ${fCI(statsBF.auc, 3, false, 'en')}), the p-value for accuracy was ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'en')} (McNemar) and for AUC was ${getPValueText(vergleichASvsBF.delong?.pValue, 'en')} (DeLong). The difference in AUC was ${diffAucBfStr}.</p>`;
-                } else {
-                    text += `<p>A full comparison between AS and the brute-force optimized criteria could not be performed (missing data or no BF optimization for this cohort for the target metric ${bfZielMetric}).</p>`;
-                }
+                const textDe = `<p>Ein Vergleich zwischen AS und den Kriterien nach ${litSetName} konnte nicht vollständig durchgeführt werden (fehlende Daten).</p>`;
+                const textEn = `<p>A full comparison between AS and the criteria by ${litSetName} could not be performed (missing data).</p>`;
+                text += lang === 'de' ? textDe : textEn;
+            }
+
+            if (statsAS && statsBF && vergleichASvsBF && bfDef) {
+                const textDe = `<p>Gegenüber den für die ${bfDef.metricName} optimierten T2-Kriterien (AUC ${fCI(statsBF.auc, 3, false, 'de')}) ergab sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsBF.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${diffAucBfStr}.</p>`;
+                const textEn = `<p>Compared to the T2 criteria optimized for ${bfDef.metricName} (AUC ${fCI(statsBF.auc, 3, false, 'en')}), the p-value for accuracy was ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'en')} (McNemar) and for AUC was ${getPValueText(vergleichASvsBF.delong?.pValue, 'en')} (DeLong). The difference in AUC was ${diffAucBfStr}.</p>`;
+                text += lang === 'de' ? textDe : textEn;
+            } else {
+                const textDe = `<p>Ein Vergleich zwischen AS und den Brute-Force-optimierten Kriterien konnte nicht vollständig durchgeführt werden (fehlende Daten oder keine BF-Optimierung für dieses Kollektiv für die Zielmetrik ${bfZielMetric}).</p>`;
+                const textEn = `<p>A full comparison between AS and the brute-force optimized criteria could not be performed (missing data or no BF optimization for this cohort for the target metric ${bfZielMetric}).</p>`;
+                text += lang === 'de' ? textDe : textEn;
             }
         });
         return text;
     }
 
-
     function getSectionText(sectionId, lang, publicationData, kollektiveData, commonData) {
-        // `publicationData` ist hier äquivalent zu `allKollektivStats` im alten Code
-        // `kollektiveData` ist ebenfalls `allKollektivStats`
-        // `commonData` enthält die zusätzlichen Infos wie appVersion, etc.
-        const notImplementedText = lang === 'de' ?
-            `<p class="text-warning">Text für Sektion '${sectionId}' (Sprache: ${lang}) noch nicht implementiert.</p>` :
-            `<p class="text-warning">Text for section '${sectionId}' (Language: ${lang}) not yet implemented.</p>`;
+        const notImplementedText = _getText('publikationTab.publicationMisc.noData', lang, { SECTION: sectionId, LANG: lang });
 
         switch (sectionId) {
             case 'methoden_studienanlage': return getMethodenStudienanlageText(lang, commonData);
@@ -450,7 +446,7 @@ const publicationTextGenerator = (() => {
             case 'ergebnisse_literatur_t2_performance': return getErgebnisseLiteraturT2PerformanceText(lang, publicationData, commonData);
             case 'ergebnisse_optimierte_t2_performance': return getErgebnisseOptimierteT2PerformanceText(lang, publicationData, commonData);
             case 'ergebnisse_vergleich_performance': return getErgebnisseVergleichPerformanceText(lang, publicationData, commonData);
-            default: return notImplementedText;
+            default: return `<p class="text-warning">${notImplementedText}</p>`;
         }
     }
 
@@ -459,9 +455,9 @@ const publicationTextGenerator = (() => {
         let markdown = htmlContent
             .replace(/<p>/g, '\n')
             .replace(/<\/p>/g, '\n')
-            .replace(/<strong>(.*?)<\/strong>/g, '**$1**') // Korrekte Markdown-Syntax für Fett
-            .replace(/<em>(.*?)<\/em>/g, '*$1*')     // Korrekte Markdown-Syntax für Kursiv
-            .replace(/<i>(.*?)<\/i>/g, '*$1*')       // Korrekte Markdown-Syntax für Kursiv
+            .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
+            .replace(/<em>(.*?)<\/em>/g, '*$1*')
+            .replace(/<i>(.*?)<\/i>/g, '*$1*')
             .replace(/<ul>/g, '')
             .replace(/<\/ul>/g, '')
             .replace(/<ol>/g, '')
@@ -469,20 +465,18 @@ const publicationTextGenerator = (() => {
             .replace(/<li>/g, '\n* ')
             .replace(/<\/li>/g, '')
             .replace(/<br\s*\/?>/g, '\n')
-            .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/g, (match, p1) => {
+            .replace(/<h[1-4]>(.*?)<\/h[1-4]>/g, (match, p1) => { // H1-H4 in Markdown umwandeln
                 const level = parseInt(match.match(/<h(\d)/)?.[1] || 1);
-                return `\n\n${'#'.repeat(level)} ${p1}\n`; // Mehr Leerraum für bessere Lesbarkeit
+                return `\n\n${'#'.repeat(level)} ${p1}\n`;
             })
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
             .replace(/&amp;/g, '&')
-            .replace(/ {2,}/g, ' ') // Reduziert mehrere Leerzeichen auf eines
-            .replace(/\n\s*\n/g, '\n\n') // Normalisiert mehrere Zeilenumbrüche
+            .replace(/ {2,}/g, ' ')
+            .replace(/\n\s*\n/g, '\n\n')
             .trim();
 
-        // Manuelle Bereinigung für spezifische HTML-Reste, die nicht gut konvertiert werden
-        markdown = markdown.replace(//sg, ''); // Entfernt HTML-Kommentare
-
+        markdown = markdown.replace(//sg, '');
         return markdown;
     }
 
