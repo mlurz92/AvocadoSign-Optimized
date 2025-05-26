@@ -1,5 +1,5 @@
 function getKollektivDisplayName(kollektivId) {
-    const displayName = UI_TEXTS?.kollektivDisplayNames?.[kollektivId] || kollektivId || 'Unbekannt';
+    const displayName = UI_TEXTS?.kollektivDisplayNames?.[kollektivId] || kollektivId || UI_TEXTS?.kollektivDisplayNames?.unknown || 'Unbekannt';
     return displayName;
 }
 
@@ -41,25 +41,39 @@ function formatPercent(num, digits = 1, placeholder = '--%') {
 
 function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeholder = '--') {
     const formatFn = isPercent ? formatPercent : formatNumber;
-    const formattedValue = formatFn(value, digits, placeholder);
+    const formattedValue = formatFn(value, digits, placeholder, !isPercent); // useStandardFormat for non-percent values in CI
 
-    if (formattedValue === placeholder) {
+    if (formattedValue === placeholder && !isPercent) { // Allow placeholder for value if non-percent
+        return placeholder;
+    }
+     if (isPercent && value === null) { // Allow percent placeholder if value is null
         return placeholder;
     }
 
-    const formattedLower = formatFn(ciLower, digits, null);
-    const formattedUpper = formatFn(ciUpper, digits, null);
+
+    const formattedLower = formatFn(ciLower, digits, null, !isPercent);
+    const formattedUpper = formatFn(ciUpper, digits, null, !isPercent);
 
     if (formattedLower !== null && formattedUpper !== null) {
-        const valueWithoutPercent = isPercent ? formattedValue.replace('%','') : formattedValue;
-        const lowerStr = isPercent ? formattedLower.replace('%','') : formattedLower;
-        const upperStr = isPercent ? formattedUpper.replace('%','') : formattedUpper;
-        const ciStr = `(${lowerStr}\u00A0-\u00A0${upperStr})`;
-        return `${valueWithoutPercent} ${ciStr}${isPercent ? '%' : ''}`;
+        const valueWithoutUnit = isPercent ? String(value*100) : String(value);
+        const valueStrDisplay = formatFn(value, digits, placeholder, !isPercent);
+
+
+        const lowerStrDisplay = isPercent ? String(parseFloat(formattedLower).toFixed(digits)) : formattedLower;
+        const upperStrDisplay = isPercent ? String(parseFloat(formattedUpper).toFixed(digits)) : formattedUpper;
+
+
+        let valForDisplay = valueStrDisplay;
+        if(isPercent && valueStrDisplay !== placeholder) valForDisplay = formatNumber(parseFloat(valueStrDisplay.replace('%','')), digits, placeholder);
+
+
+        const ciStr = `(${lowerStrDisplay}\u00A0-\u00A0${upperStrDisplay})`;
+        return `${valForDisplay} ${ciStr}${isPercent ? '%' : ''}`;
     } else {
         return formattedValue;
     }
 }
+
 
 function getCurrentDateString(format = 'YYYY-MM-DD') {
     const date = new Date();
@@ -374,3 +388,4 @@ function getPhiBewertung(phiValue) {
     if (absPhi >= 0.1) return texts.schwach || 'schwach';
     return texts.sehr_schwach || 'sehr schwach';
 }
+
