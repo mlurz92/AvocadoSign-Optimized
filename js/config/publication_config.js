@@ -42,6 +42,11 @@ const PUBLICATION_CONFIG = Object.freeze({
             id: 'rutegard_et_al_esgar',
             nameKey: 'Rutegård et al. (2025) / ESGAR 2016',
             shortName: 'ESGAR 2016'
+        }),
+        Object.freeze({
+            id: 'lahaye_et_al_2009_restaging',
+            nameKey: 'Lahaye et al. (2009) - Restaging',
+            shortName: 'Lahaye et al.'
         })
     ]),
     bruteForceMetricsForPublication: Object.freeze([
