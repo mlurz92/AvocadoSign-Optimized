@@ -20,7 +20,8 @@ const APP_CONFIG = Object.freeze({
             'applied_criteria',
             'rutegard_et_al_esgar',
             'koh_2008_morphology',
-            'barbaro_2024_restaging'
+            'barbaro_2024_restaging',
+            'lahaye_et_al_2009_restaging'
         ]),
         CHART_COLOR_SCHEME: 'default',
         BRUTE_FORCE_METRIC: 'Balanced Accuracy'
