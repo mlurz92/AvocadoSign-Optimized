@@ -1,6 +1,14 @@
-function getKollektivDisplayName(kollektivId) {
-    const displayName = UI_TEXTS?.kollektivDisplayNames?.[kollektivId] || kollektivId || 'Unbekannt';
-    return displayName;
+function getKollektivDisplayName(kollektivId, lang = null) {
+    const defaultLang = typeof state !== 'undefined' ? state.getCurrentPublikationLang() : 'de';
+    const effectiveLang = lang || defaultLang;
+
+    if (UI_TEXTS && UI_TEXTS.kollektivDisplayNames && UI_TEXTS.kollektivDisplayNames[kollektivId] && UI_TEXTS.kollektivDisplayNames[kollektivId][effectiveLang]) {
+        return UI_TEXTS.kollektivDisplayNames[kollektivId][effectiveLang];
+    }
+    if (UI_TEXTS && UI_TEXTS.kollektivDisplayNames && typeof UI_TEXTS.kollektivDisplayNames[kollektivId] === 'string') {
+        return UI_TEXTS.kollektivDisplayNames[kollektivId];
+    }
+    return kollektivId || (effectiveLang === 'de' ? 'Unbekannt' : 'Unknown');
 }
 
 function formatNumber(num, digits = 1, placeholder = '--', useStandardFormat = false) {
@@ -11,13 +19,14 @@ function formatNumber(num, digits = 1, placeholder = '--', useStandardFormat = f
     if (useStandardFormat) {
         return number.toFixed(digits);
     }
+    const langForFormatting = (typeof state !== 'undefined' && state.getCurrentPublikationLang && state.getActiveTabId && state.getActiveTabId() === 'publikation-tab') ? state.getCurrentPublikationLang() : 'de';
     try {
-        return number.toLocaleString('de-DE', {
+        return number.toLocaleString(langForFormatting === 'en' ? 'en-US' : 'de-DE', {
             minimumFractionDigits: digits,
             maximumFractionDigits: digits
         });
     } catch (e) {
-        console.error("Fehler bei formatNumber mit de-DE Locale:", e);
+        console.error(`Fehler bei formatNumber mit ${langForFormatting} Locale:`, e);
         return number.toFixed(digits);
     }
 }
@@ -27,35 +36,38 @@ function formatPercent(num, digits = 1, placeholder = '--%') {
     if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
         return placeholder;
     }
+    const langForFormatting = (typeof state !== 'undefined' && state.getCurrentPublikationLang && state.getActiveTabId && state.getActiveTabId() === 'publikation-tab') ? state.getCurrentPublikationLang() : 'de';
     try {
-        return new Intl.NumberFormat('de-DE', {
+        return new Intl.NumberFormat(langForFormatting === 'en' ? 'en-US' : 'de-DE', {
             style: 'percent',
             minimumFractionDigits: digits,
             maximumFractionDigits: digits
         }).format(number);
     } catch (e) {
-        console.error("Fehler bei formatPercent mit de-DE Locale:", e);
+        console.error(`Fehler bei formatPercent mit ${langForFormatting} Locale:`, e);
         return (number * 100).toFixed(digits) + '%';
     }
 }
 
 function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeholder = '--') {
-    const formatFn = isPercent ? formatPercent : formatNumber;
-    const formattedValue = formatFn(value, digits, placeholder);
+    const langForFormatting = (typeof state !== 'undefined' && state.getCurrentPublikationLang && state.getActiveTabId && state.getActiveTabId() === 'publikation-tab') ? state.getCurrentPublikationLang() : 'de';
+    const formatFn = isPercent ? (val, dig, ph) => formatPercent(val, dig, ph) : (val, dig, ph, useStd) => formatNumber(val, dig, ph, useStd);
+    const formattedValue = formatFn(value, digits, placeholder, !isPercent);
 
     if (formattedValue === placeholder) {
         return placeholder;
     }
 
-    const formattedLower = formatFn(ciLower, digits, null);
-    const formattedUpper = formatFn(ciUpper, digits, null);
+    const formattedLower = formatFn(ciLower, digits, null, !isPercent);
+    const formattedUpper = formatFn(ciUpper, digits, null, !isPercent);
 
-    if (formattedLower !== null && formattedUpper !== null) {
-        const valueWithoutPercent = isPercent ? formattedValue.replace('%','') : formattedValue;
+    if (formattedLower !== null && formattedUpper !== null && formattedLower !== placeholder && formattedUpper !== placeholder) {
+        const valueWithoutUnit = isPercent ? formattedValue.replace('%','') : formattedValue;
         const lowerStr = isPercent ? formattedLower.replace('%','') : formattedLower;
         const upperStr = isPercent ? formattedUpper.replace('%','') : formattedUpper;
-        const ciStr = `(${lowerStr}\u00A0-\u00A0${upperStr})`;
-        return `${valueWithoutPercent} ${ciStr}${isPercent ? '%' : ''}`;
+        const ciLabel = langForFormatting === 'en' ? '95% CI' : '95% KI';
+        const ciStr = `${ciLabel}: ${lowerStr}\u00A0–\u00A0${upperStr}`; // Non-breaking hyphen
+        return `${valueWithoutUnit} (${ciStr})${isPercent ? '%' : ''}`;
     } else {
         return formattedValue;
     }
@@ -294,12 +306,27 @@ function getStatisticalSignificanceSymbol(pValue, significanceLevel = APP_CONFIG
     return 'ns';
 }
 
-function getStatisticalSignificanceText(pValue, significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL) {
+function getStatisticalSignificanceText(pValue, lang = 'de', significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL) {
      if (pValue === null || pValue === undefined || isNaN(pValue)) return '';
      const level = significanceLevel;
-     return pValue < level
-         ? UI_TEXTS.statMetrics.signifikanzTexte.SIGNIFIKANT || 'statistisch signifikant'
-         : UI_TEXTS.statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT || 'statistisch nicht signifikant';
+     const isSignificant = pValue < level;
+
+     if (UI_TEXTS && UI_TEXTS.statMetrics && UI_TEXTS.statMetrics.signifikanzTexte) {
+         const key = isSignificant ? 'SIGNIFIKANT' : 'NICHT_SIGNIFIKANT';
+         if (UI_TEXTS.statMetrics.signifikanzTexte[key] && UI_TEXTS.statMetrics.signifikanzTexte[key][lang]) {
+            return UI_TEXTS.statMetrics.signifikanzTexte[key][lang];
+         }
+         // Fallback, falls Sprache nicht existiert, aber Hauptkey schon
+         if (typeof UI_TEXTS.statMetrics.signifikanzTexte[key] === 'string') {
+            return UI_TEXTS.statMetrics.signifikanzTexte[key];
+         }
+     }
+     // Absoluter Fallback
+     if (lang === 'de') {
+        return isSignificant ? 'statistisch signifikant' : 'statistisch nicht signifikant';
+     } else {
+        return isSignificant ? 'statistically significant' : 'not statistically significant';
+     }
 }
 
 function getPValueText(pValue, lang = 'de') {
@@ -354,23 +381,53 @@ function arraysAreEqual(arr1, arr2) {
     return true;
 }
 
-function getAUCBewertung(aucValue) {
+function getAUCBewertung(aucValue, lang = 'de') {
     const value = parseFloat(aucValue);
-    if (isNaN(value) || value < 0 || value > 1) return 'N/A';
-    if (value >= 0.9) return 'exzellent';
-    if (value >= 0.8) return 'gut';
-    if (value >= 0.7) return 'moderat';
-    if (value > 0.5) return 'schwach';
-    return 'nicht informativ';
+    if (isNaN(value) || value < 0 || value > 1) return lang === 'de' ? 'N/A' : 'N/A';
+
+    const bewertungen = {
+        de: { exzellent: 'exzellent', gut: 'gut', moderat: 'moderat', schwach: 'schwach', nicht_informativ: 'nicht informativ' },
+        en: { exzellent: 'excellent', gut: 'good', moderat: 'fair', schwach: 'poor', nicht_informativ: 'non-informative' }
+    };
+    const texte = bewertungen[lang] || bewertungen.de;
+
+    if (value >= 0.9) return texte.exzellent;
+    if (value >= 0.8) return texte.gut;
+    if (value >= 0.7) return texte.moderat;
+    if (value > 0.5) return texte.schwach;
+    return texte.nicht_informativ;
 }
 
-function getPhiBewertung(phiValue) {
+function getPhiBewertung(phiValue, lang = 'de') {
     const value = parseFloat(phiValue);
-    if (isNaN(value)) return 'N/A';
+    if (isNaN(value)) return lang === 'de' ? 'N/A' : 'N/A';
     const absPhi = Math.abs(value);
-    const texts = UI_TEXTS.statMetrics.assoziationStaerkeTexte || {};
-    if (absPhi >= 0.5) return texts.stark || 'stark';
-    if (absPhi >= 0.3) return texts.moderat || 'moderat';
-    if (absPhi >= 0.1) return texts.schwach || 'schwach';
-    return texts.sehr_schwach || 'sehr schwach';
+
+    const baseTexte = UI_TEXTS?.statMetrics?.assoziationStaerkeTexte;
+    let texte;
+
+    if (baseTexte && baseTexte.stark && typeof baseTexte.stark === 'object') { // Zweisprachige Struktur
+        texte = {
+            stark: baseTexte.stark[lang] || baseTexte.stark.de,
+            moderat: baseTexte.moderat[lang] || baseTexte.moderat.de,
+            schwach: baseTexte.schwach[lang] || baseTexte.schwach.de,
+            sehr_schwach: baseTexte.sehr_schwach[lang] || baseTexte.sehr_schwach.de,
+        };
+    } else if (baseTexte) { // Einsprachige Fallback-Struktur (wie ursprünglich)
+        texte = {
+            stark: baseTexte.stark || 'stark',
+            moderat: baseTexte.moderat || 'moderat',
+            schwach: baseTexte.schwach || 'schwach',
+            sehr_schwach: baseTexte.sehr_schwach || 'sehr schwach',
+        };
+    } else { // Absoluter Fallback
+        texte = lang === 'de' ?
+            { stark: 'stark', moderat: 'moderat', schwach: 'schwach', sehr_schwach: 'sehr schwach' } :
+            { stark: 'strong', moderat: 'moderate', schwach: 'weak', sehr_schwach: 'very weak' };
+    }
+
+    if (absPhi >= 0.5) return texte.stark;
+    if (absPhi >= 0.3) return texte.moderat;
+    if (absPhi >= 0.1) return texte.schwach;
+    return texte.sehr_schwach;
 }
