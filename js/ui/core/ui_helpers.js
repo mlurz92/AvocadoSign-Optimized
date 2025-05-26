@@ -26,12 +26,16 @@ const ui_helpers = (() => {
 
           const toastElement = document.createElement('div');
           toastElement.id = toastId; toastElement.className = `toast align-items-center ${textClass} ${bgClass} border-0 fade`;
-          toastElement.setAttribute('role', 'alert'); toastElement.setAttribute('aria-live', 'assertive'); toastElement.setAttribute('aria-atomic', 'true'); toastElement.setAttribute('data-bs-delay', String(duration));
+          toastElement.setAttribute('role', 'alert'); toastElement.setAttribute('aria-live', 'assertive'); toastElement.setAttribute('aria-atomic', 'true');
+          toastElement.setAttribute('data-bs-delay', String(duration));
+          toastElement.setAttribute('data-bs-autohide', 'true');
+
+
           toastElement.innerHTML = `<div class="d-flex"><div class="toast-body"><i class="fas ${iconClass} fa-fw me-2"></i> ${escapeMarkdown(message)}</div><button type="button" class="btn-close me-2 m-auto ${textClass === 'text-white' ? 'btn-close-white' : ''}" data-bs-dismiss="toast" aria-label="Schließen"></button></div>`;
           toastContainer.appendChild(toastElement);
 
           try {
-              const toastInstance = new bootstrap.Toast(toastElement, { delay: duration });
+              const toastInstance = new bootstrap.Toast(toastElement, { delay: duration, autohide: true });
               toastElement.addEventListener('hidden.bs.toast', () => { if(toastContainer.contains(toastElement)) { toastElement.remove(); } }, { once: true });
               toastInstance.show();
           } catch (e) { console.error("Fehler beim Erstellen/Anzeigen des Toasts:", e); if(toastContainer.contains(toastElement)) { toastElement.remove(); } }
@@ -80,6 +84,16 @@ const ui_helpers = (() => {
     function setElementDisabled(elementId, isDisabled) {
         const element = document.getElementById(elementId);
         if (element) { element.disabled = !!isDisabled; }
+    }
+
+    function highlightElement(elementId, highlightClass = 'element-flash-highlight', duration = 1500) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.classList.add(highlightClass);
+            setTimeout(() => {
+                element.classList.remove(highlightClass);
+            }, duration);
+        }
     }
 
     function updateHeaderStatsUI(stats) {
@@ -504,21 +518,21 @@ const ui_helpers = (() => {
         trySetDisabled('export-daten-md', dataDisabled);
         trySetDisabled('export-auswertung-md', dataDisabled);
         trySetDisabled('export-filtered-data-csv', dataDisabled);
-        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled);
+        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled); // Adjusted logic: needs data OR bf results
         trySetDisabled('export-charts-png', dataDisabled);
         trySetDisabled('export-charts-svg', dataDisabled);
 
-        trySetDisabled('export-all-zip', dataDisabled && bfDisabled);
+        trySetDisabled('export-all-zip', dataDisabled && bfDisabled); // Adjusted logic
         trySetDisabled('export-csv-zip', dataDisabled);
         trySetDisabled('export-md-zip', dataDisabled);
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
 
-        trySetDisabled('export-statistik-xlsx', true);
-        trySetDisabled('export-daten-xlsx', true);
-        trySetDisabled('export-auswertung-xlsx', true);
-        trySetDisabled('export-filtered-data-xlsx', true);
-        trySetDisabled('export-xlsx-zip', true);
+        trySetDisabled('export-statistik-xlsx', true); // XLSX not implemented
+        trySetDisabled('export-daten-xlsx', true); // XLSX not implemented
+        trySetDisabled('export-auswertung-xlsx', true); // XLSX not implemented
+        trySetDisabled('export-filtered-data-xlsx', true); // XLSX not implemented
+        trySetDisabled('export-xlsx-zip', true); // XLSX not implemented
 
 
         const isPresentationTabActive = activeTabId === 'praesentation-tab';
@@ -571,11 +585,12 @@ const ui_helpers = (() => {
         const na = '--';
         const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
         const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na, isPercent);
+        const valueStr = formatNumber(data?.value, digits, na, isPercent); // Using formatNumber from utils.js
         const lowerStr = formatNumber(data?.ci?.lower, digits, na, isPercent);
         const upperStr = formatNumber(data?.ci?.upper, digits, na, isPercent);
         const ciMethodStr = data?.method || 'N/A';
-        const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value) : '';
+        const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value) : ((key === 'phi') ? getPhiBewertung(data?.value) : '');
+
 
         let interpretation = interpretationTemplate
             .replace(/\[METHODE\]/g, methode)
@@ -640,7 +655,7 @@ const ui_helpers = (() => {
         } else if (key === 'phi') {
             valueStr = formatNumber(assocObj.phi?.value, 2, na);
             bewertungStr = getPhiBewertung(assocObj.phi?.value);
-        } else if (key === 'fisher' || key === 'mannwhitney' || key === 'pvalue' || key === 'size_mwu') {
+        } else if (key === 'fisher' || key === 'mannwhitney' || key === 'pvalue' || key === 'size_mwu' || key === 'defaultP') {
              pVal = assocObj?.pValue;
              pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na)) : na;
              sigSymbol = getStatisticalSignificanceSymbol(pVal);
@@ -690,6 +705,7 @@ const ui_helpers = (() => {
         updateElementHTML,
         toggleElementClass,
         setElementDisabled,
+        highlightElement,
         updateHeaderStatsUI,
         updateKollektivButtonsUI,
         updateSortIcons,
