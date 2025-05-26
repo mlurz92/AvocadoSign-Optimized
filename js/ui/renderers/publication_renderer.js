@@ -263,7 +263,8 @@ const publicationRenderer = (() => {
                 koh2008: "Koh et al. (2008)",
                 barbaro2024: "Barbaro et al. (2024)",
                 rutegard2025: "Rutegård et al. (2025)",
-                beetsTan2018ESGAR: "ESGAR Consensus (Beets-Tan et al. 2018)"
+                beetsTan2018ESGAR: "ESGAR Consensus (Beets-Tan et al. 2018)",
+                lahaye2009: "Lahaye et al. (2009)"
             }
         };
 
