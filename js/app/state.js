@@ -2,18 +2,20 @@ const state = (() => {
     let currentState = {};
 
     const defaultState = {
-        currentKollektiv: APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV,
+        currentKollektiv: APP_CONFIG.KOLLEKTIV_IDS.GESAMT,
         datenTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT),
         auswertungTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT),
         currentPublikationLang: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG,
         currentPublikationSection: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION,
         currentPublikationBruteForceMetric: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC,
         currentStatsLayout: APP_CONFIG.DEFAULT_SETTINGS.STATS_LAYOUT,
-        currentStatsKollektiv1: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1,
-        currentStatsKollektiv2: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2,
+        currentStatsKollektiv1: APP_CONFIG.KOLLEKTIV_IDS.GESAMT,
+        currentStatsKollektiv2: APP_CONFIG.KOLLEKTIV_IDS.NRCT,
         currentPresentationView: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW,
         currentPresentationStudyId: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID,
-        activeTabId: 'daten-tab'
+        activeTabId: 'daten-tab',
+        datenTableDetailsExpanded: false,
+        auswertungTableDetailsExpanded: false
     };
 
     function init() {
@@ -29,11 +31,21 @@ const state = (() => {
             currentPresentationStudyId: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID) ?? defaultState.currentPresentationStudyId,
             datenTableSort: cloneDeep(defaultState.datenTableSort),
             auswertungTableSort: cloneDeep(defaultState.auswertungTableSort),
-            activeTabId: defaultState.activeTabId
+            activeTabId: defaultState.activeTabId,
+            datenTableDetailsExpanded: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATE_DATEN_TABLE_DETAILS_EXPANDED) ?? defaultState.datenTableDetailsExpanded,
+            auswertungTableDetailsExpanded: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATE_AUSWERTUNG_TABLE_DETAILS_EXPANDED) ?? defaultState.auswertungTableDetailsExpanded
         };
-        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) {
-            localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
+
+        if (!Object.values(APP_CONFIG.KOLLEKTIV_IDS).includes(currentState.currentKollektiv)) {
+            currentState.currentKollektiv = defaultState.currentKollektiv;
         }
+        if (!Object.values(APP_CONFIG.KOLLEKTIV_IDS).includes(currentState.currentStatsKollektiv1)) {
+            currentState.currentStatsKollektiv1 = defaultState.currentStatsKollektiv1;
+        }
+        if (!Object.values(APP_CONFIG.KOLLEKTIV_IDS).includes(currentState.currentStatsKollektiv2)) {
+            currentState.currentStatsKollektiv2 = defaultState.currentStatsKollektiv2;
+        }
+
         console.log("State Manager initialisiert mit:", currentState);
     }
 
@@ -42,7 +54,7 @@ const state = (() => {
     }
 
     function setCurrentKollektiv(newKollektiv) {
-        if (typeof newKollektiv === 'string' && currentState.currentKollektiv !== newKollektiv) {
+        if (Object.values(APP_CONFIG.KOLLEKTIV_IDS).includes(newKollektiv) && currentState.currentKollektiv !== newKollektiv) {
             currentState.currentKollektiv = newKollektiv;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV, currentState.currentKollektiv);
             return true;
@@ -140,7 +152,7 @@ const state = (() => {
     }
 
     function setCurrentStatsKollektiv1(newKollektiv) {
-         if (typeof newKollektiv === 'string' && currentState.currentStatsKollektiv1 !== newKollektiv) {
+         if (Object.values(APP_CONFIG.KOLLEKTIV_IDS).includes(newKollektiv) && currentState.currentStatsKollektiv1 !== newKollektiv) {
             currentState.currentStatsKollektiv1 = newKollektiv;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1, currentState.currentStatsKollektiv1);
             return true;
@@ -153,7 +165,7 @@ const state = (() => {
     }
 
     function setCurrentStatsKollektiv2(newKollektiv) {
-         if (typeof newKollektiv === 'string' && currentState.currentStatsKollektiv2 !== newKollektiv) {
+         if (Object.values(APP_CONFIG.KOLLEKTIV_IDS).includes(newKollektiv) && currentState.currentStatsKollektiv2 !== newKollektiv) {
             currentState.currentStatsKollektiv2 = newKollektiv;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2, currentState.currentStatsKollektiv2);
             return true;
@@ -205,6 +217,34 @@ const state = (() => {
         return false;
     }
 
+    function getDatenTableDetailsExpanded() {
+        return currentState.datenTableDetailsExpanded;
+    }
+
+    function setDatenTableDetailsExpanded(isExpanded) {
+        const expandedBool = !!isExpanded;
+        if (currentState.datenTableDetailsExpanded !== expandedBool) {
+            currentState.datenTableDetailsExpanded = expandedBool;
+            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATE_DATEN_TABLE_DETAILS_EXPANDED, currentState.datenTableDetailsExpanded);
+            return true;
+        }
+        return false;
+    }
+
+    function getAuswertungTableDetailsExpanded() {
+        return currentState.auswertungTableDetailsExpanded;
+    }
+
+    function setAuswertungTableDetailsExpanded(isExpanded) {
+        const expandedBool = !!isExpanded;
+        if (currentState.auswertungTableDetailsExpanded !== expandedBool) {
+            currentState.auswertungTableDetailsExpanded = expandedBool;
+            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATE_AUSWERTUNG_TABLE_DETAILS_EXPANDED, currentState.auswertungTableDetailsExpanded);
+            return true;
+        }
+        return false;
+    }
+
     return Object.freeze({
         init,
         getCurrentKollektiv,
@@ -230,7 +270,11 @@ const state = (() => {
         getCurrentPresentationStudyId,
         setCurrentPresentationStudyId,
         getActiveTabId,
-        setActiveTabId
+        setActiveTabId,
+        getDatenTableDetailsExpanded,
+        setDatenTableDetailsExpanded,
+        getAuswertungTableDetailsExpanded,
+        setAuswertungTableDetailsExpanded
     });
 
 })();
