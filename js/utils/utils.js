@@ -1,12 +1,18 @@
 function getKollektivDisplayName(kollektivId, lang = null) {
-    const defaultLang = typeof state !== 'undefined' ? state.getCurrentPublikationLang() : 'de';
-    const effectiveLang = lang || defaultLang;
-
-    if (UI_TEXTS && UI_TEXTS.kollektivDisplayNames && UI_TEXTS.kollektivDisplayNames[kollektivId] && UI_TEXTS.kollektivDisplayNames[kollektivId][effectiveLang]) {
-        return UI_TEXTS.kollektivDisplayNames[kollektivId][effectiveLang];
+    let effectiveLang = lang;
+    if (!effectiveLang && typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function') {
+        effectiveLang = state.getCurrentPublikationLang();
     }
-    if (UI_TEXTS && UI_TEXTS.kollektivDisplayNames && typeof UI_TEXTS.kollektivDisplayNames[kollektivId] === 'string') {
-        return UI_TEXTS.kollektivDisplayNames[kollektivId];
+    if (!effectiveLang) {
+        effectiveLang = 'de'; // Absoluter Fallback, falls state nicht verfügbar ist
+    }
+
+    if (typeof UI_TEXTS !== 'undefined' && UI_TEXTS.kollektivDisplayNames && UI_TEXTS.kollektivDisplayNames[kollektivId]) {
+        if (typeof UI_TEXTS.kollektivDisplayNames[kollektivId] === 'object' && UI_TEXTS.kollektivDisplayNames[kollektivId][effectiveLang]) {
+            return UI_TEXTS.kollektivDisplayNames[kollektivId][effectiveLang];
+        } else if (typeof UI_TEXTS.kollektivDisplayNames[kollektivId] === 'string') { // Fallback für alte, nicht-sprachspezifische Einträge
+            return UI_TEXTS.kollektivDisplayNames[kollektivId];
+        }
     }
     return kollektivId || (effectiveLang === 'de' ? 'Unbekannt' : 'Unknown');
 }
@@ -19,7 +25,12 @@ function formatNumber(num, digits = 1, placeholder = '--', useStandardFormat = f
     if (useStandardFormat) {
         return number.toFixed(digits);
     }
-    const langForFormatting = (typeof state !== 'undefined' && state.getCurrentPublikationLang && state.getActiveTabId && state.getActiveTabId() === 'publikation-tab') ? state.getCurrentPublikationLang() : 'de';
+
+    let langForFormatting = 'de'; // Standard-Fallback
+    if (typeof state !== 'undefined' && typeof state.getActiveTabId === 'function' && state.getActiveTabId() === 'publikation-tab' && typeof state.getCurrentPublikationLang === 'function') {
+        langForFormatting = state.getCurrentPublikationLang();
+    }
+
     try {
         return number.toLocaleString(langForFormatting === 'en' ? 'en-US' : 'de-DE', {
             minimumFractionDigits: digits,
@@ -36,7 +47,10 @@ function formatPercent(num, digits = 1, placeholder = '--%') {
     if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
         return placeholder;
     }
-    const langForFormatting = (typeof state !== 'undefined' && state.getCurrentPublikationLang && state.getActiveTabId && state.getActiveTabId() === 'publikation-tab') ? state.getCurrentPublikationLang() : 'de';
+    let langForFormatting = 'de'; // Standard-Fallback
+    if (typeof state !== 'undefined' && typeof state.getActiveTabId === 'function' && state.getActiveTabId() === 'publikation-tab' && typeof state.getCurrentPublikationLang === 'function') {
+        langForFormatting = state.getCurrentPublikationLang();
+    }
     try {
         return new Intl.NumberFormat(langForFormatting === 'en' ? 'en-US' : 'de-DE', {
             style: 'percent',
@@ -50,7 +64,11 @@ function formatPercent(num, digits = 1, placeholder = '--%') {
 }
 
 function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeholder = '--') {
-    const langForFormatting = (typeof state !== 'undefined' && state.getCurrentPublikationLang && state.getActiveTabId && state.getActiveTabId() === 'publikation-tab') ? state.getCurrentPublikationLang() : 'de';
+    let langForFormatting = 'de'; // Standard-Fallback
+    if (typeof state !== 'undefined' && typeof state.getActiveTabId === 'function' && state.getActiveTabId() === 'publikation-tab' && typeof state.getCurrentPublikationLang === 'function') {
+        langForFormatting = state.getCurrentPublikationLang();
+    }
+
     const formatFn = isPercent ? (val, dig, ph) => formatPercent(val, dig, ph) : (val, dig, ph, useStd) => formatNumber(val, dig, ph, useStd);
     const formattedValue = formatFn(value, digits, placeholder, !isPercent);
 
@@ -66,7 +84,7 @@ function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeh
         const lowerStr = isPercent ? formattedLower.replace('%','') : formattedLower;
         const upperStr = isPercent ? formattedUpper.replace('%','') : formattedUpper;
         const ciLabel = langForFormatting === 'en' ? '95% CI' : '95% KI';
-        const ciStr = `${ciLabel}: ${lowerStr}\u00A0–\u00A0${upperStr}`; // Non-breaking hyphen
+        const ciStr = `${ciLabel}: ${lowerStr}\u00A0–\u00A0${upperStr}`;
         return `${valueWithoutUnit} (${ciStr})${isPercent ? '%' : ''}`;
     } else {
         return formattedValue;
@@ -303,26 +321,27 @@ function getStatisticalSignificanceSymbol(pValue, significanceLevel = APP_CONFIG
     if (pValue < 0.001) return '***';
     if (pValue < 0.01) return '**';
     if (pValue < level) return '*';
-    return 'ns';
+    return 'ns'; // Ensure 'ns' is returned for non-significant p-values
 }
 
 function getStatisticalSignificanceText(pValue, lang = 'de', significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL) {
      if (pValue === null || pValue === undefined || isNaN(pValue)) return '';
      const level = significanceLevel;
      const isSignificant = pValue < level;
+     const effectiveLang = (lang === 'de' || lang === 'en') ? lang : 'de'; // Fallback to 'de' if lang is invalid
 
-     if (UI_TEXTS && UI_TEXTS.statMetrics && UI_TEXTS.statMetrics.signifikanzTexte) {
+     if (typeof UI_TEXTS !== 'undefined' && UI_TEXTS.statMetrics && UI_TEXTS.statMetrics.signifikanzTexte) {
          const key = isSignificant ? 'SIGNIFIKANT' : 'NICHT_SIGNIFIKANT';
-         if (UI_TEXTS.statMetrics.signifikanzTexte[key] && UI_TEXTS.statMetrics.signifikanzTexte[key][lang]) {
-            return UI_TEXTS.statMetrics.signifikanzTexte[key][lang];
+         if (UI_TEXTS.statMetrics.signifikanzTexte[key] && UI_TEXTS.statMetrics.signifikanzTexte[key][effectiveLang]) {
+            return UI_TEXTS.statMetrics.signifikanzTexte[key][effectiveLang];
          }
-         // Fallback, falls Sprache nicht existiert, aber Hauptkey schon
+         // Fallback, if language key exists but specific lang doesn't (should not happen with current UI_TEXTS structure)
          if (typeof UI_TEXTS.statMetrics.signifikanzTexte[key] === 'string') {
             return UI_TEXTS.statMetrics.signifikanzTexte[key];
          }
      }
-     // Absoluter Fallback
-     if (lang === 'de') {
+     // Absolute Fallback
+     if (effectiveLang === 'de') {
         return isSignificant ? 'statistisch signifikant' : 'statistisch nicht signifikant';
      } else {
         return isSignificant ? 'statistically significant' : 'not statistically significant';
@@ -331,11 +350,14 @@ function getStatisticalSignificanceText(pValue, lang = 'de', significanceLevel =
 
 function getPValueText(pValue, lang = 'de') {
     if (pValue === null || pValue === undefined || isNaN(pValue)) return 'N/A';
-    if (pValue < 0.001) return lang === 'de' ? 'p < 0,001' : 'P < .001';
+    const effectiveLang = (lang === 'de' || lang === 'en') ? lang : 'de';
 
-    let pFormatted = formatNumber(pValue, 3, 'N/A', true);
-    if (pFormatted === '0.000') return lang === 'de' ? 'p < 0,001' : 'P < .001';
-    if (lang === 'de' && pFormatted !== 'N/A') {
+    if (pValue < 0.001) return effectiveLang === 'de' ? 'p < 0,001' : 'P < .001';
+
+    let pFormatted = formatNumber(pValue, 3, 'N/A', true); // useStandardFormat = true for "." decimal
+    if (pFormatted === '0.000') return effectiveLang === 'de' ? 'p < 0,001' : 'P < .001';
+
+    if (effectiveLang === 'de' && pFormatted !== 'N/A') {
         pFormatted = pFormatted.replace('.', ',');
     }
     return `p = ${pFormatted}`;
@@ -383,13 +405,16 @@ function arraysAreEqual(arr1, arr2) {
 
 function getAUCBewertung(aucValue, lang = 'de') {
     const value = parseFloat(aucValue);
-    if (isNaN(value) || value < 0 || value > 1) return lang === 'de' ? 'N/A' : 'N/A';
+    const effectiveLang = (lang === 'de' || lang === 'en') ? lang : 'de';
+    const naText = effectiveLang === 'de' ? 'N/A' : 'N/A';
+
+    if (isNaN(value) || value < 0 || value > 1) return naText;
 
     const bewertungen = {
         de: { exzellent: 'exzellent', gut: 'gut', moderat: 'moderat', schwach: 'schwach', nicht_informativ: 'nicht informativ' },
         en: { exzellent: 'excellent', gut: 'good', moderat: 'fair', schwach: 'poor', nicht_informativ: 'non-informative' }
     };
-    const texte = bewertungen[lang] || bewertungen.de;
+    const texte = bewertungen[effectiveLang] || bewertungen.de;
 
     if (value >= 0.9) return texte.exzellent;
     if (value >= 0.8) return texte.gut;
@@ -400,28 +425,23 @@ function getAUCBewertung(aucValue, lang = 'de') {
 
 function getPhiBewertung(phiValue, lang = 'de') {
     const value = parseFloat(phiValue);
-    if (isNaN(value)) return lang === 'de' ? 'N/A' : 'N/A';
+    const effectiveLang = (lang === 'de' || lang === 'en') ? lang : 'de';
+    const naText = effectiveLang === 'de' ? 'N/A' : 'N/A';
+
+    if (isNaN(value)) return naText;
     const absPhi = Math.abs(value);
 
-    const baseTexte = UI_TEXTS?.statMetrics?.assoziationStaerkeTexte;
     let texte;
-
-    if (baseTexte && baseTexte.stark && typeof baseTexte.stark === 'object') { // Zweisprachige Struktur
+    if (typeof UI_TEXTS !== 'undefined' && UI_TEXTS.statMetrics && UI_TEXTS.statMetrics.assoziationStaerkeTexte) {
+        const baseTexte = UI_TEXTS.statMetrics.assoziationStaerkeTexte;
         texte = {
-            stark: baseTexte.stark[lang] || baseTexte.stark.de,
-            moderat: baseTexte.moderat[lang] || baseTexte.moderat.de,
-            schwach: baseTexte.schwach[lang] || baseTexte.schwach.de,
-            sehr_schwach: baseTexte.sehr_schwach[lang] || baseTexte.sehr_schwach.de,
+            stark: (baseTexte.stark && baseTexte.stark[effectiveLang]) ? baseTexte.stark[effectiveLang] : (effectiveLang === 'de' ? 'stark' : 'strong'),
+            moderat: (baseTexte.moderat && baseTexte.moderat[effectiveLang]) ? baseTexte.moderat[effectiveLang] : (effectiveLang === 'de' ? 'moderat' : 'moderate'),
+            schwach: (baseTexte.schwach && baseTexte.schwach[effectiveLang]) ? baseTexte.schwach[effectiveLang] : (effectiveLang === 'de' ? 'schwach' : 'weak'),
+            sehr_schwach: (baseTexte.sehr_schwach && baseTexte.sehr_schwach[effectiveLang]) ? baseTexte.sehr_schwach[effectiveLang] : (effectiveLang === 'de' ? 'sehr schwach' : 'very weak'),
         };
-    } else if (baseTexte) { // Einsprachige Fallback-Struktur (wie ursprünglich)
-        texte = {
-            stark: baseTexte.stark || 'stark',
-            moderat: baseTexte.moderat || 'moderat',
-            schwach: baseTexte.schwach || 'schwach',
-            sehr_schwach: baseTexte.sehr_schwach || 'sehr schwach',
-        };
-    } else { // Absoluter Fallback
-        texte = lang === 'de' ?
+    } else {
+        texte = effectiveLang === 'de' ?
             { stark: 'stark', moderat: 'moderat', schwach: 'schwach', sehr_schwach: 'sehr schwach' } :
             { stark: 'strong', moderat: 'moderate', schwach: 'weak', sehr_schwach: 'very weak' };
     }
