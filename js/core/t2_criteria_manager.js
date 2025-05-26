@@ -5,13 +5,20 @@ const t2CriteriaManager = (() => {
     let appliedT2Logic = APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC;
     let isCriteriaUnsaved = false;
 
+    const LOGIC_AND = 'UND';
+    const LOGIC_OR = 'ODER';
+
     function initializeT2CriteriaState() {
         const savedCriteria = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA);
         const savedLogic = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC);
         const defaultCriteriaObject = getDefaultT2Criteria();
 
         appliedT2Criteria = deepMerge(cloneDeep(defaultCriteriaObject), savedCriteria || {});
-        appliedT2Logic = (savedLogic === 'UND' || savedLogic === 'ODER') ? savedLogic : defaultCriteriaObject.logic;
+        appliedT2Logic = (savedLogic === LOGIC_AND || savedLogic === LOGIC_OR) ? savedLogic : defaultCriteriaObject.logic;
+        if (appliedT2Criteria.logic) { // Ensure logic in criteria object matches separate logic variable
+            appliedT2Criteria.logic = appliedT2Logic;
+        }
+
 
         currentT2Criteria = cloneDeep(appliedT2Criteria);
         currentT2Logic = appliedT2Logic;
@@ -61,7 +68,8 @@ const t2CriteriaManager = (() => {
          if (APP_CONFIG.T2_CRITERIA_SETTINGS.hasOwnProperty(allowedValuesKey)) {
             isValidValue = APP_CONFIG.T2_CRITERIA_SETTINGS[allowedValuesKey].includes(value);
          } else {
-             isValidValue = false;
+             isValidValue = false; // Should not happen if config is correct
+             console.error(`Konfigurationsfehler: '${allowedValuesKey}' nicht in T2_CRITERIA_SETTINGS gefunden für Kriterium '${key}'.`);
          }
 
          if (isValidValue && currentT2Criteria[key].value !== value) {
@@ -105,7 +113,7 @@ const t2CriteriaManager = (() => {
      }
 
     function updateCurrentT2Logic(logic) {
-        if ((logic === 'UND' || logic === 'ODER') && currentT2Logic !== logic) {
+        if ((logic === LOGIC_AND || logic === LOGIC_OR) && currentT2Logic !== logic) {
             currentT2Logic = logic;
             isCriteriaUnsaved = true;
             return true;
@@ -116,13 +124,16 @@ const t2CriteriaManager = (() => {
     function resetCurrentT2Criteria() {
         const defaultCriteria = getDefaultT2Criteria();
         currentT2Criteria = cloneDeep(defaultCriteria);
-        currentT2Logic = defaultCriteria.logic;
+        currentT2Logic = defaultCriteria.logic; // Default logic from getDefaultT2Criteria
         isCriteriaUnsaved = true;
     }
 
     function applyCurrentT2Criteria() {
         appliedT2Criteria = cloneDeep(currentT2Criteria);
         appliedT2Logic = currentT2Logic;
+        if(appliedT2Criteria.logic) { // Ensure the logic property within criteria object is also updated
+            appliedT2Criteria.logic = appliedT2Logic;
+        }
 
         saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA, appliedT2Criteria);
         saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC, appliedT2Logic);
@@ -190,7 +201,7 @@ const t2CriteriaManager = (() => {
 
     function applyT2CriteriaToPatient(patient, criteria, logic) {
         const defaultReturn = { t2Status: null, positiveLKCount: 0, bewerteteLK: [] };
-        if (!patient || !criteria || (logic !== 'UND' && logic !== 'ODER')) {
+        if (!patient || !criteria || (logic !== LOGIC_AND && logic !== LOGIC_OR)) {
             return defaultReturn;
         }
 
@@ -222,9 +233,9 @@ const t2CriteriaManager = (() => {
             let lkIsPositive = false;
 
             if (activeCriteriaKeys.length > 0) {
-                if (logic === 'UND') {
+                if (logic === LOGIC_AND) {
                     lkIsPositive = activeCriteriaKeys.every(key => checkResult[key] === true);
-                } else {
+                } else { // LOGIC_OR
                     lkIsPositive = activeCriteriaKeys.some(key => checkResult[key] === true);
                 }
             }
@@ -251,7 +262,6 @@ const t2CriteriaManager = (() => {
             finalT2Status = patientIsPositive ? '+' : '-';
         }
 
-
         return {
             t2Status: finalT2Status,
             positiveLKCount: positiveLKCount,
@@ -264,15 +274,27 @@ const t2CriteriaManager = (() => {
             console.error("evaluateDataset: Ungültige Eingabedaten, Array erwartet.");
             return [];
         }
-        if (!criteria || (logic !== 'UND' && logic !== 'ODER')) {
+        if (!criteria || (logic !== LOGIC_AND && logic !== LOGIC_OR)) {
              console.error("evaluateDataset: Ungültige Kriterien oder Logik.");
              return dataset.map(p => {
+                 if (!p) return null;
                  const pCopy = cloneDeep(p);
                  pCopy.t2 = null;
                  pCopy.anzahl_t2_plus_lk = 0;
-                 pCopy.lymphknoten_t2_bewertet = (pCopy.lymphknoten_t2 || []).map(lk => ({...lk, isPositive: false, checkResult: {}}));
+                 pCopy.lymphknoten_t2_bewertet = (pCopy.lymphknoten_t2 || []).map(lk => {
+                    const baseLk = lk || {};
+                    return {
+                        groesse: baseLk.groesse ?? null,
+                        form: baseLk.form ?? null,
+                        kontur: baseLk.kontur ?? null,
+                        homogenitaet: baseLk.homogenitaet ?? null,
+                        signal: baseLk.signal ?? null,
+                        isPositive: false,
+                        checkResult: { size: null, form: null, kontur: null, homogenitaet: null, signal: null }
+                    };
+                 });
                  return pCopy;
-             });
+             }).filter(p => p !== null);
         }
 
         return dataset.map(patient => {
