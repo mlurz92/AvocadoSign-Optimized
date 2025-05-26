@@ -287,7 +287,7 @@ const publicationTextGenerator = (() => {
         if (lang === 'de') {
             return `
                 <p>Die diagnostische Güte des Avocado Signs (AS) zur Vorhersage des pathologischen N-Status ist für das Gesamtkollektiv und die Subgruppen in ${tableRef} detailliert aufgeführt. Im Gesamtkollektiv (N=${nGesamt}) erreichte das AS eine Sensitivität von ${fCI(asGesamt?.sens, 1, true, 'de')}, eine Spezifität von ${fCI(asGesamt?.spez, 1, true, 'de')}, einen positiven prädiktiven Wert (PPV) von ${fCI(asGesamt?.ppv, 1, true, 'de')}, einen negativen prädiktiven Wert (NPV) von ${fCI(asGesamt?.npv, 1, true, 'de')} und eine Accuracy von ${fCI(asGesamt?.acc, 1, true, 'de')}. Die AUC (Balanced Accuracy) betrug ${fCI(asGesamt?.auc, 3, false, 'de')}.</p>
-                <p>In der Subgruppe der primär operierten Patienten (Direkt-OP-Gruppe, N=${nDirektOP}) zeigte das AS eine Sensitivität von ${fCI(asDirektOP?.sens, 1, true, 'de')} und eine Spezifität von ${fCI(asDirektOP?.spez, 1, true, 'de')} (AUC: ${fCI(asDirektOP?.auc, 3, false, 'de')}). Bei Patienten nach nRCT (nRCT-Gruppe, N=${nNRCT}) betrug die Sensitivität ${fCI(asNRCT?.sens, 1, true, 'de')} und die Spezifität ${fCI(asNRCT?.spez, 1, true, 'de')} (AUC: ${fCI(asNRCT?.auc, 3, false, 'de')}).</p>
+                <p>In der Subgruppe der primär operierten Patienten (Direkt-OP-Gruppe, N=${nDirektOP}) zeigte das AS eine Sensitivität von ${fCI(asDirektOP?.sens, 1, true, 'de')} und eine Spezifität von ${fCI(asDirektOP?.spez, 1, true, 'de')} (AUC: ${fCI(asDirektOP?.auc, 3, false, 'de')}). Bei Patienten nach nRCT (nRCT-Gruppe, N=${nNRCT}) betrug die Sensitivität ${fCI(asNRCT?.sens, 1, true, 'de')} und die Spezifität von ${fCI(asNRCT?.spez, 1, true, 'de')} (AUC: ${fCI(asNRCT?.auc, 3, false, 'de')}).</p>
             `;
         } else {
             return `
@@ -465,7 +465,7 @@ const publicationTextGenerator = (() => {
             .replace(/<li>/g, '\n* ')
             .replace(/<\/li>/g, '')
             .replace(/<br\s*\/?>/g, '\n')
-            .replace(/<h[1-4]>(.*?)<\/h[1-4]>/g, (match, p1) => { // H1-H4 in Markdown umwandeln
+            .replace(/<h[1-4]>(.*?)<\/h[1-4]>/g, (match, p1) => {
                 const level = parseInt(match.match(/<h(\d)/)?.[1] || 1);
                 return `\n\n${'#'.repeat(level)} ${p1}\n`;
             })
@@ -475,8 +475,6 @@ const publicationTextGenerator = (() => {
             .replace(/ {2,}/g, ' ')
             .replace(/\n\s*\n/g, '\n\n')
             .trim();
-
-        markdown = markdown.replace(//sg, '');
         return markdown;
     }
 
