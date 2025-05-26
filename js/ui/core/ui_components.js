@@ -1,13 +1,29 @@
 const uiComponents = (() => {
 
-    function createDashboardCard(title, content, chartId = null, cardClasses = '', headerClasses = '', bodyClasses = '', downloadButtons = []) {
+    function _createHeaderButtonHTML(buttons, targetId, defaultTitle = 'Element') {
         let headerButtonHtml = '';
-         if(downloadButtons && downloadButtons.length > 0 && chartId) {
-             headerButtonHtml = downloadButtons.map(btn =>
-                 `<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${chartId}" data-format="${btn.format}" data-tippy-content="${btn.tooltip || `Als ${btn.format.toUpperCase()} herunterladen`}"> <i class="fas ${btn.icon || 'fa-download'}"></i></button>`
-             ).join('');
+        if (buttons && buttons.length > 0 && targetId) {
+            headerButtonHtml = buttons.map(btn => {
+                const btnId = btn.id || `dl-${targetId}-${btn.format || 'action'}`;
+                const iconClass = btn.icon || 'fa-download';
+                const tooltip = btn.tooltip || `Als ${String(btn.format || 'Aktion').toUpperCase()} herunterladen`;
+                const dataAttributes = [];
+                if (btn.chartId) dataAttributes.push(`data-chart-id="${btn.chartId}"`);
+                if (btn.tableId) dataAttributes.push(`data-table-id="${btn.tableId}"`);
+                if (btn.tableName) dataAttributes.push(`data-table-name="${btn.tableName.replace(/[^a-z0-9]/gi, '_').substring(0,30) || defaultTitle.replace(/[^a-z0-9]/gi, '_').substring(0,30)}"`);
+                if (btn.format) dataAttributes.push(`data-format="${btn.format}"`);
+
+                return `<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 ${btn.tableId ? 'table-download-png-btn' : (btn.chartId ? 'chart-download-btn' : '')}" id="${btnId}" ${dataAttributes.join(' ')} data-tippy-content="${tooltip}"><i class="fas ${iconClass}"></i></button>`;
+            }).join('');
         }
-        const tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik[chartId]?.description || title || '';
+        return headerButtonHtml;
+    }
+
+    function createDashboardCard(title, content, chartId = null, cardClasses = '', headerClasses = '', bodyClasses = '', downloadButtons = []) {
+        const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, chartId || title.replace(/[^a-z0-9]/gi, '_'), title);
+        const tooltipKey = chartId ? chartId.replace(/^chart-dash-/, '') : title.toLowerCase().replace(/\s+/g, '');
+        const tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik[tooltipKey]?.description || title || '';
+
         return `
             <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 dashboard-card-col ${cardClasses}">
                 <div class="card h-100 dashboard-card">
@@ -159,7 +175,8 @@ const uiComponents = (() => {
                             <li><strong>Logik:</strong> <span id="bf-result-logic" class="fw-bold"></span></li>
                             <li style="word-break: break-word;"><strong>Kriterien:</strong> <span id="bf-result-criteria" class="fw-bold"></span></li>
                          </ul>
-                         <p class="mb-1 small text-muted">Dauer: <span id="bf-result-duration"></span>s | Getestet: <span id="bf-result-total-tested"></span></small></p>
+                         <p class="mb-1 small text-muted">Dauer: <span id="bf-result-duration"></span>s | Getestet: <span id="bf-result-total-tested"></span></p>
+                         <p class="mb-0 small text-muted">Kollektiv N: <span id="bf-result-kollektiv-n">--</span> (N+: <span id="bf-result-kollektiv-nplus">--</span>, N-: <span id="bf-result-kollektiv-nminus">--</span>)</p>
                          <hr class="my-1">
                          <button class="btn btn-success btn-sm me-2" id="btn-apply-best-bf-criteria" data-tippy-content="Wendet die beste gefundene Kriterienkombination an und speichert sie.">
                              <i class="fas fa-check me-1"></i> Anwenden
@@ -179,21 +196,12 @@ const uiComponents = (() => {
             ? `data-tippy-content="${TOOLTIP_CONTENT[tooltipKey].cardTitle.replace(/\[KOLLEKTIV\]/g, '{KOLLEKTIV_PLACEHOLDER}')}"`
             : '';
 
-        let headerButtonHtml = downloadButtons.map(btn => {
-            if (btn.tableId) {
-                return `<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${btn.id}" data-table-id="${btn.tableId}" data-table-name="${btn.tableName || title.replace(/[^a-z0-9]/gi, '_').substring(0,30)}" data-tippy-content="${btn.tooltip || `Tabelle als PNG`}"><i class="fas ${btn.icon || 'fa-image'}"></i></button>`;
-            } else {
-                 return `<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${btn.id}" data-chart-id="${btn.chartId || id+'-content'}" data-format="${btn.format}" data-tippy-content="${btn.tooltip || `Als ${btn.format.toUpperCase()}`}"><i class="fas ${btn.icon || 'fa-download'}"></i></button>`;
-            }
-        }).join('');
-
-
+        const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, id + '-content', title);
+        
+        let finalButtonHtml = headerButtonHtml;
         if (APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT && tableId && !downloadButtons.some(b => b.tableId === tableId)) {
-             const pngExportButton = { id: `dl-card-${id}-${tableId}-png`, icon: 'fa-image', tooltip: `Tabelle '${title}' als PNG herunterladen.`, format: 'png', tableId: tableId, tableName: title.replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').substring(0,30) };
-             headerButtonHtml += `
-                 <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="${pngExportButton.id}" data-table-id="${pngExportButton.tableId}" data-table-name="${pngExportButton.tableName}" data-tippy-content="${pngExportButton.tooltip}">
-                     <i class="fas ${pngExportButton.icon}"></i>
-                 </button>`;
+             const pngExportButton = { id: `dl-card-${id}-${tableId}-png`, icon: 'fa-image', tooltip: `Tabelle '${title}' als PNG herunterladen.`, format: 'png', tableId: tableId, tableName: title };
+             finalButtonHtml += _createHeaderButtonHTML([pngExportButton], tableId, title);
         }
 
 
@@ -203,7 +211,7 @@ const uiComponents = (() => {
                     <div class="card-header" ${cardTooltipHtml}>
                          ${title}
                          <span class="float-end card-header-buttons">
-                            ${headerButtonHtml}
+                            ${finalButtonHtml}
                          </span>
                      </div>
                     <div class="card-body ${addPadding ? '' : 'p-0'}" style="overflow-y: auto; overflow-x: hidden;">
@@ -298,7 +306,8 @@ const uiComponents = (() => {
             const lowerStr = formatNumber(metricData?.ci?.lower, digits, na);
             const upperStr = formatNumber(metricData?.ci?.upper, digits, na);
             const ciMethodStr = metricData?.method || na;
-            const bewertungStr = (key === 'auc') ? getAUCBewertung(metricData?.value) : '';
+            const bewertungStr = (key === 'auc') ? getAUCBewertung(metricData?.value) : ((key === 'phi') ? getPhiBewertung(metricData?.value) : '');
+
 
             let filledInterpretation = interpretationTemplate
                 .replace(/\[METHODE\]/g, 'T2')
@@ -327,8 +336,10 @@ const uiComponents = (() => {
         return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)</div><div class="card-body p-2">${contentHTML}</div></div>`;
     }
 
-    function createBruteForceModalContent(results, metric, kollektiv, duration, totalTested) {
+    function createBruteForceModalContent(resultsData) {
+        const { results, metric, kollektiv, duration, totalTested, nGesamt, nPlus, nMinus } = resultsData;
         if (!results || results.length === 0) return '<p class="text-muted">Keine Ergebnisse gefunden.</p>';
+
         const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
         const getKollektivNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
         const bestResult = results[0];
@@ -343,7 +354,8 @@ const uiComponents = (() => {
                     <li><strong>Logik:</strong> ${bestResult.logic.toUpperCase()}</li>
                     <li><strong>Kriterien:</strong> ${formatCriteriaFunc(bestResult.criteria, bestResult.logic)}</li>
                 </ul>
-                <p class="mb-0 text-muted"><small>Dauer: ${formatNumber(duration / 1000, 1)}s | Getestet: ${formatNumber(totalTested, 0)}</small></p>
+                <p class="mb-1 text-muted"><small>Dauer: ${formatNumber(duration / 1000, 1)}s | Getestet: ${formatNumber(totalTested, 0)}</small></p>
+                <p class="mb-0 text-muted"><small>Kollektiv N=${formatNumber(nGesamt,0,'N/A')} (N+: ${formatNumber(nPlus,0,'N/A')}, N-: ${formatNumber(nMinus,0,'N/A')})</small></p>
             </div>
             <h6 class="mb-2">Top 10 Ergebnisse (inkl. identischer Werte):</h6>
             <div class="table-responsive">
