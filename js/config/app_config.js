@@ -2,14 +2,20 @@ const APP_CONFIG = Object.freeze({
     APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
     APP_VERSION: "2.2.0",
 
+    KOLLEKTIV_IDS: Object.freeze({
+        GESAMT: 'Gesamt',
+        DIREKT_OP: 'direkt OP',
+        NRCT: 'nRCT'
+    }),
+
     DEFAULT_SETTINGS: Object.freeze({
-        KOLLEKTIV: 'Gesamt',
+        KOLLEKTIV: 'Gesamt', // Wird später durch APP_CONFIG.KOLLEKTIV_IDS.GESAMT ersetzt, wenn alle Module angepasst sind. Beibehalten für initiale Kompatibilität.
         T2_LOGIC: 'UND',
         DATEN_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
         AUSWERTUNG_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
         STATS_LAYOUT: 'einzel',
-        STATS_KOLLEKTIV1: 'Gesamt',
-        STATS_KOLLEKTIV2: 'nRCT',
+        STATS_KOLLEKTIV1: 'Gesamt', // Wird später durch Konstante ersetzt
+        STATS_KOLLEKTIV2: 'nRCT',   // Wird später durch Konstante ersetzt
         PRESENTATION_VIEW: 'as-pur',
         PRESENTATION_STUDY_ID: null,
         PUBLIKATION_LANG: 'de',
@@ -20,10 +26,12 @@ const APP_CONFIG = Object.freeze({
             'applied_criteria',
             'rutegard_et_al_esgar',
             'koh_2008_morphology',
-            'barbaro_2024_restaging'
+            'barbaro_2024_restaging',
+            'lahaye_et_al_2009_restaging'
         ]),
         CHART_COLOR_SCHEME: 'default',
-        BRUTE_FORCE_METRIC: 'Balanced Accuracy'
+        BRUTE_FORCE_METRIC: 'Balanced Accuracy',
+        // ROC_SHOW_POINTS: true // Beispiel für spätere Erweiterung (Vorschlag 4.2)
     }),
 
     STORAGE_KEYS: Object.freeze({
@@ -39,7 +47,9 @@ const APP_CONFIG = Object.freeze({
         PRESENTATION_VIEW: 'currentPresentationView_v4.2_detailed',
         PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
         CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
-        CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed'
+        CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
+        // STATE_DATEN_TABLE_DETAILS_EXPANDED: 'stateDatenTableDetailsExpanded_v2.2_opt', // Beispiel für spätere Erweiterung (Vorschlag 2.6)
+        // STATE_AUSWERTUNG_TABLE_DETAILS_EXPANDED: 'stateAuswertungTableDetailsExpanded_v2.2_opt' // Beispiel für spätere Erweiterung (Vorschlag 2.6)
     }),
 
     PATHS: Object.freeze({
@@ -58,7 +68,7 @@ const APP_CONFIG = Object.freeze({
         SIGNIFICANCE_LEVEL: 0.05,
         DEFAULT_CI_METHOD_PROPORTION: 'Wilson Score',
         DEFAULT_CI_METHOD_EFFECTSIZE: 'Bootstrap Percentile',
-        FISHER_EXACT_THRESHOLD: 5
+        FISHER_EXACT_THRESHOLD: 5 // Grenzwert für erwartete Zellhäufigkeit, unter dem Fisher Exakt statt Chi² verwendet werden sollte.
     }),
 
     T2_CRITERIA_SETTINGS: Object.freeze({
@@ -79,7 +89,8 @@ const APP_CONFIG = Object.freeze({
         TOAST_DURATION_MS: 4500,
         TRANSITION_DURATION_MS: 350,
         MODAL_BACKDROP_OPACITY: 0.6,
-        SPINNER_DELAY_MS: 300
+        SPINNER_DELAY_MS: 300,
+        // GLOBAL_BF_INDICATOR_SELECTOR: '#bf-global-indicator' // Beispiel für spätere Erweiterung (Vorschlag 2.3)
     }),
 
     CHART_SETTINGS: Object.freeze({
@@ -101,7 +112,8 @@ const APP_CONFIG = Object.freeze({
         GRIDLINE_COLOR: '#e9ecef',
         ENABLE_GRIDLINES: true,
         POINT_RADIUS: 4,
-        LINE_STROKE_WIDTH: 2
+        LINE_STROKE_WIDTH: 2,
+        // ROC_CURVE_SETTINGS: { showPoints: true, pointRadius: 3, defaultColors: ['#4472C4', '#E0DC2C', '#2ca02c', '#d62728'] } // Beispiel für spätere Erweiterung
     }),
 
     EXPORT_SETTINGS: Object.freeze({
@@ -118,8 +130,8 @@ const APP_CONFIG = Object.freeze({
             DESKRIPTIV_MD: 'DeskriptiveStatistikMD',
             DATEN_MD: 'DatenlisteMD',
             AUSWERTUNG_MD: 'AuswertungTabelleMD',
-            CHARTS_PNG: 'ChartsPNG',
-            CHARTS_SVG: 'ChartsSVG',
+            CHARTS_PNG: 'ChartsPNG', // Legacy, wird eher durch ZIP ersetzt
+            CHARTS_SVG: 'ChartsSVG', // Legacy, wird eher durch ZIP ersetzt
             ALL_ZIP: 'GesamtPaketZIP',
             CSV_ZIP: 'CSVPaketZIP',
             MD_ZIP: 'MDPaketZIP',
@@ -129,6 +141,7 @@ const APP_CONFIG = Object.freeze({
             FILTERED_DATA_CSV: 'GefilterteDatenCSV',
             FILTERED_DATA_XLSX: 'GefilterteDatenXLSX',
             COMPREHENSIVE_REPORT_HTML: 'AnalyseberichtHTML',
+            PUBLIKATION_ZIP: 'PublikationsmaterialZIP',
             AUSWERTUNG_XLSX: 'AuswertungTabelleXLSX',
             DATEN_XLSX: 'DatenlisteXLSX',
             STATISTIK_XLSX: 'StatistikUebersichtXLSX',
@@ -144,8 +157,9 @@ const APP_CONFIG = Object.freeze({
             PRAES_AS_VS_T2_CHART_SVG: 'PraesChartASvsT2_{StudyID}_SVG',
             TABLE_PNG_EXPORT: '{TableName}_PNG',
             CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
-            PUBLIKATION_METHODEN_MD: 'PublikationMethodenMD',
-            PUBLIKATION_ERGEBNISSE_MD: 'PublikationErgebnisseMD'
+            PUBLIKATION_METHODEN_MD: 'Publikation_{SectionName}_MD',
+            PUBLIKATION_ERGEBNISSE_MD: 'Publikation_{SectionName}_MD',
+            PUBLIKATION_MAIN_SECTION_MD: 'Publikation_{SectionName}_Gesamt_MD'
         }),
         EXCEL_SHEET_NAME_DATEN: 'Datenliste',
         EXCEL_SHEET_NAME_AUSWERTUNG: 'Auswertung',
@@ -154,7 +168,7 @@ const APP_CONFIG = Object.freeze({
         EXCEL_SHEET_NAME_KONFIG: 'Konfiguration'
     }),
 
-    REPORT_SETTINGS: Object.freeze({
+    REPORT_SETTINGS: Object.freeze({ // Für den umfassenden HTML-Bericht
         INCLUDE_APP_VERSION: true,
         INCLUDE_GENERATION_TIMESTAMP: true,
         INCLUDE_KOLLEKTIV_INFO: true,
@@ -168,7 +182,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.2.0"}`,
+        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.2.0"}`, // Version wird hier hartkodiert, da APP_CONFIG.APP_VERSION nicht direkt hier verfügbar ist
         REPORT_LOGO_ALT_TEXT: 'Institutslogo'
     }),
 
