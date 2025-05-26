@@ -1,106 +1,90 @@
 const PUBLICATION_CONFIG = Object.freeze({
-    defaultLanguage: 'de', // This is used by state.js as a fallback if no language is in localStorage
-    defaultSection: 'methoden', // Default section to show when publication tab is opened
+    defaultLanguage: 'de',
+    defaultSection: 'methoden',
     sections: Object.freeze([
         Object.freeze({
             id: 'methoden',
-            labelKey: 'methoden', // Key to look up in UI_TEXTS.lang[lang].publikationTab.sectionLabels
+            labelKey: 'methoden',
             subSections: Object.freeze([
-                Object.freeze({ id: 'methoden_studienanlage', labelKey: 'methoden_studienanlage' }), // Key for UI_TEXTS.lang[lang].publikationTab.subSectionLabels
-                Object.freeze({ id: 'methoden_patientenkollektiv', labelKey: 'methoden_patientenkollektiv' }),
-                Object.freeze({ id: 'methoden_mrt_protokoll', labelKey: 'methoden_mrt_protokoll' }),
-                Object.freeze({ id: 'methoden_as_definition', labelKey: 'methoden_as_definition' }),
-                Object.freeze({ id: 'methoden_t2_definition', labelKey: 'methoden_t2_definition' }),
-                Object.freeze({ id: 'methoden_referenzstandard', labelKey: 'methoden_referenzstandard' }),
-                Object.freeze({ id: 'methoden_statistische_analyse', labelKey: 'methoden_statistische_analyse' })
+                Object.freeze({ id: 'methoden_studienanlage', label: 'Studiendesign und Ethik' }),
+                Object.freeze({ id: 'methoden_patientenkollektiv', label: 'Patientenkollektiv' }),
+                Object.freeze({ id: 'methoden_mrt_protokoll', label: 'MRT-Protokoll & Kontrastmittelgabe' }),
+                Object.freeze({ id: 'methoden_as_definition', label: 'Definition & Bewertung Avocado Sign' }),
+                Object.freeze({ id: 'methoden_t2_definition', label: 'Definition & Bewertung T2-Kriterien' }),
+                Object.freeze({ id: 'methoden_referenzstandard', label: 'Referenzstandard (Histopathologie)' }),
+                Object.freeze({ id: 'methoden_statistische_analyse', label: 'Statistische Analyse' })
             ])
         }),
         Object.freeze({
             id: 'ergebnisse',
             labelKey: 'ergebnisse',
             subSections: Object.freeze([
-                Object.freeze({ id: 'ergebnisse_patientencharakteristika', labelKey: 'ergebnisse_patientencharakteristika' }),
-                Object.freeze({ id: 'ergebnisse_as_performance', labelKey: 'ergebnisse_as_performance' }),
-                Object.freeze({ id: 'ergebnisse_literatur_t2_performance', labelKey: 'ergebnisse_literatur_t2_performance' }),
-                Object.freeze({ id: 'ergebnisse_optimierte_t2_performance', labelKey: 'ergebnisse_optimierte_t2_performance' }),
-                Object.freeze({ id: 'ergebnisse_vergleich_performance', labelKey: 'ergebnisse_vergleich_performance' })
+                Object.freeze({ id: 'ergebnisse_patientencharakteristika', label: 'Patientencharakteristika' }),
+                Object.freeze({ id: 'ergebnisse_as_performance', label: 'Diagnostische Güte: Avocado Sign' }),
+                Object.freeze({ id: 'ergebnisse_literatur_t2_performance', label: 'Diagnostische Güte: Literatur-T2-Kriterien' }),
+                Object.freeze({ id: 'ergebnisse_optimierte_t2_performance', label: 'Diagnostische Güte: Optimierte T2-Kriterien (Brute-Force)' }),
+                Object.freeze({ id: 'ergebnisse_vergleich_performance', label: 'Vergleich: AS vs. T2-Kriterien' })
             ])
-        }),
-        // Additional main sections can be added here if needed, e.g., Diskussion, Einleitung
-        // For now, keeping it to Methoden and Ergebnisse as per current implementation focus
-         Object.freeze({
-            id: 'diskussion',
-            labelKey: 'diskussion',
-            subSections: [] // Placeholder, actual subsections would be defined here
-        }),
-        Object.freeze({
-            id: 'einleitung',
-            labelKey: 'einleitung',
-            subSections: [] // Placeholder
-        }),
-        Object.freeze({
-            id: 'abstract',
-            labelKey: 'abstract',
-            subSections: [] // Placeholder
-        }),
-        Object.freeze({
-            id: 'referenzen',
-            labelKey: 'referenzen',
-            subSections: [] // Placeholder
         })
     ]),
-    literatureCriteriaSets: Object.freeze([ // These IDs are used to fetch sets from study_criteria_manager
+    literatureCriteriaSets: Object.freeze([
         Object.freeze({
             id: 'koh_2008_morphology',
-            // nameKey and shortName are used by publication_renderer if directly accessed,
-            // but study_criteria_manager.getStudyCriteriaSetById(id).name is preferred
+            nameKey: 'Koh et al. (2008)',
+            shortName: 'Koh et al.'
         }),
         Object.freeze({
             id: 'barbaro_2024_restaging',
+            nameKey: 'Barbaro et al. (2024)',
+            shortName: 'Barbaro et al.'
         }),
         Object.freeze({
             id: 'rutegard_et_al_esgar',
+            nameKey: 'Rutegård et al. (2025) / ESGAR 2016',
+            shortName: 'ESGAR 2016'
         })
     ]),
-    bruteForceMetricsForPublication: Object.freeze([ // Used for the dropdown in publication tab header
-        // The 'label' here should be a key for UI_TEXTS if full localization of these labels is desired,
-        // or they are treated as universal. Current implementation in ui_components uses the label directly.
-        // For full localization, each object would need e.g. labelKey: 'bfMetricBalancedAccuracy'
-        { value: 'Balanced Accuracy', label: 'Balanced Accuracy' }, // Assuming these are recognized terms
+    bruteForceMetricsForPublication: Object.freeze([
+        { value: 'Balanced Accuracy', label: 'Balanced Accuracy' },
         { value: 'Accuracy', label: 'Accuracy' },
         { value: 'F1-Score', label: 'F1-Score' },
-        { value: 'PPV', label: 'PPV' }, // Or "Positiver Prädiktiver Wert (PPV)" if more descriptive
-        { value: 'NPV', label: 'NPV' }  // Or "Negativer Prädiktiver Wert (NPV)"
+        { value: 'PPV', label: 'Positiver Prädiktiver Wert (PPV)' },
+        { value: 'NPV', label: 'Negativer Prädiktiver Wert (NPV)' }
     ]),
-    defaultBruteForceMetricForPublication: 'Balanced Accuracy', // Value from the list above
-
-    publicationElements: Object.freeze({ // IDs for specific tables/charts generated in publication tab
+    defaultBruteForceMetricForPublication: 'Balanced Accuracy',
+    publicationElements: Object.freeze({
         methoden: Object.freeze({
             literaturT2KriterienTabelle: {
                 id: 'pub-table-literatur-t2-kriterien',
-                // titleDe and titleEn were here, now this will be handled by UI_TEXTS.lang[lang].publikationTab.tableTitles.literaturT2Kriterien
+                titleDe: 'Übersicht der Literatur-basierten T2-Kriteriensets',
+                titleEn: 'Overview of Literature-Based T2 Criteria Sets'
             }
         }),
         ergebnisse: Object.freeze({
             patientenCharakteristikaTabelle: {
                 id: 'pub-table-patienten-charakteristika',
+                titleDe: 'Patientencharakteristika',
+                titleEn: 'Patient Characteristics'
             },
-            diagnostischeGueteGesamtTabelle: { // This ID seems to be a base for multiple tables (AS, Lit, BF, Vergleich)
+            diagnostischeGueteGesamtTabelle: {
                 id: 'pub-table-diagnostische-guete',
+                titleDe: 'Diagnostische Güte: Avocado Sign und T2-Kriterien',
+                titleEn: 'Diagnostic Performance: Avocado Sign and T2 Criteria'
             },
-            // Specific chart IDs that might be referenced for styling or direct manipulation (if any)
-            // Actual rendering logic for these is in publikation_tab_logic.js -> publication_renderer.js -> chart_renderer.js
-            // Example IDs that would be dynamically generated:
-            // alterHistogrammGesamt: 'pub-chart-alter-Gesamt',
-            // geschlechtPieGesamt: 'pub-chart-gender-Gesamt',
-            // vergleichPerformanceGesamt: 'pub-chart-vergleich-Gesamt',
-            // vergleichPerformanceDirektOP: 'pub-chart-vergleich-direkt-OP',
-            // vergleichPerformanceNRCT: 'pub-chart-vergleich-nRCT'
+            rocChartAsVsT2: {
+                id: 'pub-chart-roc-as-vs-t2',
+                titleDe: 'ROC-Kurven: Avocado Sign vs. Beste T2-Kriterien (pro Kollektiv)',
+                titleEn: 'ROC Curves: Avocado Sign vs. Best T2 Criteria (per Cohort)'
+            },
+            sensSpezBarChart: {
+                id: 'pub-chart-sens-spez-bar',
+                titleDe: 'Sensitivität & Spezifität: AS vs. T2-Kriterien (pro Kollektiv)',
+                titleEn: 'Sensitivity & Specificity: AS vs. T2 Criteria (per Cohort)'
+            }
         })
     })
 });
 
 if (typeof Object.freeze === 'function') {
-    // Object.freeze(PUBLICATION_CONFIG) is already applied to the main object
-    // The nested Object.freeze calls handle the inner structures.
+    Object.freeze(PUBLICATION_CONFIG);
 }
