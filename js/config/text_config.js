@@ -19,13 +19,12 @@ const UI_TEXTS = {
         'direkt OP': 'Direkt OP',
         'nRCT': 'nRCT',
         'avocado_sign': 'Avocado Sign',
-        'applied_criteria': 'Eingestellte T2 Kriterien',
-        'unknown': 'Unbekannt'
+        'applied_criteria': 'Eingestellte T2 Kriterien'
     },
     t2LogicDisplayNames: {
         'UND': 'UND',
         'ODER': 'ODER',
-        'KOMBINIERT': 'KOMBINIERT (ESGAR-Logik)'
+        'KOMBINIERT': 'KOMBINIERT'
     },
     publikationTab: {
         spracheSwitchLabel: {
@@ -35,14 +34,12 @@ const UI_TEXTS = {
         sectionLabels: {
             methoden: 'Methoden',
             ergebnisse: 'Ergebnisse',
-            diskussion: 'Diskussion & Limitationen',
+            diskussion: 'Diskussion',
             einleitung: 'Einleitung',
-            abstract: 'Abstract & Fazit',
-            referenzen: 'Referenzen & Anhang'
+            abstract: 'Abstract',
+            referenzen: 'Referenzen'
         },
-        bruteForceMetricSelectLabel: 'Optimierungsmetrik für T2 (BF):',
-        exportCurrentSectionMD: 'Aktuellen Abschnitt als Markdown exportieren',
-        exportPublicationZIP: 'Gesamte Publikation (alle Abschnitte, MD) als ZIP exportieren'
+        bruteForceMetricSelectLabel: 'Optimierungsmetrik für T2 (BF):'
     },
     chartTitles: {
         ageDistribution: 'Altersverteilung',
@@ -50,9 +47,9 @@ const UI_TEXTS = {
         therapyDistribution: 'Therapie',
         statusN: 'N-Status (Patho)',
         statusAS: 'AS-Status',
-        statusT2: 'T2-Status (angewandt)',
+        statusT2: 'T2-Status',
         comparisonBar: 'Vergleich AS vs. {T2Name}',
-        rocCurve: 'ROC-Kurve: {METHODE} (vs. N)',
+        rocCurve: 'ROC-Kurve für {Method}',
         asPerformance: 'AS Performance (Akt. Kollektiv)'
     },
     axisLabels: {
@@ -61,8 +58,8 @@ const UI_TEXTS = {
         lymphNodeCount: 'Anzahl Lymphknoten',
         metricValue: 'Wert',
         metric: 'Diagnostische Metrik',
-        sensitivity: 'Sensitivität (Richtig-Positiv-Rate)',
-        oneMinusSpecificity: '1 - Spezifität (Falsch-Positiv-Rate)',
+        sensitivity: 'Sensitivität (RP Rate)',
+        oneMinusSpecificity: '1 - Spezifität (FP Rate)',
         probability: 'Wahrscheinlichkeit',
         shortAxisDiameter: 'Kurzachsendurchmesser (mm)'
     },
@@ -79,10 +76,9 @@ const UI_TEXTS = {
         t2Positive: 'T2+',
         t2Negative: 'T2-',
         avocadoSign: 'Avocado Sign (AS)',
-        currentT2: '{T2ShortName}', // Placeholder
+        currentT2: '{T2ShortName}',
         benignLN: 'Benigne LK',
-        malignantLN: 'Maligne LK',
-        rocCurveMethod: '{METHODE}' // Placeholder
+        malignantLN: 'Maligne LK'
     },
     criteriaComparison: {
         title: "Vergleich diagnostischer Güte verschiedener Methoden",
@@ -96,7 +92,7 @@ const UI_TEXTS = {
         tableHeaderAUC: "AUC/BalAcc",
         showAppliedLabel: "Aktuell angewandte Kriterien anzeigen"
     },
-    excelExport: { // Wird derzeit nicht verwendet, bleibt aber für Konsistenz
+    excelExport: {
         datenLabel: "Datenliste (.xlsx)",
         auswertungLabel: "Auswertungstabelle (.xlsx)",
         statistikLabel: "Statistik Übersicht (.xlsx)",
@@ -174,7 +170,7 @@ const TOOLTIP_CONTENT = {
         reset: "Setzt die Logik und alle Kriterien auf die Standardeinstellungen zurück (siehe Konfiguration). Die Änderungen sind danach noch nicht angewendet.",
         apply: "Wendet die aktuell eingestellten T2-Kriterien und die Logik auf den gesamten Datensatz an. Dies aktualisiert die T2-Spalten in den Tabellen, alle statistischen Auswertungen und Diagramme. Die Einstellung wird zudem für zukünftige Sitzungen gespeichert."
     },
-    t2CriteriaCard: { unsavedIndicator: "Achtung: Es gibt nicht angewendete Änderungen an den T2-Kriterien oder der Logik. Klicken Sie auf 'Anwenden & Speichern', um die Ergebnisse zu aktualisieren und die Einstellung zu speichern." },
+    t2CriteriaCard: { unsavedIndicator: "Achtung: Es gibt nicht angewendete Änderungen an den T2-Kriterien oder der Logik. Klicken Sie auf 'Anwenden', um die Ergebnisse zu aktualisieren und die Einstellung zu speichern." },
     t2MetricsOverview: {
         cardTitle: "Kurzübersicht der diagnostischen Güte für die aktuell angewendeten und gespeicherten T2-Kriterien im Vergleich zum histopathologischen N-Status für das gewählte Kollektiv: [KOLLEKTIV].",
         sens: "Sensitivität (T2 vs. N)",
@@ -190,17 +186,13 @@ const TOOLTIP_CONTENT = {
     bruteForceStart: { description: "Startet die exhaustive Suche (Brute-Force) nach der optimalen Kombination von T2-Kriterien (aktive Kriterien, Werte, Logik), die die gewählte Zielmetrik maximiert. Dies testet alle sinnvollen Kombinationen und kann je nach Kollektivgröße einige Minuten dauern. Der Prozess läuft im Hintergrund." },
     bruteForceInfo: { description: "Zeigt den Status des Optimierungs-Workers und das aktuell für die Analyse ausgewählte Patientenkollektiv an." },
     bruteForceProgress: { description: "Zeigt den Fortschritt der laufenden Optimierung an: Anzahl bereits getesteter Kombinationen von insgesamt zu testenden [TOTAL], sowie die bisher beste gefundene Metrik mit den zugehörigen Kriterien und der Logik." },
-    bruteForceResult: {
-        description: "Zeigt das Ergebnis der abgeschlossenen Optimierung an: die beste gefundene Kriterienkombination (Logik, aktive Kriterien, Werte) und den damit erreichten Wert der Zielmetrik für das analysierte Kollektiv.",
-        applyButton: "Übernimmt die beste gefundene Kriterienkombination und Logik in die T2-Kriterien-Definition und führt automatisch die Aktion 'Anwenden & Speichern' aus."
-    },
+    bruteForceResult: { description: "Zeigt das Ergebnis der abgeschlossenen Optimierung an: die beste gefundene Kriterienkombination (Logik, aktive Kriterien, Werte) und den damit erreichten Wert der Zielmetrik für das analysierte Kollektiv." },
     bruteForceDetailsButton: { description: "Öffnet ein separates Fenster (Modal), das eine sortierte Liste der Top 10 gefundenen Kriterienkombinationen (inklusive solcher mit gleichem Metrikwert) und weitere Details zur Optimierung anzeigt." },
     bruteForceModal: { exportButton: "Exportiert den detaillierten Bericht der Brute-Force-Optimierung, inklusive der Top 10 Ergebnisse und der Konfiguration, als formatierte Textdatei (.txt)." },
     statistikLayout: { description: "Wählen Sie die Anzeigeart für die statistischen Ergebnisse: 'Einzelansicht' zeigt die detaillierte Statistik für die global im Header ausgewählte Patientengruppe. 'Vergleich Aktiv' ermöglicht die Auswahl von zwei Kollektiven und zeigt deren Statistiken nebeneinander sowie zusätzliche statistische Tests zum Vergleich der Performanz zwischen den Gruppen an." },
     statistikKollektiv1: { description: "Wählen Sie das erste Kollektiv für die statistische Auswertung bzw. den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv')." },
     statistikKollektiv2: { description: "Wählen Sie das zweite Kollektiv für den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv')." },
     statistikToggleVergleich: { description: "Schaltet zwischen der Ansicht für ein einzelnes, global gewähltes Kollektiv und der Vergleichsansicht zweier spezifisch wählbarer Kollektive um." },
-    rocCurveCard: { cardTitle: "ROC-Kurve und AUC für [METHODE] im Kollektiv [KOLLEKTIV] zur Unterscheidung zwischen N+ und N-." },
     deskriptiveStatistik: {
         cardTitle: "Überblick über die demographischen Daten (Alter, Geschlecht), Therapieart und Verteilung der N-, AS- und T2-Status sowie Lymphknotenanzahlen im ausgewählten Kollektiv ([KOLLEKTIV]).",
         alterMedian: { description: "Median des Alters: Der zentrale Wert, der die Patienten nach Alter in zwei gleich große Hälften teilt. Angegeben mit Minimum-Maximum und [Mittelwert ± Standardabweichung]." },
@@ -233,9 +225,10 @@ const TOOLTIP_CONTENT = {
         tableHeaderAUC: "Area Under Curve / Balanced Accuracy: Maß für die Gesamt-Trennschärfe (0.5=Zufall, 1=perfekt)."
     },
     logisticRegressionCard: { cardTitle: "Ergebnisse der logistischen Regression zur Modellierung der N+ Wahrscheinlichkeit basierend auf ausgewählten Prädiktoren (z.B. T2-Merkmale, Alter) für das Kollektiv [KOLLEKTIV]. (Experimentell)" },
+    rocCurveCard: { cardTitle: "Receiver Operating Characteristic (ROC) Kurve für die Unterscheidung zwischen N+ und N- basierend auf {Variable} für das Kollektiv [KOLLEKTIV]. Zeigt Sensitivität vs. 1-Spezifität über verschiedene Schwellenwerte." },
     praesentation: {
         viewSelect: { description: "Wählen Sie die Datenansicht für den Präsentations-Tab: 'Avocado Sign (Daten)' zeigt die dynamisch berechneten Kernergebnisse für AS im aktuellen Kollektiv. 'AS vs. T2 (Vergleich)' ermöglicht einen dynamischen Vergleich von AS mit T2-Kriterien für das aktuell global gewählte Kollektiv." },
-        studySelect: { description: "Wählen Sie eine Quelle für die T2-Kriterien, die mit dem Avocado Sign verglichen werden sollen: Entweder die aktuell in der App eingestellten ('Eingestellte T2 Kriterien') oder vordefinierte Kriteriensätze aus relevanten publizierten Studien. Die Auswahl aktualisiert die Info-Karte und den Vergleichs-Chart. Der Vergleich basiert immer auf dem aktuell im Header ausgewählten Patientenkollektiv. Bei Auswahl einer Studie kann sich das globale Kollektiv automatisch anpassen, wenn die Studie primär für eine spezifische Patientengruppe (z.B. nRCT) validiert wurde." },
+        studySelect: { description: "Wählen Sie eine Quelle für die T2-Kriterien, die mit dem Avocado Sign verglichen werden sollen: Entweder die aktuell in der App eingestellten ('Eingestellte T2 Kriterien') oder vordefinierte Kriteriensätze aus relevanten publizierten Studien. Die Auswahl aktualisiert die Info-Karte und den Vergleichs-Chart. Der Vergleich basiert immer auf dem aktuell im Header ausgewählten Patientenkollektiv." },
         t2BasisInfoCard: {
             title: "Details zur T2-Vergleichsbasis",
             description: "Zeigt Details zu den aktuell für den Vergleich ausgewählten T2-Kriterien.",
@@ -297,19 +290,15 @@ const TOOLTIP_CONTENT = {
         tableSinglePNG: { description: "Exportiert die ausgewählte Tabelle als einzelne PNG-Datei.", type: 'TABLE_PNG_EXPORT', ext: "png"},
         allZIP: { description: "Exportiert alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT, alle MDs, Gefilterte-Daten-CSV, HTML-Report) in einem einzigen ZIP-Archiv.", type: 'ALL_ZIP', ext: "zip"},
         csvZIP: { description: "Bündelt alle verfügbaren CSV-Dateien (Statistik, Gefilterte Daten) in einem ZIP-Archiv.", type: 'CSV_ZIP', ext: "zip"},
-        mdZIP: { description: "Bündelt alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikations-Abschnitte) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "zip"},
+        mdZIP: { description: "Bündelt alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "md"},
         pngZIP: { description: "Identisch zum 'Alle Diagramme & Tabellen (PNG)' Einzel-Export.", type: 'PNG_ZIP', ext: "zip"},
         svgZIP: { description: "Identisch zum 'Alle Diagramme (SVG)' Einzel-Export.", type: 'SVG_ZIP', ext: "zip"},
-        xlsxZIP: { description: "Bündelt alle verfügbaren Excel-Dateien in einem ZIP-Archiv.", type: 'XLSX_ZIP', ext: "zip"},
-        publikationMD: { description: "Exportiert den aktuell ausgewählten Hauptabschnitt des Publikation-Tabs (z.B. alle Methoden-Unterabschnitte) als eine einzelne Markdown-Datei.", type: 'PUBLIKATION_MAIN_SECTION_MD', ext: "md"},
-        publikationZIP: { description: "Exportiert alle generierten Markdown-Texte für die gesamte Publikation (alle Abschnitte und Unterabschnitte) als ZIP-Archiv.", type: 'PUBLIKATION_ZIP', ext: "zip"}
+        xlsxZIP: { description: "Bündelt alle verfügbaren Excel-Dateien in einem ZIP-Archiv.", type: 'XLSX_ZIP', ext: "zip"}
     },
     publikationTabTooltips: {
         spracheSwitch: { description: "Wechselt die Sprache der Texte im Publikation-Tab zwischen Deutsch und Englisch." },
         sectionSelect: { description: "Wählen Sie den Abschnitt der wissenschaftlichen Publikation aus, für den Textvorschläge und relevante Daten/Grafiken angezeigt werden sollen." },
-        bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, für deren Optimierungsergebnisse (via Brute-Force) die entsprechenden Statistiken im 'Ergebnisse'-Abschnitt des Publikation-Tabs dargestellt werden sollen. Die generierten Publikationstexte beziehen sich jedoch primär auf die Standard-Optimierungsmetrik (Balanced Accuracy)." },
-        exportCurrentSectionButton: { description: "Exportiert den gesamten Text des aktuell ausgewählten Hauptabschnitts (z.B. 'Methoden' mit allen Unterpunkten) als eine einzelne Markdown-Datei."},
-        exportPublicationZIPButton: { description: "Exportiert die vollständigen Textentwürfe aller Haupt- und Unterabschnitte der Publikation als Markdown-Dateien, gebündelt in einem ZIP-Archiv."},
+        bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, für deren Optimierungsergebnisse (via Brute-Force) die entsprechenden Statistiken im 'Ergebnisse'-Abschnitt des Publikation-Tabs dargestellt werden sollen." },
         methoden: {
             studienanlage: "Textvorschlag und relevante Informationen zum Studiendesign, der Ethik und der verwendeten Software.",
             patientenkohorte: "Textvorschlag und relevante Informationen zum Patientenkollektiv und der Datenbasis.",
@@ -349,7 +338,7 @@ const TOOLTIP_CONTENT = {
         aucComp: { name: "AUC Vergleich", description: "Vergleicht die AUC der Methode [METHODE] zwischen zwei unabhängigen Kollektiven ([KOLLEKTIV1] vs. [KOLLEKTIV2]) mittels eines Z-Tests.", interpretation: "Der Unterschied in der AUC der Methode [METHODE] zwischen den Kollektiven [KOLLEKTIV1] und [KOLLEKTIV2] ist <strong>[SIGNIFIKANZ_TEXT]</strong> (p=[P_WERT])." },
         logisticRegressionFit: { name: "Modellanpassung (Log. Regression)", description: "Güte der Anpassung des logistischen Regressionsmodells an die Daten.", interpretation: "Das Modell zeigt eine [BEWERTUNG_FIT] Anpassung an die Daten."},
         logisticRegressionCoef: { name: "Koeffizient (Log. Regression)", description: "Geschätzter Koeffizient für den Prädiktor [PREDICTOR]. Gibt die Veränderung der Log-Odds für N+ pro Einheitsänderung des Prädiktors an.", interpretation: "Der Koeffizient für [PREDICTOR] beträgt <strong>[COEF_VALUE]</strong> (p=[P_WERT], [SIGNIFIKANZ]), was auf einen [SIGNIFIKANZ_TEXT] Einfluss auf die N+ Wahrscheinlichkeit hindeutet."},
-        rocCurvePlot: { name: "ROC-Kurve", description: "Zeigt die ROC-Kurve für [METHODE] (vs. N) im Kollektiv [KOLLEKTIV]. Die Diagonale (gestrichelt) repräsentiert zufällige Klassifikation (AUC=0.5). Eine Kurve näher an der oberen linken Ecke bedeutet bessere diagnostische Leistung. AUC-Wert: [AUC_VALUE_CI]."},
+        rocCurvePlot: { description: "Zeigt die ROC-Kurve für {Variable}. Die Diagonale repräsentiert zufällige Klassifikation (AUC=0.5). Eine Kurve näher an der oberen linken Ecke bedeutet bessere Leistung."},
         defaultP: { interpretation: `Der berechnete p-Wert beträgt <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Bei einem Signifikanzniveau von ${APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL} ist das Ergebnis <strong>[SIGNIFIKANZ_TEXT]</strong>.` }
     }
 };

@@ -564,15 +564,7 @@ const exportService = (() => {
                                 nGesamt: statsDataForAllKollektive.Gesamt?.deskriptiv?.anzahlPatienten || 0,
                                 nDirektOP: statsDataForAllKollektive['direkt OP']?.deskriptiv?.anzahlPatienten || 0,
                                 nNRCT: statsDataForAllKollektive.nRCT?.deskriptiv?.anzahlPatienten || 0,
-                                significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
-                                references: {
-                                   lurzSchaefer2025: "Lurz & Schäfer (2025)",
-                                   koh2008: "Koh et al. (2008)",
-                                   barbaro2024: "Barbaro et al. (2024)",
-                                   rutegard2025: "Rutegård et al. (2025)",
-                                   beetsTan2018ESGAR: "ESGAR Consensus (Beets-Tan et al. 2018)",
-                                   lahaye2009: "Lahaye et al. (2009)"
-                               }
+                                significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL
                             };
                             const mdContent = _getPublicationSectionContentForExport(subSection.id, state.getCurrentPublikationLang(), statsDataForAllKollektive, commonDataForPub);
                             const typeKey = subSection.id.startsWith('methoden') ? 'PUBLIKATION_METHODEN_MD' : 'PUBLIKATION_ERGEBNISSE_MD';

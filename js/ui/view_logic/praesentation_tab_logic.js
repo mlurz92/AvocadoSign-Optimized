@@ -2,12 +2,8 @@ const praesentationTabLogic = (() => {
 
     function _createPresentationView_ASPUR_HTML(presentationData) {
         const { statsGesamt, statsDirektOP, statsNRCT, kollektiv, statsCurrentKollektiv, patientCount } = presentationData || {};
-        const kollektives = [APP_CONFIG.KOLLEKTIV_IDS.GESAMT, APP_CONFIG.KOLLEKTIV_IDS.DIREKT_OP, APP_CONFIG.KOLLEKTIV_IDS.NRCT];
-        const statsMap = {
-            [APP_CONFIG.KOLLEKTIV_IDS.GESAMT]: statsGesamt,
-            [APP_CONFIG.KOLLEKTIV_IDS.DIREKT_OP]: statsDirektOP,
-            [APP_CONFIG.KOLLEKTIV_IDS.NRCT]: statsNRCT
-        };
+        const kollektives = ['Gesamt', 'direkt OP', 'nRCT'];
+        const statsMap = { 'Gesamt': statsGesamt, 'direkt OP': statsDirektOP, 'nRCT': statsNRCT };
         const currentKollektivName = getKollektivDisplayName(kollektiv);
 
         const hasDataForCurrent = !!(statsCurrentKollektiv && statsCurrentKollektiv.matrix && statsCurrentKollektiv.matrix.rp !== undefined && (statsCurrentKollektiv.matrix.rp + statsCurrentKollektiv.matrix.fp + statsCurrentKollektiv.matrix.fn + statsCurrentKollektiv.matrix.rn) > 0);
@@ -40,9 +36,8 @@ const praesentationTabLogic = (() => {
         const perfChartSVGTooltip = `Chart (${currentKollektivName}) SVG`;
         const chartId = "praes-as-pur-perf-chart";
         const tableId = "praes-as-pur-perf-table";
-        const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG.includes('{ChartName}') ? 'fa-image':'fa-download'; // Simplified check
-        const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG.includes('{ChartName}') ? 'fa-file-code':'fa-download'; // Simplified check
-
+        const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image':'fa-download';
+        const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download';
 
         const tooltipKeys = ['kollektiv', 'sens', 'spez', 'ppv', 'npv', 'acc', 'auc'];
         let tableHTML = `
@@ -56,7 +51,7 @@ const praesentationTabLogic = (() => {
                         <div class="table-responsive">
                             <table class="table table-striped table-hover table-sm small mb-0" id="${tableId}">
                                 <thead class="small">
-                                    <tr>${tooltipKeys.map((key, index) => `<th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable?.[key]?.description || ui_helpers.getMetricDescriptionHTML(key, 'AS') || ''}">${index === 0 ? 'Kollektiv' : (key.charAt(0).toUpperCase() + key.slice(1) + '. (95% CI)')}</th>`).join('')}</tr>
+                                    <tr>${tooltipKeys.map((key, index) => `<th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable?.[key] || ui_helpers.getMetricDescriptionHTML(key, 'AS') || ''}">${index === 0 ? 'Kollektiv' : (key.charAt(0).toUpperCase() + key.slice(1) + '. (95% CI)')}</th>`).join('')}</tr>
                                 </thead>
                                 <tbody>${kollektives.map(k => createPerfTableRow(statsMap[k], k)).join('')}</tbody>
                             </table>
@@ -80,7 +75,7 @@ const praesentationTabLogic = (() => {
                         </span>
                     </div>
                     <div class="card-body p-1">
-                        <div id="${chartId}" class="praes-chart-container border rounded" style="min-height: 280px;" data-tippy-content="Balkendiagramm der Gütekriterien für AS vs. N für Kollektiv ${currentKollektivName}. Fehlerbalken zeigen 95% Konfidenzintervalle.">
+                        <div id="${chartId}" class="praes-chart-container border rounded" style="min-height: 280px;" data-tippy-content="Balkendiagramm der Gütekriterien für AS vs. N für Kollektiv ${currentKollektivName}.">
                             ${hasDataForCurrent ? '' : `<p class="text-center text-muted p-3">Keine Daten für Chart (${currentKollektivName}).</p>`}
                         </div>
                     </div>
@@ -90,7 +85,7 @@ const praesentationTabLogic = (() => {
         return `<div class="row g-3"><div class="col-12"><h3 class="text-center mb-3">Diagnostische Güte - Avocado Sign</h3></div>${tableHTML}${chartHTML}</div>`;
     }
 
-    function _createPresentationView_ASvsT2_HTML(presentationData, selectedStudyId = null, currentKollektiv = APP_CONFIG.KOLLEKTIV_IDS.GESAMT) {
+    function _createPresentationView_ASvsT2_HTML(presentationData, selectedStudyId = null, currentKollektiv = 'Gesamt') {
         const { statsAS, statsT2, vergleich, comparisonCriteriaSet, kollektiv, patientCount, t2CriteriaLabelShort, t2CriteriaLabelFull } = presentationData || {};
         const kollektivName = getKollektivDisplayName(kollektiv);
         const isApplied = selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
@@ -112,8 +107,7 @@ const praesentationTabLogic = (() => {
             } else if (criteriaSourceForFormatting) {
                  criteriaHTML = studyT2CriteriaManager.formatCriteriaForDisplay(criteriaSourceForFormatting, logicSourceForFormatting, false);
                  if (criteriaHTML === 'Keine aktiven Kriterien' && logicSourceForFormatting) criteriaHTML += ` (Logik: ${logicSourceForFormatting})`;
-                 else if (criteriaHTML !== 'Keine aktiven Kriterien' && logicSourceForFormatting && logicSourceForFormatting !== 'KOMBINIERT') criteriaHTML = `<strong>Logik:</strong> ${UI_TEXTS.t2LogicDisplayNames[logicSourceForFormatting] || logicSourceForFormatting}<br><strong>Regel(n):</strong> ${criteriaHTML}`;
-                 else if (criteriaHTML !== 'Keine aktiven Kriterien' && logicSourceForFormatting === 'KOMBINIERT') criteriaHTML = `${UI_TEXTS.t2LogicDisplayNames[logicSourceForFormatting] || logicSourceForFormatting}: ${criteriaHTML}`;
+                 else if (criteriaHTML !== 'Keine aktiven Kriterien' && logicSourceForFormatting) criteriaHTML = `<strong>Logik:</strong> ${logicSourceForFormatting}<br><strong>Regel(n):</strong> ${criteriaHTML}`;
             }
 
 
@@ -133,8 +127,8 @@ const praesentationTabLogic = (() => {
         let resultsHTML = '';
         const canDisplayResults = !!(selectedStudyId && presentationData && statsAS && statsT2 && vergleich && comparisonCriteriaSet && patientCount > 0);
         const na = '--';
-        const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG.includes('{ChartName}') ? 'fa-image':'fa-download';
-        const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG.includes('{ChartName}') ? 'fa-file-code':'fa-download';
+        const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image':'fa-download';
+        const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download';
 
         if (canDisplayResults) {
             const fPVal = (r,d=3) => { const p = r?.pValue; return (p !== null && !isNaN(p)) ? (p < 0.001 ? '&lt;0.001' : formatNumber(p, d, na)) : na; };
@@ -178,7 +172,7 @@ const praesentationTabLogic = (() => {
             const delongDesc = ui_helpers.getTestDescriptionHTML('delong', t2ShortNameEffective);
             const delongInterp = ui_helpers.getTestInterpretationHTML('delong', vergleich?.delong, kollektivName, t2ShortNameEffective);
             testsTableHTML += `<tr><td data-tippy-content="${mcNemarDesc}">McNemar (Acc)</td><td>${formatNumber(vergleich?.mcnemar?.statistic, 3, '--')} (df=${vergleich?.mcnemar?.df || '--'})</td><td data-tippy-content="${mcNemarInterp}"> ${fPVal(vergleich?.mcnemar)} ${getStatisticalSignificanceSymbol(vergleich?.mcnemar?.pValue)}</td><td class="text-muted">${vergleich?.mcnemar?.method || '--'}</td></tr>`;
-            testsTableHTML += `<tr><td data-tippy-content="${delongDesc}">DeLong (AUC)</td><td>Z=${formatNumber(vergleich?.delong?.Z, 3, '--')} (Diff: ${formatNumber(vergleich?.delong?.diffAUC, 3, na)})</td><td data-tippy-content="${delongInterp}"> ${fPVal(vergleich?.delong)} ${getStatisticalSignificanceSymbol(vergleich?.delong?.pValue)}</td><td class="text-muted">${vergleich?.delong?.method || '--'}</td></tr>`;
+            testsTableHTML += `<tr><td data-tippy-content="${delongDesc}">DeLong (AUC)</td><td>Z=${formatNumber(vergleich?.delong?.Z, 3, '--')}</td><td data-tippy-content="${delongInterp}"> ${fPVal(vergleich?.delong)} ${getStatisticalSignificanceSymbol(vergleich?.delong?.pValue)}</td><td class="text-muted">${vergleich?.delong?.method || '--'}</td></tr>`;
             testsTableHTML += `</tbody></table>`;
             const testTableDownloadBtns = [ {id: `dl-${testTableId}-png`, icon: 'fa-image', tooltip: tablePNG, format: 'png', tableId: testTableId, tableName: `Praes_ASvsT2_Tests_${selectedStudyId || 'none'}`} ];
             const testsCardHTML = uiComponents.createStatistikCard(testTableId+'_card', compTitle, testsTableHTML, false, null, testTableDownloadBtns, testTableId);
@@ -195,7 +189,7 @@ const praesentationTabLogic = (() => {
                                  </span>
                              </div>
                             <div class="card-body p-1 d-flex align-items-center justify-content-center">
-                                 <div id="${chartContainerId}" class="praes-chart-container w-100" style="min-height: 300px;" data-tippy-content="Balkendiagramm: Vergleich der Gütekriterien (AS vs. ${t2ShortNameEffective}). Fehlerbalken zeigen 95% Konfidenzintervalle.">
+                                 <div id="${chartContainerId}" class="praes-chart-container w-100" style="min-height: 300px;" data-tippy-content="Balkendiagramm: Vergleich der Gütekriterien (AS vs. ${t2ShortNameEffective}).">
                                      <p class="text-muted small text-center p-3">Lade Vergleichschart...</p>
                                  </div>
                             </div>
@@ -232,7 +226,7 @@ const praesentationTabLogic = (() => {
         return `<div class="row mb-4"><div class="col-12"><h4 class="text-center mb-1">Vergleich: Avocado Sign vs. T2-Kriterien</h4><p class="text-center text-muted small mb-3">Aktuelles Kollektiv: <strong>${kollektivName}</strong> (N=${patientCount ?? '?'})</p><div class="row justify-content-center"><div class="col-md-9 col-lg-7" id="praes-study-select-container"><div class="input-group input-group-sm"><label class="input-group-text" for="praes-study-select">T2-Vergleichsbasis:</label><select class="form-select" id="praes-study-select" data-tippy-content="${TOOLTIP_CONTENT.praesentation.studySelect.description}"><option value="" ${!selectedStudyId ? 'selected' : ''} disabled>-- Bitte wählen --</option>${appliedOptionHTML}<option value="" disabled>--- Publizierte Kriterien ---</option>${studyOptionsHTML}</select></div><div id="praes-study-description" class="mt-2 small text-muted">${comparisonBasisName === 'N/A' ? 'Keine Basis gewählt' : `Aktuelle T2 Basis: <strong>${comparisonBasisName}</strong>`}</div></div></div></div></div><div id="praesentation-as-vs-t2-results">${resultsHTML}</div>`;
     }
 
-    function createPresentationTabContent(view, presentationData, selectedStudyId = null, currentKollektiv = APP_CONFIG.KOLLEKTIV_IDS.GESAMT) {
+    function createPresentationTabContent(view, presentationData, selectedStudyId = null, currentKollektiv = 'Gesamt') {
         let viewSelectorHTML = `
             <div class="row mb-4">
                 <div class="col-12 d-flex justify-content-center">

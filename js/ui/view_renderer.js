@@ -23,11 +23,10 @@ const viewRenderer = (() => {
     function renderDatenTab(data, sortState) {
         _renderTabContent('daten-tab', () => {
              if (!data) throw new Error("Daten für Datentabelle nicht verfügbar.");
-             const isExpanded = state.getDatenTableDetailsExpanded();
              const toggleButtonHTML = `
                  <div class="d-flex justify-content-end mb-3" id="daten-toggle-button-container">
-                     <button id="daten-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="${isExpanded ? 'collapse' : 'expand'}" data-tippy-content="${TOOLTIP_CONTENT.datenTable.expandAll || 'Alle Details ein-/ausblenden'}">
-                        ${isExpanded ? 'Alle Details Ausblenden' : 'Alle Details Einblenden'} <i class="fas ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'} ms-1"></i>
+                     <button id="daten-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="expand" data-tippy-content="${TOOLTIP_CONTENT.datenTable.expandAll || 'Alle Details ein-/ausblenden'}">
+                        Alle Details <i class="fas fa-chevron-down ms-1"></i>
                     </button>
                  </div>`;
             const tableHTML = dataTabLogic.createDatenTableHTML(data, sortState);
@@ -38,11 +37,7 @@ const viewRenderer = (() => {
                  const tableHeader = document.getElementById('daten-table-header');
                  if (tableBody && data.length > 0) ui_helpers.attachRowCollapseListeners(tableBody);
                  if (tableHeader) ui_helpers.updateSortIcons(tableHeader.id, sortState);
-                 if (isExpanded && tableBody && data.length > 0) { // Ensure rows are expanded if state says so
-                    tableBody.querySelectorAll('.collapse:not(.show)').forEach(el => bootstrap.Collapse.getOrCreateInstance(el).show());
-                    tableBody.querySelectorAll('tr[data-bs-target] .row-toggle-icon.fa-chevron-down').forEach(icon => icon.classList.replace('fa-chevron-down', 'fa-chevron-up'));
-                 }
-            }, 50);
+            }, 0);
             return finalHTML;
         });
     }
@@ -54,7 +49,7 @@ const viewRenderer = (() => {
         const pieOpts = { height: 130, margin: { top: 5, right: 5, bottom: 35, left: 5 }, innerRadiusFactor: 0.45, outerRadiusFactor: 0.95, fontSize: '8px', useCompactMargins: true, legendBelow: true };
         const genderData = [{label: UI_TEXTS.legendLabels.male, value: stats.geschlecht?.m ?? 0}, {label: UI_TEXTS.legendLabels.female, value: stats.geschlecht?.f ?? 0}];
         if(stats.geschlecht?.unbekannt > 0) genderData.push({label: UI_TEXTS.legendLabels.unknownGender, value: stats.geschlecht.unbekannt });
-        const therapyData = [{label: UI_TEXTS.legendLabels.direktOP, value: stats.therapie?.[APP_CONFIG.KOLLEKTIV_IDS.DIREKT_OP] ?? 0}, {label: UI_TEXTS.legendLabels.nRCT, value: stats.therapie?.[APP_CONFIG.KOLLEKTIV_IDS.NRCT] ?? 0}];
+        const therapyData = [{label: UI_TEXTS.legendLabels.direktOP, value: stats.therapie?.['direkt OP'] ?? 0}, {label: UI_TEXTS.legendLabels.nRCT, value: stats.therapie?.nRCT ?? 0}];
         try {
             chartRenderer.renderAgeDistributionChart(stats.alterData || [], ids[0], histOpts);
             chartRenderer.renderPieChart(genderData, ids[1], {...pieOpts, legendItemCount: genderData.length});
@@ -105,11 +100,10 @@ const viewRenderer = (() => {
              const metricsOverviewContainerId = 't2-metrics-overview';
              const bruteForceCardContainerId = 'brute-force-card-container';
              const tableCardContainerId = 'auswertung-table-card-container';
-             const isExpanded = state.getAuswertungTableDetailsExpanded();
 
              const criteriaControlsHTML = uiComponents.createT2CriteriaControls(currentCriteria, currentLogic);
              const bruteForceCardHTML = uiComponents.createBruteForceCard(getKollektivDisplayName(currentKollektiv), bfWorkerAvailable);
-             const auswertungTableCardHTML = auswertungTabLogic.createAuswertungTableCardHTML(data, sortState, currentCriteria, currentLogic, isExpanded);
+             const auswertungTableCardHTML = auswertungTabLogic.createAuswertungTableCardHTML(data, sortState, currentCriteria, currentLogic);
 
 
              let finalHTML = `
@@ -141,8 +135,8 @@ const viewRenderer = (() => {
                          if (!stats || stats.anzahlPatienten === 0) {
                              ui_helpers.updateElementHTML(dashboardContainerId, '<div class="col-12"><p class="text-muted text-center small p-3">Keine Daten für Dashboard.</p></div>');
                          } else {
-                             const downloadIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG.includes('{ChartName}') ? 'fa-image' : 'fa-download';
-                             const downloadIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG.includes('{ChartName}') ? 'fa-file-code' : 'fa-download';
+                             const downloadIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image' : 'fa-download';
+                             const downloadIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code' : 'fa-download';
                              const pngTooltip = TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'Als PNG';
                              const svgTooltip = TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'Als SVG';
                              const createDlBtns = (baseId) => [{id:`dl-${baseId}-png`, icon: downloadIconPNG, tooltip: pngTooltip, format:'png'}, {id:`dl-${baseId}-svg`, icon: downloadIconSVG, tooltip: svgTooltip, format:'svg'}];
@@ -150,7 +144,7 @@ const viewRenderer = (() => {
                              dashboardContainer.innerHTML = `
                                 ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.ageDistribution, `<p class="mb-0 small">Median: ${formatNumber(stats.alter?.median, 1)} (${formatNumber(stats.alter?.min, 0)} - ${formatNumber(stats.alter?.max, 0)})</p>`, 'chart-dash-age', '', '', 'p-1', createDlBtns('chart-dash-age'))}
                                 ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.genderDistribution, `<p class="mb-0 small">M: ${stats.geschlecht?.m ?? 0} W: ${stats.geschlecht?.f ?? 0}</p>`, 'chart-dash-gender', '', '', 'p-1', createDlBtns('chart-dash-gender'))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.therapyDistribution, `<p class="mb-0 small">OP: ${stats.therapie?.[APP_CONFIG.KOLLEKTIV_IDS.DIREKT_OP] ?? 0} nRCT: ${stats.therapie?.[APP_CONFIG.KOLLEKTIV_IDS.NRCT] ?? 0}</p>`, 'chart-dash-therapy', '', '', 'p-1', createDlBtns('chart-dash-therapy'))}
+                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.therapyDistribution, `<p class="mb-0 small">OP: ${stats.therapie?.['direkt OP'] ?? 0} nRCT: ${stats.therapie?.nRCT ?? 0}</p>`, 'chart-dash-therapy', '', '', 'p-1', createDlBtns('chart-dash-therapy'))}
                                 ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusN, `<p class="mb-0 small">N+: ${stats.nStatus?.plus ?? 0} N-: ${stats.nStatus?.minus ?? 0}</p>`, 'chart-dash-status-n', '', '', 'p-1', createDlBtns('chart-dash-status-n'))}
                                 ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusAS, `<p class="mb-0 small">AS+: ${stats.asStatus?.plus ?? 0} AS-: ${stats.asStatus?.minus ?? 0}</p>`, 'chart-dash-status-as', '', '', 'p-1', createDlBtns('chart-dash-status-as'))}
                                 ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusT2, `<p class="mb-0 small">T2+: ${stats.t2Status?.plus ?? 0} T2-: ${stats.t2Status?.minus ?? 0}</p>`, 'chart-dash-status-t2', '', '', 'p-1', createDlBtns('chart-dash-status-t2'))}
@@ -172,17 +166,13 @@ const viewRenderer = (() => {
                     const tableHeader = tableContainer.querySelector('#auswertung-table-header');
                     if (tableBody && data.length > 0) ui_helpers.attachRowCollapseListeners(tableBody);
                     if (tableHeader) ui_helpers.updateSortIcons(tableHeader.id, sortState);
-                    if (isExpanded && tableBody && data.length > 0) {
-                        tableBody.querySelectorAll('.collapse:not(.show)').forEach(el => bootstrap.Collapse.getOrCreateInstance(el).show());
-                        tableBody.querySelectorAll('tr[data-bs-target] .row-toggle-icon.fa-chevron-down').forEach(icon => icon.classList.replace('fa-chevron-down', 'fa-chevron-up'));
-                    }
                  }
 
                  ui_helpers.updateT2CriteriaControlsUI(currentCriteria, currentLogic);
                  ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
                  ui_helpers.updateBruteForceUI('idle', {}, bfWorkerAvailable, currentKollektiv);
 
-             }, 50);
+             }, 10);
 
              return finalHTML;
         });
@@ -204,13 +194,11 @@ const viewRenderer = (() => {
              if (datasets.length === 0 || datasets.every(d => !Array.isArray(d) || d.length === 0)) { return '<div class="col-12"><div class="alert alert-warning">Keine Daten für Statistik-Auswahl verfügbar.</div></div>'; }
 
              const outerRow = document.createElement('div'); outerRow.className = 'row g-4';
-             const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG.includes('{ChartName}') ? 'fa-image':'fa-download'; const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG.includes('{ChartName}') ? 'fa-file-code':'fa-download'; const pngTT = TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'PNG'; const svgTT = TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'SVG'; const createChartDlBtns = (baseId) => [{id:`dl-${baseId}-png`,icon:dlIconPNG,tooltip:pngTT,format:'png', chartId: baseId},{id:`dl-${baseId}-svg`,icon:dlIconSVG,tooltip:svgTT,format:'svg', chartId: baseId}];
+             const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image':'fa-download'; const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download'; const pngTT = TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'PNG'; const svgTT = TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'SVG'; const createChartDlBtns = (baseId) => [{id:`dl-${baseId}-png`,icon:dlIconPNG,tooltip:pngTT,format:'png', chartId: baseId},{id:`dl-${baseId}-svg`,icon:dlIconSVG,tooltip:svgTT,format:'svg', chartId: baseId}];
              const createTableDlBtn = (tableId, tableName) => ({id: `dl-${tableId}-png`, icon: 'fa-image', tooltip: `Tabelle '${tableName}' PNG`, format: 'png', tableId: tableId, tableName: tableName});
 
              datasets.forEach((data, i) => {
-                 const kollektivIdSafe = kollektivNames[i].replace(/\s+/g, '-').toLowerCase();
-                 const kollektivDisplayName = kollektivDisplayNames[i];
-                 const col = document.createElement('div'); col.className = layout === 'vergleich' ? 'col-xl-6' : 'col-12'; const innerRowId = `inner-stat-row-${i}`; col.innerHTML = `<h4 class="mb-3">Kollektiv: ${kollektivDisplayName} (N=${data.length})</h4><div class="row g-3" id="${innerRowId}"></div>`; outerRow.appendChild(col); const innerContainer = col.querySelector(`#${innerRowId}`);
+                 const kollektivName = kollektivDisplayNames[i]; const col = document.createElement('div'); col.className = layout === 'vergleich' ? 'col-xl-6' : 'col-12'; const innerRowId = `inner-stat-row-${i}`; col.innerHTML = `<h4 class="mb-3">Kollektiv: ${kollektivName} (N=${data.length})</h4><div class="row g-3" id="${innerRowId}"></div>`; outerRow.appendChild(col); const innerContainer = col.querySelector(`#${innerRowId}`);
                  if (data.length > 0) {
                      let stats = null;
                      try {
@@ -221,25 +209,16 @@ const viewRenderer = (() => {
                              vergleichASvsT2: statisticsService.compareDiagnosticMethods(data, 'as', 't2', 'n'),
                              assoziation: statisticsService.calculateAssociations(data, appliedCriteria)
                          };
-                     } catch(e) { console.error(`Statistikfehler für Kollektiv ${kollektivDisplayName}:`, e); }
+                     } catch(e) { console.error(`Statistikfehler für Kollektiv ${i}:`, e); }
 
                      if (!stats) { innerContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">Fehler bei Statistikberechnung.</div></div>'; return; }
-                     const descCardId=`deskriptiveStatistik-${i}`; const gueteASCardId=`diagnostischeGueteAS-${i}`; const gueteT2CardId=`diagnostischeGueteT2-${i}`; const vergleichASvsT2CardId=`statistischerVergleichASvsT2-${i}`; const assoziationCardId=`assoziationEinzelkriterien-${i}`; const rocCombinedCardId = `rocCombined-${i}`;
-
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(descCardId, `Deskriptive Statistik`, statistikTabLogic.createDeskriptiveStatistikContentHTML(stats, i, kollektivDisplayName), false, 'deskriptiveStatistik', [], `table-deskriptiv-demographie-${i}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteASCardId, `Güte - Avocado Sign (vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteAS, 'AS', kollektivDisplayName), false, `diagnostischeGueteAS-${i}`, [createTableDlBtn(`table-guete-metrics-AS-${kollektivIdSafe}`, 'Güte_AS'), createTableDlBtn(`table-guete-matrix-AS-${kollektivIdSafe}`, 'Matrix_AS')], `table-guete-metrics-AS-${kollektivIdSafe}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteT2CardId, `Güte - T2 (angewandt vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteT2, 'T2', kollektivDisplayName), false, `diagnostischeGueteT2-${i}`, [createTableDlBtn(`table-guete-metrics-T2-${kollektivIdSafe}`, 'Güte_T2'), createTableDlBtn(`table-guete-matrix-T2-${kollektivIdSafe}`, 'Matrix_T2')], `table-guete-metrics-T2-${kollektivIdSafe}`);
-
-                     const rocChartCombinedId = `chart-stat-roc-combined-${kollektivIdSafe}`;
-                     const rocCombinedContent = `<div id="${rocChartCombinedId}" class="border rounded" style="min-height: 250px;" data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.rocCurvePlot?.description || 'ROC-Kurve für [METHODE]').replace('[METHODE]', 'AS & T2 (angewandt)').replace('[KOLLEKTIV]', kollektivDisplayName).replace('[AUC_VALUE_CI]','')}"><p class="text-muted small text-center p-3">Lade kombinierte ROC-Kurve...</p></div>`;
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(rocCombinedCardId, `ROC-Kurven: AS vs. T2 (angewandt)`, rocCombinedContent, false, `rocCurveCard-${i}`);
-
-
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(vergleichASvsT2CardId, `Vergleich - AS vs. T2 (angewandt)`, statistikTabLogic.createVergleichContentHTML(stats.vergleichASvsT2, kollektivDisplayName), false, 'statistischerVergleichASvsT2', [createTableDlBtn(`table-vergleich-as-vs-t2-${kollektivIdSafe}`, 'Vergleich_AS_T2')], `table-vergleich-as-vs-t2-${kollektivIdSafe}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(assoziationCardId, `Assoziation Merkmale vs. N-Status`, statistikTabLogic.createAssoziationContentHTML(stats.assoziation, kollektivDisplayName, appliedCriteria), false, 'assoziationEinzelkriterien', [createTableDlBtn(`table-assoziation-${kollektivIdSafe}`, 'Assoziation')], `table-assoziation-${kollektivIdSafe}`);
-
+                     const descCardId=`deskriptiveStatistik-${i}`; const gueteASCardId=`diagnostischeGueteAS-${i}`; const gueteT2CardId=`diagnostischeGueteT2-${i}`; const vergleichASvsT2CardId=`statistischerVergleichASvsT2-${i}`; const assoziationCardId=`assoziationEinzelkriterien-${i}`;
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(descCardId, `Deskriptive Statistik`, statistikTabLogic.createDeskriptiveStatistikContentHTML(stats, i, kollektivName), false, 'deskriptiveStatistik', [], `table-deskriptiv-demographie-${i}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteASCardId, `Güte - Avocado Sign (vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteAS, 'AS', kollektivName), false, 'diagnostischeGueteAS', [createTableDlBtn(`table-guete-metrics-AS-${kollektivName.replace(/\s+/g, '_')}`, 'Güte_AS'), createTableDlBtn(`table-guete-matrix-AS-${kollektivName.replace(/\s+/g, '_')}`, 'Matrix_AS')], `table-guete-metrics-AS-${kollektivName.replace(/\s+/g, '_')}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteT2CardId, `Güte - T2 (angewandt vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteT2, 'T2', kollektivName), false, 'diagnostischeGueteT2', [createTableDlBtn(`table-guete-metrics-T2-${kollektivName.replace(/\s+/g, '_')}`, 'Güte_T2'), createTableDlBtn(`table-guete-matrix-T2-${kollektivName.replace(/\s+/g, '_')}`, 'Matrix_T2')], `table-guete-metrics-T2-${kollektivName.replace(/\s+/g, '_')}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(vergleichASvsT2CardId, `Vergleich - AS vs. T2 (angewandt)`, statistikTabLogic.createVergleichContentHTML(stats.vergleichASvsT2, kollektivName), false, 'statistischerVergleichASvsT2', [createTableDlBtn(`table-vergleich-as-vs-t2-${kollektivName.replace(/\s+/g, '_')}`, 'Vergleich_AS_T2')], `table-vergleich-as-vs-t2-${kollektivName.replace(/\s+/g, '_')}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(assoziationCardId, `Assoziation Merkmale vs. N-Status`, statistikTabLogic.createAssoziationContentHTML(stats.assoziation, kollektivName, appliedCriteria), false, 'assoziationEinzelkriterien', [createTableDlBtn(`table-assoziation-${kollektivName.replace(/\s+/g, '_')}`, 'Assoziation')], `table-assoziation-${kollektivName.replace(/\s+/g, '_')}`);
                      const ageChartId=`chart-stat-age-${i}`; const genderChartId=`chart-stat-gender-${i}`;
-
 
                      setTimeout(() => {
                          const descCardCont = document.getElementById(`${descCardId}-card-container`);
@@ -253,27 +232,13 @@ const viewRenderer = (() => {
                              }
                          }
                         const ageChartDiv = document.getElementById(ageChartId);
-                        if (ageChartDiv) chartRenderer.renderAgeDistributionChart(stats.deskriptiv.alterData || [], ageChartId, { height: 180, margin: { top: 10, right: 10, bottom: 35, left: 40 } });
-
+                        if (ageChartDiv) {
+                           chartRenderer.renderAgeDistributionChart(stats.deskriptiv.alterData || [], ageChartId, { height: 180, margin: { top: 10, right: 10, bottom: 35, left: 40 } });
+                        }
                          const genderChartDiv = document.getElementById(genderChartId);
                          if (genderChartDiv) {
                             const genderData = [{label: UI_TEXTS.legendLabels.male, value: stats.deskriptiv.geschlecht?.m ?? 0}, {label: UI_TEXTS.legendLabels.female, value: stats.deskriptiv.geschlecht?.f ?? 0}]; if(stats.deskriptiv.geschlecht?.unbekannt > 0) genderData.push({label: UI_TEXTS.legendLabels.unknownGender, value: stats.deskriptiv.geschlecht.unbekannt });
                             chartRenderer.renderPieChart(genderData, genderChartId, { height: 180, margin: { top: 10, right: 10, bottom: 35, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true, legendItemCount: genderData.length });
-                        }
-
-                        const rocCombinedContainer = document.getElementById(rocChartCombinedId);
-                        if (rocCombinedContainer) {
-                            const rocDataSetsCombined = [];
-                            if (stats.gueteAS?.auc?.rocPoints) rocDataSetsCombined.push({ data: stats.gueteAS.auc.rocPoints, name: UI_TEXTS.legendLabels.avocadoSign, color: APP_CONFIG.CHART_SETTINGS.AS_COLOR, auc: stats.gueteAS.auc });
-                            if (stats.gueteT2?.auc?.rocPoints) rocDataSetsCombined.push({ data: stats.gueteT2.auc.rocPoints, name: UI_TEXTS.legendLabels.currentT2.replace('{T2ShortName}', 'T2'), color: APP_CONFIG.CHART_SETTINGS.T2_COLOR, auc: stats.gueteT2.auc });
-
-                            if (rocDataSetsCombined.length > 0) {
-                                chartRenderer.renderROCCurve(rocDataSetsCombined, rocChartCombinedId, { height: 250, margin: { top: 15, right: 15, bottom: 60, left: 50 }, legendBelow: true, legendItemCount: rocDataSetsCombined.length });
-                                const rocCombinedCardCont = document.getElementById(`${rocCombinedCardId}-card-container`);
-                                if(rocCombinedCardCont) { const hdrBtnsRoc = rocCombinedCardCont.querySelector('.card-header-buttons'); if(hdrBtnsRoc) { const rocDlBtns=createChartDlBtns(rocChartCombinedId); hdrBtnsRoc.innerHTML = rocDlBtns.map(b=>`<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${b.id}" data-chart-id="${b.chartId}" data-format="${b.format}" data-tippy-content="${b.tooltip} (ROC AS vs T2)"><i class="fas ${b.icon}"></i></button>`).join(''); } }
-                            } else {
-                                rocCombinedContainer.innerHTML = '<p class="text-muted small text-center p-2">Keine ROC-Daten für kombiniertes Diagramm.</p>';
-                            }
                         }
                      }, 50);
                  } else { innerContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning small p-2">Keine Daten für dieses Kollektiv.</div></div>'; }
@@ -282,7 +247,7 @@ const viewRenderer = (() => {
              if (layout === 'vergleich' && datasets.length === 2 && datasets[0].length > 0 && datasets[1].length > 0) {
                  const vergleichKollektiveStats = statisticsService.compareCohorts(datasets[0], datasets[1], appliedCriteria, appliedLogic);
                  const comparisonCardContainer = document.createElement('div'); comparisonCardContainer.className = 'col-12 mt-4'; const title = `Vergleich ${kollektivDisplayNames[0]} vs. ${kollektivDisplayNames[1]}`;
-                 const tableIdComp = `table-vergleich-kollektive-${kollektivNames[0].replace(/\s+/g, '_')}-vs-${kollektivNames[1].replace(/\s+/g, '_')}`;
+                 const tableIdComp = `table-vergleich-kollektive-${kollektivNames[0]}-vs-${kollektivNames[1]}`;
                  const downloadBtnComp = createTableDlBtn(tableIdComp, 'Vergleich_Kollektive');
                  comparisonCardContainer.innerHTML = uiComponents.createStatistikCard('vergleichKollektive', title, statistikTabLogic.createVergleichKollektiveContentHTML(vergleichKollektiveStats, kollektivNames[0], kollektivNames[1]), false, 'vergleichKollektive', [downloadBtnComp], tableIdComp); outerRow.appendChild(comparisonCardContainer);
              }
@@ -313,8 +278,8 @@ const viewRenderer = (() => {
             let presentationData = {}; const filteredData = dataProcessor.filterDataByKollektiv(processedDataFull, currentGlobalKollektiv); presentationData.kollektiv = currentGlobalKollektiv; presentationData.patientCount = filteredData?.length ?? 0;
 
             if (view === 'as-pur') {
-                const kollektivesToCalc = [APP_CONFIG.KOLLEKTIV_IDS.GESAMT, APP_CONFIG.KOLLEKTIV_IDS.DIREKT_OP, APP_CONFIG.KOLLEKTIV_IDS.NRCT]; let statsCurrent = null;
-                kollektivesToCalc.forEach(kollektivId => { const filtered = dataProcessor.filterDataByKollektiv(processedDataFull, kollektivId); let stats = null; if (filtered && filtered.length > 0) stats = statisticsService.calculateDiagnosticPerformance(filtered, 'as', 'n'); let keyName = `stats${kollektivId.replace(/\s+/g, '')}`; presentationData[keyName] = stats; if (kollektivId === currentGlobalKollektiv) statsCurrent = stats; });
+                const kollektivesToCalc = ['Gesamt', 'direkt OP', 'nRCT']; let statsCurrent = null;
+                kollektivesToCalc.forEach(kollektivId => { const filtered = dataProcessor.filterDataByKollektiv(processedDataFull, kollektivId); let stats = null; if (filtered && filtered.length > 0) stats = statisticsService.calculateDiagnosticPerformance(filtered, 'as', 'n'); let keyName = `stats${kollektivId}`; if (kollektivId === 'direkt OP') keyName = 'statsDirektOP'; else if (kollektivId === 'nRCT') keyName = 'statsNRCT'; presentationData[keyName] = stats; if (kollektivId === currentGlobalKollektiv) statsCurrent = stats; });
                 presentationData.statsCurrentKollektiv = statsCurrent;
             } else if (view === 'as-vs-t2') {
                  if (filteredData && filteredData.length > 0) {
@@ -330,31 +295,16 @@ const viewRenderer = (() => {
                 if (view === 'as-pur') {
                      const chartContainer = document.getElementById('praes-as-pur-perf-chart');
                      if (chartContainer && presentationData?.statsCurrentKollektiv && presentationData.patientCount > 0) {
-                         const perf = presentationData.statsCurrentKollektiv;
-                         const chartData = { overall: {
-                             sensVal: perf.sens?.value, sensCI: perf.sens?.ci,
-                             spezVal: perf.spez?.value, spezCI: perf.spez?.ci,
-                             ppvVal: perf.ppv?.value, ppvCI: perf.ppv?.ci,
-                             npvVal: perf.npv?.value, npvCI: perf.npv?.ci,
-                             accVal: perf.acc?.value, accCI: perf.acc?.ci,
-                             aucVal: perf.auc?.value, aucCI: perf.auc?.ci
-                          }};
-                         chartRenderer.renderASPerformanceChart('praes-as-pur-perf-chart', chartData, {showErrorBars: true}, getKollektivDisplayName(currentGlobalKollektiv));
+                         const chartData = { overall: { sensVal: presentationData.statsCurrentKollektiv.sens?.value, spezVal: presentationData.statsCurrentKollektiv.spez?.value, ppvVal: presentationData.statsCurrentKollektiv.ppv?.value, npvVal: presentationData.statsCurrentKollektiv.npv?.value, accVal: presentationData.statsCurrentKollektiv.acc?.value, aucVal: presentationData.statsCurrentKollektiv.auc?.value }};
+                         chartRenderer.renderASPerformanceChart('praes-as-pur-perf-chart', chartData, {}, getKollektivDisplayName(currentGlobalKollektiv));
                      } else if (chartContainer) {
                          ui_helpers.updateElementHTML(chartContainer.id, '<p class="text-muted small text-center p-3">Keine Daten für Performance-Chart.</p>');
                      }
                 } else if (view === 'as-vs-t2') {
                      const chartContainer = document.getElementById('praes-comp-chart-container');
                      if (chartContainer && presentationData?.statsAS && presentationData?.statsT2 && presentationData.patientCount > 0) {
-                         const chartDataComp = [
-                            { metric: 'Sens', AS: presentationData.statsAS.sens?.value ?? NaN, T2: presentationData.statsT2.sens?.value ?? NaN, AS_CI: presentationData.statsAS.sens?.ci, T2_CI: presentationData.statsT2.sens?.ci },
-                            { metric: 'Spez', AS: presentationData.statsAS.spez?.value ?? NaN, T2: presentationData.statsT2.spez?.value ?? NaN, AS_CI: presentationData.statsAS.spez?.ci, T2_CI: presentationData.statsT2.spez?.ci },
-                            { metric: 'PPV',  AS: presentationData.statsAS.ppv?.value ?? NaN,  T2: presentationData.statsT2.ppv?.value ?? NaN,  AS_CI: presentationData.statsAS.ppv?.ci,  T2_CI: presentationData.statsT2.ppv?.ci },
-                            { metric: 'NPV',  AS: presentationData.statsAS.npv?.value ?? NaN,  T2: presentationData.statsT2.npv?.value ?? NaN,  AS_CI: presentationData.statsAS.npv?.ci,  T2_CI: presentationData.statsT2.npv?.ci },
-                            { metric: 'Acc',  AS: presentationData.statsAS.acc?.value ?? NaN,  T2: presentationData.statsT2.acc?.value ?? NaN,  AS_CI: presentationData.statsAS.acc?.ci,  T2_CI: presentationData.statsT2.acc?.ci },
-                            { metric: 'AUC',  AS: presentationData.statsAS.auc?.value ?? NaN,  T2: presentationData.statsT2.auc?.value ?? NaN,  AS_CI: presentationData.statsAS.auc?.ci,  T2_CI: presentationData.statsT2.auc?.ci }
-                         ];
-                         chartRenderer.renderComparisonBarChart(chartDataComp, 'praes-comp-chart-container', { height: 300, margin: { top: 20, right: 20, bottom: 50, left: 50 }, showErrorBars: true }, presentationData.t2CriteriaLabelShort || 'T2');
+                         const chartDataComp = [ { metric: 'Sens', AS: presentationData.statsAS.sens?.value ?? 0, T2: presentationData.statsT2.sens?.value ?? 0 }, { metric: 'Spez', AS: presentationData.statsAS.spez?.value ?? 0, T2: presentationData.statsT2.spez?.value ?? 0 }, { metric: 'PPV', AS: presentationData.statsAS.ppv?.value ?? 0, T2: presentationData.statsT2.ppv?.value ?? 0 }, { metric: 'NPV', AS: presentationData.statsAS.npv?.value ?? 0, T2: presentationData.statsT2.npv?.value ?? 0 }, { metric: 'Acc', AS: presentationData.statsAS.acc?.value ?? 0, T2: presentationData.statsT2.acc?.value ?? 0 }, { metric: 'AUC', AS: presentationData.statsAS.auc?.value ?? 0, T2: presentationData.statsT2.auc?.value ?? 0 } ];
+                         chartRenderer.renderComparisonBarChart(chartDataComp, 'praes-comp-chart-container', { height: 300, margin: { top: 20, right: 20, bottom: 50, left: 50 } }, presentationData.t2CriteriaLabelShort || 'T2');
                      } else if (chartContainer) {
                          ui_helpers.updateElementHTML(chartContainer.id, '<p class="text-muted small text-center p-3">Keine Daten für Vergleichschart.</p>');
                      }

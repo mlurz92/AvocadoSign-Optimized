@@ -33,13 +33,7 @@ const dataProcessor = (() => {
         processedPatient.geburtsdatum = patient.geburtsdatum || null;
         processedPatient.untersuchungsdatum = patient.untersuchungsdatum || null;
         processedPatient.geschlecht = (patient.geschlecht === 'm' || patient.geschlecht === 'f') ? patient.geschlecht : 'unbekannt';
-
-        if (patient.therapie === config.KOLLEKTIV_IDS.DIREKT_OP || patient.therapie === config.KOLLEKTIV_IDS.NRCT) {
-            processedPatient.therapie = patient.therapie;
-        } else {
-            processedPatient.therapie = 'unbekannt';
-        }
-
+        processedPatient.therapie = (patient.therapie === 'direkt OP' || patient.therapie === 'nRCT') ? patient.therapie : 'unbekannt';
         processedPatient.n = (patient.n === '+' || patient.n === '-') ? patient.n : null;
         processedPatient.as = (patient.as === '+' || patient.as === '-') ? patient.as : null;
 
@@ -103,7 +97,7 @@ const dataProcessor = (() => {
             console.error("filterDataByKollektiv: Ungültige Eingabedaten, Array erwartet.");
             return [];
         }
-        const filteredData = (kollektiv && kollektiv !== APP_CONFIG.KOLLEKTIV_IDS.GESAMT)
+        const filteredData = (kollektiv && kollektiv !== 'Gesamt')
             ? data.filter(p => p && p.therapie === kollektiv)
             : data;
 
