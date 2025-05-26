@@ -31,7 +31,7 @@ const state = (() => {
             auswertungTableSort: cloneDeep(defaultState.auswertungTableSort),
             activeTabId: defaultState.activeTabId
         };
-        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) { // Veralteten Schlüssel entfernen
+        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) {
             localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
         }
         console.log("State Manager initialisiert mit:", currentState);
@@ -170,10 +170,9 @@ const state = (() => {
             currentState.currentPresentationView = newView;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW, currentState.currentPresentationView);
             if (newView === 'as-pur') {
-                setCurrentPresentationStudyId(null); // Beim Wechsel zu 'as-pur' die Studien-ID zurücksetzen
+                setCurrentPresentationStudyId(null);
             } else if (!currentState.currentPresentationStudyId && newView === 'as-vs-t2') {
-                // Wenn zu 'as-vs-t2' gewechselt wird und keine Studie ausgewählt ist, Standard setzen
-                setCurrentPresentationStudyId(APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID || APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID);
+                setCurrentPresentationStudyId(APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID);
             }
             return true;
         }
@@ -185,7 +184,6 @@ const state = (() => {
     }
 
     function setCurrentPresentationStudyId(newStudyId) {
-        // Erlaube explizit null
         const newStudyIdValue = newStudyId === undefined ? null : newStudyId;
         if (currentState.currentPresentationStudyId !== newStudyIdValue) {
             currentState.currentPresentationStudyId = newStudyIdValue;
@@ -202,8 +200,6 @@ const state = (() => {
     function setActiveTabId(newTabId) {
         if (typeof newTabId === 'string' && currentState.activeTabId !== newTabId) {
             currentState.activeTabId = newTabId;
-            // Speichern des aktiven Tabs ist optional, da es oft nur den initialen Tab beeinflusst
-            // saveToLocalStorage('activeTabId', currentState.activeTabId);
             return true;
         }
         return false;

@@ -6,84 +6,36 @@ const publikationTabLogic = (() => {
     let appliedLogicForLogic = null;
     let bfResultsPerKollektivForLogic = null;
 
-    function _getLang() {
-        return (typeof state !== 'undefined' && state.getCurrentPublikationLang) ? state.getCurrentPublikationLang() : 'de';
-    }
-
-    function _getText(textObjPath, lang, replacements = {}) {
-        const textObj = getObjectValueByPath(UI_TEXTS, textObjPath);
-        let text = 'N/A Text Key: ' + textObjPath;
-        if (textObj) {
-            if (typeof textObj === 'string') {
-                text = textObj;
-            } else if (textObj[lang]) {
-                text = textObj[lang];
-            } else if (textObj['de']) {
-                text = textObj['de'];
-            } else if (typeof Object.values(textObj)[0] === 'string') {
-                text = Object.values(textObj)[0];
-            }
-        }
-        for (const key in replacements) {
-            text = text.replace(new RegExp(`{${key.toUpperCase()}}`, 'g'), replacements[key]);
-        }
-        return text;
-    }
-
     function initializeData(globalRawData, appliedCriteria, appliedLogic, bfResultsPerKollektiv) {
         rawGlobalDataInputForLogic = globalRawData;
         appliedCriteriaForLogic = appliedCriteria;
         appliedLogicForLogic = appliedLogic;
         bfResultsPerKollektivForLogic = bfResultsPerKollektiv;
 
-        if (typeof statisticsService !== 'undefined' && typeof statisticsService.calculateAllStatsForPublication === 'function') {
-            allKollektivStats = statisticsService.calculateAllStatsForPublication(
-                rawGlobalDataInputForLogic,
-                appliedCriteriaForLogic,
-                appliedLogicForLogic,
-                bfResultsPerKollektivForLogic
-            );
-        } else {
-            console.error("PublikationTabLogic: statisticsService.calculateAllStatsForPublication ist nicht verfügbar.");
-            allKollektivStats = null;
-        }
+        allKollektivStats = statisticsService.calculateAllStatsForPublication(
+            rawGlobalDataInputForLogic,
+            appliedCriteriaForLogic,
+            appliedLogicForLogic,
+            bfResultsPerKollektivForLogic
+        );
     }
 
     function getRenderedSectionContent(mainSectionId, lang, currentKollektiv) {
         if (!allKollektivStats) {
             console.warn("PublikationTabLogic: allKollektivStats nicht initialisiert. Versuche erneute Initialisierung.");
-            if (rawGlobalDataInputForLogic && appliedCriteriaForLogic && appliedLogicForLogic && typeof statisticsService !== 'undefined') {
+            if (rawGlobalDataInputForLogic && appliedCriteriaForLogic && appliedLogicForLogic) {
                 initializeData(rawGlobalDataInputForLogic, appliedCriteriaForLogic, appliedLogicForLogic, bfResultsPerKollektivForLogic);
             }
             if (!allKollektivStats) {
-                const errorMsg = lang === 'de' ?
-                    '<p class="text-danger">Statistische Grunddaten für Publikations-Tab konnten nicht geladen werden. Bitte führen Sie ggf. Analysen durch oder laden Sie die Seite neu.</p>' :
-                    '<p class="text-danger">Statistical base data for the Publication tab could not be loaded. Please perform analyses if necessary or reload the page.</p>';
-                return errorMsg;
+                return '<p class="text-danger">Statistische Grunddaten für Publikations-Tab konnten nicht geladen werden. Bitte führen Sie ggf. Analysen durch oder laden Sie die Seite neu.</p>';
             }
         }
 
-        const currentBruteForceMetric = (typeof state !== 'undefined' && state.getCurrentPublikationBruteForceMetric) ?
-                                          state.getCurrentPublikationBruteForceMetric() :
-                                          PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
-
-        const bruteForceMetricConfig = PUBLICATION_CONFIG.bruteForceMetricsForPublication.find(m => m.value === currentBruteForceMetric);
-        const bruteForceMetricName = bruteForceMetricConfig ? _getText(`UI_TEXTS.${bruteForceMetricConfig.labelKey}`, lang) || currentBruteForceMetric : currentBruteForceMetric;
-
-
         const options = {
             currentKollektiv: currentKollektiv,
-            bruteForceMetric: currentBruteForceMetric,
-            bruteForceMetricForPublicationName: bruteForceMetricName // Sprachabhängiger Name für Texte
+            bruteForceMetric: state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication
         };
-
-        if (typeof publicationRenderer !== 'undefined' && typeof publicationRenderer.renderSectionContent === 'function') {
-            return publicationRenderer.renderSectionContent(mainSectionId, lang, allKollektivStats, allKollektivStats, options);
-        } else {
-            console.error("PublikationTabLogic: publicationRenderer.renderSectionContent ist nicht verfügbar.");
-            const errorMsg = lang === 'de' ? "Fehler beim Rendern des Sektionsinhalts." : "Error rendering section content.";
-            return `<p class="text-danger">${errorMsg}</p>`;
-        }
+        return publicationRenderer.renderSectionContent(mainSectionId, lang, allKollektivStats, allKollektivStats, options);
     }
 
     function updateDynamicChartsForPublicationTab(mainSectionId, lang, currentKollektivNameForContextOnly) {
@@ -103,63 +55,39 @@ const publikationTabLogic = (() => {
             if (subSectionId === 'ergebnisse_patientencharakteristika') {
                 const dataForGesamtKollektiv = allKollektivStats['Gesamt'];
                 if (dataForGesamtKollektiv?.deskriptiv) {
-                    const alterChartId = PUBLICATION_CONFIG.publicationElements.ergebnisse.alterVerteilungGesamtChart.id;
-                    const genderChartId = PUBLICATION_CONFIG.publicationElements.ergebnisse.genderVerteilungGesamtChart.id;
+                    const alterChartId = `pub-chart-alter-Gesamt`;
+                    const genderChartId = `pub-chart-gender-Gesamt`;
                     const ageChartElement = document.getElementById(alterChartId);
                     const genderChartElement = document.getElementById(genderChartId);
 
-                    const chartOptionsAge = {
-                        height: 220,
-                        margin: { top: 10, right: 10, bottom: 40, left: 45 },
-                        xAxisLabelKey: 'age', // UI_TEXTS.axisLabels.age
-                        yAxisLabelKey: 'patientCount' // UI_TEXTS.axisLabels.patientCount
-                    };
-                    const chartOptionsGender = {
-                        height: 220,
-                        margin: { top: 10, right: 10, bottom: 40, left: 10 },
-                        innerRadiusFactor: 0.0,
-                        legendBelow: true
-                    };
-
                     if (ageChartElement) {
                         if (dataForGesamtKollektiv.deskriptiv.alterData && dataForGesamtKollektiv.deskriptiv.alterData.length > 0) {
-                            chartRenderer.renderAgeDistributionChart(dataForGesamtKollektiv.deskriptiv.alterData || [], alterChartId, chartOptionsAge);
+                            chartRenderer.renderAgeDistributionChart(dataForGesamtKollektiv.deskriptiv.alterData || [], alterChartId, { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 45 } });
                         } else {
-                            ui_helpers.updateElementHTML(alterChartId, `<p class="text-muted small text-center p-3">${_getText('publikationTab.publicationMisc.noData', lang)}</p>`);
+                            ui_helpers.updateElementHTML(alterChartId, `<p class="text-muted small text-center p-3">Keine Daten für Altersverteilung (Gesamtkollektiv).</p>`);
                         }
                     }
                     if (genderChartElement && dataForGesamtKollektiv.deskriptiv.geschlecht) {
                         const genderData = [
-                            { label: _getText('legendLabels.male', lang), value: dataForGesamtKollektiv.deskriptiv.geschlecht.m ?? 0 },
-                            { label: _getText('legendLabels.female', lang), value: dataForGesamtKollektiv.deskriptiv.geschlecht.f ?? 0 }
+                            { label: UI_TEXTS.legendLabels.male, value: dataForGesamtKollektiv.deskriptiv.geschlecht.m ?? 0 },
+                            { label: UI_TEXTS.legendLabels.female, value: dataForGesamtKollektiv.deskriptiv.geschlecht.f ?? 0 }
                         ];
                         if (dataForGesamtKollektiv.deskriptiv.geschlecht.unbekannt > 0) {
-                            genderData.push({ label: _getText('legendLabels.unknownGender', lang), value: dataForGesamtKollektiv.deskriptiv.geschlecht.unbekannt });
+                            genderData.push({ label: UI_TEXTS.legendLabels.unknownGender, value: dataForGesamtKollektiv.deskriptiv.geschlecht.unbekannt });
                         }
-                        chartOptionsGender.legendItemCount = genderData.length;
                         if (genderData.some(d => d.value > 0)) {
-                            chartRenderer.renderPieChart(genderData, genderChartId, chartOptionsGender);
+                            chartRenderer.renderPieChart(genderData, genderChartId, { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true, legendItemCount: genderData.length });
                         } else {
-                            ui_helpers.updateElementHTML(genderChartId, `<p class="text-muted small text-center p-3">${_getText('publikationTab.publicationMisc.noData', lang)}</p>`);
+                            ui_helpers.updateElementHTML(genderChartId, `<p class="text-muted small text-center p-3">Keine Daten für Geschlechterverteilung (Gesamtkollektiv).</p>`);
                         }
                     } else if (genderChartElement) {
-                        ui_helpers.updateElementHTML(genderChartId, `<p class="text-muted small text-center p-3">${_getText('publikationTab.publicationMisc.noData', lang)}</p>`);
+                        ui_helpers.updateElementHTML(genderChartId, `<p class="text-muted small text-center p-3">Keine Daten für Geschlechterverteilung (Gesamtkollektiv).</p>`);
                     }
                 }
             } else if (subSectionId === 'ergebnisse_vergleich_performance') {
-                const chartConfigs = [
-                    PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichMetrikenGesamtChart,
-                    PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichMetrikenDirektOPChart,
-                    PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichMetrikenNRCTChart
-                ];
-                 const cohortMap = { 'Gesamt': 'Gesamt', 'direkt-OP': 'direkt OP', 'nRCT': 'nRCT' };
-
-
-                chartConfigs.forEach(chartConf => {
-                    const cohortKeyFromId = Object.keys(cohortMap).find(key => chartConf.id.includes(key));
-                    const kolId = cohortMap[cohortKeyFromId] || 'Gesamt';
-
-                    const chartId = chartConf.id;
+                const kollektiveForCharts = ['Gesamt', 'direkt OP', 'nRCT'];
+                kollektiveForCharts.forEach(kolId => {
+                    const chartId = `pub-chart-vergleich-${kolId.replace(/\s+/g, '-')}`;
                     const chartElement = document.getElementById(chartId);
                     const dataForThisKollektiv = allKollektivStats[kolId];
 
@@ -179,21 +107,16 @@ const publikationTabLogic = (() => {
                             ].filter(d => !isNaN(d.AS) && !isNaN(d.T2));
 
                             if (chartDataComp.length > 0) {
-                                const t2LabelText = `BF-T2 (${bfDef.metricName.substring(0,6)}.)`; // Metrikname ist nicht sprachabhängig
-                                const chartOptions = {
-                                    height: 250,
-                                    margin: { top: 20, right: 20, bottom: 50, left: 50 },
-                                    yAxisLabelKey: 'metricValue'
-                                };
-                                chartRenderer.renderComparisonBarChart(chartDataComp, chartId, chartOptions, t2LabelText);
+                                const t2Label = `BF-T2 (${bfDef.metricName.substring(0,6)}.)`;
+                                chartRenderer.renderComparisonBarChart(chartDataComp, chartId, { height: 250, margin: { top: 20, right: 20, bottom: 50, left: 50 } }, t2Label);
                             } else {
-                                ui_helpers.updateElementHTML(chartId, `<p class="text-muted small text-center p-3">${_getText('publikationTab.publicationMisc.noValidData', lang)} (Chart: ${getKollektivDisplayName(kolId, lang)})</p>`);
+                                ui_helpers.updateElementHTML(chartId, `<p class="text-muted small text-center p-3">Keine validen Vergleichsdaten für Chart (${getKollektivDisplayName(kolId)}).</p>`);
                             }
                         } else {
-                             ui_helpers.updateElementHTML(chartId, `<p class="text-muted small text-center p-3">${_getText('publikationTab.publicationMisc.noData', lang)} (Chart: ${getKollektivDisplayName(kolId, lang)})</p>`);
+                            ui_helpers.updateElementHTML(chartId, `<p class="text-muted small text-center p-3">Unvollständige Daten für Vergleichschart (${getKollektivDisplayName(kolId)}).</p>`);
                         }
                     } else if (chartElement) {
-                         ui_helpers.updateElementHTML(chartId, `<p class="text-muted small text-center p-3">${_getText('publikationTab.publicationMisc.noData', lang)} (${getKollektivDisplayName(kolId, lang)})</p>`);
+                         ui_helpers.updateElementHTML(chartId, `<p class="text-muted small text-center p-3">Keine Daten für ${getKollektivDisplayName(kolId)}.</p>`);
                     }
                 });
             }
