@@ -45,7 +45,10 @@ const ui_helpers = (() => {
 
         globalTippyInstances = globalTippyInstances.filter(instance => {
             if (!instance || !instance.reference || !document.body.contains(instance.reference)) { try { instance?.destroy(); } catch(e){} return false; }
-            if (elementSet.has(instance.reference)) { try { instance.destroy(); } catch (e) {} return false; }
+            if (elementSet.has(instance.reference)) {
+                try { instance.destroy(); } catch (e) { console.warn("Fehler beim Zerstören der Tippy-Instanz:", e, instance.reference);}
+                return false;
+            }
             return true;
         });
 
@@ -80,6 +83,30 @@ const ui_helpers = (() => {
     function setElementDisabled(elementId, isDisabled) {
         const element = document.getElementById(elementId);
         if (element) { element.disabled = !!isDisabled; }
+    }
+
+    function setGlobalProcessingIndicator(isVisible) {
+        const indicatorId = APP_CONFIG.UI_SETTINGS.GLOBAL_BF_INDICATOR_SELECTOR;
+        if (indicatorId) {
+            const indicatorElement = document.querySelector(indicatorId);
+            if (indicatorElement) {
+                indicatorElement.classList.toggle('d-none', !isVisible);
+            } else {
+                // Fallback: Create indicator if not present
+                let newIndicator = document.createElement('div');
+                newIndicator.id = indicatorId.startsWith('#') ? indicatorId.substring(1) : indicatorId;
+                newIndicator.className = `spinner-border spinner-border-sm text-primary ms-2 global-processing-indicator ${isVisible ? '' : 'd-none'}`;
+                newIndicator.setAttribute('role', 'status');
+                newIndicator.innerHTML = `<span class="visually-hidden">Verarbeitung...</span>`;
+
+                const appTitleElement = document.querySelector('.app-title');
+                if (appTitleElement && appTitleElement.parentElement) {
+                    appTitleElement.parentElement.insertBefore(newIndicator, appTitleElement.nextSibling);
+                } else {
+                    console.warn("Globaler Processing Indikator konnte nicht platziert werden.");
+                }
+            }
+        }
     }
 
     function updateHeaderStatsUI(stats) {
@@ -120,38 +147,47 @@ const ui_helpers = (() => {
                         isSubKeySortActive = true;
                     }
                 });
-                if (!isSubKeySortActive && key === sortState.key && sortState.subKey === null) {
+                if (!isSubKeySortActive && key === sortState.key && (sortState.subKey === null || sortState.subKey === undefined)) {
                     icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
+                     th.style.color = 'var(--primary-color)';
+                } else if (!isSubKeySortActive) {
+                     th.style.color = 'inherit';
                 }
             } else {
                 if (key === sortState.key && (sortState.subKey === null || sortState.subKey === undefined)) {
                     icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
+                    th.style.color = 'var(--primary-color)';
+                } else {
+                     th.style.color = 'inherit';
                 }
             }
         });
         initializeTooltips(tableHeader);
     }
 
-    function toggleAllDetails(tableBodyId, buttonId) {
+    function toggleAllDetails(tableBodyId, buttonId, forceState = null) {
         const button = document.getElementById(buttonId);
         const tableBody = document.getElementById(tableBodyId);
         if (!button || !tableBody) return;
 
-        const action = button.dataset.action || 'expand';
-        const expand = action === 'expand';
-        const collapseElements = tableBody.querySelectorAll('.collapse');
-        let changedCount = 0;
+        let expand;
+        if (forceState !== null) {
+            expand = !!forceState;
+        } else {
+            expand = (button.dataset.action || 'expand') === 'expand';
+        }
 
+        const collapseElements = tableBody.querySelectorAll('.collapse');
         if (typeof bootstrap === 'undefined' || !bootstrap.Collapse) {
             console.error("Bootstrap Collapse nicht verfügbar.");
-            return;
+            return expand;
         }
 
         collapseElements.forEach(el => {
             const instance = bootstrap.Collapse.getOrCreateInstance(el);
             if (instance) {
-                if (expand && !el.classList.contains('show')) { instance.show(); changedCount++; }
-                else if (!expand && el.classList.contains('show')) { instance.hide(); changedCount++; }
+                if (expand && !el.classList.contains('show')) { instance.show(); }
+                else if (!expand && el.classList.contains('show')) { instance.hide(); }
             }
         });
 
@@ -169,6 +205,7 @@ const ui_helpers = (() => {
         updateElementHTML(buttonId, `${buttonText} <i class="fas ${iconClass} ms-1"></i>`);
         button.setAttribute('data-tippy-content', currentTooltipText);
         if(button._tippy) { button._tippy.setContent(currentTooltipText); } else { initializeTooltips(button.parentElement || button); }
+        return expand;
     }
 
     function handleCollapseEvent(event) {
@@ -314,7 +351,7 @@ const ui_helpers = (() => {
             existingTippy.setProps({ theme: 'glass warning' });
             existingTippy.enable();
             existingTippy.show();
-        } else if (!shouldShowIndicator && existingTippy) {
+        } else if (!shouldShowIndicator && existingTippy && existingTippy.state.isEnabled) {
             existingTippy.hide();
             existingTippy.disable();
         }
@@ -332,13 +369,13 @@ const ui_helpers = (() => {
             toggleBtn.classList.toggle('active', isVergleich);
             toggleBtn.setAttribute('aria-pressed', String(isVergleich));
             updateElementHTML(toggleBtn.id, isVergleich ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv');
-            if(toggleBtn._tippy) toggleBtn._tippy.setContent(TOOLTIP_CONTENT.statistikLayout?.description || 'Layout umschalten');
+            if(toggleBtn._tippy) toggleBtn._tippy.setContent(TOOLTIP_CONTENT.statistikToggleVergleich?.description || 'Layout umschalten');
             else initializeTooltips(toggleBtn.parentElement || toggleBtn);
         }
         if (container1) container1.classList.toggle('d-none', !isVergleich);
         if (container2) container2.classList.toggle('d-none', !isVergleich);
-        if (select1) select1.value = kollektiv1 || APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1;
-        if (select2) select2.value = kollektiv2 || APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2;
+        if (select1) select1.value = kollektiv1 || APP_CONFIG.KOLLEKTIV_IDS.GESAMT;
+        if (select2) select2.value = kollektiv2 || APP_CONFIG.KOLLEKTIV_IDS.NRCT;
     }
 
     function updatePresentationViewSelectorUI(currentView) {
@@ -399,8 +436,11 @@ const ui_helpers = (() => {
         const startButtonText = isRunning ? '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Läuft...' : `<i class="fas fa-cogs me-1"></i> ${workerAvailable ? 'Optimierung starten' : 'Starten (Worker fehlt)'}`;
         if (elements.startBtn) updateElementHTML(elements.startBtn.id, startButtonText);
 
+        const applyButtonText = TOOLTIP_CONTENT.bruteForceResult?.applyButton || 'Optimale Kriterien übernehmen & anwenden';
+        if (elements.applyBestBtn) updateElementText(elements.applyBestBtn.id, `<i class="fas fa-check me-1"></i> ${applyButtonText.split(' ')[0]} ${applyButtonText.split(' ')[1]}`); // Nur "Optimale Kriterien"
+
         if (elements.bfInfoKollektiv) {
-            const kollektivToDisplay = data.kollektiv || currentKollektiv || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
+            const kollektivToDisplay = data.kollektiv || currentKollektiv || APP_CONFIG.KOLLEKTIV_IDS.GESAMT;
             updateElementText(elements.bfInfoKollektiv.id, getKollektivNameFunc(kollektivToDisplay));
         }
 
@@ -485,6 +525,9 @@ const ui_helpers = (() => {
                     if (elements.resultTotalTested) updateElementText(elements.resultTotalTested.id, totalTestedStr);
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig.');
                     if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, TOOLTIP_CONTENT.bruteForceResult.description);
+                    if (elements.applyBestBtn) addOrUpdateTooltip(elements.applyBestBtn, TOOLTIP_CONTENT.bruteForceResult.applyButton);
+
+
                 } else {
                     if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true);
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig (kein valides Ergebnis).');
@@ -507,10 +550,12 @@ const ui_helpers = (() => {
         trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled);
         trySetDisabled('export-charts-png', dataDisabled);
         trySetDisabled('export-charts-svg', dataDisabled);
+        trySetDisabled('export-publikation-zip', dataDisabled);
+
 
         trySetDisabled('export-all-zip', dataDisabled && bfDisabled);
         trySetDisabled('export-csv-zip', dataDisabled);
-        trySetDisabled('export-md-zip', dataDisabled);
+        trySetDisabled('export-md-zip', dataDisabled && bfDisabled); // MD Zip kann auch Publikation enthalten
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
 
@@ -536,6 +581,7 @@ const ui_helpers = (() => {
             if (btn.closest('#statistik-tab-pane')) btn.disabled = activeTabId !== 'statistik-tab' || dataDisabled;
             else if (btn.closest('#auswertung-tab-pane .dashboard-card-col')) btn.disabled = activeTabId !== 'auswertung-tab' || dataDisabled;
             else if (btn.closest('#praesentation-tab-pane')) btn.disabled = activeTabId !== 'praesentation-tab' || dataDisabled;
+            else if (btn.closest('#publikation-content-area')) btn.disabled = activeTabId !== 'publikation-tab' || dataDisabled;
         });
          if(document.getElementById('export-bruteforce-modal-txt')) {
             trySetDisabled('export-bruteforce-modal-txt', bfDisabled);
@@ -558,6 +604,18 @@ const ui_helpers = (() => {
         if (bfMetricSelect) {
             bfMetricSelect.value = currentBfMetric;
         }
+
+        const exportSectionBtn = document.getElementById('export-publikation-current-section-md');
+        if (exportSectionBtn && TOOLTIP_CONTENT.publikationTabTooltips.exportCurrentSectionButton.description) {
+            exportSectionBtn.setAttribute('data-tippy-content', TOOLTIP_CONTENT.publikationTabTooltips.exportCurrentSectionButton.description);
+            if(exportSectionBtn._tippy) exportSectionBtn._tippy.setContent(TOOLTIP_CONTENT.publikationTabTooltips.exportCurrentSectionButton.description);
+        }
+         const exportAllBtn = document.getElementById('export-publikation-all-md-zip');
+        if (exportAllBtn && TOOLTIP_CONTENT.publikationTabTooltips.exportPublicationZIPButton.description) {
+            exportAllBtn.setAttribute('data-tippy-content', TOOLTIP_CONTENT.publikationTabTooltips.exportPublicationZIPButton.description);
+            if(exportAllBtn._tippy) exportAllBtn._tippy.setContent(TOOLTIP_CONTENT.publikationTabTooltips.exportPublicationZIPButton.description);
+        }
+
     }
 
     function getMetricDescriptionHTML(key, methode = '') {
@@ -571,7 +629,7 @@ const ui_helpers = (() => {
         const na = '--';
         const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
         const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na, isPercent);
+        const valueStr = formatNumber(data?.value, digits, na, isPercent); // formatNumber now takes isPercent directly
         const lowerStr = formatNumber(data?.ci?.lower, digits, na, isPercent);
         const upperStr = formatNumber(data?.ci?.upper, digits, na, isPercent);
         const ciMethodStr = data?.method || 'N/A';
@@ -583,7 +641,7 @@ const ui_helpers = (() => {
             .replace(/\[LOWER\]/g, lowerStr)
             .replace(/\[UPPER\]/g, upperStr)
             .replace(/\[METHOD_CI\]/g, ciMethodStr)
-            .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektivName)}</strong>`)
             .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`);
 
         if (lowerStr === na || upperStr === na || ciMethodStr === na) {
@@ -612,7 +670,7 @@ const ui_helpers = (() => {
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
-            .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektivName)}</strong>`)
             .replace(/\[T2_SHORT_NAME\]/g, t2ShortName)
             .replace(/<hr.*?>.*$/, '');
     }
@@ -652,7 +710,7 @@ const ui_helpers = (() => {
                  .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
                  .replace(/\[MERKMAL\]/g, `'${merkmalName}'`)
                  .replace(/\[VARIABLE\]/g, `'${merkmalName}'`)
-                 .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
+                 .replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektivName)}</strong>`)
                  .replace(/<hr.*?>.*$/, '');
         }
 
@@ -662,7 +720,7 @@ const ui_helpers = (() => {
             .replace(/\[LOWER\]/g, lowerStr)
             .replace(/\[UPPER\]/g, upperStr)
             .replace(/\[METHOD_CI\]/g, ciMethodStr)
-            .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektivName)}</strong>`)
             .replace(/\[FAKTOR_TEXT\]/g, assocObj?.or?.value > 1 ? UI_TEXTS.statMetrics.orFaktorTexte.ERHOEHT : (assocObj?.or?.value < 1 ? UI_TEXTS.statMetrics.orFaktorTexte.VERRINGERT : UI_TEXTS.statMetrics.orFaktorTexte.UNVERAENDERT))
             .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.HOEHER : (assocObj?.rd?.value < 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.NIEDRIGER : UI_TEXTS.statMetrics.rdRichtungTexte.GLEICH))
             .replace(/\[STAERKE\]/g, `<strong>${bewertungStr}</strong>`)
@@ -690,6 +748,7 @@ const ui_helpers = (() => {
         updateElementHTML,
         toggleElementClass,
         setElementDisabled,
+        setGlobalProcessingIndicator,
         updateHeaderStatsUI,
         updateKollektivButtonsUI,
         updateSortIcons,
