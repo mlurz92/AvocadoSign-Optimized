@@ -9,7 +9,7 @@ const APP_CONFIG = Object.freeze({
     }),
 
     DEFAULT_SETTINGS: Object.freeze({
-        KOLLEKTIV: 'Gesamt', // Wird später durch APP_CONFIG.KOLLEKTIV_IDS.GESAMT ersetzt, wenn alle Module angepasst sind. Beibehalten für initiale Kompatibilität.
+        KOLLEKTIV: 'Gesamt', // Wird später durch APP_CONFIG.KOLLEKTIV_IDS.GESAMT ersetzt
         T2_LOGIC: 'UND',
         DATEN_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
         AUSWERTUNG_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
@@ -31,7 +31,8 @@ const APP_CONFIG = Object.freeze({
         ]),
         CHART_COLOR_SCHEME: 'default',
         BRUTE_FORCE_METRIC: 'Balanced Accuracy',
-        // ROC_SHOW_POINTS: true // Beispiel für spätere Erweiterung (Vorschlag 4.2)
+        DATEN_TABLE_DETAILS_EXPANDED: false,
+        AUSWERTUNG_TABLE_DETAILS_EXPANDED: false
     }),
 
     STORAGE_KEYS: Object.freeze({
@@ -48,8 +49,9 @@ const APP_CONFIG = Object.freeze({
         PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
         CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
         CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
-        // STATE_DATEN_TABLE_DETAILS_EXPANDED: 'stateDatenTableDetailsExpanded_v2.2_opt', // Beispiel für spätere Erweiterung (Vorschlag 2.6)
-        // STATE_AUSWERTUNG_TABLE_DETAILS_EXPANDED: 'stateAuswertungTableDetailsExpanded_v2.2_opt' // Beispiel für spätere Erweiterung (Vorschlag 2.6)
+        STATE_DATEN_TABLE_DETAILS_EXPANDED: 'stateDatenTableDetailsExpanded_v2.2_opt',
+        STATE_AUSWERTUNG_TABLE_DETAILS_EXPANDED: 'stateAuswertungTableDetailsExpanded_v2.2_opt',
+        // STATE_GLOBAL_BF_INDICATOR_VISIBLE: 'stateGlobalBfIndicatorVisible_v2.2_opt' // Zukünftige Erweiterung
     }),
 
     PATHS: Object.freeze({
@@ -68,7 +70,7 @@ const APP_CONFIG = Object.freeze({
         SIGNIFICANCE_LEVEL: 0.05,
         DEFAULT_CI_METHOD_PROPORTION: 'Wilson Score',
         DEFAULT_CI_METHOD_EFFECTSIZE: 'Bootstrap Percentile',
-        FISHER_EXACT_THRESHOLD: 5 // Grenzwert für erwartete Zellhäufigkeit, unter dem Fisher Exakt statt Chi² verwendet werden sollte.
+        FISHER_EXACT_THRESHOLD: 5
     }),
 
     T2_CRITERIA_SETTINGS: Object.freeze({
@@ -90,7 +92,7 @@ const APP_CONFIG = Object.freeze({
         TRANSITION_DURATION_MS: 350,
         MODAL_BACKDROP_OPACITY: 0.6,
         SPINNER_DELAY_MS: 300,
-        // GLOBAL_BF_INDICATOR_SELECTOR: '#bf-global-indicator' // Beispiel für spätere Erweiterung (Vorschlag 2.3)
+        GLOBAL_BF_INDICATOR_SELECTOR: '#bf-global-processing-indicator' // Platzhalter für einen globalen Spinner/Indikator
     }),
 
     CHART_SETTINGS: Object.freeze({
@@ -113,7 +115,12 @@ const APP_CONFIG = Object.freeze({
         ENABLE_GRIDLINES: true,
         POINT_RADIUS: 4,
         LINE_STROKE_WIDTH: 2,
-        // ROC_CURVE_SETTINGS: { showPoints: true, pointRadius: 3, defaultColors: ['#4472C4', '#E0DC2C', '#2ca02c', '#d62728'] } // Beispiel für spätere Erweiterung
+        ROC_CURVE_SETTINGS: Object.freeze({
+            showPoints: true,
+            pointRadius: 3.5,
+            defaultColors: Object.freeze(['#4472C4', '#E0DC2C', '#2ca02c', '#d62728', '#9467bd', '#8c564b']),
+            lineWidth: 2.5
+        })
     }),
 
     EXPORT_SETTINGS: Object.freeze({
@@ -130,8 +137,8 @@ const APP_CONFIG = Object.freeze({
             DESKRIPTIV_MD: 'DeskriptiveStatistikMD',
             DATEN_MD: 'DatenlisteMD',
             AUSWERTUNG_MD: 'AuswertungTabelleMD',
-            CHARTS_PNG: 'ChartsPNG', // Legacy, wird eher durch ZIP ersetzt
-            CHARTS_SVG: 'ChartsSVG', // Legacy, wird eher durch ZIP ersetzt
+            CHARTS_PNG: 'ChartsPNG',
+            CHARTS_SVG: 'ChartsSVG',
             ALL_ZIP: 'GesamtPaketZIP',
             CSV_ZIP: 'CSVPaketZIP',
             MD_ZIP: 'MDPaketZIP',
@@ -168,7 +175,7 @@ const APP_CONFIG = Object.freeze({
         EXCEL_SHEET_NAME_KONFIG: 'Konfiguration'
     }),
 
-    REPORT_SETTINGS: Object.freeze({ // Für den umfassenden HTML-Bericht
+    REPORT_SETTINGS: Object.freeze({
         INCLUDE_APP_VERSION: true,
         INCLUDE_GENERATION_TIMESTAMP: true,
         INCLUDE_KOLLEKTIV_INFO: true,
@@ -182,7 +189,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.2.0"}`, // Version wird hier hartkodiert, da APP_CONFIG.APP_VERSION nicht direkt hier verfügbar ist
+        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.2.0"}`, // APP_CONFIG.APP_VERSION wird hier direkt verwendet, da es oben definiert ist.
         REPORT_LOGO_ALT_TEXT: 'Institutslogo'
     }),
 
@@ -193,6 +200,15 @@ const APP_CONFIG = Object.freeze({
         AVOCADO_SIGN_DISPLAY_NAME: 'Avocado Sign'
     })
 });
+
+(function() {
+    APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV = APP_CONFIG.KOLLEKTIV_IDS.GESAMT;
+    APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1 = APP_CONFIG.KOLLEKTIV_IDS.GESAMT;
+    APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2 = APP_CONFIG.KOLLEKTIV_IDS.NRCT;
+    if (APP_CONFIG.REPORT_SETTINGS.REPORT_AUTHOR.includes("${")) {
+        APP_CONFIG.REPORT_SETTINGS.REPORT_AUTHOR = `Generiert durch Analyse-Tool v${APP_CONFIG.APP_VERSION}`;
+    }
+})();
 
 function getDefaultT2Criteria() {
     return Object.freeze({
