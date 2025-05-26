@@ -33,7 +33,8 @@ function initializeApp() {
             typeof statistikTabLogic === 'undefined' || typeof praesentationTabLogic === 'undefined' ||
             typeof publikationTabLogic === 'undefined' || typeof publicationRenderer === 'undefined' ||
             typeof publicationTextGenerator === 'undefined' || typeof studyT2CriteriaManager === 'undefined' ||
-            typeof bruteForceManager === 'undefined'
+            typeof bruteForceManager === 'undefined' || typeof uiComponents === 'undefined' ||
+            typeof tableRenderer === 'undefined' || typeof chartRenderer === 'undefined'
         ) {
              throw new Error("Ein oder mehrere Kernmodule sind nicht verfügbar. Überprüfen Sie die Skript-Ladereihenfolge und Dateipfade.");
         }
@@ -47,7 +48,7 @@ function initializeApp() {
             console.warn("Keine validen Patientendaten gefunden nach Prozessierung.");
             ui_helpers.showToast("Warnung: Keine validen Patientendaten geladen.", "warning");
         }
-        
+
         initializeBruteForceManager();
 
         publikationTabLogic.initializeData(
@@ -57,11 +58,10 @@ function initializeApp() {
             bruteForceManager.getAllResults()
         );
 
-
         filterAndPrepareData();
         updateUIState();
         setupEventListeners();
-        
+
         const initialTabId = state.getActiveTabId() || 'daten-tab';
         const initialTabElement = document.getElementById(initialTabId);
          if(initialTabElement && bootstrap.Tab) {
@@ -124,6 +124,8 @@ function updateUIState() {
         }
         const bfResults = bruteForceManager.getAllResults();
         ui_helpers.updateExportButtonStates(state.getActiveTabId(), bfResults && Object.keys(bfResults).length > 0, currentData && currentData.length > 0);
+        ui_helpers.setGlobalProcessingIndicator(bruteForceManager.isRunning());
+
     } catch (error) {
         console.error("Fehler beim Aktualisieren des globalen UI-Zustands:", error);
     }
@@ -171,6 +173,9 @@ function handleBodyClickDelegation(event) {
     const toggleAllAuswBtn = target.closest('#auswertung-toggle-details');
     const modalExportBtn = target.closest('#export-bruteforce-modal-txt');
     const publikationNavLink = target.closest('#publikation-sections-nav .publikation-section-link');
+    const publikationExportCurrentSectionBtn = target.closest('#export-publikation-current-section-md');
+    const publikationExportAllBtn = target.closest('#export-publikation-all-md-zip');
+
 
     const clickableRowParent = target.closest('tr.clickable-row[data-bs-target]');
     if (clickableRowParent && target.closest('a, button, input, select, .btn-close, [data-bs-toggle="modal"], .table-download-png-btn, .chart-download-btn')) {
@@ -182,10 +187,13 @@ function handleBodyClickDelegation(event) {
     if (closestHeader) { handleSortClick(closestHeader, closestSubHeader); return; }
     if (chartDownloadButton) { handleSingleChartDownload(chartDownloadButton); return; }
     if (tableDownloadButton) { handleSingleTableDownload(tableDownloadButton); return; }
-    if (toggleAllDatenBtn) { ui_helpers.toggleAllDetails('daten-table-body', 'daten-toggle-details'); return; }
-    if (toggleAllAuswBtn) { ui_helpers.toggleAllDetails('auswertung-table-body', 'auswertung-toggle-details'); return; }
+    if (toggleAllDatenBtn) { const isNowExpanded = toggleAllDatenBtn.dataset.action === 'collapse'; state.setDatenTableDetailsExpanded(isNowExpanded); ui_helpers.toggleAllDetails('daten-table-body', 'daten-toggle-details'); return; }
+    if (toggleAllAuswBtn) { const isNowExpanded = toggleAllAuswBtn.dataset.action === 'collapse'; state.setAuswertungTableDetailsExpanded(isNowExpanded); ui_helpers.toggleAllDetails('auswertung-table-body', 'auswertung-toggle-details'); return; }
     if (modalExportBtn && !modalExportBtn.disabled) { exportService.exportBruteForceReport(bruteForceManager.getResultsForKollektiv(state.getCurrentKollektiv()), state.getCurrentKollektiv()); return; }
     if (publikationNavLink) { event.preventDefault(); handlePublikationSectionChange(publikationNavLink.dataset.sectionId); return; }
+    if (publikationExportCurrentSectionBtn) { handleExportPublicationSection(); return; }
+    if (publikationExportAllBtn) { handleExportPublicationAll(); return; }
+
 
     if (auswertungPane) {
         const criteriaButton = target.closest('.t2-criteria-button'); const resetButton = target.closest('#btn-reset-criteria'); const applyButton = target.closest('#btn-apply-criteria'); const startBfButton = target.closest('#btn-start-brute-force'); const cancelBfButton = target.closest('#btn-cancel-brute-force'); const applyBestBfButton = target.closest('#btn-apply-best-bf-criteria');
@@ -217,8 +225,18 @@ function handleTabShown(tabId) {
     const appliedLogic = t2CriteriaManager.getAppliedLogic();
 
     switch (tabId) {
-        case 'daten-tab': viewRenderer.renderDatenTab(currentData, state.getDatenTableSort()); break;
-        case 'auswertung-tab': viewRenderer.renderAuswertungTab(currentData, t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic(), state.getAuswertungTableSort(), currentKollektiv, bruteForceManager.isWorkerAvailable()); break;
+        case 'daten-tab':
+            viewRenderer.renderDatenTab(currentData, state.getDatenTableSort());
+            if (state.getDatenTableDetailsExpanded()) {
+                setTimeout(() => { ui_helpers.toggleAllDetails('daten-table-body', 'daten-toggle-details'); }, 100);
+            }
+            break;
+        case 'auswertung-tab':
+            viewRenderer.renderAuswertungTab(currentData, t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic(), state.getAuswertungTableSort(), currentKollektiv, bruteForceManager.isWorkerAvailable());
+            if (state.getAuswertungTableDetailsExpanded()) {
+                 setTimeout(() => { ui_helpers.toggleAllDetails('auswertung-table-body', 'auswertung-toggle-details'); }, 100);
+            }
+            break;
         case 'statistik-tab': viewRenderer.renderStatistikTab(processedData, appliedCriteria, appliedLogic, state.getCurrentStatsLayout(), state.getCurrentStatsKollektiv1(), state.getCurrentStatsKollektiv2(), currentKollektiv); break;
         case 'praesentation-tab': viewRenderer.renderPresentationTab(state.getCurrentPresentationView(), state.getCurrentPresentationStudyId(), currentKollektiv, processedData, appliedCriteria, appliedLogic); break;
         case 'publikation-tab':
@@ -245,13 +263,41 @@ function handleStatsLayoutToggle(button) { setTimeout(() => { const isPressed = 
 function handleStatistikChange(event) { const target = event.target; let needsRender = false; if (target.id === 'statistik-kollektiv-select-1') needsRender = state.setCurrentStatsKollektiv1(target.value); else if (target.id === 'statistik-kollektiv-select-2') needsRender = state.setCurrentStatsKollektiv2(target.value); if(needsRender && state.getCurrentStatsLayout() === 'vergleich' && state.getActiveTabId() === 'statistik-tab') handleTabShown('statistik-tab'); }
 function handlePresentationChangeDelegation(event) { const viewRadio = event.target.closest('input[name="praesentationAnsicht"]'); const studySelect = event.target.closest('#praes-study-select'); if(viewRadio) handlePresentationViewChange(viewRadio.value); else if (studySelect) handlePresentationStudySelectChange(studySelect.value); }
 function handlePresentationViewChange(view) { if (state.setCurrentPresentationView(view)) { updateUIState(); if (state.getActiveTabId() === 'praesentation-tab') handleTabShown('praesentation-tab'); } }
-function handlePresentationStudySelectChange(studyId) { if (!studyId || state.getCurrentPresentationStudyId() === studyId) return; const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studyId); let kollektivChanged = false; if (studySet?.applicableKollektiv && state.getCurrentKollektiv() !== studySet.applicableKollektiv && studySet.applicableKollektiv !== 'Gesamt') { kollektivChanged = handleKollektivChange(studySet.applicableKollektiv); } const studyIdChanged = state.setCurrentPresentationStudyId(studyId); if (studyIdChanged || kollektivChanged) { updateUIState(); if (state.getActiveTabId() === 'praesentation-tab') handleTabShown('praesentation-tab'); } }
-function handlePresentationDownloadClick(button) { const actionId = button.id; const currentKollektiv = state.getCurrentKollektiv(); let presentationData = null; const filteredData = dataProcessor.filterDataByKollektiv(processedData, currentKollektiv); if (filteredData?.length > 0) { const statsAS = statisticsService.calculateDiagnosticPerformance(filteredData, 'as', 'n'); const statsGesamt = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedData, 'Gesamt'), 'as', 'n'); const statsDirektOP = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedData, 'direkt OP'), 'as', 'n'); const statsNRCT = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedData, 'nRCT'), 'as', 'n'); presentationData = { statsAS, kollektiv: currentKollektiv, patientCount: filteredData.length, statsGesamt, statsDirektOP, statsNRCT, statsCurrentKollektiv: statsAS }; if (state.getCurrentPresentationView() === 'as-vs-t2') { const studyId = state.getCurrentPresentationStudyId(); let studySet = null, evaluatedDataT2 = null; const isApplied = studyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID; const appliedCriteria = t2CriteriaManager.getAppliedCriteria(); const appliedLogic = t2CriteriaManager.getAppliedLogic(); if(isApplied) { studySet = { criteria: appliedCriteria, logic: appliedLogic, id: studyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: 'Angewandt', studyInfo: { reference: "Benutzerdefiniert", patientCohort: `Aktuell: ${getKollektivDisplayName(currentKollektiv)} (N=${presentationData.patientCount})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } }; evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(filteredData), appliedCriteria, appliedLogic); } else { studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studyId); if(studySet) evaluatedDataT2 = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredData), studySet); } if (studySet && evaluatedDataT2) { presentationData.statsT2 = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n'); evaluatedDataT2.forEach((p, i) => { if (filteredData[i]) p.as = filteredData[i].as; }); presentationData.vergleich = statisticsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n'); presentationData.comparisonCriteriaSet = studySet; presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2'; presentationData.t2CriteriaLabelFull = `${isApplied ? 'Aktuell angewandt' : (studySet.name || 'Studie')}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`; } } } exportService.exportPraesentationData(actionId, presentationData, currentKollektiv); }
-function handleExportAction(exportType) { filterAndPrepareData(); const dataForExport = currentData; const currentKollektiv = state.getCurrentKollektiv(); const appliedCriteria = t2CriteriaManager.getAppliedCriteria(); const appliedLogic = t2CriteriaManager.getAppliedLogic(); const allBfResults = bruteForceManager.getAllResults(); const currentKollektivBfResult = allBfResults ? allBfResults[currentKollektiv] : null; const canExportDataDep = Array.isArray(dataForExport) && dataForExport.length > 0; if (!canExportDataDep && !['bruteforce-txt', 'all-zip', 'png-zip', 'svg-zip', 'csv-zip', 'md-zip', 'html'].includes(exportType)) { ui_helpers.showToast("Keine Daten für diesen Export verfügbar.", "warning"); return; } if (exportType === 'bruteforce-txt' && (!currentKollektivBfResult || !currentKollektivBfResult.results || currentKollektivBfResult.results.length === 0 )) { ui_helpers.showToast("Keine Brute-Force Ergebnisse für Export dieses Kollektivs.", "warning"); return; } if (['all-zip', 'csv-zip', 'md-zip'].includes(exportType) && !canExportDataDep && (!allBfResults || Object.keys(allBfResults).length === 0) ) { ui_helpers.showToast("Keine Daten/Ergebnisse für ZIP-Export.", "warning"); return; } if (exportType === 'html' && !canExportDataDep) { ui_helpers.showToast("Keine Daten für HTML-Report.", "warning"); return; } switch (exportType) { case 'statistik-csv': exportService.exportStatistikCSV(localRawData, currentKollektiv, appliedCriteria, appliedLogic); break; case 'bruteforce-txt': exportService.exportBruteForceReport(currentKollektivBfResult, currentKollektiv); break; case 'deskriptiv-md': { const stats = statisticsService.calculateAllStatsForPublication(localRawData, appliedCriteria, appliedLogic, allBfResults)[currentKollektiv]; exportService.exportTableMarkdown(stats?.deskriptiv, 'deskriptiv', currentKollektiv); break; } case 'daten-md': exportService.exportTableMarkdown(dataForExport, 'daten', currentKollektiv); break; case 'auswertung-md': exportService.exportTableMarkdown(dataForExport, 'auswertung', currentKollektiv, appliedCriteria, appliedLogic); break; case 'filtered-data-csv': exportService.exportFilteredDataCSV(dataForExport, currentKollektiv); break; case 'comprehensive-report-html': exportService.exportComprehensiveReportHTML(localRawData, currentKollektivBfResult, currentKollektiv, appliedCriteria, appliedLogic); break; case 'charts-png': exportService.exportChartsZip('#app-container', 'PNG_ZIP', currentKollektiv, 'png'); break; case 'charts-svg': exportService.exportChartsZip('#app-container', 'SVG_ZIP', currentKollektiv, 'svg'); break; case 'all-zip': case 'csv-zip': case 'md-zip': exportService.exportCategoryZip(exportType, localRawData, allBfResults, currentKollektiv, appliedCriteria, appliedLogic); break; default: console.warn(`Unbekannter Export-Typ: ${exportType}`); ui_helpers.showToast(`Export-Typ '${exportType}' nicht implementiert.`, 'warning'); break; } }
+function handlePresentationStudySelectChange(studyId) {
+    if (!studyId || state.getCurrentPresentationStudyId() === studyId) return;
+
+    const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studyId);
+    let kollektivChanged = false;
+
+    if (studySet?.applicableKollektiv) {
+        const targetKollektiv = studySet.applicableKollektiv;
+        if (targetKollektiv !== APP_CONFIG.KOLLEKTIV_IDS.GESAMT && state.getCurrentKollektiv() !== targetKollektiv) {
+            if (Object.values(APP_CONFIG.KOLLEKTIV_IDS).includes(targetKollektiv)) {
+                kollektivChanged = handleKollektivChange(targetKollektiv);
+            } else {
+                console.warn(`Ungültiges 'applicableKollektiv' (${targetKollektiv}) für Studie ${studyId} gefunden.`);
+            }
+        } else if (targetKollektiv === APP_CONFIG.KOLLEKTIV_IDS.GESAMT && state.getCurrentKollektiv() !== APP_CONFIG.KOLLEKTIV_IDS.GESAMT) {
+             kollektivChanged = handleKollektivChange(APP_CONFIG.KOLLEKTIV_IDS.GESAMT);
+        }
+    }
+
+    const studyIdChanged = state.setCurrentPresentationStudyId(studyId);
+    if (studyIdChanged || kollektivChanged) {
+        updateUIState();
+        if (state.getActiveTabId() === 'praesentation-tab') {
+            handleTabShown('praesentation-tab');
+        }
+    }
+}
+function handlePresentationDownloadClick(button) { const actionId = button.id; const currentKollektiv = state.getCurrentKollektiv(); let presentationData = null; const filteredData = dataProcessor.filterDataByKollektiv(processedData, currentKollektiv); if (filteredData?.length > 0) { const statsAS = statisticsService.calculateDiagnosticPerformance(filteredData, 'as', 'n'); const statsGesamt = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedData, APP_CONFIG.KOLLEKTIV_IDS.GESAMT), 'as', 'n'); const statsDirektOP = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedData, APP_CONFIG.KOLLEKTIV_IDS.DIREKT_OP), 'as', 'n'); const statsNRCT = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedData, APP_CONFIG.KOLLEKTIV_IDS.NRCT), 'as', 'n'); presentationData = { statsAS, kollektiv: currentKollektiv, patientCount: filteredData.length, statsGesamt, statsDirektOP, statsNRCT, statsCurrentKollektiv: statsAS }; if (state.getCurrentPresentationView() === 'as-vs-t2') { const studyId = state.getCurrentPresentationStudyId(); let studySet = null, evaluatedDataT2 = null; const isApplied = studyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID; const appliedCriteria = t2CriteriaManager.getAppliedCriteria(); const appliedLogic = t2CriteriaManager.getAppliedLogic(); if(isApplied) { studySet = { criteria: appliedCriteria, logic: appliedLogic, id: studyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: 'Angewandt', studyInfo: { reference: "Benutzerdefiniert", patientCohort: `Aktuell: ${getKollektivDisplayName(currentKollektiv)} (N=${presentationData.patientCount})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } }; evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(filteredData), appliedCriteria, appliedLogic); } else { studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studyId); if(studySet) evaluatedDataT2 = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredData), studySet); } if (studySet && evaluatedDataT2) { presentationData.statsT2 = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n'); evaluatedDataT2.forEach((p, i) => { if (filteredData[i]) p.as = filteredData[i].as; }); presentationData.vergleich = statisticsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n'); presentationData.comparisonCriteriaSet = studySet; presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2'; presentationData.t2CriteriaLabelFull = `${isApplied ? 'Aktuell angewandt' : (studySet.name || 'Studie')}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`; } } } exportService.exportPraesentationData(actionId, presentationData, currentKollektiv); }
+function handleExportAction(exportType) { filterAndPrepareData(); const dataForExport = currentData; const currentKollektiv = state.getCurrentKollektiv(); const appliedCriteria = t2CriteriaManager.getAppliedCriteria(); const appliedLogic = t2CriteriaManager.getAppliedLogic(); const allBfResults = bruteForceManager.getAllResults(); const currentKollektivBfResult = allBfResults ? allBfResults[currentKollektiv] : null; const canExportDataDep = Array.isArray(dataForExport) && dataForExport.length > 0; if (!canExportDataDep && !['bruteforce-txt', 'all-zip', 'png-zip', 'svg-zip', 'csv-zip', 'md-zip', 'html', 'publikation-zip'].includes(exportType)) { ui_helpers.showToast("Keine Daten für diesen Export verfügbar.", "warning"); return; } if (exportType === 'bruteforce-txt' && (!currentKollektivBfResult || !currentKollektivBfResult.results || currentKollektivBfResult.results.length === 0 )) { ui_helpers.showToast("Keine Brute-Force Ergebnisse für Export dieses Kollektivs.", "warning"); return; } if (['all-zip', 'csv-zip', 'md-zip', 'publikation-zip'].includes(exportType) && !canExportDataDep && (!allBfResults || Object.keys(allBfResults).length === 0) ) { ui_helpers.showToast("Keine Daten/Ergebnisse für ZIP-Export.", "warning"); return; } if (exportType === 'html' && !canExportDataDep) { ui_helpers.showToast("Keine Daten für HTML-Report.", "warning"); return; } switch (exportType) { case 'statistik-csv': exportService.exportStatistikCSV(localRawData, currentKollektiv, appliedCriteria, appliedLogic); break; case 'bruteforce-txt': exportService.exportBruteForceReport(currentKollektivBfResult, currentKollektiv); break; case 'deskriptiv-md': { const stats = statisticsService.calculateAllStatsForPublication(localRawData, appliedCriteria, appliedLogic, allBfResults)[currentKollektiv]; exportService.exportTableMarkdown(stats?.deskriptiv, 'deskriptiv', currentKollektiv); break; } case 'daten-md': exportService.exportTableMarkdown(dataForExport, 'daten', currentKollektiv); break; case 'auswertung-md': exportService.exportTableMarkdown(dataForExport, 'auswertung', currentKollektiv, appliedCriteria, appliedLogic); break; case 'filtered-data-csv': exportService.exportFilteredDataCSV(dataForExport, currentKollektiv); break; case 'comprehensive-report-html': exportService.exportComprehensiveReportHTML(localRawData, currentKollektivBfResult, currentKollektiv, appliedCriteria, appliedLogic); break; case 'charts-png': exportService.exportChartsZip('#app-container', 'PNG_ZIP', currentKollektiv, 'png'); break; case 'charts-svg': exportService.exportChartsZip('#app-container', 'SVG_ZIP', currentKollektiv, 'svg'); break; case 'all-zip': case 'csv-zip': case 'md-zip': case 'publikation-zip': exportService.exportCategoryZip(exportType, localRawData, allBfResults, currentKollektiv, appliedCriteria, appliedLogic); break; default: console.warn(`Unbekannter Export-Typ: ${exportType}`); ui_helpers.showToast(`Export-Typ '${exportType}' nicht implementiert.`, 'warning'); break; } }
 function handleSingleChartDownload(button) { const chartId = button.dataset.chartId; const format = button.dataset.format; const chartName = button.dataset.chartName || chartId.replace(/^chart-/, '').replace(/-container$/, '').replace(/-content$/, '').replace(/-[0-9]+$/, ''); if (chartId && (format === 'png' || format === 'svg')) exportService.exportSingleChart(chartId, format, state.getCurrentKollektiv(), {chartName: chartName}); else ui_helpers.showToast("Fehler beim Chart-Download.", "warning"); }
 function handleSingleTableDownload(button) { if (!button) return; const tableId = button.dataset.tableId; const tableName = button.dataset.tableName || 'Tabelle'; if (tableId && APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT) exportService.exportTablePNG(tableId, state.getCurrentKollektiv(), 'TABLE_PNG_EXPORT', tableName); else if (!tableId) ui_helpers.showToast(`Fehler: Tabelle '${tableName}' nicht gefunden.`, "danger"); }
 function handlePublikationChange(event) { const target = event.target; if (target.id === 'publikation-sprache-switch') { if(state.setCurrentPublikationLang(target.checked ? 'en' : 'de')) { updateUIState(); handleTabShown('publikation-tab'); } } else if (target.id === 'publikation-bf-metric-select') { if(state.setCurrentPublikationBruteForceMetric(target.value)) { updateUIState(); handleTabShown('publikation-tab'); } } }
 function handlePublikationSectionChange(sectionId) { if (state.setCurrentPublikationSection(sectionId)) { updateUIState(); handleTabShown('publikation-tab'); const contentArea = document.getElementById('publikation-content-area'); if(contentArea) contentArea.scrollTop = 0; } }
+function handleExportPublicationSection() { const currentSectionId = state.getCurrentPublikationSection(); const currentLang = state.getCurrentPublikationLang(); const allStats = statisticsService.calculateAllStatsForPublication( localRawData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getAllResults() ); const commonData = { appName: APP_CONFIG.APP_NAME, appVersion: APP_CONFIG.APP_VERSION, currentKollektivName: getKollektivDisplayName(state.getCurrentKollektiv()), nGesamt: allStats.Gesamt?.deskriptiv?.anzahlPatienten || 0, nDirektOP: allStats[APP_CONFIG.KOLLEKTIV_IDS.DIREKT_OP]?.deskriptiv?.anzahlPatienten || 0, nNRCT: allStats[APP_CONFIG.KOLLEKTIV_IDS.NRCT]?.deskriptiv?.anzahlPatienten || 0, significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, references: { lurzSchaefer2025: "Lurz & Schäfer (2025)", koh2008: "Koh et al. (2008)", barbaro2024: "Barbaro et al. (2024)", rutegard2025: "Rutegård et al. (2025)", beetsTan2018ESGAR: "ESGAR Consensus (Beets-Tan et al. 2018)", lahaye2009: "Lahaye et al. (2009)" } }; let markdownContent = ""; const mainSectionConfig = PUBLICATION_CONFIG.sections.find(s => s.id === currentSectionId); if (mainSectionConfig?.subSections) { mainSectionConfig.subSections.forEach(subSection => { markdownContent += publicationTextGenerator.getSectionTextAsMarkdown(subSection.id, currentLang, allStats, allStats, commonData) + "\n\n---\n\n"; }); } if (markdownContent) { const filename = exportService.generateFilename('PUBLIKATION_MAIN_SECTION_MD', state.getCurrentKollektiv(), 'md', {sectionName: currentSectionId}); exportService.downloadFile(markdownContent.trim(), filename, 'text/markdown;charset=utf-8;'); ui_helpers.showToast(`Abschnitt '${currentSectionId}' als Markdown exportiert.`, 'success'); } else { ui_helpers.showToast('Kein Inhalt zum Exportieren für diesen Abschnitt.', 'warning'); } }
+function handleExportPublicationAll() { exportService.exportCategoryZip('publikation-zip', localRawData, bruteForceManager.getAllResults(), state.getCurrentKollektiv(), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic()); }
 
 function initializeBruteForceManager() {
     const bfCallbacks = {
@@ -311,6 +357,9 @@ function handleBruteForceResult(payload) {
         if (state.getActiveTabId() === 'publikation-tab') {
             publikationTabLogic.initializeData(localRawData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getAllResults());
             handleTabShown('publikation-tab');
+        } else if (state.getActiveTabId() === 'auswertung-tab') {
+            // Ensure Auswertung tab also reflects new BF results possibility
+             ui_helpers.updateBruteForceUI('result', payload, true, currentKollektiv);
         }
     } else {
         ui_helpers.showToast('Optimierung ohne valide Ergebnisse.', 'warning');
