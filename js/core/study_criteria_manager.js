@@ -40,7 +40,7 @@ const studyT2CriteriaManager = (() => {
             logic: 'ODER',
             description: 'Koh et al. (2008): Morphologische Kriterien - Irreguläre Kontur ODER heterogenes Binnensignal. In dieser Anwendung für das Gesamtkollektiv evaluiert.',
             studyInfo: Object.freeze({
-                reference: "Koh et al., Int J Radiat Oncol Biol Phys (2008)",
+                reference: "Koh DM et al., Int J Radiat Oncol Biol Phys (2008); 71(2):456-461",
                 patientCohort: "Ursprüngliche Studie: N=25 (alle nCRT, 'poor-risk'). Anwendung in diesem Tool: Gesamtkollektiv.",
                 investigationType: "Vor und nach nCRT (Ursprüngliche Genauigkeitsanalyse post-nCRT)",
                 focus: "Ursprünglich: Bewertung von LK vor und nach nCRT mittels Morphologie. In diesem Tool: Vergleichbarkeit mit Avocado Sign im Gesamtkollektiv.",
@@ -54,20 +54,43 @@ const studyT2CriteriaManager = (() => {
             context: 'Restaging nach nCRT',
             applicableKollektiv: 'nRCT',
             criteria: Object.freeze({
-                size: Object.freeze({ active: true, threshold: 2.3, condition: '>=' }),
+                size: Object.freeze({ active: true, threshold: 2.3, condition: '>=' }), // Original: 2.2mm, in App gerundet/angepasst auf 2.3mm
                 form: Object.freeze({ active: false, value: null }),
                 kontur: Object.freeze({ active: false, value: null }),
                 homogenitaet: Object.freeze({ active: false, value: null }),
                 signal: Object.freeze({ active: false, value: null })
             }),
             logic: 'ODER',
-            description: 'Barbaro et al. (2024): Optimaler Cut-off für Kurzachse im Restaging nach nRCT: ≥ 2.3mm (Original 2.2mm).',
+            description: 'Barbaro et al. (2024): Optimaler Cut-off für Kurzachse im Restaging nach nCRT: ≥ 2.3mm (Originalstudie verwendete 2.2mm).',
              studyInfo: Object.freeze({
-                reference: "Barbaro et al., Radiother Oncol (2024)",
+                reference: "Barbaro B et al., Radiother Oncol (2024); 193:110124",
                 patientCohort: "N=191 (alle nCRT, LARC)",
                 investigationType: "Restaging nach nCRT",
                 focus: "MRI-Bewertung N-Status nach nCRT mittels Größe (optimaler Cut-off).",
                 keyCriteriaSummary: "Kurzachse ≥ 2.3 mm (basierend auf Studie: 2.2mm)."
+            })
+        }),
+        Object.freeze({
+            id: 'lahaye_et_al_2009_restaging',
+            name: 'Lahaye et al. (2009) - Restaging',
+            displayShortName: 'Lahaye et al.',
+            context: 'Restaging nach nCRT (Standard T2)',
+            applicableKollektiv: 'nRCT',
+            criteria: Object.freeze({
+                size: Object.freeze({ active: true, threshold: 3.3, condition: '>=' }),
+                form: Object.freeze({ active: false, value: null }),
+                kontur: Object.freeze({ active: false, value: null }),
+                homogenitaet: Object.freeze({ active: false, value: null }),
+                signal: Object.freeze({ active: false, value: null })
+            }),
+            logic: 'ODER',
+            description: 'Lahaye et al. (2009) - Restaging: Kurzachse ≥ 3.3mm auf Standard T2-Bildern nach nCRT.',
+            studyInfo: Object.freeze({
+                reference: "Lahaye M et al., Radiology (2009); 252(1):81-91",
+                patientCohort: "N=39, alle Patienten mit Rektumkarzinom nach neoadjuvanter Radiochemotherapie.",
+                investigationType: "Restaging nach nCRT.",
+                focus: "Bestimmung diagnostischer Kriterien für Lymphknoten-Restaging nach nCRT mittels Standard-T2-MRT (Größenkriterien) und USPIO-MRT.",
+                keyCriteriaSummary: "Kurzachse ≥ 3.3 mm (auf Standard T2-MRT)."
             })
         })
     ]);
@@ -273,7 +296,7 @@ const studyT2CriteriaManager = (() => {
                 if (activeCriteriaKeys.length > 0) {
                    if (logic === 'UND') {
                        lkIsPositive = activeCriteriaKeys.every(key => checkResult[key] === true);
-                   } else {
+                   } else { // ODER
                        lkIsPositive = activeCriteriaKeys.some(key => checkResult[key] === true);
                    }
                 }
