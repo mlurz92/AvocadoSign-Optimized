@@ -23,10 +23,11 @@ const viewRenderer = (() => {
     function renderDatenTab(data, sortState) {
         _renderTabContent('daten-tab', () => {
              if (!data) throw new Error("Daten für Datentabelle nicht verfügbar.");
+             const isExpanded = state.getDatenTableDetailsExpanded();
              const toggleButtonHTML = `
                  <div class="d-flex justify-content-end mb-3" id="daten-toggle-button-container">
-                     <button id="daten-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="${state.getDatenTableDetailsExpanded() ? 'collapse' : 'expand'}" data-tippy-content="${TOOLTIP_CONTENT.datenTable.expandAll || 'Alle Details ein-/ausblenden'}">
-                        ${state.getDatenTableDetailsExpanded() ? 'Alle Details Ausblenden' : 'Alle Details Einblenden'} <i class="fas ${state.getDatenTableDetailsExpanded() ? 'fa-chevron-up' : 'fa-chevron-down'} ms-1"></i>
+                     <button id="daten-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="${isExpanded ? 'collapse' : 'expand'}" data-tippy-content="${TOOLTIP_CONTENT.datenTable.expandAll || 'Alle Details ein-/ausblenden'}">
+                        ${isExpanded ? 'Alle Details Ausblenden' : 'Alle Details Einblenden'} <i class="fas ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'} ms-1"></i>
                     </button>
                  </div>`;
             const tableHTML = dataTabLogic.createDatenTableHTML(data, sortState);
@@ -37,7 +38,11 @@ const viewRenderer = (() => {
                  const tableHeader = document.getElementById('daten-table-header');
                  if (tableBody && data.length > 0) ui_helpers.attachRowCollapseListeners(tableBody);
                  if (tableHeader) ui_helpers.updateSortIcons(tableHeader.id, sortState);
-            }, 0);
+                 if (isExpanded && tableBody && data.length > 0) { // Ensure rows are expanded if state says so
+                    tableBody.querySelectorAll('.collapse:not(.show)').forEach(el => bootstrap.Collapse.getOrCreateInstance(el).show());
+                    tableBody.querySelectorAll('tr[data-bs-target] .row-toggle-icon.fa-chevron-down').forEach(icon => icon.classList.replace('fa-chevron-down', 'fa-chevron-up'));
+                 }
+            }, 50);
             return finalHTML;
         });
     }
@@ -100,10 +105,11 @@ const viewRenderer = (() => {
              const metricsOverviewContainerId = 't2-metrics-overview';
              const bruteForceCardContainerId = 'brute-force-card-container';
              const tableCardContainerId = 'auswertung-table-card-container';
+             const isExpanded = state.getAuswertungTableDetailsExpanded();
 
              const criteriaControlsHTML = uiComponents.createT2CriteriaControls(currentCriteria, currentLogic);
              const bruteForceCardHTML = uiComponents.createBruteForceCard(getKollektivDisplayName(currentKollektiv), bfWorkerAvailable);
-             const auswertungTableCardHTML = auswertungTabLogic.createAuswertungTableCardHTML(data, sortState, currentCriteria, currentLogic);
+             const auswertungTableCardHTML = auswertungTabLogic.createAuswertungTableCardHTML(data, sortState, currentCriteria, currentLogic, isExpanded);
 
 
              let finalHTML = `
@@ -135,8 +141,8 @@ const viewRenderer = (() => {
                          if (!stats || stats.anzahlPatienten === 0) {
                              ui_helpers.updateElementHTML(dashboardContainerId, '<div class="col-12"><p class="text-muted text-center small p-3">Keine Daten für Dashboard.</p></div>');
                          } else {
-                             const downloadIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image' : 'fa-download';
-                             const downloadIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code' : 'fa-download';
+                             const downloadIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG.includes('{ChartName}') ? 'fa-image' : 'fa-download';
+                             const downloadIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG.includes('{ChartName}') ? 'fa-file-code' : 'fa-download';
                              const pngTooltip = TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'Als PNG';
                              const svgTooltip = TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'Als SVG';
                              const createDlBtns = (baseId) => [{id:`dl-${baseId}-png`, icon: downloadIconPNG, tooltip: pngTooltip, format:'png'}, {id:`dl-${baseId}-svg`, icon: downloadIconSVG, tooltip: svgTooltip, format:'svg'}];
@@ -166,13 +172,17 @@ const viewRenderer = (() => {
                     const tableHeader = tableContainer.querySelector('#auswertung-table-header');
                     if (tableBody && data.length > 0) ui_helpers.attachRowCollapseListeners(tableBody);
                     if (tableHeader) ui_helpers.updateSortIcons(tableHeader.id, sortState);
+                    if (isExpanded && tableBody && data.length > 0) {
+                        tableBody.querySelectorAll('.collapse:not(.show)').forEach(el => bootstrap.Collapse.getOrCreateInstance(el).show());
+                        tableBody.querySelectorAll('tr[data-bs-target] .row-toggle-icon.fa-chevron-down').forEach(icon => icon.classList.replace('fa-chevron-down', 'fa-chevron-up'));
+                    }
                  }
 
                  ui_helpers.updateT2CriteriaControlsUI(currentCriteria, currentLogic);
                  ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
                  ui_helpers.updateBruteForceUI('idle', {}, bfWorkerAvailable, currentKollektiv);
 
-             }, 10);
+             }, 50);
 
              return finalHTML;
         });
@@ -194,18 +204,13 @@ const viewRenderer = (() => {
              if (datasets.length === 0 || datasets.every(d => !Array.isArray(d) || d.length === 0)) { return '<div class="col-12"><div class="alert alert-warning">Keine Daten für Statistik-Auswahl verfügbar.</div></div>'; }
 
              const outerRow = document.createElement('div'); outerRow.className = 'row g-4';
-             const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image':'fa-download'; const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download'; const pngTT = TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'PNG'; const svgTT = TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'SVG'; const createChartDlBtns = (baseId) => [{id:`dl-${baseId}-png`,icon:dlIconPNG,tooltip:pngTT,format:'png', chartId: baseId},{id:`dl-${baseId}-svg`,icon:dlIconSVG,tooltip:svgTT,format:'svg', chartId: baseId}];
+             const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG.includes('{ChartName}') ? 'fa-image':'fa-download'; const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG.includes('{ChartName}') ? 'fa-file-code':'fa-download'; const pngTT = TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'PNG'; const svgTT = TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'SVG'; const createChartDlBtns = (baseId) => [{id:`dl-${baseId}-png`,icon:dlIconPNG,tooltip:pngTT,format:'png', chartId: baseId},{id:`dl-${baseId}-svg`,icon:dlIconSVG,tooltip:svgTT,format:'svg', chartId: baseId}];
              const createTableDlBtn = (tableId, tableName) => ({id: `dl-${tableId}-png`, icon: 'fa-image', tooltip: `Tabelle '${tableName}' PNG`, format: 'png', tableId: tableId, tableName: tableName});
 
              datasets.forEach((data, i) => {
                  const kollektivIdSafe = kollektivNames[i].replace(/\s+/g, '-').toLowerCase();
                  const kollektivDisplayName = kollektivDisplayNames[i];
-                 const col = document.createElement('div'); col.className = layout === 'vergleich' ? 'col-xl-6' : 'col-12';
-                 const innerRowId = `inner-stat-row-${i}`;
-                 col.innerHTML = `<h4 class="mb-3">Kollektiv: ${kollektivDisplayName} (N=${data.length})</h4><div class="row g-3" id="${innerRowId}"></div>`;
-                 outerRow.appendChild(col);
-                 const innerContainer = col.querySelector(`#${innerRowId}`);
-
+                 const col = document.createElement('div'); col.className = layout === 'vergleich' ? 'col-xl-6' : 'col-12'; const innerRowId = `inner-stat-row-${i}`; col.innerHTML = `<h4 class="mb-3">Kollektiv: ${kollektivDisplayName} (N=${data.length})</h4><div class="row g-3" id="${innerRowId}"></div>`; outerRow.appendChild(col); const innerContainer = col.querySelector(`#${innerRowId}`);
                  if (data.length > 0) {
                      let stats = null;
                      try {
@@ -219,20 +224,21 @@ const viewRenderer = (() => {
                      } catch(e) { console.error(`Statistikfehler für Kollektiv ${kollektivDisplayName}:`, e); }
 
                      if (!stats) { innerContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">Fehler bei Statistikberechnung.</div></div>'; return; }
-
-                     const descCardId=`deskriptiveStatistik-${i}`; const gueteASCardId=`diagnostischeGueteAS-${i}`; const gueteT2CardId=`diagnostischeGueteT2-${i}`; const vergleichASvsT2CardId=`statistischerVergleichASvsT2-${i}`; const assoziationCardId=`assoziationEinzelkriterien-${i}`;
-                     const rocASCardId = `rocAS-${i}`; const rocT2CardId = `rocT2-${i}`;
+                     const descCardId=`deskriptiveStatistik-${i}`; const gueteASCardId=`diagnostischeGueteAS-${i}`; const gueteT2CardId=`diagnostischeGueteT2-${i}`; const vergleichASvsT2CardId=`statistischerVergleichASvsT2-${i}`; const assoziationCardId=`assoziationEinzelkriterien-${i}`; const rocCombinedCardId = `rocCombined-${i}`;
 
                      innerContainer.innerHTML += uiComponents.createStatistikCard(descCardId, `Deskriptive Statistik`, statistikTabLogic.createDeskriptiveStatistikContentHTML(stats, i, kollektivDisplayName), false, 'deskriptiveStatistik', [], `table-deskriptiv-demographie-${i}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteASCardId, `Güte & ROC - Avocado Sign (vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteAS, 'AS', kollektivDisplayName), false, `diagnostischeGueteAS-${i}`, [createTableDlBtn(`table-guete-metrics-AS-${kollektivIdSafe}`, 'Güte_AS'), createTableDlBtn(`table-guete-matrix-AS-${kollektivIdSafe}`, 'Matrix_AS')], `table-guete-metrics-AS-${kollektivIdSafe}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteT2CardId, `Güte & ROC - T2 (angewandt vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteT2, 'T2', kollektivDisplayName), false, `diagnostischeGueteT2-${i}`, [createTableDlBtn(`table-guete-metrics-T2-${kollektivIdSafe}`, 'Güte_T2'), createTableDlBtn(`table-guete-matrix-T2-${kollektivIdSafe}`, 'Matrix_T2')], `table-guete-metrics-T2-${kollektivIdSafe}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteASCardId, `Güte - Avocado Sign (vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteAS, 'AS', kollektivDisplayName), false, `diagnostischeGueteAS-${i}`, [createTableDlBtn(`table-guete-metrics-AS-${kollektivIdSafe}`, 'Güte_AS'), createTableDlBtn(`table-guete-matrix-AS-${kollektivIdSafe}`, 'Matrix_AS')], `table-guete-metrics-AS-${kollektivIdSafe}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteT2CardId, `Güte - T2 (angewandt vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteT2, 'T2', kollektivDisplayName), false, `diagnostischeGueteT2-${i}`, [createTableDlBtn(`table-guete-metrics-T2-${kollektivIdSafe}`, 'Güte_T2'), createTableDlBtn(`table-guete-matrix-T2-${kollektivIdSafe}`, 'Matrix_T2')], `table-guete-metrics-T2-${kollektivIdSafe}`);
+
+                     const rocChartCombinedId = `chart-stat-roc-combined-${kollektivIdSafe}`;
+                     const rocCombinedContent = `<div id="${rocChartCombinedId}" class="border rounded" style="min-height: 250px;" data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.rocCurvePlot?.description || 'ROC-Kurve für [METHODE]').replace('[METHODE]', 'AS & T2 (angewandt)').replace('[KOLLEKTIV]', kollektivDisplayName).replace('[AUC_VALUE_CI]','')}"><p class="text-muted small text-center p-3">Lade kombinierte ROC-Kurve...</p></div>`;
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(rocCombinedCardId, `ROC-Kurven: AS vs. T2 (angewandt)`, rocCombinedContent, false, `rocCurveCard-${i}`);
+
+
                      innerContainer.innerHTML += uiComponents.createStatistikCard(vergleichASvsT2CardId, `Vergleich - AS vs. T2 (angewandt)`, statistikTabLogic.createVergleichContentHTML(stats.vergleichASvsT2, kollektivDisplayName), false, 'statistischerVergleichASvsT2', [createTableDlBtn(`table-vergleich-as-vs-t2-${kollektivIdSafe}`, 'Vergleich_AS_T2')], `table-vergleich-as-vs-t2-${kollektivIdSafe}`);
                      innerContainer.innerHTML += uiComponents.createStatistikCard(assoziationCardId, `Assoziation Merkmale vs. N-Status`, statistikTabLogic.createAssoziationContentHTML(stats.assoziation, kollektivDisplayName, appliedCriteria), false, 'assoziationEinzelkriterien', [createTableDlBtn(`table-assoziation-${kollektivIdSafe}`, 'Assoziation')], `table-assoziation-${kollektivIdSafe}`);
 
                      const ageChartId=`chart-stat-age-${i}`; const genderChartId=`chart-stat-gender-${i}`;
-                     const rocChartASId = `chart-stat-roc-AS-${kollektivIdSafe}`;
-                     const rocChartT2Id = `chart-stat-roc-T2-${kollektivIdSafe}`;
-                     const rocChartCombinedId = `chart-stat-roc-Combined-${kollektivIdSafe}`;
 
 
                      setTimeout(() => {
@@ -255,29 +261,20 @@ const viewRenderer = (() => {
                             chartRenderer.renderPieChart(genderData, genderChartId, { height: 180, margin: { top: 10, right: 10, bottom: 35, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true, legendItemCount: genderData.length });
                         }
 
-                        const rocDataSets = [];
-                        if (stats.gueteAS?.auc?.rocPoints) {
-                            rocDataSets.push({ data: stats.gueteAS.auc.rocPoints, name: 'Avocado Sign', color: APP_CONFIG.CHART_SETTINGS.AS_COLOR, auc: stats.gueteAS.auc });
+                        const rocCombinedContainer = document.getElementById(rocChartCombinedId);
+                        if (rocCombinedContainer) {
+                            const rocDataSetsCombined = [];
+                            if (stats.gueteAS?.auc?.rocPoints) rocDataSetsCombined.push({ data: stats.gueteAS.auc.rocPoints, name: UI_TEXTS.legendLabels.avocadoSign, color: APP_CONFIG.CHART_SETTINGS.AS_COLOR, auc: stats.gueteAS.auc });
+                            if (stats.gueteT2?.auc?.rocPoints) rocDataSetsCombined.push({ data: stats.gueteT2.auc.rocPoints, name: UI_TEXTS.legendLabels.currentT2.replace('{T2ShortName}', 'T2'), color: APP_CONFIG.CHART_SETTINGS.T2_COLOR, auc: stats.gueteT2.auc });
+
+                            if (rocDataSetsCombined.length > 0) {
+                                chartRenderer.renderROCCurve(rocDataSetsCombined, rocChartCombinedId, { height: 250, margin: { top: 15, right: 15, bottom: 60, left: 50 }, legendBelow: true, legendItemCount: rocDataSetsCombined.length });
+                                const rocCombinedCardCont = document.getElementById(`${rocCombinedCardId}-card-container`);
+                                if(rocCombinedCardCont) { const hdrBtnsRoc = rocCombinedCardCont.querySelector('.card-header-buttons'); if(hdrBtnsRoc) { const rocDlBtns=createChartDlBtns(rocChartCombinedId); hdrBtnsRoc.innerHTML = rocDlBtns.map(b=>`<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${b.id}" data-chart-id="${b.chartId}" data-format="${b.format}" data-tippy-content="${b.tooltip} (ROC AS vs T2)"><i class="fas ${b.icon}"></i></button>`).join(''); } }
+                            } else {
+                                rocCombinedContainer.innerHTML = '<p class="text-muted small text-center p-2">Keine ROC-Daten für kombiniertes Diagramm.</p>';
+                            }
                         }
-                        if (stats.gueteT2?.auc?.rocPoints) {
-                             rocDataSets.push({ data: stats.gueteT2.auc.rocPoints, name: 'T2 (angewandt)', color: APP_CONFIG.CHART_SETTINGS.T2_COLOR, auc: stats.gueteT2.auc });
-                        }
-
-                        const rocASContainer = document.getElementById(rocChartASId);
-                        if (rocASContainer && stats.gueteAS?.auc?.rocPoints) {
-                            chartRenderer.renderROCCurve([{data: stats.gueteAS.auc.rocPoints, name: 'Avocado Sign', auc: stats.gueteAS.auc}], rocChartASId, { height: 220, margin: { top: 15, right: 15, bottom: 50, left: 50 }, legendBelow: false, aucValue: stats.gueteAS.auc, chartTitle: UI_TEXTS.chartTitles.rocCurve.replace('{METHODE}', 'AS') });
-                            const gueteASCardCont = document.getElementById(`${gueteASCardId}-card-container`);
-                            if(gueteASCardCont) { const hdrBtns = gueteASCardCont.querySelector('.card-header-buttons'); if(hdrBtns) { const rocBtns=createChartDlBtns(rocChartASId); hdrBtns.innerHTML += rocBtns.map(b=>`<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${b.id}" data-chart-id="${b.chartId}" data-format="${b.format}" data-tippy-content="${b.tooltip} (ROC AS)"><i class="fas ${b.icon}"></i></button>`).join(''); } }
-                        } else if (rocASContainer) { rocASContainer.innerHTML = '<p class="text-muted small text-center p-2">Keine ROC-Daten für AS.</p>';}
-
-                        const rocT2Container = document.getElementById(rocChartT2Id);
-                         if (rocT2Container && stats.gueteT2?.auc?.rocPoints) {
-                            chartRenderer.renderROCCurve([{data: stats.gueteT2.auc.rocPoints, name: 'T2 (angewandt)', auc: stats.gueteT2.auc, color: APP_CONFIG.CHART_SETTINGS.T2_COLOR}], rocChartT2Id, { height: 220, margin: { top: 15, right: 15, bottom: 50, left: 50 }, legendBelow: false, aucValue: stats.gueteT2.auc, chartTitle: UI_TEXTS.chartTitles.rocCurve.replace('{METHODE}', 'T2') });
-                             const gueteT2CardCont = document.getElementById(`${gueteT2CardId}-card-container`);
-                            if(gueteT2CardCont) { const hdrBtns = gueteT2CardCont.querySelector('.card-header-buttons'); if(hdrBtns) { const rocBtns=createChartDlBtns(rocChartT2Id); hdrBtns.innerHTML += rocBtns.map(b=>`<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="${b.id}" data-chart-id="${b.chartId}" data-format="${b.format}" data-tippy-content="${b.tooltip} (ROC T2)"><i class="fas ${b.icon}"></i></button>`).join(''); } }
-                        } else if (rocT2Container) { rocT2Container.innerHTML = '<p class="text-muted small text-center p-2">Keine ROC-Daten für T2.</p>';}
-
-
                      }, 50);
                  } else { innerContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning small p-2">Keine Daten für dieses Kollektiv.</div></div>'; }
              });
@@ -333,13 +330,14 @@ const viewRenderer = (() => {
                 if (view === 'as-pur') {
                      const chartContainer = document.getElementById('praes-as-pur-perf-chart');
                      if (chartContainer && presentationData?.statsCurrentKollektiv && presentationData.patientCount > 0) {
+                         const perf = presentationData.statsCurrentKollektiv;
                          const chartData = { overall: {
-                             sensVal: presentationData.statsCurrentKollektiv.sens?.value, sensCI: presentationData.statsCurrentKollektiv.sens?.ci,
-                             spezVal: presentationData.statsCurrentKollektiv.spez?.value, spezCI: presentationData.statsCurrentKollektiv.spez?.ci,
-                             ppvVal: presentationData.statsCurrentKollektiv.ppv?.value, ppvCI: presentationData.statsCurrentKollektiv.ppv?.ci,
-                             npvVal: presentationData.statsCurrentKollektiv.npv?.value, npvCI: presentationData.statsCurrentKollektiv.npv?.ci,
-                             accVal: presentationData.statsCurrentKollektiv.acc?.value, accCI: presentationData.statsCurrentKollektiv.acc?.ci,
-                             aucVal: presentationData.statsCurrentKollektiv.auc?.value, aucCI: presentationData.statsCurrentKollektiv.auc?.ci
+                             sensVal: perf.sens?.value, sensCI: perf.sens?.ci,
+                             spezVal: perf.spez?.value, spezCI: perf.spez?.ci,
+                             ppvVal: perf.ppv?.value, ppvCI: perf.ppv?.ci,
+                             npvVal: perf.npv?.value, npvCI: perf.npv?.ci,
+                             accVal: perf.acc?.value, accCI: perf.acc?.ci,
+                             aucVal: perf.auc?.value, aucCI: perf.auc?.ci
                           }};
                          chartRenderer.renderASPerformanceChart('praes-as-pur-perf-chart', chartData, {showErrorBars: true}, getKollektivDisplayName(currentGlobalKollektiv));
                      } else if (chartContainer) {
