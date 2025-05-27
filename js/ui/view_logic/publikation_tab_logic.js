@@ -1,31 +1,16 @@
 const publikationTabLogic = (() => {
 
-    let allKollektivStats = null;
+    let allKollektivStats = { isLoading: false, data: null, error: null, needsCalculation: true };
     let isCalculatingStats = false;
     let statsCalculationPromise = null;
 
     function initializeData(globalRawData, appliedCriteria, appliedLogic, bfResultsPerKollektiv) {
-        allKollektivStats = { isLoading: true, data: null, error: null };
+        // Berechnung wird nicht mehr hier direkt angestoßen.
+        // Setzt nur den initialen Zustand, dass Berechnung notwendig ist.
+        allKollektivStats = { isLoading: false, data: null, error: null, needsCalculation: true };
         isCalculatingStats = false;
         statsCalculationPromise = null;
-        
-        console.log("PublikationTabLogic: Initial leerer Zustand für allKollektivStats gesetzt.");
-
-        if (globalRawData && appliedCriteria && appliedLogic) {
-            triggerStatsCalculation(globalRawData, appliedCriteria, appliedLogic, bfResultsPerKollektiv, (success) => {
-                if (state.getActiveTabId() === 'publikation-tab') {
-                    if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
-                        console.log("PublikationTabLogic: Statistiken initial berechnet, aktualisiere Publikation-Tab.");
-                        mainAppInterface.refreshCurrentTab();
-                    } else {
-                        console.warn("PublikationTabLogic: mainAppInterface.refreshCurrentTab nicht verfügbar nach initialer Statistikberechnung.");
-                    }
-                }
-            });
-        } else {
-            console.warn("PublikationTabLogic.initializeData: Unvollständige Basisdaten für initiale Statistikberechnung in initializeData.");
-            allKollektivStats = { isLoading: false, data: null, error: "Unvollständige Initialisierungsdaten." };
-        }
+        console.log("PublikationTabLogic: Initialisiert. Statistiken werden bei Bedarf berechnet.");
     }
 
     async function triggerStatsCalculation(globalRawData, appliedCriteria, appliedLogic, bfResultsPerKollektiv, callback) {
@@ -35,15 +20,16 @@ const publikationTabLogic = (() => {
         }
 
         isCalculatingStats = true;
-        allKollektivStats = { isLoading: true, data: null, error: null };
+        allKollektivStats = { isLoading: true, data: null, error: null, needsCalculation: false };
         console.log("PublikationTabLogic: Starte Statistikberechnung für Publikationsdaten...");
-        
-        if (state.getActiveTabId() === 'publikation-tab' && typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
-             mainAppInterface.refreshCurrentTab(); // Zeigt den Ladezustand im UI, falls der Tab aktiv ist
+
+        if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function' && state.getActiveTabId() === 'publikation-tab') {
+             mainAppInterface.refreshCurrentTab();
         }
 
-
         statsCalculationPromise = new Promise((resolve) => {
+            // Simuliert Asynchronität, aber die Berechnung selbst ist blockierend
+            // Für eine echte nicht-blockierende UI müsste dies in einen Web Worker
             setTimeout(async () => {
                 try {
                     if (!globalRawData || !appliedCriteria || !appliedLogic || typeof statisticsService === 'undefined') {
@@ -59,37 +45,73 @@ const publikationTabLogic = (() => {
                     if (!calculatedStats) {
                         throw new Error("calculateAllStatsForPublication lieferte null.");
                     }
-                    allKollektivStats = { isLoading: false, data: calculatedStats, error: null };
+                    allKollektivStats = { isLoading: false, data: calculatedStats, error: null, needsCalculation: false };
                     console.log("PublikationTabLogic: Statistikberechnung erfolgreich abgeschlossen.");
-                    if (callback) callback(true);
+                    if (callback) callback(true, null);
                     resolve(true);
                 } catch (error) {
-                    console.error("PublikationTabLogic: Fehler bei der asynchronen Berechnung der Publikationsstatistiken:", error);
-                    allKollektivStats = { isLoading: false, data: null, error: error.message || "Unbekannter Fehler bei Statistikberechnung." };
-                    if (callback) callback(false);
+                    console.error("PublikationTabLogic: Fehler bei der Berechnung der Publikationsstatistiken:", error);
+                    allKollektivStats = { isLoading: false, data: null, error: error.message || "Unbekannter Fehler bei Statistikberechnung.", needsCalculation: true };
+                    if (callback) callback(false, error.message);
                     resolve(false);
                 } finally {
                     isCalculatingStats = false;
                     statsCalculationPromise = null;
-                     if (state.getActiveTabId() === 'publikation-tab' && typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
-                         mainAppInterface.refreshCurrentTab(); // Aktualisiert UI mit Ergebnis oder Fehler
-                     }
+                    if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function' && state.getActiveTabId() === 'publikation-tab') {
+                         mainAppInterface.refreshCurrentTab();
+                    }
                 }
-            }, 100); // Kurzer Timeout, um dem Browser zu erlauben, UI-Updates (Ladeanzeige) zu verarbeiten
+            }, 50); // Kurzer Timeout, um UI Updates (Ladeanzeige) zu ermöglichen, bevor die blockierende Berechnung startet
         });
         return statsCalculationPromise;
     }
 
+    function ensureStatsAreCalculated(mainAppInterface, callback) {
+        if (allKollektivStats.data && !allKollektivStats.needsCalculation) {
+            if (callback) callback(true, null);
+            return Promise.resolve(true);
+        }
+        if (isCalculatingStats) {
+            if (callback) { // Wenn ein Callback da ist, warten bis Promise erfüllt ist
+                return statsCalculationPromise.then(success => callback(success, allKollektivStats.error)).catch(err => callback(false, err.message));
+            }
+            return statsCalculationPromise || Promise.resolve(false); // Wenn kein Callback, nur das Promise zurückgeben
+        }
+        if (allKollektivStats.needsCalculation || allKollektivStats.error) { // Auch bei Fehler erneut versuchen
+            if (typeof mainAppInterface.getRawData !== 'function') {
+                 const errorMsg = "mainAppInterface.getRawData ist nicht verfügbar in ensureStatsAreCalculated.";
+                 console.error(errorMsg);
+                 allKollektivStats = { isLoading: false, data:null, error: errorMsg, needsCalculation: true};
+                 if(callback) callback(false, errorMsg);
+                 return Promise.resolve(false);
+            }
+            return triggerStatsCalculation(
+                mainAppInterface.getRawData(),
+                t2CriteriaManager.getAppliedCriteria(),
+                t2CriteriaManager.getAppliedLogic(),
+                bruteForceManager.getAllResults(),
+                callback
+            );
+        }
+        if (callback) callback(false, "Unbekannter Zustand in ensureStatsAreCalculated.");
+        return Promise.resolve(false);
+    }
 
-    function getRenderedSectionContent(mainSectionId, lang, currentGlobalKollektivId) {
-        if (!allKollektivStats || allKollektivStats.isLoading) {
+
+    function getRenderedSectionContent(mainSectionId, lang, currentGlobalKollektivId, mainAppInterface) {
+        if (allKollektivStats.isLoading) {
             return `<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade Statistikdaten für Publikation...</span></div><p class="mt-2 text-muted">Umfangreiche Statistiken werden berechnet...</p></div>`;
         }
         if (allKollektivStats.error) {
-            return `<p class="text-danger p-3"><strong>Fehler beim Laden der Publikationsdaten:</strong> ${allKollektivStats.error}<br>Bitte überprüfen Sie die Browser-Konsole für Details und versuchen Sie, die Seite neu zu laden.</p>`;
+            return `<p class="text-danger p-3"><strong>Fehler beim Laden der Publikationsdaten:</strong> ${allKollektivStats.error}<br>Bitte versuchen Sie, die Statistiken erneut zu generieren.</p><div class="text-center p-3"><button class="btn btn-primary" id="btn-retry-pub-stats-calc">${lang === 'de' ? 'Statistiken erneut generieren' : 'Regenerate Statistics'}</button></div>`;
         }
-        if (!allKollektivStats.data) {
-             return '<p class="text-danger p-3"><strong>Fehler:</strong> Keine validen statistischen Daten für den Publikations-Tab verfügbar, obwohl die Berechnung abgeschlossen sein sollte. Bitte kontaktieren Sie den Support.</p>';
+        if (allKollektivStats.needsCalculation || !allKollektivStats.data) {
+             return `<div class="alert alert-info text-center">
+                        <p>${lang === 'de' ? 'Die statistischen Daten für den Publikationsentwurf wurden noch nicht generiert.' : 'Statistical data for the publication draft has not been generated yet.'}</p>
+                        <button class="btn btn-primary" id="btn-generate-pub-stats">
+                            <i class="fas fa-calculator me-1"></i> ${lang === 'de' ? 'Statistiken jetzt generieren' : 'Generate Statistics Now'}
+                        </button>
+                     </div>`;
         }
 
         const statsData = allKollektivStats.data;
@@ -120,34 +142,19 @@ const publikationTabLogic = (() => {
             currentKollektiv: currentGlobalKollektivId,
             bruteForceMetric: state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication
         };
-        
+
         if (!publicationRenderer || typeof publicationRenderer.renderSectionContent !== 'function') {
             return '<p class="text-danger p-3"><strong>Fehler:</strong> Publikations-Renderer ist nicht verfügbar.</p>';
         }
-
         return publicationRenderer.renderSectionContent(mainSectionId, lang, statsData, commonDataForGenerator, optionsForRenderer);
     }
 
-    function _getROCPointsFromStats(statsObj) {
-        if (!statsObj || isNaN(statsObj.sens?.value) || isNaN(statsObj.spez?.value)) {
-            return [{fpr:0, tpr:0}, {fpr:1, tpr:1}];
-        }
-        const sens = statsObj.sens.value;
-        const spez = statsObj.spez.value;
-        return [
-            { fpr: 0, tpr: 0 },
-            { fpr: 1 - spez, tpr: sens },
-            { fpr: 1, tpr: 1 }
-        ];
-    }
-
     function updateDynamicChartsForPublicationTab(mainSectionId, lang, currentKollektivNameForContextOnly) {
-        if (!allKollektivStats || allKollektivStats.isLoading || allKollektivStats.error || !allKollektivStats.data) {
-            console.warn("PublikationTabLogic.updateDynamicCharts: Keine validen Daten für Chart-Rendering im Publikationstab vorhanden. isLoading:", allKollektivStats?.isLoading, "Error:", allKollektivStats?.error);
+        if (!allKollektivStats || allKollektivStats.isLoading || allKollektivStats.error || !allKollektivStats.data || allKollektivStats.needsCalculation) {
+            console.warn("PublikationTabLogic.updateDynamicCharts: Keine validen oder vollständigen Daten für Chart-Rendering.");
             return;
         }
         const statsData = allKollektivStats.data;
-
         const mainSectionConfig = PUBLICATION_CONFIG.sections.find(s => s.id === mainSectionId);
         if (!mainSectionConfig || !mainSectionConfig.subSections) {
             return;
@@ -155,7 +162,6 @@ const publikationTabLogic = (() => {
 
         mainSectionConfig.subSections.forEach(subSection => {
             const subSectionId = subSection.id;
-
             if (subSectionId === 'ergebnisse_patientencharakteristika') {
                 const dataForGesamtKollektiv = statsData['Gesamt'];
                 if (dataForGesamtKollektiv?.deskriptiv) {
@@ -163,7 +169,6 @@ const publikationTabLogic = (() => {
                     const genderChartConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse.geschlechtVerteilungChart;
                     const alterChartId = `${alterChartConfig.idPrefix || alterChartConfig.id}-Gesamt`;
                     const genderChartId = `${genderChartConfig.idPrefix || genderChartConfig.id}-Gesamt`;
-
                     const ageChartElement = document.getElementById(alterChartId);
                     const genderChartElement = document.getElementById(genderChartId);
 
@@ -207,13 +212,11 @@ const publikationTabLogic = (() => {
                         const asStats = dataForThisKollektiv.gueteAS;
                         const bfStats = dataForThisKollektiv.gueteT2_bruteforce;
                         const bfDef = dataForThisKollektiv.bruteforce_definition;
-                        
                         let chartDataComp = [];
                         if (asStats) chartDataComp.push({metric: 'AS', ...Object.fromEntries(['Sens', 'Spez', 'PPV', 'NPV', 'Acc', 'AUC'].map(m => [m, asStats[m.toLowerCase()]?.value ?? NaN])) });
                         if (bfStats && bfDef && bfDef.metricName === currentPubBfMetric) {
                             chartDataComp.push({metric: `Opt. T2 (${bfDef.metricName.substring(0,6)})`, ...Object.fromEntries(['Sens', 'Spez', 'PPV', 'NPV', 'Acc', 'AUC'].map(m => [m, bfStats[m.toLowerCase()]?.value ?? NaN])) });
                         }
-                        
                         const firstLitSetConf = PUBLICATION_CONFIG.literatureCriteriaSets.find(lc => {
                             const s = studyT2CriteriaManager.getStudyCriteriaSetById(lc.id);
                             return s && (s.applicableKollektiv === kolId || (s.applicableKollektiv === 'Gesamt' && kolId === 'Gesamt'));
@@ -222,17 +225,12 @@ const publikationTabLogic = (() => {
                             const litStats = dataForThisKollektiv.gueteT2_literatur?.[firstLitSetConf.id];
                             if(litStats) chartDataComp.push({metric: studyT2CriteriaManager.getStudyCriteriaSetById(firstLitSetConf.id)?.displayShortName || firstLitSetConf.id, ...Object.fromEntries(['Sens', 'Spez', 'PPV', 'NPV', 'Acc', 'AUC'].map(m => [m, litStats[m.toLowerCase()]?.value ?? NaN])) });
                         }
-
                         const metricsToDisplay = ['Sens', 'Spez', 'PPV', 'NPV', 'Acc', 'AUC'];
                         const transformedChartData = metricsToDisplay.map(metricKey => {
                             const entry = { metric: metricKey };
-                            chartDataComp.forEach(methodData => {
-                                entry[methodData.metric] = methodData[metricKey];
-                            });
+                            chartDataComp.forEach(methodData => { entry[methodData.metric] = methodData[metricKey]; });
                             return entry;
                         }).filter(d => Object.values(d).some(val => typeof val === 'number' && !isNaN(val)));
-
-
                         if (transformedChartData.length > 0 && chartDataComp.length > 0) {
                             const t2LabelForChart = chartDataComp.length > 1 ? chartDataComp[1].metric : 'T2';
                             chartRenderer.renderComparisonBarChart(transformedChartData, balkenChartId, { height: 280, margin: { top: 20, right: 20, bottom: 60, left: 50 } }, t2LabelForChart);
@@ -248,41 +246,17 @@ const publikationTabLogic = (() => {
                     if (rocChartElement) {
                         const rocDatasets = [];
                         const asStats = dataForThisKollektiv.gueteAS;
-                        if (asStats) {
-                            rocDatasets.push({
-                                name: UI_TEXTS.legendLabels.avocadoSign,
-                                points: _getROCPointsFromStats(asStats),
-                                color: APP_CONFIG.CHART_SETTINGS.AS_COLOR,
-                                auc: asStats.auc?.value
-                            });
-                        }
-
+                        if (asStats) { rocDatasets.push({ name: UI_TEXTS.legendLabels.avocadoSign, points: statisticsService._getROCPointsFromStats(asStats), color: APP_CONFIG.CHART_SETTINGS.AS_COLOR, auc: asStats.auc?.value }); }
                         const bfStats = dataForThisKollektiv.gueteT2_bruteforce;
                         const bfDef = dataForThisKollektiv.bruteforce_definition;
-                        if (bfStats && bfDef && bfDef.metricName === currentPubBfMetric) {
-                             rocDatasets.push({
-                                name: `${lang === 'de' ? 'Opt. T2' : 'Opt. T2'} (${bfDef.metricName.substring(0,6)})`,
-                                points: _getROCPointsFromStats(bfStats),
-                                color: APP_CONFIG.CHART_SETTINGS.T2_COLOR,
-                                auc: bfStats.auc?.value
-                            });
-                        }
-                        
+                        if (bfStats && bfDef && bfDef.metricName === currentPubBfMetric) { rocDatasets.push({ name: `${lang === 'de' ? 'Opt. T2' : 'Opt. T2'} (${bfDef.metricName.substring(0,6)})`, points: statisticsService._getROCPointsFromStats(bfStats), color: APP_CONFIG.CHART_SETTINGS.T2_COLOR, auc: bfStats.auc?.value });}
                         PUBLICATION_CONFIG.literatureCriteriaSets.forEach((litConf, index) => {
                             const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(litConf.id);
                              if (studySet && (studySet.applicableKollektiv === kolId || (studySet.applicableKollektiv === 'Gesamt' && kolId === 'Gesamt'))) {
                                 const litStats = dataForThisKollektiv.gueteT2_literatur?.[litConf.id];
-                                if (litStats) {
-                                    rocDatasets.push({
-                                        name: studySet.displayShortName || litConf.id,
-                                        points: _getROCPointsFromStats(litStats),
-                                        color: APP_CONFIG.CHART_SETTINGS.LITERATURE_SET_COLORS[index % APP_CONFIG.CHART_SETTINGS.LITERATURE_SET_COLORS.length],
-                                        auc: litStats.auc?.value
-                                    });
-                                }
+                                if (litStats) { rocDatasets.push({ name: studySet.displayShortName || litConf.id, points: statisticsService._getROCPointsFromStats(litStats), color: APP_CONFIG.CHART_SETTINGS.LITERATURE_SET_COLORS[index % APP_CONFIG.CHART_SETTINGS.LITERATURE_SET_COLORS.length], auc: litStats.auc?.value }); }
                             }
                         });
-
                         if (rocDatasets.length > 0) {
                             chartRenderer.renderComparisonROCCurve(rocDatasets, rocChartId, { height: 300, margin: { top: 20, right: 20, bottom: 70, left: 60 }, showPointsOnComparison: false, legendColumns: 2 });
                         } else {
@@ -294,12 +268,13 @@ const publikationTabLogic = (() => {
         });
     }
 
-
     return Object.freeze({
         initializeData,
         getRenderedSectionContent,
         updateDynamicChartsForPublicationTab,
-        triggerStatsCalculation 
+        triggerStatsCalculation,
+        ensureStatsAreCalculated,
+        getAllKollektivStats: () => allKollektivStats // Für Testzwecke oder Export
     });
 
 })();
