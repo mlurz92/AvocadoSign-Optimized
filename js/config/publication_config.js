@@ -66,20 +66,50 @@ const PUBLICATION_CONFIG = Object.freeze({
                 titleDe: 'Patientencharakteristika',
                 titleEn: 'Patient Characteristics'
             },
-            diagnostischeGueteGesamtTabelle: {
-                id: 'pub-table-diagnostische-guete',
-                titleDe: 'Diagnostische Güte: Avocado Sign und T2-Kriterien',
-                titleEn: 'Diagnostic Performance: Avocado Sign and T2 Criteria'
+            diagnostischeGueteASTabelle: { // Hinzugefügt für Tabelle 3
+                id: 'pub-table-diagnostische-guete-as',
+                titleDe: 'Diagnostische Güte: Avocado Sign (vs. N-Status)',
+                titleEn: 'Diagnostic Performance: Avocado Sign (vs. N-Status)'
             },
-            rocChartAsVsT2: {
-                id: 'pub-chart-roc-as-vs-t2',
-                titleDe: 'ROC-Kurven: Avocado Sign vs. Beste T2-Kriterien (pro Kollektiv)',
-                titleEn: 'ROC Curves: Avocado Sign vs. Best T2 Criteria (per Cohort)'
+            diagnostischeGueteLiteraturT2Tabelle: { // Hinzugefügt für Tabelle 4
+                id: 'pub-table-diagnostische-guete-literatur-t2',
+                titleDe: 'Diagnostische Güte: Literatur-basierte T2-Kriterien (vs. N-Status)',
+                titleEn: 'Diagnostic Performance: Literature-Based T2 Criteria (vs. N-Status)'
             },
-            sensSpezBarChart: {
-                id: 'pub-chart-sens-spez-bar',
-                titleDe: 'Sensitivität & Spezifität: AS vs. T2-Kriterien (pro Kollektiv)',
-                titleEn: 'Sensitivity & Specificity: AS vs. T2 Criteria (per Cohort)'
+            diagnostischeGueteOptimierteT2Tabelle: { // Hinzugefügt für Tabelle 5
+                id: 'pub-table-diagnostische-guete-optimierte-t2',
+                titleDe: 'Diagnostische Güte: Optimierte T2-Kriterien (Ziel: {BF_METRIC}, vs. N-Status)',
+                titleEn: 'Diagnostic Performance: Optimized T2 Criteria (Target: {BF_METRIC}, vs. N-Status)'
+            },
+            statistischerVergleichAST2Tabelle: { // Hinzugefügt für Tabelle 6
+                id: 'pub-table-statistischer-vergleich-as-t2',
+                titleDe: 'Statistischer Vergleich: Avocado Sign vs. T2-Kriterien (Literatur und Optimiert)',
+                titleEn: 'Statistical Comparison: Avocado Sign vs. T2 Criteria (Literature and Optimized)'
+            },
+            alterVerteilungChart: { // Hinzugefügt für Abbildung 1a
+                id: 'pub-chart-alter-Gesamt',
+                titleDe: 'Altersverteilung (Gesamtkollektiv)',
+                titleEn: 'Age Distribution (Overall Cohort)'
+            },
+            geschlechtVerteilungChart: { // Hinzugefügt für Abbildung 1b
+                id: 'pub-chart-gender-Gesamt',
+                titleDe: 'Geschlechterverteilung (Gesamtkollektiv)',
+                titleEn: 'Gender Distribution (Overall Cohort)'
+            },
+            vergleichPerformanceChartGesamt: { // Hinzugefügt für Abbildung 2a
+                id: 'pub-chart-vergleich-Gesamt',
+                titleDe: 'Vergleichsmetriken für Gesamtkollektiv',
+                titleEn: 'Comparative Metrics for Overall Cohort'
+            },
+            vergleichPerformanceChartDirektOP: { // Hinzugefügt für Abbildung 2b
+                id: 'pub-chart-vergleich-direkt-OP',
+                titleDe: 'Vergleichsmetriken für Direkt-OP Kollektiv',
+                titleEn: 'Comparative Metrics for Upfront Surgery Cohort'
+            },
+            vergleichPerformanceChartNRCT: { // Hinzugefügt für Abbildung 2c
+                id: 'pub-chart-vergleich-nRCT',
+                titleDe: 'Vergleichsmetriken für nRCT Kollektiv',
+                titleEn: 'Comparative Metrics for nRCT Cohort'
             }
         })
     })
