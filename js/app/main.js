@@ -98,18 +98,18 @@ function initializeApp() {
         const initialTabElement = document.getElementById(initialTabId);
          if(initialTabElement && bootstrap.Tab) {
             const tab = bootstrap.Tab.getOrCreateInstance(initialTabElement);
-            if(tab) tab.show(); // Dies triggert 'shown.bs.tab', was processTabChange aufruft
+            if(tab) tab.show();
          } else {
-             state.setActiveTabId('publikation-tab'); // Fallback
+             state.setActiveTabId('publikation-tab');
              const fallbackTabElement = document.getElementById('publikation-tab');
              if(fallbackTabElement && bootstrap.Tab) {
                 const tab = bootstrap.Tab.getOrCreateInstance(fallbackTabElement);
                 if(tab) tab.show();
-             } else { // Wenn auch der Fallback-Tab nicht da ist, manuell rendern
+             } else {
                  processTabChange(state.getActiveTabId());
              }
          }
-        
+
         const mainTabNav = document.getElementById('mainTab');
         if(mainTabNav) {
             mainTabNav.querySelectorAll('.nav-link').forEach(navLink => {
@@ -123,7 +123,7 @@ function initializeApp() {
         if (kurzanleitungButton && TOOLTIP_CONTENT.kurzanleitungButton?.description) {
             kurzanleitungButton.setAttribute('data-tippy-content', TOOLTIP_CONTENT.kurzanleitungButton.description.replace('${APP_CONFIG.APP_VERSION}', APP_CONFIG.APP_VERSION));
         }
-        
+
         if (!loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START)) {
             ui_helpers.showKurzanleitung();
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, 'shown');
@@ -294,6 +294,14 @@ function handleBodyClickDelegation(event) {
         publikationEventHandlers.handlePublikationSectionChange(target.closest('#publikation-sections-nav .publikation-section-link').dataset.sectionId, mainAppInterface);
         return;
     }
+    if (target.closest('#btn-generate-pub-stats') || target.closest('#btn-retry-pub-stats-calc')) {
+        if (typeof publikationEventHandlers !== 'undefined' && typeof publikationEventHandlers.handleGeneratePublikationStats === 'function') {
+            publikationEventHandlers.handleGeneratePublikationStats(mainAppInterface);
+        } else {
+            console.error("Handler für Publikationsstatistiken (handleGeneratePublikationStats) nicht gefunden.");
+        }
+        return;
+    }
 }
 
 function processTabChange(tabId) {
@@ -326,13 +334,7 @@ function _renderCurrentTab(tabId) {
         case 'statistik-tab': viewRenderer.renderStatistikTab(processedData, appliedCriteria, appliedLogic, state.getCurrentStatsLayout(), state.getCurrentStatsKollektiv1(), state.getCurrentStatsKollektiv2(), currentKollektiv); break;
         case 'praesentation-tab': viewRenderer.renderPresentationTab(state.getCurrentPresentationView(), state.getCurrentPresentationStudyId(), currentKollektiv, processedData, appliedCriteria, appliedLogic); break;
         case 'publikation-tab':
-            if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.getRenderedSectionContent === 'function') {
-                viewRenderer.renderPublikationTab(state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), currentKollektiv, localRawData, bruteForceManager.getAllResults());
-            } else {
-                console.error("PublikationTabLogic oder getRenderedSectionContent nicht verfügbar für Tab 'publikation-tab'.");
-                const paneId = 'publikation-tab-pane';
-                 ui_helpers.updateElementHTML(paneId, `<div class="alert alert-danger m-3">Interner Fehler: Publikationsmodul konnte nicht korrekt geladen werden.</div>`);
-            }
+            viewRenderer.renderPublikationTab(mainAppInterface, state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), currentKollektiv);
             break;
         case 'export-tab': viewRenderer.renderExportTab(currentKollektiv); break;
         default: console.warn(`Unbekannter Tab für Rendering: ${tabId}`); const paneId = tabId.replace('-tab', '-tab-pane'); ui_helpers.updateElementHTML(paneId, `<div class="alert alert-warning m-3">Inhalt für Tab '${tabId}' nicht implementiert.</div>`);
@@ -341,6 +343,14 @@ function _renderCurrentTab(tabId) {
 
 function _handleGlobalKollektivChange(newKollektiv, source = "user") {
     if (state.setCurrentKollektiv(newKollektiv)) {
+        if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.initializeData === 'function') {
+            publikationTabLogic.initializeData(
+                localRawData,
+                t2CriteriaManager.getAppliedCriteria(),
+                t2CriteriaManager.getAppliedLogic(),
+                bruteForceManager.getAllResults()
+            );
+        }
         filterAndPrepareData();
         updateUIState();
         _renderCurrentTab(state.getActiveTabId());
@@ -379,6 +389,14 @@ function handleSortRequest(tableContext, key, subKey = null) {
 
 function applyAndRefreshAll() {
     t2CriteriaManager.applyCriteria();
+    if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.initializeData === 'function') {
+        publikationTabLogic.initializeData(
+            localRawData,
+            t2CriteriaManager.getAppliedCriteria(),
+            t2CriteriaManager.getAppliedLogic(),
+            bruteForceManager.getAllResults()
+        );
+    }
     filterAndPrepareData();
     ui_helpers.markCriteriaSavedIndicator(false);
     updateUIState();
@@ -423,17 +441,15 @@ function handleBruteForceResult(payload) {
         }
         ui_helpers.showToast('Optimierung abgeschlossen.', 'success');
         if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.triggerStatsCalculation === 'function') {
-            publikationTabLogic.triggerStatsCalculation(
-                localRawData,
-                t2CriteriaManager.getAppliedCriteria(),
-                t2CriteriaManager.getAppliedLogic(),
-                bruteForceManager.getAllResults(),
-                (success) => {
-                    if (state.getActiveTabId() === 'publikation-tab') {
-                         _renderCurrentTab('publikation-tab');
-                    }
-                }
+            publikationTabLogic.initializeData( // Reset and mark for recalculation
+                 localRawData,
+                 t2CriteriaManager.getAppliedCriteria(),
+                 t2CriteriaManager.getAppliedLogic(),
+                 bruteForceManager.getAllResults()
             );
+            if (state.getActiveTabId() === 'publikation-tab') {
+                 mainAppInterface.refreshCurrentTab();
+            }
         }
     } else {
         ui_helpers.showToast('Optimierung ohne valide Ergebnisse.', 'warning');
