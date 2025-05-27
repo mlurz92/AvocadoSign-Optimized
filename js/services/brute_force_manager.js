@@ -55,7 +55,7 @@ const bruteForceManager = (() => {
             case 'result':
                 isRunningState = false;
                 if (payload && payload.kollektiv && payload.bestResult) {
-                    allKollektivResults[payload.kollektiv] = cloneDeep(payload);
+                    allKollektivResults[payload.kollektiv] = cloneDeep(payload); // payload now includes nGesamt, nPlus, nMinus
                 } else if (payload && currentKollektivRunning && payload.bestResult) {
                     allKollektivResults[currentKollektivRunning] = cloneDeep(payload);
                      console.warn("BruteForceManager: Ergebnis vom Worker ohne Kollektiv-Info, verwende currentKollektivRunning:", currentKollektivRunning);
@@ -85,9 +85,7 @@ const bruteForceManager = (() => {
         isRunningState = false;
         currentKollektivRunning = null;
         if (onErrorCallback) onErrorCallback({ message: error.message || 'Unbekannter Worker-Fehler' });
-        // Optional: Versuchen, den Worker neu zu initialisieren oder ihn als nicht verfügbar zu markieren
-        // initializeWorker(); // Könnte zu Endlosschleifen führen, wenn der Worker-Code selbst fehlerhaft ist.
-        worker = null; // Markiert den Worker als nicht verfügbar nach einem Fehler.
+        worker = null;
     }
 
     function init(callbacks = {}) {
@@ -139,7 +137,6 @@ const bruteForceManager = (() => {
             return false;
         }
         worker.postMessage({ action: 'cancel' });
-        // isRunningState wird im Handler für 'cancelled' oder 'error' gesetzt
         console.log("BruteForceManager: Abbruchanfrage an Worker gesendet.");
         return true;
     }
