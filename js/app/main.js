@@ -6,13 +6,13 @@ const mainAppInterface = {};
 
 const debouncedUpdateSizeInput_Main = debounce((value) => {
     if (typeof auswertungEventHandlers !== 'undefined' && typeof auswertungEventHandlers.handleT2SizeInputChange === 'function') {
-        auswertungEventHandlers.handleT2SizeInputChange(value, mainAppInterface);
+        auswertungEventHandlers.handleT2SizeInputChange(value);
     }
 }, APP_CONFIG.PERFORMANCE_SETTINGS.DEBOUNCE_DELAY_MS);
 
 const debouncedUpdateSizeRange_Main = debounce((value) => {
     if (typeof auswertungEventHandlers !== 'undefined' && typeof auswertungEventHandlers.handleT2SizeRangeChange === 'function') {
-        auswertungEventHandlers.handleT2SizeRangeChange(value, mainAppInterface);
+        auswertungEventHandlers.handleT2SizeRangeChange(value);
     }
 }, APP_CONFIG.PERFORMANCE_SETTINGS.DEBOUNCE_DELAY_MS);
 
@@ -41,14 +41,16 @@ function initializeApp() {
 
     try {
         if (typeof state === 'undefined' || typeof t2CriteriaManager === 'undefined' || typeof dataProcessor === 'undefined' ||
-            typeof viewRenderer === 'undefined' || typeof ui_helpers === 'undefined' || typeof exportService === 'undefined' ||
+            typeof viewRenderer === 'undefined' || typeof ui_helpers === 'undefined' || typeof ui_components === 'undefined' ||
+            typeof exportService === 'undefined' || typeof tableRenderer === 'undefined' ||
             typeof dataTabLogic === 'undefined' || typeof auswertungTabLogic === 'undefined' ||
             typeof statistikTabLogic === 'undefined' || typeof praesentationTabLogic === 'undefined' ||
             typeof publikationTabLogic === 'undefined' || typeof publicationRenderer === 'undefined' ||
             typeof publicationTextGenerator === 'undefined' || typeof studyT2CriteriaManager === 'undefined' ||
             typeof bruteForceManager === 'undefined' || typeof generalEventHandlers === 'undefined' ||
             typeof auswertungEventHandlers === 'undefined' || typeof statistikEventHandlers === 'undefined' ||
-            typeof praesentationEventHandlers === 'undefined' || typeof publikationEventHandlers === 'undefined'
+            typeof praesentationEventHandlers === 'undefined' || typeof publikationEventHandlers === 'undefined' ||
+            typeof chartRenderer === 'undefined'
         ) {
              throw new Error("Ein oder mehrere Kernmodule oder Event-Handler-Module sind nicht verfügbar. Überprüfen Sie die Skript-Ladereihenfolge und Dateipfade in index.html.");
         }
@@ -61,7 +63,6 @@ function initializeApp() {
         mainAppInterface.getRawData = () => localRawData;
         mainAppInterface.updateGlobalUIState = updateUIState;
         mainAppInterface.refreshCurrentTab = refreshCurrentTab;
-        mainAppInterface.startBruteForceAnalysis = handleStartBruteForce_Internal;
 
 
         state.init();
@@ -87,17 +88,17 @@ function initializeApp() {
         updateUIState();
         setupEventListeners();
 
-        const initialTabId = state.getActiveTabId() || 'daten-tab';
+        const initialTabId = state.getActiveTabId() || 'publikation-tab';
         const initialTabElement = document.getElementById(initialTabId);
          if(initialTabElement && bootstrap.Tab) {
             const tab = bootstrap.Tab.getOrCreateInstance(initialTabElement);
             if(tab) tab.show();
          } else {
-             state.setActiveTabId('daten-tab');
-             const fallbackTabElement = document.getElementById('daten-tab');
+             state.setActiveTabId('publikation-tab'); // Fallback zum Publikation-Tab
+             const fallbackTabElement = document.getElementById('publikation-tab');
              if(fallbackTabElement && bootstrap.Tab) bootstrap.Tab.getOrCreateInstance(fallbackTabElement).show();
          }
-        processTabChange(state.getActiveTabId());
+        processTabChange(state.getActiveTabId()); // Stellt sicher, dass der initiale Tab gerendert wird
 
         const mainTabNav = document.getElementById('mainTab');
         if(mainTabNav) {
@@ -110,18 +111,28 @@ function initializeApp() {
 
         const kurzanleitungButton = document.getElementById('btn-kurzanleitung');
         if (kurzanleitungButton && TOOLTIP_CONTENT.kurzanleitungButton?.description) {
-            kurzanleitungButton.setAttribute('data-tippy-content', TOOLTIP_CONTENT.kurzanleitungButton.description);
+            kurzanleitungButton.setAttribute('data-tippy-content', TOOLTIP_CONTENT.kurzanleitungButton.description.replace('${APP_CONFIG.APP_VERSION}', APP_CONFIG.APP_VERSION));
         }
-        ui_helpers.showKurzanleitung();
+        
+        if (!loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START)) {
+            ui_helpers.showKurzanleitung();
+            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, 'shown');
+        } else {
+            const kurzanleitungModalTitle = document.querySelector('#kurzanleitung-modal .modal-title');
+            const kurzanleitungModalBody = document.querySelector('#kurzanleitung-modal .modal-body');
+            if (kurzanleitungModalTitle && UI_TEXTS.kurzanleitung?.title) kurzanleitungModalTitle.innerHTML = UI_TEXTS.kurzanleitung.title;
+            if (kurzanleitungModalBody && UI_TEXTS.kurzanleitung?.content) {
+                 let content = UI_TEXTS.kurzanleitung.content;
+                 content = content.replace(/\$\{APP_CONFIG\.APP_VERSION\}/g, APP_CONFIG.APP_VERSION);
+                 content = content.replace(/\$\{formatNumber\(APP_CONFIG\.STATISTICAL_CONSTANTS\.SIGNIFICANCE_LEVEL, 2\)\.replace\('\.', ','\)\}/g, formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, 2).replace('.', ','));
+                 content = content.replace(/\$\{APP_CONFIG\.UI_SETTINGS\.CONTEXT_HELP_ICON_CLASS\}/g, APP_CONFIG.UI_SETTINGS.CONTEXT_HELP_ICON_CLASS);
+                 kurzanleitungModalBody.innerHTML = content;
+            }
+        }
+
 
         ui_helpers.initializeTooltips(document.body);
         ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
-
-        const kurzanleitungModalTitle = document.querySelector('#kurzanleitung-modal .modal-title');
-        const kurzanleitungModalBody = document.querySelector('#kurzanleitung-modal .modal-body');
-        if (kurzanleitungModalTitle && UI_TEXTS.kurzanleitung?.title) kurzanleitungModalTitle.innerHTML = UI_TEXTS.kurzanleitung.title;
-        if (kurzanleitungModalBody && UI_TEXTS.kurzanleitung?.content) kurzanleitungModalBody.innerHTML = UI_TEXTS.kurzanleitung.content;
-
 
         ui_helpers.showToast('Anwendung initialisiert.', 'success', 2500);
         console.log("App Initialisierung abgeschlossen.");
@@ -228,9 +239,9 @@ function handleBodyClickDelegation(event) {
 
     const clickableRowParent = target.closest('tr.clickable-row[data-bs-target]');
      if (clickableRowParent && (target.closest('a, button, input, select, .btn-close, [data-bs-toggle="modal"], .table-download-png-btn, .chart-download-btn'))) {
-        event.stopPropagation(); 
+        // Do nothing, let the specific element handle its event
     } else if (clickableRowParent) {
-
+        // Default action for clickable row (toggle collapse) will be handled by Bootstrap if attributes are set correctly
     }
 
 
@@ -256,7 +267,14 @@ function handleBodyClickDelegation(event) {
         if (target.closest('#statistik-toggle-vergleich')) { statistikEventHandlers.handleStatsLayoutToggle(target.closest('#statistik-toggle-vergleich'), mainAppInterface); return;}
     }
     if (target.closest('#export-tab-pane button[id^="export-"]') && !target.closest('#export-tab-pane button[id^="export-"]').disabled && !target.closest('#export-tab-pane button[id^="export-"]').id.startsWith('export-bruteforce-modal')) {
-        exportService.exportCategoryZip(target.closest('#export-tab-pane button[id^="export-"]').id.replace('export-', ''), localRawData, bruteForceManager.getAllResults(), state.getCurrentKollektiv(), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
+        const exportId = target.closest('#export-tab-pane button[id^="export-"]').id.replace('export-', '');
+        if (exportId === 'publikation-paket-zip') {
+            exportService.exportCategoryZip('publikation_paket', localRawData, bruteForceManager.getAllResults(), state.getCurrentKollektiv(), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), state.getCurrentPublikationLang(), state.getCurrentPublikationBruteForceMetric());
+        } else if (exportId === 'konfiguration-json') {
+            exportService.exportConfiguration(state.getCurrentKollektiv(), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getResultsForKollektiv(state.getCurrentKollektiv()));
+        } else {
+             exportService.exportCategoryZip(exportId, localRawData, bruteForceManager.getAllResults(), state.getCurrentKollektiv(), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
+        }
         return;
     }
     if (target.closest('#praesentation-tab-pane button[id^="download-"]') && !target.closest('#praesentation-tab-pane button[id^="download-"]').disabled && !target.closest('#praesentation-tab-pane button[id^="download-"]').classList.contains('table-download-png-btn') && !target.closest('#praesentation-tab-pane button[id^="download-"]').classList.contains('chart-download-btn')) {
@@ -291,7 +309,7 @@ function _renderCurrentTab(tabId) {
     const appliedLogic = t2CriteriaManager.getAppliedLogic();
 
     if (['daten-tab', 'auswertung-tab', 'statistik-tab', 'praesentation-tab'].includes(tabId)) {
-        filterAndPrepareData();
+        filterAndPrepareData(); // Ensure currentData is up-to-date for these tabs
     }
 
     switch (tabId) {
@@ -341,7 +359,7 @@ function handleSortRequest(tableContext, key, subKey = null) {
     }
 
     if (sortStateUpdated) {
-        filterAndPrepareData();
+        filterAndPrepareData(); // Daten neu sortieren
         const sortState = (tableContext === 'daten') ? state.getDatenTableSort() : state.getAuswertungTableSort();
         if (tableContext === 'daten' && state.getActiveTabId() === 'daten-tab') {
             viewRenderer.renderDatenTab(currentData, sortState);
@@ -361,9 +379,6 @@ function applyAndRefreshAll() {
 
 function refreshCurrentTab(){
     _renderCurrentTab(state.getActiveTabId());
-}
-
-function handleStartBruteForce_Internal() {
 }
 
 function initializeBruteForceManager() {
@@ -399,14 +414,16 @@ function handleBruteForceResult(payload) {
             ui_helpers.initializeTooltips(modalBody);
         }
         ui_helpers.showToast('Optimierung abgeschlossen.', 'success');
+        // Re-initialize publication tab data if it's active or if BF results are globally used by it
+        // For now, always re-init as BF results could be used by any section of publication tab
+         publikationTabLogic.initializeData(localRawData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getAllResults());
         if (state.getActiveTabId() === 'publikation-tab') {
-            publikationTabLogic.initializeData(localRawData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getAllResults());
             _renderCurrentTab('publikation-tab');
         }
     } else {
         ui_helpers.showToast('Optimierung ohne valide Ergebnisse.', 'warning');
     }
-    updateUIState();
+    updateUIState(); // Update export button states etc.
 }
 
 function handleBruteForceCancelled(payload) {
