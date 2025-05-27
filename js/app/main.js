@@ -41,7 +41,7 @@ function initializeApp() {
 
     try {
         if (typeof state === 'undefined' || typeof t2CriteriaManager === 'undefined' || typeof dataProcessor === 'undefined' ||
-            typeof viewRenderer === 'undefined' || typeof ui_helpers === 'undefined' || typeof ui_components === 'undefined' ||
+            typeof viewRenderer === 'undefined' || typeof ui_helpers === 'undefined' || typeof uiComponents === 'undefined' ||
             typeof exportService === 'undefined' || typeof tableRenderer === 'undefined' ||
             typeof dataTabLogic === 'undefined' || typeof auswertungTabLogic === 'undefined' ||
             typeof statistikTabLogic === 'undefined' || typeof praesentationTabLogic === 'undefined' ||
@@ -50,7 +50,7 @@ function initializeApp() {
             typeof bruteForceManager === 'undefined' || typeof generalEventHandlers === 'undefined' ||
             typeof auswertungEventHandlers === 'undefined' || typeof statistikEventHandlers === 'undefined' ||
             typeof praesentationEventHandlers === 'undefined' || typeof publikationEventHandlers === 'undefined' ||
-            typeof chartRenderer === 'undefined'
+            typeof chartRenderer === 'undefined' || typeof statisticsService === 'undefined'
         ) {
              throw new Error("Ein oder mehrere Kernmodule oder Event-Handler-Module sind nicht verfügbar. Überprüfen Sie die Skript-Ladereihenfolge und Dateipfade in index.html.");
         }
@@ -94,11 +94,11 @@ function initializeApp() {
             const tab = bootstrap.Tab.getOrCreateInstance(initialTabElement);
             if(tab) tab.show();
          } else {
-             state.setActiveTabId('publikation-tab'); // Fallback zum Publikation-Tab
+             state.setActiveTabId('publikation-tab');
              const fallbackTabElement = document.getElementById('publikation-tab');
              if(fallbackTabElement && bootstrap.Tab) bootstrap.Tab.getOrCreateInstance(fallbackTabElement).show();
          }
-        processTabChange(state.getActiveTabId()); // Stellt sicher, dass der initiale Tab gerendert wird
+        processTabChange(state.getActiveTabId());
 
         const mainTabNav = document.getElementById('mainTab');
         if(mainTabNav) {
@@ -239,9 +239,7 @@ function handleBodyClickDelegation(event) {
 
     const clickableRowParent = target.closest('tr.clickable-row[data-bs-target]');
      if (clickableRowParent && (target.closest('a, button, input, select, .btn-close, [data-bs-toggle="modal"], .table-download-png-btn, .chart-download-btn'))) {
-        // Do nothing, let the specific element handle its event
     } else if (clickableRowParent) {
-        // Default action for clickable row (toggle collapse) will be handled by Bootstrap if attributes are set correctly
     }
 
 
@@ -309,7 +307,7 @@ function _renderCurrentTab(tabId) {
     const appliedLogic = t2CriteriaManager.getAppliedLogic();
 
     if (['daten-tab', 'auswertung-tab', 'statistik-tab', 'praesentation-tab'].includes(tabId)) {
-        filterAndPrepareData(); // Ensure currentData is up-to-date for these tabs
+        filterAndPrepareData();
     }
 
     switch (tabId) {
@@ -359,7 +357,7 @@ function handleSortRequest(tableContext, key, subKey = null) {
     }
 
     if (sortStateUpdated) {
-        filterAndPrepareData(); // Daten neu sortieren
+        filterAndPrepareData();
         const sortState = (tableContext === 'daten') ? state.getDatenTableSort() : state.getAuswertungTableSort();
         if (tableContext === 'daten' && state.getActiveTabId() === 'daten-tab') {
             viewRenderer.renderDatenTab(currentData, sortState);
@@ -414,16 +412,14 @@ function handleBruteForceResult(payload) {
             ui_helpers.initializeTooltips(modalBody);
         }
         ui_helpers.showToast('Optimierung abgeschlossen.', 'success');
-        // Re-initialize publication tab data if it's active or if BF results are globally used by it
-        // For now, always re-init as BF results could be used by any section of publication tab
-         publikationTabLogic.initializeData(localRawData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getAllResults());
+        publikationTabLogic.initializeData(localRawData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getAllResults());
         if (state.getActiveTabId() === 'publikation-tab') {
             _renderCurrentTab('publikation-tab');
         }
     } else {
         ui_helpers.showToast('Optimierung ohne valide Ergebnisse.', 'warning');
     }
-    updateUIState(); // Update export button states etc.
+    updateUIState();
 }
 
 function handleBruteForceCancelled(payload) {
