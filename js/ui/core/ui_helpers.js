@@ -50,7 +50,10 @@ const ui_helpers = (() => {
 
         globalTippyInstances = globalTippyInstances.filter(instance => {
             if (!instance || !instance.reference || !document.body.contains(instance.reference)) { try { instance?.destroy(); } catch(e){} return false; }
-            if (elementSet.has(instance.reference)) { try { instance.destroy(); } catch (e) {} return false; }
+            if (elementSet.has(instance.reference) && instance.state.isEnabled) {
+                 try { instance.destroy(); } catch (e) {}
+                 return false;
+            }
             return true;
         });
 
@@ -62,7 +65,7 @@ const ui_helpers = (() => {
                onCreate(instance) { if (!instance.props.content || String(instance.props.content).trim() === '') { instance.disable(); } },
                onShow(instance) { const content = instance.reference.getAttribute('data-tippy-content'); if (content && String(content).trim() !== '') { instance.setContent(content); return true; } else { return false; } }
            });
-           if (Array.isArray(newInstances)) { globalTippyInstances = globalTippyInstances.concat(newInstances); }
+           if (Array.isArray(newInstances)) { globalTippyInstances = globalTippyInstances.concat(newInstances.filter(inst => inst !== null && inst !== undefined)); }
            else if (newInstances) { globalTippyInstances.push(newInstances); }
         }
     }
@@ -90,9 +93,11 @@ const ui_helpers = (() => {
     function highlightElement(elementId, highlightClass = 'element-flash-highlight', duration = 1500) {
         const element = document.getElementById(elementId);
         if (element) {
+            element.classList.remove(highlightClass); // Remove first to reset animation if called again quickly
+            void element.offsetWidth; // Trigger reflow
             element.classList.add(highlightClass);
             setTimeout(() => {
-                element.classList.remove(highlightClass);
+                if (element) element.classList.remove(highlightClass);
             }, duration);
         }
     }
@@ -127,20 +132,26 @@ const ui_helpers = (() => {
                     span.style.fontWeight = isActiveSort ? 'bold' : 'normal';
                     span.style.textDecoration = isActiveSort ? 'underline' : 'none';
                     span.style.color = isActiveSort ? 'var(--primary-color)' : 'inherit';
-                    const thLabel = th.getAttribute('data-tippy-content') || th.textContent.split('(')[0].trim() || key;
+                    const thLabel = th.getAttribute('data-tippy-content')?.split('.')[0] || th.textContent.split('(')[0].trim() || key;
                     const spanLabel = span.textContent.trim();
-                    span.setAttribute('data-tippy-content', `Sortieren nach: ${thLabel.split(':')[0]} -> ${spanLabel}`);
+                    span.setAttribute('data-tippy-content', `Sortieren nach: ${thLabel} -> ${spanLabel}`);
                     if (isActiveSort) {
-                        icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
+                        icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
                         isSubKeySortActive = true;
                     }
                 });
                 if (!isSubKeySortActive && key === sortState.key && (sortState.subKey === null || sortState.subKey === undefined)) {
-                    icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
+                     th.style.color = 'var(--primary-color)';
+                     icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
+                } else if (!isSubKeySortActive) {
+                     th.style.color = 'inherit';
                 }
             } else {
                 if (key === sortState.key && (sortState.subKey === null || sortState.subKey === undefined)) {
-                    icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
+                    icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
+                    th.style.color = 'var(--primary-color)';
+                } else {
+                    th.style.color = 'inherit';
                 }
             }
         });
@@ -419,9 +430,9 @@ const ui_helpers = (() => {
         const startButtonText = isRunning ? '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Läuft...' : `<i class="fas fa-cogs me-1"></i> ${workerAvailable ? 'Optimierung starten' : 'Starten (Worker fehlt)'}`;
         if (elements.startBtn) updateElementHTML(elements.startBtn.id, startButtonText);
 
+        const kollektivToDisplayForInfo = data?.kollektiv || currentKollektiv || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
         if (elements.bfInfoKollektiv) {
-            const kollektivToDisplay = data.kollektiv || currentKollektiv || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
-            updateElementText(elements.bfInfoKollektiv.id, getKollektivNameFunc(kollektivToDisplay));
+            updateElementText(elements.bfInfoKollektiv.id, getKollektivNameFunc(kollektivToDisplayForInfo));
         }
 
         const addOrUpdateTooltip = (el, content) => {
@@ -442,7 +453,7 @@ const ui_helpers = (() => {
                 else if (state === 'cancelled') statusMsg = 'Abgebrochen.';
                 else if (state === 'error') statusMsg = `Fehler: ${data?.message || 'Unbekannt.'}`;
                 if (elements.statusText) updateElementText(elements.statusText.id, statusMsg);
-                addOrUpdateTooltip(elements.bfInfoKollektiv, `Aktueller Status: ${statusMsg}. Kollektiv: ${getKollektivNameFunc(currentKollektiv || data.kollektiv || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV)}`);
+                addOrUpdateTooltip(elements.bfInfoKollektiv.closest('#brute-force-info'), (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Aktueller Status: ${statusMsg}`);
                 break;
             case 'start':
                 if (elements.progressBar) { elements.progressBar.style.width = '0%'; elements.progressBar.setAttribute('aria-valuenow', '0'); }
@@ -453,13 +464,13 @@ const ui_helpers = (() => {
                 if (elements.bestMetric) updateElementText(elements.bestMetric.id, '--');
                 if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, 'Beste Kriterien: --');
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Initialisiere...');
-                addOrUpdateTooltip(elements.bfInfoKollektiv, `Status: Initialisiere... Kollektiv: ${getKollektivNameFunc(data.kollektiv || currentKollektiv)}`);
+                addOrUpdateTooltip(elements.bfInfoKollektiv.closest('#brute-force-info'), (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: Initialisiere...`);
                 break;
             case 'started':
                 const totalComb = formatNumber(data?.totalCombinations || 0, 0, 'N/A');
                 if (elements.totalCount) updateElementText(elements.totalCount.id, totalComb);
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Teste...');
-                addOrUpdateTooltip(elements.bfInfoKollektiv, `Status: Teste ${totalComb} Kombinationen... Kollektiv: ${getKollektivNameFunc(data.kollektiv || currentKollektiv)}`);
+                addOrUpdateTooltip(elements.bfInfoKollektiv.closest('#brute-force-info'), (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: Teste ${totalComb} Kombinationen...`);
                 if (elements.progressContainer) addOrUpdateTooltip(elements.progressContainer, (TOOLTIP_CONTENT.bruteForceProgress?.description || '').replace('[TOTAL]', totalComb));
                 break;
             case 'progress':
@@ -468,11 +479,11 @@ const ui_helpers = (() => {
                 if (elements.progressBar) { elements.progressBar.style.width = percentStr; elements.progressBar.setAttribute('aria-valuenow', String(percent)); }
                 if (elements.progressPercent) updateElementText(elements.progressPercent.id, percentStr);
                 const testedNum = formatNumber(data?.tested || 0, 0);
-                const totalNum = formatNumber(data?.total || 0, 0);
+                const totalNumProg = formatNumber(data?.total || 0, 0);
                 if (elements.testedCount) updateElementText(elements.testedCount.id, testedNum);
-                if (elements.totalCount) updateElementText(elements.totalCount.id, totalNum);
+                if (elements.totalCount) updateElementText(elements.totalCount.id, totalNumProg);
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Läuft...');
-                addOrUpdateTooltip(elements.bfInfoKollektiv, `Status: ${percentStr} (${testedNum}/${totalNum}) Kollektiv: ${getKollektivNameFunc(data.kollektiv || currentKollektiv)}`);
+                addOrUpdateTooltip(elements.bfInfoKollektiv.closest('#brute-force-info'), (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: ${percentStr} (${testedNum}/${totalNumProg})`);
                 if (data?.currentBest && data.currentBest.criteria && isFinite(data.currentBest.metricValue)) {
                     const bestValStr = formatNumber(data.currentBest.metricValue, 4);
                     const bestCritStr = formatCriteriaFunc(data.currentBest.criteria, data.currentBest.logic);
@@ -486,16 +497,16 @@ const ui_helpers = (() => {
                 break;
             case 'result':
                 const best = data?.bestResult;
+                const resultKollektivName = getKollektivNameFunc(data.kollektiv || 'N/A');
                 if (best && best.criteria && isFinite(best.metricValue)) {
                     const metricName = data.metric || 'N/A';
-                    const kollektivName = getKollektivNameFunc(data.kollektiv || 'N/A');
                     const bestValueStr = formatNumber(best.metricValue, 4);
                     const logicStr = best.logic?.toUpperCase() || 'N/A';
                     const criteriaStr = formatCriteriaFunc(best.criteria, best.logic);
                     const durationStr = formatNumber((data.duration || 0) / 1000, 1);
                     const totalTestedStr = formatNumber(data.totalTested || 0, 0);
                     if (elements.resultMetric) updateElementText(elements.resultMetric.id, metricName);
-                    if (elements.resultKollektiv) updateElementText(elements.resultKollektiv.id, kollektivName);
+                    if (elements.resultKollektiv) updateElementText(elements.resultKollektiv.id, resultKollektivName);
                     if (elements.resultValue) updateElementText(elements.resultValue.id, bestValueStr);
                     if (elements.resultLogic) updateElementText(elements.resultLogic.id, logicStr);
                     if (elements.resultCriteria) updateElementText(elements.resultCriteria.id, criteriaStr);
@@ -505,12 +516,12 @@ const ui_helpers = (() => {
                     if (elements.resultKollektivNplus) updateElementText(elements.resultKollektivNplus.id, formatNumber(data.nPlus,0,'--'));
                     if (elements.resultKollektivNminus) updateElementText(elements.resultKollektivNminus.id, formatNumber(data.nMinus,0,'--'));
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig.');
-                    addOrUpdateTooltip(elements.bfInfoKollektiv, `Status: Fertig. Kollektiv: ${kollektivName}`);
-                    addOrUpdateTooltip(elements.resultContainer, (TOOLTIP_CONTENT.bruteForceResult.description || '').replace('[N_GESAMT]', formatNumber(data.nGesamt,0,'?')).replace('[N_PLUS]', formatNumber(data.nPlus,0,'?')).replace('[N_MINUS]', formatNumber(data.nMinus,0,'?')) );
+                     addOrUpdateTooltip(elements.bfInfoKollektiv.closest('#brute-force-info'), (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${resultKollektivName}</strong>`) + ` Status: Fertig.`);
+                     if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, (TOOLTIP_CONTENT.bruteForceResult.description || '').replace('[N_GESAMT]', formatNumber(data.nGesamt,0,'?')).replace('[N_PLUS]', formatNumber(data.nPlus,0,'?')).replace('[N_MINUS]', formatNumber(data.nMinus,0,'?')) );
                 } else {
                     if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true);
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig (kein valides Ergebnis).');
-                     addOrUpdateTooltip(elements.bfInfoKollektiv, `Status: Fertig (kein Ergebnis). Kollektiv: ${getKollektivNameFunc(data.kollektiv || currentKollektiv)}`);
+                     addOrUpdateTooltip(elements.bfInfoKollektiv.closest('#brute-force-info'), (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${resultKollektivName}</strong>`) + ` Status: Fertig (kein Ergebnis).`);
                 }
                 break;
         }
@@ -601,6 +612,16 @@ const ui_helpers = (() => {
         const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value) : ((key === 'phi') ? getPhiBewertung(data?.value) : '');
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
 
+        let ciWarning = '';
+        const ciWarningThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 10;
+        if (data?.n_trials !== undefined && data?.n_trials < ciWarningThreshold && (key === 'sens' || key === 'spez' || key === 'ppv' || key === 'npv' || key === 'acc')) {
+            ciWarning = `<hr><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahl (Nenner=${data.n_trials}).</i>`;
+        } else if (data?.matrix_components && (key === 'balAcc' || key === 'f1' || key === 'auc')) {
+            const mc = data.matrix_components;
+            if (mc.total < ciWarningThreshold * 2 || mc.rp < ciWarningThreshold/2 || mc.fp < ciWarningThreshold/2 || mc.fn < ciWarningThreshold/2 || mc.rn < ciWarningThreshold/2 ) {
+                 ciWarning = `<hr><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahlen in der Konfusionsmatrix (Gesamt=${mc.total}).</i>`;
+            }
+        }
 
         let interpretation = interpretationTemplate
             .replace(/\[METHODE\]/g, `<strong>${methode}</strong>`)
@@ -616,7 +637,8 @@ const ui_helpers = (() => {
              interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
         }
         interpretation = interpretation.replace(/, p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
-        interpretation = interpretation.replace(/<hr.*?>.*$/, '');
+        interpretation = interpretation.replace(/<hr.*?>.*$/, ''); // remove existing hr if any
+        interpretation += ciWarning;
         return interpretation;
     }
 
@@ -647,29 +669,39 @@ const ui_helpers = (() => {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
         if (!assocObj) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
-        let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '', pVal = NaN;
+        let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '', pVal = NaN, ciWarning = '';
         const assozPValue = assocObj?.pValue;
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
+        const ciWarningThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 10;
+
+        if(assocObj.matrix && (key === 'or' || key === 'rd' || key === 'phi')) {
+            const m = assocObj.matrix;
+            const totalInMatrix = m.rp + m.fp + m.fn + m.rn;
+            if (totalInMatrix < ciWarningThreshold * 2 || m.rp < ciWarningThreshold/2 || m.fp < ciWarningThreshold/2 || m.fn < ciWarningThreshold/2 || m.rn < ciWarningThreshold/2) {
+                ciWarning = `<hr><i>Hinweis: Konfidenzintervall oder Maß ggf. unsicher aufgrund kleiner Fallzahlen in der zugrundeliegenden 2x2 Tabelle (Gesamt=${totalInMatrix}).</i>`;
+            }
+        }
+
 
         if (key === 'or') {
-            valueStr = formatNumber(assocObj.or?.value, 2, na);
-            lowerStr = formatNumber(assocObj.or?.ci?.lower, 2, na);
-            upperStr = formatNumber(assocObj.or?.ci?.upper, 2, na);
+            valueStr = formatNumber(assocObj.or?.value, 2, na, true);
+            lowerStr = formatNumber(assocObj.or?.ci?.lower, 2, na, true);
+            upperStr = formatNumber(assocObj.or?.ci?.upper, 2, na, true);
             ciMethodStr = assocObj.or?.method || na;
-            pStr = (assozPValue !== null && !isNaN(assozPValue)) ? (assozPValue < 0.001 ? '&lt;0.001' : formatNumber(assozPValue, 3, na)) : na;
+            pStr = (assozPValue !== null && !isNaN(assozPValue)) ? (assozPValue < 0.001 ? '&lt;0.001' : formatNumber(assozPValue, 3, na, true)) : na;
             sigSymbol = getStatisticalSignificanceSymbol(assozPValue);
             sigText = getStatisticalSignificanceText(assozPValue);
         } else if (key === 'rd') {
-            valueStr = formatNumber(assocObj.rd?.value !== null && !isNaN(assocObj.rd?.value) ? assocObj.rd.value * 100 : NaN, 1, na);
-            lowerStr = formatNumber(assocObj.rd?.ci?.lower !== null && !isNaN(assocObj.rd?.ci?.lower) ? assocObj.rd.ci.lower * 100 : NaN, 1, na);
-            upperStr = formatNumber(assocObj.rd?.ci?.upper !== null && !isNaN(assocObj.rd?.ci?.upper) ? assocObj.rd.ci.upper * 100 : NaN, 1, na);
+            valueStr = formatNumber(assocObj.rd?.value !== null && !isNaN(assocObj.rd?.value) ? assocObj.rd.value * 100 : NaN, 1, na, true);
+            lowerStr = formatNumber(assocObj.rd?.ci?.lower !== null && !isNaN(assocObj.rd?.ci?.lower) ? assocObj.rd.ci.lower * 100 : NaN, 1, na, true);
+            upperStr = formatNumber(assocObj.rd?.ci?.upper !== null && !isNaN(assocObj.rd?.ci?.upper) ? assocObj.rd.ci.upper * 100 : NaN, 1, na, true);
             ciMethodStr = assocObj.rd?.method || na;
         } else if (key === 'phi') {
-            valueStr = formatNumber(assocObj.phi?.value, 2, na);
+            valueStr = formatNumber(assocObj.phi?.value, 2, na, true);
             bewertungStr = getPhiBewertung(assocObj.phi?.value);
         } else if (key === 'fisher' || key === 'mannwhitney' || key === 'pvalue' || key === 'size_mwu' || key === 'defaultP') {
              pVal = assocObj?.pValue;
-             pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na)) : na;
+             pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na, true)) : na;
              sigSymbol = getStatisticalSignificanceSymbol(pVal);
              sigText = getStatisticalSignificanceText(pVal);
              const templateToUse = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || TOOLTIP_CONTENT.statMetrics.defaultP.interpretation;
@@ -706,11 +738,15 @@ const ui_helpers = (() => {
          if (key === 'or' && pStr === na) {
              interpretation = interpretation.replace(/, p=.*?, \[SIGNIFIKANZ\]/g, '');
          }
+        interpretation += ciWarning;
         return interpretation;
     }
 
     function showKurzanleitung() {
         const modalElement = document.getElementById('kurzanleitung-modal');
+        const firstStartKey = APP_CONFIG.STORAGE_KEYS.FIRST_APP_START;
+        const isFirstStart = loadFromLocalStorage(firstStartKey) === null;
+
         if (!modalElement) {
             const modalHTML = `
                 <div class="modal fade" id="kurzanleitung-modal" tabindex="-1" aria-labelledby="kurzanleitungModalLabel" aria-hidden="true">
@@ -732,9 +768,17 @@ const ui_helpers = (() => {
             document.body.insertAdjacentHTML('beforeend', modalHTML);
             const newModalElement = document.getElementById('kurzanleitung-modal');
             kurzanleitungModalInstance = new bootstrap.Modal(newModalElement);
+        } else if (!kurzanleitungModalInstance) {
+             kurzanleitungModalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
         }
+
         if (kurzanleitungModalInstance) {
-            kurzanleitungModalInstance.show();
+             if(isFirstStart){
+                kurzanleitungModalInstance.show();
+                saveToLocalStorage(firstStartKey, 'shown');
+             } else if (modalElement && !modalElement.classList.contains('show')) { // Nur zeigen, wenn manuell getriggert und nicht schon offen
+                kurzanleitungModalInstance.show();
+             }
         }
     }
 
