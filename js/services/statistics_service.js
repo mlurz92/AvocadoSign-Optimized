@@ -186,8 +186,8 @@ const statisticsService = (() => {
         return { value: rd, ci: { lower: Math.max(-1.0, lower), upper: Math.min(1.0, upper) }, method: 'Wald' };
     }
 
-    function bootstrapCI(data, statisticFn, nBoot = APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS, alpha = APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_ALPHA) {
-        const defaultReturn = { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE, se: NaN };
+    function bootstrapCI(data, statisticFn, nBoot = APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS, alpha = APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_ALPHA, ciMethodName = APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE) {
+        const defaultReturn = { lower: NaN, upper: NaN, method: ciMethodName, se: NaN };
         if (!Array.isArray(data) || data.length < 2 || typeof statisticFn !== 'function' || isNaN(nBoot) || nBoot <= 0 || isNaN(alpha) || alpha <= 0 || alpha >= 1) return defaultReturn;
 
         const n = data.length;
@@ -208,19 +208,20 @@ const statisticsService = (() => {
             } catch (e) { console.warn("Bootstrap-Iteration fehlgeschlagen:", e); }
         }
 
-        if (validCount < Math.max(10, nBoot * 0.1)) return defaultReturn;
+        if (validCount < Math.max(10, nBoot * 0.1)) return defaultReturn; // Ensure sufficient valid bootstrap samples
         bootStats.sort((a, b) => a - b);
 
         const lowerIndex = Math.max(0, Math.min(validCount - 1, Math.floor(validCount * (alpha / 2.0))));
         const upperIndex = Math.max(0, Math.min(validCount - 1, Math.ceil(validCount * (1.0 - alpha / 2.0)) -1));
 
+
         if (lowerIndex > upperIndex || lowerIndex < 0 || upperIndex >= validCount) return defaultReturn;
 
         const meanStat = sum / validCount;
         const variance = (validCount > 1) ? (sumSq - (sum * sum / validCount)) / (validCount -1) : NaN;
-        const se = (variance > 0 && !isNaN(variance)) ? Math.sqrt(variance) : NaN;
+        const se = (variance >= 0 && !isNaN(variance)) ? Math.sqrt(variance) : NaN;
 
-        return { lower: bootStats[lowerIndex], upper: bootStats[upperIndex], method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE, se: se };
+        return { lower: bootStats[lowerIndex], upper: bootStats[upperIndex], method: ciMethodName, se: se };
     }
 
     function manualMcNemarTest(b, c) {
@@ -388,7 +389,7 @@ const statisticsService = (() => {
             if (isNaN(auc1) || isNaN(auc2)) return { ...defaultReturn, method: "DeLong Test (Invalid AUCs calculated)" };
 
             const calculateVarianceComponent = (V_arr, mean_auc, n_other) => {
-                if (n_other === 0 || V_arr.some(isNaN)) return NaN;
+                if (n_other === 0 || V_arr.some(isNaN) || V_arr.length < 2) return NaN;
                 let sumSqDiff = 0;
                 for(let val of V_arr) sumSqDiff += Math.pow(val - mean_auc, 2);
                 return sumSqDiff / (V_arr.length -1);
@@ -399,7 +400,7 @@ const statisticsService = (() => {
             const S01_2 = calculateVarianceComponent(V01_2, auc2, n_pos);
 
             const calculateCovarianceComponent = (V_X_arr, V_Y_arr, meanX, meanY, n_other) => {
-                if (n_other === 0 || V_X_arr.some(isNaN) || V_Y_arr.some(isNaN)) return NaN;
+                if (n_other === 0 || V_X_arr.some(isNaN) || V_Y_arr.some(isNaN) || V_X_arr.length < 2) return NaN;
                  let sumProdDiff = 0;
                  for (let i = 0; i < V_X_arr.length; i++) sumProdDiff += (V_X_arr[i] - meanX) * (V_Y_arr[i] - meanY);
                  return sumProdDiff / (V_X_arr.length - 1);
@@ -497,7 +498,7 @@ const statisticsService = (() => {
         const total = rp + fp + fn + rn;
         const nullMetric = { value: NaN, ci: null, method: null, se: NaN, n_success: NaN, n_trials: NaN, matrix_components: null };
 
-        if (total === 0) return { matrix, sens: nullMetric, spez: nullMetric, ppv: nullMetric, npv: nullMetric, acc: nullMetric, balAcc: nullMetric, f1: nullMetric, auc: nullMetric };
+        if (total === 0) return { matrix, sens: nullMetric, spez: nullMetric, ppv: nullMetric, npv: nullMetric, acc: nullMetric, balAcc: nullMetric, f1: nullMetric, auc: nullMetric, lrPlus: nullMetric, lrMinus: nullMetric };
 
         const sens_val = (rp + fn) > 0 ? rp / (rp + fn) : ((rp === 0 && fn === 0) ? NaN : 0) ;
         const spez_val = (fp + rn) > 0 ? rn / (fp + rn) : ((fp === 0 && rn === 0) ? NaN : 0) ;
@@ -506,7 +507,11 @@ const statisticsService = (() => {
         const acc_val = total > 0 ? (rp + rn) / total : NaN;
         const balAcc_val = (!isNaN(sens_val) && !isNaN(spez_val)) ? (sens_val + spez_val) / 2.0 : NaN;
         const f1_val = (!isNaN(ppv_val) && !isNaN(sens_val) && (ppv_val + sens_val) > 1e-9) ? 2.0 * (ppv_val * sens_val) / (ppv_val + sens_val) : ((ppv_val === 0 && sens_val === 0) ? 0 : NaN);
-        const auc_val = balAcc_val;
+        const auc_val = balAcc_val; // For binary tests, AUC is equivalent to Balanced Accuracy
+
+        const lrPlus_val = (!isNaN(sens_val) && !isNaN(spez_val) && spez_val !== 1) ? sens_val / (1 - spez_val) : NaN;
+        const lrMinus_val = (!isNaN(sens_val) && !isNaN(spez_val) && spez_val !== 0) ? (1 - sens_val) / spez_val : NaN;
+
 
         const n_sens = rp + fn;
         const n_spez = fp + rn;
@@ -524,22 +529,26 @@ const statisticsService = (() => {
             const m = calculateConfusionMatrix(sample, pKey, rKey);
             const t_boot = m.rp + m.fp + m.fn + m.rn;
             if (t_boot === 0) return NaN;
-            const se_boot = (m.rp + m.fn) > 0 ? m.rp / (m.rp + m.fn) : ((m.rp === 0 && m.fn === 0) ? NaN : 0);
-            const sp_boot = (m.fp + m.rn) > 0 ? m.rn / (m.fp + m.rn) : ((m.fp === 0 && m.rn === 0) ? NaN : 0);
+            const se_b = (m.rp + m.fn) > 0 ? m.rp / (m.rp + m.fn) : ((m.rp === 0 && m.fn === 0) ? NaN : 0);
+            const sp_b = (m.fp + m.rn) > 0 ? m.rn / (m.fp + m.rn) : ((m.fp === 0 && m.rn === 0) ? NaN : 0);
 
-            if (isNaN(se_boot) || isNaN(sp_boot)) return NaN;
+            if (isNaN(se_b) || isNaN(sp_b)) return NaN;
 
-            if (metric === 'balAcc' || metric === 'auc') return (se_boot + sp_boot) / 2.0;
+            if (metric === 'balAcc' || metric === 'auc') return (se_b + sp_b) / 2.0;
             if (metric === 'f1') {
-                const pv_boot = (m.rp + m.fp) > 0 ? m.rp / (m.rp + m.fp) : ((m.rp === 0 && m.fp === 0) ? NaN : 0);
-                return (isNaN(pv_boot) || (pv_boot + se_boot) <= 1e-9) ? ((pv_boot === 0 && se_boot === 0) ? 0 : NaN) : 2.0 * (pv_boot * se_boot) / (pv_boot + se_boot);
+                const pv_b = (m.rp + m.fp) > 0 ? m.rp / (m.rp + m.fp) : ((m.rp === 0 && m.fp === 0) ? NaN : 0);
+                return (isNaN(pv_b) || (pv_b + se_b) <= 1e-9) ? ((pv_b === 0 && se_b === 0) ? 0 : NaN) : 2.0 * (pv_b * se_b) / (pv_b + se_b);
             }
+            if (metric === 'lrPlus') return (sp_b !== 1) ? se_b / (1 - sp_b) : NaN;
+            if (metric === 'lrMinus') return (sp_b !== 0) ? (1 - se_b) / sp_b : NaN;
             return NaN;
         };
 
         const balAccBootCIResult = !isNaN(balAcc_val) ? bootstrapCI(data, bootstrapStatFnFactory(predictionKey, referenceKey, 'balAcc')) : { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE, se: NaN };
         const f1BootCIResult = !isNaN(f1_val) ? bootstrapCI(data, bootstrapStatFnFactory(predictionKey, referenceKey, 'f1')) : { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE, se: NaN };
-        const aucBootCIResult = balAccBootCIResult;
+        const aucBootCIResult = balAccBootCIResult; // As AUC is treated as BalAcc for binary tests
+        const lrPlusBootCIResult = !isNaN(lrPlus_val) && isFinite(lrPlus_val) ? bootstrapCI(data, bootstrapStatFnFactory(predictionKey, referenceKey, 'lrPlus'), undefined, undefined, APP_CONFIG.STATISTICAL_CONSTANTS.LIKELIHOOD_RATIO_CI_METHOD) : { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.LIKELIHOOD_RATIO_CI_METHOD, se: NaN };
+        const lrMinusBootCIResult = !isNaN(lrMinus_val) && isFinite(lrMinus_val) ? bootstrapCI(data, bootstrapStatFnFactory(predictionKey, referenceKey, 'lrMinus'), undefined, undefined, APP_CONFIG.STATISTICAL_CONSTANTS.LIKELIHOOD_RATIO_CI_METHOD) : { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.LIKELIHOOD_RATIO_CI_METHOD, se: NaN };
         
         const matrixComponentsForBootstrap = { rp, fp, fn, rn, total };
 
@@ -552,31 +561,110 @@ const statisticsService = (() => {
             acc: { value: acc_val, ci: { lower: accCIResult.lower, upper: accCIResult.upper }, method: accCIResult.method, se: NaN, n_success: rp + rn, n_trials: n_acc, matrix_components: null },
             balAcc: { value: balAcc_val, ci: { lower: balAccBootCIResult.lower, upper: balAccBootCIResult.upper }, method: balAccBootCIResult.method, se: balAccBootCIResult.se, n_success: NaN, n_trials: NaN, matrix_components: matrixComponentsForBootstrap },
             f1: { value: f1_val, ci: { lower: f1BootCIResult.lower, upper: f1BootCIResult.upper }, method: f1BootCIResult.method, se: f1BootCIResult.se, n_success: NaN, n_trials: NaN, matrix_components: matrixComponentsForBootstrap },
-            auc: { value: auc_val, ci: { lower: aucBootCIResult.lower, upper: aucBootCIResult.upper }, method: aucBootCIResult.method, se: aucBootCIResult.se, n_success: NaN, n_trials: NaN, matrix_components: matrixComponentsForBootstrap }
+            auc: { value: auc_val, ci: { lower: aucBootCIResult.lower, upper: aucBootCIResult.upper }, method: aucBootCIResult.method, se: aucBootCIResult.se, n_success: NaN, n_trials: NaN, matrix_components: matrixComponentsForBootstrap },
+            lrPlus: { value: lrPlus_val, ci: { lower: lrPlusBootCIResult.lower, upper: lrPlusBootCIResult.upper }, method: lrPlusBootCIResult.method, se: lrPlusBootCIResult.se, n_success: NaN, n_trials: NaN, matrix_components: matrixComponentsForBootstrap },
+            lrMinus: { value: lrMinus_val, ci: { lower: lrMinusBootCIResult.lower, upper: lrMinusBootCIResult.upper }, method: lrMinusBootCIResult.method, se: lrMinusBootCIResult.se, n_success: NaN, n_trials: NaN, matrix_components: matrixComponentsForBootstrap }
         };
     }
 
+    function bootstrapCIDifference(data1, data2, statFn1, statFn2, nBoot = APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS, alpha = APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_ALPHA, isPaired = false) {
+        const defaultReturn = { value: NaN, lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_DIFFERENCE, se: NaN };
+        if (!Array.isArray(data1) || !statFn1 || (isPaired && (!Array.isArray(data2) || data1.length !== data2.length)) || (!isPaired && !Array.isArray(data2))) {
+            return defaultReturn;
+        }
+
+        const n1 = data1.length;
+        const n2 = isPaired ? 0 : data2.length; // n2 not used directly for paired resampling from combined data structure
+        const bootDiffs = [];
+        let sum = 0, sumSq = 0, validCount = 0;
+
+        for (let i = 0; i < nBoot; i++) {
+            let bootSample1, bootSample2;
+            if (isPaired) {
+                bootSample1 = new Array(n1);
+                bootSample2 = new Array(n1); // data2 must exist and be of same length for paired bootstrap
+                for (let j = 0; j < n1; j++) {
+                    const randomIndex = Math.floor(Math.random() * n1);
+                    bootSample1[j] = data1[randomIndex];
+                    bootSample2[j] = data2[randomIndex]; // data2 here implies the data for the second metric on the same resampled patient
+                }
+            } else {
+                bootSample1 = new Array(n1);
+                for (let j = 0; j < n1; j++) bootSample1[j] = data1[Math.floor(Math.random() * n1)];
+                bootSample2 = new Array(n2);
+                for (let j = 0; j < n2; j++) bootSample2[j] = data2[Math.floor(Math.random() * n2)];
+            }
+
+            try {
+                const stat1 = statFn1(bootSample1);
+                const stat2 = statFn2(bootSample2); // For paired, bootSample2 is the data for the second method on the *same* resampled subjects as bootSample1
+                if (isFinite(stat1) && isFinite(stat2) && !isNaN(stat1) && !isNaN(stat2)) {
+                    const diff = stat1 - stat2;
+                    bootDiffs.push(diff);
+                    sum += diff;
+                    sumSq += diff * diff;
+                    validCount++;
+                }
+            } catch (e) { console.warn("Bootstrap CI Difference Iteration failed:", e); }
+        }
+
+        if (validCount < Math.max(10, nBoot * 0.1)) return defaultReturn;
+        bootDiffs.sort((a, b) => a - b);
+
+        const lowerIndex = Math.max(0, Math.min(validCount - 1, Math.floor(validCount * (alpha / 2.0))));
+        const upperIndex = Math.max(0, Math.min(validCount - 1, Math.ceil(validCount * (1.0 - alpha / 2.0)) -1));
+        if (lowerIndex > upperIndex || lowerIndex < 0 || upperIndex >= validCount) return defaultReturn;
+
+        const meanDiff = sum / validCount;
+        const variance = (validCount > 1) ? (sumSq - (sum * sum / validCount)) / (validCount -1) : NaN;
+        const se = (variance >= 0 && !isNaN(variance)) ? Math.sqrt(variance) : NaN;
+        const originalStat1 = statFn1(data1);
+        const originalStat2 = statFn2(isPaired ? data2 : data2); // Pass original data2
+        const originalDiff = (isFinite(originalStat1) && isFinite(originalStat2)) ? originalStat1 - originalStat2 : NaN;
+
+        return { value: originalDiff, lower: bootDiffs[lowerIndex], upper: bootDiffs[upperIndex], method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_DIFFERENCE, se: se };
+    }
+
+
     function compareDiagnosticMethods(data, key1, key2, referenceKey) {
-        const nullReturn = { mcnemar: { pValue: NaN, statistic: NaN, df: NaN, method: "McNemar's Test (Nicht berechnet)" }, delong: { pValue: NaN, Z: NaN, diffAUC: NaN, method: "DeLong Test (Nicht berechnet)" } };
+        const nullMetricDiff = { value: NaN, ci: null, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_DIFFERENCE };
+        const nullReturn = {
+            mcnemar: { pValue: NaN, statistic: NaN, df: NaN, method: "McNemar's Test (Nicht berechnet)" },
+            delong: { pValue: NaN, Z: NaN, diffAUC: NaN, method: "DeLong Test (Nicht berechnet)" },
+            diffSens: nullMetricDiff,
+            diffSpez: nullMetricDiff
+        };
         if (!Array.isArray(data) || data.length === 0 || !key1 || !key2 || !referenceKey) return nullReturn;
 
-        let b = 0, c = 0; // b: key1+/key2-, c: key1-/key2+
+        let b = 0, c = 0;
         data.forEach(p => {
             if (p && typeof p === 'object') {
                 const p1_is_plus = p[key1] === '+';
                 const p2_is_plus = p[key2] === '+';
                 const valid_p1 = p[key1] === '+' || p[key1] === '-';
                 const valid_p2 = p[key2] === '+' || p[key2] === '-';
-
                 if (valid_p1 && valid_p2) {
-                    if (p1_is_plus && !p2_is_plus) b++; // Method 1 identified, Method 2 missed
-                    if (!p1_is_plus && p2_is_plus) c++; // Method 1 missed, Method 2 identified
+                    if (p1_is_plus && !p2_is_plus) b++;
+                    if (!p1_is_plus && p2_is_plus) c++;
                 }
             }
         });
         const mcnemarResult = manualMcNemarTest(b, c);
         const delongResult = manualDeLongTest(data, key1, key2, referenceKey);
-        return { mcnemar: mcnemarResult, delong: delongResult };
+
+        const statFnSensFactory = (k, refK) => (d) => calculateDiagnosticPerformance(d, k, refK)?.sens.value;
+        const statFnSpezFactory = (k, refK) => (d) => calculateDiagnosticPerformance(d, k, refK)?.spez.value;
+        
+        const diffSensCI = bootstrapCIDifference(data, data, statFnSensFactory(key1, referenceKey), statFnSensFactory(key2, referenceKey), undefined, undefined, true);
+        const diffSpezCI = bootstrapCIDifference(data, data, statFnSpezFactory(key1, referenceKey), statFnSpezFactory(key2, referenceKey), undefined, undefined, true);
+
+
+        return {
+            mcnemar: mcnemarResult,
+            delong: delongResult,
+            diffSens: { value: diffSensCI.value, ci: { lower: diffSensCI.lower, upper: diffSensCI.upper }, method: diffSensCI.method },
+            diffSpez: { value: diffSpezCI.value, ci: { lower: diffSpezCI.lower, upper: diffSpezCI.upper }, method: diffSpezCI.method }
+        };
     }
 
     function calculateAssociations(data, t2Criteria) {
@@ -624,10 +712,10 @@ const statisticsService = (() => {
                 statistic: mwuResult.U,
                 testName: mwuResult.testName, Z: mwuResult.Z,
                 or: null, rd: null, phi: null, matrix: null,
-                featureName: 'LK Größe (Median Vergleich)'
+                featureName: 'LK Größe (Median Vgl.)'
             };
         } else {
-            results.size_mwu = { ...nullReturn, testName: "Mann-Whitney U (Nicht genug Daten)", featureName: 'LK Größe (Median Vergleich)' };
+            results.size_mwu = { ...nullReturn, testName: "Mann-Whitney U (Nicht genug Daten)", featureName: 'LK Größe (Median Vgl.)' };
         }
 
         const t2Features = ['size', 'form', 'kontur', 'homogenitaet', 'signal'];
@@ -640,7 +728,7 @@ const statisticsService = (() => {
                     threshold = t2Criteria[featureKey].threshold;
                     condition = t2Criteria[featureKey].condition || '>=';
                     if (threshold !== null && !isNaN(threshold)) {
-                        featureNameForDisplay = `T2 Größe ${condition} ${formatNumber(threshold, 1)}`;
+                        featureNameForDisplay = `T2 Größe ${condition}${formatNumber(threshold, 1)}`;
                     }
                 } else {
                     featureValue = t2Criteria[featureKey].value;
@@ -708,9 +796,12 @@ const statisticsService = (() => {
 
     function compareCohorts(data1, data2, t2Criteria, t2Logic) {
         const nullComp = { pValue: NaN, testName: "N/A", Z: NaN, statistic: NaN };
+        const nullMetricDiff = { value: NaN, ci: null, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_DIFFERENCE, se: NaN };
         const defaultReturn = {
             accuracyComparison: { as: { ...nullComp }, t2: { ...nullComp } },
-            aucComparison: { as: { ...nullComp, diffAUC: NaN }, t2: { ...nullComp, diffAUC: NaN } }
+            aucComparison: { as: { ...nullComp, diffAUC: NaN }, t2: { ...nullComp, diffAUC: NaN } },
+            sensComparisonAS: nullMetricDiff, spezComparisonAS: nullMetricDiff,
+            sensComparisonT2: nullMetricDiff, spezComparisonT2: nullMetricDiff
         };
         if (!Array.isArray(data1) || !Array.isArray(data2) || data1.length === 0 || data2.length === 0) return defaultReturn;
 
@@ -727,30 +818,37 @@ const statisticsService = (() => {
 
         const matrix1AS = calculateConfusionMatrix(data1, 'as', 'n');
         const matrix2AS = calculateConfusionMatrix(data2, 'as', 'n');
-
-        const accCompASResult = manualFisherExactTest(matrix1AS.rp + matrix1AS.rn, matrix1AS.fp + matrix1AS.fn,
-                                                    matrix2AS.rp + matrix2AS.rn, matrix2AS.fp + matrix2AS.fn);
+        const accCompASResult = manualFisherExactTest(matrix1AS.rp + matrix1AS.rn, matrix1AS.fp + matrix1AS.fn, matrix2AS.rp + matrix2AS.rn, matrix2AS.fp + matrix2AS.fn);
 
         let accCompT2Result = { pValue: NaN, method: "T2 nicht ausgewertet oder Kriterien ungültig"};
         if (t2Evaluated) {
             const matrix1T2 = calculateConfusionMatrix(evaluatedData1, 't2', 'n');
             const matrix2T2 = calculateConfusionMatrix(evaluatedData2, 't2', 'n');
-            accCompT2Result = manualFisherExactTest(matrix1T2.rp + matrix1T2.rn, matrix1T2.fp + matrix1T2.fn,
-                                                     matrix2T2.rp + matrix2T2.rn, matrix2T2.fp + matrix2T2.fn);
+            accCompT2Result = manualFisherExactTest(matrix1T2.rp + matrix1T2.rn, matrix1T2.fp + matrix1T2.fn, matrix2T2.rp + matrix2T2.rn, matrix2T2.fp + matrix2T2.fn);
         }
 
         const guete1AS = calculateDiagnosticPerformance(data1, 'as', 'n');
         const guete2AS = calculateDiagnosticPerformance(data2, 'as', 'n');
-        const aucCompASResult = calculateZTestForAUCComparison(guete1AS?.auc?.value, guete1AS?.auc?.se, data1.length,
-                                                               guete2AS?.auc?.value, guete2AS?.auc?.se, data2.length);
+        const aucCompASResult = calculateZTestForAUCComparison(guete1AS?.auc?.value, guete1AS?.auc?.se, data1.length, guete2AS?.auc?.value, guete2AS?.auc?.se, data2.length);
+        
+        const statFnSensFactoryUnpaired = (predKey, refKey) => (sampleData) => calculateDiagnosticPerformance(sampleData, predKey, refKey)?.sens?.value;
+        const statFnSpezFactoryUnpaired = (predKey, refKey) => (sampleData) => calculateDiagnosticPerformance(sampleData, predKey, refKey)?.spez?.value;
+
+        const diffSensAS_CI = bootstrapCIDifference(data1, data2, statFnSensFactoryUnpaired('as', 'n'), statFnSensFactoryUnpaired('as', 'n'), undefined, undefined, false);
+        const diffSpezAS_CI = bootstrapCIDifference(data1, data2, statFnSpezFactoryUnpaired('as', 'n'), statFnSpezFactoryUnpaired('as', 'n'), undefined, undefined, false);
+
         let aucCompT2Result = { pValue: NaN, Z: NaN, method: "Z-Test (AUC - T2 nicht ausgewertet oder Kriterien ungültig)" };
+        let diffSensT2_CI = { ...nullMetricDiff, method: "T2 nicht ausgewertet" };
+        let diffSpezT2_CI = { ...nullMetricDiff, method: "T2 nicht ausgewertet" };
         let diffAUC_T2 = NaN;
+
         if (t2Evaluated) {
             const guete1T2 = calculateDiagnosticPerformance(evaluatedData1, 't2', 'n');
             const guete2T2 = calculateDiagnosticPerformance(evaluatedData2, 't2', 'n');
-            aucCompT2Result = calculateZTestForAUCComparison(guete1T2?.auc?.value, guete1T2?.auc?.se, evaluatedData1.length,
-                                                               guete2T2?.auc?.value, guete2T2?.auc?.se, evaluatedData2.length);
+            aucCompT2Result = calculateZTestForAUCComparison(guete1T2?.auc?.value, guete1T2?.auc?.se, evaluatedData1.length, guete2T2?.auc?.value, guete2T2?.auc?.se, evaluatedData2.length);
             diffAUC_T2 = (guete1T2?.auc?.value ?? NaN) - (guete2T2?.auc?.value ?? NaN);
+            diffSensT2_CI = bootstrapCIDifference(evaluatedData1, evaluatedData2, statFnSensFactoryUnpaired('t2', 'n'), statFnSensFactoryUnpaired('t2', 'n'), undefined, undefined, false);
+            diffSpezT2_CI = bootstrapCIDifference(evaluatedData1, evaluatedData2, statFnSpezFactoryUnpaired('t2', 'n'), statFnSpezFactoryUnpaired('t2', 'n'), undefined, undefined, false);
         }
 
         return {
@@ -761,7 +859,11 @@ const statisticsService = (() => {
             aucComparison: {
                 as: { ...aucCompASResult, diffAUC: (guete1AS?.auc?.value ?? NaN) - (guete2AS?.auc?.value ?? NaN), statistic: NaN },
                 t2: { ...aucCompT2Result, diffAUC: diffAUC_T2, statistic: NaN }
-            }
+            },
+            sensComparisonAS: { value: diffSensAS_CI.value, ci: {lower: diffSensAS_CI.lower, upper: diffSensAS_CI.upper}, method: diffSensAS_CI.method, se: diffSensAS_CI.se },
+            spezComparisonAS: { value: diffSpezAS_CI.value, ci: {lower: diffSpezAS_CI.lower, upper: diffSpezAS_CI.upper}, method: diffSpezAS_CI.method, se: diffSpezAS_CI.se },
+            sensComparisonT2: { value: diffSensT2_CI.value, ci: {lower: diffSensT2_CI.lower, upper: diffSensT2_CI.upper}, method: diffSensT2_CI.method, se: diffSensT2_CI.se },
+            spezComparisonT2: { value: diffSpezT2_CI.value, ci: {lower: diffSpezT2_CI.lower, upper: diffSpezT2_CI.upper}, method: diffSpezT2_CI.method, se: diffSpezT2_CI.se }
         };
     }
 
@@ -820,7 +922,7 @@ const statisticsService = (() => {
 
             const evaluatedDataApplied = t2CriteriaManager.evaluateDataset(cloneDeep(filteredData), appliedT2Criteria, appliedT2Logic);
 
-            results[kollektivId].deskriptiv = calculateDescriptiveStats(filteredData); // Verwendet gefilterte, aber nicht T2-evaluierte Daten für Basis-Deskriptiv
+            results[kollektivId].deskriptiv = calculateDescriptiveStats(filteredData);
             results[kollektivId].gueteAS = calculateDiagnosticPerformance(evaluatedDataApplied, 'as', 'n');
             results[kollektivId].gueteT2_angewandt = calculateDiagnosticPerformance(evaluatedDataApplied, 't2', 'n');
             results[kollektivId].vergleichASvsT2_angewandt = compareDiagnosticMethods(evaluatedDataApplied, 'as', 't2', 'n');
@@ -870,7 +972,9 @@ const statisticsService = (() => {
         calculateAssociations,
         compareCohorts,
         calculateDescriptiveStats,
-        calculateAllStatsForPublication
+        calculateAllStatsForPublication,
+        bootstrapCI,
+        bootstrapCIDifference
     });
 
 })();
