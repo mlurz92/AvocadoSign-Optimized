@@ -18,11 +18,12 @@ function initializeApp() {
 
     if (missingLibs.length > 0) {
         console.error("Externe Bibliotheken fehlen oder sind unvollständig:", missingLibs.join(', '));
-        ui_helpers.updateElementHTML('app-container', `<div class="alert alert-danger m-5">Fehler: Bibliotheken (${missingLibs.join(', ')}) konnten nicht vollständig geladen werden.</div>`);
+        ui_helpers.updateElementHTML('app-container', `<div class="alert alert-danger m-5">Fehler: Bibliotheken (${missingLibs.join(', ')}) konnten nicht vollständig geladen werden. Die Anwendung kann nicht gestartet werden.</div>`);
         return;
     }
      if (!document.getElementById('app-container')) {
          console.error("App container ('app-container') nicht gefunden!");
+         document.body.innerHTML = `<div class="alert alert-danger m-5">Schwerwiegender Fehler: App-Container nicht im HTML gefunden. Anwendung kann nicht starten.</div>`;
          return;
      }
 
@@ -35,7 +36,7 @@ function initializeApp() {
             typeof publicationTextGenerator === 'undefined' || typeof studyT2CriteriaManager === 'undefined' ||
             typeof bruteForceManager === 'undefined'
         ) {
-             throw new Error("Ein oder mehrere Kernmodule sind nicht verfügbar. Überprüfen Sie die Skript-Ladereihenfolge und Dateipfade.");
+             throw new Error("Ein oder mehrere Kernmodule sind nicht verfügbar. Überprüfen Sie die Skript-Ladereihenfolge und Dateipfade in index.html.");
         }
 
         state.init();
@@ -57,7 +58,6 @@ function initializeApp() {
             bruteForceManager.getAllResults()
         );
 
-
         filterAndPrepareData();
         updateUIState();
         setupEventListeners();
@@ -74,8 +74,22 @@ function initializeApp() {
          }
         handleTabShown(state.getActiveTabId());
 
+        const mainTabNav = document.getElementById('mainTab');
+        if(mainTabNav) {
+            mainTabNav.querySelectorAll('.nav-link').forEach(navLink => {
+                const tabKey = navLink.id.replace('-tab', '');
+                const tooltipText = TOOLTIP_CONTENT.mainTabs[tabKey] || `Wechsel zum Tab '${navLink.textContent.trim()}'`;
+                navLink.setAttribute('data-tippy-content', tooltipText);
+            });
+        }
         ui_helpers.initializeTooltips(document.body);
         ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
+
+        const kurzanleitungModalTitle = document.querySelector('#kurzanleitung-modal .modal-title');
+        const kurzanleitungModalBody = document.querySelector('#kurzanleitung-modal .modal-body');
+        if (kurzanleitungModalTitle) kurzanleitungModalTitle.innerHTML = UI_TEXTS.kurzanleitung.title;
+        if (kurzanleitungModalBody) kurzanleitungModalBody.innerHTML = UI_TEXTS.kurzanleitung.content;
+
 
         ui_helpers.showToast('Anwendung initialisiert.', 'success', 2500);
         console.log("App Initialisierung abgeschlossen.");
@@ -167,7 +181,7 @@ function handleBodyClickDelegation(event) {
     const closestSubHeader = target.closest('.sortable-sub-header');
     const chartDownloadButton = target.closest('.chart-download-btn[data-chart-id][data-format]');
     const tableDownloadButton = target.closest('.table-download-png-btn[data-table-id]');
-    const kollektivButton = target.closest('header .btn-group button[data-kollektiv]');
+    const kollektivButton = target.closest('header button[data-kollektiv]');
     const auswertungPane = target.closest('#auswertung-tab-pane');
     const statistikPane = target.closest('#statistik-tab-pane');
     const exportButton = target.closest('#export-tab-pane button[id^="export-"]');
@@ -176,6 +190,7 @@ function handleBodyClickDelegation(event) {
     const toggleAllAuswBtn = target.closest('#auswertung-toggle-details');
     const modalExportBtn = target.closest('#export-bruteforce-modal-txt');
     const publikationNavLink = target.closest('#publikation-sections-nav .publikation-section-link');
+    const kurzanleitungButton = target.closest('#btn-kurzanleitung');
 
     const clickableRowParent = target.closest('tr.clickable-row[data-bs-target]');
     if (clickableRowParent && target.closest('a, button, input, select, .btn-close, [data-bs-toggle="modal"], .table-download-png-btn, .chart-download-btn')) {
@@ -191,6 +206,8 @@ function handleBodyClickDelegation(event) {
     if (toggleAllAuswBtn) { ui_helpers.toggleAllDetails('auswertung-table-body', 'auswertung-toggle-details'); return; }
     if (modalExportBtn && !modalExportBtn.disabled) { exportService.exportBruteForceReport(bruteForceManager.getResultsForKollektiv(state.getCurrentKollektiv()), state.getCurrentKollektiv()); return; }
     if (publikationNavLink) { event.preventDefault(); handlePublikationSectionChange(publikationNavLink.dataset.sectionId); return; }
+    if (kurzanleitungButton) { ui_helpers.showKurzanleitung(); return; }
+
 
     if (auswertungPane) {
         const criteriaButton = target.closest('.t2-criteria-button'); const resetButton = target.closest('#btn-reset-criteria'); const applyButton = target.closest('#btn-apply-criteria'); const startBfButton = target.closest('#btn-start-brute-force'); const cancelBfButton = target.closest('#btn-cancel-brute-force'); const applyBestBfButton = target.closest('#btn-apply-best-bf-criteria');
@@ -203,9 +220,9 @@ function handleBodyClickDelegation(event) {
 
 function handleTabShownEvent(event) {
     if (event.target && event.target.id && state.setActiveTabId(event.target.id)) {
-        filterAndPrepareData(); // Filter/Sort data based on the new tab's requirements if necessary
-        updateUIState(); // Update general UI elements
-        handleTabShown(event.target.id); // Render the specific tab content
+        filterAndPrepareData();
+        updateUIState();
+        handleTabShown(event.target.id);
     }
 }
 
@@ -221,11 +238,9 @@ function handleTabShown(tabId) {
     const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
     const appliedLogic = t2CriteriaManager.getAppliedLogic();
 
-    // Ensure data is freshly filtered and evaluated before rendering a tab that depends on it
     if (['daten-tab', 'auswertung-tab', 'statistik-tab', 'praesentation-tab'].includes(tabId)) {
         filterAndPrepareData();
     }
-
 
     switch (tabId) {
         case 'daten-tab': viewRenderer.renderDatenTab(currentData, state.getDatenTableSort()); break;
@@ -233,8 +248,8 @@ function handleTabShown(tabId) {
         case 'statistik-tab': viewRenderer.renderStatistikTab(processedData, appliedCriteria, appliedLogic, state.getCurrentStatsLayout(), state.getCurrentStatsKollektiv1(), state.getCurrentStatsKollektiv2(), currentKollektiv); break;
         case 'praesentation-tab': viewRenderer.renderPresentationTab(state.getCurrentPresentationView(), state.getCurrentPresentationStudyId(), currentKollektiv, processedData, appliedCriteria, appliedLogic); break;
         case 'publikation-tab':
-            publikationTabLogic.initializeData( // Ensure publication logic has the latest data
-                localRawData, // Publikation-Tab arbeitet oft mit dem gesamten, unveränderten Datensatz
+            publikationTabLogic.initializeData(
+                localRawData,
                 appliedCriteria,
                 appliedLogic,
                 bruteForceManager.getAllResults()
@@ -244,30 +259,27 @@ function handleTabShown(tabId) {
         case 'export-tab': viewRenderer.renderExportTab(currentKollektiv); break;
         default: console.warn(`Unbekannter Tab angezeigt: ${tabId}`); const paneId = tabId.replace('-tab', '-tab-pane'); ui_helpers.updateElementHTML(paneId, `<div class="alert alert-warning m-3">Inhalt für Tab '${tabId}' nicht implementiert.</div>`);
     }
-    updateUIState(); // Ensure UI is consistent after tab rendering
+    updateUIState();
 }
 
 function _handleGlobalKollektivChange(newKollektiv, source = "user") {
     if (state.setCurrentKollektiv(newKollektiv)) {
         filterAndPrepareData();
-        updateUIState(); // Update header, buttons etc.
-        handleTabShown(state.getActiveTabId()); // Re-render current tab with new kollektiv
+        updateUIState();
+        handleTabShown(state.getActiveTabId());
         if (source === "user") {
             ui_helpers.showToast(`Kollektiv '${getKollektivDisplayName(newKollektiv)}' ausgewählt.`, 'info');
         } else if (source === "auto_praesentation") {
             ui_helpers.showToast(`Globales Kollektiv automatisch auf '${getKollektivDisplayName(newKollektiv)}' gesetzt (passend zur Studienauswahl im Präsentation-Tab).`, 'info', 4000);
-            // Optional: Visuelle Hervorhebung des Header-Kollektiv-Buttons
-            const headerButton = document.querySelector(`header .btn-group button[data-kollektiv="${newKollektiv}"]`);
+            const headerButton = document.querySelector(`header button[data-kollektiv="${newKollektiv}"]`);
             if(headerButton) {
-                headerButton.classList.add('btn-flash-highlight');
-                setTimeout(() => headerButton.classList.remove('btn-flash-highlight'), 1500);
+                ui_helpers.highlightElement(headerButton.id);
             }
         }
         return true;
     }
     return false;
 }
-
 
 function handleKollektivChange(newKollektiv) {
     return _handleGlobalKollektivChange(newKollektiv, "user");
@@ -298,20 +310,17 @@ function handlePresentationStudySelectChange(studyId) {
     if (studySet?.applicableKollektiv) {
         const targetKollektiv = studySet.applicableKollektiv;
         if (state.getCurrentKollektiv() !== targetKollektiv) {
-            // Hier rufen wir die neue zentrale Funktion auf
             kollektivChanged = _handleGlobalKollektivChange(targetKollektiv, "auto_praesentation");
-            refreshNeeded = kollektivChanged; // Wenn Kollektiv geändert wurde, ist ein Refresh definitiv nötig
+            refreshNeeded = kollektivChanged;
         }
     }
 
     const studyIdChanged = state.setCurrentPresentationStudyId(studyId);
-    if (studyIdChanged && !refreshNeeded) { // Nur wenn Study ID geändert, aber Kollektiv nicht, dann Refresh
+    if (studyIdChanged && !refreshNeeded) {
         refreshNeeded = true;
     }
     
     if (refreshNeeded) {
-        // updateUIState wird bereits durch _handleGlobalKollektivChange oder hier direkt aufgerufen
-        // filterAndPrepareData wird durch _handleGlobalKollektivChange oder handleTabShown (wenn Kollektiv nicht geändert) getriggert
         updateUIState(); 
         if (state.getActiveTabId() === 'praesentation-tab') {
             handleTabShown('praesentation-tab');
@@ -319,8 +328,7 @@ function handlePresentationStudySelectChange(studyId) {
     }
 }
 
-
-function handlePresentationDownloadClick(button) { const actionId = button.id; const currentKollektiv = state.getCurrentKollektiv(); let presentationData = null; const filteredData = dataProcessor.filterDataByKollektiv(processedData, currentKollektiv); if (filteredData?.length > 0) { const statsAS = statisticsService.calculateDiagnosticPerformance(filteredData, 'as', 'n'); const statsGesamt = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedData, 'Gesamt'), 'as', 'n'); const statsDirektOP = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedData, 'direkt OP'), 'as', 'n'); const statsNRCT = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedData, 'nRCT'), 'as', 'n'); presentationData = { statsAS, kollektiv: currentKollektiv, patientCount: filteredData.length, statsGesamt, statsDirektOP, statsNRCT, statsCurrentKollektiv: statsAS }; if (state.getCurrentPresentationView() === 'as-vs-t2') { const studyId = state.getCurrentPresentationStudyId(); let studySet = null, evaluatedDataT2 = null; const isApplied = studyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID; const appliedCriteria = t2CriteriaManager.getAppliedCriteria(); const appliedLogic = t2CriteriaManager.getAppliedLogic(); if(isApplied) { studySet = { criteria: appliedCriteria, logic: appliedLogic, id: studyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: 'Angewandt', studyInfo: { reference: "Benutzerdefiniert", patientCohort: `Aktuell: ${getKollektivDisplayName(currentKollektiv)} (N=${presentationData.patientCount})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } }; evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(filteredData), appliedCriteria, appliedLogic); } else { studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studyId); if(studySet) evaluatedDataT2 = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredData), studySet); } if (studySet && evaluatedDataT2) { presentationData.statsT2 = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n'); evaluatedDataT2.forEach((p, i) => { if (filteredData[i]) p.as = filteredData[i].as; }); presentationData.vergleich = statisticsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n'); presentationData.comparisonCriteriaSet = studySet; presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2'; presentationData.t2CriteriaLabelFull = `${isApplied ? 'Aktuell angewandt' : (studySet.name || 'Studie')}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`; } } } exportService.exportPraesentationData(actionId, presentationData, currentKollektiv); }
+function handlePresentationDownloadClick(button) { const actionId = button.id; const currentKollektiv = state.getCurrentKollektiv(); let presentationData = null; const globalKollektivDaten = dataProcessor.filterDataByKollektiv(processedData, currentKollektiv); const statsASForCurrent = statisticsService.calculateDiagnosticPerformance(globalKollektivDaten, 'as', 'n'); const statsGesamtAS = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedData, 'Gesamt'), 'as', 'n'); const statsDirektOPAS = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedData, 'direkt OP'), 'as', 'n'); const statsNRCTAS = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedData, 'nRCT'), 'as', 'n'); presentationData = { kollektiv: currentKollektiv, patientCount: globalKollektivDaten?.length ?? 0, statsCurrentKollektiv: statsASForCurrent, statsGesamt: statsGesamtAS, statsDirektOP: statsDirektOPAS, statsNRCT: statsNRCTAS }; const currentView = state.getCurrentPresentationView(); if (currentView === 'as-vs-t2') { const studyId = state.getCurrentPresentationStudyId(); let comparisonCohortData = globalKollektivDaten; let comparisonKollektivName = currentKollektiv; if (studyId && studyId !== APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) { const studySetForKollektiv = studyT2CriteriaManager.getStudyCriteriaSetById(studyId); if (studySetForKollektiv?.applicableKollektiv && studySetForKollektiv.applicableKollektiv !== currentKollektiv) { comparisonKollektivName = studySetForKollektiv.applicableKollektiv; comparisonCohortData = dataProcessor.filterDataByKollektiv(processedData, comparisonKollektivName); } } presentationData.kollektivForComparison = comparisonKollektivName; presentationData.patientCountForComparison = comparisonCohortData?.length ?? 0; if (comparisonCohortData && comparisonCohortData.length > 0) { presentationData.statsAS = statisticsService.calculateDiagnosticPerformance(comparisonCohortData, 'as', 'n'); let studySet = null; let evaluatedDataT2 = null; const isApplied = studyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID; const appliedCriteria = t2CriteriaManager.getAppliedCriteria(); const appliedLogic = t2CriteriaManager.getAppliedLogic(); if(isApplied) { studySet = { criteria: appliedCriteria, logic: appliedLogic, id: studyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: 'Angewandt', studyInfo: { reference: "Benutzerdefiniert (aktuell im Auswertungstab eingestellt)", patientCohort: `Vergleichskollektiv: ${getKollektivDisplayName(comparisonKollektivName)} (N=${presentationData.patientCountForComparison})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } }; evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(comparisonCohortData), appliedCriteria, appliedLogic); } else { studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studyId); if(studySet) evaluatedDataT2 = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(comparisonCohortData), studySet); } if (studySet && evaluatedDataT2 && evaluatedDataT2.length > 0) { presentationData.statsT2 = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n'); let asDataForDirectComparison = cloneDeep(comparisonCohortData); evaluatedDataT2.forEach((p, i) => { if (asDataForDirectComparison[i]) p.as = asDataForDirectComparison[i].as; }); presentationData.vergleich = statisticsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n'); presentationData.comparisonCriteriaSet = studySet; presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2'; presentationData.t2CriteriaLabelFull = `${isApplied ? 'Aktuell angewandt' : (studySet.name || 'Studie')}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`; } else if (studySet) { presentationData.statsT2 = null; presentationData.vergleich = null; presentationData.comparisonCriteriaSet = studySet; presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2'; presentationData.t2CriteriaLabelFull = `${studySet.name}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`; } } } exportService.exportPraesentationData(actionId, presentationData, currentKollektiv); }
 function handleExportAction(exportType) { filterAndPrepareData(); const dataForExport = currentData; const currentKollektiv = state.getCurrentKollektiv(); const appliedCriteria = t2CriteriaManager.getAppliedCriteria(); const appliedLogic = t2CriteriaManager.getAppliedLogic(); const allBfResults = bruteForceManager.getAllResults(); const currentKollektivBfResult = allBfResults ? allBfResults[currentKollektiv] : null; const canExportDataDep = Array.isArray(dataForExport) && dataForExport.length > 0; if (!canExportDataDep && !['bruteforce-txt', 'all-zip', 'png-zip', 'svg-zip', 'csv-zip', 'md-zip', 'html'].includes(exportType)) { ui_helpers.showToast("Keine Daten für diesen Export verfügbar.", "warning"); return; } if (exportType === 'bruteforce-txt' && (!currentKollektivBfResult || !currentKollektivBfResult.results || currentKollektivBfResult.results.length === 0 )) { ui_helpers.showToast("Keine Brute-Force Ergebnisse für Export dieses Kollektivs.", "warning"); return; } if (['all-zip', 'csv-zip', 'md-zip'].includes(exportType) && !canExportDataDep && (!allBfResults || Object.keys(allBfResults).length === 0) ) { ui_helpers.showToast("Keine Daten/Ergebnisse für ZIP-Export.", "warning"); return; } if (exportType === 'html' && !canExportDataDep) { ui_helpers.showToast("Keine Daten für HTML-Report.", "warning"); return; } switch (exportType) { case 'statistik-csv': exportService.exportStatistikCSV(localRawData, currentKollektiv, appliedCriteria, appliedLogic); break; case 'bruteforce-txt': exportService.exportBruteForceReport(currentKollektivBfResult, currentKollektiv); break; case 'deskriptiv-md': { const stats = statisticsService.calculateAllStatsForPublication(localRawData, appliedCriteria, appliedLogic, allBfResults)[currentKollektiv]; exportService.exportTableMarkdown(stats?.deskriptiv, 'deskriptiv', currentKollektiv); break; } case 'daten-md': exportService.exportTableMarkdown(dataForExport, 'daten', currentKollektiv); break; case 'auswertung-md': exportService.exportTableMarkdown(dataForExport, 'auswertung', currentKollektiv, appliedCriteria, appliedLogic); break; case 'filtered-data-csv': exportService.exportFilteredDataCSV(dataForExport, currentKollektiv); break; case 'comprehensive-report-html': exportService.exportComprehensiveReportHTML(localRawData, currentKollektivBfResult, currentKollektiv, appliedCriteria, appliedLogic); break; case 'charts-png': exportService.exportChartsZip('#app-container', 'PNG_ZIP', currentKollektiv, 'png'); break; case 'charts-svg': exportService.exportChartsZip('#app-container', 'SVG_ZIP', currentKollektiv, 'svg'); break; case 'all-zip': case 'csv-zip': case 'md-zip': exportService.exportCategoryZip(exportType, localRawData, allBfResults, currentKollektiv, appliedCriteria, appliedLogic); break; default: console.warn(`Unbekannter Export-Typ: ${exportType}`); ui_helpers.showToast(`Export-Typ '${exportType}' nicht implementiert.`, 'warning'); break; } }
 function handleSingleChartDownload(button) { const chartId = button.dataset.chartId; const format = button.dataset.format; const chartName = button.dataset.chartName || chartId.replace(/^chart-/, '').replace(/-container$/, '').replace(/-content$/, '').replace(/-[0-9]+$/, ''); if (chartId && (format === 'png' || format === 'svg')) exportService.exportSingleChart(chartId, format, state.getCurrentKollektiv(), {chartName: chartName}); else ui_helpers.showToast("Fehler beim Chart-Download.", "warning"); }
 function handleSingleTableDownload(button) { if (!button) return; const tableId = button.dataset.tableId; const tableName = button.dataset.tableName || 'Tabelle'; if (tableId && APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT) exportService.exportTablePNG(tableId, state.getCurrentKollektiv(), 'TABLE_PNG_EXPORT', tableName); else if (!tableId) ui_helpers.showToast(`Fehler: Tabelle '${tableName}' nicht gefunden.`, "danger"); }
@@ -363,22 +371,22 @@ function handleCancelBruteForce() {
 function handleBruteForceStarted(payload) {
     const currentKollektiv = state.getCurrentKollektiv();
     const metric = document.getElementById('brute-force-metric')?.value || APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC;
-    ui_helpers.updateBruteForceUI('started', { ...payload, metric: metric }, true, currentKollektiv);
+    ui_helpers.updateBruteForceUI('started', { ...payload, metric: metric, kollektiv: currentKollektiv }, true, currentKollektiv);
 }
 
 function handleBruteForceProgress(payload) {
-    const currentKollektiv = state.getCurrentKollektiv();
-     const metric = payload?.metric || document.getElementById('brute-force-metric')?.value || APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC;
-    ui_helpers.updateBruteForceUI('progress', {...payload, metric: metric}, true, currentKollektiv);
+    const currentKollektiv = payload?.kollektiv || state.getCurrentKollektiv();
+    const metric = payload?.metric || document.getElementById('brute-force-metric')?.value || APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC;
+    ui_helpers.updateBruteForceUI('progress', {...payload, metric: metric, kollektiv: currentKollektiv}, true, currentKollektiv);
 }
 
 function handleBruteForceResult(payload) {
-    const currentKollektiv = state.getCurrentKollektiv();
-    ui_helpers.updateBruteForceUI('result', payload, true, currentKollektiv);
+    const resultKollektiv = payload?.kollektiv || state.getCurrentKollektiv();
+    ui_helpers.updateBruteForceUI('result', {...payload, kollektiv: resultKollektiv}, true, resultKollektiv);
     if (payload?.results?.length > 0) {
         const modalBody = document.querySelector('#brute-force-modal .modal-body');
         if (modalBody) {
-            modalBody.innerHTML = uiComponents.createBruteForceModalContent(payload.results, payload.metric, payload.kollektiv, payload.duration, payload.totalTested);
+            modalBody.innerHTML = uiComponents.createBruteForceModalContent(payload);
             ui_helpers.initializeTooltips(modalBody);
         }
         ui_helpers.showToast('Optimierung abgeschlossen.', 'success');
