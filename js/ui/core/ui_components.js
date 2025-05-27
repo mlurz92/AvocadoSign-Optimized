@@ -4,23 +4,31 @@ const uiComponents = (() => {
         let headerButtonHtml = '';
         if (buttons && buttons.length > 0 && targetId) {
             headerButtonHtml = buttons.map(btn => {
-                const btnId = btn.id || `dl-${targetId}-${btn.format || 'action'}`;
+                const btnId = btn.id || `dl-${targetId.replace(/[^a-zA-Z0-9_-]/g, '')}-${btn.format || 'action'}`;
                 const iconClass = btn.icon || 'fa-download';
                 let tooltip = btn.tooltip || `Als ${String(btn.format || 'Aktion').toUpperCase()} herunterladen`;
-                if (btn.format === 'png' && APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG) {
-                    tooltip = (TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'Als PNG herunterladen').replace('{ChartName}', defaultTitle);
-                } else if (btn.format === 'svg' && APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG) {
-                    tooltip = (TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'Als SVG herunterladen').replace('{ChartName}', defaultTitle);
-                } else if (btn.format === 'png' && btn.tableId && APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.TABLE_PNG_EXPORT) {
-                    tooltip = (TOOLTIP_CONTENT.exportTab.tableSinglePNG?.description || 'Tabelle als PNG herunterladen').replace('{TableName}', defaultTitle);
+
+                const safeDefaultTitle = String(defaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
+                const safeChartName = String(btn.chartName || safeDefaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
+                const safeTableName = String(btn.tableName || safeDefaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
+
+                if (btn.format === 'png' && btn.chartId && TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description) {
+                    tooltip = TOOLTIP_CONTENT.exportTab.chartSinglePNG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
+                } else if (btn.format === 'svg' && btn.chartId && TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description) {
+                    tooltip = TOOLTIP_CONTENT.exportTab.chartSingleSVG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
+                } else if (btn.format === 'png' && btn.tableId && TOOLTIP_CONTENT.exportTab.tableSinglePNG?.description) {
+                    tooltip = TOOLTIP_CONTENT.exportTab.tableSinglePNG.description.replace('{TableName}', `<strong>${safeTableName}</strong>`);
                 }
 
 
                 const dataAttributes = [];
                 if (btn.chartId) dataAttributes.push(`data-chart-id="${btn.chartId}"`);
                 if (btn.tableId) dataAttributes.push(`data-table-id="${btn.tableId}"`);
-                if (btn.tableName) dataAttributes.push(`data-table-name="${btn.tableName.replace(/[^a-z0-9]/gi, '_').substring(0,30) || defaultTitle.replace(/[^a-z0-9]/gi, '_').substring(0,30)}"`);
-                else if (btn.chartId) dataAttributes.push(`data-chart-name="${defaultTitle.replace(/[^a-z0-9]/gi, '_').substring(0,30)}"`);
+                
+                if (btn.tableName) dataAttributes.push(`data-table-name="${safeTableName.replace(/\s/g, '_')}"`);
+                else if (btn.chartId) dataAttributes.push(`data-chart-name="${safeChartName.replace(/\s/g, '_')}"`);
+                else dataAttributes.push(`data-default-name="${safeDefaultTitle.replace(/\s/g, '_')}"`);
+
 
                 if (btn.format) dataAttributes.push(`data-format="${btn.format}"`);
 
@@ -171,7 +179,7 @@ const uiComponents = (() => {
                              </div>
                          </div>
                     </div>
-                     <div id="brute-force-progress-container" class="mt-3 d-none" data-tippy-content="${TOOLTIP_CONTENT.bruteForceProgress.description || 'Fortschritt der laufenden Optimierung.'}">
+                     <div id="brute-force-progress-container" class="mt-3 d-none" data-tippy-content="${(TOOLTIP_CONTENT.bruteForceProgress.description || 'Fortschritt der laufenden Optimierung.').replace('[TOTAL]', '0')}">
                          <div class="d-flex justify-content-between mb-1 small">
                             <span>Fortschritt: <span id="bf-tested-count">0</span> / <span id="bf-total-count">0</span></span>
                             <span id="bf-progress-percent">0%</span>
@@ -217,7 +225,7 @@ const uiComponents = (() => {
             : `data-tippy-content="${title}"`;
 
         const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, id + '-content', title);
-        
+
         let finalButtonHtml = headerButtonHtml;
         if (APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT && tableId && !downloadButtons.some(b => b.tableId === tableId)) {
              const pngExportButton = { id: `dl-card-${id}-${tableId}-png`, icon: 'fa-image', tooltip: `Tabelle '${title}' als PNG herunterladen.`, format: 'png', tableId: tableId, tableName: title };
@@ -322,7 +330,7 @@ const uiComponents = (() => {
             const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
             const isPercent = !(key === 'f1' || key === 'auc');
             const formattedValue = formatCI(metricData?.value, metricData?.ci?.lower, metricData?.ci?.upper, digits, isPercent, na);
-            
+
             contentHTML += `
                 <div class="p-1 flex-fill bd-highlight ${index > 0 ? 'border-start' : ''}">
                     <strong data-tippy-content="${metricDescription}">${metricDisplayNames[key]}:</strong>
@@ -360,13 +368,17 @@ const uiComponents = (() => {
                 <p class="mb-1 text-muted"><small>Dauer: ${formatNumber(duration / 1000, 1)}s | Getestet: ${formatNumber(totalTested, 0)}</small></p>
                 <p class="mb-0 text-muted" data-tippy-content="${TOOLTIP_CONTENT.bruteForceResult.kollektivStats || 'Statistik des für diese Optimierung verwendeten Kollektivs.'}"><small>Kollektiv N=${formatNumber(nGesamt,0,'N/A')} (N+: ${formatNumber(nPlus,0,'N/A')}, N-: ${formatNumber(nMinus,0,'N/A')})</small></p>
             </div>
-            <h6 class="mb-2">Top 10 Ergebnisse (inkl. identischer Werte):</h6>
+            <h6 class="mb-2">Top Ergebnisse (inkl. identischer Werte):</h6>
             <div class="table-responsive">
                 <table class="table table-sm table-striped table-hover small" id="bruteforce-results-table">
                     <thead class="small">
                         <tr>
                             <th data-tippy-content="Rang des Ergebnisses.">Rang</th>
                             <th data-tippy-content="Erreichter Wert der Zielmetrik (${metricDisplayName}). Höher ist besser.">${metricDisplayName}</th>
+                            <th data-tippy-content="Sensitivität dieser Kriterienkombination.">Sens.</th>
+                            <th data-tippy-content="Spezifität dieser Kriterienkombination.">Spez.</th>
+                            <th data-tippy-content="Positiver Prädiktiver Wert dieser Kriterienkombination.">PPV</th>
+                            <th data-tippy-content="Negativer Prädiktiver Wert dieser Kriterienkombination.">NPV</th>
                             <th data-tippy-content="Verwendete logische Verknüpfung (UND/ODER).">Logik</th>
                             <th data-tippy-content="Kombination der T2-Malignitätskriterien.">Kriterien</th>
                         </tr>
@@ -393,12 +405,16 @@ const uiComponents = (() => {
                 currentRank = rank;
             }
 
-            if (rank > 10 && isNewRank) break;
+            if (rank > 10 && isNewRank && i >=10 ) break; // Ensure at least 10 distinct ranks or more items if scores are tied
 
             tableHTML += `
                 <tr>
                     <td>${currentRank}.</td>
                     <td>${formatNumber(result.metricValue, 4)}</td>
+                    <td>${result.sens !== undefined ? formatPercent(result.sens, 1) : 'N/A'}</td>
+                    <td>${result.spez !== undefined ? formatPercent(result.spez, 1) : 'N/A'}</td>
+                    <td>${result.ppv !== undefined ? formatPercent(result.ppv, 1) : 'N/A'}</td>
+                    <td>${result.npv !== undefined ? formatPercent(result.npv, 1) : 'N/A'}</td>
                     <td>${result.logic.toUpperCase()}</td>
                     <td>${formatCriteriaFunc(result.criteria, result.logic)}</td>
                 </tr>`;
@@ -431,7 +447,7 @@ const uiComponents = (() => {
         ).join('');
 
         return `
-            <div class="row mb-3 sticky-top bg-light py-2 shadow-sm" style="top: calc(var(--header-height) + var(--nav-height)); z-index: 1010;">
+            <div class="row mb-3 sticky-top bg-light py-2 shadow-sm" style="top: var(--sticky-header-offset); z-index: 1015;">
                 <div class="col-md-3">
                     <h5 class="mb-2">Abschnitte</h5>
                     <nav id="publikation-sections-nav" class="nav flex-column nav-pills" data-tippy-content="${TOOLTIP_CONTENT.publikationTabTooltips.sectionSelect?.description || 'Wählen Sie einen Publikationsabschnitt.'}">
@@ -451,7 +467,7 @@ const uiComponents = (() => {
                             <label class="form-check-label fw-bold" for="publikation-sprache-switch" id="publikation-sprache-label">${UI_TEXTS.publikationTab.spracheSwitchLabel[lang]}</label>
                         </div>
                     </div>
-                    <div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: calc(100vh - var(--header-height) - var(--nav-height) - 70px); overflow-y: auto;">
+                    <div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: calc(100vh - var(--sticky-header-offset) - 4rem - 2rem); overflow-y: auto;">
                         <p class="text-muted">Bitte wählen Sie einen Abschnitt aus der Navigation.</p>
                     </div>
                 </div>
