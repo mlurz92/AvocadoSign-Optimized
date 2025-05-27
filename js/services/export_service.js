@@ -208,14 +208,48 @@ const exportService = (() => {
         }
     }
 
-    function generateBruteForceTXTString(resultsData, kollektiv) {
+    function generateBruteForceTXTString(resultsData) {
         if (!resultsData || !resultsData.results || resultsData.results.length === 0) return "Keine Brute-Force-Ergebnisse vorhanden.";
         try {
             const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
-            const { results, metric, duration, totalTested, kollektiv: bfKollektiv } = resultsData; const kollektivName = getKollektivDisplayName(bfKollektiv || kollektiv); const bestResult = results[0]; let report = `Brute-Force Optimierungsbericht\r\n==================================================\r\nDatum der Analyse: ${new Date().toLocaleString('de-DE')}\r\nAnalysiertes Kollektiv: ${kollektivName}\r\nOptimierte Zielmetrik: ${metric}\r\nGesamtdauer: ${formatNumber((duration || 0) / 1000, 1)} Sekunden\r\nGetestete Kombinationen: ${formatNumber(totalTested, 0)}\r\n==================================================\r\n\r\n--- Bestes Ergebnis ---\r\nLogik: ${bestResult.logic.toUpperCase()}\r\nKriterien: ${formatCriteriaFunc(bestResult.criteria, bestResult.logic)}\r\nErreichter ${metric}: ${formatNumber(bestResult.metricValue, 4)}\r\n\r\n--- Top 10 Ergebnisse (inklusive identischer Werte) ---\r\nRang | ${metric.padEnd(12)} | Logik | Kriterien\r\n-----|--------------|-------|------------------------------------------\r\n`;
+            const { results, metric, duration, totalTested, kollektiv, nGesamt, nPlus, nMinus } = resultsData;
+            const kollektivName = getKollektivDisplayName(kollektiv);
+            const bestResult = results[0];
+            let report = `Brute-Force Optimierungsbericht\r\n==================================================\r\n`;
+            report += `Datum der Analyse: ${new Date().toLocaleString('de-DE')}\r\n`;
+            report += `Analysiertes Kollektiv: ${kollektivName}\r\n`;
+            report += `   - Gesamtzahl Patienten: ${formatNumber(nGesamt, 0, 'N/A')}\r\n`;
+            report += `   - N+ Patienten: ${formatNumber(nPlus, 0, 'N/A')}\r\n`;
+            report += `   - N- Patienten: ${formatNumber(nMinus, 0, 'N/A')}\r\n`;
+            report += `Optimierte Zielmetrik: ${metric}\r\n`;
+            report += `Gesamtdauer: ${formatNumber((duration || 0) / 1000, 1)} Sekunden\r\n`;
+            report += `Getestete Kombinationen: ${formatNumber(totalTested, 0)}\r\n`;
+            report += `==================================================\r\n\r\n`;
+            report += `--- Bestes Ergebnis ---\r\n`;
+            report += `Logik: ${bestResult.logic.toUpperCase()}\r\n`;
+            report += `Kriterien: ${formatCriteriaFunc(bestResult.criteria, bestResult.logic)}\r\n`;
+            report += `Erreichter ${metric}: ${formatNumber(bestResult.metricValue, 4)}\r\n\r\n`;
+            report += `--- Top 10 Ergebnisse (inklusive identischer Werte) ---\r\n`;
+            report += `Rang | ${metric.padEnd(12)} | Logik | Kriterien\r\n`;
+            report += `-----|--------------|-------|------------------------------------------\r\n`;
+
             let rank = 1, displayedCount = 0, lastMetricValue = -Infinity; const precision = 8;
-            for (let i = 0; i < results.length; i++) { const result = results[i]; if (!result || typeof result.metricValue !== 'number' || !isFinite(result.metricValue)) continue; const currentMetricValueRounded = parseFloat(result.metricValue.toFixed(precision)); const lastMetricValueRounded = parseFloat(lastMetricValue.toFixed(precision)); let currentRank = rank; const isNewRank = Math.abs(currentMetricValueRounded - lastMetricValueRounded) > 1e-8; if (i > 0 && isNewRank) { rank = displayedCount + 1; currentRank = rank; } else if (i > 0) { currentRank = rank; } if (rank > 10 && isNewRank) break; report += `${String(currentRank).padEnd(4)} | ${formatNumber(result.metricValue, 4).padEnd(12)} | ${result.logic.toUpperCase().padEnd(5)} | ${formatCriteriaFunc(result.criteria, result.logic)}\r\n`; if (isNewRank || i === 0) { lastMetricValue = result.metricValue; } displayedCount++; }
-            report += `==================================================\r\n`; return report;
+            for (let i = 0; i < results.length; i++) {
+                const result = results[i];
+                if (!result || typeof result.metricValue !== 'number' || !isFinite(result.metricValue)) continue;
+                const currentMetricValueRounded = parseFloat(result.metricValue.toFixed(precision));
+                const lastMetricValueRounded = parseFloat(lastMetricValue.toFixed(precision));
+                let currentRank = rank;
+                const isNewRank = Math.abs(currentMetricValueRounded - lastMetricValueRounded) > 1e-8;
+                if (i > 0 && isNewRank) { rank = displayedCount + 1; currentRank = rank; }
+                else if (i > 0) { currentRank = rank; }
+                if (rank > 10 && isNewRank) break;
+                report += `${String(currentRank).padEnd(4)} | ${formatNumber(result.metricValue, 4).padEnd(12)} | ${result.logic.toUpperCase().padEnd(5)} | ${formatCriteriaFunc(result.criteria, result.logic)}\r\n`;
+                if (isNewRank || i === 0) { lastMetricValue = result.metricValue; }
+                displayedCount++;
+            }
+            report += `==================================================\r\n`;
+            return report;
         } catch (error) {
              console.error("Fehler in generateBruteForceTXTString:", error);
              return null;
@@ -294,7 +328,7 @@ const exportService = (() => {
             if (config.INCLUDE_AS_VS_T2_COMPARISON_CHART) { const chartKey = Object.keys(chartSVGs).find(k => k.startsWith('praes-comp-chart') || k.startsWith('stat-comp-bar')); if(chartSVGs[chartKey]) { html += `<div class="chart-container"><h3>Vergleich ausgewählter Metriken (AS vs T2 - '${appliedCriteriaDisplayName}')</h3>${chartSVGs[chartKey]}</div>`; } }
             if (config.INCLUDE_ASSOCIATIONS_TABLE && statsDataForCurrentKollektiv?.assoziation_angewandt && Object.keys(statsDataForCurrentKollektiv.assoziation_angewandt).length > 0) { html += `<h2>Assoziation mit N-Status</h2><table><thead><tr><th>Merkmal</th><th>OR (95% CI)</th><th>RD (%) (95% CI)</th><th>Phi</th><th>p-Wert</th><th>Test</th></tr></thead><tbody>`; const a = statsDataForCurrentKollektiv.assoziation_angewandt; const na = '--'; const fP = (p) => (p !== null && !isNaN(p)) ? (p < 0.001 ? '<0.001' : formatNumber(p, 3, na)) : na; const fRowAssoc = (nm, obj) => { if (!obj) return ''; const orS = formatCI(obj.or?.value, obj.or?.ci?.lower, obj.or?.ci?.upper, 2, false, na); const rdV = formatNumber(obj.rd?.value !== null && !isNaN(obj.rd?.value) ? obj.rd.value * 100 : NaN, 1, na); const rdL = formatNumber(obj.rd?.ci?.lower !== null && !isNaN(obj.rd?.ci?.lower) ? obj.rd.ci.lower * 100 : NaN, 1, na); const rdU = formatNumber(obj.rd?.ci?.upper !== null && !isNaN(obj.rd?.ci?.upper) ? obj.rd.ci.upper * 100 : NaN, 1, na); const rdS = rdV !== na ? `${rdV}% (${rdL}% - ${rdU}%)` : na; const phiS = formatNumber(obj.phi?.value, 2, na); const pS = fP(obj.pValue) + ' ' + getStatisticalSignificanceSymbol(obj.pValue); const tN = obj.testName || na; return `<tr><td>${nm}</td><td>${orS}</td><td>${rdS}</td><td>${phiS}</td><td>${pS}</td><td>${tN}</td></tr>`; }; html += fRowAssoc('AS Positiv', a?.as); if (a?.size_mwu) html += `<tr><td>${a.size_mwu.featureName || 'LK Größe (Median Vgl.)'}</td><td>${na}</td><td>${na}</td><td>${na}</td><td>${fP(a.size_mwu.pValue)} ${getStatisticalSignificanceSymbol(a.size_mwu.pValue)}</td><td>${a.size_mwu.testName || na}</td></tr>`; ['size', 'form', 'kontur', 'homogenitaet', 'signal'].forEach(k => { if (a && a[k]) { const isActive = criteria[k]?.active === true; html += fRowAssoc(a[k].featureName + (isActive ? '' : ' (inaktiv)'), a[k]); } }); html += `</tbody></table>`; }
             const currentKollektivBfResult = allBruteForceResults ? allBruteForceResults[kollektiv] : null;
-            if (config.INCLUDE_BRUTEFORCE_BEST_RESULT && currentKollektivBfResult?.results && currentKollektivBfResult.results.length > 0 && currentKollektivBfResult.bestResult) { html += `<h2>Bestes Brute-Force Ergebnis (für Kollektiv: ${kollektivName})</h2><div class="meta-info"><ul>`; const best = currentKollektivBfResult.bestResult; html += `<li><strong>Optimierte Metrik:</strong> ${currentKollektivBfResult.metric}</li><li><strong>Bester Wert:</strong> ${formatNumber(best.metricValue, 4)}</li><li><strong>Logik:</strong> ${best.logic?.toUpperCase()}</li><li><strong>Kriterien:</strong> ${formatCriteriaFunc(best.criteria, best.logic)}</li></ul></div>`; }
+            if (config.INCLUDE_BRUTEFORCE_BEST_RESULT && currentKollektivBfResult?.results && currentKollektivBfResult.results.length > 0 && currentKollektivBfResult.bestResult) { html += `<h2>Bestes Brute-Force Ergebnis (für Kollektiv: ${kollektivName})</h2><div class="meta-info"><ul>`; const best = currentKollektivBfResult.bestResult; html += `<li><strong>Optimierte Metrik:</strong> ${currentKollektivBfResult.metric}</li><li><strong>Bester Wert:</strong> ${formatNumber(best.metricValue, 4)}</li><li><strong>Logik:</strong> ${best.logic?.toUpperCase()}</li><li><strong>Kriterien:</strong> ${formatCriteriaFunc(best.criteria, best.logic)}</li></ul><p class="small text-muted">Kollektiv N=${formatNumber(currentKollektivBfResult.nGesamt, 0, 'N/A')} (N+: ${formatNumber(currentKollektivBfResult.nPlus, 0, 'N/A')}, N-: ${formatNumber(currentKollektivBfResult.nMinus, 0, 'N/A')})</p></div>`; }
             html += `<div class="report-footer">${config.REPORT_AUTHOR} - ${timestamp}</div></body></html>`; return html;
         } catch (error) {
              console.error("Fehler in generateComprehensiveReportHTML:", error);
@@ -403,14 +437,28 @@ const exportService = (() => {
         if(downloadFile(csvString, filename, 'text/csv;charset=utf-8;')) ui_helpers.showToast(`Statistik als CSV exportiert: ${filename}`, 'success');
     }
 
-    function exportBruteForceReport(resultsData, kollektiv) {
-        if (!resultsData) { ui_helpers.showToast("Keine Brute-Force Ergebnisse zum Exportieren vorhanden.", "warning"); return; }
+    function exportBruteForceReport(resultsData) {
+        if (!resultsData || !resultsData.results || resultsData.results.length === 0) {
+             ui_helpers.showToast("Keine Brute-Force Ergebnisse zum Exportieren vorhanden.", "warning");
+             return;
+        }
         let txtString = null;
-        try { txtString = generateBruteForceTXTString(resultsData, kollektiv); } catch(e) { ui_helpers.showToast("Fehler bei TXT-Erstellung.", "danger"); return; }
-        if (txtString === null || txtString.length === 0) { ui_helpers.showToast("TXT-Generierung ergab leere Datei.", "warning"); return; }
-        const filename = generateFilename('BRUTEFORCE_TXT', kollektiv, 'txt');
-        if(downloadFile(txtString, filename, 'text/plain;charset=utf-8;')) ui_helpers.showToast(`Brute-Force Bericht exportiert: ${filename}`, 'success');
+        try {
+            txtString = generateBruteForceTXTString(resultsData);
+        } catch(e) {
+            ui_helpers.showToast("Fehler bei TXT-Erstellung.", "danger");
+            return;
+        }
+        if (txtString === null || txtString.length === 0) {
+            ui_helpers.showToast("TXT-Generierung ergab leere Datei.", "warning");
+            return;
+        }
+        const filename = generateFilename('BRUTEFORCE_TXT', resultsData.kollektiv, 'txt');
+        if(downloadFile(txtString, filename, 'text/plain;charset=utf-8;')) {
+            ui_helpers.showToast(`Brute-Force Bericht exportiert: ${filename}`, 'success');
+        }
     }
+
 
     function exportTableMarkdown(dataOrStats, tableType, kollektiv, criteria = null, logic = null, options = {}) {
         let mdString = null; let typeKey = `UnknownTable_${tableType}_MD`, title = tableType;
@@ -544,6 +592,8 @@ const exportService = (() => {
              }
          }
          const currentKollektivStats = statsDataForAllKollektive ? statsDataForAllKollektive[kollektiv] : null;
+         const currentKollektivBfResult = bfResults ? bfResults[kollektiv] : null;
+
 
          const addFile = (filename, content) => { if (content !== null && content !== undefined && String(content).length > 0) { zip.file(filename, content); filesAdded++; return true; } console.warn(`Überspringe leere oder ungültige Datei: ${filename}`); return false; };
          try {
@@ -573,8 +623,8 @@ const exportService = (() => {
                      });
                  }
              }
-             if (['all-zip'].includes(category) && bfResults && bfResults[kollektiv]) { addFile(generateFilename('BRUTEFORCE_TXT', kollektiv, 'txt'), generateBruteForceTXTString(bfResults[kollektiv], kollektiv)); }
-             if (['all-zip', 'html'].includes(category) && data && data.length > 0 ) { addFile(generateFilename('COMPREHENSIVE_REPORT_HTML', kollektiv, 'html'), generateComprehensiveReportHTML(data, bfResults ? bfResults[kollektiv] : null, kollektiv, criteria, logic)); }
+             if (['all-zip'].includes(category) && currentKollektivBfResult) { addFile(generateFilename('BRUTEFORCE_TXT', kollektiv, 'txt'), generateBruteForceTXTString(currentKollektivBfResult)); }
+             if (['all-zip', 'html'].includes(category) && data && data.length > 0 ) { addFile(generateFilename('COMPREHENSIVE_REPORT_HTML', kollektiv, 'html'), generateComprehensiveReportHTML(data, currentKollektivBfResult, kollektiv, criteria, logic)); }
 
              if (['png-zip'].includes(category)) { await exportChartsZip('#app-container', 'PNG_ZIP', kollektiv, 'png'); return; }
              if (['svg-zip'].includes(category)) { await exportChartsZip('#app-container', 'SVG_ZIP', kollektiv, 'svg'); return; }
