@@ -37,7 +37,7 @@
         <div class="container-fluid">
             <ul class="nav nav-tabs" id="mainTab" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="daten-tab" data-bs-toggle="tab" data-bs-target="#daten-tab-pane" type="button" role="tab" aria-controls="daten-tab-pane" aria-selected="true" data-tippy-content="Patientendaten anzeigen.">
+                    <button class="nav-link" id="daten-tab" data-bs-toggle="tab" data-bs-target="#daten-tab-pane" type="button" role="tab" aria-controls="daten-tab-pane" aria-selected="false" data-tippy-content="Patientendaten anzeigen.">
                         <i class="fas fa-database fa-fw me-1"></i>Daten
                     </button>
                 </li>
@@ -57,7 +57,7 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="publikation-tab" data-bs-toggle="tab" data-bs-target="#publikation-tab-pane" type="button" role="tab" aria-controls="publikation-tab-pane" aria-selected="false" data-tippy-content="Textvorschläge und Materialien für Publikationen generieren.">
+                    <button class="nav-link active" id="publikation-tab" data-bs-toggle="tab" data-bs-target="#publikation-tab-pane" type="button" role="tab" aria-controls="publikation-tab-pane" aria-selected="true" data-tippy-content="Textvorschläge und Materialien für Publikationen generieren.">
                         <i class="fas fa-feather-alt fa-fw me-1"></i>Publikation
                     </button>
                 </li>
@@ -72,7 +72,7 @@
 
     <main class="container-fluid main-content" id="app-container">
         <div class="tab-content" id="mainTabContent">
-            <section class="tab-pane fade show active" id="daten-tab-pane" role="tabpanel" aria-labelledby="daten-tab" tabindex="0">
+            <section class="tab-pane fade" id="daten-tab-pane" role="tabpanel" aria-labelledby="daten-tab" tabindex="0">
                  <p class="text-center p-5 text-muted">Lade Patientendaten...</p>
             </section>
 
@@ -88,7 +88,7 @@
                  <p class="text-center p-5 text-muted">Lade Präsentation...</p>
             </section>
 
-            <section class="tab-pane fade" id="publikation-tab-pane" role="tabpanel" aria-labelledby="publikation-tab" tabindex="0">
+            <section class="tab-pane fade show active" id="publikation-tab-pane" role="tabpanel" aria-labelledby="publikation-tab" tabindex="0">
                  <p class="text-center p-5 text-muted">Lade Publikationswerkzeuge...</p>
             </section>
 
