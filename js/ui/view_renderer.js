@@ -81,8 +81,8 @@ const viewRenderer = (() => {
             let perf = null;
             let setName = 'Unbekannt';
             let setIdUsed = setId;
-            let specificKollektivName = globalKollektiv;
-            let specificKollektivN = globalNCount;
+            let specificKollektivName = getKollektivDisplayName(globalKollektiv); // Default to global
+            let specificKollektivN = globalNCount; // Default to global
 
             try {
                 if (setId === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID) {
@@ -95,31 +95,36 @@ const viewRenderer = (() => {
                     const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(setId);
                     if (studySet) {
                         setName = studySet.name;
-                        // Determine the correct kollektiv for this study set
                         const targetKollektivForStudy = studySet.applicableKollektiv || 'Gesamt';
-                        const dataForThisStudySet = dataProcessor.filterDataByKollektiv(processedDataFull, targetKollektivForStudy);
                         specificKollektivName = getKollektivDisplayName(targetKollektivForStudy);
+                        const dataForThisStudySet = dataProcessor.filterDataByKollektiv(processedDataFull, targetKollektivForStudy);
                         specificKollektivN = dataForThisStudySet.length;
 
                         if (dataForThisStudySet.length > 0) {
                             const evaluatedData = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(dataForThisStudySet), studySet);
                             perf = statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n');
                         } else {
-                            console.warn(`Keine Daten für Kollektiv ${targetKollektivForStudy} für Kriterienset ${setId}.`);
-                            perf = null; // Ensure perf is null if no data
+                            perf = null;
                         }
                     } else {
-                        console.warn(`Kriterienset ${setId} für Vergleich nicht gefunden.`);
                         perf = null;
                     }
                 }
             } catch (error) { console.error(`Fehler bei Berechnung für Vergleichsset ${setId}:`, error); perf = null; }
 
-            if (perf && perf.auc && !isNaN(perf.auc.value)) {
-                results.push({ id: setIdUsed, name: setName, sens: perf.sens?.value, spez: perf.spez?.value, ppv: perf.ppv?.value, npv: perf.npv?.value, acc: perf.acc?.value, auc: perf.auc?.value, specificKollektivName: specificKollektivName, specificKollektivN: specificKollektivN, globalN: globalNCount });
-            } else {
-                results.push({ id: setIdUsed, name: setName, sens: NaN, spez: NaN, ppv: NaN, npv: NaN, acc: NaN, auc: NaN, specificKollektivName: specificKollektivName, specificKollektivN: specificKollektivN, globalN: globalNCount });
-            }
+            results.push({
+                id: setIdUsed,
+                name: setName,
+                sens: perf?.sens?.value ?? NaN,
+                spez: perf?.spez?.value ?? NaN,
+                ppv: perf?.ppv?.value ?? NaN,
+                npv: perf?.npv?.value ?? NaN,
+                acc: perf?.acc?.value ?? NaN,
+                auc: perf?.auc?.value ?? NaN,
+                specificKollektivName: specificKollektivName, // Store the name of the kollektiv used for this specific calculation
+                specificKollektivN: specificKollektivN,      // Store N for that specific kollektiv
+                globalN: globalNCount // Keep track of N for the global kollektiv for context if needed
+            });
          });
 
          results.sort((a, b) => {
@@ -235,8 +240,12 @@ const viewRenderer = (() => {
              if (datasets.length === 0 || datasets.every(d => !Array.isArray(d) || d.length === 0)) { return '<div class="col-12"><div class="alert alert-warning">Keine Daten für Statistik-Auswahl verfügbar.</div></div>'; }
 
              const outerRow = document.createElement('div'); outerRow.className = 'row g-4';
-             const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image':'fa-download'; const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download'; const pngTT = TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'PNG'; const svgTT = TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'SVG'; const createChartDlBtns = (baseId) => [{id:`dl-${baseId}-png`,icon:dlIconPNG,tooltip:pngTT,format:'png', chartId: baseId},{id:`dl-${baseId}-svg`,icon:dlIconSVG,tooltip:svgTT,format:'svg', chartId: baseId}];
-             const createTableDlBtn = (tableId, tableName) => ({id: `dl-${tableId}-png`, icon: 'fa-image', tooltip: `Tabelle '${tableName}' PNG`, format: 'png', tableId: tableId, tableName: tableName});
+             const createChartDlBtns = (baseId) => [
+                { id: `dl-${baseId}-png`, icon: APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image' : 'fa-download', tooltip: TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'PNG', format: 'png', chartId: baseId },
+                { id: `dl-${baseId}-svg`, icon: APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code' : 'fa-download', tooltip: TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'SVG', format: 'svg', chartId: baseId }
+             ];
+             const createTableDlBtn = (tableId, tableName) => ({ id: `dl-${tableId}-png`, icon: 'fa-image', tooltip: `Tabelle '${tableName}' PNG`, format: 'png', tableId: tableId, tableName: tableName });
+
 
              datasets.forEach((data, i) => {
                  const kollektivName = kollektivDisplayNames[i]; const col = document.createElement('div'); col.className = layout === 'vergleich' ? 'col-xl-6' : 'col-12'; const innerRowId = `inner-stat-row-${i}`; col.innerHTML = `<h4 class="mb-3">Kollektiv: ${kollektivName} (N=${data.length})</h4><div class="row g-3" id="${innerRowId}"></div>`; outerRow.appendChild(col); const innerContainer = col.querySelector(`#${innerRowId}`);
@@ -254,17 +263,28 @@ const viewRenderer = (() => {
 
                      if (!stats) { innerContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">Fehler bei Statistikberechnung.</div></div>'; return; }
                      const descCardId=`deskriptiveStatistik-${i}`; const gueteASCardId=`diagnostischeGueteAS-${i}`; const gueteT2CardId=`diagnostischeGueteT2-${i}`; const vergleichASvsT2CardId=`statistischerVergleichASvsT2-${i}`; const assoziationCardId=`assoziationEinzelkriterien-${i}`;
-                     const deskriptivDownloadBtns = [
-                        ...createChartDlBtns(`chart-stat-age-${i}`),
-                        ...createChartDlBtns(`chart-stat-gender-${i}`),
-                        createTableDlBtn(`table-deskriptiv-demographie-${i}`, `Deskriptive_Demographie_${kollektivName.replace(/\s+/g, '_')}`),
-                        createTableDlBtn(`table-deskriptiv-lk-${i}`, `Deskriptive_LK_${kollektivName.replace(/\s+/g, '_')}`)
+                     const safeKollektivName = kollektivName.replace(/\s+/g, '_');
+
+                     const deskriptivDlBtns = [
+                         ...createChartDlBtns(`chart-stat-age-${i}`),
+                         ...createChartDlBtns(`chart-stat-gender-${i}`),
+                         createTableDlBtn(`table-deskriptiv-demographie-${i}`, `Deskriptive_Demographie_${safeKollektivName}`),
+                         createTableDlBtn(`table-deskriptiv-lk-${i}`, `Deskriptive_LK_${safeKollektivName}`)
                      ];
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(descCardId, `Deskriptive Statistik`, statistikTabLogic.createDeskriptiveStatistikContentHTML(stats, i, kollektivName), false, 'deskriptiveStatistik', deskriptivDownloadBtns, `table-deskriptiv-demographie-${i}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteASCardId, `Güte - Avocado Sign (vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteAS, 'AS', kollektivName), false, 'diagnostischeGueteAS', [createTableDlBtn(`table-guete-metrics-AS-${kollektivName.replace(/\s+/g, '_')}`, 'Guete_AS'), createTableDlBtn(`table-guete-matrix-AS-${kollektivName.replace(/\s+/g, '_')}`, 'Matrix_AS')], `table-guete-metrics-AS-${kollektivName.replace(/\s+/g, '_')}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteT2CardId, `Güte - T2 (angewandt vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteT2, 'T2', kollektivName), false, 'diagnostischeGueteT2', [createTableDlBtn(`table-guete-metrics-T2-${kollektivName.replace(/\s+/g, '_')}`, 'Guete_T2'), createTableDlBtn(`table-guete-matrix-T2-${kollektivName.replace(/\s+/g, '_')}`, 'Matrix_T2')], `table-guete-metrics-T2-${kollektivName.replace(/\s+/g, '_')}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(vergleichASvsT2CardId, `Vergleich - AS vs. T2 (angewandt)`, statistikTabLogic.createVergleichContentHTML(stats.vergleichASvsT2, kollektivName), false, 'statistischerVergleichASvsT2', [createTableDlBtn(`table-vergleich-as-vs-t2-${kollektivName.replace(/\s+/g, '_')}`, 'Vergleich_AS_T2')], `table-vergleich-as-vs-t2-${kollektivName.replace(/\s+/g, '_')}`);
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(assoziationCardId, `Assoziation Merkmale vs. N-Status`, statistikTabLogic.createAssoziationContentHTML(stats.assoziation, kollektivName, appliedCriteria), false, 'assoziationEinzelkriterien', [createTableDlBtn(`table-assoziation-${kollektivName.replace(/\s+/g, '_')}`, 'Assoziation')], `table-assoziation-${kollektivName.replace(/\s+/g, '_')}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(descCardId, `Deskriptive Statistik`, statistikTabLogic.createDeskriptiveStatistikContentHTML(stats, i, kollektivName), false, 'deskriptiveStatistik', deskriptivDlBtns, `table-deskriptiv-demographie-${i}`);
+
+                     const gueteASDlBtns = [createTableDlBtn(`table-guete-metrics-AS-${safeKollektivName}`, 'Guete_AS'), createTableDlBtn(`table-guete-matrix-AS-${safeKollektivName}`, 'Matrix_AS')];
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteASCardId, `Güte - Avocado Sign (vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteAS, 'AS', kollektivName), false, 'diagnostischeGueteAS', gueteASDlBtns, `table-guete-metrics-AS-${safeKollektivName}`);
+
+                     const gueteT2DlBtns = [createTableDlBtn(`table-guete-metrics-T2-${safeKollektivName}`, 'Guete_T2'), createTableDlBtn(`table-guete-matrix-T2-${safeKollektivName}`, 'Matrix_T2')];
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteT2CardId, `Güte - T2 (angewandt vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteT2, 'T2', kollektivName), false, 'diagnostischeGueteT2', gueteT2DlBtns, `table-guete-metrics-T2-${safeKollektivName}`);
+
+                     const vergleichASvsT2DlBtns = [createTableDlBtn(`table-vergleich-as-vs-t2-${safeKollektivName}`, 'Vergleich_AS_T2')];
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(vergleichASvsT2CardId, `Vergleich - AS vs. T2 (angewandt)`, statistikTabLogic.createVergleichContentHTML(stats.vergleichASvsT2, kollektivName), false, 'statistischerVergleichASvsT2', vergleichASvsT2DlBtns, `table-vergleich-as-vs-t2-${safeKollektivName}`);
+
+                     const assoziationDlBtns = [createTableDlBtn(`table-assoziation-${safeKollektivName}`, 'Assoziation')];
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(assoziationCardId, `Assoziation Merkmale vs. N-Status`, statistikTabLogic.createAssoziationContentHTML(stats.assoziation, kollektivName, appliedCriteria), false, 'assoziationEinzelkriterien', assoziationDlBtns, `table-assoziation-${safeKollektivName}`);
+
                      const ageChartId=`chart-stat-age-${i}`; const genderChartId=`chart-stat-gender-${i}`;
 
                      setTimeout(() => {
@@ -284,8 +304,10 @@ const viewRenderer = (() => {
              if (layout === 'vergleich' && datasets.length === 2 && datasets[0].length > 0 && datasets[1].length > 0) {
                  const vergleichKollektiveStats = statisticsService.compareCohorts(datasets[0], datasets[1], appliedCriteria, appliedLogic);
                  const comparisonCardContainer = document.createElement('div'); comparisonCardContainer.className = 'col-12 mt-4'; const title = `Vergleich ${kollektivDisplayNames[0]} vs. ${kollektivDisplayNames[1]}`;
-                 const tableIdComp = `table-vergleich-kollektive-${kollektivNames[0].replace(/\s+/g, '_')}-vs-${kollektivNames[1].replace(/\s+/g, '_')}`;
-                 const downloadBtnComp = createTableDlBtn(tableIdComp, `Vergleich_Kollektive_${kollektivNames[0].replace(/\s+/g, '_')}_vs_${kollektivNames[1].replace(/\s+/g, '_')}`);
+                 const safeKollektiv1Name = kollektivNames[0].replace(/\s+/g, '_');
+                 const safeKollektiv2Name = kollektivNames[1].replace(/\s+/g, '_');
+                 const tableIdComp = `table-vergleich-kollektive-${safeKollektiv1Name}-vs-${safeKollektiv2Name}`;
+                 const downloadBtnComp = createTableDlBtn(tableIdComp, `Vergleich_Kollektive_${safeKollektiv1Name}_vs_${safeKollektiv2Name}`);
                  comparisonCardContainer.innerHTML = uiComponents.createStatistikCard('vergleichKollektive', title, statistikTabLogic.createVergleichKollektiveContentHTML(vergleichKollektiveStats, kollektivNames[0], kollektivNames[1]), false, 'vergleichKollektive', [downloadBtnComp], tableIdComp); outerRow.appendChild(comparisonCardContainer);
              }
              const criteriaComparisonContainer = document.createElement('div'); criteriaComparisonContainer.className = 'col-12 mt-4'; criteriaComparisonContainer.id = 'criteria-comparison-container'; outerRow.appendChild(criteriaComparisonContainer);
@@ -313,7 +335,7 @@ const viewRenderer = (() => {
 
             let presentationData = {};
             const globalKollektivDaten = dataProcessor.filterDataByKollektiv(processedDataFull, currentGlobalKollektiv);
-            presentationData.kollektiv = currentGlobalKollektiv;
+            presentationData.kollektiv = currentGlobalKollektiv; // Keep track of the globally selected one for "AS Pur"
             presentationData.patientCount = globalKollektivDaten?.length ?? 0;
 
             if (view === 'as-pur') {
@@ -322,80 +344,78 @@ const viewRenderer = (() => {
                 presentationData.statsNRCT = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'nRCT'), 'as', 'n');
                 presentationData.statsCurrentKollektiv = statisticsService.calculateDiagnosticPerformance(globalKollektivDaten, 'as', 'n');
             } else if (view === 'as-vs-t2') {
-                 if (globalKollektivDaten && globalKollektivDaten.length > 0) {
-                    presentationData.statsAS = statisticsService.calculateDiagnosticPerformance(globalKollektivDaten, 'as', 'n');
+                 // The actual cohort for comparison might change based on selectedStudyId
+                 let comparisonCohortData = globalKollektivDaten;
+                 let comparisonKollektivName = currentGlobalKollektiv;
+
+                 if (selectedStudyId && selectedStudyId !== APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) {
+                     const studySetForKollektiv = studyT2CriteriaManager.getStudyCriteriaSetById(selectedStudyId);
+                     if (studySetForKollektiv?.applicableKollektiv && studySetForKollektiv.applicableKollektiv !== currentGlobalKollektiv) {
+                         comparisonKollektivName = studySetForKollektiv.applicableKollektiv;
+                         comparisonCohortData = dataProcessor.filterDataByKollektiv(processedDataFull, comparisonKollektivName);
+                     }
+                 }
+                 presentationData.kollektivForComparison = comparisonKollektivName; // Store the kollektiv actually used for T2 eval
+                 presentationData.patientCountForComparison = comparisonCohortData?.length ?? 0;
+
+
+                 if (comparisonCohortData && comparisonCohortData.length > 0) {
+                    presentationData.statsAS = statisticsService.calculateDiagnosticPerformance(comparisonCohortData, 'as', 'n');
                     let studySet = null;
                     let evaluatedDataT2 = null;
                     const isApplied = selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
 
                     if(isApplied) {
-                        studySet = { criteria: appliedCriteria, logic: appliedLogic, id: selectedStudyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: "Angewandt", studyInfo: { reference: "Benutzerdefiniert", patientCohort: `Aktuell: ${getKollektivDisplayName(currentGlobalKollektiv)} (N=${presentationData.patientCount})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } };
-                        evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(globalKollektivDaten), studySet.criteria, studySet.logic);
+                        studySet = { criteria: appliedCriteria, logic: appliedLogic, id: selectedStudyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: "Angewandt", studyInfo: { reference: "Benutzerdefiniert", patientCohort: `Aktuell: ${getKollektivDisplayName(comparisonKollektivName)} (N=${presentationData.patientCountForComparison})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } };
+                        evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(comparisonCohortData), studySet.criteria, studySet.logic);
                     } else if (selectedStudyId) {
                         studySet = studyT2CriteriaManager.getStudyCriteriaSetById(selectedStudyId);
                         if(studySet) {
-                            // For literature sets, apply to their specific applicable kollektiv for comparison
-                            const targetKollektivForStudy = studySet.applicableKollektiv || 'Gesamt';
-                            const dataForThisStudySet = dataProcessor.filterDataByKollektiv(processedDataFull, targetKollektivForStudy);
-
-                            if (dataForThisStudySet.length > 0) {
-                                evaluatedDataT2 = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(dataForThisStudySet), studySet);
-                                // We need AS stats from the *same* cohort as T2 for direct comparison chart
-                                const statsASforComparisonCohort = statisticsService.calculateDiagnosticPerformance(dataForThisStudySet, 'as', 'n');
-                                presentationData.statsAS = statsASforComparisonCohort; // Overwrite globalKollektiv AS if study cohort differs
-                                presentationData.patientCount = dataForThisStudySet.length; // Update patient count to reflect comparison cohort
-                                presentationData.kollektiv = targetKollektivForStudy; // Update kollektiv to reflect comparison cohort
-                            } else {
-                                evaluatedDataT2 = []; // Ensure it's an empty array if no data
-                            }
+                           evaluatedDataT2 = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(comparisonCohortData), studySet);
                         }
                     }
 
                     if (studySet && evaluatedDataT2 && evaluatedDataT2.length > 0) {
                         presentationData.statsT2 = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n');
-                        // Ensure AS data matches the T2 data cohort for comparison
-                        let asDataForComparison = [];
-                        if(isApplied) {
-                            asDataForComparison = cloneDeep(globalKollektivDaten);
-                        } else if (studySet && studySet.applicableKollektiv) {
-                            asDataForComparison = dataProcessor.filterDataByKollektiv(processedDataFull, studySet.applicableKollektiv);
-                        }
+                        let asDataForDirectComparison = cloneDeep(comparisonCohortData); // Data for AS should match T2 cohort
+                        evaluatedDataT2.forEach((p, i) => { if (asDataForDirectComparison[i]) p.as = asDataForDirectComparison[i].as; });
+                        presentationData.vergleich = statisticsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n');
 
-                        if(asDataForComparison.length === evaluatedDataT2.length){
-                            evaluatedDataT2.forEach((p, i) => { if (asDataForComparison[i]) p.as = asDataForComparison[i].as; });
-                            presentationData.vergleich = statisticsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n');
-                        } else {
-                             console.warn("Mismatch in data length for AS vs T2 comparison in presentation tab.");
-                             presentationData.vergleich = null;
-                        }
                         presentationData.comparisonCriteriaSet = studySet;
                         presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2';
                         presentationData.t2CriteriaLabelFull = `${studySet.name}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`;
-                    } else if (studySet) { // studySet exists but no data or eval failed
+                    } else if (studySet) {
                         presentationData.statsT2 = null;
                         presentationData.vergleich = null;
                         presentationData.comparisonCriteriaSet = studySet;
                         presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2';
                         presentationData.t2CriteriaLabelFull = `${studySet.name}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`;
-                        console.warn(`Keine Daten für T2-Evaluierung im Präsentationstab für Studie ${selectedStudyId} auf Kollektiv ${getKollektivDisplayName(presentationData.kollektiv)}.`);
                     }
+                } else { // No data for comparison cohort
+                     presentationData.statsAS = null;
+                     presentationData.statsT2 = null;
+                     presentationData.vergleich = null;
+                     if(selectedStudyId) presentationData.comparisonCriteriaSet = studyT2CriteriaManager.getStudyCriteriaSetById(selectedStudyId) || {name: selectedStudyId, displayShortName: 'Unbekannt', criteria: {}, logic: 'ODER', studyInfo:{}};
                 }
             }
+            // Pass currentGlobalKollektiv for context, but presentationData contains the possibly adjusted kollektiv/data for ASvsT2
             const tabContentHTML = praesentationTabLogic.createPresentationTabContent(view, presentationData, selectedStudyId, currentGlobalKollektiv);
+
 
             setTimeout(() => {
                 if (view === 'as-pur') {
                      const chartContainer = document.getElementById('praes-as-pur-perf-chart');
-                     if (chartContainer && presentationData?.statsCurrentKollektiv && presentationData.patientCount > 0) {
+                     // Use statsCurrentKollektiv which is based on the *global* kollektiv for this view
+                     if (chartContainer && presentationData?.statsCurrentKollektiv && (presentationData?.statsCurrentKollektiv?.matrix?.rp + presentationData?.statsCurrentKollektiv?.matrix?.fp + presentationData?.statsCurrentKollektiv?.matrix?.fn + presentationData?.statsCurrentKollektiv?.matrix?.rn > 0) ) {
                          const chartData = { overall: { sensVal: presentationData.statsCurrentKollektiv.sens?.value, spezVal: presentationData.statsCurrentKollektiv.spez?.value, ppvVal: presentationData.statsCurrentKollektiv.ppv?.value, npvVal: presentationData.statsCurrentKollektiv.npv?.value, accVal: presentationData.statsCurrentKollektiv.acc?.value, aucVal: presentationData.statsCurrentKollektiv.auc?.value }};
-                         chartRenderer.renderASPerformanceChart('praes-as-pur-perf-chart', chartData, {}, getKollektivDisplayName(currentGlobalKollektiv));
+                         chartRenderer.renderASPerformanceChart('praes-as-pur-perf-chart', chartData, {}, getKollektivDisplayName(currentGlobalKollektiv)); // Label with global kollektiv
                      } else if (chartContainer) {
                          ui_helpers.updateElementHTML(chartContainer.id, '<p class="text-muted small text-center p-3">Keine Daten für Performance-Chart.</p>');
                      }
                 } else if (view === 'as-vs-t2') {
                      const chartContainer = document.getElementById('praes-comp-chart-container');
-                     // Use presentationData.statsAS and presentationData.statsT2 that were specifically prepared for the comparison cohort
-                     if (chartContainer && presentationData?.statsAS && presentationData?.statsT2 && presentationData.patientCount > 0) {
+                     // Use presentationData.statsAS and presentationData.statsT2 that were specifically prepared for the *comparison* cohort
+                     if (chartContainer && presentationData?.statsAS && presentationData?.statsT2 && presentationData.patientCountForComparison > 0) {
                          const chartDataComp = [
                              { metric: 'Sens', AS: presentationData.statsAS.sens?.value ?? NaN, T2: presentationData.statsT2.sens?.value ?? NaN },
                              { metric: 'Spez', AS: presentationData.statsAS.spez?.value ?? NaN, T2: presentationData.statsT2.spez?.value ?? NaN },
