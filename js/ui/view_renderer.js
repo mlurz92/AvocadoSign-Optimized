@@ -460,22 +460,41 @@ const viewRenderer = (() => {
         });
     }
 
-    function renderPublikationTab(currentLang, currentSection, currentKollektiv, globalProcessedData, bruteForceResults) {
-        _renderTabContent('publikation-tab', () => {
+    function renderPublikationTab(mainAppInterface, currentLang, currentSection, currentKollektiv) {
+        const tabId = 'publikation-tab';
+        const containerId = `${tabId}-pane`;
+        const container = document.getElementById(containerId);
+
+        if (!container) {
+            console.error(`Container #${containerId} nicht gefunden für Tab ${tabId}.`);
+            return;
+        }
+
+        if (typeof publikationTabLogic === 'undefined' || typeof publikationTabLogic.ensureStatsAreCalculated !== 'function' || typeof publikationTabLogic.getRenderedSectionContent !== 'function') {
+            console.error("viewRenderer.renderPublikationTab: publikationTabLogic oder dessen Funktionen nicht verfügbar.");
+            const errorMsg = '<p class="text-danger p-3">Fehler: Publikationsmodul konnte nicht korrekt initialisiert werden.</p>';
+            ui_helpers.updateElementHTML(containerId, errorMsg);
+            return;
+        }
+
+        ui_helpers.updateElementHTML(containerId, '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade Publikationsinhalt...</span></div><p class="mt-2 text-muted">Überprüfe Statistikdaten...</p></div>');
+
+        publikationTabLogic.ensureStatsAreCalculated(mainAppInterface, (success, errorMsg) => {
+            if (!document.getElementById(containerId)) return;
+
             const headerHTML = uiComponents.createPublikationTabHeader();
-            let sectionContentHTML;
-            
-            if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.getRenderedSectionContent === 'function') {
-                sectionContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv);
+            let sectionContentHTML = '';
+
+            if (success) {
+                sectionContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv, mainAppInterface);
             } else {
-                console.error("viewRenderer.renderPublikationTab: publikationTabLogic.getRenderedSectionContent ist nicht verfügbar.");
-                sectionContentHTML = '<p class="text-danger">Fehler: Inhalt des Publikationsmoduls konnte nicht geladen werden.</p>';
+                sectionContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv, mainAppInterface);
             }
-            
-            const container = document.createElement('div');
-            container.innerHTML = headerHTML;
-            
-            let contentArea = container.querySelector('#publikation-content-area');
+
+            const tempContainer = document.createElement('div');
+            tempContainer.innerHTML = headerHTML;
+            let contentArea = tempContainer.querySelector('#publikation-content-area');
+
             if (!contentArea) {
                 console.warn("Publikations-Tab: #publikation-content-area nicht im Header-HTML gefunden. Erstelle und füge es hinzu.");
                 contentArea = document.createElement('div');
@@ -484,31 +503,28 @@ const viewRenderer = (() => {
                 contentArea.style.minHeight = '400px';
                 contentArea.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)';
                 contentArea.style.overflowY = 'auto';
-                
-                const mainCol = container.querySelector('.col-md-9');
-                if (mainCol) {
-                    mainCol.appendChild(contentArea);
-                } else {
-                    container.appendChild(contentArea); 
-                }
+                const mainCol = tempContainer.querySelector('.col-md-9');
+                if (mainCol) mainCol.appendChild(contentArea);
+                else tempContainer.appendChild(contentArea);
             }
             contentArea.innerHTML = sectionContentHTML;
+            ui_helpers.updateElementHTML(containerId, tempContainer.innerHTML);
 
-            if (sectionContentHTML.includes("Lade Statistikdaten") || sectionContentHTML.includes("Fehler:")) {
-                 // Tue nichts weiter, da der Inhalt bereits eine Lade- oder Fehlermeldung ist.
-            } else {
-                setTimeout(() => {
+            if (success && !sectionContentHTML.includes("Fehler:") && !sectionContentHTML.includes("Statistiken jetzt generieren")) {
+                 setTimeout(() => {
                     const renderedContentArea = document.getElementById('publikation-content-area');
                     if (!renderedContentArea) {
                          console.error("Publikations-Tab: #publikation-content-area konnte auch nach manueller Erstellung nicht gefunden werden.");
                     } else if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.updateDynamicChartsForPublicationTab === 'function'){
                         publikationTabLogic.updateDynamicChartsForPublicationTab(currentSection, currentLang, currentKollektiv);
                     }
-                    ui_helpers.updatePublikationUI(currentLang, currentSection, state.getCurrentPublikationBruteForceMetric());
+                    ui_helpers.updatePublikationUI(state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), state.getCurrentPublikationBruteForceMetric());
                     ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
-                }, 50); // Erhöhter Timeout für komplexere Sektionsinhalte und Chart-Rendering
+                }, 50);
+            } else {
+                 ui_helpers.updatePublikationUI(state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), state.getCurrentPublikationBruteForceMetric());
+                 ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
             }
-            return container.innerHTML;
         });
     }
 
