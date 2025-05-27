@@ -1,7 +1,21 @@
 const PUBLICATION_CONFIG = Object.freeze({
     defaultLanguage: 'de',
-    defaultSection: 'methoden',
+    defaultSection: 'abstract',
     sections: Object.freeze([
+        Object.freeze({
+            id: 'abstract',
+            labelKey: 'abstract',
+            subSections: Object.freeze([
+                Object.freeze({ id: 'abstract_content', label: 'Abstrakt / Summary' })
+            ])
+        }),
+        Object.freeze({
+            id: 'einleitung',
+            labelKey: 'einleitung',
+            subSections: Object.freeze([
+                Object.freeze({ id: 'einleitung_content', label: 'Einführung und Zielsetzung' })
+            ])
+        }),
         Object.freeze({
             id: 'methoden',
             labelKey: 'methoden',
@@ -25,9 +39,28 @@ const PUBLICATION_CONFIG = Object.freeze({
                 Object.freeze({ id: 'ergebnisse_optimierte_t2_performance', label: 'Diagnostische Güte: Optimierte T2-Kriterien (Brute-Force)' }),
                 Object.freeze({ id: 'ergebnisse_vergleich_performance', label: 'Vergleich: AS vs. T2-Kriterien' })
             ])
+        }),
+        Object.freeze({
+            id: 'diskussion',
+            labelKey: 'diskussion',
+            subSections: Object.freeze([
+                Object.freeze({ id: 'diskussion_content', label: 'Diskussion der Ergebnisse' })
+            ])
+        }),
+        Object.freeze({
+            id: 'referenzen',
+            labelKey: 'referenzen',
+            subSections: Object.freeze([
+                Object.freeze({ id: 'referenzen_content', label: 'Literaturverzeichnis' })
+            ])
         })
     ]),
     literatureCriteriaSets: Object.freeze([
+        Object.freeze({
+            id: 'rutegard_et_al_esgar',
+            nameKey: 'Rutegård et al. (2025) / ESGAR 2016',
+            shortName: 'ESGAR 2016'
+        }),
         Object.freeze({
             id: 'koh_2008_morphology',
             nameKey: 'Koh et al. (2008)',
@@ -37,11 +70,6 @@ const PUBLICATION_CONFIG = Object.freeze({
             id: 'barbaro_2024_restaging',
             nameKey: 'Barbaro et al. (2024)',
             shortName: 'Barbaro et al.'
-        }),
-        Object.freeze({
-            id: 'rutegard_et_al_esgar',
-            nameKey: 'Rutegård et al. (2025) / ESGAR 2016',
-            shortName: 'ESGAR 2016'
         })
     ]),
     bruteForceMetricsForPublication: Object.freeze([
@@ -54,62 +82,47 @@ const PUBLICATION_CONFIG = Object.freeze({
     defaultBruteForceMetricForPublication: 'Balanced Accuracy',
     publicationElements: Object.freeze({
         methoden: Object.freeze({
-            literaturT2KriterienTabelle: {
-                id: 'pub-table-literatur-t2-kriterien',
-                titleDe: 'Übersicht der Literatur-basierten T2-Kriteriensets',
-                titleEn: 'Overview of Literature-Based T2 Criteria Sets'
+            literaturT2KriterienUebersichtTabelle: { // War literaturT2KriterienTabelle, präziser benannt
+                id: 'pub-table-literatur-t2-kriterien-uebersicht',
+                titleDe: 'Übersicht der implementierten Literatur-basierten T2-Kriteriensets',
+                titleEn: 'Overview of Implemented Literature-Based T2 Criteria Sets'
             }
         }),
         ergebnisse: Object.freeze({
             patientenCharakteristikaTabelle: {
-                id: 'pub-table-patienten-charakteristika',
+                id: 'pub-table-patienten-charakteristika', // Beibehaltung der ID für Konsistenz mit bestehendem Code
                 titleDe: 'Patientencharakteristika',
                 titleEn: 'Patient Characteristics'
             },
-            diagnostischeGueteASTabelle: { // Hinzugefügt für Tabelle 3
-                id: 'pub-table-diagnostische-guete-as',
-                titleDe: 'Diagnostische Güte: Avocado Sign (vs. N-Status)',
-                titleEn: 'Diagnostic Performance: Avocado Sign (vs. N-Status)'
+            alterVerteilungChart: {
+                id: 'pub-chart-alter-Gesamt', // Wird für Gesamtkollektiv verwendet
+                titleDe: 'Altersverteilung ({Kollektiv})',
+                titleEn: 'Age Distribution ({Kollektiv})'
             },
-            diagnostischeGueteLiteraturT2Tabelle: { // Hinzugefügt für Tabelle 4
-                id: 'pub-table-diagnostische-guete-literatur-t2',
-                titleDe: 'Diagnostische Güte: Literatur-basierte T2-Kriterien (vs. N-Status)',
-                titleEn: 'Diagnostic Performance: Literature-Based T2 Criteria (vs. N-Status)'
+            geschlechtVerteilungChart: {
+                id: 'pub-chart-gender-Gesamt', // Wird für Gesamtkollektiv verwendet
+                titleDe: 'Geschlechterverteilung ({Kollektiv})',
+                titleEn: 'Gender Distribution ({Kollektiv})'
             },
-            diagnostischeGueteOptimierteT2Tabelle: { // Hinzugefügt für Tabelle 5
-                id: 'pub-table-diagnostische-guete-optimierte-t2',
-                titleDe: 'Diagnostische Güte: Optimierte T2-Kriterien (Ziel: {BF_METRIC}, vs. N-Status)',
-                titleEn: 'Diagnostic Performance: Optimized T2 Criteria (Target: {BF_METRIC}, vs. N-Status)'
+            performanceMetrikenTabelle: { // Neue generische Tabelle für Performance-Metriken
+                idPrefix: 'pub-table-perf-metrics', // z.B. pub-table-perf-metrics-AS-Gesamt
+                titleDe: 'Diagnostische Güte: {Methode} (vs. N) im Kollektiv {Kollektiv}',
+                titleEn: 'Diagnostic Performance: {Methode} (vs. N) in {Kollektiv} Cohort'
             },
-            statistischerVergleichAST2Tabelle: { // Hinzugefügt für Tabelle 6
-                id: 'pub-table-statistischer-vergleich-as-t2',
-                titleDe: 'Statistischer Vergleich: Avocado Sign vs. T2-Kriterien (Literatur und Optimiert)',
-                titleEn: 'Statistical Comparison: Avocado Sign vs. T2 Criteria (Literature and Optimized)'
+            statistischerVergleichTabelle: { // Neue generische Tabelle für Vergleiche
+                idPrefix: 'pub-table-stat-vergleich', // z.B. pub-table-stat-vergleich-AS-vs-Koh-Gesamt
+                titleDe: 'Statistischer Vergleich: {Methode1} vs. {Methode2} im Kollektiv {Kollektiv}',
+                titleEn: 'Statistical Comparison: {Methode1} vs. {Methode2} in {Kollektiv} Cohort'
             },
-            alterVerteilungChart: { // Hinzugefügt für Abbildung 1a
-                id: 'pub-chart-alter-Gesamt',
-                titleDe: 'Altersverteilung (Gesamtkollektiv)',
-                titleEn: 'Age Distribution (Overall Cohort)'
+            vergleichPerformanceBalkenChart: { // ID-Prefix für Balken-Charts, die Methoden vergleichen
+                idPrefix: 'pub-chart-vergleich-perf', // z.B. pub-chart-vergleich-perf-Gesamt
+                titleDe: 'Vergleichsmetriken für Kollektiv {Kollektiv} (AS vs. Optimiertes T2 vs. Ausgew. Literatur)',
+                titleEn: 'Comparative Metrics for {Kollektiv} Cohort (AS vs. Optimized T2 vs. Selected Literature)'
             },
-            geschlechtVerteilungChart: { // Hinzugefügt für Abbildung 1b
-                id: 'pub-chart-gender-Gesamt',
-                titleDe: 'Geschlechterverteilung (Gesamtkollektiv)',
-                titleEn: 'Gender Distribution (Overall Cohort)'
-            },
-            vergleichPerformanceChartGesamt: { // Hinzugefügt für Abbildung 2a
-                id: 'pub-chart-vergleich-Gesamt',
-                titleDe: 'Vergleichsmetriken für Gesamtkollektiv',
-                titleEn: 'Comparative Metrics for Overall Cohort'
-            },
-            vergleichPerformanceChartDirektOP: { // Hinzugefügt für Abbildung 2b
-                id: 'pub-chart-vergleich-direkt-OP',
-                titleDe: 'Vergleichsmetriken für Direkt-OP Kollektiv',
-                titleEn: 'Comparative Metrics for Upfront Surgery Cohort'
-            },
-            vergleichPerformanceChartNRCT: { // Hinzugefügt für Abbildung 2c
-                id: 'pub-chart-vergleich-nRCT',
-                titleDe: 'Vergleichsmetriken für nRCT Kollektiv',
-                titleEn: 'Comparative Metrics for nRCT Cohort'
+            vergleichROCChart: { // ID-Prefix für ROC-Vergleichs-Charts
+                idPrefix: 'pub-chart-vergleich-roc', // z.B. pub-chart-vergleich-roc-Gesamt
+                titleDe: 'Vergleich ROC-Kurven für Kollektiv {Kollektiv}',
+                titleEn: 'Comparative ROC Curves for {Kollektiv} Cohort'
             }
         })
     })
