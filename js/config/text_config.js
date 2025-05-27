@@ -32,11 +32,11 @@ const UI_TEXTS = {
             en: 'English'
         },
         sectionLabels: {
+            abstract: 'Abstract',
+            einleitung: 'Einleitung',
             methoden: 'Methoden',
             ergebnisse: 'Ergebnisse',
             diskussion: 'Diskussion',
-            einleitung: 'Einleitung',
-            abstract: 'Abstract',
             referenzen: 'Referenzen'
         },
         bruteForceMetricSelectLabel: 'Optimierungsmetrik für T2 (BF):'
@@ -50,7 +50,9 @@ const UI_TEXTS = {
         statusT2: 'T2-Status (angewandt)',
         comparisonBar: 'Vergleich AS vs. {T2Name}',
         rocCurve: 'ROC-Kurve für {Method}',
-        asPerformance: 'AS Performance (Akt. Kollektiv)'
+        rocCurveComparison: 'Vergleich ROC-Kurven',
+        asPerformance: 'AS Performance (Akt. Kollektiv)',
+        likelihoodRatios: 'Likelihood Ratios für {Method}'
     },
     axisLabels: {
         age: 'Alter (Jahre)',
@@ -61,7 +63,8 @@ const UI_TEXTS = {
         sensitivity: 'Sensitivität (Richtig-Positiv-Rate)',
         oneMinusSpecificity: '1 - Spezifität (Falsch-Positiv-Rate)',
         probability: 'Wahrscheinlichkeit',
-        shortAxisDiameter: 'Kurzachsendurchmesser (mm)'
+        shortAxisDiameter: 'Kurzachsendurchmesser (mm)',
+        likelihoodRatio: 'Likelihood Ratio'
     },
     legendLabels: {
         male: 'Männlich',
@@ -77,8 +80,13 @@ const UI_TEXTS = {
         t2Negative: 'T2-',
         avocadoSign: 'Avocado Sign (AS)',
         currentT2: '{T2ShortName}',
+        literatureT2_1: 'Literatur T2 (Set 1)',
+        literatureT2_2: 'Literatur T2 (Set 2)',
+        optimizedT2: 'Optimiertes T2 (BF)',
         benignLN: 'Benigne LK',
-        malignantLN: 'Maligne LK'
+        malignantLN: 'Maligne LK',
+        lrPlus: 'LR+',
+        lrMinus: 'LR-'
     },
     criteriaComparison: {
         title: "Vergleich diagnostischer Güte verschiedener Methoden",
@@ -90,6 +98,8 @@ const UI_TEXTS = {
         tableHeaderNPV: "NPV",
         tableHeaderAcc: "Acc.",
         tableHeaderAUC: "AUC/BalAcc",
+        tableHeaderLRplus: "LR+",
+        tableHeaderLRminus: "LR-",
         showAppliedLabel: "Aktuell angewandte Kriterien anzeigen"
     },
     excelExport: {
@@ -133,24 +143,24 @@ const UI_TEXTS = {
             <h6>Allgemeine Bedienung:</h6>
             <ul>
                 <li><strong>Kollektiv-Auswahl (Header):</strong> Wählen Sie hier das globale Patientenkollektiv (Gesamt, Direkt OP, nRCT). Diese Auswahl beeinflusst alle Analysen und Darstellungen.</li>
-                <li><strong>Tab-Navigation:</strong> Wechseln Sie zwischen den Hauptfunktionen (Daten, Auswertung, Statistik, etc.).</li>
-                <li><strong>Tooltips:</strong> Fahren Sie mit der Maus über Elemente für detaillierte Erklärungen.</li>
-                <li><strong>Statistische Signifikanz:</strong> p-Werte werden mit Symbolen versehen: * p < 0.05, ** p < 0.01, *** p < 0.001. Das Signifikanzniveau ist α = ${APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL}.</li>
+                <li><strong>Tab-Navigation:</strong> Wechseln Sie zwischen den Hauptfunktionen (Daten, Auswertung, Statistik, etc.). Der "Publikation"-Tab wurde erweitert, um umfassende Manuskriptentwürfe zu generieren.</li>
+                <li><strong>Tooltips & Kontext-Hilfe:</strong> Fahren Sie mit der Maus über Elemente für detaillierte Erklärungen. Ausschau halten nach kleinen <i class="${APP_CONFIG.UI_SETTINGS.CONTEXT_HELP_ICON_CLASS}"></i> Icons für zusätzliche kontextsensitive Hilfe.</li>
+                <li><strong>Statistische Signifikanz:</strong> p-Werte werden mit Symbolen versehen: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Das Signifikanzniveau ist &#945; = ${formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, 2).replace('.', ',')}. Konfidenzintervalle (CI) sind standardmäßig 95%-CIs.</li>
             </ul>
             <h6>Wichtige Tabs:</h6>
             <ul>
                 <li><strong>Daten:</strong> Zeigt Patientendaten. Reihen sind für T2-LK-Details aufklappbar.</li>
                 <li><strong>Auswertung:</strong>
                     <ul>
-                        <li>Definieren Sie hier <strong>T2-Malignitätskriterien</strong> (Größe, Form etc.) und die <strong>Logik</strong> (UND/ODER).</li>
-                        <li>Klicken Sie <strong>"Anwenden & Speichern"</strong>, um Ihre T2-Definitionen auf den Datensatz anzuwenden und die Ergebnisse in allen Tabs zu aktualisieren. Ungespeicherte Änderungen werden markiert.</li>
-                        <li>Starten Sie die <strong>Brute-Force-Optimierung</strong>, um datengetrieben die besten T2-Kriterien für eine Zielmetrik zu finden.</li>
+                        <li>Definieren Sie hier <strong>T2-Malignitätskriterien</strong> und die <strong>Logik</strong> (UND/ODER).</li>
+                        <li>Klicken Sie <strong>"Anwenden & Speichern"</strong>, um Ihre T2-Definitionen auf den Datensatz anzuwenden. Ein <span class="text-warning fw-bold">prominenterer Indikator (z.B. pulsierender Rahmen um die Karte)</span> zeigt ungespeicherte Änderungen an.</li>
+                        <li>Starten Sie die <strong>Brute-Force-Optimierung</strong>. Die Fortschrittsanzeige wurde verbessert.</li>
                     </ul>
                 </li>
-                <li><strong>Statistik:</strong> Detaillierte statistische Analysen. Wählen Sie "Einzelansicht" oder "Vergleich Aktiv" für Kollektivvergleiche. Konfidenzintervalle (CI) sind 95%-CIs.</li>
+                <li><strong>Statistik:</strong> Detaillierte statistische Analysen, erweitert um <strong>Likelihood Ratios (LR+, LR-)</strong> und CIs für Differenzen von Metriken. Vergleichende ROC-Kurven sind nun verfügbar.</li>
                 <li><strong>Präsentation:</strong> Aufbereitete Ergebnisse, ideal für Vorträge.</li>
-                <li><strong>Publikation:</strong> Generiert Textvorschläge und Materialien für eine wissenschaftliche Publikation.</li>
-                <li><strong>Export:</strong> Lädt Analyseergebnisse und Daten herunter.</li>
+                <li><strong>Publikation:</strong> Stark erweitert zur Generierung von Manuskriptentwürfen (Abstract, Einleitung, Methoden, Ergebnisse, Diskussion, Referenzen) mit integrierten Tabellen und Abbildungsverweisen.</li>
+                <li><strong>Export:</strong> Erweiterte Exportoptionen, inkl. eines "Publikations-Paket" ZIPs und Konfigurationsexport.</li>
             </ul>
              <h6>T2-Kriterien Anwendung:</h6>
             <p class="small">Der Status 'T2' in den Tabellen, die T2-bezogenen Statistiken und Diagramme (außer bei expliziter Auswahl einer Literaturstudie im Präsentationstab) basieren <strong>immer</strong> auf den zuletzt im 'Auswertung'-Tab <strong>definierten UND angewendeten</strong> Kriterien.</p>
@@ -162,7 +172,7 @@ const UI_TEXTS = {
 };
 
 const TOOLTIP_CONTENT = {
-    kurzanleitungButton: { description: "Zeigt eine Kurzanleitung und wichtige Hinweise zur Bedienung der Anwendung." },
+    kurzanleitungButton: { description: "Zeigt eine Kurzanleitung und wichtige Hinweise zur Bedienung der Anwendung (Version ${APP_CONFIG.APP_VERSION})." },
     kollektivButtons: { description: "Wählen Sie das Patientenkollektiv für die Analyse aus: <strong>Gesamt</strong> (alle Patienten), <strong>Direkt OP</strong> (nur primär Operierte ohne Vorbehandlung) oder <strong>nRCT</strong> (nur neoadjuvant Radiochemotherapeutisch Vorbehandelte). Die Auswahl filtert die Datenbasis für alle Tabs." },
     headerStats: {
         kollektiv: "Aktuell betrachtetes Patientenkollektiv.",
@@ -174,10 +184,10 @@ const TOOLTIP_CONTENT = {
     mainTabs: {
         daten: "Zeigt die Liste aller Patientendaten im ausgewählten Kollektiv mit Basisinformationen und Status (N/AS/T2). Ermöglicht das Sortieren und Aufklappen von Details zu T2-Lymphknotenmerkmalen.",
         auswertung: "Zentraler Tab zur Definition von T2-Kriterien, Anzeige eines deskriptiven Dashboards, Durchführung der Brute-Force-Optimierung und detaillierte Auswertungsergebnisse pro Patient basierend auf den angewendeten Kriterien.",
-        statistik: "Bietet detaillierte statistische Analysen (Gütekriterien, Vergleiche, Assoziationen) für das global gewählte Kollektiv oder einen Vergleich zweier spezifisch wählbarer Kollektive. Alle Konfidenzintervalle (CI) sind 95%-CIs.",
+        statistik: "Bietet detaillierte statistische Analysen (Gütekriterien inkl. LRs, Vergleiche inkl. CIs für Differenzen, Assoziationen, ROC-Vergleiche) für das global gewählte Kollektiv oder einen Vergleich zweier spezifisch wählbarer Kollektive. Alle Konfidenzintervalle (CI) sind 95%-CIs.",
         praesentation: "Stellt Analyseergebnisse in einem aufbereiteten, präsentationsfreundlichen Format dar, fokussiert auf den Vergleich des Avocado Signs mit T2-basierten Ansätzen (angewandt oder Literatur).",
-        publikation: "Generiert Textvorschläge und Materialien für eine wissenschaftliche Publikation zum Vergleich von Avocado Sign mit verschiedenen T2-Kriteriensets.",
-        export: "Bietet umfangreiche Optionen zum Herunterladen von Rohdaten, Analyseergebnissen, Tabellen und Diagrammen in verschiedenen Dateiformaten.",
+        publikation: "Generiert umfassende Textentwürfe, Tabellen und Abbildungsverweise für eine wissenschaftliche Publikation zum Vergleich von Avocado Sign mit verschiedenen T2-Kriteriensets.",
+        export: "Bietet umfangreiche Optionen zum Herunterladen von Rohdaten, Analyseergebnissen, Tabellen, Diagrammen und der aktuellen Analysekonfiguration in verschiedenen Dateiformaten, inkl. eines Publikations-Pakets.",
         moreTabsDropdown: "Weitere Tabs anzeigen."
     },
     datenTable: {
@@ -213,7 +223,10 @@ const TOOLTIP_CONTENT = {
         reset: "Setzt die Logik und alle Kriterien auf die definierten Standardeinstellungen zurück. Die Änderungen sind danach noch nicht angewendet.",
         apply: "Wendet die aktuell eingestellten T2-Kriterien und die Logik auf den gesamten Datensatz an. Dies aktualisiert die T2-Spalten in den Tabellen, alle statistischen Auswertungen und Diagramme. Die Einstellung wird zudem für zukünftige Sitzungen gespeichert."
     },
-    t2CriteriaCard: { unsavedIndicator: "<strong>Achtung:</strong> Es gibt nicht angewendete Änderungen an den T2-Kriterien oder der Logik. Klicken Sie auf 'Anwenden & Speichern', um die Ergebnisse zu aktualisieren und die Einstellung zu speichern." },
+    t2CriteriaCard: {
+        unsavedIndicator: "<strong>Achtung:</strong> Es gibt nicht angewendete Änderungen an den T2-Kriterien oder der Logik. Klicken Sie auf 'Anwenden & Speichern', um die Ergebnisse zu aktualisieren und die Einstellung zu speichern.",
+        title: "T2 Malignitäts-Kriterien Definieren"
+    },
     t2MetricsOverview: {
         cardTitle: "Kurzübersicht der diagnostischen Güte für die aktuell angewendeten und gespeicherten T2-Kriterien im Vergleich zum histopathologischen N-Status für das gewählte Kollektiv: <strong>[KOLLEKTIV]</strong>. Alle Konfidenzintervalle (CI) sind 95%-CIs.",
         sens: "Sensitivität (T2 vs. N): Anteil der N+ Fälle, die von den T2-Kriterien korrekt als positiv erkannt wurden.",
@@ -223,18 +236,23 @@ const TOOLTIP_CONTENT = {
         acc: "Accuracy (T2 vs. N): Gesamtanteil der korrekt klassifizierten Fälle.",
         balAcc: "Balanced Accuracy (T2 vs. N): Mittelwert aus Sensitivität und Spezifität.",
         f1: "F1-Score (T2 vs. N): Harmonisches Mittel aus PPV und Sensitivität.",
-        auc: "AUC (T2 vs. N): Fläche unter der ROC-Kurve; für binäre Tests wie hier äquivalent zur Balanced Accuracy."
+        auc: "AUC (T2 vs. N): Fläche unter der ROC-Kurve; für binäre Tests wie hier äquivalent zur Balanced Accuracy.",
+        lrPlus: "Positive Likelihood Ratio (LR+): Um welchen Faktor die Odds eines positiven Testergebnisses bei Kranken höher sind als bei Gesunden.",
+        lrMinus: "Negative Likelihood Ratio (LR-): Um welchen Faktor die Odds eines negativen Testergebnisses bei Kranken niedriger sind als bei Gesunden."
      },
     bruteForceMetric: { description: "Wählen Sie die Zielmetrik für die Brute-Force-Optimierung.<br><strong>Accuracy:</strong> Anteil korrekt klassifizierter Fälle.<br><strong>Balanced Accuracy:</strong> (Sens+Spez)/2; gut bei ungleichen Klassengrößen.<br><strong>F1-Score:</strong> Harmonisches Mittel aus PPV & Sensitivität.<br><strong>PPV:</strong> Präzision bei positiver Vorhersage.<br><strong>NPV:</strong> Präzision bei negativer Vorhersage." },
-    bruteForceStart: { description: "Startet die Brute-Force-Suche nach der T2-Kriterienkombination, die die gewählte Zielmetrik im aktuellen Kollektiv maximiert. Dies kann einige Zeit in Anspruch nehmen und läuft im Hintergrund." },
+    bruteForceStart: { description: "Startet die Brute-Force-Suche nach der T2-Kriterienkombination, die die gewählte Zielmetrik im aktuellen Kollektiv maximiert. Dies kann einige Zeit in Anspruch nehmen und läuft im Hintergrund. Die geschätzte Dauer hängt von der Anzahl der zu testenden Kombinationen ab (siehe Fortschritt)." },
     bruteForceInfo: { description: "Zeigt den Status des Brute-Force Optimierungs-Workers und das aktuell analysierte Patientenkollektiv: <strong>[KOLLEKTIV_NAME]</strong>." },
-    bruteForceProgress: { description: "Fortschritt der Optimierung: Getestete Kombinationen / Gesamtanzahl ([TOTAL]). Angezeigt werden die aktuelle beste Metrik und die zugehörigen Kriterien." },
+    bruteForceProgress: { description: "Fortschritt der Optimierung: Getestete Kombinationen / Gesamtanzahl ([TOTAL]). Angezeigt werden die aktuelle beste Metrik und die zugehörigen Kriterien. Die geschätzte Restdauer wird ggf. angezeigt." },
     bruteForceResult: {
         description: "Bestes Ergebnis der abgeschlossenen Brute-Force-Optimierung für das gewählte Kollektiv ([N_GESAMT] Patienten, davon [N_PLUS] N+ und [N_MINUS] N-) und die Zielmetrik.",
         kollektivStats: "Statistik des für diese Optimierung verwendeten Kollektivs: N (Gesamtanzahl), N+ (Anzahl N-positiv), N- (Anzahl N-negativ)."
     },
-    bruteForceDetailsButton: { description: "Öffnet ein Fenster mit den Top 10 Ergebnissen und weiteren Details zur abgeschlossenen Optimierung." },
-    bruteForceModal: { exportButton: "Exportiert den detaillierten Bericht der Brute-Force-Optimierung (Top 10 Ergebnisse, Kollektiv-Statistik, Konfiguration) als formatierte Textdatei (.txt)." },
+    bruteForceDetailsButton: { description: "Öffnet ein Fenster mit den Top 10 Ergebnissen (und ggf. mehr bei identischen Werten) und weiteren Details zur abgeschlossenen Optimierung." },
+    bruteForceModal: {
+        exportButton: "Exportiert den detaillierten Bericht der Brute-Force-Optimierung (Top-Ergebnisse, Kollektiv-Statistik, Konfiguration) als formatierte Textdatei (.txt).",
+        title: "Brute-Force Optimierungsergebnisse"
+     },
     statistikLayout: { description: "Wählen Sie die Anzeigeart: <strong>Einzelansicht</strong> für das global gewählte Kollektiv oder <strong>Vergleich Aktiv</strong> zur Auswahl und Gegenüberstellung zweier spezifischer Kollektive." },
     statistikKollektiv1: { description: "Wählen Sie das erste Kollektiv für die statistische Auswertung oder den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv')." },
     statistikKollektiv2: { description: "Wählen Sie das zweite Kollektiv für den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv')." },
@@ -270,11 +288,13 @@ const TOOLTIP_CONTENT = {
         tableHeaderPPV: "PPV",
         tableHeaderNPV: "NPV",
         tableHeaderAcc: "Accuracy",
-        tableHeaderAUC: "AUC / Bal. Accuracy"
+        tableHeaderAUC: "AUC / Bal. Accuracy",
+        tableHeaderLRplus: "LR+",
+        tableHeaderLRminus: "LR-"
     },
     praesentation: {
         viewSelect: { description: "Wählen Sie die Ansicht: <strong>Avocado Sign (Performance)</strong> für eine Übersicht der AS-Performance oder <strong>AS vs. T2 (Vergleich)</strong> für einen direkten Vergleich von AS mit einer auswählbaren T2-Kriterienbasis." },
-        studySelect: { description: "Wählen Sie eine T2-Kriterienbasis für den Vergleich mit dem Avocado Sign. Optionen: aktuell in der App eingestellte Kriterien oder vordefinierte Sets aus publizierten Studien. Die Auswahl aktualisiert die untenstehenden Vergleiche. Das globale Kollektiv passt sich ggf. an das Zielkollektiv der Studie an." },
+        studySelect: { description: "Wählen Sie eine T2-Kriterienbasis für den Vergleich mit dem Avocado Sign. Optionen: aktuell in der App eingestellte Kriterien oder vordefinierte Sets aus publizierten Studien. Die Auswahl aktualisiert die untenstehenden Vergleiche. Das globale Kollektiv passt sich ggf. an das Zielkollektiv der Studie an. Wenn das globale Kollektiv automatisch angepasst wurde, wird dies durch einen Toast und eine Hervorhebung der globalen Kollektiv-Buttons signalisiert." },
         t2BasisInfoCard: {
             title: "Informationen zur T2-Vergleichsbasis",
             description: "Zeigt Details zu den aktuell für den Vergleich mit AS ausgewählten T2-Kriterien. Die Performance-Werte beziehen sich auf das angegebene Vergleichskollektiv.",
@@ -335,17 +355,19 @@ const TOOLTIP_CONTENT = {
         chartSinglePNG: { description: "Ausgewähltes Diagramm '{ChartName}' als PNG-Datei.", type: 'CHART_SINGLE_PNG', ext: "png"},
         chartSingleSVG: { description: "Ausgewähltes Diagramm '{ChartName}' als SVG-Datei (Vektorformat).", type: 'CHART_SINGLE_SVG', ext: "svg"},
         tableSinglePNG: { description: "Ausgewählte Tabelle '{TableName}' als PNG-Bilddatei.", type: 'TABLE_PNG_EXPORT', ext: "png"},
-        allZIP: { description: "Alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT, alle MDs, Rohdaten-CSV, HTML-Report) in einem ZIP-Archiv.", type: 'ALL_ZIP', ext: "zip"},
+        allZIP: { description: "Alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT, alle MDs, Rohdaten-CSV, HTML-Report, Konfig-JSON) in einem ZIP-Archiv.", type: 'ALL_ZIP', ext: "zip"},
         csvZIP: { description: "Alle verfügbaren CSV-Dateien (Statistik, Rohdaten) in einem ZIP-Archiv.", type: 'CSV_ZIP', ext: "zip"},
-        mdZIP: { description: "Alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikationstexte) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "zip"},
+        mdZIP: { description: "Alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikationstexte) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "md"},
         pngZIP: { description: "Identisch zum 'Diagramme & Tabellen (PNG)' Einzel-Export.", type: 'PNG_ZIP', ext: "zip"},
         svgZIP: { description: "Identisch zum 'Diagramme (SVG)' Einzel-Export.", type: 'SVG_ZIP', ext: "zip"},
-        xlsxZIP: { description: "Alle verfügbaren Excel-Dateien in einem ZIP-Archiv.", type: 'XLSX_ZIP', ext: "xlsx"}
+        xlsxZIP: { description: "Alle verfügbaren Excel-Dateien in einem ZIP-Archiv.", type: 'XLSX_ZIP', ext: "xlsx"},
+        publikationPaketZIP: { description: "Alle generierten Texte (Abstract, Einleitung, Methoden, Ergebnisse, Diskussion, Referenzen als .md) und zugehörige Tabellen (.csv) und Diagramme (.svg, .png) aus dem Publikation-Tab in einem ZIP-Archiv.", type: 'PUBLIKATION_PAKET_ZIP', ext: "zip" },
+        konfigurationJSON: { description: "Exportiert die aktuellen Analyse-Einstellungen (ausgewähltes Kollektiv, angewandte T2-Kriterien, Brute-Force-Konfiguration) als JSON-Datei zur späteren Reproduktion.", type: 'KONFIGURATION_JSON', ext: "json" }
     },
     publikationTabTooltips: {
         spracheSwitch: { description: "Wechselt die Sprache der generierten Texte und einiger Beschriftungen im Publikation-Tab zwischen Deutsch und Englisch." },
-        sectionSelect: { description: "Wählen Sie den Abschnitt der wissenschaftlichen Publikation, für den Textvorschläge und relevante Daten/Grafiken angezeigt werden sollen." },
-        bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, deren Brute-Force-Optimierungsergebnisse im Ergebnisteil angezeigt werden sollen. Standardtexte beziehen sich meist auf die Default-Optimierungsmetrik (Balanced Accuracy)." },
+        sectionSelect: { description: "Wählen Sie den Abschnitt der wissenschaftlichen Publikation, für den Textvorschläge und relevante Daten/Grafiken angezeigt werden sollen. Umfasst nun auch Abstract, Einleitung, Diskussion und Referenzen." },
+        bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, deren Brute-Force-Optimierungsergebnisse im Ergebnisteil angezeigt und referenziert werden sollen. Standardtexte beziehen sich meist auf die Default-Optimierungsmetrik (Balanced Accuracy)." },
         methoden: {
             studienanlage: "Textvorschlag und Informationen zu Studiendesign, Ethik und Software.",
             patientenkohorte: "Textvorschlag und Informationen zum Patientenkollektiv und der Datenbasis.",
@@ -353,15 +375,19 @@ const TOOLTIP_CONTENT = {
             asDefinition: "Textvorschlag und Informationen zur Definition und Bewertung des Avocado Signs.",
             t2Definition: "Textvorschlag und Informationen zur Definition und Bewertung der T2-Kriterien (Literatur, Brute-Force optimiert).",
             referenzstandard: "Textvorschlag und Informationen zum Referenzstandard (Histopathologie).",
-            statistischeAnalyse: "Textvorschlag und Informationen zu den statistischen Analysemethoden."
+            statistischeAnalyse: "Textvorschlag und Informationen zu den statistischen Analysemethoden, inkl. neuer Methoden wie LR-Berechnung und CIs für Differenzen."
         },
         ergebnisse: {
             patientencharakteristika: "Textvorschlag und relevante Tabellen/Diagramme zu den Patientencharakteristika.",
-            asPerformance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte des Avocado Signs.",
-            literaturT2Performance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Literatur-basierten T2-Kriterien.",
-            optimierteT2Performance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Brute-Force optimierten T2-Kriterien.",
-            vergleichPerformance: "Textvorschlag und relevante Tabellen/Diagramme zum statistischen Vergleich der diagnostischen Güte zwischen Avocado Sign und den T2-Kriteriensets."
-        }
+            asPerformance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte des Avocado Signs, inkl. Likelihood Ratios.",
+            literaturT2Performance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Literatur-basierten T2-Kriterien, inkl. Likelihood Ratios.",
+            optimierteT2Performance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Brute-Force optimierten T2-Kriterien, inkl. Likelihood Ratios.",
+            vergleichPerformance: "Textvorschlag und relevante Tabellen/Diagramme zum statistischen Vergleich der diagnostischen Güte zwischen Avocado Sign und den T2-Kriteriensets, inkl. CIs für Differenzen."
+        },
+        abstract: { description: "Generiert einen Entwurf für das Abstract der Publikation basierend auf den Kernergebnissen." },
+        einleitung: { description: "Generiert einen Entwurf für die Einleitung, der den Kontext und die Zielsetzung der Studie darlegt." },
+        diskussion: { description: "Generiert Textbausteine für die Diskussion, die mögliche Interpretationen, Limitationen und Implikationen ansprechen." },
+        referenzen: { description: "Generiert eine formatierte Liste der in der Publikation zitierten Referenzen." }
     },
     statMetrics: {
         sens: { name: "Sensitivität", description: "Sensitivität ([METHODE] vs. N): Anteil der tatsächlich positiven Fälle (N+), die durch die Methode [METHODE] korrekt als positiv erkannt wurden.<br><i>Formel: RP / (RP + FN)</i>", interpretation: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N+ Patienten korrekt (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].<hr><i>Bei kleinen Fallzahlen für RP oder FN ist das CI ggf. sehr breit.</i>"},
@@ -371,10 +397,15 @@ const TOOLTIP_CONTENT = {
         acc: { name: "Accuracy (Gesamtgenauigkeit)", description: "Accuracy ([METHODE] vs. N): Anteil aller Fälle, die durch die Methode [METHODE] korrekt klassifiziert wurden.<br><i>Formel: (RP + RN) / Gesamtanzahl</i>", interpretation: "Die Methode [METHODE] klassifizierte insgesamt <strong>[WERT]</strong> aller Patienten korrekt (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].<hr><i>Bei unausgeglichenen Gruppen (ungleiche Prävalenz von N+ und N-) kann die Accuracy irreführend sein.</i>"},
         balAcc: { name: "Balanced Accuracy", description: "Balanced Accuracy ([METHODE] vs. N): Der Mittelwert aus Sensitivität und Spezifität. Sinnvoll bei ungleichen Gruppengrößen (Prävalenz).<br><i>Formel: (Sensitivität + Spezifität) / 2</i>", interpretation: "Die Balanced Accuracy der Methode [METHODE], die Sensitivität und Spezifität gleich gewichtet, betrug <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]."},
         f1: { name: "F1-Score", description: "F1-Score ([METHODE] vs. N): Das harmonische Mittel aus PPV (Precision) und Sensitivität (Recall). Ein Wert von 1 ist optimal.<br><i>Formel: 2 * (PPV * Sensitivität) / (PPV + Sensitivität)</i>", interpretation: "Der F1-Score für die Methode [METHODE], der Präzision und Sensitivität kombiniert, beträgt <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]."},
-        auc: { name: "Area Under Curve (AUC)", description: "AUC ([METHODE] vs. N): Fläche unter der Receiver Operating Characteristic (ROC)-Kurve. Repräsentiert die Fähigkeit einer Methode, zwischen positiven und negativen Fällen zu unterscheiden. 0.5 entspricht Zufall, 1.0 perfekter Trennung.<br><i>Für binäre Tests (wie AS oder eine feste T2-Regel) ist AUC = Balanced Accuracy.</i>", interpretation: "Die AUC von <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) deutet auf eine <strong>[BEWERTUNG]</strong> generelle Trennschärfe der Methode [METHODE] zwischen N+ und N- Fällen im Kollektiv [KOLLEKTIV] hin."},
-        mcnemar: { name: "McNemar-Test", description: "Prüft auf einen signifikanten Unterschied in den diskordanten Paaren (Fälle, bei denen AS und [T2_SHORT_NAME] unterschiedliche Ergebnisse liefern) bei gepaarten Daten (d.h. beide Tests am selben Patienten).<br><i>Nullhypothese (H0): Anzahl(AS+ / [T2_SHORT_NAME]-) = Anzahl(AS- / [T2_SHORT_NAME]+). Ein kleiner p-Wert spricht gegen H0.</i>", interpretation: "Der McNemar-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies deutet darauf hin, dass sich die Fehlklassifizierungsraten (diskordante Paare) von AS und [T2_SHORT_NAME] im Kollektiv [KOLLEKTIV] [SIGNIFIKANZ_TEXT] unterscheiden."},
-        delong: { name: "DeLong-Test", description: "Vergleicht zwei AUC-Werte von ROC-Kurven, die auf denselben (gepaarten) Daten basieren, unter Berücksichtigung der Kovarianz.<br><i>Nullhypothese (H0): AUC(AS) = AUC([T2_SHORT_NAME]). Ein kleiner p-Wert spricht gegen H0.</i>", interpretation: "Der DeLong-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies deutet darauf hin, dass sich die AUC-Werte (bzw. Balanced Accuracies) von AS und [T2_SHORT_NAME] im Kollektiv [KOLLEKTIV] [SIGNIFIKANZ_TEXT] unterscheiden."},
-        phi: { name: "Phi-Koeffizient (φ)", description: "Maß für die Stärke und Richtung des Zusammenhangs zwischen zwei binären Variablen (z.B. Vorhandensein von Merkmal '[MERKMAL]' und N-Status). Wertebereich von -1 bis +1. 0 bedeutet kein Zusammenhang.", interpretation: "Der Phi-Koeffizient von <strong>[WERT]</strong> deutet auf einen <strong>[BEWERTUNG]</strong> Zusammenhang zwischen dem Merkmal '[MERKMAL]' und dem N-Status im Kollektiv [KOLLEKTIV] hin."},
+        auc: { name: "Area Under Curve (AUC)", description: "AUC ([METHODE] vs. N): Fläche unter der Receiver Operating Characteristic (ROC)-Kurve. Repräsentiert die Fähigkeit einer Methode, zwischen positiven und negativen Fällen zu unterscheiden. 0.5 entspricht Zufall, 1.0 perfekter Trennung.<br><i>Für binäre Tests (wie AS oder eine feste T2-Regel) ist AUC = Balanced Accuracy. Bei variablen Schwellenwerten (z.B. Größe) wird eine ROC-Kurve erstellt.</i>", interpretation: "Die AUC von <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) deutet auf eine <strong>[BEWERTUNG]</strong> generelle Trennschärfe der Methode [METHODE] zwischen N+ und N- Fällen im Kollektiv [KOLLEKTIV] hin."},
+        lrPlus: { name: "Positive Likelihood Ratio (LR+)", description: "LR+ ([METHODE] vs. N): Gibt an, um wie viel wahrscheinlicher ein positives Testergebnis bei Kranken (N+) ist als bei Gesunden (N-).<br><i>Formel: Sensitivität / (1 - Spezifität)</i><br>Interpretation: LR+ > 10 starker Hinweis auf Krankheit, 5-10 moderat, 2-5 schwach.", interpretation: "Ein positives Ergebnis mit Methode [METHODE] ist <strong>[WERT]</strong>-mal wahrscheinlicher bei einem N+ Patienten als bei einem N- Patienten (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]."},
+        lrMinus: { name: "Negative Likelihood Ratio (LR-)", description: "LR- ([METHODE] vs. N): Gibt an, um wie viel wahrscheinlicher ein negatives Testergebnis bei Kranken (N+) ist als bei Gesunden (N-).<br><i>Formel: (1 - Sensitivität) / Spezifität</i><br>Interpretation: LR- < 0.1 starker Hinweis gegen Krankheit, 0.1-0.2 moderat, 0.2-0.5 schwach.", interpretation: "Ein negatives Ergebnis mit Methode [METHODE] ist <strong>[WERT]</strong>-mal wahrscheinlicher bei einem N+ Patienten als bei einem N- Patienten (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]. Ein kleinerer Wert schließt die Krankheit besser aus."},
+        diffSens: { name: "Differenz Sensitivität", description: "Differenz der Sensitivitäten ([METHODE1] - [METHODE2]). Ein positiver Wert bedeutet höhere Sensitivität für Methode 1.", interpretation: "Die Sensitivität von [METHODE1] war um <strong>[WERT]</strong> ([PROZENTPUNKTE]) [HOEHER_NIEDRIGER_GLEICH] als die von [METHODE2] (95%-KI der Differenz: [LOWER] bis [UPPER] [PROZENTPUNKTE]) im Kollektiv [KOLLEKTIV]."},
+        diffSpez: { name: "Differenz Spezifität", description: "Differenz der Spezifitäten ([METHODE1] - [METHODE2]). Ein positiver Wert bedeutet höhere Spezifität für Methode 1.", interpretation: "Die Spezifität von [METHODE1] war um <strong>[WERT]</strong> ([PROZENTPUNKTE]) [HOEHER_NIEDRIGER_GLEICH] als die von [METHODE2] (95%-KI der Differenz: [LOWER] bis [UPPER] [PROZENTPUNKTE]) im Kollektiv [KOLLEKTIV]."},
+        diffAUC: { name: "Differenz AUC", description: "Differenz der AUC-Werte ([METHODE1] - [METHODE2]). Ein positiver Wert bedeutet höhere AUC für Methode 1.", interpretation: "Die AUC von [METHODE1] war um <strong>[WERT]</strong> [HOEHER_NIEDRIGER_GLEICH] als die von [METHODE2] (95%-KI der Differenz: [LOWER] bis [UPPER]) im Kollektiv [KOLLEKTIV], p=[P_WERT_DELONG] ([SIGNIFIKANZ_DELONG])."},
+        mcnemar: { name: "McNemar-Test", description: "Prüft auf einen signifikanten Unterschied in den diskordanten Paaren (Fälle, bei denen [METHODE1] und [METHODE2] unterschiedliche Ergebnisse liefern) bei gepaarten Daten.<br><i>Nullhypothese (H0): Keine systematische Differenz in den Fehlklassifikationen.</i>", interpretation: "Der McNemar-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies deutet darauf hin, dass sich die Fehlklassifizierungsraten (diskordante Paare) von [METHODE1] und [METHODE2] im Kollektiv [KOLLEKTIV] [SIGNIFIKANZ_TEXT] unterscheiden."},
+        delong: { name: "DeLong-Test", description: "Vergleicht zwei AUC-Werte von ROC-Kurven, die auf denselben (gepaarten) Daten basieren.<br><i>Nullhypothese (H0): AUC([METHODE1]) = AUC([METHODE2]).</i>", interpretation: "Der DeLong-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies deutet darauf hin, dass sich die AUC-Werte (bzw. Balanced Accuracies) von [METHODE1] und [METHODE2] im Kollektiv [KOLLEKTIV] [SIGNIFIKANZ_TEXT] unterscheiden."},
+        phi: { name: "Phi-Koeffizient (φ)", description: "Maß für die Stärke und Richtung des Zusammenhangs zwischen zwei binären Variablen (z.B. Vorhandensein von Merkmal '[MERKMAL]' und N-Status). Wertebereich von -1 bis +1. 0 bedeutet kein Zusammenhang.", interpretation: "Der Phi-Koeffizient von <strong>[WERT]</strong> deutet auf einen <strong>[STAERKE]</strong> Zusammenhang zwischen dem Merkmal '[MERKMAL]' und dem N-Status im Kollektiv [KOLLEKTIV] hin."},
         rd: { name: "Risk Difference (RD)", description: "Absolute Differenz in der Wahrscheinlichkeit (Risiko) für N+ zwischen Patienten mit und ohne das Merkmal '[MERKMAL]'. RD = P(N+|Merkmal+) - P(N+|Merkmal-). Ein RD von 0 bedeutet kein Unterschied.", interpretation: "Das Risiko für einen N+ Status war bei Patienten mit dem Merkmal '[MERKMAL]' um <strong>[WERT]%</strong> absolut [HOEHER_NIEDRIGER] als bei Patienten ohne dieses Merkmal (95%-KI nach [METHOD_CI]: [LOWER]% – [UPPER]%) im Kollektiv [KOLLEKTIV]."},
         or: { name: "Odds Ratio (OR)", description: "Quotient der Odds für N+ bei Vorhandensein vs. Abwesenheit des Merkmals '[MERKMAL]'. OR = Odds(N+|Merkmal+) / Odds(N+|Merkmal-).<br>OR > 1: Erhöhte Odds für N+ bei Vorhandensein des Merkmals.<br>OR < 1: Verringerte Odds.<br>OR = 1: Keine Assoziation.", interpretation: "Die Chance (Odds) für einen N+ Status war bei Patienten mit dem Merkmal '[MERKMAL]' um den Faktor <strong>[WERT]</strong> [FAKTOR_TEXT] im Vergleich zu Patienten ohne dieses Merkmal (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER], p=[P_WERT], [SIGNIFIKANZ]) im Kollektiv [KOLLEKTIV]."},
         fisher: { name: "Fisher's Exact Test", description: "Exakter Test zur Prüfung auf einen signifikanten Zusammenhang zwischen zwei kategorialen Variablen (z.B. Merkmal '[MERKMAL]' vs. N-Status). Geeignet auch für kleine Stichproben/geringe erwartete Häufigkeiten.<br><i>Nullhypothese (H0): Kein Zusammenhang.</i>", interpretation: "Der exakte Test nach Fisher ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>, was auf einen [SIGNIFIKANZ_TEXT] Zusammenhang zwischen dem Merkmal '[MERKMAL]' und dem N-Status im Kollektiv [KOLLEKTIV] hindeutet."},
