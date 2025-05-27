@@ -26,7 +26,7 @@ const publikationTabLogic = (() => {
         }
     }
 
-    function getRenderedSectionContent(mainSectionId, lang, currentKollektivId) {
+    function getRenderedSectionContent(mainSectionId, lang, currentGlobalKollektivId) {
         if (!allKollektivStats) {
             console.warn("PublikationTabLogic: allKollektivStats nicht initialisiert. Versuche erneute Initialisierung.");
             if (rawGlobalDataInputForLogic && appliedCriteriaForLogic && appliedLogicForLogic && typeof statisticsService !== 'undefined') {
@@ -47,27 +47,38 @@ const publikationTabLogic = (() => {
             t2SizeMax: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max,
             bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
             significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
-            references: { // Diese könnten auch aus APP_CONFIG kommen, falls dort zentralisiert.
-                lurzSchaefer2025: "Lurz & Schäfer (2025) [DOI: 10.1007/s00330-025-11462-y]",
-                lurzSchaefer2025StudyPeriod: "Januar 2020 und November 2023",
-                lurzSchaefer2025MRISystem: "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers)",
-                lurzSchaefer2025ContrastAgent: "Gadoteridol (ProHance; Bracco)",
-                lurzSchaefer2025T2SliceThickness: "2-3 mm",
-                lurzSchaefer2025RadiologistExperience: ["29", "7", "19"],
-                koh2008: "Koh et al. (2008) [DOI: 10.1016/j.ijrobp.2007.10.016]",
-                barbaro2024: "Barbaro et al. (2024) [DOI: 10.1016/j.radonc.2024.110124]",
-                rutegard2025: "Rutegård et al. (2025) [DOI: 10.1007/s00330-025-11361-2]",
-                beetsTan2018ESGAR: "Beets-Tan et al. (2018, ESGAR Consensus) [DOI: 10.1007/s00330-017-5026-2]"
+            references: APP_CONFIG.REFERENCES_FOR_PUBLICATION || { // Fallback, falls nicht in APP_CONFIG
+                lurzSchaefer2025: "Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11462-y",
+                koh2008: "Koh DM, et al. Int J Radiat Oncol Biol Phys. 2008;71(2):456-461",
+                barbaro2024: "Barbaro B, et al. Radiother Oncol. 2024;193:110124",
+                rutegard2025: "Rutegård MK, et al. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11361-2",
+                beetsTan2018ESGAR: "Beets-Tan RGH, et al. Eur Radiol. 2018;28(4):1465-1475",
+                zhuang2021: "Zhuang Z, et al. Front Oncol. 2021;11:709070",
+                alSukhni2012: "Al-Sukhni E, et al. Ann Surg Oncol. 2012;19(7):2212-2223",
+                ethicsVote: "Ethikvotum Nr. 2023-101, Ethikkommission der Sächsischen Landesärztekammer"
             },
             bruteForceMetricForPublication: state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication
         };
 
         const optionsForRenderer = {
-            currentKollektiv: currentKollektivId, // Der global gewählte Kollektiv für Kontext
+            currentKollektiv: currentGlobalKollektivId,
             bruteForceMetric: state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication
         };
 
         return publicationRenderer.renderSectionContent(mainSectionId, lang, allKollektivStats, commonDataForGenerator, optionsForRenderer);
+    }
+
+    function _getROCPointsFromStats(statsObj) {
+        if (!statsObj || isNaN(statsObj.sens?.value) || isNaN(statsObj.spez?.value)) {
+            return [{fpr:0, tpr:0}, {fpr:1, tpr:1}]; // Default to no-discrimination line
+        }
+        const sens = statsObj.sens.value;
+        const spez = statsObj.spez.value;
+        return [
+            { fpr: 0, tpr: 0 },
+            { fpr: 1 - spez, tpr: sens },
+            { fpr: 1, tpr: 1 }
+        ];
     }
 
     function updateDynamicChartsForPublicationTab(mainSectionId, lang, currentKollektivNameForContextOnly) {
@@ -87,8 +98,11 @@ const publikationTabLogic = (() => {
             if (subSectionId === 'ergebnisse_patientencharakteristika') {
                 const dataForGesamtKollektiv = allKollektivStats['Gesamt'];
                 if (dataForGesamtKollektiv?.deskriptiv) {
-                    const alterChartId = `pub-chart-alter-Gesamt`;
-                    const genderChartId = `pub-chart-gender-Gesamt`;
+                    const alterChartConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse.alterVerteilungChart;
+                    const genderChartConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse.geschlechtVerteilungChart;
+                    const alterChartId = `${alterChartConfig.idPrefix || alterChartConfig.id}-Gesamt`;
+                    const genderChartId = `${genderChartConfig.idPrefix || genderChartConfig.id}-Gesamt`;
+
                     const ageChartElement = document.getElementById(alterChartId);
                     const genderChartElement = document.getElementById(genderChartId);
 
@@ -118,63 +132,111 @@ const publikationTabLogic = (() => {
                 }
             } else if (subSectionId === 'ergebnisse_vergleich_performance') {
                 const kollektiveForCharts = ['Gesamt', 'direkt OP', 'nRCT'];
+                const currentPubBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+
                 kollektiveForCharts.forEach(kolId => {
-                    const chartId = `pub-chart-vergleich-${kolId.replace(/\s+/g, '-')}`;
-                    const chartElement = document.getElementById(chartId);
                     const dataForThisKollektiv = allKollektivStats[kolId];
+                    if (!dataForThisKollektiv) return;
 
-                    if (chartElement && dataForThisKollektiv) {
+                    // Vergleichs-Balkendiagramm (Abb. 2)
+                    const balkenChartConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceBalkenChart;
+                    const balkenChartId = `${balkenChartConfig.idPrefix}-${kolId.replace(/\s+/g, '_')}`;
+                    const balkenChartElement = document.getElementById(balkenChartId);
+
+                    if (balkenChartElement) {
                         const asStats = dataForThisKollektiv.gueteAS;
-                        // Verwende die BF-Ergebnisse basierend auf der im State ausgewählten Metrik für die Publikationsansicht
-                        const bfResultsForDisplay = bruteForceManager.getResultsForKollektiv(kolId);
-                        let bfStatsForChart = null;
-                        let bfDefForChart = null;
-
-                        if (bfResultsForDisplay && bfResultsForDisplay.metric === state.getCurrentPublikationBruteForceMetric() && bfResultsForDisplay.bestResult) {
-                             // Wenn die gespeicherten BF-Ergebnisse mit der aktuellen Auswahl übereinstimmen
-                             const bfCriteria = bfResultsForDisplay.bestResult.criteria;
-                             const bfLogic = bfResultsForDisplay.bestResult.logic;
-                             const evaluatedDataBF = t2CriteriaManager.evaluateDataset(cloneDeep(dataProcessor.filterDataByKollektiv(rawGlobalDataInputForLogic, kolId)), bfCriteria, bfLogic);
-                             bfStatsForChart = statisticsService.calculateDiagnosticPerformance(evaluatedDataBF, 't2', 'n');
-                             bfDefForChart = {
-                                 criteria: bfCriteria,
-                                 logic: bfLogic,
-                                 metricName: bfResultsForDisplay.metric,
-                                 metricValue: bfResultsForDisplay.bestResult.metricValue
-                             };
-                        } else if (dataForThisKollektiv.gueteT2_bruteforce && dataForThisKollektiv.bruteforce_definition) {
-                            // Fallback auf die Standard-BF-Metrik, die in allKollektivStats gespeichert ist
-                            bfStatsForChart = dataForThisKollektiv.gueteT2_bruteforce;
-                            bfDefForChart = dataForThisKollektiv.bruteforce_definition;
+                        const bfStats = dataForThisKollektiv.gueteT2_bruteforce;
+                        const bfDef = dataForThisKollektiv.bruteforce_definition;
+                        
+                        let chartDataComp = [];
+                        if (asStats) chartDataComp.push({metric: 'AS', ...Object.fromEntries(['Sens', 'Spez', 'PPV', 'NPV', 'Acc', 'AUC'].map(m => [m, asStats[m.toLowerCase()]?.value ?? NaN])) });
+                        if (bfStats && bfDef && bfDef.metricName === currentPubBfMetric) {
+                            chartDataComp.push({metric: `Opt. T2 (${bfDef.metricName.substring(0,6)})`, ...Object.fromEntries(['Sens', 'Spez', 'PPV', 'NPV', 'Acc', 'AUC'].map(m => [m, bfStats[m.toLowerCase()]?.value ?? NaN])) });
+                        }
+                        
+                        // Beispiel: Füge das erste passende Literatur-Set hinzu (kann erweitert werden)
+                        const firstLitSetConf = PUBLICATION_CONFIG.literatureCriteriaSets.find(lc => {
+                            const s = studyT2CriteriaManager.getStudyCriteriaSetById(lc.id);
+                            return s && (s.applicableKollektiv === kolId || (s.applicableKollektiv === 'Gesamt' && kolId === 'Gesamt'));
+                        });
+                        if (firstLitSetConf) {
+                            const litStats = dataForThisKollektiv.gueteT2_literatur?.[firstLitSetConf.id];
+                            if(litStats) chartDataComp.push({metric: studyT2CriteriaManager.getStudyCriteriaSetById(firstLitSetConf.id)?.displayShortName || firstLitSetConf.id, ...Object.fromEntries(['Sens', 'Spez', 'PPV', 'NPV', 'Acc', 'AUC'].map(m => [m, litStats[m.toLowerCase()]?.value ?? NaN])) });
                         }
 
+                        // Transform data for chartRenderer.renderComparisonBarChart
+                        const metricsToDisplay = ['Sens', 'Spez', 'PPV', 'NPV', 'Acc', 'AUC'];
+                        const transformedChartData = metricsToDisplay.map(metricKey => {
+                            const entry = { metric: metricKey };
+                            chartDataComp.forEach(methodData => {
+                                entry[methodData.metric] = methodData[metricKey];
+                            });
+                            return entry;
+                        }).filter(d => Object.values(d).some(val => typeof val === 'number' && !isNaN(val)));
 
-                        if (asStats && bfStatsForChart && bfDefForChart) {
-                            const chartDataComp = [
-                                { metric: 'Sens', AS: asStats.sens?.value ?? NaN, T2: bfStatsForChart.sens?.value ?? NaN },
-                                { metric: 'Spez', AS: asStats.spez?.value ?? NaN, T2: bfStatsForChart.spez?.value ?? NaN },
-                                { metric: 'PPV', AS: asStats.ppv?.value ?? NaN, T2: bfStatsForChart.ppv?.value ?? NaN },
-                                { metric: 'NPV', AS: asStats.npv?.value ?? NaN, T2: bfStatsForChart.npv?.value ?? NaN },
-                                { metric: 'Acc', AS: asStats.acc?.value ?? NaN, T2: bfStatsForChart.acc?.value ?? NaN },
-                                { metric: 'AUC', AS: asStats.auc?.value ?? NaN, T2: bfStatsForChart.auc?.value ?? NaN }
-                            ].filter(d => !isNaN(d.AS) && !isNaN(d.T2));
 
-                            if (chartDataComp.length > 0) {
-                                const t2Label = `BF-T2 (${(bfDefForChart.metricName || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication).substring(0,6)}.)`;
-                                chartRenderer.renderComparisonBarChart(chartDataComp, chartId, { height: 250, margin: { top: 20, right: 20, bottom: 50, left: 50 } }, t2Label);
-                            } else {
-                                ui_helpers.updateElementHTML(chartId, `<p class="text-muted small text-center p-3">Keine validen Vergleichsdaten für Chart (${getKollektivDisplayName(kolId)}).</p>`);
-                            }
+                        if (transformedChartData.length > 0 && chartDataComp.length > 0) {
+                            const t2LabelForChart = chartDataComp.length > 1 ? chartDataComp[1].metric : 'T2'; // Nimmt den Namen der zweiten Methode für die Legende
+                            chartRenderer.renderComparisonBarChart(transformedChartData, balkenChartId, { height: 280, margin: { top: 20, right: 20, bottom: 60, left: 50 } }, t2LabelForChart);
                         } else {
-                            ui_helpers.updateElementHTML(chartId, `<p class="text-muted small text-center p-3">Unvollständige Daten für Vergleichschart (${getKollektivDisplayName(kolId)}).</p>`);
+                            ui_helpers.updateElementHTML(balkenChartId, `<p class="text-muted small text-center p-3">${lang === 'de' ? `Keine/unvollständige Daten für Vergleichs-Balkendiagramm (${getKollektivDisplayName(kolId)}).` : `No/incomplete data for comparison bar chart (${getKollektivDisplayName(kolId)}).`}</p>`);
                         }
-                    } else if (chartElement) {
-                         ui_helpers.updateElementHTML(chartId, `<p class="text-muted small text-center p-3">Keine Daten für ${getKollektivDisplayName(kolId)}.</p>`);
+                    }
+
+                    // Vergleichs-ROC-Kurven (Abb. 3)
+                    const rocChartConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichROCChart;
+                    const rocChartId = `${rocChartConfig.idPrefix}-${kolId.replace(/\s+/g, '_')}`;
+                    const rocChartElement = document.getElementById(rocChartId);
+
+                    if (rocChartElement) {
+                        const rocDatasets = [];
+                        const asStats = dataForThisKollektiv.gueteAS;
+                        if (asStats) {
+                            rocDatasets.push({
+                                name: UI_TEXTS.legendLabels.avocadoSign,
+                                points: _getROCPointsFromStats(asStats),
+                                color: APP_CONFIG.CHART_SETTINGS.AS_COLOR,
+                                auc: asStats.auc?.value
+                            });
+                        }
+
+                        const bfStats = dataForThisKollektiv.gueteT2_bruteforce;
+                        const bfDef = dataForThisKollektiv.bruteforce_definition;
+                        if (bfStats && bfDef && bfDef.metricName === currentPubBfMetric) {
+                             rocDatasets.push({
+                                name: `${lang === 'de' ? 'Opt. T2' : 'Opt. T2'} (${bfDef.metricName.substring(0,6)})`,
+                                points: _getROCPointsFromStats(bfStats),
+                                color: APP_CONFIG.CHART_SETTINGS.T2_COLOR, // Farbe für optimiertes T2
+                                auc: bfStats.auc?.value
+                            });
+                        }
+                        
+                        PUBLICATION_CONFIG.literatureCriteriaSets.forEach((litConf, index) => {
+                            const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(litConf.id);
+                             if (studySet && (studySet.applicableKollektiv === kolId || (studySet.applicableKollektiv === 'Gesamt' && kolId === 'Gesamt'))) {
+                                const litStats = dataForThisKollektiv.gueteT2_literatur?.[litConf.id];
+                                if (litStats) {
+                                    rocDatasets.push({
+                                        name: studySet.displayShortName || litConf.id,
+                                        points: _getROCPointsFromStats(litStats),
+                                        color: APP_CONFIG.CHART_SETTINGS.LITERATURE_SET_COLORS[index % APP_CONFIG.CHART_SETTINGS.LITERATURE_SET_COLORS.length],
+                                        auc: litStats.auc?.value
+                                    });
+                                }
+                            }
+                        });
+
+                        if (rocDatasets.length > 0) {
+                            chartRenderer.renderComparisonROCCurve(rocDatasets, rocChartId, { height: 300, margin: { top: 20, right: 20, bottom: 70, left: 60 }, showPointsOnComparison: false, legendColumns: 2 });
+                        } else {
+                            ui_helpers.updateElementHTML(rocChartId, `<p class="text-muted small text-center p-3">${lang === 'de' ? `Keine Daten für ROC-Vergleich (${getKollektivDisplayName(kolId)}).` : `No data for ROC comparison (${getKollektivDisplayName(kolId)}).`}</p>`);
+                        }
                     }
                 });
             }
         });
     }
+
 
     return Object.freeze({
         initializeData,
