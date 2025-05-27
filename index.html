@@ -20,10 +20,15 @@
                 <span data-tippy-content="Anteil AS+ Patienten (Vorhersage)">AS: <strong id="header-status-as">--</strong></span>
                 <span data-tippy-content="Anteil T2+ Patienten (angew. Kriterien)">T2: <strong id="header-status-t2">--</strong></span>
             </div>
-            <div class="btn-group" role="group" aria-label="Kollektiv Auswahl" data-tippy-content="Wählen Sie das Patientenkollektiv für die Analyse aus.">
-                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-gesamt" data-kollektiv="Gesamt">Gesamt</button>
-                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-direkt-op" data-kollektiv="direkt OP">Direkt OP</button>
-                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-nrct" data-kollektiv="nRCT">nRCT</button>
+            <div class="d-flex align-items-center">
+                <button class="btn btn-sm btn-outline-secondary me-2" id="btn-kurzanleitung" data-tippy-content="Zeigt eine Kurzanleitung und wichtige Hinweise zur Bedienung der Anwendung.">
+                    <i class="fas fa-question-circle"></i>
+                </button>
+                <div class="btn-group" role="group" aria-label="Kollektiv Auswahl" data-tippy-content="Wählen Sie das Patientenkollektiv für die Analyse aus.">
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-gesamt" data-kollektiv="Gesamt">Gesamt</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-direkt-op" data-kollektiv="direkt OP">Direkt OP</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-nrct" data-kollektiv="nRCT">nRCT</button>
+                </div>
             </div>
         </div>
     </header>
@@ -32,32 +37,32 @@
         <div class="container-fluid">
             <ul class="nav nav-tabs" id="mainTab" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="daten-tab" data-bs-toggle="tab" data-bs-target="#daten-tab-pane" type="button" role="tab" aria-controls="daten-tab-pane" aria-selected="true" data-tippy-content="Zeigt die Liste aller Patientendaten im ausgewählten Kollektiv mit Basisinformationen und Status (N/AS/T2).">
+                    <button class="nav-link active" id="daten-tab" data-bs-toggle="tab" data-bs-target="#daten-tab-pane" type="button" role="tab" aria-controls="daten-tab-pane" aria-selected="true" data-tippy-content="${TOOLTIP_CONTENT.mainTabs.daten || 'Patientendaten anzeigen.'}">
                         <i class="fas fa-database fa-fw me-1"></i>Daten
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="auswertung-tab" data-bs-toggle="tab" data-bs-target="#auswertung-tab-pane" type="button" role="tab" aria-controls="auswertung-tab-pane" aria-selected="false" data-tippy-content="Ermöglicht die Definition von T2-Kriterien, zeigt deskriptive Übersichten und detaillierte Auswertungsergebnisse pro Patient.">
+                    <button class="nav-link" id="auswertung-tab" data-bs-toggle="tab" data-bs-target="#auswertung-tab-pane" type="button" role="tab" aria-controls="auswertung-tab-pane" aria-selected="false" data-tippy-content="${TOOLTIP_CONTENT.mainTabs.auswertung || 'T2-Kriterien definieren und Ergebnisse auswerten.'}">
                         <i class="fas fa-tasks fa-fw me-1"></i>Auswertung
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="statistik-tab" data-bs-toggle="tab" data-bs-target="#statistik-tab-pane" type="button" role="tab" aria-controls="statistik-tab-pane" aria-selected="false" data-tippy-content="Zeigt detaillierte statistische Analysen (Gütekriterien, Vergleiche, Assoziationen) für ausgewählte Kollektive.">
+                    <button class="nav-link" id="statistik-tab" data-bs-toggle="tab" data-bs-target="#statistik-tab-pane" type="button" role="tab" aria-controls="statistik-tab-pane" aria-selected="false" data-tippy-content="${TOOLTIP_CONTENT.mainTabs.statistik || 'Detaillierte statistische Analysen durchführen.'}">
                         <i class="fas fa-chart-bar fa-fw me-1"></i>Statistik
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="praesentation-tab" data-bs-toggle="tab" data-bs-target="#praesentation-tab-pane" type="button" role="tab" aria-controls="praesentation-tab-pane" aria-selected="false" data-tippy-content="Stellt Ergebnisse in einem präsentationsfreundlichen Format dar (Publikationsdaten oder Vergleich AS vs. T2).">
+                    <button class="nav-link" id="praesentation-tab" data-bs-toggle="tab" data-bs-target="#praesentation-tab-pane" type="button" role="tab" aria-controls="praesentation-tab-pane" aria-selected="false" data-tippy-content="${TOOLTIP_CONTENT.mainTabs.praesentation || 'Ergebnisse präsentationsfreundlich darstellen.'}">
                         <i class="fas fa-slideshare fa-fw me-1"></i>Präsentation
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="publikation-tab" data-bs-toggle="tab" data-bs-target="#publikation-tab-pane" type="button" role="tab" aria-controls="publikation-tab-pane" aria-selected="false" data-tippy-content="Stellt Textvorschläge, Tabellen und Grafiken für die wissenschaftliche Publikation zum Vergleich von Avocado Sign und T2-Kriterien bereit.">
+                    <button class="nav-link" id="publikation-tab" data-bs-toggle="tab" data-bs-target="#publikation-tab-pane" type="button" role="tab" aria-controls="publikation-tab-pane" aria-selected="false" data-tippy-content="${TOOLTIP_CONTENT.mainTabs.publikation || 'Textvorschläge und Materialien für Publikationen generieren.'}">
                         <i class="fas fa-feather-alt fa-fw me-1"></i>Publikation
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-tab-pane" type="button" role="tab" aria-controls="export-tab-pane" aria-selected="false" data-tippy-content="Bietet Optionen zum Exportieren von Daten, Tabellen, Statistiken und Diagrammen in verschiedenen Formaten.">
+                    <button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-tab-pane" type="button" role="tab" aria-controls="export-tab-pane" aria-selected="false" data-tippy-content="${TOOLTIP_CONTENT.mainTabs.export || 'Daten und Analyseergebnisse exportieren.'}">
                         <i class="fas fa-download fa-fw me-1"></i>Export
                     </button>
                 </li>
@@ -108,10 +113,26 @@
              <p class="text-center text-muted">Ergebnisse werden geladen...</p>
           </div>
           <div class="modal-footer">
-             <button type="button" class="btn btn-outline-primary btn-sm" id="export-bruteforce-modal-txt" disabled data-tippy-content="Exportiert den detaillierten Brute-Force-Bericht als TXT.">
+             <button type="button" class="btn btn-outline-primary btn-sm" id="export-bruteforce-modal-txt" disabled data-tippy-content="${TOOLTIP_CONTENT.bruteForceModal.exportButton || 'Exportiert den detaillierten Brute-Force-Bericht als TXT.'}">
                  <i class="fas fa-file-alt me-1"></i> Bericht exportieren (.txt)
              </button>
             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" data-tippy-content="Schließt dieses Fenster ohne weitere Aktion.">Schließen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="kurzanleitung-modal" tabindex="-1" aria-labelledby="kurzanleitungModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content modal-glass">
+          <div class="modal-header">
+            <h5 class="modal-title" id="kurzanleitungModalLabel"></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+          </div>
+          <div class="modal-body">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Schließen</button>
           </div>
         </div>
       </div>
