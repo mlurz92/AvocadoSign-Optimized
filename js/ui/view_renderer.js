@@ -66,6 +66,7 @@ const viewRenderer = (() => {
          const container = document.getElementById(containerId); if (!container) return;
          if (!Array.isArray(processedDataFull) || processedDataFull.length === 0) {
              container.innerHTML = uiComponents.createStatistikCard('criteriaComparisonTable', UI_TEXTS.criteriaComparison.title, '<p class="p-3 text-muted small">Keine globalen Daten für Vergleich verfügbar.</p>', false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
+             ui_helpers.initializeTooltips(container);
              return;
          }
 
@@ -155,7 +156,7 @@ const viewRenderer = (() => {
              const tableCardContainerId = 'auswertung-table-card-container';
 
              const criteriaControlsHTML = uiComponents.createT2CriteriaControls(currentCriteria, currentLogic);
-             const bruteForceCardHTML = uiComponents.createBruteForceCard(getKollektivDisplayName(currentKollektiv), bfWorkerAvailable);
+             const bruteForceCardHTML = uiComponents.createBruteForceCard(currentKollektiv, bfWorkerAvailable); // Pass only kollektiv ID
              const auswertungTableCardHTML = auswertungTabLogic.createAuswertungTableCardHTML(data, sortState, currentCriteria, currentLogic);
 
 
@@ -190,9 +191,9 @@ const viewRenderer = (() => {
                          } else {
                              const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image' : 'fa-download';
                              const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code' : 'fa-download';
-                             const pngTooltip = (TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'Als PNG herunterladen').replace('{ChartName}', 'dieses Diagramm');
-                             const svgTooltip = (TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'Als SVG herunterladen').replace('{ChartName}', 'dieses Diagramm');
-                             const createDlBtns = (baseId, chartTitle) => [{id:`dl-${baseId}-png`, icon: dlIconPNG, tooltip: pngTooltip.replace('dieses Diagramm', chartTitle), format:'png', chartId: baseId, chartName: chartTitle}, {id:`dl-${baseId}-svg`, icon: dlIconSVG, tooltip: svgTooltip.replace('dieses Diagramm', chartTitle), format:'svg', chartId: baseId, chartName: chartTitle}];
+                             const pngTooltipBase = (TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'Als PNG herunterladen');
+                             const svgTooltipBase = (TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'Als SVG herunterladen');
+                             const createDlBtns = (baseId, chartTitle) => [{id:`dl-${baseId}-png`, icon: dlIconPNG, tooltip: pngTooltipBase.replace('{ChartName}', chartTitle), format:'png', chartId: baseId, chartName: chartTitle}, {id:`dl-${baseId}-svg`, icon: dlIconSVG, tooltip: svgTooltipBase.replace('{ChartName}', chartTitle), format:'svg', chartId: baseId, chartName: chartTitle}];
 
                              dashboardContainer.innerHTML = `
                                 ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.ageDistribution, `<p class="mb-0 small">Median: ${formatNumber(stats.alter?.median, 1)} (${formatNumber(stats.alter?.min, 0)} - ${formatNumber(stats.alter?.max, 0)})</p>`, 'chart-dash-age', '', '', 'p-1', createDlBtns('chart-dash-age', UI_TEXTS.chartTitles.ageDistribution))}
