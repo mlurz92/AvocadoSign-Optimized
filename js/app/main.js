@@ -316,13 +316,19 @@ function _renderCurrentTab(tabId) {
         case 'statistik-tab': viewRenderer.renderStatistikTab(processedData, appliedCriteria, appliedLogic, state.getCurrentStatsLayout(), state.getCurrentStatsKollektiv1(), state.getCurrentStatsKollektiv2(), currentKollektiv); break;
         case 'praesentation-tab': viewRenderer.renderPresentationTab(state.getCurrentPresentationView(), state.getCurrentPresentationStudyId(), currentKollektiv, processedData, appliedCriteria, appliedLogic); break;
         case 'publikation-tab':
-            publikationTabLogic.initializeData(
-                localRawData, 
-                appliedCriteria,
-                appliedLogic,
-                bruteForceManager.getAllResults()
-            );
-            viewRenderer.renderPublikationTab(state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), currentKollektiv, localRawData, bruteForceManager.getAllResults());
+            if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.initializeData === 'function') {
+                publikationTabLogic.initializeData(
+                    localRawData,
+                    appliedCriteria,
+                    appliedLogic,
+                    bruteForceManager.getAllResults()
+                );
+                viewRenderer.renderPublikationTab(state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), currentKollektiv, localRawData, bruteForceManager.getAllResults());
+            } else {
+                console.error("PublikationTabLogic oder initializeData nicht verfügbar für Tab 'publikation-tab'.");
+                const paneId = 'publikation-tab-pane';
+                 ui_helpers.updateElementHTML(paneId, `<div class="alert alert-danger m-3">Interner Fehler: Publikationsmodul konnte nicht korrekt geladen werden.</div>`);
+            }
             break;
         case 'export-tab': viewRenderer.renderExportTab(currentKollektiv); break;
         default: console.warn(`Unbekannter Tab für Rendering: ${tabId}`); const paneId = tabId.replace('-tab', '-tab-pane'); ui_helpers.updateElementHTML(paneId, `<div class="alert alert-warning m-3">Inhalt für Tab '${tabId}' nicht implementiert.</div>`);
@@ -412,9 +418,11 @@ function handleBruteForceResult(payload) {
             ui_helpers.initializeTooltips(modalBody);
         }
         ui_helpers.showToast('Optimierung abgeschlossen.', 'success');
-        publikationTabLogic.initializeData(localRawData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getAllResults());
-        if (state.getActiveTabId() === 'publikation-tab') {
-            _renderCurrentTab('publikation-tab');
+        if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.initializeData === 'function') {
+            publikationTabLogic.initializeData(localRawData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getAllResults());
+            if (state.getActiveTabId() === 'publikation-tab') {
+                _renderCurrentTab('publikation-tab');
+            }
         }
     } else {
         ui_helpers.showToast('Optimierung ohne valide Ergebnisse.', 'warning');
