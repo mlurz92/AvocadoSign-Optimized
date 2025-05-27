@@ -19,6 +19,7 @@ const bruteForceManager = (() => {
         try {
             if (worker) {
                 worker.terminate();
+                worker = null;
             }
             worker = new Worker(APP_CONFIG.PATHS.BRUTE_FORCE_WORKER);
             worker.onmessage = handleWorkerMessage;
@@ -26,6 +27,9 @@ const bruteForceManager = (() => {
             worker.onmessageerror = (e) => {
                 console.error("BruteForceManager: Worker messageerror:", e);
                 if (onErrorCallback) onErrorCallback({ message: 'Worker-Kommunikationsfehler (messageerror).' });
+                 isRunningState = false;
+                 currentKollektivRunning = null;
+                 worker = null;
             };
             console.log("BruteForceManager: Worker erfolgreich initialisiert.");
             return true;
@@ -47,6 +51,7 @@ const bruteForceManager = (() => {
         switch (type) {
             case 'started':
                 isRunningState = true;
+                currentKollektivRunning = payload?.kollektiv || currentKollektivRunning;
                 if (onStartedCallback) onStartedCallback(payload);
                 break;
             case 'progress':
@@ -54,37 +59,40 @@ const bruteForceManager = (() => {
                 break;
             case 'result':
                 isRunningState = false;
-                if (payload && payload.kollektiv && payload.bestResult) {
-                    allKollektivResults[payload.kollektiv] = cloneDeep(payload); // payload now includes nGesamt, nPlus, nMinus
-                } else if (payload && currentKollektivRunning && payload.bestResult) {
-                    allKollektivResults[currentKollektivRunning] = cloneDeep(payload);
-                     console.warn("BruteForceManager: Ergebnis vom Worker ohne Kollektiv-Info, verwende currentKollektivRunning:", currentKollektivRunning);
+                const resultKollektiv = payload?.kollektiv || currentKollektivRunning;
+                if (resultKollektiv && payload && payload.bestResult) {
+                    allKollektivResults[resultKollektiv] = cloneDeep(payload);
                 } else {
-                    console.warn("BruteForceManager: Unvollständiges Ergebnis vom Worker, Kollektiv-Info fehlt oder kein bestResult.");
+                    console.warn("BruteForceManager: Unvollständiges Ergebnis vom Worker, Kollektiv-Info fehlt oder kein bestResult. Payload:", payload, "CurrentKollektivRunning:", currentKollektivRunning);
                 }
                 currentKollektivRunning = null;
                 if (onResultCallback) onResultCallback(payload);
                 break;
             case 'cancelled':
                 isRunningState = false;
+                const cancelledKollektiv = payload?.kollektiv || currentKollektivRunning;
+                console.log(`BruteForceManager: Analyse für Kollektiv '${cancelledKollektiv}' abgebrochen.`);
                 currentKollektivRunning = null;
                 if (onCancelledCallback) onCancelledCallback(payload);
                 break;
             case 'error':
                 isRunningState = false;
+                const errorKollektiv = payload?.kollektiv || currentKollektivRunning;
+                console.error(`BruteForceManager: Fehler vom Worker für Kollektiv '${errorKollektiv}':`, payload?.message);
                 currentKollektivRunning = null;
                 if (onErrorCallback) onErrorCallback(payload);
                 break;
             default:
-                console.warn(`BruteForceManager: Unbekannter Nachrichtentyp vom Worker: ${type}`);
+                console.warn(`BruteForceManager: Unbekannter Nachrichtentyp vom Worker: ${type}`, payload);
         }
     }
 
     function handleWorkerError(error) {
-        console.error("BruteForceManager: Fehler im Brute Force Worker:", error);
+        console.error("BruteForceManager: Globaler Fehler im Brute Force Worker:", error);
         isRunningState = false;
+        const erroredKollektiv = currentKollektivRunning;
         currentKollektivRunning = null;
-        if (onErrorCallback) onErrorCallback({ message: error.message || 'Unbekannter Worker-Fehler' });
+        if (onErrorCallback) onErrorCallback({ message: error.message || 'Unbekannter Worker-Fehler', kollektiv: erroredKollektiv });
         worker = null;
     }
 
@@ -101,17 +109,20 @@ const bruteForceManager = (() => {
     function startAnalysis(data, metric, kollektiv) {
         if (isRunningState) {
             console.warn("BruteForceManager: Analyse läuft bereits. Startanfrage ignoriert.");
-            if (onErrorCallback) onErrorCallback({ message: "Eine Optimierung läuft bereits."});
+            if (onErrorCallback) onErrorCallback({ message: "Eine Optimierung läuft bereits.", kollektiv: kollektiv });
             return false;
         }
         if (!worker) {
-            console.error("BruteForceManager: Worker nicht verfügbar. Start abgebrochen.");
-            if (onErrorCallback) onErrorCallback({ message: "Worker nicht verfügbar."});
-            return false;
+            const workerInitialized = initializeWorker();
+            if (!workerInitialized) {
+                console.error("BruteForceManager: Worker nicht verfügbar und konnte nicht initialisiert werden. Start abgebrochen.");
+                if (onErrorCallback) onErrorCallback({ message: "Worker nicht verfügbar und Initialisierung fehlgeschlagen.", kollektiv: kollektiv });
+                return false;
+            }
         }
         if (!data || data.length === 0) {
             console.warn("BruteForceManager: Keine Daten für die Analyse übergeben.");
-             if (onErrorCallback) onErrorCallback({ message: "Keine Daten für Optimierung übergeben."});
+             if (onErrorCallback) onErrorCallback({ message: "Keine Daten für Optimierung übergeben.", kollektiv: kollektiv });
             return false;
         }
 
