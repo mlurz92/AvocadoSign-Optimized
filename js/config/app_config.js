@@ -1,6 +1,6 @@
 const APP_CONFIG = Object.freeze({
     APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
-    APP_VERSION: "2.2.0",
+    APP_VERSION: "2.3.0",
 
     DEFAULT_SETTINGS: Object.freeze({
         KOLLEKTIV: 'Gesamt',
@@ -39,7 +39,8 @@ const APP_CONFIG = Object.freeze({
         PRESENTATION_VIEW: 'currentPresentationView_v4.2_detailed',
         PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
         CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
-        CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed'
+        CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
+        FIRST_APP_START: 'appFirstStart_v2.3'
     }),
 
     PATHS: Object.freeze({
@@ -56,6 +57,11 @@ const APP_CONFIG = Object.freeze({
         BOOTSTRAP_CI_REPLICATIONS: 1000,
         BOOTSTRAP_CI_ALPHA: 0.05,
         SIGNIFICANCE_LEVEL: 0.05,
+        SIGNIFICANCE_SYMBOLS: Object.freeze([
+            { threshold: 0.001, symbol: '***' },
+            { threshold: 0.01, symbol: '**' },
+            { threshold: 0.05, symbol: '*' }
+        ]),
         DEFAULT_CI_METHOD_PROPORTION: 'Wilson Score',
         DEFAULT_CI_METHOD_EFFECTSIZE: 'Bootstrap Percentile',
         FISHER_EXACT_THRESHOLD: 5
@@ -79,7 +85,8 @@ const APP_CONFIG = Object.freeze({
         TOAST_DURATION_MS: 4500,
         TRANSITION_DURATION_MS: 350,
         MODAL_BACKDROP_OPACITY: 0.6,
-        SPINNER_DELAY_MS: 300
+        SPINNER_DELAY_MS: 300,
+        STICKY_HEADER_OFFSET: '111px'
     }),
 
     CHART_SETTINGS: Object.freeze({
@@ -138,14 +145,14 @@ const APP_CONFIG = Object.freeze({
             PRAES_AS_PERF_CSV: 'PraesPerformanceASPUR_CSV',
             PRAES_AS_PERF_MD: 'PraesPerformanceASPUR_MD',
             PRAES_AS_VS_T2_PERF_CSV: 'PraesPerformanceASvsT2_{StudyID}_CSV',
-            PRAES_AS_VS_T2_PERF_MD: 'PraesPerformanceASvsT2_{StudyID}_MD',
+            PRAES_AS_VS_T2_COMP_MD: 'PraesMetricsASvsT2_{StudyID}_MD',
             PRAES_AS_VS_T2_TESTS_MD: 'PraesTestsASvsT2_{StudyID}_MD',
             PRAES_AS_VS_T2_CHART_PNG: 'PraesChartASvsT2_{StudyID}_PNG',
             PRAES_AS_VS_T2_CHART_SVG: 'PraesChartASvsT2_{StudyID}_SVG',
             TABLE_PNG_EXPORT: '{TableName}_PNG',
             CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
-            PUBLIKATION_METHODEN_MD: 'PublikationMethodenMD',
-            PUBLIKATION_ERGEBNISSE_MD: 'PublikationErgebnisseMD'
+            PUBLIKATION_METHODEN_MD: 'Publikation_{SectionName}_MD',
+            PUBLIKATION_ERGEBNISSE_MD: 'Publikation_{SectionName}_MD'
         }),
         EXCEL_SHEET_NAME_DATEN: 'Datenliste',
         EXCEL_SHEET_NAME_AUSWERTUNG: 'Auswertung',
@@ -168,7 +175,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.2.0"}`,
+        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.3.0"}`,
         REPORT_LOGO_ALT_TEXT: 'Institutslogo'
     }),
 
