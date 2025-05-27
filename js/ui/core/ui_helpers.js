@@ -93,8 +93,8 @@ const ui_helpers = (() => {
     function highlightElement(elementId, highlightClass = 'element-flash-highlight', duration = 1500) {
         const element = document.getElementById(elementId);
         if (element) {
-            element.classList.remove(highlightClass); // Remove first to reset animation if called again quickly
-            void element.offsetWidth; // Trigger reflow
+            element.classList.remove(highlightClass);
+            void element.offsetWidth; 
             element.classList.add(highlightClass);
             setTimeout(() => {
                 if (element) element.classList.remove(highlightClass);
@@ -436,9 +436,23 @@ const ui_helpers = (() => {
         }
 
         const addOrUpdateTooltip = (el, content) => {
-            if(el && content) { el.setAttribute('data-tippy-content', content); if(el._tippy && el._tippy.state.isEnabled) el._tippy.setContent(content); else initializeTooltips(el.parentElement || el); }
-            else if (el && el._tippy && el._tippy.state.isEnabled) { el._tippy.hide(); el._tippy.disable(); }
+            if (el) {
+                const currentTippy = el._tippy;
+                if (content) {
+                    el.setAttribute('data-tippy-content', content);
+                    if (currentTippy && currentTippy.state.isEnabled) {
+                        currentTippy.setContent(content);
+                    } else if (!currentTippy) {
+                        initializeTooltips(el.parentElement || el);
+                    }
+                } else if (currentTippy && currentTippy.state.isEnabled) {
+                    currentTippy.hide();
+                    currentTippy.disable();
+                }
+            }
         };
+        
+        const bfInfoElement = elements.bfInfoKollektiv?.closest('#brute-force-info');
 
         switch (state) {
             case 'idle': case 'cancelled': case 'error':
@@ -453,7 +467,7 @@ const ui_helpers = (() => {
                 else if (state === 'cancelled') statusMsg = 'Abgebrochen.';
                 else if (state === 'error') statusMsg = `Fehler: ${data?.message || 'Unbekannt.'}`;
                 if (elements.statusText) updateElementText(elements.statusText.id, statusMsg);
-                addOrUpdateTooltip(elements.bfInfoKollektiv.closest('#brute-force-info'), (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Aktueller Status: ${statusMsg}`);
+                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Aktueller Status: ${statusMsg}`);
                 break;
             case 'start':
                 if (elements.progressBar) { elements.progressBar.style.width = '0%'; elements.progressBar.setAttribute('aria-valuenow', '0'); }
@@ -464,13 +478,13 @@ const ui_helpers = (() => {
                 if (elements.bestMetric) updateElementText(elements.bestMetric.id, '--');
                 if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, 'Beste Kriterien: --');
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Initialisiere...');
-                addOrUpdateTooltip(elements.bfInfoKollektiv.closest('#brute-force-info'), (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: Initialisiere...`);
+                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: Initialisiere...`);
                 break;
             case 'started':
                 const totalComb = formatNumber(data?.totalCombinations || 0, 0, 'N/A');
                 if (elements.totalCount) updateElementText(elements.totalCount.id, totalComb);
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Teste...');
-                addOrUpdateTooltip(elements.bfInfoKollektiv.closest('#brute-force-info'), (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: Teste ${totalComb} Kombinationen...`);
+                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: Teste ${totalComb} Kombinationen...`);
                 if (elements.progressContainer) addOrUpdateTooltip(elements.progressContainer, (TOOLTIP_CONTENT.bruteForceProgress?.description || '').replace('[TOTAL]', totalComb));
                 break;
             case 'progress':
@@ -483,7 +497,7 @@ const ui_helpers = (() => {
                 if (elements.testedCount) updateElementText(elements.testedCount.id, testedNum);
                 if (elements.totalCount) updateElementText(elements.totalCount.id, totalNumProg);
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Läuft...');
-                addOrUpdateTooltip(elements.bfInfoKollektiv.closest('#brute-force-info'), (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: ${percentStr} (${testedNum}/${totalNumProg})`);
+                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: ${percentStr} (${testedNum}/${totalNumProg})`);
                 if (data?.currentBest && data.currentBest.criteria && isFinite(data.currentBest.metricValue)) {
                     const bestValStr = formatNumber(data.currentBest.metricValue, 4);
                     const bestCritStr = formatCriteriaFunc(data.currentBest.criteria, data.currentBest.logic);
@@ -516,12 +530,12 @@ const ui_helpers = (() => {
                     if (elements.resultKollektivNplus) updateElementText(elements.resultKollektivNplus.id, formatNumber(data.nPlus,0,'--'));
                     if (elements.resultKollektivNminus) updateElementText(elements.resultKollektivNminus.id, formatNumber(data.nMinus,0,'--'));
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig.');
-                     addOrUpdateTooltip(elements.bfInfoKollektiv.closest('#brute-force-info'), (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${resultKollektivName}</strong>`) + ` Status: Fertig.`);
+                     if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${resultKollektivName}</strong>`) + ` Status: Fertig.`);
                      if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, (TOOLTIP_CONTENT.bruteForceResult.description || '').replace('[N_GESAMT]', formatNumber(data.nGesamt,0,'?')).replace('[N_PLUS]', formatNumber(data.nPlus,0,'?')).replace('[N_MINUS]', formatNumber(data.nMinus,0,'?')) );
                 } else {
                     if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true);
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig (kein valides Ergebnis).');
-                     addOrUpdateTooltip(elements.bfInfoKollektiv.closest('#brute-force-info'), (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${resultKollektivName}</strong>`) + ` Status: Fertig (kein Ergebnis).`);
+                     if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${resultKollektivName}</strong>`) + ` Status: Fertig (kein Ergebnis).`);
                 }
                 break;
         }
@@ -637,7 +651,7 @@ const ui_helpers = (() => {
              interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
         }
         interpretation = interpretation.replace(/, p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
-        interpretation = interpretation.replace(/<hr.*?>.*$/, ''); // remove existing hr if any
+        interpretation = interpretation.replace(/<hr.*?>.*$/, ''); 
         interpretation += ciWarning;
         return interpretation;
     }
@@ -776,7 +790,7 @@ const ui_helpers = (() => {
              if(isFirstStart){
                 kurzanleitungModalInstance.show();
                 saveToLocalStorage(firstStartKey, 'shown');
-             } else if (modalElement && !modalElement.classList.contains('show')) { // Nur zeigen, wenn manuell getriggert und nicht schon offen
+             } else if (modalElement && !modalElement.classList.contains('show')) { 
                 kurzanleitungModalInstance.show();
              }
         }
