@@ -358,6 +358,18 @@ function runBruteForce() {
             }
         }
         const finalBest = bestResult.criteria ? cloneDeepWorker(bestResult) : (topResults[0] ? cloneDeepWorker(topResults[0]) : null);
+        
+        let nGesamt = 0;
+        let nPlus = 0;
+        let nMinus = 0;
+        if (Array.isArray(currentData)) {
+            nGesamt = currentData.length;
+            currentData.forEach(p => {
+                if (p && p.n === '+') nPlus++;
+                else if (p && p.n === '-') nMinus++;
+            });
+        }
+
 
         self.postMessage({
             type: 'result',
@@ -371,7 +383,10 @@ function runBruteForce() {
                 metric: targetMetric,
                 kollektiv: kollektivName,
                 duration: endTime - startTime,
-                totalTested: combinationsTested
+                totalTested: combinationsTested,
+                nGesamt: nGesamt,
+                nPlus: nPlus,
+                nMinus: nMinus
             }
         });
     }
