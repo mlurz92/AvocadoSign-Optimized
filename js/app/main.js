@@ -316,16 +316,10 @@ function _renderCurrentTab(tabId) {
         case 'statistik-tab': viewRenderer.renderStatistikTab(processedData, appliedCriteria, appliedLogic, state.getCurrentStatsLayout(), state.getCurrentStatsKollektiv1(), state.getCurrentStatsKollektiv2(), currentKollektiv); break;
         case 'praesentation-tab': viewRenderer.renderPresentationTab(state.getCurrentPresentationView(), state.getCurrentPresentationStudyId(), currentKollektiv, processedData, appliedCriteria, appliedLogic); break;
         case 'publikation-tab':
-            if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.initializeData === 'function') {
-                publikationTabLogic.initializeData(
-                    localRawData,
-                    appliedCriteria,
-                    appliedLogic,
-                    bruteForceManager.getAllResults()
-                );
+            if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.getRenderedSectionContent === 'function') {
                 viewRenderer.renderPublikationTab(state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), currentKollektiv, localRawData, bruteForceManager.getAllResults());
             } else {
-                console.error("PublikationTabLogic oder initializeData nicht verfügbar für Tab 'publikation-tab'.");
+                console.error("PublikationTabLogic oder getRenderedSectionContent nicht verfügbar für Tab 'publikation-tab'.");
                 const paneId = 'publikation-tab-pane';
                  ui_helpers.updateElementHTML(paneId, `<div class="alert alert-danger m-3">Interner Fehler: Publikationsmodul konnte nicht korrekt geladen werden.</div>`);
             }
