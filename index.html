@@ -21,10 +21,10 @@
                 <span data-tippy-content="Anteil T2+ Patienten (angew. Kriterien)">T2: <strong id="header-status-t2">--</strong></span>
             </div>
             <div class="d-flex align-items-center">
-                <button class="btn btn-sm btn-outline-secondary me-2" id="btn-kurzanleitung" data-tippy-content="Zeigt eine Kurzanleitung und wichtige Hinweise zur Bedienung der Anwendung.">
+                <button class="btn btn-sm btn-outline-secondary me-2" id="btn-kurzanleitung" data-tippy-content="${TOOLTIP_CONTENT.kurzanleitungButton?.description || 'Kurzanleitung anzeigen'}">
                     <i class="fas fa-question-circle"></i>
                 </button>
-                <div class="btn-group" role="group" aria-label="Kollektiv Auswahl" data-tippy-content="Wählen Sie das Patientenkollektiv für die Analyse aus.">
+                <div class="btn-group" role="group" aria-label="Kollektiv Auswahl" data-tippy-content="${TOOLTIP_CONTENT.kollektivButtons?.description || 'Wählen Sie das Patientenkollektiv für die Analyse aus.'}">
                     <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-gesamt" data-kollektiv="Gesamt">Gesamt</button>
                     <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-direkt-op" data-kollektiv="direkt OP">Direkt OP</button>
                     <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-nrct" data-kollektiv="nRCT">nRCT</button>
@@ -126,10 +126,11 @@
       <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content modal-glass">
           <div class="modal-header">
-            <h5 class="modal-title" id="kurzanleitungModalLabel"></h5>
+            <h5 class="modal-title" id="kurzanleitungModalLabel">${UI_TEXTS.kurzanleitung.title || 'Kurzanleitung'}</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
           </div>
           <div class="modal-body">
+            ${UI_TEXTS.kurzanleitung.content || '<p>Kein Inhalt für Kurzanleitung definiert.</p>'}
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Schließen</button>
