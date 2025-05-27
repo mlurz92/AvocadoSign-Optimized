@@ -20,7 +20,7 @@ const statistikTabLogic = (() => {
                             <caption>Demographie & Status (N=${total})</caption>
                             <thead class="visually-hidden"><tr><th>Metrik</th><th>Wert</th></tr></thead>
                             <tbody>
-                                <tr data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.alterMedian?.description || 'Alter (Median, Min-Max, [Mittelwert ± SD])')}"><td>Alter Median (Min-Max) [Mean ± SD]</td><td>${fv(d.alter?.median, 1, lang==='en')} (${fv(d.alter?.min, 0, lang==='en')} - ${fv(d.alter?.max, 0, lang==='en')}) [${fv(d.alter?.mean, 1, lang==='en')} ± ${fv(d.alter?.sd, 1, lang==='en')}]</td></tr>
+                                <tr data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.alterMedian?.description || 'Alter (Median, Min-Max, [Mittelwert ± SD])')}"><td>Alter Median (Min-Max) [Mean ± SD]</td><td>${fv(d.alter?.median, 1)} (${fv(d.alter?.min, 0)} - ${fv(d.alter?.max, 0)}) [${fv(d.alter?.mean, 1)} ± ${fv(d.alter?.sd, 1)}]</td></tr>
                                 <tr data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.geschlecht?.description || 'Geschlechterverteilung')}"><td>Geschlecht (m / w) (n / %)</td><td>${d.geschlecht?.m ?? 0} / ${d.geschlecht?.f ?? 0} (${fP(d.anzahlPatienten > 0 ? (d.geschlecht?.m ?? 0) / d.anzahlPatienten : NaN, 1)} / ${fP(d.anzahlPatienten > 0 ? (d.geschlecht?.f ?? 0) / d.anzahlPatienten : NaN, 1)})</td></tr>
                                 <tr data-tippy-content="${(TOOLTIP_CONTENT.datenTable.therapie || 'Therapieverteilung')}"><td>Therapie (direkt OP / nRCT) (n / %)</td><td>${d.therapie?.['direkt OP'] ?? 0} / ${d.therapie?.nRCT ?? 0} (${fP(d.anzahlPatienten > 0 ? (d.therapie?.['direkt OP'] ?? 0) / d.anzahlPatienten : NaN, 1)} / ${fP(d.anzahlPatienten > 0 ? (d.therapie?.nRCT ?? 0) / d.anzahlPatienten : NaN, 1)})</td></tr>
                                 <tr data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.nStatus?.description || 'N-Status Verteilung (Pathologie)')}"><td>N Status (+ / -) (n / %)</td><td>${d.nStatus?.plus ?? 0} / ${d.nStatus?.minus ?? 0} (${fP(d.anzahlPatienten > 0 ? (d.nStatus?.plus ?? 0) / d.anzahlPatienten : NaN, 1)} / ${fP(d.anzahlPatienten > 0 ? (d.nStatus?.minus ?? 0) / d.anzahlPatienten : NaN, 1)})</td></tr>
@@ -62,8 +62,8 @@ const statistikTabLogic = (() => {
         const matrix = stats.matrix; const na = '--';
         const displayKollektivName = getKollektivDisplayName(kollektivName);
         const fCI_perf = (m, key) => {
-            const digits = (key === 'f1' || key === 'auc' || key === 'lrPlus' || key === 'lrMinus') ? 3 : 1;
-            const isPercent = !(key === 'f1' || key === 'auc' || key === 'lrPlus' || key === 'lrMinus');
+            const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
+            const isPercent = !(key === 'f1' || key === 'auc');
             return formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, digits, isPercent, na);
         };
         let matrixHTML = `<h6 class="px-2 pt-2">Konfusionsmatrix (${methode} vs. N)</h6><table class="table table-sm table-bordered text-center small mx-2 mb-3" style="width: auto;" id="table-guete-matrix-${methode}-${kollektivName.replace(/\s+/g, '_')}"><thead class="small"><tr><th></th><th>N+ (Patho)</th><th>N- (Patho)</th></tr></thead><tbody><tr><td class="fw-bold">${methode}+</td><td data-tippy-content="Richtig Positiv (RP): ${methode}+ und N+. Anzahl Patienten, die von Methode ${methode} korrekt als positiv vorhergesagt wurden.">${formatNumber(matrix.rp,0,na)}</td><td data-tippy-content="Falsch Positiv (FP): ${methode}+ aber N-. Anzahl Patienten, die von Methode ${methode} fälschlicherweise als positiv vorhergesagt wurden (Typ-I-Fehler).">${formatNumber(matrix.fp,0,na)}</td></tr><tr><td class="fw-bold">${methode}-</td><td data-tippy-content="Falsch Negativ (FN): ${methode}- aber N+. Anzahl Patienten, die von Methode ${methode} fälschlicherweise als negativ vorhergesagt wurden (Typ-II-Fehler).">${formatNumber(matrix.fn,0,na)}</td><td data-tippy-content="Richtig Negativ (RN): ${methode}- und N-. Anzahl Patienten, die von Methode ${methode} korrekt als negativ vorhergesagt wurden.">${formatNumber(matrix.rn,0,na)}</td></tr></tbody></table>`;
@@ -76,35 +76,20 @@ const statistikTabLogic = (() => {
             <tr><td data-tippy-content="${ui_helpers.getMetricDescriptionHTML('balAcc', methode)}">Balanced Accuracy</td><td data-tippy-content="${ui_helpers.getMetricInterpretationHTML('balAcc', stats.balAcc, methode, displayKollektivName)}">${fCI_perf(stats.balAcc, 'balAcc')}</td><td>${stats.balAcc?.method || na}</td></tr>
             <tr><td data-tippy-content="${ui_helpers.getMetricDescriptionHTML('f1', methode)}">F1-Score</td><td data-tippy-content="${ui_helpers.getMetricInterpretationHTML('f1', stats.f1, methode, displayKollektivName)}">${fCI_perf(stats.f1, 'f1')}</td><td>${stats.f1?.method || na}</td></tr>
             <tr><td data-tippy-content="${ui_helpers.getMetricDescriptionHTML('auc', methode)}">AUC (Bal. Acc.)</td><td data-tippy-content="${ui_helpers.getMetricInterpretationHTML('auc', stats.auc, methode, displayKollektivName)}">${fCI_perf(stats.auc, 'auc')}</td><td>${stats.auc?.method || na}</td></tr>
-            <tr><td data-tippy-content="${ui_helpers.getMetricDescriptionHTML('lrPlus', methode)}">LR+</td><td data-tippy-content="${ui_helpers.getMetricInterpretationHTML('lrPlus', stats.lrPlus, methode, displayKollektivName)}">${fCI_perf(stats.lrPlus, 'lrPlus')}</td><td>${stats.lrPlus?.method || na}</td></tr>
-            <tr><td data-tippy-content="${ui_helpers.getMetricDescriptionHTML('lrMinus', methode)}">LR-</td><td data-tippy-content="${ui_helpers.getMetricInterpretationHTML('lrMinus', stats.lrMinus, methode, displayKollektivName)}">${fCI_perf(stats.lrMinus, 'lrMinus')}</td><td>${stats.lrMinus?.method || na}</td></tr>
         </tbody></table></div>`;
         return matrixHTML + metricsHTML;
     }
 
     function createVergleichContentHTML(stats, kollektivName, t2ShortName = 'T2') {
         if (!stats) return '<p class="text-muted small p-3">Keine Vergleichsdaten verfügbar.</p>';
-        const na = '--';
-        const fPVal = (pVal) => (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na, true)) : na;
+        const na = '--'; const fP = (pVal) => (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na, true)) : na;
         const displayKollektivName = getKollektivDisplayName(kollektivName);
-        const methode1Name = 'AS';
-        const methode2Name = t2ShortName;
-
-        let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped small mb-0" id="table-vergleich-as-vs-t2-${kollektivName.replace(/\s+/g, '_')}"><caption>Statistische Vergleiche zwischen Avocado Sign (AS) und T2-Kriterien (${t2ShortName}) im Kollektiv ${displayKollektivName}</caption><thead><tr><th>Test / Metrik</th><th>Wert / Statistik</th><th>p-Wert / 95% CI</th><th>Methode</th></tr></thead><tbody>
-            <tr><td data-tippy-content="${ui_helpers.getTestDescriptionHTML('mcnemar', methode2Name, methode1Name, methode2Name)}">McNemar (Accuracy)</td><td>${formatNumber(stats.mcnemar?.statistic, 3, na, true)} (df=${stats.mcnemar?.df || na})</td><td data-tippy-content="${ui_helpers.getTestInterpretationHTML('mcnemar', stats.mcnemar, displayKollektivName, methode2Name, methode1Name, methode2Name)}">${fPVal(stats.mcnemar?.pValue)} ${getStatisticalSignificanceSymbol(stats.mcnemar?.pValue)}</td><td>${stats.mcnemar?.method || na}</td></tr>
-            <tr><td data-tippy-content="${ui_helpers.getTestDescriptionHTML('delong', methode2Name, methode1Name, methode2Name)}">DeLong (AUC)</td><td>Z=${formatNumber(stats.delong?.Z, 3, na, true)}</td><td data-tippy-content="${ui_helpers.getTestInterpretationHTML('delong', stats.delong, displayKollektivName, methode2Name, methode1Name, methode2Name)}">${fPVal(stats.delong?.pValue)} ${getStatisticalSignificanceSymbol(stats.delong?.pValue)}</td><td>${stats.delong?.method || na}</td></tr>
-            <tr><td data-tippy-content="${ui_helpers.getMetricDescriptionHTML('diffSens', methode1Name, methode2Name)}">Differenz Sensitivität (AS - ${methode2Name})</td>
-                <td data-tippy-content="${ui_helpers.getMetricInterpretationHTML('diffSens', stats.diffSens, methode1Name, methode2Name, displayKollektivName)}">${formatCI(stats.diffSens?.value, stats.diffSens?.ci?.lower, stats.diffSens?.ci?.upper, 1, true, na)}</td>
-                <td>(${formatNumber(stats.diffSens?.ci?.lower, 1, na, true)}% - ${formatNumber(stats.diffSens?.ci?.upper, 1, na, true)}%)</td>
-                <td>${stats.diffSens?.method || na}</td></tr>
-            <tr><td data-tippy-content="${ui_helpers.getMetricDescriptionHTML('diffSpez', methode1Name, methode2Name)}">Differenz Spezifität (AS - ${methode2Name})</td>
-                <td data-tippy-content="${ui_helpers.getMetricInterpretationHTML('diffSpez', stats.diffSpez, methode1Name, methode2Name, displayKollektivName)}">${formatCI(stats.diffSpez?.value, stats.diffSpez?.ci?.lower, stats.diffSpez?.ci?.upper, 1, true, na)}</td>
-                <td>(${formatNumber(stats.diffSpez?.ci?.lower, 1, na, true)}% - ${formatNumber(stats.diffSpez?.ci?.upper, 1, na, true)}%)</td>
-                <td>${stats.diffSpez?.method || na}</td></tr>
+        let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped small mb-0" id="table-vergleich-as-vs-t2-${kollektivName.replace(/\s+/g, '_')}"><caption>Statistische Vergleiche zwischen Avocado Sign (AS) und T2-Kriterien (${t2ShortName}) im Kollektiv ${displayKollektivName}</caption><thead><tr><th>Test</th><th>Statistik</th><th>p-Wert</th><th>Methode</th></tr></thead><tbody>
+            <tr><td data-tippy-content="${ui_helpers.getTestDescriptionHTML('mcnemar', t2ShortName)}">McNemar (Accuracy)</td><td>${formatNumber(stats.mcnemar?.statistic, 3, na, true)} (df=${stats.mcnemar?.df || na})</td><td data-tippy-content="${ui_helpers.getTestInterpretationHTML('mcnemar', stats.mcnemar, displayKollektivName, t2ShortName)}">${fP(stats.mcnemar?.pValue)} ${getStatisticalSignificanceSymbol(stats.mcnemar?.pValue)}</td><td>${stats.mcnemar?.method || na}</td></tr>
+            <tr><td data-tippy-content="${ui_helpers.getTestDescriptionHTML('delong', t2ShortName)}">DeLong (AUC)</td><td>Z=${formatNumber(stats.delong?.Z, 3, na, true)}</td><td data-tippy-content="${ui_helpers.getTestInterpretationHTML('delong', stats.delong, displayKollektivName, t2ShortName)}">${fP(stats.delong?.pValue)} ${getStatisticalSignificanceSymbol(stats.delong?.pValue)}</td><td>${stats.delong?.method || na}</td></tr>
         </tbody></table></div>`;
         return tableHTML;
     }
-
 
     function createAssoziationContentHTML(stats, kollektivName, criteria) {
         if (!stats || Object.keys(stats).length === 0) return '<p class="text-muted small p-3">Keine Assoziationsdaten verfügbar.</p>';
@@ -196,20 +181,11 @@ const statistikTabLogic = (() => {
     }
 
     function createVergleichKollektiveContentHTML(stats, kollektiv1Name, kollektiv2Name) {
-        if (!stats) return '<p class="text-muted small p-3">Keine Kollektiv-Vergleichsdaten verfügbar.</p>';
-        const na = '--';
-        const fPVal = (pVal) => (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na, true)) : na;
-        const kollektiv1Display = getKollektivDisplayName(kollektiv1Name);
-        const kollektiv2Display = getKollektivDisplayName(kollektiv2Name);
-
-        const accAS = stats.accuracyComparison?.as;
-        const accT2 = stats.accuracyComparison?.t2;
-        const aucAS = stats.aucComparison?.as;
-        const aucT2 = stats.aucComparison?.t2;
-        const sensASComp = stats.sensComparisonAS;
-        const spezASComp = stats.spezComparisonAS;
-        const sensT2Comp = stats.sensComparisonT2;
-        const spezT2Comp = stats.spezComparisonT2;
+        if (!stats || !stats.accuracyComparison || !stats.aucComparison) return '<p class="text-muted small p-3">Keine Kollektiv-Vergleichsdaten verfügbar.</p>';
+        const na = '--'; const fP = (pVal) => (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na, true)) : na;
+        const kollektiv1Display = getKollektivDisplayName(kollektiv1Name); const kollektiv2Display = getKollektivDisplayName(kollektiv2Name);
+        const accAS = stats.accuracyComparison?.as; const accT2 = stats.accuracyComparison?.t2;
+        const aucAS = stats.aucComparison?.as; const aucT2 = stats.aucComparison?.t2;
 
         const getPValueInterpretationComp = (pValue, testKey, methode) => {
              const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[testKey]?.interpretation || 'Keine Interpretation verfügbar.';
@@ -222,35 +198,12 @@ const statistikTabLogic = (() => {
                  .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
                  .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`);
         };
-        
-        const getDiffInterpretation = (diffData, methode, metricName) => {
-            if (!diffData) return na;
-            const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[`diff${metricName}`]?.interpretation || `Differenz der ${metricName} ([METHODE1] - [METHODE2])`;
-            return interpretationTemplate
-                .replace(/\[METHODE1\]/g, `<strong>${methode} in ${kollektiv1Display}</strong>`)
-                .replace(/\[METHODE2\]/g, `<strong>${methode} in ${kollektiv2Display}</strong>`)
-                .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektiv1Display} vs. ${kollektiv2Display}</strong>`) // General context
-                .replace(/\[WERT\]/g, `<strong>${formatNumber(diffData.value, 3, na, true)}</strong>`)
-                .replace(/\[PROZENTPUNKTE\]/g, `(${formatNumber(diffData.value * 100, 1, na, true)} PP)`)
-                .replace(/\[LOWER\]/g, `<strong>${formatNumber(diffData.ci?.lower, 3, na, true)}</strong>`)
-                .replace(/\[UPPER\]/g, `<strong>${formatNumber(diffData.ci?.upper, 3, na, true)}</strong>`)
-                .replace(/\[HOEHER_NIEDRIGER_GLEICH\]/g, diffData.value > 1e-9 ? 'höher' : (diffData.value < -1e-9 ? 'niedriger' : 'annähernd gleich'));
-        };
 
-
-        let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped small mb-0" id="table-vergleich-kollektive-${kollektiv1Name.replace(/\s+/g, '_')}-vs-${kollektiv2Name.replace(/\s+/g, '_')}"><caption>Vergleich der diagnostischen Leistung zwischen den Kollektiven ${kollektiv1Display} und ${kollektiv2Display}</caption><thead><tr><th>Vergleich</th><th>Methode</th><th>Wert / Diff. (95% CI)</th><th>p-Wert</th><th>Test</th></tr></thead><tbody>`;
-        
-        tableHTML += `<tr><td>Accuracy</td><td>AS</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.accComp?.description || 'Vergleich Accuracy AS zw. Kollektiven.').replace('[METHODE]','AS')}">Vergleich</td><td data-tippy-content="${getPValueInterpretationComp(accAS?.pValue, 'accComp', 'AS')}">${fPVal(accAS?.pValue)} ${getStatisticalSignificanceSymbol(accAS?.pValue)}</td><td>${accAS?.testName || na}</td></tr>`;
-        tableHTML += `<tr><td>Accuracy</td><td>T2</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.accComp?.description || 'Vergleich Accuracy T2 zw. Kollektiven.').replace('[METHODE]','T2')}">Vergleich</td><td data-tippy-content="${getPValueInterpretationComp(accT2?.pValue, 'accComp', 'T2')}">${fPVal(accT2?.pValue)} ${getStatisticalSignificanceSymbol(accT2?.pValue)}</td><td>${accT2?.testName || na}</td></tr>`;
-        
-        tableHTML += `<tr><td>AUC</td><td>AS</td><td data-tippy-content="${getDiffInterpretation(aucAS, 'AS', 'AUC')}">${formatCI(aucAS?.diffAUC, aucAS?.ci?.lower, aucAS?.ci?.upper, 3, false, na)} (Z=${formatNumber(aucAS?.Z, 2, na, true)})</td><td data-tippy-content="${getPValueInterpretationComp(aucAS?.pValue, 'aucComp', 'AS')}">${fPVal(aucAS?.pValue)} ${getStatisticalSignificanceSymbol(aucAS?.pValue)}</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.aucComp?.description || 'Vergleich AUC AS zw. Kollektiven.').replace('[METHODE]','AS')}">${aucAS?.method || na}</td></tr>`;
-        tableHTML += `<tr><td>AUC</td><td>T2</td><td data-tippy-content="${getDiffInterpretation(aucT2, 'T2', 'AUC')}">${formatCI(aucT2?.diffAUC, aucT2?.ci?.lower, aucT2?.ci?.upper, 3, false, na)} (Z=${formatNumber(aucT2?.Z, 2, na, true)})</td><td data-tippy-content="${getPValueInterpretationComp(aucT2?.pValue, 'aucComp', 'T2')}">${fPVal(aucT2?.pValue)} ${getStatisticalSignificanceSymbol(aucT2?.pValue)}</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.aucComp?.description || 'Vergleich AUC T2 zw. Kollektiven.').replace('[METHODE]','T2')}">${aucT2?.method || na}</td></tr>`;
-
-        tableHTML += `<tr><td>Sensitivität</td><td>AS</td><td data-tippy-content="${getDiffInterpretation(sensASComp, 'AS', 'Sens')}">${formatCI(sensASComp?.value, sensASComp?.ci?.lower, sensASComp?.ci?.upper, 1, true, na)}</td><td>${na}</td><td>${sensASComp?.method || na}</td></tr>`;
-        tableHTML += `<tr><td>Spezifität</td><td>AS</td><td data-tippy-content="${getDiffInterpretation(spezASComp, 'AS', 'Spez')}">${formatCI(spezASComp?.value, spezASComp?.ci?.lower, spezASComp?.ci?.upper, 1, true, na)}</td><td>${na}</td><td>${spezASComp?.method || na}</td></tr>`;
-        tableHTML += `<tr><td>Sensitivität</td><td>T2</td><td data-tippy-content="${getDiffInterpretation(sensT2Comp, 'T2', 'Sens')}">${formatCI(sensT2Comp?.value, sensT2Comp?.ci?.lower, sensT2Comp?.ci?.upper, 1, true, na)}</td><td>${na}</td><td>${sensT2Comp?.method || na}</td></tr>`;
-        tableHTML += `<tr><td>Spezifität</td><td>T2</td><td data-tippy-content="${getDiffInterpretation(spezT2Comp, 'T2', 'Spez')}">${formatCI(spezT2Comp?.value, spezT2Comp?.ci?.lower, spezT2Comp?.ci?.upper, 1, true, na)}</td><td>${na}</td><td>${spezT2Comp?.method || na}</td></tr>`;
-        
+        let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped small mb-0" id="table-vergleich-kollektive-${kollektiv1Name.replace(/\s+/g, '_')}-vs-${kollektiv2Name.replace(/\s+/g, '_')}"><caption>Vergleich der diagnostischen Leistung zwischen den Kollektiven ${kollektiv1Display} und ${kollektiv2Display}</caption><thead><tr><th>Vergleich</th><th>Methode</th><th>p-Wert</th><th>Test</th></tr></thead><tbody>`;
+        tableHTML += `<tr><td>Accuracy</td><td>AS</td><td data-tippy-content="${getPValueInterpretationComp(accAS?.pValue, 'accComp', 'AS')}">${fP(accAS?.pValue)} ${getStatisticalSignificanceSymbol(accAS?.pValue)}</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.accComp?.description || 'Vergleich Accuracy der Methode [METHODE] zwischen zwei Kollektiven.').replace('[METHODE]','AS')}">${accAS?.testName || na}</td></tr>`;
+        tableHTML += `<tr><td>Accuracy</td><td>T2</td><td data-tippy-content="${getPValueInterpretationComp(accT2?.pValue, 'accComp', 'T2')}">${fP(accT2?.pValue)} ${getStatisticalSignificanceSymbol(accT2?.pValue)}</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.accComp?.description || 'Vergleich Accuracy der Methode [METHODE] zwischen zwei Kollektiven.').replace('[METHODE]','T2')}">${accT2?.testName || na}</td></tr>`;
+        tableHTML += `<tr><td>AUC</td><td>AS</td><td data-tippy-content="${getPValueInterpretationComp(aucAS?.pValue, 'aucComp', 'AS')}">${fP(aucAS?.pValue)} ${getStatisticalSignificanceSymbol(aucAS?.pValue)} (Diff: ${formatNumber(aucAS?.diffAUC, 3, na, true)}, Z=${formatNumber(aucAS?.Z, 2, na, true)})</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.aucComp?.description || 'Vergleich AUC der Methode [METHODE] zwischen zwei Kollektiven.').replace('[METHODE]','AS')}">${aucAS?.method || na}</td></tr>`;
+        tableHTML += `<tr><td>AUC</td><td>T2</td><td data-tippy-content="${getPValueInterpretationComp(aucT2?.pValue, 'aucComp', 'T2')}">${fP(aucT2?.pValue)} ${getStatisticalSignificanceSymbol(aucT2?.pValue)} (Diff: ${formatNumber(aucT2?.diffAUC, 3, na, true)}, Z=${formatNumber(aucT2?.Z, 2, na, true)})</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.aucComp?.description || 'Vergleich AUC der Methode [METHODE] zwischen zwei Kollektiven.').replace('[METHODE]','T2')}">${aucT2?.method || na}</td></tr>`;
         tableHTML += `</tbody></table></div>`;
         return tableHTML;
     }
@@ -265,9 +218,7 @@ const statistikTabLogic = (() => {
              { key: 'ppv', label: cc.tableHeaderPPV || "PPV", tooltip: (cc.tableHeaderPPV || "PPV") + ": " + ui_helpers.getMetricDescriptionHTML('ppv', 'der Methode') },
              { key: 'npv', label: cc.tableHeaderNPV || "NPV", tooltip: (cc.tableHeaderNPV || "NPV") + ": " + ui_helpers.getMetricDescriptionHTML('npv', 'der Methode') },
              { key: 'acc', label: cc.tableHeaderAcc || "Acc.", tooltip: (cc.tableHeaderAcc || "Accuracy") + ": " + ui_helpers.getMetricDescriptionHTML('acc', 'der Methode') },
-             { key: 'auc', label: cc.tableHeaderAUC || "AUC/BalAcc", tooltip: (cc.tableHeaderAUC || "AUC/Bal. Accuracy") + ": " + ui_helpers.getMetricDescriptionHTML('auc', 'der Methode') },
-             { key: 'lrPlus', label: cc.tableHeaderLRplus || "LR+", tooltip: (cc.tableHeaderLRplus || "LR+") + ": " + ui_helpers.getMetricDescriptionHTML('lrPlus', 'der Methode') },
-             { key: 'lrMinus', label: cc.tableHeaderLRminus || "LR-", tooltip: (cc.tableHeaderLRminus || "LR-") + ": " + ui_helpers.getMetricDescriptionHTML('lrMinus', 'der Methode') }
+             { key: 'auc', label: cc.tableHeaderAUC || "AUC/BalAcc", tooltip: (cc.tableHeaderAUC || "AUC/Bal. Accuracy") + ": " + ui_helpers.getMetricDescriptionHTML('auc', 'der Methode') }
          ];
          const tableId = "table-kriterien-vergleich";
          const displayGlobalKollektivName = getKollektivDisplayName(globalKollektivName);
@@ -301,18 +252,20 @@ const statistikTabLogic = (() => {
              } else if ((isApplied || isAS) && patientCountForInterpretation !== undefined) {
                  nameSuffix = ` <small class="text-muted fst-italic">(N=${patientCountForInterpretation || '?'})</small>`;
              }
-             
-             const createMetricDataForTooltip = (value) => ({ value: value, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} });
+             const metricForTooltipAS = { value: result.sens, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} };
+             const metricForTooltipSpez = { value: result.spez, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} };
+             const metricForTooltipPPV = { value: result.ppv, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} };
+             const metricForTooltipNPV = { value: result.npv, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} };
+             const metricForTooltipAcc = { value: result.acc, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} };
+             const metricForTooltipAUC = { value: result.auc, matrix_components: {total: patientCountForInterpretation} };
 
-             const tooltipSens = ui_helpers.getMetricInterpretationHTML('sens', createMetricDataForTooltip(result.sens), nameDisplay, displayKollektivForInterpretation);
-             const tooltipSpez = ui_helpers.getMetricInterpretationHTML('spez', createMetricDataForTooltip(result.spez), nameDisplay, displayKollektivForInterpretation);
-             const tooltipPPV = ui_helpers.getMetricInterpretationHTML('ppv', createMetricDataForTooltip(result.ppv), nameDisplay, displayKollektivForInterpretation);
-             const tooltipNPV = ui_helpers.getMetricInterpretationHTML('npv', createMetricDataForTooltip(result.npv), nameDisplay, displayKollektivForInterpretation);
-             const tooltipAcc = ui_helpers.getMetricInterpretationHTML('acc', createMetricDataForTooltip(result.acc), nameDisplay, displayKollektivForInterpretation);
-             const tooltipAUC = ui_helpers.getMetricInterpretationHTML('auc', createMetricDataForTooltip(result.auc), nameDisplay, displayKollektivForInterpretation);
-             const tooltipLRplus = ui_helpers.getMetricInterpretationHTML('lrPlus', createMetricDataForTooltip(result.lrPlus), nameDisplay, displayKollektivForInterpretation);
-             const tooltipLRminus = ui_helpers.getMetricInterpretationHTML('lrMinus', createMetricDataForTooltip(result.lrMinus), nameDisplay, displayKollektivForInterpretation);
 
+             const tooltipSens = ui_helpers.getMetricInterpretationHTML('sens', metricForTooltipAS, nameDisplay, displayKollektivForInterpretation);
+             const tooltipSpez = ui_helpers.getMetricInterpretationHTML('spez', metricForTooltipSpez, nameDisplay, displayKollektivForInterpretation);
+             const tooltipPPV = ui_helpers.getMetricInterpretationHTML('ppv', metricForTooltipPPV, nameDisplay, displayKollektivForInterpretation);
+             const tooltipNPV = ui_helpers.getMetricInterpretationHTML('npv', metricForTooltipNPV, nameDisplay, displayKollektivForInterpretation);
+             const tooltipAcc = ui_helpers.getMetricInterpretationHTML('acc', metricForTooltipAcc, nameDisplay, displayKollektivForInterpretation);
+             const tooltipAUC = ui_helpers.getMetricInterpretationHTML('auc', metricForTooltipAUC, nameDisplay, displayKollektivForInterpretation);
 
              tableHTML += `<tr class="${rowClass}">
                              <td class="fw-bold">${nameDisplay}${nameSuffix}</td>
@@ -322,8 +275,6 @@ const statistikTabLogic = (() => {
                              <td data-tippy-content="${tooltipNPV}">${formatPercent(result.npv, 1)}</td>
                              <td data-tippy-content="${tooltipAcc}">${formatPercent(result.acc, 1)}</td>
                              <td data-tippy-content="${tooltipAUC}">${formatNumber(result.auc, 3, '--', true)}</td>
-                             <td data-tippy-content="${tooltipLRplus}">${formatNumber(result.lrPlus, 2, '--', true)}</td>
-                             <td data-tippy-content="${tooltipLRminus}">${formatNumber(result.lrMinus, 2, '--', true)}</td>
                            </tr>`;
          });
          tableHTML += `</tbody></table></div>`;

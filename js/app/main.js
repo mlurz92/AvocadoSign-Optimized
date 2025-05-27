@@ -6,13 +6,13 @@ const mainAppInterface = {};
 
 const debouncedUpdateSizeInput_Main = debounce((value) => {
     if (typeof auswertungEventHandlers !== 'undefined' && typeof auswertungEventHandlers.handleT2SizeInputChange === 'function') {
-        auswertungEventHandlers.handleT2SizeInputChange(value);
+        auswertungEventHandlers.handleT2SizeInputChange(value, mainAppInterface);
     }
 }, APP_CONFIG.PERFORMANCE_SETTINGS.DEBOUNCE_DELAY_MS);
 
 const debouncedUpdateSizeRange_Main = debounce((value) => {
     if (typeof auswertungEventHandlers !== 'undefined' && typeof auswertungEventHandlers.handleT2SizeRangeChange === 'function') {
-        auswertungEventHandlers.handleT2SizeRangeChange(value);
+        auswertungEventHandlers.handleT2SizeRangeChange(value, mainAppInterface);
     }
 }, APP_CONFIG.PERFORMANCE_SETTINGS.DEBOUNCE_DELAY_MS);
 
@@ -41,16 +41,14 @@ function initializeApp() {
 
     try {
         if (typeof state === 'undefined' || typeof t2CriteriaManager === 'undefined' || typeof dataProcessor === 'undefined' ||
-            typeof viewRenderer === 'undefined' || typeof ui_helpers === 'undefined' || typeof uiComponents === 'undefined' ||
-            typeof exportService === 'undefined' || typeof tableRenderer === 'undefined' ||
+            typeof viewRenderer === 'undefined' || typeof ui_helpers === 'undefined' || typeof exportService === 'undefined' ||
             typeof dataTabLogic === 'undefined' || typeof auswertungTabLogic === 'undefined' ||
             typeof statistikTabLogic === 'undefined' || typeof praesentationTabLogic === 'undefined' ||
             typeof publikationTabLogic === 'undefined' || typeof publicationRenderer === 'undefined' ||
             typeof publicationTextGenerator === 'undefined' || typeof studyT2CriteriaManager === 'undefined' ||
             typeof bruteForceManager === 'undefined' || typeof generalEventHandlers === 'undefined' ||
             typeof auswertungEventHandlers === 'undefined' || typeof statistikEventHandlers === 'undefined' ||
-            typeof praesentationEventHandlers === 'undefined' || typeof publikationEventHandlers === 'undefined' ||
-            typeof chartRenderer === 'undefined' || typeof statisticsService === 'undefined'
+            typeof praesentationEventHandlers === 'undefined' || typeof publikationEventHandlers === 'undefined'
         ) {
              throw new Error("Ein oder mehrere Kernmodule oder Event-Handler-Module sind nicht verfügbar. Überprüfen Sie die Skript-Ladereihenfolge und Dateipfade in index.html.");
         }
@@ -63,6 +61,7 @@ function initializeApp() {
         mainAppInterface.getRawData = () => localRawData;
         mainAppInterface.updateGlobalUIState = updateUIState;
         mainAppInterface.refreshCurrentTab = refreshCurrentTab;
+        mainAppInterface.startBruteForceAnalysis = handleStartBruteForce_Internal;
 
 
         state.init();
@@ -77,38 +76,28 @@ function initializeApp() {
 
         initializeBruteForceManager();
 
-        if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.initializeData === 'function') {
-            publikationTabLogic.initializeData(
-                localRawData,
-                t2CriteriaManager.getAppliedCriteria(),
-                t2CriteriaManager.getAppliedLogic(),
-                bruteForceManager.getAllResults()
-            );
-        } else {
-            console.error("initializeApp: publikationTabLogic.initializeData ist nicht verfügbar.");
-            ui_helpers.showToast("Kritischer Fehler: Initialisierung des Publikationsmoduls fehlgeschlagen.", "danger");
-        }
-
+        publikationTabLogic.initializeData(
+            localRawData,
+            t2CriteriaManager.getAppliedCriteria(),
+            t2CriteriaManager.getAppliedLogic(),
+            bruteForceManager.getAllResults()
+        );
 
         filterAndPrepareData();
         updateUIState();
         setupEventListeners();
 
-        const initialTabId = state.getActiveTabId() || 'publikation-tab';
+        const initialTabId = state.getActiveTabId() || 'daten-tab';
         const initialTabElement = document.getElementById(initialTabId);
          if(initialTabElement && bootstrap.Tab) {
             const tab = bootstrap.Tab.getOrCreateInstance(initialTabElement);
             if(tab) tab.show();
          } else {
-             state.setActiveTabId('publikation-tab');
-             const fallbackTabElement = document.getElementById('publikation-tab');
-             if(fallbackTabElement && bootstrap.Tab) {
-                const tab = bootstrap.Tab.getOrCreateInstance(fallbackTabElement);
-                if(tab) tab.show();
-             } else {
-                 processTabChange(state.getActiveTabId());
-             }
+             state.setActiveTabId('daten-tab');
+             const fallbackTabElement = document.getElementById('daten-tab');
+             if(fallbackTabElement && bootstrap.Tab) bootstrap.Tab.getOrCreateInstance(fallbackTabElement).show();
          }
+        processTabChange(state.getActiveTabId());
 
         const mainTabNav = document.getElementById('mainTab');
         if(mainTabNav) {
@@ -121,28 +110,18 @@ function initializeApp() {
 
         const kurzanleitungButton = document.getElementById('btn-kurzanleitung');
         if (kurzanleitungButton && TOOLTIP_CONTENT.kurzanleitungButton?.description) {
-            kurzanleitungButton.setAttribute('data-tippy-content', TOOLTIP_CONTENT.kurzanleitungButton.description.replace('${APP_CONFIG.APP_VERSION}', APP_CONFIG.APP_VERSION));
+            kurzanleitungButton.setAttribute('data-tippy-content', TOOLTIP_CONTENT.kurzanleitungButton.description);
         }
-
-        if (!loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START)) {
-            ui_helpers.showKurzanleitung();
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, 'shown');
-        } else {
-            const kurzanleitungModalTitle = document.querySelector('#kurzanleitung-modal .modal-title');
-            const kurzanleitungModalBody = document.querySelector('#kurzanleitung-modal .modal-body');
-            if (kurzanleitungModalTitle && UI_TEXTS.kurzanleitung?.title) kurzanleitungModalTitle.innerHTML = UI_TEXTS.kurzanleitung.title;
-            if (kurzanleitungModalBody && UI_TEXTS.kurzanleitung?.content) {
-                 let content = UI_TEXTS.kurzanleitung.content;
-                 content = content.replace(/\$\{APP_CONFIG\.APP_VERSION\}/g, APP_CONFIG.APP_VERSION);
-                 content = content.replace(/\$\{formatNumber\(APP_CONFIG\.STATISTICAL_CONSTANTS\.SIGNIFICANCE_LEVEL, 2\)\.replace\('\.', ','\)\}/g, formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, 2).replace('.', ','));
-                 content = content.replace(/\$\{APP_CONFIG\.UI_SETTINGS\.CONTEXT_HELP_ICON_CLASS\}/g, APP_CONFIG.UI_SETTINGS.CONTEXT_HELP_ICON_CLASS);
-                 kurzanleitungModalBody.innerHTML = content;
-            }
-        }
-
+        ui_helpers.showKurzanleitung();
 
         ui_helpers.initializeTooltips(document.body);
         ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
+
+        const kurzanleitungModalTitle = document.querySelector('#kurzanleitung-modal .modal-title');
+        const kurzanleitungModalBody = document.querySelector('#kurzanleitung-modal .modal-body');
+        if (kurzanleitungModalTitle && UI_TEXTS.kurzanleitung?.title) kurzanleitungModalTitle.innerHTML = UI_TEXTS.kurzanleitung.title;
+        if (kurzanleitungModalBody && UI_TEXTS.kurzanleitung?.content) kurzanleitungModalBody.innerHTML = UI_TEXTS.kurzanleitung.content;
+
 
         ui_helpers.showToast('Anwendung initialisiert.', 'success', 2500);
         console.log("App Initialisierung abgeschlossen.");
@@ -249,7 +228,9 @@ function handleBodyClickDelegation(event) {
 
     const clickableRowParent = target.closest('tr.clickable-row[data-bs-target]');
      if (clickableRowParent && (target.closest('a, button, input, select, .btn-close, [data-bs-toggle="modal"], .table-download-png-btn, .chart-download-btn'))) {
+        event.stopPropagation(); 
     } else if (clickableRowParent) {
+
     }
 
 
@@ -275,14 +256,7 @@ function handleBodyClickDelegation(event) {
         if (target.closest('#statistik-toggle-vergleich')) { statistikEventHandlers.handleStatsLayoutToggle(target.closest('#statistik-toggle-vergleich'), mainAppInterface); return;}
     }
     if (target.closest('#export-tab-pane button[id^="export-"]') && !target.closest('#export-tab-pane button[id^="export-"]').disabled && !target.closest('#export-tab-pane button[id^="export-"]').id.startsWith('export-bruteforce-modal')) {
-        const exportId = target.closest('#export-tab-pane button[id^="export-"]').id.replace('export-', '');
-        if (exportId === 'publikation-paket-zip') {
-            exportService.exportCategoryZip('publikation_paket', localRawData, bruteForceManager.getAllResults(), state.getCurrentKollektiv(), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), state.getCurrentPublikationLang(), state.getCurrentPublikationBruteForceMetric());
-        } else if (exportId === 'konfiguration-json') {
-            exportService.exportConfiguration(state.getCurrentKollektiv(), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getResultsForKollektiv(state.getCurrentKollektiv()));
-        } else {
-             exportService.exportCategoryZip(exportId, localRawData, bruteForceManager.getAllResults(), state.getCurrentKollektiv(), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
-        }
+        exportService.exportCategoryZip(target.closest('#export-tab-pane button[id^="export-"]').id.replace('export-', ''), localRawData, bruteForceManager.getAllResults(), state.getCurrentKollektiv(), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
         return;
     }
     if (target.closest('#praesentation-tab-pane button[id^="download-"]') && !target.closest('#praesentation-tab-pane button[id^="download-"]').disabled && !target.closest('#praesentation-tab-pane button[id^="download-"]').classList.contains('table-download-png-btn') && !target.closest('#praesentation-tab-pane button[id^="download-"]').classList.contains('chart-download-btn')) {
@@ -292,14 +266,6 @@ function handleBodyClickDelegation(event) {
      if (target.closest('#publikation-sections-nav .publikation-section-link')) {
         event.preventDefault();
         publikationEventHandlers.handlePublikationSectionChange(target.closest('#publikation-sections-nav .publikation-section-link').dataset.sectionId, mainAppInterface);
-        return;
-    }
-    if (target.closest('#btn-generate-pub-stats') || target.closest('#btn-retry-pub-stats-calc')) {
-        if (typeof publikationEventHandlers !== 'undefined' && typeof publikationEventHandlers.handleGeneratePublikationStats === 'function') {
-            publikationEventHandlers.handleGeneratePublikationStats(mainAppInterface);
-        } else {
-            console.error("Handler für Publikationsstatistiken (handleGeneratePublikationStats) nicht gefunden.");
-        }
         return;
     }
 }
@@ -334,7 +300,13 @@ function _renderCurrentTab(tabId) {
         case 'statistik-tab': viewRenderer.renderStatistikTab(processedData, appliedCriteria, appliedLogic, state.getCurrentStatsLayout(), state.getCurrentStatsKollektiv1(), state.getCurrentStatsKollektiv2(), currentKollektiv); break;
         case 'praesentation-tab': viewRenderer.renderPresentationTab(state.getCurrentPresentationView(), state.getCurrentPresentationStudyId(), currentKollektiv, processedData, appliedCriteria, appliedLogic); break;
         case 'publikation-tab':
-            viewRenderer.renderPublikationTab(mainAppInterface, state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), currentKollektiv);
+            publikationTabLogic.initializeData(
+                localRawData, 
+                appliedCriteria,
+                appliedLogic,
+                bruteForceManager.getAllResults()
+            );
+            viewRenderer.renderPublikationTab(state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), currentKollektiv, localRawData, bruteForceManager.getAllResults());
             break;
         case 'export-tab': viewRenderer.renderExportTab(currentKollektiv); break;
         default: console.warn(`Unbekannter Tab für Rendering: ${tabId}`); const paneId = tabId.replace('-tab', '-tab-pane'); ui_helpers.updateElementHTML(paneId, `<div class="alert alert-warning m-3">Inhalt für Tab '${tabId}' nicht implementiert.</div>`);
@@ -343,14 +315,6 @@ function _renderCurrentTab(tabId) {
 
 function _handleGlobalKollektivChange(newKollektiv, source = "user") {
     if (state.setCurrentKollektiv(newKollektiv)) {
-        if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.initializeData === 'function') {
-            publikationTabLogic.initializeData(
-                localRawData,
-                t2CriteriaManager.getAppliedCriteria(),
-                t2CriteriaManager.getAppliedLogic(),
-                bruteForceManager.getAllResults()
-            );
-        }
         filterAndPrepareData();
         updateUIState();
         _renderCurrentTab(state.getActiveTabId());
@@ -389,14 +353,6 @@ function handleSortRequest(tableContext, key, subKey = null) {
 
 function applyAndRefreshAll() {
     t2CriteriaManager.applyCriteria();
-    if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.initializeData === 'function') {
-        publikationTabLogic.initializeData(
-            localRawData,
-            t2CriteriaManager.getAppliedCriteria(),
-            t2CriteriaManager.getAppliedLogic(),
-            bruteForceManager.getAllResults()
-        );
-    }
     filterAndPrepareData();
     ui_helpers.markCriteriaSavedIndicator(false);
     updateUIState();
@@ -405,6 +361,9 @@ function applyAndRefreshAll() {
 
 function refreshCurrentTab(){
     _renderCurrentTab(state.getActiveTabId());
+}
+
+function handleStartBruteForce_Internal() {
 }
 
 function initializeBruteForceManager() {
@@ -440,16 +399,9 @@ function handleBruteForceResult(payload) {
             ui_helpers.initializeTooltips(modalBody);
         }
         ui_helpers.showToast('Optimierung abgeschlossen.', 'success');
-        if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.triggerStatsCalculation === 'function') {
-            publikationTabLogic.initializeData( // Reset and mark for recalculation
-                 localRawData,
-                 t2CriteriaManager.getAppliedCriteria(),
-                 t2CriteriaManager.getAppliedLogic(),
-                 bruteForceManager.getAllResults()
-            );
-            if (state.getActiveTabId() === 'publikation-tab') {
-                 mainAppInterface.refreshCurrentTab();
-            }
+        if (state.getActiveTabId() === 'publikation-tab') {
+            publikationTabLogic.initializeData(localRawData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getAllResults());
+            _renderCurrentTab('publikation-tab');
         }
     } else {
         ui_helpers.showToast('Optimierung ohne valide Ergebnisse.', 'warning');

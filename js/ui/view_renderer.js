@@ -123,8 +123,6 @@ const viewRenderer = (() => {
                 npv: perf?.npv?.value ?? NaN,
                 acc: perf?.acc?.value ?? NaN,
                 auc: perf?.auc?.value ?? NaN,
-                lrPlus: perf?.lrPlus?.value ?? NaN,
-                lrMinus: perf?.lrMinus?.value ?? NaN,
                 specificKollektivName: specificKollektivName,
                 specificKollektivN: specificKollektivN,
                 globalN: globalNCount
@@ -198,7 +196,7 @@ const viewRenderer = (() => {
                              const createDlBtns = (baseId, chartTitle) => [{id:`dl-${baseId}-png`, icon: dlIconPNG, tooltip: pngTooltipBase.replace('{ChartName}', chartTitle), format:'png', chartId: baseId, chartName: chartTitle}, {id:`dl-${baseId}-svg`, icon: dlIconSVG, tooltip: svgTooltipBase.replace('{ChartName}', chartTitle), format:'svg', chartId: baseId, chartName: chartTitle}];
 
                              dashboardContainer.innerHTML = `
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.ageDistribution, `<p class="mb-0 small">Median: ${formatNumber(stats.alter?.median, 1, '--', true)} (${formatNumber(stats.alter?.min, 0, '--', true)} - ${formatNumber(stats.alter?.max, 0, '--', true)})</p>`, 'chart-dash-age', '', '', 'p-1', createDlBtns('chart-dash-age', UI_TEXTS.chartTitles.ageDistribution))}
+                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.ageDistribution, `<p class="mb-0 small">Median: ${formatNumber(stats.alter?.median, 1)} (${formatNumber(stats.alter?.min, 0)} - ${formatNumber(stats.alter?.max, 0)})</p>`, 'chart-dash-age', '', '', 'p-1', createDlBtns('chart-dash-age', UI_TEXTS.chartTitles.ageDistribution))}
                                 ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.genderDistribution, `<p class="mb-0 small">M: ${stats.geschlecht?.m ?? 0} W: ${stats.geschlecht?.f ?? 0}</p>`, 'chart-dash-gender', '', '', 'p-1', createDlBtns('chart-dash-gender', UI_TEXTS.chartTitles.genderDistribution))}
                                 ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.therapyDistribution, `<p class="mb-0 small">OP: ${stats.therapie?.['direkt OP'] ?? 0} nRCT: ${stats.therapie?.nRCT ?? 0}</p>`, 'chart-dash-therapy', '', '', 'p-1', createDlBtns('chart-dash-therapy', UI_TEXTS.chartTitles.therapyDistribution))}
                                 ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusN, `<p class="mb-0 small">N+: ${stats.nStatus?.plus ?? 0} N-: ${stats.nStatus?.minus ?? 0}</p>`, 'chart-dash-status-n', '', '', 'p-1', createDlBtns('chart-dash-status-n', UI_TEXTS.chartTitles.statusN))}
@@ -460,71 +458,69 @@ const viewRenderer = (() => {
         });
     }
 
-    function renderPublikationTab(mainAppInterface, currentLang, currentSection, currentKollektiv) {
-        const tabId = 'publikation-tab';
-        const containerId = `${tabId}-pane`;
-        const container = document.getElementById(containerId);
-
-        if (!container) {
-            console.error(`Container #${containerId} nicht gefunden für Tab ${tabId}.`);
-            return;
-        }
-
-        if (typeof publikationTabLogic === 'undefined' || typeof publikationTabLogic.ensureStatsAreCalculated !== 'function' || typeof publikationTabLogic.getRenderedSectionContent !== 'function') {
-            console.error("viewRenderer.renderPublikationTab: publikationTabLogic oder dessen Funktionen nicht verfügbar.");
-            const errorMsg = '<p class="text-danger p-3">Fehler: Publikationsmodul konnte nicht korrekt initialisiert werden.</p>';
-            ui_helpers.updateElementHTML(containerId, errorMsg);
-            return;
-        }
-
-        ui_helpers.updateElementHTML(containerId, '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade Publikationsinhalt...</span></div><p class="mt-2 text-muted">Überprüfe Statistikdaten...</p></div>');
-
-        publikationTabLogic.ensureStatsAreCalculated(mainAppInterface, (success, errorMsg) => {
-            if (!document.getElementById(containerId)) return;
+    function renderPublikationTab(currentLang, currentSection, currentKollektiv, globalProcessedData, bruteForceResults) {
+        _renderTabContent('publikation-tab', () => {
+            publikationTabLogic.initializeData(
+                globalProcessedData,
+                t2CriteriaManager.getAppliedCriteria(),
+                t2CriteriaManager.getAppliedLogic(),
+                bruteForceResults
+            );
 
             const headerHTML = uiComponents.createPublikationTabHeader();
-            let sectionContentHTML = '';
-
-            if (success) {
-                sectionContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv, mainAppInterface);
+            const initialContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv);
+            
+            const container = document.createElement('div');
+            container.innerHTML = headerHTML;
+            const contentAreaDiv = document.createElement('div');
+            contentAreaDiv.id = 'publikation-content-area'; // Ensure this matches the ID used in ui_helpers
+            contentAreaDiv.className = 'bg-white p-3 border rounded'; // Apply styles as in createPublikationTabHeader
+            contentAreaDiv.style.minHeight = '400px';
+            contentAreaDiv.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)'; // Match styles
+            contentAreaDiv.style.overflowY = 'auto';
+            contentAreaDiv.innerHTML = initialContentHTML;
+            
+            const mainCol = container.querySelector('.col-md-9'); // Target specific column if headerHTML has this structure
+            if (mainCol) {
+                const existingContentArea = mainCol.querySelector('#publikation-content-area');
+                if (existingContentArea) {
+                    existingContentArea.innerHTML = initialContentHTML;
+                } else {
+                     const controlDiv = mainCol.querySelector('.d-flex.justify-content-end.align-items-center.mb-2');
+                     if(controlDiv) {
+                         controlDiv.insertAdjacentElement('afterend', contentAreaDiv);
+                     } else {
+                         mainCol.appendChild(contentAreaDiv);
+                     }
+                }
             } else {
-                sectionContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv, mainAppInterface);
+                 console.warn("Hauptspalte für Publikationsinhalt nicht im Header-HTML gefunden. Inhalt wird möglicherweise nicht korrekt platziert.");
+                 const fallbackContainer = container.querySelector('#publikation-content-area') || container;
+                 fallbackContainer.innerHTML = initialContentHTML;
             }
 
-            const tempContainer = document.createElement('div');
-            tempContainer.innerHTML = headerHTML;
-            let contentArea = tempContainer.querySelector('#publikation-content-area');
 
-            if (!contentArea) {
-                console.warn("Publikations-Tab: #publikation-content-area nicht im Header-HTML gefunden. Erstelle und füge es hinzu.");
-                contentArea = document.createElement('div');
-                contentArea.id = 'publikation-content-area';
-                contentArea.className = 'bg-white p-3 border rounded';
-                contentArea.style.minHeight = '400px';
-                contentArea.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)';
-                contentArea.style.overflowY = 'auto';
-                const mainCol = tempContainer.querySelector('.col-md-9');
-                if (mainCol) mainCol.appendChild(contentArea);
-                else tempContainer.appendChild(contentArea);
-            }
-            contentArea.innerHTML = sectionContentHTML;
-            ui_helpers.updateElementHTML(containerId, tempContainer.innerHTML);
+            setTimeout(() => {
+                const contentArea = document.getElementById('publikation-content-area');
+                if (!contentArea) { // Double check if it was not found or created above
+                     const mainContentCol = document.querySelector('#publikation-tab-pane .col-md-9');
+                     if (mainContentCol) {
+                          const newContentArea = document.createElement('div');
+                          newContentArea.id = 'publikation-content-area';
+                          newContentArea.className = 'bg-white p-3 border rounded';
+                          newContentArea.style.minHeight = '400px';
+                          newContentArea.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)';
+                          newContentArea.style.overflowY = 'auto';
+                          newContentArea.innerHTML = initialContentHTML;
+                          mainContentCol.appendChild(newContentArea);
+                     }
+                }
+                publikationTabLogic.updateDynamicChartsForPublicationTab(currentSection, currentLang, currentKollektiv);
+                ui_helpers.updatePublikationUI(currentLang, currentSection, state.getCurrentPublikationBruteForceMetric());
+                ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
+            }, 10);
 
-            if (success && !sectionContentHTML.includes("Fehler:") && !sectionContentHTML.includes("Statistiken jetzt generieren")) {
-                 setTimeout(() => {
-                    const renderedContentArea = document.getElementById('publikation-content-area');
-                    if (!renderedContentArea) {
-                         console.error("Publikations-Tab: #publikation-content-area konnte auch nach manueller Erstellung nicht gefunden werden.");
-                    } else if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.updateDynamicChartsForPublicationTab === 'function'){
-                        publikationTabLogic.updateDynamicChartsForPublicationTab(currentSection, currentLang, currentKollektiv);
-                    }
-                    ui_helpers.updatePublikationUI(state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), state.getCurrentPublikationBruteForceMetric());
-                    ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
-                }, 50);
-            } else {
-                 ui_helpers.updatePublikationUI(state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), state.getCurrentPublikationBruteForceMetric());
-                 ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
-            }
+            return container.innerHTML;
         });
     }
 

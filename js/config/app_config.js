@@ -1,6 +1,6 @@
 const APP_CONFIG = Object.freeze({
     APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
-    APP_VERSION: "2.5.0",
+    APP_VERSION: "2.3.0",
 
     DEFAULT_SETTINGS: Object.freeze({
         KOLLEKTIV: 'Gesamt',
@@ -40,7 +40,7 @@ const APP_CONFIG = Object.freeze({
         PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
         CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
         CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
-        FIRST_APP_START: 'appFirstStart_v2.5'
+        FIRST_APP_START: 'appFirstStart_v2.3'
     }),
 
     PATHS: Object.freeze({
@@ -64,10 +64,7 @@ const APP_CONFIG = Object.freeze({
         ]),
         DEFAULT_CI_METHOD_PROPORTION: 'Wilson Score',
         DEFAULT_CI_METHOD_EFFECTSIZE: 'Bootstrap Percentile',
-        DEFAULT_CI_METHOD_DIFFERENCE: 'Bootstrap Percentile', // For CI of differences
-        LIKELIHOOD_RATIO_CI_METHOD: 'Log Method', // Placeholder for LR CI method name
-        FISHER_EXACT_THRESHOLD: 5,
-        CI_WARNING_SAMPLE_SIZE_THRESHOLD: 10
+        FISHER_EXACT_THRESHOLD: 5
     }),
 
     T2_CRITERIA_SETTINGS: Object.freeze({
@@ -89,9 +86,7 @@ const APP_CONFIG = Object.freeze({
         TRANSITION_DURATION_MS: 350,
         MODAL_BACKDROP_OPACITY: 0.6,
         SPINNER_DELAY_MS: 300,
-        STICKY_HEADER_OFFSET: '111px',
-        UNSAVED_CRITERIA_INDICATOR_CLASS: 'criteria-unsaved-indicator-enhanced',
-        CONTEXT_HELP_ICON_CLASS: 'fas fa-question-circle text-muted ms-1 small context-help-icon'
+        STICKY_HEADER_OFFSET: '111px'
     }),
 
     CHART_SETTINGS: Object.freeze({
@@ -104,7 +99,6 @@ const APP_CONFIG = Object.freeze({
         TERTIARY_COLOR_GREEN: '#2ca02c',
         AS_COLOR: '#4472C4',
         T2_COLOR: '#E0DC2C',
-        LITERATURE_SET_COLORS: Object.freeze(['#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']), // Example colors for literature sets
         ANIMATION_DURATION_MS: 750,
         AXIS_LABEL_FONT_SIZE: '11px',
         TICK_LABEL_FONT_SIZE: '10px',
@@ -114,13 +108,12 @@ const APP_CONFIG = Object.freeze({
         GRIDLINE_COLOR: '#e9ecef',
         ENABLE_GRIDLINES: true,
         POINT_RADIUS: 4,
-        LINE_STROKE_WIDTH: 2,
-        COMPARISON_ROC_LINE_WIDTH: 1.5
+        LINE_STROKE_WIDTH: 2
     }),
 
     EXPORT_SETTINGS: Object.freeze({
         DATE_FORMAT: 'YYYYMMDD',
-        FILENAME_TEMPLATE: 'AvocadoSignT2_v2.5_{TYPE}_{KOLLEKTIV}_{DATE}.{EXT}',
+        FILENAME_TEMPLATE: 'AvocadoSignT2_{TYPE}_{KOLLEKTIV}_{DATE}.{EXT}',
         TABLE_PNG_EXPORT_SCALE: 2,
         ENABLE_TABLE_PNG_EXPORT: true,
         CSV_DELIMITER: ';',
@@ -159,9 +152,7 @@ const APP_CONFIG = Object.freeze({
             TABLE_PNG_EXPORT: '{TableName}_PNG',
             CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
             PUBLIKATION_METHODEN_MD: 'Publikation_{SectionName}_MD',
-            PUBLIKATION_ERGEBNISSE_MD: 'Publikation_{SectionName}_MD',
-            PUBLIKATION_PAKET_ZIP: 'PublikationsPaketZIP',
-            KONFIGURATION_JSON: 'AnalyseKonfigurationJSON'
+            PUBLIKATION_ERGEBNISSE_MD: 'Publikation_{SectionName}_MD'
         }),
         EXCEL_SHEET_NAME_DATEN: 'Datenliste',
         EXCEL_SHEET_NAME_AUSWERTUNG: 'Auswertung',
@@ -184,7 +175,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.5.0"}`,
+        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.3.0"}`,
         REPORT_LOGO_ALT_TEXT: 'Institutslogo'
     }),
 

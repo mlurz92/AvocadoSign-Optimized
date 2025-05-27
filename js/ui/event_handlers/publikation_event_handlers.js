@@ -45,34 +45,9 @@ const publikationEventHandlers = (() => {
         }
     }
 
-    function handleGeneratePublikationStats(mainAppInterface) {
-        if (!mainAppInterface || typeof mainAppInterface.refreshCurrentTab !== 'function') {
-            console.error("publikationEventHandlers.handleGeneratePublikationStats: Ungültiges mainAppInterface.");
-            ui_helpers.showToast("Interner Fehler: Schnittstelle zur Hauptanwendung nicht verfügbar.", "danger");
-            return;
-        }
-        if (typeof publikationTabLogic === 'undefined' || typeof publikationTabLogic.ensureStatsAreCalculated !== 'function') {
-            console.error("publikationEventHandlers.handleGeneratePublikationStats: publikationTabLogic.ensureStatsAreCalculated nicht verfügbar.");
-            ui_helpers.showToast("Interner Fehler: Statistikmodul nicht bereit.", "danger");
-            return;
-        }
-
-        ui_helpers.showToast("Starte Berechnung der Publikationsstatistiken...", "info");
-        
-        publikationTabLogic.ensureStatsAreCalculated(mainAppInterface, (success, errorMsg) => {
-            if (success) {
-                ui_helpers.showToast("Statistiken für Publikation erfolgreich generiert.", "success");
-            } else {
-                ui_helpers.showToast(`Fehler bei der Generierung der Publikationsstatistiken: ${errorMsg || 'Unbekannter Fehler'}`, "danger");
-            }
-            // Das Neurendern des Tabs wird bereits durch ensureStatsAreCalculated -> triggerStatsCalculation -> refreshCurrentTab gehandhabt.
-        });
-    }
-
     return Object.freeze({
         handlePublikationSpracheChange,
         handlePublikationBfMetricChange,
-        handlePublikationSectionChange,
-        handleGeneratePublikationStats
+        handlePublikationSectionChange
     });
 })();
