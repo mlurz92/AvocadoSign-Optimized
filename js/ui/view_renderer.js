@@ -26,7 +26,7 @@ const viewRenderer = (() => {
              const toggleButtonHTML = `
                  <div class="d-flex justify-content-end mb-3" id="daten-toggle-button-container">
                      <button id="daten-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="expand" data-tippy-content="${TOOLTIP_CONTENT.datenTable.expandAll || 'Alle Details ein-/ausblenden'}">
-                        Alle Details <i class="fas fa-chevron-down ms-1"></i>
+                        Alle Details Anzeigen <i class="fas fa-chevron-down ms-1"></i>
                     </button>
                  </div>`;
             const tableHTML = dataTabLogic.createDatenTableHTML(data, sortState);
@@ -37,6 +37,7 @@ const viewRenderer = (() => {
                  const tableHeader = document.getElementById('daten-table-header');
                  if (tableBody && data.length > 0) ui_helpers.attachRowCollapseListeners(tableBody);
                  if (tableHeader) ui_helpers.updateSortIcons(tableHeader.id, sortState);
+                 ui_helpers.initializeTooltips(document.getElementById('daten-tab-pane'));
             }, 0);
             return finalHTML;
         });
@@ -81,8 +82,8 @@ const viewRenderer = (() => {
             let perf = null;
             let setName = 'Unbekannt';
             let setIdUsed = setId;
-            let specificKollektivName = getKollektivDisplayName(globalKollektiv); // Default to global
-            let specificKollektivN = globalNCount; // Default to global
+            let specificKollektivName = getKollektivDisplayName(globalKollektiv);
+            let specificKollektivN = globalNCount;
 
             try {
                 if (setId === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID) {
@@ -121,9 +122,9 @@ const viewRenderer = (() => {
                 npv: perf?.npv?.value ?? NaN,
                 acc: perf?.acc?.value ?? NaN,
                 auc: perf?.auc?.value ?? NaN,
-                specificKollektivName: specificKollektivName, // Store the name of the kollektiv used for this specific calculation
-                specificKollektivN: specificKollektivN,      // Store N for that specific kollektiv
-                globalN: globalNCount // Keep track of N for the global kollektiv for context if needed
+                specificKollektivName: specificKollektivName,
+                specificKollektivN: specificKollektivN,
+                globalN: globalNCount
             });
          });
 
@@ -134,7 +135,13 @@ const viewRenderer = (() => {
              return (a.name || '').localeCompare(b.name || '');
          });
          const tableHTML = statistikTabLogic.createCriteriaComparisonTableHTML(results, getKollektivDisplayName(globalKollektiv));
+         const cardTooltipText = (TOOLTIP_CONTENT.criteriaComparisonTable.cardTitle || "Vergleich verschiedener Kriteriensätze")
+            .replace('[GLOBAL_KOLLEKTIV_NAME]', `<strong>${getKollektivDisplayName(globalKollektiv)}</strong>`);
+
          container.innerHTML = uiComponents.createStatistikCard('criteriaComparisonTable', UI_TEXTS.criteriaComparison.title, tableHTML, false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
+         const cardHeader = container.querySelector('.card-header');
+         if (cardHeader) cardHeader.setAttribute('data-tippy-content', cardTooltipText);
+         ui_helpers.initializeTooltips(container);
     }
 
 
@@ -183,17 +190,17 @@ const viewRenderer = (() => {
                          } else {
                              const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image' : 'fa-download';
                              const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code' : 'fa-download';
-                             const pngTooltip = TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'Als PNG';
-                             const svgTooltip = TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'Als SVG';
-                             const createDlBtns = (baseId) => [{id:`dl-${baseId}-png`, icon: dlIconPNG, tooltip: pngTooltip, format:'png', chartId: baseId}, {id:`dl-${baseId}-svg`, icon: dlIconSVG, tooltip: svgTooltip, format:'svg', chartId: baseId}];
+                             const pngTooltip = (TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'Als PNG herunterladen').replace('{ChartName}', 'dieses Diagramm');
+                             const svgTooltip = (TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'Als SVG herunterladen').replace('{ChartName}', 'dieses Diagramm');
+                             const createDlBtns = (baseId, chartTitle) => [{id:`dl-${baseId}-png`, icon: dlIconPNG, tooltip: pngTooltip.replace('dieses Diagramm', chartTitle), format:'png', chartId: baseId, chartName: chartTitle}, {id:`dl-${baseId}-svg`, icon: dlIconSVG, tooltip: svgTooltip.replace('dieses Diagramm', chartTitle), format:'svg', chartId: baseId, chartName: chartTitle}];
 
                              dashboardContainer.innerHTML = `
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.ageDistribution, `<p class="mb-0 small">Median: ${formatNumber(stats.alter?.median, 1)} (${formatNumber(stats.alter?.min, 0)} - ${formatNumber(stats.alter?.max, 0)})</p>`, 'chart-dash-age', '', '', 'p-1', createDlBtns('chart-dash-age'))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.genderDistribution, `<p class="mb-0 small">M: ${stats.geschlecht?.m ?? 0} W: ${stats.geschlecht?.f ?? 0}</p>`, 'chart-dash-gender', '', '', 'p-1', createDlBtns('chart-dash-gender'))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.therapyDistribution, `<p class="mb-0 small">OP: ${stats.therapie?.['direkt OP'] ?? 0} nRCT: ${stats.therapie?.nRCT ?? 0}</p>`, 'chart-dash-therapy', '', '', 'p-1', createDlBtns('chart-dash-therapy'))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusN, `<p class="mb-0 small">N+: ${stats.nStatus?.plus ?? 0} N-: ${stats.nStatus?.minus ?? 0}</p>`, 'chart-dash-status-n', '', '', 'p-1', createDlBtns('chart-dash-status-n'))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusAS, `<p class="mb-0 small">AS+: ${stats.asStatus?.plus ?? 0} AS-: ${stats.asStatus?.minus ?? 0}</p>`, 'chart-dash-status-as', '', '', 'p-1', createDlBtns('chart-dash-status-as'))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusT2, `<p class="mb-0 small">T2+: ${stats.t2Status?.plus ?? 0} T2-: ${stats.t2Status?.minus ?? 0}</p>`, 'chart-dash-status-t2', '', '', 'p-1', createDlBtns('chart-dash-status-t2'))}
+                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.ageDistribution, `<p class="mb-0 small">Median: ${formatNumber(stats.alter?.median, 1)} (${formatNumber(stats.alter?.min, 0)} - ${formatNumber(stats.alter?.max, 0)})</p>`, 'chart-dash-age', '', '', 'p-1', createDlBtns('chart-dash-age', UI_TEXTS.chartTitles.ageDistribution))}
+                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.genderDistribution, `<p class="mb-0 small">M: ${stats.geschlecht?.m ?? 0} W: ${stats.geschlecht?.f ?? 0}</p>`, 'chart-dash-gender', '', '', 'p-1', createDlBtns('chart-dash-gender', UI_TEXTS.chartTitles.genderDistribution))}
+                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.therapyDistribution, `<p class="mb-0 small">OP: ${stats.therapie?.['direkt OP'] ?? 0} nRCT: ${stats.therapie?.nRCT ?? 0}</p>`, 'chart-dash-therapy', '', '', 'p-1', createDlBtns('chart-dash-therapy', UI_TEXTS.chartTitles.therapyDistribution))}
+                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusN, `<p class="mb-0 small">N+: ${stats.nStatus?.plus ?? 0} N-: ${stats.nStatus?.minus ?? 0}</p>`, 'chart-dash-status-n', '', '', 'p-1', createDlBtns('chart-dash-status-n', UI_TEXTS.chartTitles.statusN))}
+                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusAS, `<p class="mb-0 small">AS+: ${stats.asStatus?.plus ?? 0} AS-: ${stats.asStatus?.minus ?? 0}</p>`, 'chart-dash-status-as', '', '', 'p-1', createDlBtns('chart-dash-status-as', UI_TEXTS.chartTitles.statusAS))}
+                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusT2, `<p class="mb-0 small">T2+: ${stats.t2Status?.plus ?? 0} T2-: ${stats.t2Status?.minus ?? 0}</p>`, 'chart-dash-status-t2', '', '', 'p-1', createDlBtns('chart-dash-status-t2', UI_TEXTS.chartTitles.statusT2))}
                              `;
                               _renderAuswertungDashboardCharts(stats);
                          }
@@ -217,7 +224,7 @@ const viewRenderer = (() => {
                  ui_helpers.updateT2CriteriaControlsUI(currentCriteria, currentLogic);
                  ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
                  ui_helpers.updateBruteForceUI('idle', {}, bfWorkerAvailable, currentKollektiv);
-
+                 ui_helpers.initializeTooltips(document.getElementById('auswertung-tab-pane'));
              }, 10);
 
              return finalHTML;
@@ -240,11 +247,11 @@ const viewRenderer = (() => {
              if (datasets.length === 0 || datasets.every(d => !Array.isArray(d) || d.length === 0)) { return '<div class="col-12"><div class="alert alert-warning">Keine Daten für Statistik-Auswahl verfügbar.</div></div>'; }
 
              const outerRow = document.createElement('div'); outerRow.className = 'row g-4';
-             const createChartDlBtns = (baseId) => [
-                { id: `dl-${baseId}-png`, icon: APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image' : 'fa-download', tooltip: TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'PNG', format: 'png', chartId: baseId },
-                { id: `dl-${baseId}-svg`, icon: APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code' : 'fa-download', tooltip: TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'SVG', format: 'svg', chartId: baseId }
+             const createChartDlBtns = (baseId, chartTitle) => [
+                { id: `dl-${baseId}-png`, icon: APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image' : 'fa-download', tooltip: (TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'PNG').replace('{ChartName}', chartTitle), format: 'png', chartId: baseId, chartName: chartTitle },
+                { id: `dl-${baseId}-svg`, icon: APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code' : 'fa-download', tooltip: (TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'SVG').replace('{ChartName}', chartTitle), format: 'svg', chartId: baseId, chartName: chartTitle }
              ];
-             const createTableDlBtn = (tableId, tableName) => ({ id: `dl-${tableId}-png`, icon: 'fa-image', tooltip: `Tabelle '${tableName}' PNG`, format: 'png', tableId: tableId, tableName: tableName });
+             const createTableDlBtn = (tableId, tableName) => ({ id: `dl-${tableId}-png`, icon: 'fa-image', tooltip: (TOOLTIP_CONTENT.exportTab.tableSinglePNG?.description || 'Tabelle als PNG').replace('{TableName}', tableName), format: 'png', tableId: tableId, tableName: tableName });
 
 
              datasets.forEach((data, i) => {
@@ -266,23 +273,23 @@ const viewRenderer = (() => {
                      const safeKollektivName = kollektivName.replace(/\s+/g, '_');
 
                      const deskriptivDlBtns = [
-                         ...createChartDlBtns(`chart-stat-age-${i}`),
-                         ...createChartDlBtns(`chart-stat-gender-${i}`),
+                         ...createChartDlBtns(`chart-stat-age-${i}`, `Altersverteilung_${safeKollektivName}`),
+                         ...createChartDlBtns(`chart-stat-gender-${i}`, `Geschlechterverteilung_${safeKollektivName}`),
                          createTableDlBtn(`table-deskriptiv-demographie-${i}`, `Deskriptive_Demographie_${safeKollektivName}`),
                          createTableDlBtn(`table-deskriptiv-lk-${i}`, `Deskriptive_LK_${safeKollektivName}`)
                      ];
                      innerContainer.innerHTML += uiComponents.createStatistikCard(descCardId, `Deskriptive Statistik`, statistikTabLogic.createDeskriptiveStatistikContentHTML(stats, i, kollektivName), false, 'deskriptiveStatistik', deskriptivDlBtns, `table-deskriptiv-demographie-${i}`);
 
-                     const gueteASDlBtns = [createTableDlBtn(`table-guete-metrics-AS-${safeKollektivName}`, 'Guete_AS'), createTableDlBtn(`table-guete-matrix-AS-${safeKollektivName}`, 'Matrix_AS')];
+                     const gueteASDlBtns = [createTableDlBtn(`table-guete-metrics-AS-${safeKollektivName}`, `Guete_AS_${safeKollektivName}`), createTableDlBtn(`table-guete-matrix-AS-${safeKollektivName}`, `Matrix_AS_${safeKollektivName}`)];
                      innerContainer.innerHTML += uiComponents.createStatistikCard(gueteASCardId, `Güte - Avocado Sign (vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteAS, 'AS', kollektivName), false, 'diagnostischeGueteAS', gueteASDlBtns, `table-guete-metrics-AS-${safeKollektivName}`);
 
-                     const gueteT2DlBtns = [createTableDlBtn(`table-guete-metrics-T2-${safeKollektivName}`, 'Guete_T2'), createTableDlBtn(`table-guete-matrix-T2-${safeKollektivName}`, 'Matrix_T2')];
+                     const gueteT2DlBtns = [createTableDlBtn(`table-guete-metrics-T2-${safeKollektivName}`, `Guete_T2_${safeKollektivName}`), createTableDlBtn(`table-guete-matrix-T2-${safeKollektivName}`, `Matrix_T2_${safeKollektivName}`)];
                      innerContainer.innerHTML += uiComponents.createStatistikCard(gueteT2CardId, `Güte - T2 (angewandt vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteT2, 'T2', kollektivName), false, 'diagnostischeGueteT2', gueteT2DlBtns, `table-guete-metrics-T2-${safeKollektivName}`);
 
-                     const vergleichASvsT2DlBtns = [createTableDlBtn(`table-vergleich-as-vs-t2-${safeKollektivName}`, 'Vergleich_AS_T2')];
+                     const vergleichASvsT2DlBtns = [createTableDlBtn(`table-vergleich-as-vs-t2-${safeKollektivName}`, `Vergleich_AS_T2_${safeKollektivName}`)];
                      innerContainer.innerHTML += uiComponents.createStatistikCard(vergleichASvsT2CardId, `Vergleich - AS vs. T2 (angewandt)`, statistikTabLogic.createVergleichContentHTML(stats.vergleichASvsT2, kollektivName), false, 'statistischerVergleichASvsT2', vergleichASvsT2DlBtns, `table-vergleich-as-vs-t2-${safeKollektivName}`);
 
-                     const assoziationDlBtns = [createTableDlBtn(`table-assoziation-${safeKollektivName}`, 'Assoziation')];
+                     const assoziationDlBtns = [createTableDlBtn(`table-assoziation-${safeKollektivName}`, `Assoziation_${safeKollektivName}`)];
                      innerContainer.innerHTML += uiComponents.createStatistikCard(assoziationCardId, `Assoziation Merkmale vs. N-Status`, statistikTabLogic.createAssoziationContentHTML(stats.assoziation, kollektivName, appliedCriteria), false, 'assoziationEinzelkriterien', assoziationDlBtns, `table-assoziation-${safeKollektivName}`);
 
                      const ageChartId=`chart-stat-age-${i}`; const genderChartId=`chart-stat-gender-${i}`;
@@ -317,6 +324,7 @@ const viewRenderer = (() => {
                  document.querySelectorAll('#statistik-tab-pane [data-tippy-content]').forEach(el => {
                      let currentContent = el.getAttribute('data-tippy-content') || '';
                      const kollektivToDisplay = layout === 'vergleich' ? `${kollektivDisplayNames[0]} vs. ${kollektivDisplayNames[1]}` : kollektivDisplayNames[0];
+                     currentContent = currentContent.replace(/\[KOLLEKTIV_PLACEHOLDER\]/g, `<strong>${kollektivToDisplay}</strong>`);
                      currentContent = currentContent.replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivToDisplay}</strong>`);
                      currentContent = currentContent.replace(/\[KOLLEKTIV1\]/g, `<strong>${kollektivDisplayNames[0]}</strong>`);
                      currentContent = currentContent.replace(/\[KOLLEKTIV2\]/g, `<strong>${kollektivDisplayNames[1]}</strong>`);
@@ -335,7 +343,7 @@ const viewRenderer = (() => {
 
             let presentationData = {};
             const globalKollektivDaten = dataProcessor.filterDataByKollektiv(processedDataFull, currentGlobalKollektiv);
-            presentationData.kollektiv = currentGlobalKollektiv; // Keep track of the globally selected one for "AS Pur"
+            presentationData.kollektiv = currentGlobalKollektiv;
             presentationData.patientCount = globalKollektivDaten?.length ?? 0;
 
             if (view === 'as-pur') {
@@ -344,7 +352,6 @@ const viewRenderer = (() => {
                 presentationData.statsNRCT = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'nRCT'), 'as', 'n');
                 presentationData.statsCurrentKollektiv = statisticsService.calculateDiagnosticPerformance(globalKollektivDaten, 'as', 'n');
             } else if (view === 'as-vs-t2') {
-                 // The actual cohort for comparison might change based on selectedStudyId
                  let comparisonCohortData = globalKollektivDaten;
                  let comparisonKollektivName = currentGlobalKollektiv;
 
@@ -355,7 +362,7 @@ const viewRenderer = (() => {
                          comparisonCohortData = dataProcessor.filterDataByKollektiv(processedDataFull, comparisonKollektivName);
                      }
                  }
-                 presentationData.kollektivForComparison = comparisonKollektivName; // Store the kollektiv actually used for T2 eval
+                 presentationData.kollektivForComparison = comparisonKollektivName;
                  presentationData.patientCountForComparison = comparisonCohortData?.length ?? 0;
 
 
@@ -366,7 +373,7 @@ const viewRenderer = (() => {
                     const isApplied = selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
 
                     if(isApplied) {
-                        studySet = { criteria: appliedCriteria, logic: appliedLogic, id: selectedStudyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: "Angewandt", studyInfo: { reference: "Benutzerdefiniert", patientCohort: `Aktuell: ${getKollektivDisplayName(comparisonKollektivName)} (N=${presentationData.patientCountForComparison})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } };
+                        studySet = { criteria: appliedCriteria, logic: appliedLogic, id: selectedStudyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: "Angewandt", studyInfo: { reference: "Benutzerdefiniert (aktuell im Auswertungstab eingestellt)", patientCohort: `Vergleichskollektiv: ${getKollektivDisplayName(comparisonKollektivName)} (N=${presentationData.patientCountForComparison})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } };
                         evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(comparisonCohortData), studySet.criteria, studySet.logic);
                     } else if (selectedStudyId) {
                         studySet = studyT2CriteriaManager.getStudyCriteriaSetById(selectedStudyId);
@@ -377,7 +384,7 @@ const viewRenderer = (() => {
 
                     if (studySet && evaluatedDataT2 && evaluatedDataT2.length > 0) {
                         presentationData.statsT2 = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n');
-                        let asDataForDirectComparison = cloneDeep(comparisonCohortData); // Data for AS should match T2 cohort
+                        let asDataForDirectComparison = cloneDeep(comparisonCohortData);
                         evaluatedDataT2.forEach((p, i) => { if (asDataForDirectComparison[i]) p.as = asDataForDirectComparison[i].as; });
                         presentationData.vergleich = statisticsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n');
 
@@ -391,30 +398,27 @@ const viewRenderer = (() => {
                         presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2';
                         presentationData.t2CriteriaLabelFull = `${studySet.name}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`;
                     }
-                } else { // No data for comparison cohort
+                } else {
                      presentationData.statsAS = null;
                      presentationData.statsT2 = null;
                      presentationData.vergleich = null;
                      if(selectedStudyId) presentationData.comparisonCriteriaSet = studyT2CriteriaManager.getStudyCriteriaSetById(selectedStudyId) || {name: selectedStudyId, displayShortName: 'Unbekannt', criteria: {}, logic: 'ODER', studyInfo:{}};
                 }
             }
-            // Pass currentGlobalKollektiv for context, but presentationData contains the possibly adjusted kollektiv/data for ASvsT2
             const tabContentHTML = praesentationTabLogic.createPresentationTabContent(view, presentationData, selectedStudyId, currentGlobalKollektiv);
 
 
             setTimeout(() => {
                 if (view === 'as-pur') {
                      const chartContainer = document.getElementById('praes-as-pur-perf-chart');
-                     // Use statsCurrentKollektiv which is based on the *global* kollektiv for this view
                      if (chartContainer && presentationData?.statsCurrentKollektiv && (presentationData?.statsCurrentKollektiv?.matrix?.rp + presentationData?.statsCurrentKollektiv?.matrix?.fp + presentationData?.statsCurrentKollektiv?.matrix?.fn + presentationData?.statsCurrentKollektiv?.matrix?.rn > 0) ) {
                          const chartData = { overall: { sensVal: presentationData.statsCurrentKollektiv.sens?.value, spezVal: presentationData.statsCurrentKollektiv.spez?.value, ppvVal: presentationData.statsCurrentKollektiv.ppv?.value, npvVal: presentationData.statsCurrentKollektiv.npv?.value, accVal: presentationData.statsCurrentKollektiv.acc?.value, aucVal: presentationData.statsCurrentKollektiv.auc?.value }};
-                         chartRenderer.renderASPerformanceChart('praes-as-pur-perf-chart', chartData, {}, getKollektivDisplayName(currentGlobalKollektiv)); // Label with global kollektiv
+                         chartRenderer.renderASPerformanceChart('praes-as-pur-perf-chart', chartData, {}, getKollektivDisplayName(currentGlobalKollektiv));
                      } else if (chartContainer) {
                          ui_helpers.updateElementHTML(chartContainer.id, '<p class="text-muted small text-center p-3">Keine Daten für Performance-Chart.</p>');
                      }
                 } else if (view === 'as-vs-t2') {
                      const chartContainer = document.getElementById('praes-comp-chart-container');
-                     // Use presentationData.statsAS and presentationData.statsT2 that were specifically prepared for the *comparison* cohort
                      if (chartContainer && presentationData?.statsAS && presentationData?.statsT2 && presentationData.patientCountForComparison > 0) {
                          const chartDataComp = [
                              { metric: 'Sens', AS: presentationData.statsAS.sens?.value ?? NaN, T2: presentationData.statsT2.sens?.value ?? NaN },
@@ -444,7 +448,11 @@ const viewRenderer = (() => {
 
     function renderExportTab(currentKollektiv) {
         _renderTabContent('export-tab', () => {
-             return uiComponents.createExportOptions(currentKollektiv);
+             const exportOptionsHTML = uiComponents.createExportOptions(currentKollektiv);
+             setTimeout(() => {
+                ui_helpers.initializeTooltips(document.getElementById('export-tab-pane'));
+             }, 0);
+             return exportOptionsHTML;
         });
     }
 
@@ -465,9 +473,9 @@ const viewRenderer = (() => {
                 if (contentArea) {
                     ui_helpers.updateElementHTML(contentArea.id, initialContentHTML);
                     publikationTabLogic.updateDynamicChartsForPublicationTab(currentSection, currentLang, currentKollektiv);
-                    ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
                 }
                  ui_helpers.updatePublikationUI(currentLang, currentSection, state.getCurrentPublikationBruteForceMetric());
+                 ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
             }, 10);
 
             return headerHTML;
