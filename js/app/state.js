@@ -170,8 +170,9 @@ const state = (() => {
             currentState.currentPresentationView = newView;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW, currentState.currentPresentationView);
             if (newView === 'as-pur') {
-                setCurrentPresentationStudyId(null);
+                setCurrentPresentationStudyId(null); // Reset study ID when switching to "AS Pur"
             } else if (!currentState.currentPresentationStudyId && newView === 'as-vs-t2') {
+                // If switching to "AS vs T2" and no study is selected, default to applied criteria
                 setCurrentPresentationStudyId(APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID);
             }
             return true;
