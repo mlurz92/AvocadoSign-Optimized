@@ -462,13 +462,6 @@ const viewRenderer = (() => {
 
     function renderPublikationTab(currentLang, currentSection, currentKollektiv, globalProcessedData, bruteForceResults) {
         _renderTabContent('publikation-tab', () => {
-            publikationTabLogic.initializeData(
-                globalProcessedData,
-                t2CriteriaManager.getAppliedCriteria(),
-                t2CriteriaManager.getAppliedLogic(),
-                bruteForceResults
-            );
-
             const headerHTML = uiComponents.createPublikationTabHeader();
             const initialContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv);
             
