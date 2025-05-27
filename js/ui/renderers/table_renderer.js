@@ -44,7 +44,7 @@ const tableRenderer = (() => {
         const rowId = `daten-row-${patient.nr}`;
         const detailRowId = `daten-detail-${patient.nr}`;
         const hasT2Nodes = Array.isArray(patient.lymphknoten_t2) && patient.lymphknoten_t2.length > 0;
-        const geschlechtText = patient.geschlecht === 'm' ? UI_TEXTS.legendLabels.male : patient.geschlecht === 'f' ? UI_TEXTS.legendLabels.female : UI_TEXTS.legendLabels.unknownGender;
+        const geschlechtText = patient.geschlecht === 'm' ? (UI_TEXTS.legendLabels.male || 'Männlich') : patient.geschlecht === 'f' ? (UI_TEXTS.legendLabels.female || 'Weiblich') : (UI_TEXTS.legendLabels.unknownGender || 'Unbekannt');
         const therapieText = getKollektivDisplayName(patient.therapie);
         const naPlaceholder = '--';
 
@@ -103,7 +103,7 @@ const tableRenderer = (() => {
         const criteriaFormatted = formatCriteriaFunc(appliedCriteria, appliedLogic, true);
         const naPlaceholder = '--';
 
-        let content = `<h6 class="w-100 mb-2 ps-1" data-tippy-content="Zeigt die Bewertung jedes einzelnen T2-Lymphknotens basierend auf den aktuell angewendeten Kriterien. Erfüllte Kriterien, die zur Positiv-Bewertung beitragen, sind hervorgehoben.">T2 LK Bewertung (Logik: ${appliedLogic || 'N/A'}, Kriterien: ${criteriaFormatted || 'N/A'})</h6>`;
+        let content = `<h6 class="w-100 mb-2 ps-1" data-tippy-content="Zeigt die Bewertung jedes einzelnen T2-Lymphknotens basierend auf den aktuell angewendeten Kriterien. Erfüllte Kriterien, die zur Positiv-Bewertung beitragen, sind hervorgehoben.">T2 LK Bewertung (Logik: ${UI_TEXTS.t2LogicDisplayNames[appliedLogic] || appliedLogic || 'N/A'}, Kriterien: ${criteriaFormatted || 'N/A'})</h6>`;
 
         patient.lymphknoten_t2_bewertet.forEach((lk, index) => {
             if (!lk || !lk.checkResult) {
@@ -121,11 +121,12 @@ const tableRenderer = (() => {
                 const checkFailed = checkResultForLK[key] === false;
                 let hlClass = '';
 
-                if (lk.isPositive) {
-                    if (checkMet && (appliedLogic === 'ODER' || appliedLogic === 'UND')) {
+                if (lk.isPositive) { // Highlight only if the LK itself is positive overall
+                    if (checkMet && (appliedLogic === 'ODER' || (appliedLogic === 'UND' && activeCriteriaKeys.every(k => checkResultForLK[k] === true)))) {
                         hlClass = 'highlight-suspekt-feature';
                     }
                 }
+
 
                 const icon = ui_helpers.getT2IconSVG(iconType || key, valueText);
                 const text = valueText || naPlaceholder;
