@@ -2,7 +2,7 @@ const chartRenderer = (() => {
 
     const NEW_PRIMARY_COLOR_BLUE = APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE || '#4472C4';
     const NEW_SECONDARY_COLOR_YELLOW_GREEN = APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN || '#E0DC2C';
-    const DEFAULT_COLOR_SCHEME = APP_CONFIG.CHART_SETTINGS.COLOR_SCHEMES?.default || ['#4472C4', '#E0DC2C', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
+    const DEFAULT_COLOR_SCHEME = APP_CONFIG.CHART_SETTINGS.DEFAULT_COLOR_SCHEME || ['#4472C4', '#E0DC2C', '#2ca02c', '#d62728', '#9467bd', '#8c564b'];
     const PLOT_BACKGROUND_COLOR = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#ffffff';
     const ANIMATION_DURATION_MS = APP_CONFIG.CHART_SETTINGS.ANIMATION_DURATION_MS || 750;
     const TICK_LABEL_FONT_SIZE = APP_CONFIG.CHART_SETTINGS.TICK_LABEL_FONT_SIZE || '10px';
@@ -31,7 +31,9 @@ const chartRenderer = (() => {
         let height = options.height || (initialHeight > 20 ? initialHeight : defaultHeight);
 
         const legendItemCount = options.legendItemCount || 0;
-        const estimatedLegendHeight = options.legendBelow ? Math.max(25, legendItemCount * 12 + 15) : 0;
+        const legendRows = options.legendRows || 1;
+        const estimatedLegendHeight = options.legendBelow ? Math.max(25, legendItemCount * (12 / legendRows) + (15 * legendRows) ) : 0;
+
 
         if (options.useCompactMargins && options.legendBelow) {
             height = Math.max(height, (options.height || defaultHeight) + estimatedLegendHeight);
@@ -195,12 +197,159 @@ const chartRenderer = (() => {
          if (options.aucValue !== undefined && !isNaN(options.aucValue)) { const aucText = `AUC: ${formatCI(options.aucValue, options.aucCI?.lower, options.aucCI?.upper, 3, false, '--')}`; chartArea.append("text").attr("class", "auc-label").attr("x", innerWidth - 10).attr("y", innerHeight - 10).attr("text-anchor", "end").style("font-size", AXIS_LABEL_FONT_SIZE).style("font-weight", "bold").text(aucText); }
     }
 
+    function renderComparisonROCCurve(rocDatasets, targetElementId, options = {}) {
+        const setupOptions = { ...options, margin: { ...APP_CONFIG.CHART_SETTINGS.DEFAULT_MARGIN, ...options.margin }, legendBelow: true, legendItemCount: rocDatasets?.length || 0, legendRows: Math.ceil((rocDatasets?.length || 1) / 2) };
+        const containerSetup = createSvgContainer(targetElementId, setupOptions);
+        if (!containerSetup) return;
+
+        const { svg, chartArea, innerWidth, innerHeight, width, height, margin, legendSpaceY } = containerSetup;
+        const tooltip = createTooltip();
+
+        if (!Array.isArray(rocDatasets) || rocDatasets.length === 0) {
+            chartArea.append('text').attr('x', innerWidth / 2).attr('y', innerHeight / 2).attr('text-anchor', 'middle').attr('class', 'text-muted small').text('Keine Daten für ROC-Vergleich.');
+            return;
+        }
+
+        const xScale = d3.scaleLinear().domain([0, 1]).range([0, innerWidth]);
+        const yScale = d3.scaleLinear().domain([0, 1]).range([innerHeight, 0]);
+        const tickCount = 5;
+
+        chartArea.append("g").attr("class", "x-axis axis")
+            .attr("transform", `translate(0,${innerHeight})`)
+            .call(d3.axisBottom(xScale).ticks(tickCount).tickSizeOuter(0).tickFormat(d3.format(".1f")))
+            .selectAll("text").style("font-size", TICK_LABEL_FONT_SIZE);
+        svg.append("text").attr("class", "axis-label x-axis-label")
+            .attr("text-anchor", "middle").attr("x", margin.left + innerWidth / 2)
+            .attr("y", height - legendSpaceY - 5).style("font-size", AXIS_LABEL_FONT_SIZE)
+            .text(UI_TEXTS.axisLabels.oneMinusSpecificity);
+
+        chartArea.append("g").attr("class", "y-axis axis")
+            .call(d3.axisLeft(yScale).ticks(tickCount).tickSizeOuter(0).tickFormat(d3.format(".1f")))
+            .selectAll("text").style("font-size", TICK_LABEL_FONT_SIZE);
+        svg.append("text").attr("class", "axis-label y-axis-label")
+            .attr("text-anchor", "middle")
+            .attr("transform", `translate(${margin.left / 2 - 10}, ${margin.top + innerHeight / 2}) rotate(-90)`)
+            .style("font-size", AXIS_LABEL_FONT_SIZE).text(UI_TEXTS.axisLabels.sensitivity);
+
+        if (ENABLE_GRIDLINES) {
+            chartArea.append("g").attr("class", "grid x-grid")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(d3.axisBottom(xScale).ticks(tickCount).tickSize(-innerHeight).tickFormat(""));
+            chartArea.append("g").attr("class", "grid y-grid")
+                .call(d3.axisLeft(yScale).ticks(tickCount).tickSize(-innerWidth).tickFormat(""));
+        }
+
+        chartArea.append("line").attr("class", "reference-line")
+            .attr("x1", 0).attr("y1", innerHeight)
+            .attr("x2", innerWidth).attr("y2", 0)
+            .style("stroke-dasharray", "3 3");
+
+        const rocLineGenerator = d3.line()
+            .x(d => xScale(d.fpr))
+            .y(d => yScale(d.tpr))
+            .curve(d3.curveLinear);
+
+        rocDatasets.forEach((dataset, index) => {
+            if (!dataset || !Array.isArray(dataset.points) || dataset.points.length < 2) return;
+
+            let validPoints = dataset.points.filter(d => d && typeof d.fpr === 'number' && typeof d.tpr === 'number' && isFinite(d.fpr) && isFinite(d.tpr));
+            if (validPoints.length === 0 || validPoints[0].fpr !== 0 || validPoints[0].tpr !== 0) {
+                 validPoints.unshift({ fpr: 0, tpr: 0, threshold: Infinity });
+            }
+            if (validPoints.length === 0 || validPoints[validPoints.length - 1].fpr !== 1 || validPoints[validPoints.length - 1].tpr !== 1) {
+                 validPoints.push({ fpr: 1, tpr: 1, threshold: -Infinity });
+            }
+             if (validPoints.length < 2) return;
+
+
+            const path = chartArea.append("path")
+                .datum(validPoints)
+                .attr("class", `roc-curve roc-curve-${index}`)
+                .attr("fill", "none")
+                .attr("stroke", dataset.color || DEFAULT_COLOR_SCHEME[index % DEFAULT_COLOR_SCHEME.length])
+                .attr("stroke-width", APP_CONFIG.CHART_SETTINGS.COMPARISON_ROC_LINE_WIDTH || LINE_STROKE_WIDTH)
+                .attr("d", rocLineGenerator);
+
+            const totalLength = path.node()?.getTotalLength();
+            if (totalLength) {
+                path.attr("stroke-dasharray", totalLength + " " + totalLength)
+                    .attr("stroke-dashoffset", totalLength)
+                    .transition().duration(ANIMATION_DURATION_MS * 1.5).ease(d3.easeLinear).delay(index * 200)
+                    .attr("stroke-dashoffset", 0);
+            }
+
+            if (options.showPointsOnComparison) {
+                chartArea.selectAll(`.roc-point-${index}`)
+                    .data(validPoints.filter((d, i) => i > 0 && i < validPoints.length -1 )) // Exclude (0,0) and (1,1)
+                    .join("circle")
+                    .attr("class", `roc-point roc-point-${index}`)
+                    .attr("cx", d => xScale(d.fpr))
+                    .attr("cy", d => yScale(d.tpr))
+                    .attr("r", (POINT_RADIUS / 2) + 0.5 )
+                    .style("fill", dataset.color || DEFAULT_COLOR_SCHEME[index % DEFAULT_COLOR_SCHEME.length])
+                    .style("opacity", 0)
+                    .on("mouseover", function(event, d) {
+                        tooltip.transition().duration(50).style("opacity", .95);
+                        const threshText = (d.threshold && isFinite(d.threshold)) ? `<br>Threshold: ${formatNumber(d.threshold, 2)}` : '';
+                        tooltip.html(`<strong>${dataset.name || `Kurve ${index+1}`}</strong><br>FPR: ${formatNumber(d.fpr, 2)}<br>TPR: ${formatNumber(d.tpr, 2)}${threshText}`)
+                            .style("left", (event.pageX + 10) + "px")
+                            .style("top", (event.pageY - 15) + "px");
+                        d3.select(this).attr("r", POINT_RADIUS / 1.5);
+                    })
+                    .on("mouseout", function(event, d) {
+                        tooltip.transition().duration(200).style("opacity", 0);
+                        d3.select(this).attr("r", (POINT_RADIUS / 2) + 0.5);
+                    })
+                    .transition().delay(ANIMATION_DURATION_MS * 1.5 + index * 200).duration(ANIMATION_DURATION_MS / 2)
+                    .style("opacity", 0.6);
+            }
+        });
+
+        if (legendSpaceY > 0 && rocDatasets.length > 0) {
+            const legendItemHeight = 18;
+            const legendMaxWidth = innerWidth;
+            const legendGroup = svg.append("g").attr("class", "legend roc-comparison-legend")
+                .attr("transform", `translate(${margin.left}, ${margin.top + innerHeight + 20})`)
+                .attr("font-family", "sans-serif")
+                .attr("font-size", LEGEND_FONT_SIZE)
+                .attr("text-anchor", "start");
+
+            let currentX = 0;
+            let currentY = 0;
+            const legendItems = legendGroup.selectAll("g.legend-item")
+                .data(rocDatasets)
+                .join("g").attr("class", "legend-item");
+
+            legendItems.each(function(d, i) {
+                const item = d3.select(this);
+                item.append("rect")
+                    .attr("x", 0).attr("y", 0).attr("width", 10).attr("height", 10)
+                    .attr("fill", d.color || DEFAULT_COLOR_SCHEME[i % DEFAULT_COLOR_SCHEME.length]);
+
+                const aucText = d.auc !== undefined && !isNaN(d.auc) ? ` (AUC: ${formatNumber(d.auc, 3)})` : '';
+                item.append("text")
+                    .attr("x", 14).attr("y", 5).attr("dy", "0.35em")
+                    .text(`${d.name || `Kurve ${i+1}`}${aucText}`);
+
+                const itemWidth = this.getBBox().width + 20; // Add some padding
+                if (i > 0 && currentX + itemWidth > legendMaxWidth && options.legendColumns !== 1) {
+                    currentX = 0;
+                    currentY += legendItemHeight;
+                }
+                item.attr("transform", `translate(${currentX}, ${currentY})`);
+                currentX += itemWidth;
+            });
+        }
+    }
+
+
     return Object.freeze({
         renderAgeDistributionChart,
         renderPieChart,
         renderComparisonBarChart,
         renderASPerformanceChart,
-        renderROCCurve
+        renderROCCurve,
+        renderComparisonROCCurve
     });
 
 })();
