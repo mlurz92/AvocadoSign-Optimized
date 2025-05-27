@@ -156,7 +156,7 @@ const viewRenderer = (() => {
              const tableCardContainerId = 'auswertung-table-card-container';
 
              const criteriaControlsHTML = uiComponents.createT2CriteriaControls(currentCriteria, currentLogic);
-             const bruteForceCardHTML = uiComponents.createBruteForceCard(currentKollektiv, bfWorkerAvailable); // Pass only kollektiv ID
+             const bruteForceCardHTML = uiComponents.createBruteForceCard(currentKollektiv, bfWorkerAvailable);
              const auswertungTableCardHTML = auswertungTabLogic.createAuswertungTableCardHTML(data, sortState, currentCriteria, currentLogic);
 
 
@@ -271,7 +271,8 @@ const viewRenderer = (() => {
 
                      if (!stats) { innerContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">Fehler bei Statistikberechnung.</div></div>'; return; }
                      const descCardId=`deskriptiveStatistik-${i}`; const gueteASCardId=`diagnostischeGueteAS-${i}`; const gueteT2CardId=`diagnostischeGueteT2-${i}`; const vergleichASvsT2CardId=`statistischerVergleichASvsT2-${i}`; const assoziationCardId=`assoziationEinzelkriterien-${i}`;
-                     const safeKollektivName = kollektivName.replace(/\s+/g, '_');
+                     const safeKollektivName = kollektivNames[i].replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+
 
                      const deskriptivDlBtns = [
                          ...createChartDlBtns(`chart-stat-age-${i}`, `Altersverteilung_${safeKollektivName}`),
@@ -279,19 +280,19 @@ const viewRenderer = (() => {
                          createTableDlBtn(`table-deskriptiv-demographie-${i}`, `Deskriptive_Demographie_${safeKollektivName}`),
                          createTableDlBtn(`table-deskriptiv-lk-${i}`, `Deskriptive_LK_${safeKollektivName}`)
                      ];
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(descCardId, `Deskriptive Statistik`, statistikTabLogic.createDeskriptiveStatistikContentHTML(stats, i, kollektivName), false, 'deskriptiveStatistik', deskriptivDlBtns, `table-deskriptiv-demographie-${i}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(descCardId, `Deskriptive Statistik`, statistikTabLogic.createDeskriptiveStatistikContentHTML(stats, i, kollektivNames[i]), false, 'deskriptiveStatistik', deskriptivDlBtns, `table-deskriptiv-demographie-${i}`);
 
                      const gueteASDlBtns = [createTableDlBtn(`table-guete-metrics-AS-${safeKollektivName}`, `Guete_AS_${safeKollektivName}`), createTableDlBtn(`table-guete-matrix-AS-${safeKollektivName}`, `Matrix_AS_${safeKollektivName}`)];
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteASCardId, `Güte - Avocado Sign (vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteAS, 'AS', kollektivName), false, 'diagnostischeGueteAS', gueteASDlBtns, `table-guete-metrics-AS-${safeKollektivName}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteASCardId, `Güte - Avocado Sign (vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteAS, 'AS', kollektivNames[i]), false, 'diagnostischeGueteAS', gueteASDlBtns, `table-guete-metrics-AS-${safeKollektivName}`);
 
                      const gueteT2DlBtns = [createTableDlBtn(`table-guete-metrics-T2-${safeKollektivName}`, `Guete_T2_${safeKollektivName}`), createTableDlBtn(`table-guete-matrix-T2-${safeKollektivName}`, `Matrix_T2_${safeKollektivName}`)];
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteT2CardId, `Güte - T2 (angewandt vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteT2, 'T2', kollektivName), false, 'diagnostischeGueteT2', gueteT2DlBtns, `table-guete-metrics-T2-${safeKollektivName}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteT2CardId, `Güte - T2 (angewandt vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteT2, 'T2', kollektivNames[i]), false, 'diagnostischeGueteT2', gueteT2DlBtns, `table-guete-metrics-T2-${safeKollektivName}`);
 
                      const vergleichASvsT2DlBtns = [createTableDlBtn(`table-vergleich-as-vs-t2-${safeKollektivName}`, `Vergleich_AS_T2_${safeKollektivName}`)];
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(vergleichASvsT2CardId, `Vergleich - AS vs. T2 (angewandt)`, statistikTabLogic.createVergleichContentHTML(stats.vergleichASvsT2, kollektivName), false, 'statistischerVergleichASvsT2', vergleichASvsT2DlBtns, `table-vergleich-as-vs-t2-${safeKollektivName}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(vergleichASvsT2CardId, `Vergleich - AS vs. T2 (angewandt)`, statistikTabLogic.createVergleichContentHTML(stats.vergleichASvsT2, kollektivNames[i]), false, 'statistischerVergleichASvsT2', vergleichASvsT2DlBtns, `table-vergleich-as-vs-t2-${safeKollektivName}`);
 
                      const assoziationDlBtns = [createTableDlBtn(`table-assoziation-${safeKollektivName}`, `Assoziation_${safeKollektivName}`)];
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(assoziationCardId, `Assoziation Merkmale vs. N-Status`, statistikTabLogic.createAssoziationContentHTML(stats.assoziation, kollektivName, appliedCriteria), false, 'assoziationEinzelkriterien', assoziationDlBtns, `table-assoziation-${safeKollektivName}`);
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(assoziationCardId, `Assoziation Merkmale vs. N-Status`, statistikTabLogic.createAssoziationContentHTML(stats.assoziation, kollektivNames[i], appliedCriteria), false, 'assoziationEinzelkriterien', assoziationDlBtns, `table-assoziation-${safeKollektivName}`);
 
                      const ageChartId=`chart-stat-age-${i}`; const genderChartId=`chart-stat-gender-${i}`;
 
@@ -312,8 +313,8 @@ const viewRenderer = (() => {
              if (layout === 'vergleich' && datasets.length === 2 && datasets[0].length > 0 && datasets[1].length > 0) {
                  const vergleichKollektiveStats = statisticsService.compareCohorts(datasets[0], datasets[1], appliedCriteria, appliedLogic);
                  const comparisonCardContainer = document.createElement('div'); comparisonCardContainer.className = 'col-12 mt-4'; const title = `Vergleich ${kollektivDisplayNames[0]} vs. ${kollektivDisplayNames[1]}`;
-                 const safeKollektiv1Name = kollektivNames[0].replace(/\s+/g, '_');
-                 const safeKollektiv2Name = kollektivNames[1].replace(/\s+/g, '_');
+                 const safeKollektiv1Name = kollektivNames[0].replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+                 const safeKollektiv2Name = kollektivNames[1].replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
                  const tableIdComp = `table-vergleich-kollektive-${safeKollektiv1Name}-vs-${safeKollektiv2Name}`;
                  const downloadBtnComp = createTableDlBtn(tableIdComp, `Vergleich_Kollektive_${safeKollektiv1Name}_vs_${safeKollektiv2Name}`);
                  comparisonCardContainer.innerHTML = uiComponents.createStatistikCard('vergleichKollektive', title, statistikTabLogic.createVergleichKollektiveContentHTML(vergleichKollektiveStats, kollektivNames[0], kollektivNames[1]), false, 'vergleichKollektive', [downloadBtnComp], tableIdComp); outerRow.appendChild(comparisonCardContainer);
@@ -391,13 +392,13 @@ const viewRenderer = (() => {
 
                         presentationData.comparisonCriteriaSet = studySet;
                         presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2';
-                        presentationData.t2CriteriaLabelFull = `${studySet.name}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`;
+                        presentationData.t2CriteriaLabelFull = `${isApplied ? 'Aktuell angewandt' : (studySet.name || 'Studie')}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`;
                     } else if (studySet) {
                         presentationData.statsT2 = null;
                         presentationData.vergleich = null;
                         presentationData.comparisonCriteriaSet = studySet;
                         presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2';
-                        presentationData.t2CriteriaLabelFull = `${studySet.name}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`;
+                        presentationData.t2CriteriaLabelFull = `${isApplied ? 'Aktuell angewandt' : (studySet.name || 'Studie')}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`;
                     }
                 } else {
                      presentationData.statsAS = null;
@@ -468,18 +469,58 @@ const viewRenderer = (() => {
 
             const headerHTML = uiComponents.createPublikationTabHeader();
             const initialContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv);
+            
+            const container = document.createElement('div');
+            container.innerHTML = headerHTML;
+            const contentAreaDiv = document.createElement('div');
+            contentAreaDiv.id = 'publikation-content-area'; // Ensure this matches the ID used in ui_helpers
+            contentAreaDiv.className = 'bg-white p-3 border rounded'; // Apply styles as in createPublikationTabHeader
+            contentAreaDiv.style.minHeight = '400px';
+            contentAreaDiv.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)'; // Match styles
+            contentAreaDiv.style.overflowY = 'auto';
+            contentAreaDiv.innerHTML = initialContentHTML;
+            
+            const mainCol = container.querySelector('.col-md-9'); // Target specific column if headerHTML has this structure
+            if (mainCol) {
+                const existingContentArea = mainCol.querySelector('#publikation-content-area');
+                if (existingContentArea) {
+                    existingContentArea.innerHTML = initialContentHTML;
+                } else {
+                     const controlDiv = mainCol.querySelector('.d-flex.justify-content-end.align-items-center.mb-2');
+                     if(controlDiv) {
+                         controlDiv.insertAdjacentElement('afterend', contentAreaDiv);
+                     } else {
+                         mainCol.appendChild(contentAreaDiv);
+                     }
+                }
+            } else {
+                 console.warn("Hauptspalte für Publikationsinhalt nicht im Header-HTML gefunden. Inhalt wird möglicherweise nicht korrekt platziert.");
+                 const fallbackContainer = container.querySelector('#publikation-content-area') || container;
+                 fallbackContainer.innerHTML = initialContentHTML;
+            }
+
 
             setTimeout(() => {
                 const contentArea = document.getElementById('publikation-content-area');
-                if (contentArea) {
-                    ui_helpers.updateElementHTML(contentArea.id, initialContentHTML);
-                    publikationTabLogic.updateDynamicChartsForPublicationTab(currentSection, currentLang, currentKollektiv);
+                if (!contentArea) { // Double check if it was not found or created above
+                     const mainContentCol = document.querySelector('#publikation-tab-pane .col-md-9');
+                     if (mainContentCol) {
+                          const newContentArea = document.createElement('div');
+                          newContentArea.id = 'publikation-content-area';
+                          newContentArea.className = 'bg-white p-3 border rounded';
+                          newContentArea.style.minHeight = '400px';
+                          newContentArea.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)';
+                          newContentArea.style.overflowY = 'auto';
+                          newContentArea.innerHTML = initialContentHTML;
+                          mainContentCol.appendChild(newContentArea);
+                     }
                 }
-                 ui_helpers.updatePublikationUI(currentLang, currentSection, state.getCurrentPublikationBruteForceMetric());
-                 ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
+                publikationTabLogic.updateDynamicChartsForPublicationTab(currentSection, currentLang, currentKollektiv);
+                ui_helpers.updatePublikationUI(currentLang, currentSection, state.getCurrentPublikationBruteForceMetric());
+                ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
             }, 10);
 
-            return headerHTML;
+            return container.innerHTML;
         });
     }
 
