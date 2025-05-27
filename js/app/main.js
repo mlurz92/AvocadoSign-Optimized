@@ -112,7 +112,7 @@ function initializeApp() {
         if (kurzanleitungButton && TOOLTIP_CONTENT.kurzanleitungButton?.description) {
             kurzanleitungButton.setAttribute('data-tippy-content', TOOLTIP_CONTENT.kurzanleitungButton.description);
         }
-        ui_helpers.showKurzanleitung(); // Check for first start and show automatically if needed
+        ui_helpers.showKurzanleitung();
 
         ui_helpers.initializeTooltips(document.body);
         ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
@@ -228,12 +228,9 @@ function handleBodyClickDelegation(event) {
 
     const clickableRowParent = target.closest('tr.clickable-row[data-bs-target]');
      if (clickableRowParent && (target.closest('a, button, input, select, .btn-close, [data-bs-toggle="modal"], .table-download-png-btn, .chart-download-btn'))) {
-        event.stopPropagation(); // Verhindert das Auslösen des Row-Toggle, wenn auf interaktive Elemente in der Zeile geklickt wird.
-        // Führe die Aktion des Buttons/Links etc. trotzdem aus
+        event.stopPropagation(); 
     } else if (clickableRowParent) {
-        // Standard Row-Toggle-Verhalten, wenn nicht auf ein interaktives Element geklickt wurde.
-        // Dies wird durch Bootstrap selbst gehandhabt, wenn data-bs-toggle="collapse" gesetzt ist.
-        // Hier ist kein expliziter Code nötig, es sei denn, man möchte das Standardverhalten unterbinden.
+
     }
 
 
@@ -293,9 +290,8 @@ function _renderCurrentTab(tabId) {
     const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
     const appliedLogic = t2CriteriaManager.getAppliedLogic();
 
-    // Sicherstellen, dass für Tabs, die `currentData` benötigen, dieses auch frisch gefiltert ist.
     if (['daten-tab', 'auswertung-tab', 'statistik-tab', 'praesentation-tab'].includes(tabId)) {
-        filterAndPrepareData(); // Kann redundant sein, wenn processTabChange es schon tut, aber sicher ist sicher.
+        filterAndPrepareData();
     }
 
     switch (tabId) {
@@ -304,11 +300,8 @@ function _renderCurrentTab(tabId) {
         case 'statistik-tab': viewRenderer.renderStatistikTab(processedData, appliedCriteria, appliedLogic, state.getCurrentStatsLayout(), state.getCurrentStatsKollektiv1(), state.getCurrentStatsKollektiv2(), currentKollektiv); break;
         case 'praesentation-tab': viewRenderer.renderPresentationTab(state.getCurrentPresentationView(), state.getCurrentPresentationStudyId(), currentKollektiv, processedData, appliedCriteria, appliedLogic); break;
         case 'publikation-tab':
-            // `initializeData` in `publikationTabLogic` sollte idealerweise nur einmal oder bei Bedarf aufgerufen werden.
-            // Der Aufruf in `initializeApp` ist gut. Hier ggf. nur, wenn sich fundamentale Daten ändern.
-            // Für v2.3 bleibt der Aufruf hier, um sicherzustellen, dass die Daten aktuell sind.
             publikationTabLogic.initializeData(
-                localRawData, // Besser wäre processedData oder eine spezifischere Form davon.
+                localRawData, 
                 appliedCriteria,
                 appliedLogic,
                 bruteForceManager.getAllResults()
@@ -318,7 +311,6 @@ function _renderCurrentTab(tabId) {
         case 'export-tab': viewRenderer.renderExportTab(currentKollektiv); break;
         default: console.warn(`Unbekannter Tab für Rendering: ${tabId}`); const paneId = tabId.replace('-tab', '-tab-pane'); ui_helpers.updateElementHTML(paneId, `<div class="alert alert-warning m-3">Inhalt für Tab '${tabId}' nicht implementiert.</div>`);
     }
-    // updateUIState(); // Wird bereits in processTabChange aufgerufen
 }
 
 function _handleGlobalKollektivChange(newKollektiv, source = "user") {
@@ -371,11 +363,7 @@ function refreshCurrentTab(){
     _renderCurrentTab(state.getActiveTabId());
 }
 
-function handleStartBruteForce_Internal() { // Wird vom auswertungEventHandler aufgerufen
-    // Diese Funktion wurde bereits im auswertungEventHandlers.js implementiert,
-    // da sie spezifisch für den Auswertungstab ist.
-    // Sie nutzt das mainAppInterface, um z.B. auf getProcessedData zuzugreifen.
-    // Hier ist kein weiterer Code nötig, der Aufruf erfolgt über das Interface.
+function handleStartBruteForce_Internal() {
 }
 
 function initializeBruteForceManager() {
@@ -386,8 +374,7 @@ function initializeBruteForceManager() {
         onCancelled: handleBruteForceCancelled,
         onError: handleBruteForceError
     };
-    const workerAvailable = bruteForceManager.init(bfCallbacks);
-    ui_helpers.updateBruteForceUI('idle', {}, workerAvailable, state.getCurrentKollektiv());
+    bruteForceManager.init(bfCallbacks);
 }
 
 function handleBruteForceStarted(payload) {
