@@ -1,53 +1,104 @@
 const publikationTabLogic = (() => {
 
     let allKollektivStats = null;
-    let rawGlobalDataInputForLogic = null;
-    let appliedCriteriaForLogic = null;
-    let appliedLogicForLogic = null;
-    let bfResultsPerKollektivForLogic = null;
+    let isCalculatingStats = false;
+    let statsCalculationPromise = null;
 
     function initializeData(globalRawData, appliedCriteria, appliedLogic, bfResultsPerKollektiv) {
-        rawGlobalDataInputForLogic = globalRawData;
-        appliedCriteriaForLogic = appliedCriteria;
-        appliedLogicForLogic = appliedLogic;
-        bfResultsPerKollektivForLogic = bfResultsPerKollektiv;
+        allKollektivStats = { isLoading: true, data: null, error: null };
+        isCalculatingStats = false;
+        statsCalculationPromise = null;
+        
+        console.log("PublikationTabLogic: Initial leerer Zustand für allKollektivStats gesetzt.");
 
-        try {
-            if (!globalRawData || !appliedCriteria || !appliedLogic || typeof statisticsService === 'undefined') {
-                console.error("PublikationTabLogic.initializeData: Unvollständige Basisdaten für Statistikberechnung.");
-                allKollektivStats = null;
-                ui_helpers.showToast("Fehler: Unvollständige Daten für Publikations-Tab-Vorbereitung.", "danger");
-                return;
-            }
-            allKollektivStats = statisticsService.calculateAllStatsForPublication(
-                rawGlobalDataInputForLogic,
-                appliedCriteriaForLogic,
-                appliedLogicForLogic,
-                bfResultsPerKollektivForLogic
-            );
-            if (!allKollektivStats) {
-                 console.warn("PublikationTabLogic.initializeData: calculateAllStatsForPublication lieferte null.");
-                 ui_helpers.showToast("Warnung: Statistiken für Publikation-Tab konnten nicht vollständig berechnet werden.", "warning");
-            }
-        } catch (error) {
-            console.error("PublikationTabLogic.initializeData: Fehler bei der Berechnung der Publikationsstatistiken:", error);
-            allKollektivStats = null;
-            ui_helpers.showToast("Schwerwiegender Fehler bei der Vorbereitung der Publikationsdaten.", "danger");
+        if (globalRawData && appliedCriteria && appliedLogic) {
+            triggerStatsCalculation(globalRawData, appliedCriteria, appliedLogic, bfResultsPerKollektiv, (success) => {
+                if (state.getActiveTabId() === 'publikation-tab') {
+                    if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
+                        console.log("PublikationTabLogic: Statistiken initial berechnet, aktualisiere Publikation-Tab.");
+                        mainAppInterface.refreshCurrentTab();
+                    } else {
+                        console.warn("PublikationTabLogic: mainAppInterface.refreshCurrentTab nicht verfügbar nach initialer Statistikberechnung.");
+                    }
+                }
+            });
+        } else {
+            console.warn("PublikationTabLogic.initializeData: Unvollständige Basisdaten für initiale Statistikberechnung in initializeData.");
+            allKollektivStats = { isLoading: false, data: null, error: "Unvollständige Initialisierungsdaten." };
         }
     }
 
-    function getRenderedSectionContent(mainSectionId, lang, currentGlobalKollektivId) {
-        if (!allKollektivStats) {
-            console.error("PublikationTabLogic.getRenderedSectionContent: allKollektivStats ist nicht initialisiert. Dies sollte in main.js erfolgen. Zeige Fehlermeldung an.");
-            return '<p class="text-danger"><strong>Fehler:</strong> Die statistischen Grunddaten für den Publikations-Tab konnten nicht geladen werden. Bitte überprüfen Sie die Konsolenausgabe auf Fehler während der Initialisierung und versuchen Sie ggf. die Seite neu zu laden oder wenden Sie sich an den Support.</p>';
+    async function triggerStatsCalculation(globalRawData, appliedCriteria, appliedLogic, bfResultsPerKollektiv, callback) {
+        if (isCalculatingStats && statsCalculationPromise) {
+            console.log("PublikationTabLogic: Statistikberechnung läuft bereits oder ist geplant.");
+            return statsCalculationPromise;
         }
 
+        isCalculatingStats = true;
+        allKollektivStats = { isLoading: true, data: null, error: null };
+        console.log("PublikationTabLogic: Starte Statistikberechnung für Publikationsdaten...");
+        
+        if (state.getActiveTabId() === 'publikation-tab' && typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
+             mainAppInterface.refreshCurrentTab(); // Zeigt den Ladezustand im UI, falls der Tab aktiv ist
+        }
+
+
+        statsCalculationPromise = new Promise((resolve) => {
+            setTimeout(async () => {
+                try {
+                    if (!globalRawData || !appliedCriteria || !appliedLogic || typeof statisticsService === 'undefined') {
+                        throw new Error("Unvollständige Basisdaten für Statistikberechnung.");
+                    }
+                    const calculatedStats = statisticsService.calculateAllStatsForPublication(
+                        globalRawData,
+                        appliedCriteria,
+                        appliedLogic,
+                        bfResultsPerKollektiv
+                    );
+
+                    if (!calculatedStats) {
+                        throw new Error("calculateAllStatsForPublication lieferte null.");
+                    }
+                    allKollektivStats = { isLoading: false, data: calculatedStats, error: null };
+                    console.log("PublikationTabLogic: Statistikberechnung erfolgreich abgeschlossen.");
+                    if (callback) callback(true);
+                    resolve(true);
+                } catch (error) {
+                    console.error("PublikationTabLogic: Fehler bei der asynchronen Berechnung der Publikationsstatistiken:", error);
+                    allKollektivStats = { isLoading: false, data: null, error: error.message || "Unbekannter Fehler bei Statistikberechnung." };
+                    if (callback) callback(false);
+                    resolve(false);
+                } finally {
+                    isCalculatingStats = false;
+                    statsCalculationPromise = null;
+                     if (state.getActiveTabId() === 'publikation-tab' && typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
+                         mainAppInterface.refreshCurrentTab(); // Aktualisiert UI mit Ergebnis oder Fehler
+                     }
+                }
+            }, 100); // Kurzer Timeout, um dem Browser zu erlauben, UI-Updates (Ladeanzeige) zu verarbeiten
+        });
+        return statsCalculationPromise;
+    }
+
+
+    function getRenderedSectionContent(mainSectionId, lang, currentGlobalKollektivId) {
+        if (!allKollektivStats || allKollektivStats.isLoading) {
+            return `<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade Statistikdaten für Publikation...</span></div><p class="mt-2 text-muted">Umfangreiche Statistiken werden berechnet...</p></div>`;
+        }
+        if (allKollektivStats.error) {
+            return `<p class="text-danger p-3"><strong>Fehler beim Laden der Publikationsdaten:</strong> ${allKollektivStats.error}<br>Bitte überprüfen Sie die Browser-Konsole für Details und versuchen Sie, die Seite neu zu laden.</p>`;
+        }
+        if (!allKollektivStats.data) {
+             return '<p class="text-danger p-3"><strong>Fehler:</strong> Keine validen statistischen Daten für den Publikations-Tab verfügbar, obwohl die Berechnung abgeschlossen sein sollte. Bitte kontaktieren Sie den Support.</p>';
+        }
+
+        const statsData = allKollektivStats.data;
         const commonDataForGenerator = {
             appName: APP_CONFIG.APP_NAME,
             appVersion: APP_CONFIG.APP_VERSION,
-            nGesamt: allKollektivStats.Gesamt?.deskriptiv?.anzahlPatienten || 0,
-            nDirektOP: allKollektivStats['direkt OP']?.deskriptiv?.anzahlPatienten || 0,
-            nNRCT: allKollektivStats.nRCT?.deskriptiv?.anzahlPatienten || 0,
+            nGesamt: statsData.Gesamt?.deskriptiv?.anzahlPatienten || 0,
+            nDirektOP: statsData['direkt OP']?.deskriptiv?.anzahlPatienten || 0,
+            nNRCT: statsData.nRCT?.deskriptiv?.anzahlPatienten || 0,
             t2SizeMin: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min,
             t2SizeMax: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max,
             bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
@@ -69,8 +120,12 @@ const publikationTabLogic = (() => {
             currentKollektiv: currentGlobalKollektivId,
             bruteForceMetric: state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication
         };
+        
+        if (!publicationRenderer || typeof publicationRenderer.renderSectionContent !== 'function') {
+            return '<p class="text-danger p-3"><strong>Fehler:</strong> Publikations-Renderer ist nicht verfügbar.</p>';
+        }
 
-        return publicationRenderer.renderSectionContent(mainSectionId, lang, allKollektivStats, commonDataForGenerator, optionsForRenderer);
+        return publicationRenderer.renderSectionContent(mainSectionId, lang, statsData, commonDataForGenerator, optionsForRenderer);
     }
 
     function _getROCPointsFromStats(statsObj) {
@@ -87,10 +142,11 @@ const publikationTabLogic = (() => {
     }
 
     function updateDynamicChartsForPublicationTab(mainSectionId, lang, currentKollektivNameForContextOnly) {
-        if (!allKollektivStats) {
-            console.warn("PublikationTabLogic.updateDynamicCharts: Keine Daten für Chart-Rendering im Publikationstab vorhanden (allKollektivStats ist null). Diagramme können nicht aktualisiert werden.");
+        if (!allKollektivStats || allKollektivStats.isLoading || allKollektivStats.error || !allKollektivStats.data) {
+            console.warn("PublikationTabLogic.updateDynamicCharts: Keine validen Daten für Chart-Rendering im Publikationstab vorhanden. isLoading:", allKollektivStats?.isLoading, "Error:", allKollektivStats?.error);
             return;
         }
+        const statsData = allKollektivStats.data;
 
         const mainSectionConfig = PUBLICATION_CONFIG.sections.find(s => s.id === mainSectionId);
         if (!mainSectionConfig || !mainSectionConfig.subSections) {
@@ -101,7 +157,7 @@ const publikationTabLogic = (() => {
             const subSectionId = subSection.id;
 
             if (subSectionId === 'ergebnisse_patientencharakteristika') {
-                const dataForGesamtKollektiv = allKollektivStats['Gesamt'];
+                const dataForGesamtKollektiv = statsData['Gesamt'];
                 if (dataForGesamtKollektiv?.deskriptiv) {
                     const alterChartConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse.alterVerteilungChart;
                     const genderChartConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse.geschlechtVerteilungChart;
@@ -140,7 +196,7 @@ const publikationTabLogic = (() => {
                 const currentPubBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
                 kollektiveForCharts.forEach(kolId => {
-                    const dataForThisKollektiv = allKollektivStats[kolId];
+                    const dataForThisKollektiv = statsData[kolId];
                     if (!dataForThisKollektiv) return;
 
                     const balkenChartConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceBalkenChart;
@@ -238,10 +294,12 @@ const publikationTabLogic = (() => {
         });
     }
 
+
     return Object.freeze({
         initializeData,
         getRenderedSectionContent,
-        updateDynamicChartsForPublicationTab
+        updateDynamicChartsForPublicationTab,
+        triggerStatsCalculation 
     });
 
 })();
