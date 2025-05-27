@@ -123,6 +123,8 @@ const viewRenderer = (() => {
                 npv: perf?.npv?.value ?? NaN,
                 acc: perf?.acc?.value ?? NaN,
                 auc: perf?.auc?.value ?? NaN,
+                lrPlus: perf?.lrPlus?.value ?? NaN,
+                lrMinus: perf?.lrMinus?.value ?? NaN,
                 specificKollektivName: specificKollektivName,
                 specificKollektivN: specificKollektivN,
                 globalN: globalNCount
@@ -196,7 +198,7 @@ const viewRenderer = (() => {
                              const createDlBtns = (baseId, chartTitle) => [{id:`dl-${baseId}-png`, icon: dlIconPNG, tooltip: pngTooltipBase.replace('{ChartName}', chartTitle), format:'png', chartId: baseId, chartName: chartTitle}, {id:`dl-${baseId}-svg`, icon: dlIconSVG, tooltip: svgTooltipBase.replace('{ChartName}', chartTitle), format:'svg', chartId: baseId, chartName: chartTitle}];
 
                              dashboardContainer.innerHTML = `
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.ageDistribution, `<p class="mb-0 small">Median: ${formatNumber(stats.alter?.median, 1)} (${formatNumber(stats.alter?.min, 0)} - ${formatNumber(stats.alter?.max, 0)})</p>`, 'chart-dash-age', '', '', 'p-1', createDlBtns('chart-dash-age', UI_TEXTS.chartTitles.ageDistribution))}
+                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.ageDistribution, `<p class="mb-0 small">Median: ${formatNumber(stats.alter?.median, 1, '--', true)} (${formatNumber(stats.alter?.min, 0, '--', true)} - ${formatNumber(stats.alter?.max, 0, '--', true)})</p>`, 'chart-dash-age', '', '', 'p-1', createDlBtns('chart-dash-age', UI_TEXTS.chartTitles.ageDistribution))}
                                 ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.genderDistribution, `<p class="mb-0 small">M: ${stats.geschlecht?.m ?? 0} W: ${stats.geschlecht?.f ?? 0}</p>`, 'chart-dash-gender', '', '', 'p-1', createDlBtns('chart-dash-gender', UI_TEXTS.chartTitles.genderDistribution))}
                                 ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.therapyDistribution, `<p class="mb-0 small">OP: ${stats.therapie?.['direkt OP'] ?? 0} nRCT: ${stats.therapie?.nRCT ?? 0}</p>`, 'chart-dash-therapy', '', '', 'p-1', createDlBtns('chart-dash-therapy', UI_TEXTS.chartTitles.therapyDistribution))}
                                 ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusN, `<p class="mb-0 small">N+: ${stats.nStatus?.plus ?? 0} N-: ${stats.nStatus?.minus ?? 0}</p>`, 'chart-dash-status-n', '', '', 'p-1', createDlBtns('chart-dash-status-n', UI_TEXTS.chartTitles.statusN))}
@@ -472,50 +474,34 @@ const viewRenderer = (() => {
             
             const container = document.createElement('div');
             container.innerHTML = headerHTML;
-            const contentAreaDiv = document.createElement('div');
-            contentAreaDiv.id = 'publikation-content-area'; // Ensure this matches the ID used in ui_helpers
-            contentAreaDiv.className = 'bg-white p-3 border rounded'; // Apply styles as in createPublikationTabHeader
-            contentAreaDiv.style.minHeight = '400px';
-            contentAreaDiv.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)'; // Match styles
-            contentAreaDiv.style.overflowY = 'auto';
-            contentAreaDiv.innerHTML = initialContentHTML;
             
-            const mainCol = container.querySelector('.col-md-9'); // Target specific column if headerHTML has this structure
-            if (mainCol) {
-                const existingContentArea = mainCol.querySelector('#publikation-content-area');
-                if (existingContentArea) {
-                    existingContentArea.innerHTML = initialContentHTML;
+            let contentArea = container.querySelector('#publikation-content-area');
+            if (!contentArea) {
+                console.warn("Publikations-Tab: #publikation-content-area nicht im Header-HTML gefunden. Erstelle und füge es hinzu.");
+                contentArea = document.createElement('div');
+                contentArea.id = 'publikation-content-area';
+                contentArea.className = 'bg-white p-3 border rounded';
+                contentArea.style.minHeight = '400px';
+                contentArea.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)';
+                contentArea.style.overflowY = 'auto';
+                
+                const mainCol = container.querySelector('.col-md-9');
+                if (mainCol) {
+                    mainCol.appendChild(contentArea);
                 } else {
-                     const controlDiv = mainCol.querySelector('.d-flex.justify-content-end.align-items-center.mb-2');
-                     if(controlDiv) {
-                         controlDiv.insertAdjacentElement('afterend', contentAreaDiv);
-                     } else {
-                         mainCol.appendChild(contentAreaDiv);
-                     }
+                    container.appendChild(contentArea); 
                 }
-            } else {
-                 console.warn("Hauptspalte für Publikationsinhalt nicht im Header-HTML gefunden. Inhalt wird möglicherweise nicht korrekt platziert.");
-                 const fallbackContainer = container.querySelector('#publikation-content-area') || container;
-                 fallbackContainer.innerHTML = initialContentHTML;
             }
+            contentArea.innerHTML = initialContentHTML;
 
 
             setTimeout(() => {
-                const contentArea = document.getElementById('publikation-content-area');
-                if (!contentArea) { // Double check if it was not found or created above
-                     const mainContentCol = document.querySelector('#publikation-tab-pane .col-md-9');
-                     if (mainContentCol) {
-                          const newContentArea = document.createElement('div');
-                          newContentArea.id = 'publikation-content-area';
-                          newContentArea.className = 'bg-white p-3 border rounded';
-                          newContentArea.style.minHeight = '400px';
-                          newContentArea.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)';
-                          newContentArea.style.overflowY = 'auto';
-                          newContentArea.innerHTML = initialContentHTML;
-                          mainContentCol.appendChild(newContentArea);
-                     }
+                const renderedContentArea = document.getElementById('publikation-content-area');
+                if (!renderedContentArea) {
+                     console.error("Publikations-Tab: #publikation-content-area konnte auch nach manueller Erstellung nicht gefunden werden.");
+                } else {
+                    publikationTabLogic.updateDynamicChartsForPublicationTab(currentSection, currentLang, currentKollektiv);
                 }
-                publikationTabLogic.updateDynamicChartsForPublicationTab(currentSection, currentLang, currentKollektiv);
                 ui_helpers.updatePublikationUI(currentLang, currentSection, state.getCurrentPublikationBruteForceMetric());
                 ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
             }, 10);
