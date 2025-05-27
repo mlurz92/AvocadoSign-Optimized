@@ -19,6 +19,7 @@ const publicationTextGenerator = (() => {
         const valStr = formatSingleValue(metric.value, digits, isPercent);
         if (valStr === 'N/A') return valStr;
 
+
         if (metric.ci && metric.ci.lower !== null && metric.ci.upper !== null && !isNaN(metric.ci.lower) && !isNaN(metric.ci.upper) && isFinite(metric.ci.lower) && isFinite(metric.ci.upper)) {
             const lowerStr = formatSingleValue(metric.ci.lower, digits, isPercent);
             const upperStr = formatSingleValue(metric.ci.upper, digits, isPercent);
@@ -38,7 +39,7 @@ const publicationTextGenerator = (() => {
     function getMethodenStudienanlageText(lang, commonData) {
         const appVersion = commonData.appVersion || APP_CONFIG.APP_VERSION;
         const studyReferenceAS = commonData.references?.lurzSchaefer2025 || "Lurz & Schäfer (2025)";
-        const ethicsVote = "Ethikvotum Nr. 2023-101, Ethikkommission der Landesärztekammer Sachsen"; // Beispiel
+        const ethicsVote = "Ethikvotum Nr. 2023-101, Ethikkommission der Landesärztekammer Sachsen";
 
         if (lang === 'de') {
             return `
@@ -58,7 +59,7 @@ const publicationTextGenerator = (() => {
         const anzahlGesamt = commonData.nGesamt || pCharGesamt?.anzahlPatienten || 'N/A';
         const anzahlNRCT = commonData.nNRCT || allKollektivStats?.nRCT?.deskriptiv?.anzahlPatienten || 'N/A';
         const anzahlDirektOP = commonData.nDirektOP || allKollektivStats?.['direkt OP']?.deskriptiv?.anzahlPatienten || 'N/A';
-        const studienzeitraum = commonData.references?.lurzSchaefer2025StudyPeriod || "Januar 2020 und November 2023"; // Entnommen aus Lurz & Schäfer (2025) (Seite 3, Methods)
+        const studienzeitraum = commonData.references?.lurzSchaefer2025StudyPeriod || "Januar 2020 und November 2023";
 
         const alterMedian = formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', lang === 'en');
         const alterMin = formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', lang === 'en');
@@ -82,9 +83,9 @@ const publicationTextGenerator = (() => {
     }
 
     function getMethodenMRTProtokollText(lang, commonData) {
-        const mrtSystem = commonData.references?.lurzSchaefer2025MRISystem || "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers)"; // (Seite 3, MRI protocol)
-        const kontrastmittel = commonData.references?.lurzSchaefer2025ContrastAgent || "Gadoteridol (ProHance; Bracco)"; // (Seite 3, MRI protocol)
-        const t2SliceThickness = commonData.references?.lurzSchaefer2025T2SliceThickness || "2-3 mm"; // Aus Tabelle 1, (Axial/Coronal T2-TSE)
+        const mrtSystem = commonData.references?.lurzSchaefer2025MRISystem || "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers)";
+        const kontrastmittel = commonData.references?.lurzSchaefer2025ContrastAgent || "Gadoteridol (ProHance; Bracco)";
+        const t2SliceThickness = commonData.references?.lurzSchaefer2025T2SliceThickness || "2-3 mm";
 
          if (lang === 'de') {
             return `
@@ -101,7 +102,7 @@ const publicationTextGenerator = (() => {
 
     function getMethodenASDefinitionText(lang, commonData) {
         const studyReferenceAS = commonData.references?.lurzSchaefer2025 || "Lurz & Schäfer (2025)";
-        const radiologistExperience = commonData.references?.lurzSchaefer2025RadiologistExperience || ["29 years", "7 years", "19 years"]; // (Seite 3, Image analysis)
+        const radiologistExperience = commonData.references?.lurzSchaefer2025RadiologistExperience || ["29 years", "7 years", "19 years"];
 
         if (lang === 'de') {
             return `
@@ -145,13 +146,13 @@ const publicationTextGenerator = (() => {
         bfCriteriaTextEn += formatBFDefinition('nRCT', 'nRCT cohort');
         bfCriteriaTextEn += '</ul>';
 
-        const kohDesc = studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology')?.description || 'Irreguläre Kontur ODER heterogenes Signal'; //
-        const kohRef = commonData.references?.koh2008 || "Koh et al. (2008)"; //
-        const barbaroDesc = studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging')?.description || 'Kurzachse ≥ 2.3mm'; //
-        const barbaroRef = commonData.references?.barbaro2024 || "Barbaro et al. (2024)"; //
-        const esgarDesc = studyT2CriteriaManager.getStudyCriteriaSetById('rutegard_et_al_esgar')?.description || 'Größe ≥9mm ODER (5-8mm UND ≥2 Kriterien) ODER (<5mm UND 3 Kriterien)'; //
-        const esgarRefPrimary = commonData.references?.beetsTan2018ESGAR || "Beets-Tan et al. (2018, ESGAR Consensus)"; //
-        const esgarRefValidation = commonData.references?.rutegard2025 || "Rutegård et al. (2025)"; //
+        const kohDesc = studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology')?.description || 'Irreguläre Kontur ODER heterogenes Signal';
+        const kohRef = commonData.references?.koh2008 || "Koh et al. (2008)";
+        const barbaroDesc = studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging')?.description || 'Kurzachse ≥ 2.3mm';
+        const barbaroRef = commonData.references?.barbaro2024 || "Barbaro et al. (2024)";
+        const esgarDesc = studyT2CriteriaManager.getStudyCriteriaSetById('rutegard_et_al_esgar')?.description || 'Größe ≥9mm ODER (5-8mm UND ≥2 Kriterien) ODER (<5mm UND 3 Kriterien)';
+        const esgarRefPrimary = commonData.references?.beetsTan2018ESGAR || "Beets-Tan et al. (2018, ESGAR Consensus)";
+        const esgarRefValidation = commonData.references?.rutegard2025 || "Rutegård et al. (2025)";
 
 
         if (lang === 'de') {
@@ -255,9 +256,9 @@ const publicationTextGenerator = (() => {
         const asDirektOP = allKollektivStats?.['direkt OP']?.gueteAS;
         const asNRCT = allKollektivStats?.nRCT?.gueteAS;
 
-        const nGesamt = commonData.nGesamt || pCharGesamt?.anzahlPatienten || 'N/A'; // (N=106)
-        const nDirektOP = commonData.nDirektOP || allKollektivStats?.['direkt OP']?.deskriptiv?.anzahlPatienten || 'N/A'; // (N=29)
-        const nNRCT = commonData.nNRCT || allKollektivStats?.nRCT?.deskriptiv?.anzahlPatienten || 'N/A'; // (N=77)
+        const nGesamt = commonData.nGesamt || allKollektivStats?.Gesamt?.deskriptiv?.anzahlPatienten || 'N/A';
+        const nDirektOP = commonData.nDirektOP || allKollektivStats?.['direkt OP']?.deskriptiv?.anzahlPatienten || 'N/A';
+        const nNRCT = commonData.nNRCT || allKollektivStats?.nRCT?.deskriptiv?.anzahlPatienten || 'N/A';
 
         if (lang === 'de') {
             return `
@@ -354,7 +355,6 @@ const publicationTextGenerator = (() => {
             const statsBF = allKollektivStats?.[k.id]?.gueteT2_bruteforce;
             const bfDef = allKollektivStats?.[k.id]?.bruteforce_definition;
 
-            // Ensure the comparison is made using the stats from the specific literature set ID
             const vergleichASvsLit = allKollektivStats?.[k.id]?.[`vergleichASvsT2_literatur_${k.litSetId}`];
             const vergleichASvsBF = allKollektivStats?.[k.id]?.vergleichASvsT2_bruteforce;
 
@@ -369,11 +369,11 @@ const publicationTextGenerator = (() => {
                     text += `<p>Ein Vergleich zwischen AS und den Kriterien nach ${k.litSetName} konnte nicht vollständig durchgeführt werden (fehlende Daten oder Test nicht anwendbar).</p>`;
                 }
                 if (statsAS && statsBF && vergleichASvsBF && bfDef) {
-                    text += `<p>Gegenüber den für die ${bfDef.metricName} optimierten T2-Kriterien (AUC ${fCI(statsBF.auc, 3, false, 'de')}) ergab sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsBF.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${diffAucBfStr}.</p>`;
+                    text += `<p>Gegenüber den für die ${bfDef.metricName || bfZielMetric} optimierten T2-Kriterien (AUC ${fCI(statsBF.auc, 3, false, 'de')}) ergab sich für die Accuracy ein p-Wert von ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'de')} (McNemar) und für die AUC ein p-Wert von ${getPValueText(vergleichASvsBF.delong?.pValue, 'de')} (DeLong). Der Unterschied in der AUC betrug ${diffAucBfStr}.</p>`;
                 } else {
                     text += `<p>Ein Vergleich zwischen AS und den Brute-Force-optimierten Kriterien konnte nicht vollständig durchgeführt werden (fehlende Daten oder keine BF-Optimierung für dieses Kollektiv für die Zielmetrik ${bfZielMetric}).</p>`;
                 }
-            } else { // lang === 'en'
+            } else {
                 text += `<h4>Comparison in the ${name}</h4>`;
                 if (statsAS && statsLit && vergleichASvsLit) {
                     text += `<p>Comparing AS (AUC ${fCI(statsAS.auc, 3, false, 'en')}) with the criteria by ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'en')}), the p-value for accuracy was ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'en')} (McNemar) and for AUC was ${getPValueText(vergleichASvsLit.delong?.pValue, 'en')} (DeLong). The difference in AUC was ${diffAucLitStr}.</p>`;
@@ -381,7 +381,7 @@ const publicationTextGenerator = (() => {
                     text += `<p>A full comparison between AS and the criteria by ${k.litSetName} could not be performed (missing data or test not applicable).</p>`;
                 }
                 if (statsAS && statsBF && vergleichASvsBF && bfDef) {
-                    text += `<p>Compared to the T2 criteria optimized for ${bfDef.metricName} (AUC ${fCI(statsBF.auc, 3, false, 'en')}), the p-value for accuracy was ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'en')} (McNemar) and for AUC was ${getPValueText(vergleichASvsBF.delong?.pValue, 'en')} (DeLong). The difference in AUC was ${diffAucBfStr}.</p>`;
+                    text += `<p>Compared to the T2 criteria optimized for ${bfDef.metricName || bfZielMetric} (AUC ${fCI(statsBF.auc, 3, false, 'en')}), the p-value for accuracy was ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'en')} (McNemar) and for AUC was ${getPValueText(vergleichASvsBF.delong?.pValue, 'en')} (DeLong). The difference in AUC was ${diffAucBfStr}.</p>`;
                 } else {
                     text += `<p>A full comparison between AS and the brute-force optimized criteria could not be performed (missing data or no BF optimization for this cohort for the target metric ${bfZielMetric}).</p>`;
                 }
@@ -428,7 +428,7 @@ const publicationTextGenerator = (() => {
                 const level = parseInt(match.match(/<h(\d)/)?.[1] || '1');
                 return `\n${'#'.repeat(level)} ${p1}\n`;
             })
-            .replace(/\/g, '[$1]') // Vereinfache Cites für Markdown
+            .replace(/<cite>(.*?)<\/cite>/g, '[$1]')
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
             .replace(/&amp;/g, '&')
