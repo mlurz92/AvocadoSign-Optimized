@@ -31,9 +31,11 @@ const state = (() => {
             auswertungTableSort: cloneDeep(defaultState.auswertungTableSort),
             activeTabId: defaultState.activeTabId
         };
-        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) {
-            localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
-        }
+        
+        // Alte LocalStorage-Keys ggf. entfernen, falls sich die Struktur geändert hat
+        // Beispiel: if (localStorage.getItem('oldStorageKey')) localStorage.removeItem('oldStorageKey');
+        // Aktuell keine Notwendigkeit basierend auf den Änderungen.
+
         console.log("State Manager initialisiert mit:", currentState);
     }
 
