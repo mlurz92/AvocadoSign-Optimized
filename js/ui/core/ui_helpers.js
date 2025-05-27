@@ -3,7 +3,6 @@ const ui_helpers = (() => {
     let globalTippyInstances = [];
     let collapseEventListenersAttached = new Set();
     let kurzanleitungModalInstance = null;
-    let initialTabRenderFixed = false;
 
     function escapeMarkdown(text) {
         if (typeof text !== 'string' || text === null) return text === null ? '' : String(text);
@@ -639,7 +638,7 @@ const ui_helpers = (() => {
 
         let ciWarning = '';
         const ciWarningThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 10;
-        if (data?.n_trials !== undefined && data?.n_trials < ciWarningThreshold && (key === 'sens' || key === 'spez' || key === 'ppv' || key === 'npv' || key === 'acc')) {
+        if (data?.n_success !== undefined && data?.n_trials !== undefined && data?.n_trials < ciWarningThreshold && (key === 'sens' || key === 'spez' || key === 'ppv' || key === 'npv' || key === 'acc')) {
             ciWarning = `<hr><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahl (Nenner=${data.n_trials}).</i>`;
         } else if (data?.matrix_components && (key === 'balAcc' || key === 'f1' || key === 'auc' || key === 'lrPlus' || key === 'lrMinus')) {
             const mc = data.matrix_components;
@@ -647,6 +646,7 @@ const ui_helpers = (() => {
                  ciWarning = `<hr><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahlen in der Konfusionsmatrix (Gesamt=${mc.total}).</i>`;
             }
         }
+
 
         let prozentpunkteText = '';
         if (key.startsWith('diff') && valueStr !== na) {
@@ -672,7 +672,7 @@ const ui_helpers = (() => {
              interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
              interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
         }
-        interpretation = interpretation.replace(/, p=\[P_WERT(_DELONG)?\], \[SIGNIFIKANZ(_DELONG)?\]/g,''); // remove p-value placeholders if not filled by specific test interpretation
+        interpretation = interpretation.replace(/, p=\[P_WERT(_DELONG)?\], \[SIGNIFIKANZ(_DELONG)?\]/g,'');
         interpretation = interpretation.replace(/<hr.*?>.*$/, '');
         interpretation += ciWarning;
         return interpretation;
@@ -810,17 +810,6 @@ const ui_helpers = (() => {
         }
 
         if (kurzanleitungModalInstance && !modalElement.classList.contains('show')) {
-            if (!initialTabRenderFixed) {
-                modalElement.addEventListener('hidden.bs.modal', () => {
-                    if (!initialTabRenderFixed && typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
-                        const defaultInitialTabId = 'publikation-tab'; 
-                        if (typeof state !== 'undefined' && state.getActiveTabId() === defaultInitialTabId) {
-                            mainAppInterface.refreshCurrentTab();
-                        }
-                    }
-                    initialTabRenderFixed = true; 
-                }, { once: true });
-            }
             kurzanleitungModalInstance.show();
         }
     }
