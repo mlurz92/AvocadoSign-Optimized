@@ -13,7 +13,7 @@ const state = (() => {
         currentStatsKollektiv2: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2,
         currentPresentationView: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW,
         currentPresentationStudyId: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID,
-        activeTabId: 'daten-tab'
+        activeTabId: 'publikation-tab'
     };
 
     function init() {
@@ -170,9 +170,8 @@ const state = (() => {
             currentState.currentPresentationView = newView;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW, currentState.currentPresentationView);
             if (newView === 'as-pur') {
-                setCurrentPresentationStudyId(null); // Reset study ID when switching to "AS Pur"
+                setCurrentPresentationStudyId(null); 
             } else if (!currentState.currentPresentationStudyId && newView === 'as-vs-t2') {
-                // If switching to "AS vs T2" and no study is selected, default to applied criteria
                 setCurrentPresentationStudyId(APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID);
             }
             return true;
