@@ -137,6 +137,11 @@ const uiComponents = (() => {
         const statusText = workerAvailable ? 'Bereit.' : 'Worker konnte nicht initialisiert werden.';
         const defaultMetric = APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC || 'Balanced Accuracy';
         const displayKollektivName = getKollektivDisplayName(currentKollektivName);
+        const resultContainerTooltip = (TOOLTIP_CONTENT.bruteForceResult.description || 'Ergebnis der Optimierung.')
+                                      .replace('[N_GESAMT]', '--')
+                                      .replace('[N_PLUS]', '--')
+                                      .replace('[N_MINUS]', '--');
+
 
         return `
         <div class="col-12">
@@ -182,7 +187,7 @@ const uiComponents = (() => {
                             <i class="fas fa-times me-1"></i> Abbrechen
                          </button>
                      </div>
-                     <div id="brute-force-result-container" class="mt-3 d-none alert alert-success p-2" role="alert" data-tippy-content="${(TOOLTIP_CONTENT.bruteForceResult.description || 'Ergebnis der Optimierung.').replace('[N_GESAMT]', data?.nGesamt || '?').replace('[N_PLUS]', data?.nPlus || '?').replace('[N_MINUS]', data?.nMinus || '?')}">
+                     <div id="brute-force-result-container" class="mt-3 d-none alert alert-success p-2" role="alert" data-tippy-content="${resultContainerTooltip}">
                          <h6 class="alert-heading small">Optimierung Abgeschlossen</h6>
                          <p class="mb-1 small">Beste Kombi für <strong id="bf-result-metric"></strong> (Koll.: <strong id="bf-result-kollektiv"></strong>):</p>
                          <ul class="list-unstyled mb-1 small">
@@ -208,7 +213,7 @@ const uiComponents = (() => {
 
     function createStatistikCard(id, title, content = '', addPadding = true, tooltipKey = null, downloadButtons = [], tableId = null) {
         const cardTooltipHtml = tooltipKey && TOOLTIP_CONTENT[tooltipKey]?.cardTitle
-            ? `data-tippy-content="${(TOOLTIP_CONTENT[tooltipKey].cardTitle || title).replace(/\[KOLLEKTIV\]/g, '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>')}"`
+            ? `data-tippy-content="${(TOOLTIP_CONTENT[tooltipKey].cardTitle || title).replace('[KOLLEKTIV]', '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>')}"`
             : `data-tippy-content="${title}"`;
 
         const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, id + '-content', title);
@@ -218,7 +223,6 @@ const uiComponents = (() => {
              const pngExportButton = { id: `dl-card-${id}-${tableId}-png`, icon: 'fa-image', tooltip: `Tabelle '${title}' als PNG herunterladen.`, format: 'png', tableId: tableId, tableName: title };
              finalButtonHtml += _createHeaderButtonHTML([pngExportButton], tableId, title);
         }
-
 
         return `
             <div class="col-12 stat-card" id="${id}-card-container">
@@ -340,9 +344,13 @@ const uiComponents = (() => {
         const bestResult = results[0];
         const kollektivName = getKollektivNameFunc(kollektiv);
         const metricDisplayName = metric === 'PPV' ? 'PPV' : metric === 'NPV' ? 'NPV' : metric;
+        const resultContainerTooltip = (TOOLTIP_CONTENT.bruteForceResult.description || 'Ergebnis der Optimierung.')
+                                      .replace('[N_GESAMT]', formatNumber(nGesamt,0,'?'))
+                                      .replace('[N_PLUS]', formatNumber(nPlus,0,'?'))
+                                      .replace('[N_MINUS]', formatNumber(nMinus,0,'?'));
 
         let tableHTML = `
-            <div class="alert alert-light small p-2 mb-3" data-tippy-content="${(TOOLTIP_CONTENT.bruteForceResult.description || 'Bestes Ergebnis der Optimierung.').replace('[N_GESAMT]', formatNumber(nGesamt,0,'?')).replace('[N_PLUS]', formatNumber(nPlus,0,'?')).replace('[N_MINUS]', formatNumber(nMinus,0,'?'))}">
+            <div class="alert alert-light small p-2 mb-3" data-tippy-content="${resultContainerTooltip}">
                 <p class="mb-1"><strong>Beste Kombi für '${metricDisplayName}' (Koll.: '${kollektivName}'):</strong></p>
                 <ul class="list-unstyled mb-1">
                     <li><strong>Wert:</strong> ${formatNumber(bestResult.metricValue, 4)}</li>
@@ -449,7 +457,6 @@ const uiComponents = (() => {
                 </div>
             </div>`;
     }
-
 
     return Object.freeze({
         createDashboardCard,
