@@ -77,12 +77,18 @@ function initializeApp() {
 
         initializeBruteForceManager();
 
-        publikationTabLogic.initializeData(
-            localRawData,
-            t2CriteriaManager.getAppliedCriteria(),
-            t2CriteriaManager.getAppliedLogic(),
-            bruteForceManager.getAllResults()
-        );
+        if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.initializeData === 'function') {
+            publikationTabLogic.initializeData(
+                localRawData,
+                t2CriteriaManager.getAppliedCriteria(),
+                t2CriteriaManager.getAppliedLogic(),
+                bruteForceManager.getAllResults()
+            );
+        } else {
+            console.error("initializeApp: publikationTabLogic.initializeData ist nicht verfügbar.");
+            ui_helpers.showToast("Kritischer Fehler: Initialisierung des Publikationsmoduls fehlgeschlagen.", "danger");
+        }
+
 
         filterAndPrepareData();
         updateUIState();
@@ -92,14 +98,18 @@ function initializeApp() {
         const initialTabElement = document.getElementById(initialTabId);
          if(initialTabElement && bootstrap.Tab) {
             const tab = bootstrap.Tab.getOrCreateInstance(initialTabElement);
-            if(tab) tab.show();
+            if(tab) tab.show(); // Dies triggert 'shown.bs.tab', was processTabChange aufruft
          } else {
-             state.setActiveTabId('publikation-tab');
+             state.setActiveTabId('publikation-tab'); // Fallback
              const fallbackTabElement = document.getElementById('publikation-tab');
-             if(fallbackTabElement && bootstrap.Tab) bootstrap.Tab.getOrCreateInstance(fallbackTabElement).show();
+             if(fallbackTabElement && bootstrap.Tab) {
+                const tab = bootstrap.Tab.getOrCreateInstance(fallbackTabElement);
+                if(tab) tab.show();
+             } else { // Wenn auch der Fallback-Tab nicht da ist, manuell rendern
+                 processTabChange(state.getActiveTabId());
+             }
          }
-        processTabChange(state.getActiveTabId());
-
+        
         const mainTabNav = document.getElementById('mainTab');
         if(mainTabNav) {
             mainTabNav.querySelectorAll('.nav-link').forEach(navLink => {
@@ -412,11 +422,18 @@ function handleBruteForceResult(payload) {
             ui_helpers.initializeTooltips(modalBody);
         }
         ui_helpers.showToast('Optimierung abgeschlossen.', 'success');
-        if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.initializeData === 'function') {
-            publikationTabLogic.initializeData(localRawData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getAllResults());
-            if (state.getActiveTabId() === 'publikation-tab') {
-                _renderCurrentTab('publikation-tab');
-            }
+        if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.triggerStatsCalculation === 'function') {
+            publikationTabLogic.triggerStatsCalculation(
+                localRawData,
+                t2CriteriaManager.getAppliedCriteria(),
+                t2CriteriaManager.getAppliedLogic(),
+                bruteForceManager.getAllResults(),
+                (success) => {
+                    if (state.getActiveTabId() === 'publikation-tab') {
+                         _renderCurrentTab('publikation-tab');
+                    }
+                }
+            );
         }
     } else {
         ui_helpers.showToast('Optimierung ohne valide Ergebnisse.', 'warning');
