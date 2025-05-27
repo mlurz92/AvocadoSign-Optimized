@@ -111,7 +111,10 @@ const publicationRenderer = (() => {
     function _renderDiagnostischeGueteTabellen(allKollektivStats, lang, sectionId, commonData) {
         if (!allKollektivStats) return '<p class="text-muted small">Keine Gütedaten für diese Sektion verfügbar.</p>';
         let tableHTML = '';
-        const tableIdBase = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteGesamtTabelle.id;
+        let tableIdForHTML = 'pub-table-default-guete';
+        let tableTitleDe = 'Diagnostische Güte';
+        let tableTitleEn = 'Diagnostic Performance';
+
         const kollektive = ['Gesamt', 'direkt OP', 'nRCT'];
         const bfZielMetric = commonData.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
@@ -171,13 +174,19 @@ const publicationRenderer = (() => {
         }
 
         if (sectionId === 'ergebnisse_as_performance') {
-            tableHTML += `<h4 class="mt-4 mb-3">${lang === 'de' ? 'Tabelle 3: Diagnostische Güte - Avocado Sign (vs. N-Status)' : 'Table 3: Diagnostic Performance - Avocado Sign (vs. N-Status)'}</h4>`;
-            tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdBase}-as"><thead><tr><th>${lang==='de'?'Methode':'Method'}</th><th>${lang==='de'?'Kollektiv':'Cohort'}</th><th>Sens. (95%-KI)</th><th>Spez. (95%-KI)</th><th>PPV (95%-KI)</th><th>NPV (95%-KI)</th><th>Acc. (95%-KI)</th><th>AUC (95%-KI)</th></tr></thead><tbody>`;
+            tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteASTabelle.id;
+            tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteASTabelle.titleDe;
+            tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteASTabelle.titleEn;
+            tableHTML += `<h4 class="mt-4 mb-3">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
+            tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdForHTML}"><thead><tr><th>${lang==='de'?'Methode':'Method'}</th><th>${lang==='de'?'Kollektiv':'Cohort'}</th><th>Sens. (95%-KI)</th><th>Spez. (95%-KI)</th><th>PPV (95%-KI)</th><th>NPV (95%-KI)</th><th>Acc. (95%-KI)</th><th>AUC (95%-KI)</th></tr></thead><tbody>`;
             tableHTML += renderTableRows('Avocado Sign', (kolId) => allKollektivStats?.[kolId]?.gueteAS);
             tableHTML += `</tbody></table></div>`;
         } else if (sectionId === 'ergebnisse_literatur_t2_performance') {
-            tableHTML += `<h4 class="mt-4 mb-3">${lang === 'de' ? 'Tabelle 4: Diagnostische Güte - Literatur-basierte T2-Kriterien (vs. N-Status)' : 'Table 4: Diagnostic Performance - Literature-Based T2 Criteria (vs. N-Status)'}</h4>`;
-            tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdBase}-literatur"><thead><tr><th>${lang==='de'?'Kriteriensatz':'Criteria Set'}</th><th>${lang==='de'?'Angew. Kollektiv':'Applied Cohort'}</th><th>Sens. (95%-KI)</th><th>Spez. (95%-KI)</th><th>PPV (95%-KI)</th><th>NPV (95%-KI)</th><th>Acc. (95%-KI)</th><th>AUC (95%-KI)</th></tr></thead><tbody>`;
+            tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteLiteraturT2Tabelle.id;
+            tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteLiteraturT2Tabelle.titleDe;
+            tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteLiteraturT2Tabelle.titleEn;
+            tableHTML += `<h4 class="mt-4 mb-3">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
+            tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdForHTML}"><thead><tr><th>${lang==='de'?'Kriteriensatz':'Criteria Set'}</th><th>${lang==='de'?'Angew. Kollektiv':'Applied Cohort'}</th><th>Sens. (95%-KI)</th><th>Spez. (95%-KI)</th><th>PPV (95%-KI)</th><th>NPV (95%-KI)</th><th>Acc. (95%-KI)</th><th>AUC (95%-KI)</th></tr></thead><tbody>`;
             PUBLICATION_CONFIG.literatureCriteriaSets.forEach(conf => {
                 const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(conf.id);
                 if(studySet){
@@ -188,13 +197,19 @@ const publicationRenderer = (() => {
             });
             tableHTML += `</tbody></table></div>`;
         } else if (sectionId === 'ergebnisse_optimierte_t2_performance') {
-            tableHTML += `<h4 class="mt-4 mb-3">${lang === 'de' ? `Tabelle 5: Diagnostische Güte - Optimierte T2-Kriterien (Ziel: ${bfZielMetric}, vs. N-Status)` : `Table 5: Diagnostic Performance - Optimized T2 Criteria (Target: ${bfZielMetric}, vs. N-Status)`}</h4>`;
-            tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdBase}-bf"><thead><tr><th>${lang==='de'?'Optimierungs-Ziel':'Optimization Target'}</th><th>${lang==='de'?'Kollektiv':'Cohort'}</th><th>Sens. (95%-KI)</th><th>Spez. (95%-KI)</th><th>PPV (95%-KI)</th><th>NPV (95%-KI)</th><th>Acc. (95%-KI)</th><th>AUC (95%-KI)</th></tr></thead><tbody>`;
+            tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.id;
+            tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.titleDe.replace('{BF_METRIC}', bfZielMetric);
+            tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.titleEn.replace('{BF_METRIC}', bfZielMetric);
+            tableHTML += `<h4 class="mt-4 mb-3">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
+            tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdForHTML}"><thead><tr><th>${lang==='de'?'Optimierungs-Ziel':'Optimization Target'}</th><th>${lang==='de'?'Kollektiv':'Cohort'}</th><th>Sens. (95%-KI)</th><th>Spez. (95%-KI)</th><th>PPV (95%-KI)</th><th>NPV (95%-KI)</th><th>Acc. (95%-KI)</th><th>AUC (95%-KI)</th></tr></thead><tbody>`;
             tableHTML += renderTableRows(`Optimiert für ${bfZielMetric}`, (kolId) => allKollektivStats?.[kolId]?.gueteT2_bruteforce);
             tableHTML += `</tbody></table></div>`;
         } else if (sectionId === 'ergebnisse_vergleich_performance') {
-             tableHTML += `<h4 class="mt-4 mb-3">${lang === 'de' ? 'Tabelle 6: Statistischer Vergleich - Avocado Sign vs. T2-Kriterien (Literatur und Optimiert)' : 'Table 6: Statistical Comparison - Avocado Sign vs. T2 Criteria (Literature and Optimized)'}</h4>`;
-             tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdBase}-vergleich">
+             tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.id;
+             tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.titleDe;
+             tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.titleEn;
+             tableHTML += `<h4 class="mt-4 mb-3">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
+             tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdForHTML}">
                 <thead><tr>
                     <th>${lang==='de'?'Vergleich':'Comparison'}</th>
                     <th>${lang==='de'?'Kollektiv':'Cohort'}</th>
@@ -260,9 +275,9 @@ const publicationRenderer = (() => {
             return '<p class="text-danger">Fehler: Notwendige Daten für die Sektionsanzeige fehlen.</p>';
         }
 
-        const { currentKollektiv, bruteForceMetric } = options; // currentKollektiv ist hier der global gewählte
+        const { currentKollektiv, bruteForceMetric } = options;
         const commonData = {
-            ...commonDataFromLogic, // Übernimmt appName, appVersion etc. von publikation_tab_logic
+            ...commonDataFromLogic,
             currentKollektivName: getKollektivDisplayName(currentKollektiv),
             bruteForceMetricForPublication: bruteForceMetric || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication,
         };
@@ -291,12 +306,12 @@ const publicationRenderer = (() => {
                 combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="pub-chart-gender-Gesamt"><h5 class="text-center small mb-1">${UI_TEXTS.chartTitles.genderDistribution} (${getKollektivDisplayName("Gesamt")})</h5><p class="text-muted small text-center p-1">${lang==='de'?'Abb. 1b':'Fig. 1b'}</p></div></div>`;
                 combinedHtml += '</div>';
             } else if (['ergebnisse_as_performance', 'ergebnisse_literatur_t2_performance', 'ergebnisse_optimierte_t2_performance', 'ergebnisse_vergleich_performance'].includes(subSection.id)) {
-                combinedHtml += _renderDiagnostischeGueteTabellen(allKollektivStats, lang, subSection.id, commonData); // commonData für bfZielMetric
+                combinedHtml += _renderDiagnostischeGueteTabellen(allKollektivStats, lang, subSection.id, commonData);
                 if (subSection.id === 'ergebnisse_vergleich_performance') {
                      combinedHtml += '<div class="row mt-4 g-3">';
                      const kollektiveForCharts = ['Gesamt', 'direkt OP', 'nRCT'];
                      kollektiveForCharts.forEach((kolId, index) => {
-                        const chartLetter = String.fromCharCode(97 + index); // a, b, c
+                        const chartLetter = String.fromCharCode(97 + index);
                         const chartId = `pub-chart-vergleich-${kolId.replace(/\s+/g, '-')}`;
                         const chartTitle = lang === 'de' ? `Vergleichsmetriken für ${getKollektivDisplayName(kolId)}` : `Comparative Metrics for ${getKollektivDisplayName(kolId)}`;
                         const figRef = lang === 'de' ? `Abb. 2${chartLetter}` : `Fig. 2${chartLetter}`;
