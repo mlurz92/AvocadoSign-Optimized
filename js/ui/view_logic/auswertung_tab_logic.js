@@ -8,13 +8,13 @@ const auswertungTabLogic = (() => {
 
         const tableId = 'auswertung-table';
         const columns = [
-            { key: 'nr', label: 'Nr', tooltip: TOOLTIP_CONTENT.auswertungTable.nr },
-            { key: 'name', label: 'Name', tooltip: TOOLTIP_CONTENT.auswertungTable.name },
-            { key: 'therapie', label: 'Therapie', tooltip: TOOLTIP_CONTENT.auswertungTable.therapie },
-            { key: 'status', label: 'N/AS/T2', tooltip: TOOLTIP_CONTENT.auswertungTable.n_as_t2, subKeys: [{key: 'n', label: 'N'}, {key: 'as', label: 'AS'}, {key: 't2', label: 'T2'}]},
-            { key: 'anzahl_patho_lk', label: 'N+/N ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.n_counts, textAlign: 'center' },
-            { key: 'anzahl_as_lk', label: 'AS+/AS ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.as_counts, textAlign: 'center' },
-            { key: 'anzahl_t2_lk', label: 'T2+/T2 ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.t2_counts, textAlign: 'center' },
+            { key: 'nr', label: 'Nr', tooltip: TOOLTIP_CONTENT.auswertungTable.nr || 'Fortlaufende Nummer des Patienten.' },
+            { key: 'name', label: 'Name', tooltip: TOOLTIP_CONTENT.auswertungTable.name || 'Nachname des Patienten (anonymisiert/kodiert).' },
+            { key: 'therapie', label: 'Therapie', tooltip: TOOLTIP_CONTENT.auswertungTable.therapie || 'Angewandte Therapie vor der Operation.' },
+            { key: 'status', label: 'N/AS/T2', tooltip: TOOLTIP_CONTENT.auswertungTable.n_as_t2 || 'Status: Pathologie (N), Avocado Sign (AS), T2 (aktuelle Kriterien). Klicken Sie auf N, AS oder T2 im Spaltenkopf zur Sub-Sortierung.', subKeys: [{key: 'n', label: 'N'}, {key: 'as', label: 'AS'}, {key: 't2', label: 'T2'}]},
+            { key: 'anzahl_patho_lk', label: 'N+/N ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.n_counts || 'Pathologisch N+ LK / Gesamt N LK.', textAlign: 'center' },
+            { key: 'anzahl_as_lk', label: 'AS+/AS ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.as_counts || 'Avocado Sign (AS)+ LK / Gesamt AS LK.', textAlign: 'center' },
+            { key: 'anzahl_t2_lk', label: 'T2+/T2 ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.t2_counts || 'T2+ LK (aktuelle Kriterien) / Gesamt T2 LK.', textAlign: 'center' },
             { key: 'details', label: '', width: '30px'}
         ];
 
@@ -56,23 +56,25 @@ const auswertungTabLogic = (() => {
                     if(!thStyle.endsWith('"')) thStyle += '"';
                 }
             }
+            
+            const baseTooltipContent = col.tooltip || col.label;
 
             const subHeaders = col.subKeys ? col.subKeys.map(sk => {
                  const isActiveSubSort = activeSubKey === sk.key;
                  const style = isActiveSubSort ? 'font-weight: bold; text-decoration: underline; color: var(--primary-color);' : '';
-                 const thLabel = col.label || col.key;
-                 const subLabel = sk.label || sk.key;
-                 return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="Sortieren nach ${thLabel} -> ${subLabel}">${subLabel}</span>`;
+                 const subLabel = sk.label || sk.key.toUpperCase();
+                 const subTooltip = `Sortieren nach Status ${subLabel}. ${baseTooltipContent}`;
+                 return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="${subTooltip}">${subLabel}</span>`;
              }).join(' / ') : '';
 
+            const mainTooltip = col.subKeys ? `${baseTooltipContent} Klicken Sie auf N, AS oder T2 für Sub-Sortierung.` : (col.key === 'details' ? (TOOLTIP_CONTENT.auswertungTable.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
             const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys || col.key === 'details' ? '' : 'style="cursor: pointer;"'}`;
-            const tooltip = col.tooltip && col.key !== 'details' ? `data-tippy-content="${col.tooltip}"` : '';
             const thClass = mainHeaderClass;
 
             if (col.subKeys) {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${col.label} ${subHeaders ? `(${subHeaders})` : ''} ${sortIconHTML}</th>`;
+                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} data-tippy-content="${mainTooltip}" ${thStyle}>${col.label} ${subHeaders ? `(${subHeaders})` : ''} ${isMainKeyActiveSort && !activeSubKey ? sortIconHTML : '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>'}</th>`;
              } else {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltip} ${thStyle}>${col.label} ${col.key === 'details' ? '' : sortIconHTML}</th>`;
+                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} data-tippy-content="${mainTooltip}" ${thStyle}>${col.label} ${col.key === 'details' ? '' : sortIconHTML}</th>`;
              }
         });
         headerHTML += `</tr></thead>`;
@@ -81,12 +83,12 @@ const auswertungTabLogic = (() => {
 
     function createAuswertungTableCardHTML(data, sortState, appliedCriteria, appliedLogic) {
         const tableHTML = createAuswertungTableHTML(data, sortState, appliedCriteria, appliedLogic);
-        const toggleButtonTooltip = TOOLTIP_CONTENT.auswertungTable.expandAll || 'Alle Details ein-/ausblenden';
+        const toggleButtonTooltip = TOOLTIP_CONTENT.auswertungTable.expandAll || 'Alle Detailansichten (Bewertung einzelner T2-LKs) für Patienten in dieser Tabelle ein- oder ausblenden.';
         return `
             <div class="col-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>Patientenübersicht & Auswertungsergebnisse</span>
+                        <span>Patientenübersicht & Auswertungsergebnisse (basierend auf angewandten T2-Kriterien)</span>
                         <button id="auswertung-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="expand" data-tippy-content="${toggleButtonTooltip}">
                            Alle Details <i class="fas fa-chevron-down ms-1"></i>
                        </button>
