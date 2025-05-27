@@ -463,7 +463,14 @@ const viewRenderer = (() => {
     function renderPublikationTab(currentLang, currentSection, currentKollektiv, globalProcessedData, bruteForceResults) {
         _renderTabContent('publikation-tab', () => {
             const headerHTML = uiComponents.createPublikationTabHeader();
-            const initialContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv);
+            let sectionContentHTML;
+            
+            if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.getRenderedSectionContent === 'function') {
+                sectionContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv);
+            } else {
+                console.error("viewRenderer.renderPublikationTab: publikationTabLogic.getRenderedSectionContent ist nicht verfügbar.");
+                sectionContentHTML = '<p class="text-danger">Fehler: Inhalt des Publikationsmoduls konnte nicht geladen werden.</p>';
+            }
             
             const container = document.createElement('div');
             container.innerHTML = headerHTML;
@@ -485,20 +492,22 @@ const viewRenderer = (() => {
                     container.appendChild(contentArea); 
                 }
             }
-            contentArea.innerHTML = initialContentHTML;
+            contentArea.innerHTML = sectionContentHTML;
 
-
-            setTimeout(() => {
-                const renderedContentArea = document.getElementById('publikation-content-area');
-                if (!renderedContentArea) {
-                     console.error("Publikations-Tab: #publikation-content-area konnte auch nach manueller Erstellung nicht gefunden werden.");
-                } else {
-                    publikationTabLogic.updateDynamicChartsForPublicationTab(currentSection, currentLang, currentKollektiv);
-                }
-                ui_helpers.updatePublikationUI(currentLang, currentSection, state.getCurrentPublikationBruteForceMetric());
-                ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
-            }, 10);
-
+            if (sectionContentHTML.includes("Lade Statistikdaten") || sectionContentHTML.includes("Fehler:")) {
+                 // Tue nichts weiter, da der Inhalt bereits eine Lade- oder Fehlermeldung ist.
+            } else {
+                setTimeout(() => {
+                    const renderedContentArea = document.getElementById('publikation-content-area');
+                    if (!renderedContentArea) {
+                         console.error("Publikations-Tab: #publikation-content-area konnte auch nach manueller Erstellung nicht gefunden werden.");
+                    } else if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.updateDynamicChartsForPublicationTab === 'function'){
+                        publikationTabLogic.updateDynamicChartsForPublicationTab(currentSection, currentLang, currentKollektiv);
+                    }
+                    ui_helpers.updatePublikationUI(currentLang, currentSection, state.getCurrentPublikationBruteForceMetric());
+                    ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
+                }, 50); // Erhöhter Timeout für komplexere Sektionsinhalte und Chart-Rendering
+            }
             return container.innerHTML;
         });
     }
