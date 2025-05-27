@@ -758,9 +758,7 @@ const ui_helpers = (() => {
 
     function showKurzanleitung() {
         const modalElement = document.getElementById('kurzanleitung-modal');
-        const firstStartKey = APP_CONFIG.STORAGE_KEYS.FIRST_APP_START;
-        const isFirstStart = loadFromLocalStorage(firstStartKey) === null;
-
+        
         if (!modalElement) {
             const modalHTML = `
                 <div class="modal fade" id="kurzanleitung-modal" tabindex="-1" aria-labelledby="kurzanleitungModalLabel" aria-hidden="true">
@@ -786,13 +784,8 @@ const ui_helpers = (() => {
              kurzanleitungModalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
         }
 
-        if (kurzanleitungModalInstance) {
-             if(isFirstStart){
-                kurzanleitungModalInstance.show();
-                saveToLocalStorage(firstStartKey, 'shown');
-             } else if (modalElement && !modalElement.classList.contains('show')) { 
-                kurzanleitungModalInstance.show();
-             }
+        if (kurzanleitungModalInstance && modalElement && !modalElement.classList.contains('show')) {
+            kurzanleitungModalInstance.show();
         }
     }
 
