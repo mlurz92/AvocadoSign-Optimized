@@ -91,13 +91,23 @@ const statistikTabLogic = (() => {
 
         const getPValueInterpretationAssoc = (key, assocObj) => {
              const testName = assocObj?.testName || '';
-             const pTooltipKey = testName.includes("Fisher") ? 'fisher' : (testName.includes("Mann-Whitney") ? 'mannwhitney' : (key === 'size_mwu' ? 'mannwhitney' : 'defaultP'));
+             let pTooltipKey = 'defaultP';
+             if (testName) {
+                if (testName.toLowerCase().includes("fisher")) pTooltipKey = 'fisher';
+                else if (testName.toLowerCase().includes("mann-whitney")) pTooltipKey = 'mannwhitney';
+             } else if (key === 'size_mwu') {
+                pTooltipKey = 'mannwhitney';
+             }
              const merkmalName = assocObj?.featureName || key;
              return ui_helpers.getAssociationInterpretationHTML(pTooltipKey, assocObj, merkmalName, kollektivName);
         };
         const getTestDescriptionAssoc = (assocObj) => {
              const testName = assocObj?.testName || '';
-             const pTooltipKey = testName.includes("Fisher") ? 'fisher' : (testName.includes("Mann-Whitney") ? 'mannwhitney' : 'defaultP');
+             let pTooltipKey = 'defaultP';
+             if (testName) {
+                if (testName.toLowerCase().includes("fisher")) pTooltipKey = 'fisher';
+                else if (testName.toLowerCase().includes("mann-whitney")) pTooltipKey = 'mannwhitney';
+             }
              const merkmalName = assocObj?.featureName || '';
              return (TOOLTIP_CONTENT.statMetrics[pTooltipKey]?.description || '').replace('[MERKMAL]', `'${merkmalName}'`).replace('[VARIABLE]', `'${merkmalName}'`);
         };
@@ -185,7 +195,7 @@ const statistikTabLogic = (() => {
         return tableHTML;
     }
 
-    function createCriteriaComparisonTableHTML(results, kollektivName) {
+    function createCriteriaComparisonTableHTML(results, globalKollektivName) {
          if (!Array.isArray(results) || results.length === 0) return '<p class="text-muted small p-3">Keine Daten für Kriterienvergleich verfügbar.</p>';
          const tc = TOOLTIP_CONTENT || {}; const cc = tc.criteriaComparisonTable || {};
          const headers = [
@@ -198,24 +208,58 @@ const statistikTabLogic = (() => {
              { key: 'auc', label: cc.tableHeaderAUC || "AUC/BalAcc", tooltip: ui_helpers.getMetricDescriptionHTML('auc', 'Ausgewählte Methode') }
          ];
          const tableId = "table-kriterien-vergleich";
-         let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped table-hover small caption-top" id="${tableId}"><caption>Vergleich verschiedener Kriteriensätze (vs. N) für Kollektiv: ${kollektivName}</caption><thead class="small"><tr>`;
+         let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped table-hover small caption-top" id="${tableId}"><caption>Vergleich verschiedener Kriteriensätze (vs. N) für das globale Kollektiv: ${globalKollektivName}</caption><thead class="small"><tr>`;
          headers.forEach(h => {
             const tooltipAttr = h.tooltip ? `data-tippy-content="${h.tooltip}"` : '';
             tableHTML += `<th ${tooltipAttr}>${h.label}</th>`;
          });
          tableHTML += `</tr></thead><tbody>`;
-         results.forEach(result => {
-             const isApplied = result.id === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID; const isAS = result.id === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID; const rowClass = isApplied ? 'table-primary' : (isAS ? 'table-info' : ''); let nameDisplay = result.name || 'Unbekannt'; if (isApplied) nameDisplay = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME; else if (isAS) nameDisplay = APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME;
-             const tooltipSens = ui_helpers.getMetricInterpretationHTML('sens', { value: result.sens }, nameDisplay, kollektivName);
-             const tooltipSpez = ui_helpers.getMetricInterpretationHTML('spez', { value: result.spez }, nameDisplay, kollektivName);
-             const tooltipPPV = ui_helpers.getMetricInterpretationHTML('ppv', { value: result.ppv }, nameDisplay, kollektivName);
-             const tooltipNPV = ui_helpers.getMetricInterpretationHTML('npv', { value: result.npv }, nameDisplay, kollektivName);
-             const tooltipAcc = ui_helpers.getMetricInterpretationHTML('acc', { value: result.acc }, nameDisplay, kollektivName);
-             const tooltipAUC = ui_helpers.getMetricInterpretationHTML('auc', { value: result.auc }, nameDisplay, kollektivName);
 
-             tableHTML += `<tr class="${rowClass}"><td class="fw-bold">${nameDisplay}</td><td data-tippy-content="${tooltipSens}">${formatPercent(result.sens, 1)}</td><td data-tippy-content="${tooltipSpez}">${formatPercent(result.spez, 1)}</td><td data-tippy-content="${tooltipPPV}">${formatPercent(result.ppv, 1)}</td><td data-tippy-content="${tooltipNPV}">${formatPercent(result.npv, 1)}</td><td data-tippy-content="${tooltipAcc}">${formatPercent(result.acc, 1)}</td><td data-tippy-content="${tooltipAUC}">${formatNumber(result.auc, 3)}</td></tr>`;
+         results.forEach(result => {
+             const isApplied = result.id === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
+             const isAS = result.id === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID;
+             const isLiteratur = !isApplied && !isAS;
+
+             let rowClass = '';
+             if (isApplied) rowClass = 'table-primary';
+             else if (isAS) rowClass = 'table-info';
+
+             let nameDisplay = result.name || 'Unbekannt';
+             let kollektivForInterpretation = result.specificKollektivName || globalKollektivName; // Default to global
+             let patientCountForInterpretation = result.specificKollektivN !== undefined ? result.specificKollektivN : result.globalN;
+
+
+             if (isApplied) nameDisplay = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME;
+             else if (isAS) nameDisplay = APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME;
+
+             let nameSuffix = '';
+             if (isLiteratur && result.specificKollektivName && result.specificKollektivName !== globalKollektivName) {
+                 nameSuffix = ` <small class="text-muted fst-italic">(eval. auf ${result.specificKollektivName}, N=${patientCountForInterpretation || '?'})</small>`;
+             } else if ((isApplied || isAS) && patientCountForInterpretation !== undefined) {
+                 nameSuffix = ` <small class="text-muted fst-italic">(N=${patientCountForInterpretation || '?'})</small>`;
+             }
+
+
+             const tooltipSens = ui_helpers.getMetricInterpretationHTML('sens', { value: result.sens }, nameDisplay, kollektivForInterpretation);
+             const tooltipSpez = ui_helpers.getMetricInterpretationHTML('spez', { value: result.spez }, nameDisplay, kollektivForInterpretation);
+             const tooltipPPV = ui_helpers.getMetricInterpretationHTML('ppv', { value: result.ppv }, nameDisplay, kollektivForInterpretation);
+             const tooltipNPV = ui_helpers.getMetricInterpretationHTML('npv', { value: result.npv }, nameDisplay, kollektivForInterpretation);
+             const tooltipAcc = ui_helpers.getMetricInterpretationHTML('acc', { value: result.acc }, nameDisplay, kollektivForInterpretation);
+             const tooltipAUC = ui_helpers.getMetricInterpretationHTML('auc', { value: result.auc }, nameDisplay, kollektivForInterpretation);
+
+             tableHTML += `<tr class="${rowClass}">
+                             <td class="fw-bold">${nameDisplay}${nameSuffix}</td>
+                             <td data-tippy-content="${tooltipSens}">${formatPercent(result.sens, 1)}</td>
+                             <td data-tippy-content="${tooltipSpez}">${formatPercent(result.spez, 1)}</td>
+                             <td data-tippy-content="${tooltipPPV}">${formatPercent(result.ppv, 1)}</td>
+                             <td data-tippy-content="${tooltipNPV}">${formatPercent(result.npv, 1)}</td>
+                             <td data-tippy-content="${tooltipAcc}">${formatPercent(result.acc, 1)}</td>
+                             <td data-tippy-content="${tooltipAUC}">${formatNumber(result.auc, 3)}</td>
+                           </tr>`;
          });
-         tableHTML += `</tbody></table></div>`; return tableHTML;
+         tableHTML += `</tbody></table></div>`;
+         tableHTML += `<p class="small text-muted px-2 mt-1">Hinweis: Werte für Literatur-Kriteriensätze werden idealerweise auf deren spezifischem Zielkollektiv berechnet, falls dieses vom global gewählten Kollektiv abweicht. Dies wird ggf. in der Namensspalte ausgewiesen.</p>`
+         return tableHTML;
     }
 
     return Object.freeze({
