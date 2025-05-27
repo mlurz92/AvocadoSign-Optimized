@@ -2,6 +2,7 @@ const ui_helpers = (() => {
 
     let globalTippyInstances = [];
     let collapseEventListenersAttached = new Set();
+    let kurzanleitungModalInstance = null;
 
     function escapeMarkdown(text) {
         if (typeof text !== 'string' || text === null) return text === null ? '' : String(text);
@@ -57,7 +58,7 @@ const ui_helpers = (() => {
            const newInstances = tippy(elementsInScope, {
                allowHTML: true, theme: 'glass', placement: 'top', animation: 'fade',
                interactive: false, appendTo: () => document.body, delay: APP_CONFIG.UI_SETTINGS.TOOLTIP_DELAY || [150, 50],
-               maxWidth: 350, duration: [150, 150], zIndex: 3050,
+               maxWidth: 400, duration: [150, 150], zIndex: 3050,
                onCreate(instance) { if (!instance.props.content || String(instance.props.content).trim() === '') { instance.disable(); } },
                onShow(instance) { const content = instance.reference.getAttribute('data-tippy-content'); if (content && String(content).trim() !== '') { instance.setContent(content); return true; } else { return false; } }
            });
@@ -126,15 +127,15 @@ const ui_helpers = (() => {
                     span.style.fontWeight = isActiveSort ? 'bold' : 'normal';
                     span.style.textDecoration = isActiveSort ? 'underline' : 'none';
                     span.style.color = isActiveSort ? 'var(--primary-color)' : 'inherit';
-                    const thLabel = th.textContent.split('(')[0].trim();
+                    const thLabel = th.getAttribute('data-tippy-content') || th.textContent.split('(')[0].trim() || key;
                     const spanLabel = span.textContent.trim();
-                    span.setAttribute('data-tippy-content', `Sortieren nach: ${thLabel} -> ${spanLabel}`);
+                    span.setAttribute('data-tippy-content', `Sortieren nach: ${thLabel.split(':')[0]} -> ${spanLabel}`);
                     if (isActiveSort) {
                         icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
                         isSubKeySortActive = true;
                     }
                 });
-                if (!isSubKeySortActive && key === sortState.key && sortState.subKey === null) {
+                if (!isSubKeySortActive && key === sortState.key && (sortState.subKey === null || sortState.subKey === undefined)) {
                     icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary`;
                 }
             } else {
@@ -178,7 +179,7 @@ const ui_helpers = (() => {
         if (buttonId === 'daten-toggle-details') tooltipKeyBase = 'datenTable';
         else if (buttonId === 'auswertung-toggle-details') tooltipKeyBase = 'auswertungTable';
         const tooltipContentBase = TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll || 'Alle Details ein-/ausblenden';
-        const currentTooltipText = expand ? tooltipContentBase.replace('ein-', 'aus-') : tooltipContentBase.replace('aus-', 'ein-');
+        const currentTooltipText = expand ? tooltipContentBase.replace('ein-', 'aus-').replace('anzeigen', 'ausblenden') : tooltipContentBase.replace('aus-', 'ein-').replace('ausblenden', 'anzeigen');
 
         updateElementHTML(buttonId, `${buttonText} <i class="fas ${iconClass} ms-1"></i>`);
         button.setAttribute('data-tippy-content', currentTooltipText);
@@ -288,6 +289,16 @@ const ui_helpers = (() => {
                     if (el) {
                         el.disabled = !criterion.active;
                         el.classList.toggle('disabled-criterion-control', !criterion.active);
+                        if (el.matches('.t2-criteria-button')) {
+                            el.classList.toggle('inactive-option', !criterion.active);
+                             const buttonCriterionKey = el.dataset.criterion;
+                             const buttonValue = el.dataset.value;
+                             if (criterion.active && currentCriteria[buttonCriterionKey]?.value === buttonValue) {
+                                el.classList.add('active');
+                             } else {
+                                el.classList.remove('active');
+                             }
+                        }
                     }
                 });
 
@@ -299,14 +310,6 @@ const ui_helpers = (() => {
                     if (range) range.value = formatNumber(thresholdValue, 1, '', true);
                     if (input) input.value = formatNumber(thresholdValue, 1, '', true);
                     if (valueDisplay) valueDisplay.textContent = formatNumber(thresholdValue, 1);
-                } else {
-                    optionsContainer.querySelectorAll('.t2-criteria-button').forEach(button => {
-                        if(button.dataset.criterion === key) {
-                            const isActiveValue = criterion.active && button.dataset.value === String(criterion.value);
-                            button.classList.toggle('active', isActiveValue);
-                            button.classList.toggle('inactive-option', !criterion.active || !isActiveValue);
-                        }
-                    });
                 }
             }
         });
@@ -326,10 +329,10 @@ const ui_helpers = (() => {
         } else if (shouldShowIndicator && existingTippy) {
             existingTippy.setContent(tooltipContent);
             existingTippy.setProps({ theme: 'glass warning' });
-            existingTippy.enable();
-            existingTippy.show();
-        } else if (!shouldShowIndicator && existingTippy) {
-            existingTippy.hide();
+            if(!existingTippy.state.isEnabled) existingTippy.enable();
+            if(!existingTippy.state.isVisible) existingTippy.show();
+        } else if (!shouldShowIndicator && existingTippy && existingTippy.state.isEnabled) {
+            if(existingTippy.state.isVisible) existingTippy.hide();
             existingTippy.disable();
         }
     }
@@ -346,7 +349,7 @@ const ui_helpers = (() => {
             toggleBtn.classList.toggle('active', isVergleich);
             toggleBtn.setAttribute('aria-pressed', String(isVergleich));
             updateElementHTML(toggleBtn.id, isVergleich ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv');
-            if(toggleBtn._tippy) toggleBtn._tippy.setContent(TOOLTIP_CONTENT.statistikLayout?.description || 'Layout umschalten');
+            if(toggleBtn._tippy) toggleBtn._tippy.setContent(TOOLTIP_CONTENT.statistikToggleVergleich?.description || 'Layout umschalten');
             else initializeTooltips(toggleBtn.parentElement || toggleBtn);
         }
         if (container1) container1.classList.toggle('d-none', !isVergleich);
@@ -395,6 +398,9 @@ const ui_helpers = (() => {
             resultCriteria: document.getElementById('bf-result-criteria'),
             resultDuration: document.getElementById('bf-result-duration'),
             resultTotalTested: document.getElementById('bf-result-total-tested'),
+            resultKollektivN: document.getElementById('bf-result-kollektiv-n'),
+            resultKollektivNplus: document.getElementById('bf-result-kollektiv-nplus'),
+            resultKollektivNminus: document.getElementById('bf-result-kollektiv-nminus'),
             applyBestBtn: document.getElementById('btn-apply-best-bf-criteria')
         };
 
@@ -419,8 +425,8 @@ const ui_helpers = (() => {
         }
 
         const addOrUpdateTooltip = (el, content) => {
-            if(el && content) { el.setAttribute('data-tippy-content', content); if(el._tippy) el._tippy.setContent(content); else initializeTooltips(el.parentElement || el); }
-            else if (el && el._tippy && el._tippy.state.isEnabled) { el._tippy.disable(); }
+            if(el && content) { el.setAttribute('data-tippy-content', content); if(el._tippy && el._tippy.state.isEnabled) el._tippy.setContent(content); else initializeTooltips(el.parentElement || el); }
+            else if (el && el._tippy && el._tippy.state.isEnabled) { el._tippy.hide(); el._tippy.disable(); }
         };
 
         switch (state) {
@@ -436,7 +442,7 @@ const ui_helpers = (() => {
                 else if (state === 'cancelled') statusMsg = 'Abgebrochen.';
                 else if (state === 'error') statusMsg = `Fehler: ${data?.message || 'Unbekannt.'}`;
                 if (elements.statusText) updateElementText(elements.statusText.id, statusMsg);
-                if (elements.statusText) addOrUpdateTooltip(elements.statusText, `Aktueller Status: ${statusMsg}`);
+                addOrUpdateTooltip(elements.bfInfoKollektiv, `Aktueller Status: ${statusMsg}. Kollektiv: ${getKollektivNameFunc(currentKollektiv || data.kollektiv || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV)}`);
                 break;
             case 'start':
                 if (elements.progressBar) { elements.progressBar.style.width = '0%'; elements.progressBar.setAttribute('aria-valuenow', '0'); }
@@ -447,13 +453,13 @@ const ui_helpers = (() => {
                 if (elements.bestMetric) updateElementText(elements.bestMetric.id, '--');
                 if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, 'Beste Kriterien: --');
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Initialisiere...');
-                if (elements.statusText) addOrUpdateTooltip(elements.statusText, 'Aktueller Status: Initialisiere...');
+                addOrUpdateTooltip(elements.bfInfoKollektiv, `Status: Initialisiere... Kollektiv: ${getKollektivNameFunc(data.kollektiv || currentKollektiv)}`);
                 break;
             case 'started':
                 const totalComb = formatNumber(data?.totalCombinations || 0, 0, 'N/A');
                 if (elements.totalCount) updateElementText(elements.totalCount.id, totalComb);
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Teste...');
-                if (elements.statusText) addOrUpdateTooltip(elements.statusText, `Aktueller Status: Teste ${totalComb} Kombinationen...`);
+                addOrUpdateTooltip(elements.bfInfoKollektiv, `Status: Teste ${totalComb} Kombinationen... Kollektiv: ${getKollektivNameFunc(data.kollektiv || currentKollektiv)}`);
                 if (elements.progressContainer) addOrUpdateTooltip(elements.progressContainer, (TOOLTIP_CONTENT.bruteForceProgress?.description || '').replace('[TOTAL]', totalComb));
                 break;
             case 'progress':
@@ -466,15 +472,13 @@ const ui_helpers = (() => {
                 if (elements.testedCount) updateElementText(elements.testedCount.id, testedNum);
                 if (elements.totalCount) updateElementText(elements.totalCount.id, totalNum);
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Läuft...');
-                if (elements.statusText) addOrUpdateTooltip(elements.statusText, `Aktueller Status: ${percentStr} (${testedNum}/${totalNum})`);
+                addOrUpdateTooltip(elements.bfInfoKollektiv, `Status: ${percentStr} (${testedNum}/${totalNum}) Kollektiv: ${getKollektivNameFunc(data.kollektiv || currentKollektiv)}`);
                 if (data?.currentBest && data.currentBest.criteria && isFinite(data.currentBest.metricValue)) {
                     const bestValStr = formatNumber(data.currentBest.metricValue, 4);
                     const bestCritStr = formatCriteriaFunc(data.currentBest.criteria, data.currentBest.logic);
                     if (elements.metricLabel) updateElementText(elements.metricLabel.id, data.metric || 'Metrik');
                     if (elements.bestMetric) updateElementText(elements.bestMetric.id, bestValStr);
                     if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, `Beste: ${data.currentBest.logic?.toUpperCase()} - ${bestCritStr}`);
-                    if (elements.bestMetric) addOrUpdateTooltip(elements.bestMetric, `Bester Wert für '${data.metric || 'Zielmetrik'}'.`);
-                    if (elements.bestCriteria) addOrUpdateTooltip(elements.bestCriteria, `Kriterien für besten Wert.`);
                 } else {
                     if (elements.bestMetric) updateElementText(elements.bestMetric.id, '--');
                     if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, 'Beste Kriterien: --');
@@ -497,11 +501,16 @@ const ui_helpers = (() => {
                     if (elements.resultCriteria) updateElementText(elements.resultCriteria.id, criteriaStr);
                     if (elements.resultDuration) updateElementText(elements.resultDuration.id, durationStr);
                     if (elements.resultTotalTested) updateElementText(elements.resultTotalTested.id, totalTestedStr);
+                    if (elements.resultKollektivN) updateElementText(elements.resultKollektivN.id, formatNumber(data.nGesamt,0,'--'));
+                    if (elements.resultKollektivNplus) updateElementText(elements.resultKollektivNplus.id, formatNumber(data.nPlus,0,'--'));
+                    if (elements.resultKollektivNminus) updateElementText(elements.resultKollektivNminus.id, formatNumber(data.nMinus,0,'--'));
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig.');
-                    if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, TOOLTIP_CONTENT.bruteForceResult.description);
+                    addOrUpdateTooltip(elements.bfInfoKollektiv, `Status: Fertig. Kollektiv: ${kollektivName}`);
+                    addOrUpdateTooltip(elements.resultContainer, (TOOLTIP_CONTENT.bruteForceResult.description || '').replace('[N_GESAMT]', formatNumber(data.nGesamt,0,'?')).replace('[N_PLUS]', formatNumber(data.nPlus,0,'?')).replace('[N_MINUS]', formatNumber(data.nMinus,0,'?')) );
                 } else {
                     if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true);
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig (kein valides Ergebnis).');
+                     addOrUpdateTooltip(elements.bfInfoKollektiv, `Status: Fertig (kein Ergebnis). Kollektiv: ${getKollektivNameFunc(data.kollektiv || currentKollektiv)}`);
                 }
                 break;
         }
@@ -518,22 +527,21 @@ const ui_helpers = (() => {
         trySetDisabled('export-daten-md', dataDisabled);
         trySetDisabled('export-auswertung-md', dataDisabled);
         trySetDisabled('export-filtered-data-csv', dataDisabled);
-        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled); // Adjusted logic: needs data OR bf results
+        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled);
         trySetDisabled('export-charts-png', dataDisabled);
         trySetDisabled('export-charts-svg', dataDisabled);
 
-        trySetDisabled('export-all-zip', dataDisabled && bfDisabled); // Adjusted logic
+        trySetDisabled('export-all-zip', dataDisabled && bfDisabled);
         trySetDisabled('export-csv-zip', dataDisabled);
         trySetDisabled('export-md-zip', dataDisabled);
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
 
-        trySetDisabled('export-statistik-xlsx', true); // XLSX not implemented
-        trySetDisabled('export-daten-xlsx', true); // XLSX not implemented
-        trySetDisabled('export-auswertung-xlsx', true); // XLSX not implemented
-        trySetDisabled('export-filtered-data-xlsx', true); // XLSX not implemented
-        trySetDisabled('export-xlsx-zip', true); // XLSX not implemented
-
+        trySetDisabled('export-statistik-xlsx', true);
+        trySetDisabled('export-daten-xlsx', true);
+        trySetDisabled('export-auswertung-xlsx', true);
+        trySetDisabled('export-filtered-data-xlsx', true);
+        trySetDisabled('export-xlsx-zip', true);
 
         const isPresentationTabActive = activeTabId === 'praesentation-tab';
         const praesButtons = [
@@ -550,6 +558,7 @@ const ui_helpers = (() => {
             if (btn.closest('#statistik-tab-pane')) btn.disabled = activeTabId !== 'statistik-tab' || dataDisabled;
             else if (btn.closest('#auswertung-tab-pane .dashboard-card-col')) btn.disabled = activeTabId !== 'auswertung-tab' || dataDisabled;
             else if (btn.closest('#praesentation-tab-pane')) btn.disabled = activeTabId !== 'praesentation-tab' || dataDisabled;
+            else if (btn.closest('#publikation-tab-pane')) btn.disabled = activeTabId !== 'publikation-tab' || dataDisabled;
         });
          if(document.getElementById('export-bruteforce-modal-txt')) {
             trySetDisabled('export-bruteforce-modal-txt', bfDisabled);
@@ -576,43 +585,44 @@ const ui_helpers = (() => {
 
     function getMetricDescriptionHTML(key, methode = '') {
        const desc = TOOLTIP_CONTENT.statMetrics[key]?.description || key;
-       return desc.replace(/\[METHODE\]/g, methode);
+       return desc.replace(/\[METHODE\]/g, `<strong>${methode}</strong>`);
     }
 
     function getMetricInterpretationHTML(key, metricData, methode = '', kollektivName = '') {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
-        const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: 'N/A' };
+        const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: null };
         const na = '--';
         const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
         const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na, isPercent); // Using formatNumber from utils.js
-        const lowerStr = formatNumber(data?.ci?.lower, digits, na, isPercent);
-        const upperStr = formatNumber(data?.ci?.upper, digits, na, isPercent);
+        const valueStr = formatNumber(data?.value, digits, na, true);
+        const lowerStr = formatNumber(data?.ci?.lower, digits, na, true);
+        const upperStr = formatNumber(data?.ci?.upper, digits, na, true);
         const ciMethodStr = data?.method || 'N/A';
         const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value) : ((key === 'phi') ? getPhiBewertung(data?.value) : '');
+        const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
 
 
         let interpretation = interpretationTemplate
-            .replace(/\[METHODE\]/g, methode)
+            .replace(/\[METHODE\]/g, `<strong>${methode}</strong>`)
             .replace(/\[WERT\]/g, `<strong>${valueStr}${isPercent && valueStr !== na ? '%' : ''}</strong>`)
-            .replace(/\[LOWER\]/g, lowerStr)
-            .replace(/\[UPPER\]/g, upperStr)
-            .replace(/\[METHOD_CI\]/g, ciMethodStr)
-            .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
+            .replace(/\[LOWER\]/g, `<strong>${lowerStr}${isPercent && lowerStr !== na ? '%' : ''}</strong>`)
+            .replace(/\[UPPER\]/g, `<strong>${upperStr}${isPercent && upperStr !== na ? '%' : ''}</strong>`)
+            .replace(/\[METHOD_CI\]/g, `<em>${ciMethodStr}</em>`)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivNameToUse}</strong>`)
             .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`);
 
-        if (lowerStr === na || upperStr === na || ciMethodStr === na) {
-             interpretation = interpretation.replace(/\(95% CI nach .*?: .*? - .*?\)/g, '(Keine CI-Daten verfügbar)');
+        if (lowerStr === na || upperStr === na || ciMethodStr === na || !data?.ci) {
+             interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
              interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
         }
-        interpretation = interpretation.replace(/p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
+        interpretation = interpretation.replace(/, p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
         interpretation = interpretation.replace(/<hr.*?>.*$/, '');
         return interpretation;
     }
 
     function getTestDescriptionHTML(key, t2ShortName = 'T2') {
         const desc = TOOLTIP_CONTENT.statMetrics[key]?.description || key;
-        return desc.replace(/\[T2_SHORT_NAME\]/g, t2ShortName);
+        return desc.replace(/\[T2_SHORT_NAME\]/g, `<strong>${t2ShortName}</strong>`);
     }
 
     function getTestInterpretationHTML(key, testData, kollektivName = '', t2ShortName = 'T2') {
@@ -623,12 +633,13 @@ const ui_helpers = (() => {
         const pStr = (pValue !== null && !isNaN(pValue)) ? (pValue < 0.001 ? '&lt;0.001' : formatNumber(pValue, 3, na)) : na;
         const sigSymbol = getStatisticalSignificanceSymbol(pValue);
         const sigText = getStatisticalSignificanceText(pValue);
+        const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
          return interpretationTemplate
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
-            .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
-            .replace(/\[T2_SHORT_NAME\]/g, t2ShortName)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivNameToUse}</strong>`)
+            .replace(/\[T2_SHORT_NAME\]/g, `<strong>${t2ShortName}</strong>`)
             .replace(/<hr.*?>.*$/, '');
     }
 
@@ -638,6 +649,7 @@ const ui_helpers = (() => {
         const na = '--';
         let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '', pVal = NaN;
         const assozPValue = assocObj?.pValue;
+        const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
 
         if (key === 'or') {
             valueStr = formatNumber(assocObj.or?.value, 2, na);
@@ -665,19 +677,19 @@ const ui_helpers = (() => {
                  .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
                  .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
                  .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
-                 .replace(/\[MERKMAL\]/g, `'${merkmalName}'`)
-                 .replace(/\[VARIABLE\]/g, `'${merkmalName}'`)
-                 .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
+                 .replace(/\[MERKMAL\]/g, `<strong>'${merkmalName}'</strong>`)
+                 .replace(/\[VARIABLE\]/g, `<strong>'${merkmalName}'</strong>`)
+                 .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivNameToUse}</strong>`)
                  .replace(/<hr.*?>.*$/, '');
         }
 
         let interpretation = interpretationTemplate
-            .replace(/\[MERKMAL\]/g, `'${merkmalName}'`)
+            .replace(/\[MERKMAL\]/g, `<strong>'${merkmalName}'</strong>`)
             .replace(/\[WERT\]/g, `<strong>${valueStr}${key === 'rd' && valueStr !== na ? '%' : ''}</strong>`)
-            .replace(/\[LOWER\]/g, lowerStr)
-            .replace(/\[UPPER\]/g, upperStr)
-            .replace(/\[METHOD_CI\]/g, ciMethodStr)
-            .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
+            .replace(/\[LOWER\]/g, `<strong>${lowerStr}${key === 'rd' && lowerStr !== na ? '%' : ''}</strong>`)
+            .replace(/\[UPPER\]/g, `<strong>${upperStr}${key === 'rd' && upperStr !== na ? '%' : ''}</strong>`)
+            .replace(/\[METHOD_CI\]/g, `<em>${ciMethodStr}</em>`)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivNameToUse}</strong>`)
             .replace(/\[FAKTOR_TEXT\]/g, assocObj?.or?.value > 1 ? UI_TEXTS.statMetrics.orFaktorTexte.ERHOEHT : (assocObj?.or?.value < 1 ? UI_TEXTS.statMetrics.orFaktorTexte.VERRINGERT : UI_TEXTS.statMetrics.orFaktorTexte.UNVERAENDERT))
             .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.HOEHER : (assocObj?.rd?.value < 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.NIEDRIGER : UI_TEXTS.statMetrics.rdRichtungTexte.GLEICH))
             .replace(/\[STAERKE\]/g, `<strong>${bewertungStr}</strong>`)
@@ -686,16 +698,46 @@ const ui_helpers = (() => {
             .replace(/<hr.*?>.*$/, '');
 
          if (key === 'or' || key === 'rd') {
-            if (lowerStr === na || upperStr === na || ciMethodStr === na) {
-                interpretation = interpretation.replace(/\(95% CI nach .*?: .*? - .*?\)/g, '(Keine CI-Daten verfügbar)');
+            if (lowerStr === na || upperStr === na || ciMethodStr === na || !assocObj?.[key]?.ci) {
+                interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
                 interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
             }
          }
          if (key === 'or' && pStr === na) {
-             interpretation = interpretation.replace(/, p=.*?, .*?\)/g, ')');
+             interpretation = interpretation.replace(/, p=.*?, \[SIGNIFIKANZ\]/g, '');
          }
         return interpretation;
     }
+
+    function showKurzanleitung() {
+        const modalElement = document.getElementById('kurzanleitung-modal');
+        if (!modalElement) {
+            const modalHTML = `
+                <div class="modal fade" id="kurzanleitung-modal" tabindex="-1" aria-labelledby="kurzanleitungModalLabel" aria-hidden="true">
+                  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content modal-glass">
+                      <div class="modal-header">
+                        <h5 class="modal-title" id="kurzanleitungModalLabel">${UI_TEXTS.kurzanleitung.title}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+                      </div>
+                      <div class="modal-body">
+                        ${UI_TEXTS.kurzanleitung.content}
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Schließen</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            const newModalElement = document.getElementById('kurzanleitung-modal');
+            kurzanleitungModalInstance = new bootstrap.Modal(newModalElement);
+        }
+        if (kurzanleitungModalInstance) {
+            kurzanleitungModalInstance.show();
+        }
+    }
+
 
     return Object.freeze({
         escapeMarkdown,
@@ -724,7 +766,8 @@ const ui_helpers = (() => {
         getMetricInterpretationHTML,
         getTestDescriptionHTML,
         getTestInterpretationHTML,
-        getAssociationInterpretationHTML
+        getAssociationInterpretationHTML,
+        showKurzanleitung
     });
 
 })();
