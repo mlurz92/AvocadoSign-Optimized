@@ -5,33 +5,43 @@ const publicationRenderer = (() => {
 
         const formatSingleValue = (val, d, isP) => {
             if (val === null || val === undefined || isNaN(val) || !isFinite(val)) return 'N/A';
+            let numStrToFormat = val;
+            let formattedNum;
             if (isP) {
-                return formatPercent(val, d, 'N/A');
+                formattedNum = formatPercent(numStrToFormat, d, 'N/A');
             } else {
-                let numStr = formatNumber(val, d, 'N/A', true);
-                if (lang === 'de' && numStr !== 'N/A' && typeof numStr === 'string') {
-                    numStr = numStr.replace('.', ',');
-                }
-                return numStr;
+                formattedNum = formatNumber(numStrToFormat, d, 'N/A', false);
             }
+            return formattedNum;
         };
 
         const valStr = formatSingleValue(metricData.value, digits, isRate);
         if (valStr === 'N/A') return valStr;
-
 
         if (metricData.ci && metricData.ci.lower !== null && metricData.ci.upper !== null && !isNaN(metricData.ci.lower) && !isNaN(metricData.ci.upper) && isFinite(metricData.ci.lower) && isFinite(metricData.ci.upper)) {
             const lowerStr = formatSingleValue(metricData.ci.lower, digits, isRate);
             const upperStr = formatSingleValue(metricData.ci.upper, digits, isRate);
             if (lowerStr === 'N/A' || upperStr === 'N/A') return valStr;
             const ciText = lang === 'de' ? '95%-KI' : '95% CI';
-            return `${valStr} (${ciText}: ${lowerStr} – ${upperStr})`;
+
+            let mainValForDisplay = valStr;
+            let lowerValForDisplay = lowerStr;
+            let upperValForDisplay = upperStr;
+
+            if(isRate){
+                mainValForDisplay = String(mainValForDisplay).replace('%','');
+                lowerValForDisplay = String(lowerValForDisplay).replace('%','');
+                upperValForDisplay = String(upperValForDisplay).replace('%','');
+                return `${mainValForDisplay} (${ciText}: ${lowerValForDisplay}\u00A0–\u00A0${upperValForDisplay})%`;
+            } else {
+                 return `${mainValForDisplay} (${ciText}: ${lowerValForDisplay}\u00A0–\u00A0${upperValForDisplay})`;
+            }
         }
         return valStr;
     }
 
     function _renderLiteraturT2KriterienTabelle(lang) {
-        let tableHTML = `<h4 class="mt-4 mb-3">${lang === 'de' ? 'Tabelle 2: Übersicht der Literatur-basierten T2-Kriteriensets' : 'Table 2: Overview of Literature-Based T2 Criteria Sets'}</h4>`;
+        let tableHTML = `<h4 class="mt-4 mb-3" id="${PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle.id}-title">${lang === 'de' ? PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle.titleDe : PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle.titleEn}</h4>`;
         tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle.id}">
             <thead>
                 <tr>
@@ -63,7 +73,7 @@ const publicationRenderer = (() => {
 
     function _renderPatientenCharakteristikaTabelle(allKollektivStats, lang) {
         if (!allKollektivStats || !allKollektivStats.Gesamt || !allKollektivStats.Gesamt.deskriptiv) return `<p class="text-muted small">Keine ausreichenden Patientendaten für Tabelle 1 verfügbar.</p>`;
-        let tableHTML = `<h4 class="mt-4 mb-3">${lang === 'de' ? 'Tabelle 1: Patientencharakteristika' : 'Table 1: Patient Characteristics'}</h4>`;
+        let tableHTML = `<h4 class="mt-4 mb-3" id="${PUBLICATION_CONFIG.publicationElements.ergebnisse.patientenCharakteristikaTabelle.id}-title">${lang === 'de' ? PUBLICATION_CONFIG.publicationElements.ergebnisse.patientenCharakteristikaTabelle.titleDe : PUBLICATION_CONFIG.publicationElements.ergebnisse.patientenCharakteristikaTabelle.titleEn}</h4>`;
         tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${PUBLICATION_CONFIG.publicationElements.ergebnisse.patientenCharakteristikaTabelle.id}">
             <thead>
                 <tr>
@@ -74,8 +84,8 @@ const publicationRenderer = (() => {
                 </tr>
             </thead><tbody>`;
 
-        const fVal = (val, dig = 1, placeholder = 'N/A') => formatNumber(val, dig, placeholder, lang === 'en');
-        const fPerc = (count, total, dig = 1) => (total > 0 && count !== undefined && count !== null) ? formatPercent(count / total, dig) : 'N/A';
+        const fVal = (val, dig = 1, placeholder = 'N/A', useStd = false) => formatNumber(val, dig, placeholder, useStd);
+        const fPerc = (count, total, dig = 1) => (total > 0 && count !== undefined && count !== null && !isNaN(count)) ? formatPercent(count / total, dig) : 'N/A';
 
         const addRow = (labelDe, labelEn, getterGesamt, getterDirektOP, getterNRCT) => {
             const pGesamt = allKollektivStats.Gesamt?.deskriptiv;
@@ -90,9 +100,9 @@ const publicationRenderer = (() => {
         };
 
         addRow('Alter, Median (Min–Max) [Jahre]', 'Age, Median (Min–Max) [Years]',
-            p => `${fVal(p.alter?.median)} (${fVal(p.alter?.min,0)}–${fVal(p.alter?.max,0)})`,
-            p => `${fVal(p.alter?.median)} (${fVal(p.alter?.min,0)}–${fVal(p.alter?.max,0)})`,
-            p => `${fVal(p.alter?.median)} (${fVal(p.alter?.min,0)}–${fVal(p.alter?.max,0)})`
+            p => `${fVal(p.alter?.median,1,undefined,lang==='en')} (${fVal(p.alter?.min,0,undefined,lang==='en')}–${fVal(p.alter?.max,0,undefined,lang==='en')})`,
+            p => `${fVal(p.alter?.median,1,undefined,lang==='en')} (${fVal(p.alter?.min,0,undefined,lang==='en')}–${fVal(p.alter?.max,0,undefined,lang==='en')})`,
+            p => `${fVal(p.alter?.median,1,undefined,lang==='en')} (${fVal(p.alter?.min,0,undefined,lang==='en')}–${fVal(p.alter?.max,0,undefined,lang==='en')})`
         );
         addRow('Geschlecht, männlich [n (%)]', 'Sex, male [n (%)]',
             p => `${p.geschlecht?.m ?? 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})`,
@@ -177,7 +187,7 @@ const publicationRenderer = (() => {
             tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteASTabelle.id;
             tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteASTabelle.titleDe;
             tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteASTabelle.titleEn;
-            tableHTML += `<h4 class="mt-4 mb-3">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
+            tableHTML += `<h4 class="mt-4 mb-3" id="${tableIdForHTML}-title">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
             tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdForHTML}"><thead><tr><th>${lang==='de'?'Methode':'Method'}</th><th>${lang==='de'?'Kollektiv':'Cohort'}</th><th>Sens. (95%-KI)</th><th>Spez. (95%-KI)</th><th>PPV (95%-KI)</th><th>NPV (95%-KI)</th><th>Acc. (95%-KI)</th><th>AUC (95%-KI)</th></tr></thead><tbody>`;
             tableHTML += renderTableRows('Avocado Sign', (kolId) => allKollektivStats?.[kolId]?.gueteAS);
             tableHTML += `</tbody></table></div>`;
@@ -185,7 +195,7 @@ const publicationRenderer = (() => {
             tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteLiteraturT2Tabelle.id;
             tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteLiteraturT2Tabelle.titleDe;
             tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteLiteraturT2Tabelle.titleEn;
-            tableHTML += `<h4 class="mt-4 mb-3">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
+            tableHTML += `<h4 class="mt-4 mb-3" id="${tableIdForHTML}-title">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
             tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdForHTML}"><thead><tr><th>${lang==='de'?'Kriteriensatz':'Criteria Set'}</th><th>${lang==='de'?'Angew. Kollektiv':'Applied Cohort'}</th><th>Sens. (95%-KI)</th><th>Spez. (95%-KI)</th><th>PPV (95%-KI)</th><th>NPV (95%-KI)</th><th>Acc. (95%-KI)</th><th>AUC (95%-KI)</th></tr></thead><tbody>`;
             PUBLICATION_CONFIG.literatureCriteriaSets.forEach(conf => {
                 const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(conf.id);
@@ -200,7 +210,7 @@ const publicationRenderer = (() => {
             tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.id;
             tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.titleDe.replace('{BF_METRIC}', bfZielMetric);
             tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.titleEn.replace('{BF_METRIC}', bfZielMetric);
-            tableHTML += `<h4 class="mt-4 mb-3">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
+            tableHTML += `<h4 class="mt-4 mb-3" id="${tableIdForHTML}-title">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
             tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdForHTML}"><thead><tr><th>${lang==='de'?'Optimierungs-Ziel':'Optimization Target'}</th><th>${lang==='de'?'Kollektiv':'Cohort'}</th><th>Sens. (95%-KI)</th><th>Spez. (95%-KI)</th><th>PPV (95%-KI)</th><th>NPV (95%-KI)</th><th>Acc. (95%-KI)</th><th>AUC (95%-KI)</th></tr></thead><tbody>`;
             tableHTML += renderTableRows(`Optimiert für ${bfZielMetric}`, (kolId) => allKollektivStats?.[kolId]?.gueteT2_bruteforce);
             tableHTML += `</tbody></table></div>`;
@@ -208,7 +218,7 @@ const publicationRenderer = (() => {
              tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.id;
              tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.titleDe;
              tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.titleEn;
-             tableHTML += `<h4 class="mt-4 mb-3">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
+             tableHTML += `<h4 class="mt-4 mb-3" id="${tableIdForHTML}-title">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
              tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdForHTML}">
                 <thead><tr>
                     <th>${lang==='de'?'Vergleich':'Comparison'}</th>
@@ -237,9 +247,13 @@ const publicationRenderer = (() => {
 
                 let diffAucLitStr = formatNumber(vergleichASvsLit?.delong?.diffAUC, 3, 'N/A', true);
                 if (lang === 'de' && diffAucLitStr !== 'N/A') diffAucLitStr = diffAucLitStr.replace('.', ',');
+                else if (lang === 'en' && diffAucLitStr !== 'N/A') diffAucLitStr = diffAucLitStr.replace(',', '.');
+
 
                 let diffAucBfStr = formatNumber(vergleichASvsBF?.delong?.diffAUC, 3, 'N/A', true);
                 if (lang === 'de' && diffAucBfStr !== 'N/A') diffAucBfStr = diffAucBfStr.replace('.', ',');
+                else if (lang === 'en' && diffAucBfStr !== 'N/A') diffAucBfStr = diffAucBfStr.replace(',', '.');
+
 
                 if (asStats && litStats && vergleichASvsLit) {
                     tableHTML += `<tr>
@@ -248,8 +262,8 @@ const publicationRenderer = (() => {
                         <td>AS (${_formatMetricForTable(asStats.auc, false, 3, lang)})</td>
                         <td>Lit. (${_formatMetricForTable(litStats.auc, false, 3, lang)})</td>
                         <td>${diffAucLitStr}</td>
-                        <td>${getPValueText(vergleichASvsLit.delong?.pValue, lang)}</td>
-                        <td>${getPValueText(vergleichASvsLit.mcnemar?.pValue, lang)}</td>
+                        <td>${getPValueText(vergleichASvsLit.delong?.pValue, lang)} ${getStatisticalSignificanceSymbol(vergleichASvsLit.delong?.pValue)}</td>
+                        <td>${getPValueText(vergleichASvsLit.mcnemar?.pValue, lang)} ${getStatisticalSignificanceSymbol(vergleichASvsLit.mcnemar?.pValue)}</td>
                     </tr>`;
                 }
                  if (asStats && bfStats && vergleichASvsBF && bfDef) {
@@ -259,8 +273,8 @@ const publicationRenderer = (() => {
                         <td>AS (${_formatMetricForTable(asStats.auc, false, 3, lang)})</td>
                         <td>BF (${_formatMetricForTable(bfStats.auc, false, 3, lang)})</td>
                         <td>${diffAucBfStr}</td>
-                        <td>${getPValueText(vergleichASvsBF.delong?.pValue, lang)}</td>
-                        <td>${getPValueText(vergleichASvsBF.mcnemar?.pValue, lang)}</td>
+                        <td>${getPValueText(vergleichASvsBF.delong?.pValue, lang)} ${getStatisticalSignificanceSymbol(vergleichASvsBF.delong?.pValue)}</td>
+                        <td>${getPValueText(vergleichASvsBF.mcnemar?.pValue, lang)} ${getStatisticalSignificanceSymbol(vergleichASvsBF.mcnemar?.pValue)}</td>
                     </tr>`;
                  }
             });
@@ -280,6 +294,7 @@ const publicationRenderer = (() => {
             ...commonDataFromLogic,
             currentKollektivName: getKollektivDisplayName(currentKollektiv),
             bruteForceMetricForPublication: bruteForceMetric || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication,
+            references: commonDataFromLogic.references || {}
         };
 
         const mainSection = PUBLICATION_CONFIG.sections.find(s => s.id === sectionId);
@@ -302,20 +317,26 @@ const publicationRenderer = (() => {
             } else if (subSection.id === 'ergebnisse_patientencharakteristika') {
                 combinedHtml += _renderPatientenCharakteristikaTabelle(allKollektivStats, lang);
                 combinedHtml += '<div class="row mt-4 g-3">';
-                combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="pub-chart-alter-Gesamt"><h5 class="text-center small mb-1">${UI_TEXTS.chartTitles.ageDistribution} (${getKollektivDisplayName("Gesamt")})</h5><p class="text-muted small text-center p-1">${lang==='de'?'Abb. 1a':'Fig. 1a'}</p></div></div>`;
-                combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="pub-chart-gender-Gesamt"><h5 class="text-center small mb-1">${UI_TEXTS.chartTitles.genderDistribution} (${getKollektivDisplayName("Gesamt")})</h5><p class="text-muted small text-center p-1">${lang==='de'?'Abb. 1b':'Fig. 1b'}</p></div></div>`;
+                combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="${PUBLICATION_CONFIG.publicationElements.ergebnisse.alterVerteilungChart.id}"><h5 class="text-center small mb-1">${UI_TEXTS.chartTitles.ageDistribution} (${getKollektivDisplayName("Gesamt")})</h5><p class="text-muted small text-center p-1">${lang==='de'?'Abb. 1a':'Fig. 1a'}</p></div></div>`;
+                combinedHtml += `<div class="col-md-6"><div class="chart-container border rounded p-2" id="${PUBLICATION_CONFIG.publicationElements.ergebnisse.geschlechtVerteilungChart.id}"><h5 class="text-center small mb-1">${UI_TEXTS.chartTitles.genderDistribution} (${getKollektivDisplayName("Gesamt")})</h5><p class="text-muted small text-center p-1">${lang==='de'?'Abb. 1b':'Fig. 1b'}</p></div></div>`;
                 combinedHtml += '</div>';
             } else if (['ergebnisse_as_performance', 'ergebnisse_literatur_t2_performance', 'ergebnisse_optimierte_t2_performance', 'ergebnisse_vergleich_performance'].includes(subSection.id)) {
                 combinedHtml += _renderDiagnostischeGueteTabellen(allKollektivStats, lang, subSection.id, commonData);
                 if (subSection.id === 'ergebnisse_vergleich_performance') {
                      combinedHtml += '<div class="row mt-4 g-3">';
                      const kollektiveForCharts = ['Gesamt', 'direkt OP', 'nRCT'];
+                     const chartElementsConfig = [
+                        PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartGesamt,
+                        PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartDirektOP,
+                        PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartNRCT
+                     ];
                      kollektiveForCharts.forEach((kolId, index) => {
                         const chartLetter = String.fromCharCode(97 + index);
-                        const chartId = `pub-chart-vergleich-${kolId.replace(/\s+/g, '-')}`;
-                        const chartTitle = lang === 'de' ? `Vergleichsmetriken für ${getKollektivDisplayName(kolId)}` : `Comparative Metrics for ${getKollektivDisplayName(kolId)}`;
+                        const chartConfig = chartElementsConfig[index];
+                        const chartId = chartConfig.id;
+                        const chartTitle = lang === 'de' ? chartConfig.titleDe : chartConfig.titleEn;
                         const figRef = lang === 'de' ? `Abb. 2${chartLetter}` : `Fig. 2${chartLetter}`;
-                        combinedHtml += `<div class="col-md-4"><div class="chart-container border rounded p-2" id="${chartId}"><h5 class="text-center small mb-1">${chartTitle}</h5><p class="text-muted small text-center p-1">${figRef}</p></div></div>`;
+                        combinedHtml += `<div class="col-md-4"><div class="chart-container border rounded p-2" id="${chartId}"><h5 class="text-center small mb-1">${chartTitle.replace('{Kollektiv}', getKollektivDisplayName(kolId))}</h5><p class="text-muted small text-center p-1">${figRef}</p></div></div>`;
                      });
                      combinedHtml += '</div>';
                 }
