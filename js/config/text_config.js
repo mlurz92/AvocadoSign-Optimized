@@ -74,7 +74,7 @@ const UI_TEXTS_DE = {
         t2Positive: 'T2+',
         t2Negative: 'T2-',
         avocadoSign: 'Avocado Sign (AS)',
-        currentT2: '{T2ShortName}', // Placeholder will be replaced
+        currentT2: '{T2ShortName}',
         benignLN: 'Benigne LK',
         malignantLN: 'Maligne LK'
     },
@@ -147,7 +147,7 @@ const UI_TEXTS_DE = {
                 <li>Im Tab "Publikation" können Sie die Sprache der generierten Texte (Deutsch/Englisch) und die zugrundeliegende Zielmetrik für die präsentierten Brute-Force-Ergebnisse auswählen.</li>
                 <li>Die generierten Methoden- und Ergebnis-Texte sind als fundierte Grundlage für Ihr Manuskript gedacht. Sie integrieren dynamisch die relevanten statistischen Ergebnisse und Konfigurationen.</li>
                 <li>Alle Texte sollten sorgfältig überprüft, an den spezifischen Stil Ihrer Zielpublikation (z.B. "Radiology") angepasst und um eine Einleitung, Diskussion und vollständige Literaturverweise ergänzt werden.</li>
-                <li>Diagramme und Tabellen können über den "Export"-Tab oder direkt an den Elementen in verschiedenen Formaten (PNG, SVG, CSV, MD) heruntergeladen werden. Für Publikationen wird empfohlen, SVG für Diagramme zu verwenden und die Styles ggf. über die `journal_style_config.js` anzupassen oder im Nachgang zu bearbeiten.</li>
+                <li>Diagramme und Tabellen können über den "Export"-Tab oder direkt an den Elementen in verschiedenen Formaten (PNG, SVG, CSV, MD) heruntergeladen werden. Für Publikationen wird empfohlen, SVG für Diagramme zu verwenden und die Styles ggf. über die \`journal_style_config.js\` anzupassen oder im Nachgang zu bearbeiten.</li>
             </ul>
             <h6>Referenzstandard:</h6>
             <p class="small">Der pathologische N-Status dient als Referenzstandard für alle diagnostischen Güteberechnungen.</p>
@@ -290,7 +290,7 @@ const UI_TEXTS_EN = {
                 <li>In the "Publication" tab, you can select the language for generated texts (German/English) and the underlying target metric for presented Brute-Force results.</li>
                 <li>The generated Methods and Results texts are intended as a solid foundation for your manuscript. They dynamically integrate relevant statistical results and configurations.</li>
                 <li>All texts should be carefully reviewed, adapted to the specific style of your target journal (e.g., "Radiology"), and supplemented with an introduction, discussion, and complete references.</li>
-                <li>Diagrams and tables can be downloaded via the "Export" tab or directly from the elements in various formats (PNG, SVG, CSV, MD). For publications, using SVG for diagrams is recommended, with styles potentially adjusted via `journal_style_config.js` or post-hoc.</li>
+                <li>Diagrams and tables can be downloaded via the "Export" tab or directly from the elements in various formats (PNG, SVG, CSV, MD). For publications, using SVG for diagrams is recommended, with styles potentially adjusted via \`journal_style_config.js\` or post-hoc.</li>
             </ul>
             <h6>Reference Standard:</h6>
             <p class="small">The pathological N-status serves as the reference standard for all diagnostic performance calculations.</p>
@@ -304,7 +304,7 @@ const UI_TEXTS = (() => {
     if (lang === 'en') {
         return UI_TEXTS_EN;
     }
-    return UI_TEXTS_DE; // Default to German
+    return UI_TEXTS_DE;
 })();
 
 
@@ -345,7 +345,7 @@ const TOOLTIP_CONTENT_DE = {
         n_as_t2: "Direkter Statusvergleich: N (Pathologie-Referenz), AS (Avocado Sign), T2 (aktuelle Kriterien). Klicken Sie auf N, AS oder T2 im Spaltenkopf zur Sub-Sortierung.",
         n_counts: "Anzahl pathologisch positiver (N+) Lymphknoten / Gesamtzahl histopathologisch untersuchter Lymphknoten für diesen Patienten.",
         as_counts: "Anzahl als positiv bewerteter Avocado Sign (AS+) Lymphknoten / Gesamtzahl im T1KM-MRT sichtbarer Lymphknoten für diesen Patienten.",
-        t2_counts: "Anzahl als positiv bewerteter T2-Lymphknoten (gemäß aktuell angewendeter Kriterien) / Gesamtzahl im T2-MRT sichtbarer Lymphknoten für diesen Patienten.",
+        t2_counts: "Anzahl als positiv bewerteter T2-Lymphknoten (gemäß aktuell angewandter Kriterien) / Gesamtzahl im T2-MRT sichtbarer Lymphknoten für diesen Patienten.",
         expandAll: "Öffnet oder schließt die Detailansicht der bewerteten T2-gewichteten Lymphknoten und der erfüllten Kriterien für alle Patienten in der aktuellen Tabellenansicht.",
         expandRow: "Klicken Sie hier oder auf den Pfeil-Button, um die detaillierte Bewertung der einzelnen T2-gewichteten Lymphknoten dieses Patienten gemäß der aktuell angewendeten Kriterien anzuzeigen/auszublenden. Erfüllte Positiv-Kriterien werden hervorgehoben."
     },
@@ -391,8 +391,6 @@ const TOOLTIP_CONTENT_DE = {
         ppvCol: "Positiver Prädiktiver Wert dieser Kriterienkombination.",
         npvCol: "Negativer Prädiktiver Wert dieser Kriterienkombination."
     },
-    // ... (restliche TOOLTIP_CONTENT_DE von oben, ggf. mit Anpassungen für neue Vorschläge) ...
-    // Die folgenden Sektionen aus dem Original-Tooltip-Objekt werden hier integriert und ggf. angepasst:
     statistikLayout: { description: "Wählen Sie die Anzeigeart: <strong>Einzelansicht</strong> für das global gewählte Kollektiv oder <strong>Vergleich Aktiv</strong> zur Auswahl und Gegenüberstellung zweier spezifischer Kollektive." },
     statistikKollektiv1: { description: "Wählen Sie das erste Kollektiv für die statistische Auswertung oder den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv')." },
     statistikKollektiv2: { description: "Wählen Sie das zweite Kollektiv für den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv')." },
@@ -494,7 +492,7 @@ const TOOLTIP_CONTENT_DE = {
         pngZIP: { description: "Identisch zum 'Diagramme & Tabellen (PNG)' Einzel-Export. Diagramme werden publikationsoptimiert und in Englisch exportiert.", type: 'PNG_ZIP', ext: "zip"},
         svgZIP: { description: "Identisch zum 'Diagramme (SVG)' Einzel-Export. Diagramme werden publikationsoptimiert und in Englisch exportiert.", type: 'SVG_ZIP', ext: "zip"}
     },
-    publikationTabTooltips: { // Tooltips für den Publikationstab
+    publikationTabTooltips: {
         spracheSwitch: { description: "Wechselt die Sprache der generierten Texte und einiger Beschriftungen im Publikation-Tab zwischen Deutsch und Englisch." },
         sectionSelect: { description: "Wählen Sie den Abschnitt der wissenschaftlichen Publikation (Methoden oder Ergebnisse), für den Textvorschläge und relevante Daten/Grafiken angezeigt werden sollen." },
         bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, deren Brute-Force-Optimierungsergebnisse im Ergebnisteil und den zugehörigen Vergleichen verwendet und dargestellt werden sollen. Standardtexte beziehen sich meist auf die Default-Optimierungsmetrik (Balanced Accuracy)." },
@@ -512,181 +510,49 @@ const TOOLTIP_CONTENT_DE = {
         ergebnisse_vergleich_performance: { description: "Textvorschlag und relevante Tabellen/Diagramme zum statistischen Vergleich der diagnostischen Güte zwischen Avocado Sign und den verschiedenen T2-Kriteriensets." },
         referenzen: {description: "Automatisch generierte Liste der primären Literaturreferenzen, die in der Anwendung und den Texten verwendet werden."}
     },
-    statMetrics: { // Tooltips für statistische Metriken (teilweise schon vorhanden, hier konsolidiert und erweitert)
-        sens: { name: "Sensitivität", description: "Sensitivität ([METHODE] vs. N): Anteil der tatsächlich positiven Fälle (N+), die durch die Methode [METHODE] korrekt als positiv erkannt wurden.<br><i>Formel: RP / (RP + FN)</i>", interpretation: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N+ Patienten korrekt (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].<hr><i>Bei kleinen Fallzahlen für RP oder FN ist das CI ggf. sehr breit.</i>"},
-        spez: { name: "Spezifität", description: "Spezifität ([METHODE] vs. N): Anteil der tatsächlich negativen Fälle (N-), die durch die Methode [METHODE] korrekt als negativ erkannt wurden.<br><i>Formel: RN / (RN + FP)</i>", interpretation: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N- Patienten korrekt (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].<hr><i>Bei kleinen Fallzahlen für RN oder FP ist das CI ggf. sehr breit.</i>"},
-        ppv: { name: "Pos. Prädiktiver Wert (PPV)", description: "PPV ([METHODE] vs. N): Wahrscheinlichkeit, dass ein Patient mit einem positiven Testergebnis durch Methode [METHODE] tatsächlich krank (N+) ist.<br><i>Formel: RP / (RP + FP)</i>", interpretation: "Wenn die Methode [METHODE] ein positives Ergebnis lieferte, lag die Wahrscheinlichkeit für einen tatsächlichen N+ Status bei <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]. Dieser Wert ist stark prävalenzabhängig.<hr><i>Bei kleinen Fallzahlen für RP oder FP ist das CI ggf. sehr breit.</i>"},
-        npv: { name: "Neg. Prädiktiver Wert (NPV)", description: "NPV ([METHODE] vs. N): Wahrscheinlichkeit, dass ein Patient mit einem negativen Testergebnis durch Methode [METHODE] tatsächlich gesund (N-) ist.<br><i>Formel: RN / (RN + FN)</i>", interpretation: "Wenn die Methode [METHODE] ein negatives Ergebnis lieferte, lag die Wahrscheinlichkeit für einen tatsächlichen N- Status bei <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]. Dieser Wert ist stark prävalenzabhängig.<hr><i>Bei kleinen Fallzahlen für RN oder FN ist das CI ggf. sehr breit.</i>"},
-        acc: { name: "Accuracy (Gesamtgenauigkeit)", description: "Accuracy ([METHODE] vs. N): Anteil aller Fälle, die durch die Methode [METHODE] korrekt klassifiziert wurden.<br><i>Formel: (RP + RN) / Gesamtanzahl</i>", interpretation: "Die Methode [METHODE] klassifizierte insgesamt <strong>[WERT]</strong> aller Patienten korrekt (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].<hr><i>Bei unausgeglichenen Gruppen (ungleiche Prävalenz von N+ und N-) kann die Accuracy irreführend sein.</i>"},
-        balAcc: { name: "Balanced Accuracy", description: "Balanced Accuracy ([METHODE] vs. N): Der Mittelwert aus Sensitivität und Spezifität. Sinnvoll bei ungleichen Gruppengrößen (Prävalenz).<br><i>Formel: (Sensitivität + Spezifität) / 2</i>", interpretation: "Die Balanced Accuracy der Methode [METHODE], die Sensitivität und Spezifität gleich gewichtet, betrug <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]."},
-        f1: { name: "F1-Score", description: "F1-Score ([METHODE] vs. N): Das harmonische Mittel aus PPV (Precision) und Sensitivität (Recall). Ein Wert von 1 ist optimal.<br><i>Formel: 2 * (PPV * Sensitivität) / (PPV + Sensitivität)</i>", interpretation: "Der F1-Score für die Methode [METHODE], der Präzision und Sensitivität kombiniert, beträgt <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]."},
-        auc: { name: "Area Under Curve (AUC)", description: "AUC ([METHODE] vs. N): Fläche unter der Receiver Operating Characteristic (ROC)-Kurve. Repräsentiert die Fähigkeit einer Methode, zwischen positiven und negativen Fällen zu unterscheiden. 0.5 entspricht Zufall, 1.0 perfekter Trennung.<br><i>Für binäre Tests (wie AS oder eine feste T2-Regel) ist AUC = Balanced Accuracy.</i>", interpretation: "Die AUC von <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) deutet auf eine <strong>[BEWERTUNG]</strong> generelle Trennschärfe der Methode [METHODE] zwischen N+ und N- Fällen im Kollektiv [KOLLEKTIV] hin."},
-        mcnemar: { name: "McNemar-Test", description: "Prüft auf einen signifikanten Unterschied in den diskordanten Paaren (Fälle, bei denen AS und [T2_SHORT_NAME] unterschiedliche Ergebnisse liefern) bei gepaarten Daten (d.h. beide Tests am selben Patienten).<br><i>Nullhypothese (H0): Anzahl(AS+ / [T2_SHORT_NAME]-) = Anzahl(AS- / [T2_SHORT_NAME]+). Ein kleiner p-Wert spricht gegen H0.</i>", interpretation: "Der McNemar-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies deutet darauf hin, dass sich die Fehlklassifizierungsraten (diskordante Paare) von AS und [T2_SHORT_NAME] im Kollektiv [KOLLEKTIV] [SIGNIFIKANZ_TEXT] unterscheiden."},
-        delong: { name: "DeLong-Test", description: "Vergleicht zwei AUC-Werte von ROC-Kurven, die auf denselben (gepaarten) Daten basieren, unter Berücksichtigung der Kovarianz.<br><i>Nullhypothese (H0): AUC(AS) = AUC([T2_SHORT_NAME]). Ein kleiner p-Wert spricht gegen H0.</i>", interpretation: "Der DeLong-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies deutet darauf hin, dass sich die AUC-Werte (bzw. Balanced Accuracies) von AS und [T2_SHORT_NAME] im Kollektiv [KOLLEKTIV] [SIGNIFIKANZ_TEXT] unterscheiden."},
-        phi: { name: "Phi-Koeffizient (φ)", description: "Maß für die Stärke und Richtung des Zusammenhangs zwischen zwei binären Variablen (z.B. Vorhandensein von Merkmal '[MERKMAL]' und N-Status). Wertebereich von -1 bis +1. 0 bedeutet kein Zusammenhang.", interpretation: "Der Phi-Koeffizient von <strong>[WERT]</strong> deutet auf einen <strong>[BEWERTUNG]</strong> Zusammenhang zwischen dem Merkmal '[MERKMAL]' und dem N-Status im Kollektiv [KOLLEKTIV] hin."},
-        rd: { name: "Risk Difference (RD)", description: "Absolute Differenz in der Wahrscheinlichkeit (Risiko) für N+ zwischen Patienten mit und ohne das Merkmal '[MERKMAL]'. RD = P(N+|Merkmal+) - P(N+|Merkmal-). Ein RD von 0 bedeutet kein Unterschied.", interpretation: "Das Risiko für einen N+ Status war bei Patienten mit dem Merkmal '[MERKMAL]' um <strong>[WERT]%</strong> absolut [HOEHER_NIEDRIGER] als bei Patienten ohne dieses Merkmal (95%-KI nach [METHOD_CI]: [LOWER]% – [UPPER]%) im Kollektiv [KOLLEKTIV]."},
-        or: { name: "Odds Ratio (OR)", description: "Quotient der Odds für N+ bei Vorhandensein vs. Abwesenheit des Merkmals '[MERKMAL]'. OR = Odds(N+|Merkmal+) / Odds(N+|Merkmal-).<br>OR > 1: Erhöhte Odds für N+ bei Vorhandensein des Merkmals.<br>OR < 1: Verringerte Odds.<br>OR = 1: Keine Assoziation.", interpretation: "Die Chance (Odds) für einen N+ Status war bei Patienten mit dem Merkmal '[MERKMAL]' um den Faktor <strong>[WERT]</strong> [FAKTOR_TEXT] im Vergleich zu Patienten ohne dieses Merkmal (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER], p=[P_WERT], [SIGNIFIKANZ]) im Kollektiv [KOLLEKTIV]."},
-        fisher: { name: "Fisher's Exact Test", description: "Exakter Test zur Prüfung auf einen signifikanten Zusammenhang zwischen zwei kategorialen Variablen (z.B. Merkmal '[MERKMAL]' vs. N-Status). Geeignet auch für kleine Stichproben/geringe erwartete Häufigkeiten.<br><i>Nullhypothese (H0): Kein Zusammenhang.</i>", interpretation: "Der exakte Test nach Fisher ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>, was auf einen [SIGNIFIKANZ_TEXT] Zusammenhang zwischen dem Merkmal '[MERKMAL]' und dem N-Status im Kollektiv [KOLLEKTIV] hindeutet."},
-        mannwhitney: { name: "Mann-Whitney-U-Test", description: "Nichtparametrischer Test zum Vergleich der zentralen Tendenz (Median) einer kontinuierlichen Variablen (z.B. '[VARIABLE]') zwischen zwei unabhängigen Gruppen (z.B. N+ vs. N-).<br><i>Nullhypothese (H0): Kein Unterschied in den Medianen/Verteilungen.</i>", interpretation: "Der Mann-Whitney-U-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies zeigt einen [SIGNIFIKANZ_TEXT] Unterschied in der Verteilung der Variable '[VARIABLE]' zwischen N+ und N- Patienten im Kollektiv [KOLLEKTIV]."},
-        ci95: { name: "95% Konfidenzintervall (CI)", description: "Der Wertebereich, der den wahren (unbekannten) Populationsparameter der Metrik mit 95%iger Wahrscheinlichkeit überdeckt.<br><i>Methode: [METHOD_CI]</i>", interpretation: "Basierend auf den Daten liegt der wahre Wert der Metrik mit 95%iger Sicherheit zwischen [LOWER] und [UPPER]."},
-        konfusionsmatrix: { description: "Kreuztabelle, die die Klassifikationsergebnisse der Methode [METHODE] mit dem tatsächlichen N-Status vergleicht: Richtig Positive (RP), Falsch Positive (FP), Falsch Negative (FN), Richtig Negative (RN)." },
-        accComp: { name: "Accuracy Vergleich (ungepaart)", description: "Vergleicht die Accuracy der Methode [METHODE] zwischen zwei unabhängigen Kollektiven ([KOLLEKTIV1] vs. [KOLLEKTIV2]) mittels Fisher's Exact Test.<br><i>Nullhypothese (H0): Accuracy in Kollektiv1 = Accuracy in Kollektiv2.</i>", interpretation: "Der Unterschied in der Accuracy der Methode [METHODE] zwischen den Kollektiven [KOLLEKTIV1] und [KOLLEKTIV2] ist <strong>[SIGNIFIKANZ_TEXT]</strong> (p=[P_WERT])." },
-        aucComp: { name: "AUC Vergleich (ungepaart)", description: "Vergleicht die AUC der Methode [METHODE] zwischen zwei unabhängigen Kollektiven ([KOLLEKTIV1] vs. [KOLLEKTIV2]) mittels eines Z-Tests basierend auf den Standardfehlern der AUCs.<br><i>Nullhypothese (H0): AUC in Kollektiv1 = AUC in Kollektiv2.</i>", interpretation: "Der Unterschied in der AUC der Methode [METHODE] zwischen den Kollektiven [KOLLEKTIV1] und [KOLLEKTIV2] ist <strong>[SIGNIFIKANZ_TEXT]</strong> (p=[P_WERT])." },
-        defaultP: { interpretation: `Der berechnete p-Wert beträgt <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Bei einem Signifikanzniveau von ${formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,2).replace('.',',')} ist das Ergebnis <strong>[SIGNIFIKANZ_TEXT]</strong>.` },
-        size_mwu: {name: "LK Größe MWU", description: "Vergleich der medianen Lymphknotengrößen zwischen N+ und N- Patienten mittels Mann-Whitney-U-Test. Hier werden alle Lymphknoten der Patienten berücksichtigt, nicht Patienten-Level-Status.", interpretation: "Der Mann-Whitney-U-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies zeigt einen [SIGNIFIKANZ_TEXT] Unterschied in der Verteilung der Lymphknotengrößen zwischen den Lymphknoten von N+ und N- Patienten im Kollektiv [KOLLEKTIV]."}
-    }
-};
-
-const TOOLTIP_CONTENT_EN = {
-    kurzanleitungButton: { description: "Show quick start guide and important notes." },
-    kollektivButtons: { description: "Select the patient cohort for analysis: <strong>Overall</strong> (all patients), <strong>Upfront Surgery</strong> (only primary surgery without neoadjuvant therapy), or <strong>nCRT</strong> (only neoadjuvant chemoradiotherapy treated). This selection filters the data basis for all tabs." },
-    headerStats: {
-        kollektiv: "Currently selected patient cohort.",
-        anzahlPatienten: "Total number of patients in the selected cohort.",
-        statusN: "Proportion of patients with positive (+) vs. negative (-) histopathological lymph node status (N-status, pathology reference standard) in the selected cohort.",
-        statusAS: "Proportion of patients with positive (+) vs. negative (-) lymph node status according to Avocado Sign (AS) prediction (based on T1C+ MRI) in the selected cohort.",
-        statusT2: "Proportion of patients with positive (+) vs. negative (-) lymph node status according to the currently **applied and saved** T2 criteria (see Evaluation tab) for the selected cohort."
-    },
-    mainTabs: {
-        daten: "Display patient data for the selected cohort with basic information and status (N/AS/T2). Allows sorting and expanding details for T2 lymph node characteristics.",
-        auswertung: "Central tab for defining T2 criteria, viewing a descriptive dashboard, performing Brute-Force optimization, and detailed evaluation results per patient based on applied criteria.",
-        statistik: "Provides detailed statistical analyses (performance metrics, comparisons, associations) for the globally selected cohort or a comparison of two specifically selectable cohorts. All confidence intervals (CI) are 95%-CIs. The CI calculation method is explicitly stated in the tables.",
-        praesentation: "Presents analysis results in a presentation-friendly format, focusing on the comparison of the Avocado Sign with T2-based approaches (applied or literature).",
-        publikation: "Generates text suggestions and materials for scientific publications comparing Avocado Sign with various T2 criteria sets (Methods & Results).",
-        export: "Offers extensive options for downloading raw data, analysis results, tables, and diagrams in various file formats (including options for English language chart export for publications)."
-    },
-    // ... (All other tooltip keys from TOOLTIP_CONTENT_DE need their English counterparts here)
-    // Example for one section:
-    datenTable: {
-        nr: "Patient's sequential number.",
-        name: "Patient's last name (anonymized/coded).",
-        vorname: "Patient's first name (anonymized/coded).",
-        geschlecht: "Patient's gender (m: male, f: female, unknown).",
-        alter: "Patient's age at the time of MRI examination in years.",
-        therapie: "Applied therapy before surgery (nCRT: neoadjuvant chemoradiotherapy, direkt OP: upfront surgery). Influences cohort selection.",
-        n_as_t2: "Direct status comparison: N (Pathology reference), AS (Avocado Sign), T2 (current criteria). Click N, AS, or T2 in column header for sub-sorting.",
-        bemerkung: "Additional clinical or radiological remarks on the patient case, if available.",
-        expandAll: "Expands or collapses the detail view of T2-weighted lymph node characteristics for all patients in the current table view. Shows size, shape, border, homogeneity, and signal for each LN.",
-        expandRow: "Click here or the arrow button to show/hide details of the morphological properties of this patient's T2-weighted lymph nodes. Only available if T2 LN data exists."
-    },
-    auswertungTable: { // Example, needs full translation
-        nr: "Patient's sequential number.",
-        name: "Patient's last name (anonymized/coded).",
-        therapie: "Applied therapy before surgery.",
-        n_as_t2: "Direct status comparison: N (Pathology reference), AS (Avocado Sign), T2 (current criteria). Click N, AS, or T2 in column header for sub-sorting.",
-        n_counts: "Number of pathologically positive (N+) lymph nodes / Total number of histopathologically examined lymph nodes for this patient.",
-        as_counts: "Number of Avocado Sign positive (AS+) lymph nodes / Total number of visible lymph nodes on T1C+ MRI for this patient.",
-        t2_counts: "Number of T2-positive lymph nodes (according to currently applied criteria) / Total number of visible lymph nodes on T2-MRI for this patient.",
-        expandAll: "Expands or collapses the detail view of evaluated T2-weighted lymph nodes and met criteria for all patients in the current table view.",
-        expandRow: "Click here or the arrow button to show/hide the detailed evaluation of this patient's individual T2-weighted lymph nodes according to the currently applied criteria. Fulfilled positive criteria are highlighted."
-    },
-    t2Logic: { description: `Logical operator for active T2 criteria: <strong>AND</strong> (A lymph node is positive only if ALL activated criteria are met). <strong>OR</strong> (A lymph node is positive if AT LEAST ONE activated criterion is met). This choice affects the T2 status calculation.` },
-    t2Size: { description: `Size criterion (short axis): Lymph nodes with a diameter <strong>greater than or equal to (≥)</strong> the set threshold are considered suspicious. Adjustable range: ${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min} - ${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max} mm (step: ${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step} mm). Activate/deactivate with checkbox.` },
-    t2Form: { description: "Shape criterion: Select which shape ('round' or 'oval') is considered suspicious. Activate/deactivate with checkbox." },
-    t2Kontur: { description: "Border criterion: Select which border ('smooth' or 'irregular') is considered suspicious. Activate/deactivate with checkbox." },
-    t2Homogenitaet: { description: "Homogeneity criterion: Select whether 'homogeneous' or 'heterogeneous' internal signal on T2w is considered suspicious. Activate/deactivate with checkbox." },
-    t2Signal: { description: "Signal criterion: Select which T2 signal intensity ('low', 'intermediate', or 'high') relative to surrounding muscle is considered suspicious. Lymph nodes with non-assessable signal (value 'null') never meet this criterion. Activate/deactivate with checkbox." },
-    t2Actions: {
-        reset: "Resets logic and all criteria to defined default settings. Changes are not yet applied.",
-        apply: "Applies the currently set T2 criteria and logic to the entire dataset. This updates T2 columns in tables, all statistical evaluations, and diagrams. The setting is also saved for future sessions."
-    },
-     t2CriteriaCard: {
-        unsavedIndicator: "<strong>Caution:</strong> There are unapplied changes to the T2 criteria or logic. Click 'Apply & Save' to update results and save settings.",
-        statusApplied: "Status: Currently defined criteria are applied.",
-        statusNotApplied: "Status: Displayed criteria are NOT applied. Click 'Apply & Save'."
-    },
-     t2MetricsOverview: { // Example, needs full translation
-        cardTitle: "Brief overview of diagnostic performance for currently applied and saved T2 criteria versus histopathological N-status for the selected cohort: <strong>[KOLLEKTIV]</strong>. All confidence intervals (CI) are 95%-CIs.",
-        sens: "Sensitivity (T2 vs. N): Proportion of N+ cases correctly identified as positive by T2 criteria.",
-        spez: "Specificity (T2 vs. N): Proportion of N- cases correctly identified as negative by T2 criteria.",
-        ppv: "Positive Predictive Value (PPV, T2 vs. N): Probability that a T2+ case is actually N+.",
-        npv: "Negative Predictive Value (NPV, T2 vs. N): Probability that a T2- case is actually N-.",
-        acc: "Accuracy (T2 vs. N): Overall proportion of correctly classified cases.",
-        balAcc: "Balanced Accuracy (T2 vs. N): Mean of sensitivity and specificity.",
-        f1: "F1-Score (T2 vs. N): Harmonic mean of PPV and sensitivity.",
-        auc: "AUC (T2 vs. N): Area under the ROC curve; for binary tests like this, equivalent to Balanced Accuracy."
-     },
-    bruteForceMetric: { description: "Select the target metric for Brute-Force optimization.<br><strong>Accuracy:</strong> Proportion of correctly classified cases.<br><strong>Balanced Accuracy:</strong> (Sens+Spec)/2; good for imbalanced class sizes.<br><strong>F1-Score:</strong> Harmonic mean of PPV & Sensitivity.<br><strong>PPV:</strong> Precision in positive prediction.<br><strong>NPV:</strong> Precision in negative prediction." },
-    bruteForceStart: { description: "Starts the Brute-Force search for the T2 criteria combination that maximizes the selected target metric in the current cohort. This may take some time and runs in the background." },
-    bruteForceInfo: { description: "Shows the status of the Brute-Force optimization worker and the currently analyzed patient cohort: <strong>[KOLLEKTIV_NAME]</strong>." },
-    bruteForceProgress: { description: "Progress of the ongoing optimization: Tested combinations / Total combinations ([TOTAL]). Displays the current best metric and associated criteria." },
-    bruteForceResult: {
-        description: "Best result of the completed Brute-Force optimization for the selected cohort ([N_GESAMT] patients, thereof [N_PLUS] N+ and [N_MINUS] N-) and target metric.",
-        kollektivStats: "Statistics of the cohort used for this optimization: N (total count), N+ (count N-positive), N- (count N-negative)."
-    },
-    bruteForceDetailsButton: { description: "Opens a window with the Top 10 results and further details of the completed optimization." },
-    bruteForceModal: {
-        exportButton: "Exports the detailed Brute-Force optimization report (Top 10 results, cohort statistics, configuration) as a formatted text file (.txt).",
-        sensCol: "Sensitivity of this criteria combination.",
-        spezCol: "Specificity of this criteria combination.",
-        ppvCol: "Positive Predictive Value of this criteria combination.",
-        npvCol: "Negative Predictive Value of this criteria combination."
-    },
-    // ... (ensure all other sections are translated similarly)
-    // Placeholder for brevity, all keys from _DE would be translated here
-    statistikLayout: { description: "Select display mode: <strong>Single View</strong> for the globally selected cohort or <strong>Comparison Active</strong> to select and compare two specific cohorts." },
-    // ... and so on for all TOOLTIP_CONTENT keys
-    exportTab: {
-        singleExports: "Single Exports",
-        exportPackages: "Export Packages (.zip)",
-        description: "Allows exporting analysis results, tables, and diagrams based on the currently selected global cohort (<strong>[KOLLEKTIV]</strong>) and applied T2 criteria. Charts can also be exported directly in English for publications.",
-        statsCSV: { description: "Detailed table of all calculated statistical metrics (descriptive, performance AS & T2, comparisons, associations) from the Statistics tab as a CSV file.", type: 'STATS_CSV', ext: "csv" },
-        bruteForceTXT: { description: "Detailed report of the last Brute-Force optimization for the current cohort (Top 10 results, configuration) as a text file (.txt), if performed.", type: 'BRUTEFORCE_TXT', ext: "txt" },
-        deskriptivMD: { description: "Table of descriptive statistics (Statistics tab) as Markdown (.md).", type: 'DESKRIPTIV_MD', ext: "md" },
-        datenMD: { description: "Current data list (Data tab) as Markdown table (.md).", type: 'DATEN_MD', ext: "md" },
-        auswertungMD: { description: "Current evaluation table (Evaluation tab, incl. T2 results) as Markdown (.md).", type: 'AUSWERTUNG_MD', ext: "md" },
-        filteredDataCSV: { description: "Raw data of the currently selected cohort (incl. T2 evaluation) as CSV file (.csv).", type: 'FILTERED_DATA_CSV', ext: "csv" },
-        comprehensiveReportHTML: { description: "Comprehensive analysis report as HTML file (statistics, configurations, diagrams), printable.", type: 'COMPREHENSIVE_REPORT_HTML', ext: "html" },
-        chartsPNG: { description: "All currently visible charts (Statistics, Evaluation, Presentation) and selected tables as individual PNG files (ZIP archive). Charts are prepared for export according to 'journal_style_config.js' settings and in English.", type: 'PNG_ZIP', ext: "zip" },
-        chartsSVG: { description: "All currently visible charts (Statistics, Evaluation, Presentation) as individual SVG files (ZIP archive). Charts are prepared for export according to 'journal_style_config.js' settings and in English.", type: 'SVG_ZIP', ext: "zip" },
-        chartSinglePNG: { description: "Selected chart '{ChartName}' as PNG file (publication-optimized, English).", type: 'CHART_SINGLE_PNG', ext: "png"},
-        chartSingleSVG: { description: "Selected chart '{ChartName}' as SVG file (vector format, publication-optimized, English).", type: 'CHART_SINGLE_SVG', ext: "svg"},
-        tableSinglePNG: { description: "Selected table '{TableName}' as PNG image file.", type: 'TABLE_PNG_EXPORT', ext: "png"},
-        allZIP: { description: "All available single files (Statistics CSV, BruteForce TXT, all MDs, Raw Data CSV, HTML Report) in one ZIP archive.", type: 'ALL_ZIP', ext: "zip"},
-        csvZIP: { description: "All available CSV files (Statistics, Raw Data) in one ZIP archive.", type: 'CSV_ZIP', ext: "zip"},
-        mdZIP: { description: "All available Markdown files (Descriptive, Data, Evaluation, Publication texts) in one ZIP archive.", type: 'MD_ZIP', ext: "md"},
-        pngZIP: { description: "Identical to 'Charts & Tables (PNG)' single export. Charts are exported publication-optimized and in English.", type: 'PNG_ZIP', ext: "zip"},
-        svgZIP: { description: "Identical to 'Charts (SVG)' single export. Charts are exported publication-optimized and in English.", type: 'SVG_ZIP', ext: "zip"}
-    },
-    // Other sections like 'deskriptiveStatistik', 'diagnostischeGueteAS', etc. also need full English versions.
-    // For brevity, assuming full translation of all TOOLTIP_CONTENT_DE keys.
-    // Example for statMetrics:
     statMetrics: {
-        sens: { name: "Sensitivity", description: "Sensitivity ([METHOD] vs. N): Proportion of true positive cases (N+) correctly identified as positive by method [METHOD].<br><i>Formula: TP / (TP + FN)</i>", interpretation: "Method [METHOD] correctly identified <strong>[VALUE]</strong> of actual N+ patients (95% CI per [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV].<hr><i>If TP or FN counts are small, CI might be very wide.</i>"},
-        // ... and so for all other stat metrics.
-        // This section will be very long, so I'll just show a couple and assume the rest are translated.
-        defaultP: { interpretation: `The calculated p-value is <strong>[P_VALUE] ([SIGNIFICANCE_SYMBOL])</strong>. At a significance level of ${APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL}, the result is <strong>[SIGNIFICANCE_TEXT]</strong>.` }
-    },
-    // Ensure 'publikationTabTooltips' and 'praesentation' are fully translated.
-    // For brevity, these extensive translations are omitted here but would be included in the full file.
-     // Full translation of all other tooltips (e.g., t2MetricsOverview, statistischeGueteAS, etc.)
-    // would follow the same pattern of providing English equivalents for all German descriptions and interpretations.
-    // For example:
-    t2MetricsOverview: {
-        cardTitle: "Brief overview of diagnostic performance for currently applied T2 criteria vs. N-status for cohort: <strong>[KOLLEKTIV]</strong>. All CIs are 95%-CIs.",
-        sens: "Sensitivity (T2 vs. N): Proportion of N+ cases correctly identified by T2 criteria.",
-        spez: "Specificity (T2 vs. N): Proportion of N- cases correctly identified by T2 criteria.",
-        // ... and so on for all metrics
-    },
-    diagnostischeGueteAS: { cardTitle: "Diagnostic performance of Avocado Sign (AS) vs. Histopathology (N) for cohort <strong>[KOLLEKTIV]</strong>. All CIs are 95%-CIs. CI calculation method is stated in the table." },
-    // ... and so on for all other keys in TOOLTIP_CONTENT_DE.
+        sens: { name: {de: "Sensitivität", en: "Sensitivity"}, description: {de: "Sensitivität ([METHODE] vs. N): Anteil der tatsächlich positiven Fälle (N+), die durch die Methode [METHODE] korrekt als positiv erkannt wurden.<br><i>Formel: RP / (RP + FN)</i>", en: "Sensitivity ([METHOD] vs. N): Proportion of true positive cases (N+) correctly identified as positive by method [METHOD].<br><i>Formula: TP / (TP + FN)</i>"}, interpretation: {de: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N+ Patienten korrekt (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].<hr><i>Bei kleinen Fallzahlen für RP oder FN ist das CI ggf. sehr breit.</i>", en: "Method [METHOD] correctly identified <strong>[VALUE]</strong> of actual N+ patients (95% CI per [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV].<hr><i>If TP or FN counts are small, CI might be very wide.</i>"}},
+        spez: { name: {de: "Spezifität", en: "Specificity"}, description: {de: "Spezifität ([METHODE] vs. N): Anteil der tatsächlich negativen Fälle (N-), die durch die Methode [METHODE] korrekt als negativ erkannt wurden.<br><i>Formel: RN / (RN + FP)</i>", en: "Specificity ([METHOD] vs. N): Proportion of true negative cases (N-) correctly identified as negative by method [METHOD].<br><i>Formula: TN / (TN + FP)</i>"}, interpretation: {de: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N- Patienten korrekt (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].<hr><i>Bei kleinen Fallzahlen für RN oder FP ist das CI ggf. sehr breit.</i>", en: "Method [METHOD] correctly identified <strong>[VALUE]</strong> of actual N- patients (95% CI per [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV].<hr><i>If TN or FP counts are small, CI might be very wide.</i>"}},
+        ppv: { name: {de: "Pos. Prädiktiver Wert (PPV)", en: "Positive Predictive Value (PPV)"}, description: {de: "PPV ([METHODE] vs. N): Wahrscheinlichkeit, dass ein Patient mit einem positiven Testergebnis durch Methode [METHODE] tatsächlich krank (N+) ist.<br><i>Formel: RP / (RP + FP)</i>", en: "PPV ([METHOD] vs. N): Probability that a patient with a positive test result by method [METHOD] is actually diseased (N+).<br><i>Formula: TP / (TP + FP)</i>"}, interpretation: {de: "Wenn die Methode [METHODE] ein positives Ergebnis lieferte, lag die Wahrscheinlichkeit für einen tatsächlichen N+ Status bei <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]. Dieser Wert ist stark prävalenzabhängig.<hr><i>Bei kleinen Fallzahlen für RP oder FP ist das CI ggf. sehr breit.</i>", en: "If method [METHOD] yielded a positive result, the probability of an actual N+ status was <strong>[VALUE]</strong> (95% CI per [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV]. This value is highly prevalence-dependent.<hr><i>If TP or FP counts are small, CI might be very wide.</i>"}},
+        npv: { name: {de: "Neg. Prädiktiver Wert (NPV)", en: "Negative Predictive Value (NPV)"}, description: {de: "NPV ([METHODE] vs. N): Wahrscheinlichkeit, dass ein Patient mit einem negativen Testergebnis durch Methode [METHODE] tatsächlich gesund (N-) ist.<br><i>Formel: RN / (RN + FN)</i>", en: "NPV ([METHOD] vs. N): Probability that a patient with a negative test result by method [METHOD] is actually healthy (N-).<br><i>Formula: TN / (TN + FN)</i>"}, interpretation: {de: "Wenn die Methode [METHODE] ein negatives Ergebnis lieferte, lag die Wahrscheinlichkeit für einen tatsächlichen N- Status bei <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]. Dieser Wert ist stark prävalenzabhängig.<hr><i>Bei kleinen Fallzahlen für RN oder FN ist das CI ggf. sehr breit.</i>", en: "If method [METHOD] yielded a negative result, the probability of an actual N- status was <strong>[VALUE]</strong> (95% CI per [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV]. This value is highly prevalence-dependent.<hr><i>If TN or FN counts are small, CI might be very wide.</i>"}},
+        acc: { name: {de: "Accuracy (Gesamtgenauigkeit)", en: "Accuracy"}, description: {de: "Accuracy ([METHODE] vs. N): Anteil aller Fälle, die durch die Methode [METHODE] korrekt klassifiziert wurden.<br><i>Formel: (RP + RN) / Gesamtanzahl</i>", en: "Accuracy ([METHOD] vs. N): Proportion of all cases correctly classified by method [METHOD].<br><i>Formula: (TP + TN) / Total Number</i>"}, interpretation: {de: "Die Methode [METHODE] klassifizierte insgesamt <strong>[WERT]</strong> aller Patienten korrekt (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].<hr><i>Bei unausgeglichenen Gruppen (ungleiche Prävalenz von N+ und N-) kann die Accuracy irreführend sein.</i>", en: "Method [METHOD] correctly classified a total of <strong>[VALUE]</strong> of all patients (95% CI per [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV].<hr><i>Accuracy can be misleading in imbalanced groups (unequal prevalence of N+ and N-).</i>"}},
+        balAcc: { name: {de: "Balanced Accuracy", en: "Balanced Accuracy"}, description: {de: "Balanced Accuracy ([METHODE] vs. N): Der Mittelwert aus Sensitivität und Spezifität. Sinnvoll bei ungleichen Gruppengrößen (Prävalenz).<br><i>Formel: (Sensitivität + Spezifität) / 2</i>", en: "Balanced Accuracy ([METHOD] vs. N): The mean of sensitivity and specificity. Useful for imbalanced group sizes (prevalence).<br><i>Formula: (Sensitivity + Specificity) / 2</i>"}, interpretation: {de: "Die Balanced Accuracy der Methode [METHODE], die Sensitivität und Spezifität gleich gewichtet, betrug <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].", en: "The Balanced Accuracy of method [METHOD], which equally weights sensitivity and specificity, was <strong>[VALUE]</strong> (95% CI per [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV]."}},
+        f1: { name: {de: "F1-Score", en: "F1-Score"}, description: {de: "F1-Score ([METHODE] vs. N): Das harmonische Mittel aus PPV (Precision) und Sensitivität (Recall). Ein Wert von 1 ist optimal.<br><i>Formel: 2 * (PPV * Sensitivität) / (PPV + Sensitivität)</i>", en: "F1-Score ([METHOD] vs. N): The harmonic mean of PPV (Precision) and Sensitivity (Recall). A value of 1 is optimal.<br><i>Formula: 2 * (PPV * Sensitivity) / (PPV + Sensitivity)</i>"}, interpretation: {de: "Der F1-Score für die Methode [METHODE], der Präzision und Sensitivität kombiniert, beträgt <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].", en: "The F1-Score for method [METHOD], combining precision and sensitivity, is <strong>[VALUE]</strong> (95% CI per [METHOD_CI]: [LOWER] – [UPPER]) in cohort [KOLLEKTIV]."}},
+        auc: { name: {de: "Area Under Curve (AUC)", en: "Area Under Curve (AUC)"}, description: {de: "AUC ([METHODE] vs. N): Fläche unter der Receiver Operating Characteristic (ROC)-Kurve. Repräsentiert die Fähigkeit einer Methode, zwischen positiven und negativen Fällen zu unterscheiden. 0.5 entspricht Zufall, 1.0 perfekter Trennung.<br><i>Für binäre Tests (wie AS oder eine feste T2-Regel) ist AUC = Balanced Accuracy.</i>", en: "AUC ([METHOD] vs. N): Area under the Receiver Operating Characteristic (ROC) curve. Represents a method's ability to discriminate between positive and negative cases. 0.5 corresponds to chance, 1.0 to perfect discrimination.<br><i>For binary tests (like AS or a fixed T2 rule), AUC = Balanced Accuracy.</i>"}, interpretation: {de: "Die AUC von <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) deutet auf eine <strong>[BEWERTUNG]</strong> generelle Trennschärfe der Methode [METHODE] zwischen N+ und N- Fällen im Kollektiv [KOLLEKTIV] hin.", en: "An AUC of <strong>[VALUE]</strong> (95% CI per [METHOD_CI]: [LOWER] – [UPPER]) indicates a <strong>[EVALUATION]</strong> overall discriminative ability of method [METHOD] between N+ and N- cases in cohort [KOLLEKTIV]."}},
+        mcnemar: { name: {de: "McNemar-Test", en: "McNemar's Test"}, description: {de: "Prüft auf einen signifikanten Unterschied in den diskordanten Paaren (Fälle, bei denen AS und [T2_SHORT_NAME] unterschiedliche Ergebnisse liefern) bei gepaarten Daten (d.h. beide Tests am selben Patienten).<br><i>Nullhypothese (H0): Anzahl(AS+ / [T2_SHORT_NAME]-) = Anzahl(AS- / [T2_SHORT_NAME]+). Ein kleiner p-Wert spricht gegen H0.</i>", en: "Tests for a significant difference in discordant pairs (cases where AS and [T2_SHORT_NAME] yield different results) in paired data (i.e., both tests on the same patient).<br><i>Null hypothesis (H0): Count(AS+ / [T2_SHORT_NAME]-) = Count(AS- / [T2_SHORT_NAME]+). A small p-value argues against H0.</i>"}, interpretation: {de: "Der McNemar-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies deutet darauf hin, dass sich die Fehlklassifizierungsraten (diskordante Paare) von AS und [T2_SHORT_NAME] im Kollektiv [KOLLEKTIV] [SIGNIFIKANZ_TEXT] unterscheiden.", en: "McNemar's test yielded a p-value of <strong>[P_VALUE] ([SIGNIFICANCE])</strong>. This suggests that the misclassification rates (discordant pairs) of AS and [T2_SHORT_NAME] in cohort [KOLLEKTIV] differ [SIGNIFICANCE_TEXT]."}},
+        delong: { name: {de: "DeLong-Test", en: "DeLong's Test"}, description: {de: "Vergleicht zwei AUC-Werte von ROC-Kurven, die auf denselben (gepaarten) Daten basieren, unter Berücksichtigung der Kovarianz.<br><i>Nullhypothese (H0): AUC(AS) = AUC([T2_SHORT_NAME]). Ein kleiner p-Wert spricht gegen H0.</i>", en: "Compares two AUC values from ROC curves based on the same (paired) data, accounting for covariance.<br><i>Null hypothesis (H0): AUC(AS) = AUC([T2_SHORT_NAME]). A small p-value argues against H0.</i>"}, interpretation: {de: "Der DeLong-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies deutet darauf hin, dass sich die AUC-Werte (bzw. Balanced Accuracies) von AS und [T2_SHORT_NAME] im Kollektiv [KOLLEKTIV] [SIGNIFIKANZ_TEXT] unterscheiden.", en: "DeLong's test yielded a p-value of <strong>[P_VALUE] ([SIGNIFICANCE])</strong>. This suggests that the AUC values (or Balanced Accuracies) of AS and [T2_SHORT_NAME] in cohort [KOLLEKTIV] differ [SIGNIFICANCE_TEXT]."}},
+        phi: { name: {de: "Phi-Koeffizient (φ)", en: "Phi Coefficient (φ)"}, description: {de: "Maß für die Stärke und Richtung des Zusammenhangs zwischen zwei binären Variablen (z.B. Vorhandensein von Merkmal '[MERKMAL]' und N-Status). Wertebereich von -1 bis +1. 0 bedeutet kein Zusammenhang.", en: "Measure of the strength and direction of association between two binary variables (e.g., presence of feature '[FEATURE]' and N-status). Ranges from -1 to +1. 0 means no association."}, interpretation: {de: "Der Phi-Koeffizient von <strong>[WERT]</strong> deutet auf einen <strong>[BEWERTUNG]</strong> Zusammenhang zwischen dem Merkmal '[MERKMAL]' und dem N-Status im Kollektiv [KOLLEKTIV] hin.", en: "The Phi coefficient of <strong>[VALUE]</strong> indicates a <strong>[EVALUATION]</strong> association between feature '[FEATURE]' and N-status in cohort [KOLLEKTIV]."}},
+        rd: { name: {de: "Risk Difference (RD)", en: "Risk Difference (RD)"}, description: {de: "Absolute Differenz in der Wahrscheinlichkeit (Risiko) für N+ zwischen Patienten mit und ohne das Merkmal '[MERKMAL]'. RD = P(N+|Merkmal+) - P(N+|Merkmal-). Ein RD von 0 bedeutet kein Unterschied.", en: "Absolute difference in the probability (risk) of N+ between patients with and without feature '[FEATURE]'. RD = P(N+|Feature+) - P(N+|Feature-). An RD of 0 means no difference."}, interpretation: {de: "Das Risiko für einen N+ Status war bei Patienten mit dem Merkmal '[MERKMAL]' um <strong>[WERT]%</strong> absolut [HOEHER_NIEDRIGER] als bei Patienten ohne dieses Merkmal (95%-KI nach [METHOD_CI]: [LOWER]% – [UPPER]%) im Kollektiv [KOLLEKTIV].", en: "The risk of N+ status for patients with feature '[FEATURE]' was <strong>[VALUE]%</strong> absolutely [HIGHER_LOWER] than for patients without this feature (95% CI per [METHOD_CI]: [LOWER]% – [UPPER]%) in cohort [KOLLEKTIV]."}},
+        or: { name: {de: "Odds Ratio (OR)", en: "Odds Ratio (OR)"}, description: {de: "Quotient der Odds für N+ bei Vorhandensein vs. Abwesenheit des Merkmals '[MERKMAL]'. OR = Odds(N+|Merkmal+) / Odds(N+|Merkmal-).<br>OR > 1: Erhöhte Odds für N+ bei Vorhandensein des Merkmals.<br>OR < 1: Verringerte Odds.<br>OR = 1: Keine Assoziation.", en: "Ratio of the odds of N+ given presence vs. absence of feature '[FEATURE]'. OR = Odds(N+|Feature+) / Odds(N+|Feature-).<br>OR > 1: Increased odds for N+ if feature is present.<br>OR < 1: Decreased odds.<br>OR = 1: No association."}, interpretation: {de: "Die Chance (Odds) für einen N+ Status war bei Patienten mit dem Merkmal '[MERKMAL]' um den Faktor <strong>[WERT]</strong> [FAKTOR_TEXT] im Vergleich zu Patienten ohne dieses Merkmal (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER], p=[P_WERT], [SIGNIFIKANZ]) im Kollektiv [KOLLEKTIV].", en: "The odds of N+ status for patients with feature '[FEATURE]' were <strong>[VALUE]</strong> times [FACTOR_TEXT] compared to patients without this feature (95% CI per [METHOD_CI]: [LOWER] – [UPPER], p=[P_VALUE], [SIGNIFICANCE]) in cohort [KOLLEKTIV]."}},
+        fisher: { name: {de: "Fisher's Exact Test", en: "Fisher's Exact Test"}, description: {de: "Exakter Test zur Prüfung auf einen signifikanten Zusammenhang zwischen zwei kategorialen Variablen (z.B. Merkmal '[MERKMAL]' vs. N-Status). Geeignet auch für kleine Stichproben/geringe erwartete Häufigkeiten.<br><i>Nullhypothese (H0): Kein Zusammenhang.</i>", en: "Exact test to check for a significant association between two categorical variables (e.g., feature '[FEATURE]' vs. N-status). Suitable also for small samples/low expected frequencies.<br><i>Null hypothesis (H0): No association.</i>"}, interpretation: {de: "Der exakte Test nach Fisher ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>, was auf einen [SIGNIFIKANZ_TEXT] Zusammenhang zwischen dem Merkmal '[MERKMAL]' und dem N-Status im Kollektiv [KOLLEKTIV] hindeutet.", en: "Fisher's exact test yielded a p-value of <strong>[P_VALUE] ([SIGNIFICANCE])</strong>, suggesting a [SIGNIFICANCE_TEXT] association between feature '[FEATURE]' and N-status in cohort [KOLLEKTIV]."}},
+        mannwhitney: { name: {de: "Mann-Whitney-U-Test", en: "Mann-Whitney U Test"}, description: {de: "Nichtparametrischer Test zum Vergleich der zentralen Tendenz (Median) einer kontinuierlichen Variablen (z.B. '[VARIABLE]') zwischen zwei unabhängigen Gruppen (z.B. N+ vs. N-).<br><i>Nullhypothese (H0): Kein Unterschied in den Medianen/Verteilungen.</i>", en: "Nonparametric test to compare the central tendency (median) of a continuous variable (e.g., '[VARIABLE]') between two independent groups (e.g., N+ vs. N-).<br><i>Null hypothesis (H0): No difference in medians/distributions.</i>"}, interpretation: {de: "Der Mann-Whitney-U-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies zeigt einen [SIGNIFIKANZ_TEXT] Unterschied in der Verteilung der Variable '[VARIABLE]' zwischen N+ und N- Patienten im Kollektiv [KOLLEKTIV].", en: "The Mann-Whitney U test yielded a p-value of <strong>[P_VALUE] ([SIGNIFICANCE])</strong>. This indicates a [SIGNIFICANCE_TEXT] difference in the distribution of variable '[VARIABLE]' between N+ and N- patients in cohort [KOLLEKTIV]."}},
+        ci95: { name: {de: "95% Konfidenzintervall (CI)", en: "95% Confidence Interval (CI)"}, description: {de: "Der Wertebereich, der den wahren (unbekannten) Populationsparameter der Metrik mit 95%iger Wahrscheinlichkeit überdeckt.<br><i>Methode: [METHOD_CI]</i>", en: "The range of values that covers the true (unknown) population parameter of the metric with 95% probability.<br><i>Method: [METHOD_CI]</i>"}, interpretation: {de: "Basierend auf den Daten liegt der wahre Wert der Metrik mit 95%iger Sicherheit zwischen [LOWER] und [UPPER].", en: "Based on the data, the true value of the metric lies between [LOWER] and [UPPER] with 95% confidence."}},
+        konfusionsmatrix: { name: {de: "Konfusionsmatrix", en: "Confusion Matrix"}, description: {de: "Kreuztabelle, die die Klassifikationsergebnisse der Methode [METHODE] mit dem tatsächlichen N-Status vergleicht: Richtig Positive (RP), Falsch Positive (FP), Falsch Negative (FN), Richtig Negative (RN).", en: "Cross-tabulation comparing the classification results of method [METHOD] with the actual N-status: True Positives (TP), False Positives (FP), False Negatives (FN), True Negatives (TN)."} },
+        accComp: { name: {de: "Accuracy Vergleich (ungepaart)", en: "Accuracy Comparison (unpaired)"}, description: {de: "Vergleicht die Accuracy der Methode [METHODE] zwischen zwei unabhängigen Kollektiven ([KOLLEKTIV1] vs. [KOLLEKTIV2]) mittels Fisher's Exact Test.<br><i>Nullhypothese (H0): Accuracy in Kollektiv1 = Accuracy in Kollektiv2.</i>", en: "Compares the accuracy of method [METHOD] between two independent cohorts ([KOLLEKTIV1] vs. [KOLLEKTIV2]) using Fisher's Exact Test.<br><i>Null hypothesis (H0): Accuracy in Cohort1 = Accuracy in Cohort2.</i>"}, interpretation: {de: "Der Unterschied in der Accuracy der Methode [METHODE] zwischen den Kollektiven [KOLLEKTIV1] und [KOLLEKTIV2] ist <strong>[SIGNIFIKANZ_TEXT]</strong> (p=[P_WERT]).", en: "The difference in accuracy of method [METHOD] between cohorts [KOLLEKTIV1] and [KOLLEKTIV2] is <strong>[SIGNIFICANCE_TEXT]</strong> (p=[P_VALUE])." } },
+        aucComp: { name: {de: "AUC Vergleich (ungepaart)", en: "AUC Comparison (unpaired)"}, description: {de: "Vergleicht die AUC der Methode [METHODE] zwischen zwei unabhängigen Kollektiven ([KOLLEKTIV1] vs. [KOLLEKTIV2]) mittels eines Z-Tests basierend auf den Standardfehlern der AUCs.<br><i>Nullhypothese (H0): AUC in Kollektiv1 = AUC in Kollektiv2.</i>", en: "Compares the AUC of method [METHOD] between two independent cohorts ([KOLLEKTIV1] vs. [KOLLEKTIV2]) using a Z-test based on the standard errors of the AUCs.<br><i>Null hypothesis (H0): AUC in Cohort1 = AUC in Cohort2.</i>"}, interpretation: {de: "Der Unterschied in der AUC der Methode [METHODE] zwischen den Kollektiven [KOLLEKTIV1] und [KOLLEKTIV2] ist <strong>[SIGNIFIKANZ_TEXT]</strong> (p=[P_WERT]).", en: "The difference in AUC of method [METHOD] between cohorts [KOLLEKTIV1] and [KOLLEKTIV2] is <strong>[SIGNIFICANCE_TEXT]</strong> (p=[P_VALUE])." } },
+        defaultP: { interpretation: {de: `Der berechnete p-Wert beträgt <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Bei einem Signifikanzniveau von ${formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,2).replace('.',',')} ist das Ergebnis <strong>[SIGNIFIKANZ_TEXT]</strong>.`, en: `The calculated p-value is <strong>[P_VALUE] ([SIGNIFICANCE_SYMBOL])</strong>. At a significance level of ${APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL}, the result is <strong>[SIGNIFICANCE_TEXT]</strong>.`} },
+        size_mwu: {name: {de: "LK Größe MWU", en: "LN Size MWU"}, description: {de: "Vergleich der medianen Lymphknotengrößen zwischen N+ und N- Patienten mittels Mann-Whitney-U-Test. Hier werden alle Lymphknoten der Patienten berücksichtigt, nicht Patienten-Level-Status.", en: "Comparison of median lymph node sizes between N+ and N- patients using Mann-Whitney U test. All lymph nodes from patients are considered here, not patient-level status."}, interpretation: {de: "Der Mann-Whitney-U-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies zeigt einen [SIGNIFIKANZ_TEXT] Unterschied in der Verteilung der Lymphknotengrößen zwischen den Lymphknoten von N+ und N- Patienten im Kollektiv [KOLLEKTIV].", en: "The Mann-Whitney U test yielded a p-value of <strong>[P_VALUE] ([SIGNIFICANCE])</strong>. This indicates a [SIGNIFICANCE_TEXT] difference in the distribution of lymph node sizes between lymph nodes of N+ and N- patients in cohort [KOLLEKTIV]."}}}
 };
 
 const TOOLTIP_CONTENT = (() => {
     const lang = state && typeof state.getCurrentPublikationLang === 'function' ? state.getCurrentPublikationLang() : APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG;
-    // Basic merge: Start with English, then override with German if lang is 'de' and key exists in German
-    // A more sophisticated merge would be needed for deep objects if only partial translations exist.
-    // For this case, we assume full translation or German as the more complete default for tooltips.
-    if (lang === 'en' && typeof TOOLTIP_CONTENT_EN !== 'undefined' && Object.keys(TOOLTIP_CONTENT_EN).length > 10) { // Check if TOOLTIP_CONTENT_EN is sufficiently populated
-        // A simple merge - German serves as fallback if an English key is missing.
-        // For a real application, a more robust deep merge or i18n library would be used.
-        let mergedTooltips = { ...TOOLTIP_CONTENT_EN }; // Start with English
-        for (const key in TOOLTIP_CONTENT_DE) {
-            if (TOOLTIP_CONTENT_DE.hasOwnProperty(key) && !mergedTooltips.hasOwnProperty(key)) {
-                mergedTooltips[key] = TOOLTIP_CONTENT_DE[key]; // Add if missing in EN
-            } else if (typeof TOOLTIP_CONTENT_DE[key] === 'object' && typeof mergedTooltips[key] === 'object') {
-                 // Simple one-level deep merge for objects like statMetrics
-                mergedTooltips[key] = { ...TOOLTIP_CONTENT_DE[key], ...mergedTooltips[key] };
+    if (lang === 'en') {
+        let mergedTooltips = JSON.parse(JSON.stringify(TOOLTIP_CONTENT_DE));
+        for (const key in TOOLTIP_CONTENT_EN) {
+            if (TOOLTIP_CONTENT_EN.hasOwnProperty(key)) {
+                if (typeof TOOLTIP_CONTENT_EN[key] === 'object' && mergedTooltips[key] && typeof mergedTooltips[key] === 'object') {
+                    for (const subKey in TOOLTIP_CONTENT_EN[key]) {
+                         if (TOOLTIP_CONTENT_EN[key].hasOwnProperty(subKey)) {
+                            if (typeof TOOLTIP_CONTENT_EN[key][subKey] === 'object' && mergedTooltips[key][subKey] && typeof mergedTooltips[key][subKey] === 'object') {
+                                mergedTooltips[key][subKey] = { ...mergedTooltips[key][subKey], ...TOOLTIP_CONTENT_EN[key][subKey] };
+                            } else {
+                                mergedTooltips[key][subKey] = TOOLTIP_CONTENT_EN[key][subKey];
+                            }
+                         }
+                    }
+                } else {
+                     mergedTooltips[key] = TOOLTIP_CONTENT_EN[key];
+                }
             }
         }
         return mergedTooltips;
@@ -695,10 +561,6 @@ const TOOLTIP_CONTENT = (() => {
 })();
 
 
-// Ensure UI_TEXTS also switches based on current language
-// This needs to be callable after state is initialized.
-// For now, UI_TEXTS is directly assigned above.
-// A getter function might be better:
 function getUITexts() {
     const lang = state && typeof state.getCurrentPublikationLang === 'function' ? state.getCurrentPublikationLang() : APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG;
     if (lang === 'en') {
@@ -707,13 +569,8 @@ function getUITexts() {
     return UI_TEXTS_DE;
 }
 
-
 deepFreeze(UI_TEXTS_DE);
 deepFreeze(UI_TEXTS_EN);
-// The global UI_TEXTS is now a bit tricky due to its direct assignment.
-// For the rest of the app, it will use the initially determined language.
-// If language changes, UI_TEXTS itself would need to be reassigned or fetched via getUITexts().
-// For simplicity in this step, UI_TEXTS will hold the texts for the language active at initialization.
-// The chart_renderer will explicitly use getUITexts(lang) for exports.
-
-deepFreeze(TOOLTIP_CONTENT); // TOOLTIP_CONTENT is now dynamically selected based on initial language.
+deepFreeze(TOOLTIP_CONTENT_DE);
+deepFreeze(TOOLTIP_CONTENT_EN);
+deepFreeze(TOOLTIP_CONTENT);
