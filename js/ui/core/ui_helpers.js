@@ -166,22 +166,41 @@ const ui_helpers = (() => {
         const size = options.size || APP_CONFIG.UI_SETTINGS.ICON_SIZE;
         const color = options.color || APP_CONFIG.UI_SETTINGS.ICON_COLOR;
         const strokeWidth = options.strokeWidth || APP_CONFIG.UI_SETTINGS.ICON_STROKE_WIDTH;
-        const classList = options.class ? options.class.split(' ') : [];
+        const classArray = options.class ? options.class.split(' ').filter(c => c.length > 0) : [];
 
         svg.setAttribute("xmlns", svgNS);
-        svg.setAttribute("width", size);
-        svg.setAttribute("height", size);
+        svg.setAttribute("width", String(size));
+        svg.setAttribute("height", String(size));
         svg.setAttribute("viewBox", "0 0 24 24");
         svg.setAttribute("fill", "none");
         svg.setAttribute("stroke", color);
-        svg.setAttribute("stroke-width", strokeWidth);
+        svg.setAttribute("stroke-width", String(strokeWidth));
         svg.setAttribute("stroke-linecap", "round");
         svg.setAttribute("stroke-linejoin", "round");
         if (options.id) svg.id = options.id;
-        svg.classList.add("icon", `icon-${iconName}`, ...classList);
+
+        svg.classList.add("icon");
+        if (iconName && !iconName.includes(' ')) {
+            svg.classList.add(`icon-${iconName}`);
+        }
+        if (classArray.length > 0) {
+            svg.classList.add(...classArray);
+        }
 
         const use = document.createElementNS(svgNS, "use");
-        use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", `#icon-${iconName}`);
+        if (iconName && !iconName.includes(' ')) {
+            use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", `#icon-${iconName}`);
+        } else if (iconName) {
+            // Fallback oder alternative Handhabung, wenn iconName Leerzeichen enthält (z.B. FontAwesome)
+            // Für dieses spezifische Setup mit SVG-Sprites ist ein iconName mit Leerzeichen nicht direkt für <use> verwendbar.
+            // Wenn FontAwesome-Icons als SVG dargestellt werden sollen, wäre ein anderer Mechanismus nötig.
+            // Hier wird angenommen, dass iconName für Sprites immer ein einzelner Bezeichner ist.
+            // Die problematische Klasse `icon-${iconName}` wird nun nur hinzugefügt, wenn iconName keine Leerzeichen hat.
+            // Wenn iconName z.B. "fas fa-home" ist, wird keine href für <use> gesetzt, was das SVG leer machen würde,
+            // aber den InvalidCharacterError verhindert.
+            // Eine bessere Lösung wäre, dass die aufrufende Funktion (uiComponents.createButton)
+            // für FontAwesome direkt <i> Tags erzeugt.
+        }
         svg.appendChild(use);
         return svg;
     }
