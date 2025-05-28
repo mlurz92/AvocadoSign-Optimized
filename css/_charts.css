@@ -6,7 +6,7 @@
     width: 100%;
     height: 100%;
     max-width: 100%;
-    overflow: visible !important; /* Important for tooltips and labels outside main area */
+    overflow: visible !important;
     will-change: transform;
     font-family: var(--chart-font-family);
     background-color: var(--chart-bg-color);
@@ -39,7 +39,7 @@
     shape-rendering: crispEdges;
 }
 
-.grid path { /* Domain line for grid */
+.grid path {
     stroke-width: 0;
 }
 
@@ -70,7 +70,7 @@
 .arc path:hover,
 .roc-point:hover {
     opacity: 1;
-    filter: brightness(1.1); /* Simple hover effect */
+    filter: brightness(1.1);
 }
 
 .arc path {
@@ -87,12 +87,12 @@
     border-radius: var(--border-radius-sm);
     font-size: var(--chart-font-size-tooltip);
     line-height: var(--line-height-sm);
-    pointer-events: none; /* Tooltip should not interfere with mouse events on chart */
+    pointer-events: none;
     box-shadow: var(--shadow-sm);
     z-index: var(--z-index-tooltip);
-    opacity: 0; /* Initially hidden */
+    opacity: 0;
     transition: opacity var(--transition-duration-fast) var(--transition-timing-function);
-    will-change: opacity, transform; /* For smooth transitions */
+    will-change: opacity, transform;
 }
 
 .roc-curve {
@@ -121,14 +121,13 @@
 .chart-container,
 .dashboard-chart-container,
 .praes-chart-container {
-    position: relative; /* For positioning elements like download buttons if needed */
+    position: relative;
     border: 1px solid var(--border-color-light);
     border-radius: var(--border-radius-sm);
     background-color: var(--chart-bg-color);
     padding: var(--spacing-xs);
 }
 
-/* Specific chart container styles */
 .dashboard-chart-container {
     min-height: 125px;
     flex-grow: 1;
@@ -142,7 +141,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden; /* To contain chart elements cleanly */
+    overflow: hidden;
 }
 
 .publication-tab-chart-container {
