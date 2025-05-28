@@ -1,4 +1,9 @@
 const dataProcessor = (() => {
+    let _internalFullRawData = [];
+
+    function init(fullRawData) {
+        _internalFullRawData = fullRawData ? cloneDeep(fullRawData) : [];
+    }
 
     function calculateAge(birthdate, examDate) {
         if (!birthdate || !examDate) {
@@ -88,8 +93,11 @@ const dataProcessor = (() => {
              console.error("processPatientData: APP_CONFIG ist nicht verfügbar.");
              return [];
         }
-
         return rawData.map((patient, index) => processSinglePatient(patient, index, APP_CONFIG));
+    }
+
+    function preprocessRawData(rawData) {
+        return processPatientData(rawData);
     }
 
     function filterDataByKollektiv(data, kollektiv) {
@@ -102,6 +110,21 @@ const dataProcessor = (() => {
             : data;
 
         return cloneDeep(filteredData);
+    }
+
+    function getSummaryStatus(data, key) {
+        if (!data || data.length === 0) return '--';
+        let plus = 0;
+        let minus = 0;
+        data.forEach(p => {
+            if (p && p[key] === '+') plus++;
+            else if (p && p[key] === '-') minus++;
+        });
+        const totalValid = plus + minus;
+        if (totalValid === 0) return '--';
+        const lang = typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function' ? state.getCurrentPublikationLang() : 'de';
+        const formatFn = lang === 'en' ? formatPercent : (val, dig, ph) => formatPercent(val, dig, ph).replace('.',',');
+        return `${formatFn(plus / totalValid, 1)} (+)` ;
     }
 
     function calculateHeaderStats(data, currentKollektiv) {
@@ -122,9 +145,12 @@ const dataProcessor = (() => {
              }
          });
 
+        const lang = typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function' ? state.getCurrentPublikationLang() : 'de';
+        const formatFn = lang === 'en' ? formatPercent : (val, dig, ph) => formatPercent(val, dig, ph).replace('.',',');
+
          const formatStatus = (pos, neg) => {
              const totalKnown = pos + neg;
-             return totalKnown > 0 ? `${formatPercent(pos / totalKnown, 1)} (+)` : placeholder;
+             return totalKnown > 0 ? `${formatFn(pos / totalKnown, 1)} (+)` : placeholder;
          };
 
          return {
@@ -143,9 +169,12 @@ const dataProcessor = (() => {
     }
 
     return Object.freeze({
+        init,
+        preprocessRawData,
         processPatientData,
         filterDataByKollektiv,
-        calculateHeaderStats
+        calculateHeaderStats,
+        getSummaryStatus
     });
 
 })();
