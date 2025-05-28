@@ -1,45 +1,44 @@
 const statistikEventHandlers = (() => {
 
-    function handleStatsLayoutToggle(button, mainAppInterface) {
-        if (!button || !mainAppInterface || typeof mainAppInterface.refreshCurrentTab !== 'function' || typeof mainAppInterface.updateGlobalUIState !== 'function') {
-            console.error("statistikEventHandlers.handleStatsLayoutToggle: Ungültige Parameter.");
-            return;
-        }
-        
-        setTimeout(() => {
-            const isPressed = button.classList.contains('active');
-            const newLayout = isPressed ? 'vergleich' : 'einzel';
-            if (state.setCurrentStatsLayout(newLayout)) {
-                mainAppInterface.updateGlobalUIState();
-                if (state.getActiveTabId() === 'statistik-tab') {
-                    mainAppInterface.refreshCurrentTab();
-                }
+    function handleDataOrCriteriaChange() {
+        const statistikTabPane = document.getElementById('statistik-tab-pane');
+        if (statistikTabPane && statistikTabPane.classList.contains('active') && statistikTabPane.classList.contains('show')) {
+            if (typeof statistikTabLogic !== 'undefined' && typeof statistikTabLogic.refresh === 'function') {
+                statistikTabLogic.refresh();
             }
-        }, 50);
+        } else if (typeof statistikTabLogic !== 'undefined' && typeof statistikTabLogic.handleGlobalDataChange === 'function') {
+            const moduleConfig = viewRenderer.tabModulesConfig ? viewRenderer.tabModulesConfig['statistik-tab-pane'] : null;
+            if(moduleConfig && moduleConfig.initialized){
+                 statistikTabLogic.handleGlobalDataChange();
+            }
+        }
     }
 
-    function handleStatistikKollektivChange(selectElement, mainAppInterface) {
-        if (!selectElement || !mainAppInterface || typeof mainAppInterface.refreshCurrentTab !== 'function') {
-             console.error("statistikEventHandlers.handleStatistikKollektivChange: Ungültige Parameter.");
-            return;
-        }
+    function setupStatistikTabEventHandlers() {
+        document.addEventListener('kollektivChanged', handleDataOrCriteriaChange);
+        document.addEventListener('t2CriteriaApplied', handleDataOrCriteriaChange);
 
-        let needsRender = false;
-        const newValue = selectElement.value;
-
-        if (selectElement.id === 'statistik-kollektiv-select-1') {
-            needsRender = state.setCurrentStatsKollektiv1(newValue);
-        } else if (selectElement.id === 'statistik-kollektiv-select-2') {
-            needsRender = state.setCurrentStatsKollektiv2(newValue);
-        }
-
-        if (needsRender && state.getCurrentStatsLayout() === 'vergleich' && state.getActiveTabId() === 'statistik-tab') {
-            mainAppInterface.refreshCurrentTab();
+        const tabPane = document.getElementById('statistik-tab-pane');
+        if (tabPane) {
+            const observer = new MutationObserver((mutationsList, observerInstance) => {
+                for (const mutation of mutationsList) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        const isActiveNow = tabPane.classList.contains('active') && tabPane.classList.contains('show');
+                        const wasActivePreviously = mutation.oldValue?.includes('active show');
+                        if (isActiveNow && !wasActivePreviously) {
+                            if (typeof statistikTabLogic !== 'undefined' && typeof statistikTabLogic.refresh === 'function') {
+                                statistikTabLogic.refresh();
+                            }
+                        }
+                    }
+                }
+            });
+            observer.observe(tabPane, { attributes: true, attributeOldValue: true });
         }
     }
 
     return Object.freeze({
-        handleStatsLayoutToggle,
-        handleStatistikKollektivChange
+        setupStatistikTabEventHandlers
     });
+
 })();
