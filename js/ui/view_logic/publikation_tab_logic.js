@@ -1,4 +1,4 @@
-const publikationTabLogic = (() => {
+window.publikationTabLogic = (() => {
     const TAB_ID = 'publikation-tab-pane';
     let currentLanguage = APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG;
     let currentSection = APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION;
@@ -11,8 +11,8 @@ const publikationTabLogic = (() => {
         currentSection = state.getCurrentPublikationSection() || APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION;
         currentBruteForceMetric = state.getCurrentPublikationBruteForceMetric() || APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC;
         
-        prepareCommonData();
         fetchAllKollektivStats().then(() => {
+            prepareCommonData();
             renderPublicationTab();
             if (typeof publikationEventHandlers !== 'undefined' && typeof publikationEventHandlers.setupPublicationTabEventHandlers === 'function') {
                 const mainAppInterface = {
@@ -85,7 +85,7 @@ const publikationTabLogic = (() => {
             return;
         }
         
-        prepareCommonData(); // Ensure common data is fresh based on potentially updated allKollektivStats
+        prepareCommonData(); 
 
         tabContainer.innerHTML = '';
 
@@ -191,7 +191,6 @@ const publikationTabLogic = (() => {
             ui_helpers.showLoadingSpinner('publikation-content-area', `Lade Inhalt für Sektion '${sectionId}'...`);
         }
         
-        // Ensure commonPublicationData is up-to-date before rendering a section
         prepareCommonData();
 
         setTimeout(() => {
@@ -271,7 +270,7 @@ const publikationTabLogic = (() => {
                 const methodsData = [];
                 if (kollektivStats.gueteAS) methodsData.push({name: APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME, ...kollektivStats.gueteAS});
                 if (kollektivStats.gueteT2_angewandt) methodsData.push({name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, ...kollektivStats.gueteT2_angewandt});
-                // Add BF optimized if available
+                
                 const bfDisplayDataPub = _getBruteForceResultsForDisplay(allKollektivStats, kollektivId, currentBruteForceMetric);
                 if (bfDisplayDataPub && bfDisplayDataPub.performance) {
                      methodsData.push({name: `Opt. T2 (${currentBruteForceMetric})`, ...bfDisplayDataPub.performance});
@@ -347,7 +346,7 @@ const publikationTabLogic = (() => {
             if(contentColPresent) {
                  renderSectionContent(currentSection);
             } else {
-                renderPublicationTab(); // Full re-render if content area was missing
+                renderPublicationTab(); 
             }
             if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.initTooltips === 'function' && navCol) {
                 ui_helpers.initTooltips(navCol);
@@ -373,9 +372,8 @@ const publikationTabLogic = (() => {
         if (currentBruteForceMetric !== newMetric) {
             state.setCurrentPublikationBruteForceMetric(newMetric);
             currentBruteForceMetric = newMetric;
-            // commonPublicationData muss aktualisiert werden, bevor die Sektion neu gerendert wird
             prepareCommonData(); 
-            renderSectionContent(currentSection); // Re-render current section to reflect new BF metric in texts and potentially charts
+            renderSectionContent(currentSection); 
         }
     }
 
@@ -384,16 +382,15 @@ const publikationTabLogic = (() => {
         currentSection = state.getCurrentPublikationSection() || APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION;
         currentBruteForceMetric = state.getCurrentPublikationBruteForceMetric() || APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC;
         
-        await fetchAllKollektivStats(); // Daten neu laden und verarbeiten
-        prepareCommonData(); // Common data neu aufbereiten
-        renderPublicationTab(); // Den Tab komplett neu zeichnen
+        await fetchAllKollektivStats(); 
+        prepareCommonData(); 
+        renderPublicationTab(); 
     }
     
     function handleGlobalDataChange() {
         const tabPane = document.getElementById(TAB_ID);
         const isActive = tabPane && tabPane.classList.contains('active') && tabPane.classList.contains('show');
         
-        // Daten immer neu laden, auch wenn der Tab nicht aktiv ist, damit `allKollektivStats` aktuell ist.
         fetchAllKollektivStats().then(() => {
             prepareCommonData();
             if (isActive) {
