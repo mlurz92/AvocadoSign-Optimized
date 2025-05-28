@@ -1,115 +1,92 @@
-# Lymphknoten T2 - Avocado Sign Analyse Tool (v2.3.0)
+# Lymphknoten T2 - Avocado Sign Analyse-Tool v2.5.0
 
-## 1. Übersicht
+Ein webbasiertes Analysewerkzeug zur Untersuchung der diagnostischen Güte des Avocado Signs im Vergleich zu verschiedenen morphologischen T2-Kriterien bei der Lymphknotenbeurteilung des Rektumkarzinoms mittels MRT.
 
-Dies ist eine interaktive **Frontend-Webanwendung (Version 2.3.0)**, die speziell für die **detaillierte Analyse und den wissenschaftlichen Vergleich** des "Avocado Signs" (AS) mit verschiedenen T2-gewichteten morphologischen Kriterien zur **Prädiktion des mesorektalen Lymphknotenstatus (N-Status)** bei Rektumkarzinompatienten entwickelt wurde. Sie basiert auf dem **Patientenkollektiv (N=106)** und den Erkenntnissen der Publikation *Lurz & Schäfer, European Radiology (2025)*.
+## Übersicht
 
-Die Anwendung dient als spezialisiertes Werkzeug für Forschung und Analyse, um:
-* Die diagnostische Leistung des AS gegenüber benutzerdefinierten und literatur-basierten T2-Kriterien zu evaluieren.
-* Hypothesen durch flexible Kriteriendefinition und -kombination zu testen.
-* Automatisierte Optimierungsverfahren (Brute-Force) zur Identifikation der besten T2-Kriterien für spezifische Metriken durchzuführen.
-* Umfassende statistische Auswertungen zu generieren, inklusive Konfidenzintervallen mit Hinweisen auf Unsicherheiten bei kleinen Fallzahlen.
-* Ergebnisse in **publikationsreifen** Formaten (Tabellen, Diagramme, Berichte und Textvorschläge) zu exportieren und zu generieren, inklusive präzisierter Referenzierung und erweiterter Methodentexte.
+Diese Anwendung ermöglicht es Forschern und Medizinern, einen anonymisierten Patientendatensatz interaktiv zu analysieren, T2-gewichtete MRT-Kriterien flexibel zu definieren und deren diagnostische Performance im Vergleich zum Avocado Sign zu bewerten. Das Tool bietet detaillierte statistische Auswertungen, Visualisierungen und unterstützt die Erstellung von Publikationen durch automatisch generierte Textentwürfe.
 
-**Zielgruppe:** Primär die Autoren der Avocado-Sign Studie sowie Forschende im Bereich der radiologischen Diagnostik und Rektumkarzinom-Staging.
+**Version:** 2.5.0 (Optimierte Version)
 
-## 2. Datenbasis und Verarbeitung
+## Hauptfunktionen
 
-* **Datenquelle:** Ein **statischer, integrierter JavaScript-Datensatz** (`data/data.js`) mit 106 anonymisierten Patienten aus der Avocado-Sign Studie (Lurz & Schäfer, 2025).
-* **Patientenkollektiv:**
-    * `Gesamt`: N=106
-    * `Direkt OP`: N=29 (Patienten ohne neoadjuvante Therapie)
-    * `nRCT`: N=77 (Patienten nach neoadjuvanter Radiochemotherapie)
-* **Datenmodell (pro Patient):** Umfasst demographische Daten, Therapiegruppe, pathologischen N-Status (Referenzstandard: `n` ['+', '-'], `anzahl_patho_lk`, `anzahl_patho_n_plus_lk`), Avocado-Sign-Status (`as` ['+', '-'], `anzahl_as_lk`, `anzahl_as_plus_lk`) und ein Array (`lymphknoten_t2`) mit detaillierten morphologischen Beschreibungen jedes T2-sichtbaren Lymphknotens (`groesse`, `form`, `kontur`, `homogenitaet`, `signal`).
-* **Datenverarbeitung (`js/core/data_processor.js`):** Validierung, Bereinigung, Berechnung des Alters, Filterung nach Kollektiv, Berechnung von Header-Statistiken.
-* **Dynamische T2-Bewertung (`js/core/t2_criteria_manager.js`):** Fügt dem Patienten-Datenmodell bei Anwendung von T2-Kriterien dynamisch hinzu: `t2`-Status, `anzahl_t2_plus_lk`, `lymphknoten_t2_bewertet`.
+* **Interaktive Datentabellen:** Anzeige und Sortierung von Patientendaten und Auswertungsergebnissen.
+* **Flexible T2-Kriteriendefinition:**
+    * Anpassung von Kriterien wie Größe (Kurzachse), Form, Kontur, Homogenität und Signalintensität.
+    * Wahl der logischen Verknüpfung (UND/ODER).
+    * Visuell klare Darstellung aktiver/inaktiver Kriterien und der resultierenden kumulativen Logik.
+    * Möglichkeit zum Laden und Anwenden vordefinierter T2-Kriteriensets aus der Literatur.
+* **Brute-Force-Optimierung:**
+    * Automatisierte Suche nach der T2-Kriterienkombination, die eine ausgewählte Zielmetrik (z.B. Balanced Accuracy, Accuracy, F1-Score) maximiert.
+    * Detaillierte Anzeige der Top-Ergebnisse inklusive 4-Felder-Tafel (RP, FP, FN, RN) und abgeleiteter Metriken (Sens, Spez, PPV, NPV) pro Kombination.
+    * Exportmöglichkeit der vollständigen Brute-Force Rohdaten (alle getesteten Kombinationen).
+* **Umfassende Statistische Analysen:**
+    * Berechnung und Darstellung von Sensitivität, Spezifität, PPV, NPV, Accuracy, Balanced Accuracy, F1-Score und AUC für das Avocado Sign und die definierten T2-Kriterien.
+    * **Integration von Positivem und Negativem Likelihood Ratio (LR+, LR-)** mit Konfidenzintervallen.
+    * **Erweiterte statistische Vergleiche** zwischen Avocado Sign und T2-Kriterien (McNemar-Test für Accuracy, DeLong-Test für AUC).
+    * Vergleich von Metriken (Accuracy, AUC, Sensitivität, Spezifität) zwischen verschiedenen Patientenkollektiven.
+    * Assoziationsanalysen (Odds Ratios, Risk Differences, Phi-Koeffizient) einzelner Merkmale mit dem N-Status.
+    * **Explorative Analyse auf Lymphknoten-Ebene** (deskriptive Statistiken für Lymphknoten, stratifiziert nach Pathologie).
+    * Vergleichstabelle der Performance von Avocado Sign, angewandten T2-Kriterien und wichtigen Literatur-Kriteriensets.
+* **Dynamische Diagramme und Visualisierungen:**
+    * Histogramme, Balken- und Tortendiagramme für deskriptive Daten.
+    * **Interaktive ROC-Kurven** mit Anzeige des optimalen Cut-offs (falls anwendbar) und AUC mit 95%-CI.
+    * **Generierung von Forest-Plots** für Odds Ratios / Risk Differences.
+* **Verbesserte Exportoptionen:**
+    * Export von Tabellen und Analyseergebnissen als CSV und Markdown.
+    * Export von Diagrammen als **SVG (vektorbasiert) und PNG (mit wählbarer Auflösung - DPI)**.
+    * **"One-Click" Publikations-Chart-Paket:** Gesammelter Download aller relevanten Diagramme für eine Publikation als ZIP.
+    * Export eines umfassenden HTML-Analyseberichts.
+* **Publikationsunterstützung (stark erweitert):**
+    * Dynamische Generierung von Textentwürfen (Deutsch/Englisch) für Methoden- und Ergebnisteile einer wissenschaftlichen Publikation.
+    * Inhalte orientieren sich stark an Struktur und Detaillierungsgrad relevanter Originalarbeiten zum Thema.
+    * Fokus auf den Vergleich von Avocado Sign mit Literatur-basierten und Brute-Force optimierten T2-Kriterien.
+    * Automatische Integration von relevanten statistischen Werten, Tabellen- und Abbildungsplatzhaltern.
+* **Patientenkollektive:** Analyse für Gesamtkohorte, Direkt-OP-Gruppe und nRCT-Gruppe.
+* **Benutzerfreundliche Oberfläche:** Intuitive Bedienung mit Tooltips und einer Kurzanleitung.
+* **Technische Optimierungen:**
+    * Erweiterte Modularisierung des JavaScript-Codes für bessere Wartbarkeit.
+    * Refactoring des CSS für klarere Struktur und Konsistenz.
+    * Verfeinertes State Management.
+    * **Dynamisches Laden von JavaScript-Modulen** zur Verbesserung der initialen Ladezeit.
+    * Performance-Optimierungen für UI-Updates.
 
-## 3. Benutzeroberfläche und Bedienung
+## Technologien
 
-* **Header:** Permanente Anzeige des Titels, dynamische Schlüsselstatistiken, Buttons zur globalen Kollektiv-Auswahl und ein Button zur Anzeige der Kurzanleitung.
-* **Tab-Navigation:** `Daten`, `Auswertung`, `Statistik`, `Präsentation`, `Publikation`, `Export`.
-* **Allgemeine Interaktion:**
-    * **Tooltips:** Detaillierte Erklärungen für UI-Elemente.
-    * **Tabellen:** Sortierbar, aufklappbare Detailzeilen, erste Spalte fixiert für bessere Navigation.
-    * **Kurzanleitung:** Wird beim ersten Start der Anwendung automatisch angezeigt und kann jederzeit manuell aufgerufen werden.
-    * **Responsivität:** Anpassung an verschiedene Bildschirmgrößen.
+* HTML5
+* CSS3 (mit CSS Variablen für Theming)
+* JavaScript (ES6+)
+* Bootstrap 5.3 (UI Framework)
+* D3.js v7 (Datenvisualisierung)
+* Tippy.js (Tooltips)
+* PapaParse (CSV Parsing für potenziellen Datenimport - nicht aktiv genutzt)
+* JSZip (ZIP-Datei Erstellung für Exporte)
 
-## 4. Kernfunktionalitäten (Details pro Tab)
+## Datenbasis
 
-### 4.1. Tab: Daten
-Anzeige der Patientendaten des gewählten Kollektivs. Detailzeilen visualisieren T2-Lymphknotenmerkmale.
+Die Anwendung verwendet einen anonymisierten Datensatz von Patienten mit Rektumkarzinom. Der histopathologische Befund der operativ entfernten Lymphknoten dient als Referenzstandard. Die genauen Details zur Studienpopulation und Datenerhebung sind der assoziierten Primärpublikation zum Avocado Sign zu entnehmen (Lurz & Schäfer, 2025).
 
-### 4.2. Tab: Auswertung
-Zentral für T2-Kriteriendefinition und -optimierung.
-* **Dashboard:** Visuelle Übersicht des Kollektivs.
-* **T2-Kriterien-Definition:** Interaktive Konfiguration von Merkmalen (Größe, Form, Kontur, Homogenität, Signal) und Logik (UND/ODER). Änderungen müssen "Angewendet & Gespeichert" werden.
-* **T2 Metrik-Übersicht:** Kompakte Darstellung der Güte der angewendeten T2-Kriterien.
-* **Brute-Force-Optimierung:** Automatische Suche nach optimalen T2-Kriterien für eine gewählte Metrik. Anzeige von Fortschritt und besten Ergebnissen (Top-10 im Modal mit detaillierten Metriken).
-* **Auswertungstabelle:** Patientenliste mit N/AS/T2-Status und LK-Zahlen. Detailzeilen zeigen Bewertung einzelner T2-LKs.
+## Zielgruppe
 
-### 4.3. Tab: Statistik
-Detaillierte statistische Analysen basierend auf angewendeten T2-Kriterien.
-* **Ansichten:** `Einzelansicht` oder `Vergleich Aktiv` zweier Kollektive.
-* **Analysen:** Deskriptive Statistik, Diagnostische Güte (AS vs. N; T2 vs. N) mit 95% CIs (inkl. Warnhinweisen bei kleinen Fallzahlen), Statistische Vergleiche (AS vs. T2; Kollektiv A vs. B), Assoziationsanalysen, Kriterienvergleichstabelle (AS, angewandt, Literatur-Sets).
+Dieses Tool richtet sich an Forscher, Radiologen, Chirurgen, Onkologen und andere medizinische Fachkräfte, die sich mit der Diagnostik und dem Staging des Rektumkarzinoms beschäftigen und die Performance verschiedener MRT-basierter Kriterien untersuchen möchten.
 
-### 4.4. Tab: Präsentation
-Aufbereitete Ergebnisse für Vorträge.
-* **Ansichten:** `Avocado Sign (Performance)` oder `AS vs. T2 (Vergleich)` mit Auswahl der T2-Basis (angewandt oder Literatur).
-* Enthält Vergleichstabellen, statistische Tests und Diagramme.
+## Nutzung
 
-### 4.5. Tab: Publikation
-Unterstützt die Erstellung einer wissenschaftlichen Publikation.
-* **Steuerung:** Sprachumschalter (Deutsch/Englisch), Auswahl der BF-Zielmetrik für Ergebnisdarstellung.
-* **Inhalte:** Dynamisch generierte Textvorschläge für Methoden und Ergebnisse, präzise Referenzierung von Tabellen/Abbildungen, unterstützende Tabellen/Diagramme und eine rudimentäre Referenzliste.
+1.  Laden Sie das Repository herunter oder klonen Sie es.
+2.  Öffnen Sie die Datei `index.html` in einem modernen Webbrowser (z.B. Chrome, Firefox, Edge, Safari).
+3.  Es ist keine serverseitige Komponente oder Installation notwendig. Alle Berechnungen erfolgen clientseitig.
 
-### 4.6. Tab: Export
-Zentrale Stelle für Daten- und Ergebnisdownload.
-* **Formate:** CSV (mit präziseren p-Werten), MD, TXT, HTML, PNG, SVG.
-* Umfasst Einzelexporte und thematische ZIP-Pakete.
+## Wichtige Hinweise
 
-## 5. Technologie und Architektur
+* Diese Anwendung ist ein **Forschungswerkzeug** und **nicht für die primäre klinische Diagnostik oder Behandlungsentscheidungen** vorgesehen.
+* Die Ergebnisse basieren auf dem integrierten Datensatz. Interpretationen sollten im Kontext der Studienpopulation und der Methodik der Datenerhebung erfolgen.
+* Die Brute-Force-Optimierung kann je nach Umfang der Daten und Komplexität der Kriterien rechenintensiv sein und einige Zeit in Anspruch nehmen. Sie läuft in einem Web Worker, um die UI nicht zu blockieren.
 
-* **Typ:** Frontend SPA.
-* **Technologien:** HTML5, CSS3, JavaScript (ES6+).
-* **Bibliotheken:** Bootstrap 5.3, D3.js v7, Tippy.js v6, PapaParse v5, JSZip v3.
-* **Architektur:** Modular, mit spezifischen Event-Handler-Modulen in `js/ui/event_handlers/`.
-* **Asynchronität:** Web Worker für Brute-Force.
+## Autoren
 
-## 6. Setup und Installation
+Maximilian Lurz (Konzept, Daten, ursprüngliche Implementierung)
+KI-Coding Agent (Überarbeitung und Optimierung v2.5.0)
 
-1.  Sicherstellen, dass alle Dateien und Ordner vorhanden sind.
-2.  Datei `index.html` im Webbrowser öffnen.
+## Lizenz
 
-## 7. Verwendung (Kurzübersicht)
-
-1.  **Kollektiv wählen** (Header).
-2.  **Tabs navigieren**.
-3.  **T2-Kriterien definieren** (Tab `Auswertung`) und **Anwenden & Speichern**.
-4.  **Brute-Force ausführen** (Tab `Auswertung`, optional).
-5.  **Ergebnisse analysieren** (Tabs `Daten`, `Auswertung`, `Statistik`, `Präsentation`).
-6.  **Publikationstexte generieren** (Tab `Publikation`).
-7.  **Exportieren** (Tab `Export`).
-
-## 8. Statistische Methoden
-
-Implementiert in `js/services/statistics_service.js`. Umfasst deskriptive Statistiken, diagnostische Gütemaße (Sens, Spez, PPV, NPV, Acc, BalAcc/AUC, F1) mit 95% CIs, diverse Vergleichstests (McNemar, DeLong, Fisher's Exact, Z-Test) und Assoziationsmaße (OR, RD, Phi, Mann-Whitney U). Das Signifikanzniveau (Standard p < 0.05) und die Symbole für die p-Wert-Darstellung sind in `js/config/app_config.js` konfiguriert.
-
-## 9. Literatur-Referenzen (für T2-Vergleichssets)
-
-* Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. *Eur Radiol*. 2025. (DOI: 10.1007/s00330-025-11462-y)
-* Koh DM, Chau I, Tait D, et al. Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. *Int J Radiat Oncol Biol Phys*. 2008;71(2):456-461.
-* Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: A single center experience. *Radiother Oncol*. 2024;193:110124.
-* Rutegård MK, Båtsman M, Blomqvist L, et al. Evaluation of MRI characterisation of histopathologically matched lymph nodes and other mesorectal nodal structures in rectal cancer. *Eur Radiol*. 2025. (DOI: 10.1007/s00330-025-11361-2)
-* Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for clinical management of rectal cancer: updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. *Eur Radiol*. 2018;28(4):1465-1475.
-
-
-## 10. Konfiguration
-
-Wichtige Anwendungseinstellungen sind in den Dateien unter `js/config/` zentral definiert (z.B. `app_config.js`, `text_config.js`, `publication_config.js`).
-
-## 11. Limitationen
-
-* Basiert auf einem **statischen Datensatz (N=106)**; kein Daten-Upload.
-* Statistische Berechnungen sind spezifisch für die Implementierung; für definitive Aussagen ggf. mit Spezialsoftware validieren.
-* Performance hängt von Client-System ab.
-* Optimiert für moderne Browser.
+Details zur Lizenz sind der Datei `LICENSE` (falls vorhanden) zu entnehmen oder beim Autor zu erfragen.
