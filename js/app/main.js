@@ -86,9 +86,8 @@ const mainAppInterface = (() => {
                 if (target.id === 'statistik-toggle-vergleich') statistikEventHandlers.handleStatsLayoutToggle(target, mainAppInterface);
             }
              if (target.closest('#praesentation-tab-pane')) {
-                if (target.matches('.praes-view-btn')) {
-                    const radioInput = document.getElementById(target.getAttribute('for'));
-                    if (radioInput) praesentationEventHandlers.handlePresentationViewChange(radioInput.value, mainAppInterface);
+                if (target.matches('.praes-view-btn') && target.control) {
+                    praesentationEventHandlers.handlePresentationViewChange(target.control.value, mainAppInterface);
                 }
             }
             if (target.closest('#publikation-tab-pane')) {
@@ -138,7 +137,9 @@ const mainAppInterface = (() => {
             ui_helpers.showToast(`Brute-Force-Optimierung für '${getKollektivDisplayName(payload.kollektiv)}' abgeschlossen. Beste Metrik (${payload.metric}): ${formatNumber(payload.bestResult.metricValue, 4)}.`, 'success');
             
             if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.refreshDataAndRender === 'function') {
-                 publikationTabLogic.refreshDataAndRender(_fullRawData, _appliedT2Criteria, _appliedT2Logic, _bruteForceResults);
+                 if (state.getActiveTabId() === 'publikation-tab' || PUBLICATION_CONFIG.sections.some(s => s.subSections.some(sub => sub.id.includes('optimierte_t2_performance') || sub.id.includes('vergleich_performance')))) {
+                    publikationTabLogic.refreshDataAndRender(_fullRawData, _appliedT2Criteria, _appliedT2Logic, _bruteForceResults);
+                 }
             }
             document.dispatchEvent(new CustomEvent('bruteForceRunCompleted', { detail: { kollektiv: payload.kollektiv } }));
         } else {
@@ -180,7 +181,7 @@ const mainAppInterface = (() => {
         if (state.getActiveTabId() === 'publikation-tab' && typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.refreshDataAndRender === 'function') {
              publikationTabLogic.refreshDataAndRender(_fullRawData, _appliedT2Criteria, _appliedT2Logic, _bruteForceResults);
         }
-        ui_helpers.initializeTooltips();
+        ui_helpers.initializeTooltips(document.body);
     }
 
     function _updateFilteredDataAndStats() {
@@ -260,7 +261,10 @@ const mainAppInterface = (() => {
                 const firstTabPane = document.querySelector('.tab-pane');
                 if (firstTabPane) {
                     const fallbackTabId = firstTabPane.id.replace('-pane','');
-                    if(state.setActiveTabId(fallbackTabId)){
+                     const fallbackTabButton = document.getElementById(fallbackTabId);
+                    if(fallbackTabButton && state.setActiveTabId(fallbackTabId)){
+                        const bsTab = bootstrap.Tab.getOrCreateInstance(fallbackTabButton);
+                        if (bsTab) bsTab.show();
                         _updateAndRenderCurrentTab();
                     }
                 }
@@ -307,11 +311,8 @@ const mainAppInterface = (() => {
              ui_helpers.showToast("System ist beschäftigt. Bitte warten Sie, bis der aktuelle Vorgang abgeschlossen ist.", "warning");
              const oldTabButton = document.getElementById(state.getActiveTabId());
              if (oldTabButton) {
-                const newTabButtonElement = document.getElementById(newTabId);
-                 if (newTabButtonElement) {
-                    const newTab = bootstrap.Tab.getInstance(newTabButtonElement);
-                    if(newTab) newTab.show(); // Should switch back via Bootstrap
-                }
+                const oldBsTab = bootstrap.Tab.getInstance(oldTabButton);
+                if(oldBsTab) oldBsTab.show();
              }
             return;
         }
@@ -322,7 +323,7 @@ const mainAppInterface = (() => {
     
     function handleExportRequest(exportType) {
         if (_isLoading) { ui_helpers.showToast("System ist beschäftigt, bitte warten Sie.", "warning"); return; }
-         _bruteForceResults = bruteForceManager.getAllResults(); // Ensure latest results
+         _bruteForceResults = bruteForceManager.getAllResults();
          exportService.exportData(
             exportType,
             _fullRawData,
@@ -354,43 +355,54 @@ const mainAppInterface = (() => {
             appVersionDisplay.textContent = APP_CONFIG.APP_VERSION;
         }
 
-        const activeTabFromStorageOrHash = location.hash.replace('#','');
-        if (activeTabFromStorageOrHash) {
-            const tabElement = document.getElementById(activeTabFromStorageOrHash);
-            if (tabElement && bootstrap.Tab.getInstance(tabElement)) {
-                 bootstrap.Tab.getInstance(tabElement).show();
-                 processTabChange(activeTabFromStorageOrHash);
-            } else if (tabElement) {
-                 const bsTab = new bootstrap.Tab(tabElement);
+        const activeTabIdFromUrl = location.hash.substring(1);
+        let initialTabId = state.getActiveTabId() || APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION;
+
+        if (PUBLICATION_CONFIG.sections.some(s => s.id === activeTabIdFromUrl) || ['daten-tab', 'auswertung-tab', 'statistik-tab', 'praesentation-tab', 'export-tab'].includes(activeTabIdFromUrl)) {
+            initialTabId = activeTabIdFromUrl;
+        }
+        
+        if (initialTabId !== state.getActiveTabId()) {
+            state.setActiveTabId(initialTabId);
+        }
+        
+        const tabToActivate = document.getElementById(initialTabId);
+        if (tabToActivate) {
+            const bsTab = bootstrap.Tab.getOrCreateInstance(tabToActivate);
+            if (bsTab) {
                  bsTab.show();
-                 processTabChange(activeTabFromStorageOrHash);
             }
         } else {
-             const defaultTab = document.getElementById(state.getActiveTabId() || 'daten-tab');
-             if(defaultTab) {
-                 const bsTab = bootstrap.Tab.getOrCreateInstance(defaultTab);
+             const defaultTabElement = document.getElementById(APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION);
+             if (defaultTabElement) {
+                 const bsTab = bootstrap.Tab.getOrCreateInstance(defaultTabElement);
                  if (bsTab) bsTab.show();
              }
         }
+        _updateAndRenderAll(true);
+
+
          window.addEventListener('hashchange', () => {
-            const newTabIdFromHash = location.hash.replace('#','');
+            const newTabIdFromHash = location.hash.substring(1);
             if (newTabIdFromHash && newTabIdFromHash !== state.getActiveTabId()) {
-                const tabElement = document.getElementById(newTabIdFromHash);
-                if (tabElement) {
-                     const bsTab = bootstrap.Tab.getOrCreateInstance(tabElement);
-                     if (bsTab) bsTab.show(); // This will trigger 'shown.bs.tab'
+                 if (PUBLICATION_CONFIG.sections.some(s => s.id === newTabIdFromHash) || ['daten-tab', 'auswertung-tab', 'statistik-tab', 'praesentation-tab', 'export-tab'].includes(newTabIdFromHash)) {
+                    const tabElement = document.getElementById(newTabIdFromHash);
+                    if (tabElement) {
+                         const bsTab = bootstrap.Tab.getOrCreateInstance(tabElement);
+                         if (bsTab) bsTab.show(); 
+                    }
                 }
             }
-        });
+        }, false);
     }
 
     return Object.freeze({
         initApp,
         getRawData: () => _fullRawData,
-        getProcessedData: () => _fullRawData,
+        getProcessedData: () => _fullRawData, 
         getFilteredData: () => _filteredRawData,
-        getAppliedT2Criteria: () => _appliedT2Criteria,
-        getAppliedT2Logic: () => _appliedT2Logic,
+        getAppliedT2Criteria: () => _appliedT2Criteria, 
+        getAppliedT2Logic: () => _appliedT2Logic,     
         getAllStatistikData: () => _allStatistikData,
         getBruteForceResults: () => bruteForceManager.getAllResults(),
         isLoading: () => _isLoading,
