@@ -23,9 +23,11 @@ const viewRenderer = (() => {
     function renderDatenTab(data, sortState) {
         _renderTabContent('daten-tab', () => {
              if (!data) throw new Error("Daten für Datentabelle nicht verfügbar.");
+             const currentTexts = getUITexts();
+             const expandAllTooltip = currentTexts.TOOLTIP_CONTENT?.datenTable?.expandAll || 'Alle Details ein-/ausblenden';
              const toggleButtonHTML = `
                  <div class="d-flex justify-content-end mb-3" id="daten-toggle-button-container">
-                     <button id="daten-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="expand" data-tippy-content="${TOOLTIP_CONTENT.datenTable.expandAll || 'Alle Details ein-/ausblenden'}">
+                     <button id="daten-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="expand" data-tippy-content="${expandAllTooltip}">
                         Alle Details Anzeigen <i class="fas fa-chevron-down ms-1"></i>
                     </button>
                  </div>`;
@@ -43,29 +45,43 @@ const viewRenderer = (() => {
         });
     }
 
-    function _renderAuswertungDashboardCharts(stats) {
+    function _renderAuswertungDashboardCharts(stats, currentKollektiv) {
         const ids = ['chart-dash-age', 'chart-dash-gender', 'chart-dash-therapy', 'chart-dash-status-n', 'chart-dash-status-as', 'chart-dash-status-t2'];
-        if (!stats || stats.anzahlPatienten === 0) { ids.forEach(id => ui_helpers.updateElementHTML(id, '<p class="text-muted small text-center p-2">N/A</p>')); return; };
+        const currentTexts = getUITexts();
+        const displayKollektivName = getKollektivDisplayName(currentKollektiv);
+
+        if (!stats || stats.anzahlPatienten === 0) { 
+            ids.forEach(id => ui_helpers.updateElementHTML(id, `<p class="text-muted small text-center p-2">${currentTexts.publikationTab?.textGenerierungsHinweis?.includes('Daten für Diagramm nicht verfügbar') ? 'Daten für Diagramm nicht verfügbar.' : 'N/A'}</p>`)); 
+            return; 
+        }
+
         const histOpts = { height: 130, margin: { top: 5, right: 10, bottom: 25, left: 35 }, useCompactMargins: true };
         const pieOpts = { height: 130, margin: { top: 5, right: 5, bottom: 35, left: 5 }, innerRadiusFactor: 0.45, outerRadiusFactor: 0.95, fontSize: '8px', useCompactMargins: true, legendBelow: true };
-        const genderData = [{label: UI_TEXTS.legendLabels.male, value: stats.geschlecht?.m ?? 0}, {label: UI_TEXTS.legendLabels.female, value: stats.geschlecht?.f ?? 0}];
-        if(stats.geschlecht?.unbekannt > 0) genderData.push({label: UI_TEXTS.legendLabels.unknownGender, value: stats.geschlecht.unbekannt });
-        const therapyData = [{label: UI_TEXTS.legendLabels.direktOP, value: stats.therapie?.['direkt OP'] ?? 0}, {label: UI_TEXTS.legendLabels.nRCT, value: stats.therapie?.nRCT ?? 0}];
+        
+        const genderData = [{label: currentTexts.legendLabels.male, value: stats.geschlecht?.m ?? 0}, {label: currentTexts.legendLabels.female, value: stats.geschlecht?.f ?? 0}];
+        if(stats.geschlecht?.unbekannt > 0) genderData.push({label: currentTexts.legendLabels.unknownGender, value: stats.geschlecht.unbekannt });
+        
+        const therapyData = [{label: currentTexts.legendLabels.direktOP, value: stats.therapie?.['direkt OP'] ?? 0}, {label: currentTexts.legendLabels.nRCT, value: stats.therapie?.nRCT ?? 0}];
+        
         try {
             chartRenderer.renderAgeDistributionChart(stats.alterData || [], ids[0], histOpts);
             chartRenderer.renderPieChart(genderData, ids[1], {...pieOpts, legendItemCount: genderData.length});
             chartRenderer.renderPieChart(therapyData, ids[2], {...pieOpts, legendItemCount: therapyData.length});
-            chartRenderer.renderPieChart([{label: UI_TEXTS.legendLabels.nPositive, value: stats.nStatus?.plus ?? 0}, {label: UI_TEXTS.legendLabels.nNegative, value: stats.nStatus?.minus ?? 0}], ids[3], {...pieOpts, legendItemCount: 2});
-            chartRenderer.renderPieChart([{label: UI_TEXTS.legendLabels.asPositive, value: stats.asStatus?.plus ?? 0}, {label: UI_TEXTS.legendLabels.asNegative, value: stats.asStatus?.minus ?? 0}], ids[4], {...pieOpts, legendItemCount: 2});
-            chartRenderer.renderPieChart([{label: UI_TEXTS.legendLabels.t2Positive, value: stats.t2Status?.plus ?? 0}, {label: UI_TEXTS.legendLabels.t2Negative, value: stats.t2Status?.minus ?? 0}], ids[5], {...pieOpts, legendItemCount: 2});
+            chartRenderer.renderPieChart([{label: currentTexts.legendLabels.nPositive, value: stats.nStatus?.plus ?? 0}, {label: currentTexts.legendLabels.nNegative, value: stats.nStatus?.minus ?? 0}], ids[3], {...pieOpts, legendItemCount: 2});
+            chartRenderer.renderPieChart([{label: currentTexts.legendLabels.asPositive, value: stats.asStatus?.plus ?? 0}, {label: currentTexts.legendLabels.asNegative, value: stats.asStatus?.minus ?? 0}], ids[4], {...pieOpts, legendItemCount: 2});
+            chartRenderer.renderPieChart([{label: currentTexts.legendLabels.t2Positive, value: stats.t2Status?.plus ?? 0}, {label: currentTexts.legendLabels.t2Negative, value: stats.t2Status?.minus ?? 0}], ids[5], {...pieOpts, legendItemCount: 2});
         }
-        catch(error) { console.error("Fehler bei Chart-Rendering im Dashboard:", error); ids.forEach(id => ui_helpers.updateElementHTML(id, '<p class="text-danger small text-center p-2">Chart Fehler</p>')); }
+        catch(error) { 
+            console.error("Fehler bei Chart-Rendering im Dashboard:", error); 
+            ids.forEach(id => ui_helpers.updateElementHTML(id, '<p class="text-danger small text-center p-2">Chart Fehler</p>')); 
+        }
     }
 
      function _renderCriteriaComparisonTable(containerId, processedDataFull, globalKollektiv) {
          const container = document.getElementById(containerId); if (!container) return;
+         const currentTexts = getUITexts();
          if (!Array.isArray(processedDataFull) || processedDataFull.length === 0) {
-             container.innerHTML = uiComponents.createStatistikCard('criteriaComparisonTable', UI_TEXTS.criteriaComparison.title, '<p class="p-3 text-muted small">Keine globalen Daten für Vergleich verfügbar.</p>', false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
+             container.innerHTML = uiComponents.createStatistikCard('criteriaComparisonTable', currentTexts.criteriaComparison.title, '<p class="p-3 text-muted small">Keine globalen Daten für Vergleich verfügbar.</p>', false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
              ui_helpers.initializeTooltips(container);
              return;
          }
@@ -136,10 +152,10 @@ const viewRenderer = (() => {
              return (a.name || '').localeCompare(b.name || '');
          });
          const tableHTML = statistikTabLogic.createCriteriaComparisonTableHTML(results, getKollektivDisplayName(globalKollektiv));
-         const cardTooltipText = (TOOLTIP_CONTENT.criteriaComparisonTable.cardTitle || "Vergleich verschiedener Kriteriensätze")
+         const cardTooltipText = (currentTexts.TOOLTIP_CONTENT.criteriaComparisonTable?.cardTitle || "Vergleich verschiedener Kriteriensätze")
             .replace('[GLOBAL_KOLLEKTIV_NAME]', `<strong>${getKollektivDisplayName(globalKollektiv)}</strong>`);
 
-         container.innerHTML = uiComponents.createStatistikCard('criteriaComparisonTable', UI_TEXTS.criteriaComparison.title, tableHTML, false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
+         container.innerHTML = uiComponents.createStatistikCard('criteriaComparisonTable', currentTexts.criteriaComparison.title, tableHTML, false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
          const cardHeader = container.querySelector('.card-header');
          if (cardHeader) cardHeader.setAttribute('data-tippy-content', cardTooltipText);
          ui_helpers.initializeTooltips(container);
@@ -148,12 +164,13 @@ const viewRenderer = (() => {
 
     function renderAuswertungTab(data, currentCriteria, currentLogic, sortState, currentKollektiv, bfWorkerAvailable) {
          _renderTabContent('auswertung-tab', () => {
-             if (!data || !currentCriteria || !currentLogic) throw new Error("Daten oder Kriterien für Auswertungstab nicht verfügbar.");
+             if (!data || !currentCriteria || typeof currentLogic === 'undefined' || currentLogic === null) throw new Error("Daten oder Kriterien/Logik für Auswertungstab nicht verfügbar.");
 
              const dashboardContainerId = 'auswertung-dashboard';
              const metricsOverviewContainerId = 't2-metrics-overview';
              const bruteForceCardContainerId = 'brute-force-card-container';
              const tableCardContainerId = 'auswertung-table-card-container';
+             const currentTexts = getUITexts();
 
              const criteriaControlsHTML = uiComponents.createT2CriteriaControls(currentCriteria, currentLogic);
              const bruteForceCardHTML = uiComponents.createBruteForceCard(currentKollektiv, bfWorkerAvailable);
@@ -187,23 +204,23 @@ const viewRenderer = (() => {
                      try {
                          const stats = statisticsService.calculateDescriptiveStats(data);
                          if (!stats || stats.anzahlPatienten === 0) {
-                             ui_helpers.updateElementHTML(dashboardContainerId, '<div class="col-12"><p class="text-muted text-center small p-3">Keine Daten für Dashboard.</p></div>');
+                             ui_helpers.updateElementHTML(dashboardContainerId, `<div class="col-12"><p class="text-muted text-center small p-3">${currentTexts.publikationTab?.textGenerierungsHinweis?.includes('Keine Daten für Dashboard') ? 'Keine Daten für Dashboard.' : 'Keine Daten für Dashboard verfügbar.'}</p></div>`);
                          } else {
                              const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image' : 'fa-download';
                              const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code' : 'fa-download';
-                             const pngTooltipBase = (TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'Als PNG herunterladen');
-                             const svgTooltipBase = (TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'Als SVG herunterladen');
+                             const pngTooltipBase = (currentTexts.TOOLTIP_CONTENT.exportTab?.chartSinglePNG?.description || 'Als PNG herunterladen');
+                             const svgTooltipBase = (currentTexts.TOOLTIP_CONTENT.exportTab?.chartSingleSVG?.description || 'Als SVG herunterladen');
                              const createDlBtns = (baseId, chartTitle) => [{id:`dl-${baseId}-png`, icon: dlIconPNG, tooltip: pngTooltipBase.replace('{ChartName}', chartTitle), format:'png', chartId: baseId, chartName: chartTitle}, {id:`dl-${baseId}-svg`, icon: dlIconSVG, tooltip: svgTooltipBase.replace('{ChartName}', chartTitle), format:'svg', chartId: baseId, chartName: chartTitle}];
 
                              dashboardContainer.innerHTML = `
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.ageDistribution, `<p class="mb-0 small">Median: ${formatNumber(stats.alter?.median, 1)} (${formatNumber(stats.alter?.min, 0)} - ${formatNumber(stats.alter?.max, 0)})</p>`, 'chart-dash-age', '', '', 'p-1', createDlBtns('chart-dash-age', UI_TEXTS.chartTitles.ageDistribution))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.genderDistribution, `<p class="mb-0 small">M: ${stats.geschlecht?.m ?? 0} W: ${stats.geschlecht?.f ?? 0}</p>`, 'chart-dash-gender', '', '', 'p-1', createDlBtns('chart-dash-gender', UI_TEXTS.chartTitles.genderDistribution))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.therapyDistribution, `<p class="mb-0 small">OP: ${stats.therapie?.['direkt OP'] ?? 0} nRCT: ${stats.therapie?.nRCT ?? 0}</p>`, 'chart-dash-therapy', '', '', 'p-1', createDlBtns('chart-dash-therapy', UI_TEXTS.chartTitles.therapyDistribution))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusN, `<p class="mb-0 small">N+: ${stats.nStatus?.plus ?? 0} N-: ${stats.nStatus?.minus ?? 0}</p>`, 'chart-dash-status-n', '', '', 'p-1', createDlBtns('chart-dash-status-n', UI_TEXTS.chartTitles.statusN))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusAS, `<p class="mb-0 small">AS+: ${stats.asStatus?.plus ?? 0} AS-: ${stats.asStatus?.minus ?? 0}</p>`, 'chart-dash-status-as', '', '', 'p-1', createDlBtns('chart-dash-status-as', UI_TEXTS.chartTitles.statusAS))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusT2, `<p class="mb-0 small">T2+: ${stats.t2Status?.plus ?? 0} T2-: ${stats.t2Status?.minus ?? 0}</p>`, 'chart-dash-status-t2', '', '', 'p-1', createDlBtns('chart-dash-status-t2', UI_TEXTS.chartTitles.statusT2))}
+                                ${uiComponents.createDashboardCard(currentTexts.chartTitles.ageDistribution, `<p class="mb-0 small">Median: ${formatNumber(stats.alter?.median, 1)} (${formatNumber(stats.alter?.min, 0)} - ${formatNumber(stats.alter?.max, 0)})</p>`, 'chart-dash-age', '', '', 'p-1', createDlBtns('chart-dash-age', currentTexts.chartTitles.ageDistribution))}
+                                ${uiComponents.createDashboardCard(currentTexts.chartTitles.genderDistribution, `<p class="mb-0 small">M: ${stats.geschlecht?.m ?? 0} W: ${stats.geschlecht?.f ?? 0}</p>`, 'chart-dash-gender', '', '', 'p-1', createDlBtns('chart-dash-gender', currentTexts.chartTitles.genderDistribution))}
+                                ${uiComponents.createDashboardCard(currentTexts.chartTitles.therapyDistribution, `<p class="mb-0 small">OP: ${stats.therapie?.['direkt OP'] ?? 0} nRCT: ${stats.therapie?.nRCT ?? 0}</p>`, 'chart-dash-therapy', '', '', 'p-1', createDlBtns('chart-dash-therapy', currentTexts.chartTitles.therapyDistribution))}
+                                ${uiComponents.createDashboardCard(currentTexts.chartTitles.statusN, `<p class="mb-0 small">N+: ${stats.nStatus?.plus ?? 0} N-: ${stats.nStatus?.minus ?? 0}</p>`, 'chart-dash-status-n', '', '', 'p-1', createDlBtns('chart-dash-status-n', currentTexts.chartTitles.statusN))}
+                                ${uiComponents.createDashboardCard(currentTexts.chartTitles.statusAS, `<p class="mb-0 small">AS+: ${stats.asStatus?.plus ?? 0} AS-: ${stats.asStatus?.minus ?? 0}</p>`, 'chart-dash-status-as', '', '', 'p-1', createDlBtns('chart-dash-status-as', currentTexts.chartTitles.statusAS))}
+                                ${uiComponents.createDashboardCard(currentTexts.chartTitles.statusT2, `<p class="mb-0 small">T2+: ${stats.t2Status?.plus ?? 0} T2-: ${stats.t2Status?.minus ?? 0}</p>`, 'chart-dash-status-t2', '', '', 'p-1', createDlBtns('chart-dash-status-t2', currentTexts.chartTitles.statusT2))}
                              `;
-                              _renderAuswertungDashboardCharts(stats);
+                              _renderAuswertungDashboardCharts(stats, currentKollektiv);
                          }
                      } catch (error) { console.error("Fehler _renderAuswertungDashboard:", error); ui_helpers.updateElementHTML(dashboardContainerId, '<div class="col-12"><div class="alert alert-danger">Dashboard Fehler.</div></div>'); }
                  }
@@ -246,13 +263,13 @@ const viewRenderer = (() => {
              else { const data1 = dataProcessor.filterDataByKollektiv(baseEvaluatedData, kollektiv1); const data2 = dataProcessor.filterDataByKollektiv(baseEvaluatedData, kollektiv2); datasets.push(data1); datasets.push(data2); kollektivNames.push(kollektiv1); kollektivNames.push(kollektiv2); kollektivDisplayNames.push(getKollektivDisplayName(kollektiv1)); kollektivDisplayNames.push(getKollektivDisplayName(kollektiv2)); }
 
              if (datasets.length === 0 || datasets.every(d => !Array.isArray(d) || d.length === 0)) { return '<div class="col-12"><div class="alert alert-warning">Keine Daten für Statistik-Auswahl verfügbar.</div></div>'; }
-
+             const currentTexts = getUITexts();
              const outerRow = document.createElement('div'); outerRow.className = 'row g-4';
              const createChartDlBtns = (baseId, chartTitle) => [
-                { id: `dl-${baseId}-png`, icon: APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image' : 'fa-download', tooltip: (TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'PNG').replace('{ChartName}', chartTitle), format: 'png', chartId: baseId, chartName: chartTitle },
-                { id: `dl-${baseId}-svg`, icon: APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code' : 'fa-download', tooltip: (TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'SVG').replace('{ChartName}', chartTitle), format: 'svg', chartId: baseId, chartName: chartTitle }
+                { id: `dl-${baseId}-png`, icon: APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image' : 'fa-download', tooltip: (currentTexts.TOOLTIP_CONTENT.exportTab?.chartSinglePNG?.description || 'PNG').replace('{ChartName}', chartTitle), format: 'png', chartId: baseId, chartName: chartTitle },
+                { id: `dl-${baseId}-svg`, icon: APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code' : 'fa-download', tooltip: (currentTexts.TOOLTIP_CONTENT.exportTab?.chartSingleSVG?.description || 'SVG').replace('{ChartName}', chartTitle), format: 'svg', chartId: baseId, chartName: chartTitle }
              ];
-             const createTableDlBtn = (tableId, tableName) => ({ id: `dl-${tableId}-png`, icon: 'fa-image', tooltip: (TOOLTIP_CONTENT.exportTab.tableSinglePNG?.description || 'Tabelle als PNG').replace('{TableName}', tableName), format: 'png', tableId: tableId, tableName: tableName });
+             const createTableDlBtn = (tableId, tableName) => ({ id: `dl-${tableId}-png`, icon: 'fa-image', tooltip: (currentTexts.TOOLTIP_CONTENT.exportTab?.tableSinglePNG?.description || 'Tabelle als PNG').replace('{TableName}', tableName), format: 'png', tableId: tableId, tableName: tableName });
 
 
              datasets.forEach((data, i) => {
@@ -267,44 +284,53 @@ const viewRenderer = (() => {
                              vergleichASvsT2: statisticsService.compareDiagnosticMethods(data, 'as', 't2', 'n'),
                              assoziation: statisticsService.calculateAssociations(data, appliedCriteria)
                          };
-                     } catch(e) { console.error(`Statistikfehler für Kollektiv ${i}:`, e); }
+                     } catch(e) { 
+                        console.error(`Statistikfehler für Kollektiv ${kollektivNames[i]}:`, e); 
+                        stats = { deskriptiv: null, gueteAS: null, gueteT2: null, vergleichASvsT2: null, assoziation: null };
+                    }
 
-                     if (!stats) { innerContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">Fehler bei Statistikberechnung.</div></div>'; return; }
                      const descCardId=`deskriptiveStatistik-${i}`; const gueteASCardId=`diagnostischeGueteAS-${i}`; const gueteT2CardId=`diagnostischeGueteT2-${i}`; const vergleichASvsT2CardId=`statistischerVergleichASvsT2-${i}`; const assoziationCardId=`assoziationEinzelkriterien-${i}`;
                      const safeKollektivName = kollektivNames[i].replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
 
-
-                     const deskriptivDlBtns = [
+                     const deskriptivDlBtns = (stats && stats.deskriptiv) ? [
                          ...createChartDlBtns(`chart-stat-age-${i}`, `Altersverteilung_${safeKollektivName}`),
                          ...createChartDlBtns(`chart-stat-gender-${i}`, `Geschlechterverteilung_${safeKollektivName}`),
                          createTableDlBtn(`table-deskriptiv-demographie-${i}`, `Deskriptive_Demographie_${safeKollektivName}`),
                          createTableDlBtn(`table-deskriptiv-lk-${i}`, `Deskriptive_LK_${safeKollektivName}`)
-                     ];
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(descCardId, `Deskriptive Statistik`, statistikTabLogic.createDeskriptiveStatistikContentHTML(stats, i, kollektivNames[i]), false, 'deskriptiveStatistik', deskriptivDlBtns, `table-deskriptiv-demographie-${i}`);
+                     ] : [];
+                     const deskriptivContent = (stats && stats.deskriptiv) ? statistikTabLogic.createDeskriptiveStatistikContentHTML(stats, i, kollektivNames[i]) : '<p class="text-danger small p-3">Fehler bei der Berechnung der deskriptiven Statistik.</p>';
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(descCardId, `Deskriptive Statistik`, deskriptivContent, false, 'deskriptiveStatistik', deskriptivDlBtns, `table-deskriptiv-demographie-${i}`);
 
-                     const gueteASDlBtns = [createTableDlBtn(`table-guete-metrics-AS-${safeKollektivName}`, `Guete_AS_${safeKollektivName}`), createTableDlBtn(`table-guete-matrix-AS-${safeKollektivName}`, `Matrix_AS_${safeKollektivName}`)];
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteASCardId, `Güte - Avocado Sign (vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteAS, 'AS', kollektivNames[i]), false, 'diagnostischeGueteAS', gueteASDlBtns, `table-guete-metrics-AS-${safeKollektivName}`);
+                     const gueteASDlBtns = (stats && stats.gueteAS) ? [createTableDlBtn(`table-guete-metrics-AS-${safeKollektivName}`, `Guete_AS_${safeKollektivName}`), createTableDlBtn(`table-guete-matrix-AS-${safeKollektivName}`, `Matrix_AS_${safeKollektivName}`)] : [];
+                     const gueteASContent = (stats && stats.gueteAS) ? statistikTabLogic.createGueteContentHTML(stats.gueteAS, 'AS', kollektivNames[i]) : '<p class="text-danger small p-3">Fehler bei der Berechnung der Güte für AS.</p>';
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteASCardId, `Güte - Avocado Sign (vs. N)`, gueteASContent, false, 'diagnostischeGueteAS', gueteASDlBtns, `table-guete-metrics-AS-${safeKollektivName}`);
 
-                     const gueteT2DlBtns = [createTableDlBtn(`table-guete-metrics-T2-${safeKollektivName}`, `Guete_T2_${safeKollektivName}`), createTableDlBtn(`table-guete-matrix-T2-${safeKollektivName}`, `Matrix_T2_${safeKollektivName}`)];
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteT2CardId, `Güte - T2 (angewandt vs. N)`, statistikTabLogic.createGueteContentHTML(stats.gueteT2, 'T2', kollektivNames[i]), false, 'diagnostischeGueteT2', gueteT2DlBtns, `table-guete-metrics-T2-${safeKollektivName}`);
+                     const gueteT2DlBtns = (stats && stats.gueteT2) ? [createTableDlBtn(`table-guete-metrics-T2-${safeKollektivName}`, `Guete_T2_${safeKollektivName}`), createTableDlBtn(`table-guete-matrix-T2-${safeKollektivName}`, `Matrix_T2_${safeKollektivName}`)] : [];
+                     const gueteT2Content = (stats && stats.gueteT2) ? statistikTabLogic.createGueteContentHTML(stats.gueteT2, 'T2', kollektivNames[i]) : '<p class="text-danger small p-3">Fehler bei der Berechnung der Güte für T2.</p>';
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(gueteT2CardId, `Güte - T2 (angewandt vs. N)`, gueteT2Content, false, 'diagnostischeGueteT2', gueteT2DlBtns, `table-guete-metrics-T2-${safeKollektivName}`);
+                     
+                     const vergleichASvsT2DlBtns = (stats && stats.vergleichASvsT2) ? [createTableDlBtn(`table-vergleich-as-vs-t2-${safeKollektivName}`, `Vergleich_AS_T2_${safeKollektivName}`)] : [];
+                     const vergleichASvsT2Content = (stats && stats.vergleichASvsT2) ? statistikTabLogic.createVergleichContentHTML(stats.vergleichASvsT2, kollektivNames[i]) : '<p class="text-danger small p-3">Fehler beim statistischen Vergleich AS vs. T2.</p>';
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(vergleichASvsT2CardId, `Vergleich - AS vs. T2 (angewandt)`, vergleichASvsT2Content, false, 'statistischerVergleichASvsT2', vergleichASvsT2DlBtns, `table-vergleich-as-vs-t2-${safeKollektivName}`);
 
-                     const vergleichASvsT2DlBtns = [createTableDlBtn(`table-vergleich-as-vs-t2-${safeKollektivName}`, `Vergleich_AS_T2_${safeKollektivName}`)];
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(vergleichASvsT2CardId, `Vergleich - AS vs. T2 (angewandt)`, statistikTabLogic.createVergleichContentHTML(stats.vergleichASvsT2, kollektivNames[i]), false, 'statistischerVergleichASvsT2', vergleichASvsT2DlBtns, `table-vergleich-as-vs-t2-${safeKollektivName}`);
+                     const assoziationDlBtns = (stats && stats.assoziation) ? [createTableDlBtn(`table-assoziation-${safeKollektivName}`, `Assoziation_${safeKollektivName}`)] : [];
+                     const assoziationContent = (stats && stats.assoziation) ? statistikTabLogic.createAssoziationContentHTML(stats.assoziation, kollektivNames[i], appliedCriteria) : '<p class="text-danger small p-3">Fehler bei der Assoziationsanalyse.</p>';
+                     innerContainer.innerHTML += uiComponents.createStatistikCard(assoziationCardId, `Assoziation Merkmale vs. N-Status`, assoziationContent, false, 'assoziationEinzelkriterien', assoziationDlBtns, `table-assoziation-${safeKollektivName}`);
 
-                     const assoziationDlBtns = [createTableDlBtn(`table-assoziation-${safeKollektivName}`, `Assoziation_${safeKollektivName}`)];
-                     innerContainer.innerHTML += uiComponents.createStatistikCard(assoziationCardId, `Assoziation Merkmale vs. N-Status`, statistikTabLogic.createAssoziationContentHTML(stats.assoziation, kollektivNames[i], appliedCriteria), false, 'assoziationEinzelkriterien', assoziationDlBtns, `table-assoziation-${safeKollektivName}`);
 
                      const ageChartId=`chart-stat-age-${i}`; const genderChartId=`chart-stat-gender-${i}`;
 
                      setTimeout(() => {
-                        const ageChartDiv = document.getElementById(ageChartId);
-                        if (ageChartDiv) {
-                           chartRenderer.renderAgeDistributionChart(stats.deskriptiv.alterData || [], ageChartId, { height: 180, margin: { top: 10, right: 10, bottom: 35, left: 40 } });
-                        }
-                         const genderChartDiv = document.getElementById(genderChartId);
-                         if (genderChartDiv) {
-                            const genderData = [{label: UI_TEXTS.legendLabels.male, value: stats.deskriptiv.geschlecht?.m ?? 0}, {label: UI_TEXTS.legendLabels.female, value: stats.deskriptiv.geschlecht?.f ?? 0}]; if(stats.deskriptiv.geschlecht?.unbekannt > 0) genderData.push({label: UI_TEXTS.legendLabels.unknownGender, value: stats.deskriptiv.geschlecht.unbekannt });
-                            chartRenderer.renderPieChart(genderData, genderChartId, { height: 180, margin: { top: 10, right: 10, bottom: 35, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true, legendItemCount: genderData.length });
+                        if (stats && stats.deskriptiv) {
+                            const ageChartDiv = document.getElementById(ageChartId);
+                            if (ageChartDiv) {
+                               chartRenderer.renderAgeDistributionChart(stats.deskriptiv.alterData || [], ageChartId, { height: 180, margin: { top: 10, right: 10, bottom: 35, left: 40 } });
+                            }
+                             const genderChartDiv = document.getElementById(genderChartId);
+                             if (genderChartDiv) {
+                                const genderDataForChart = [{label: currentTexts.legendLabels.male, value: stats.deskriptiv.geschlecht?.m ?? 0}, {label: currentTexts.legendLabels.female, value: stats.deskriptiv.geschlecht?.f ?? 0}]; if(stats.deskriptiv.geschlecht?.unbekannt > 0) genderDataForChart.push({label: currentTexts.legendLabels.unknownGender, value: stats.deskriptiv.geschlecht.unbekannt });
+                                chartRenderer.renderPieChart(genderDataForChart, genderChartId, { height: 180, margin: { top: 10, right: 10, bottom: 35, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true, legendItemCount: genderDataForChart.length });
+                            }
                         }
                      }, 50);
                  } else { innerContainer.innerHTML = '<div class="col-12"><div class="alert alert-warning small p-2">Keine Daten für dieses Kollektiv.</div></div>'; }
@@ -347,6 +373,7 @@ const viewRenderer = (() => {
             const globalKollektivDaten = dataProcessor.filterDataByKollektiv(processedDataFull, currentGlobalKollektiv);
             presentationData.kollektiv = currentGlobalKollektiv;
             presentationData.patientCount = globalKollektivDaten?.length ?? 0;
+            const currentTexts = getUITexts();
 
             if (view === 'as-pur') {
                 presentationData.statsGesamt = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'Gesamt'), 'as', 'n');
@@ -399,12 +426,17 @@ const viewRenderer = (() => {
                         presentationData.comparisonCriteriaSet = studySet;
                         presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2';
                         presentationData.t2CriteriaLabelFull = `${isApplied ? 'Aktuell angewandt' : (studySet.name || 'Studie')}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`;
+                    } else {
+                        presentationData.statsT2 = null;
+                        presentationData.vergleich = null;
+                        presentationData.comparisonCriteriaSet = { name: 'N/A', displayShortName: 'N/A', criteria: {}, logic: 'ODER', studyInfo:{} };
                     }
                 } else {
                      presentationData.statsAS = null;
                      presentationData.statsT2 = null;
                      presentationData.vergleich = null;
                      if(selectedStudyId) presentationData.comparisonCriteriaSet = studyT2CriteriaManager.getStudyCriteriaSetById(selectedStudyId) || {name: selectedStudyId, displayShortName: 'Unbekannt', criteria: {}, logic: 'ODER', studyInfo:{}};
+                     else presentationData.comparisonCriteriaSet = { name: 'N/A', displayShortName: 'N/A', criteria: {}, logic: 'ODER', studyInfo:{} };
                 }
             }
             const tabContentHTML = praesentationTabLogic.createPresentationTabContent(view, presentationData, selectedStudyId, currentGlobalKollektiv);
@@ -417,7 +449,7 @@ const viewRenderer = (() => {
                          const chartData = { overall: { sensVal: presentationData.statsCurrentKollektiv.sens?.value, spezVal: presentationData.statsCurrentKollektiv.spez?.value, ppvVal: presentationData.statsCurrentKollektiv.ppv?.value, npvVal: presentationData.statsCurrentKollektiv.npv?.value, accVal: presentationData.statsCurrentKollektiv.acc?.value, aucVal: presentationData.statsCurrentKollektiv.auc?.value }};
                          chartRenderer.renderASPerformanceChart('praes-as-pur-perf-chart', chartData, {}, getKollektivDisplayName(currentGlobalKollektiv));
                      } else if (chartContainer) {
-                         ui_helpers.updateElementHTML(chartContainer.id, '<p class="text-muted small text-center p-3">Keine Daten für Performance-Chart.</p>');
+                         ui_helpers.updateElementHTML(chartContainer.id, `<p class="text-muted small text-center p-3">${currentTexts.publikationTab?.textGenerierungsHinweis?.includes('Daten für Diagramm nicht verfügbar') ? 'Daten für Diagramm nicht verfügbar.' : 'Keine Daten für Performance-Chart.'}</p>`);
                      }
                 } else if (view === 'as-vs-t2') {
                      const chartContainer = document.getElementById('praes-comp-chart-container');
@@ -429,15 +461,15 @@ const viewRenderer = (() => {
                              { metric: 'NPV',  AS: presentationData.statsAS.npv?.value ?? NaN,  T2: presentationData.statsT2.npv?.value ?? NaN },
                              { metric: 'Acc',  AS: presentationData.statsAS.acc?.value ?? NaN,  T2: presentationData.statsT2.acc?.value ?? NaN },
                              { metric: 'AUC',  AS: presentationData.statsAS.auc?.value ?? NaN,  T2: presentationData.statsT2.auc?.value ?? NaN }
-                         ].filter(d => !isNaN(d.AS) && !isNaN(d.T2));
+                         ].filter(d => !isNaN(d.AS) || !isNaN(d.T2)); // Allow if at least one value is valid
 
                          if (chartDataComp.length > 0) {
                             chartRenderer.renderComparisonBarChart(chartDataComp, 'praes-comp-chart-container', { height: 300, margin: { top: 20, right: 20, bottom: 50, left: 50 } }, presentationData.t2CriteriaLabelShort || 'T2');
                          } else {
-                            ui_helpers.updateElementHTML(chartContainer.id, '<p class="text-muted small text-center p-3">Unvollständige oder keine validen Daten für Vergleichschart.</p>');
+                            ui_helpers.updateElementHTML(chartContainer.id, `<p class="text-muted small text-center p-3">${currentTexts.publikationTab?.textGenerierungsHinweis?.includes('Daten für Diagramm nicht verfügbar') ? 'Daten für Diagramm nicht verfügbar.' : 'Unvollständige oder keine validen Daten für Vergleichschart.'}</p>`);
                          }
                      } else if (chartContainer) {
-                         ui_helpers.updateElementHTML(chartContainer.id, '<p class="text-muted small text-center p-3">Keine Daten für Vergleichschart.</p>');
+                         ui_helpers.updateElementHTML(chartContainer.id, `<p class="text-muted small text-center p-3">${currentTexts.publikationTab?.textGenerierungsHinweis?.includes('Daten für Diagramm nicht verfügbar') ? 'Daten für Diagramm nicht verfügbar.' : 'Keine Daten für Vergleichschart.'}</p>`);
                      }
                 }
                 ui_helpers.updatePresentationViewSelectorUI(view); const studySelect = document.getElementById('praes-study-select'); if (studySelect) studySelect.value = selectedStudyId || '';
@@ -460,65 +492,39 @@ const viewRenderer = (() => {
 
     function renderPublikationTab(currentLang, currentSection, currentKollektiv, globalProcessedData, bruteForceResults) {
         _renderTabContent('publikation-tab', () => {
-            publikationTabLogic.initializeData(
+            if (typeof publikationTabLogic === 'undefined' || typeof publikationTabLogic.refreshDataAndRender !== 'function') {
+                return '<p class="text-danger">Publikationslogik nicht geladen.</p>';
+            }
+            const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
+            const appliedLogic = t2CriteriaManager.getAppliedLogic();
+
+            publikationTabLogic.refreshDataAndRender(
                 globalProcessedData,
-                t2CriteriaManager.getAppliedCriteria(),
-                t2CriteriaManager.getAppliedLogic(),
+                appliedCriteria,
+                appliedLogic,
                 bruteForceResults
             );
 
             const headerHTML = uiComponents.createPublikationTabHeader();
-            const initialContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv);
+            const initialContentHTML = publikationTabLogic.getRenderedSectionContent();
             
             const container = document.createElement('div');
             container.innerHTML = headerHTML;
-            const contentAreaDiv = document.createElement('div');
-            contentAreaDiv.id = 'publikation-content-area'; // Ensure this matches the ID used in ui_helpers
-            contentAreaDiv.className = 'bg-white p-3 border rounded'; // Apply styles as in createPublikationTabHeader
-            contentAreaDiv.style.minHeight = '400px';
-            contentAreaDiv.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)'; // Match styles
-            contentAreaDiv.style.overflowY = 'auto';
-            contentAreaDiv.innerHTML = initialContentHTML;
+            const contentAreaDiv = container.querySelector('#publikation-content-area'); 
             
-            const mainCol = container.querySelector('.col-md-9'); // Target specific column if headerHTML has this structure
-            if (mainCol) {
-                const existingContentArea = mainCol.querySelector('#publikation-content-area');
-                if (existingContentArea) {
-                    existingContentArea.innerHTML = initialContentHTML;
-                } else {
-                     const controlDiv = mainCol.querySelector('.d-flex.justify-content-end.align-items-center.mb-2');
-                     if(controlDiv) {
-                         controlDiv.insertAdjacentElement('afterend', contentAreaDiv);
-                     } else {
-                         mainCol.appendChild(contentAreaDiv);
-                     }
-                }
+            if (contentAreaDiv) {
+                contentAreaDiv.innerHTML = initialContentHTML;
             } else {
-                 console.warn("Hauptspalte für Publikationsinhalt nicht im Header-HTML gefunden. Inhalt wird möglicherweise nicht korrekt platziert.");
-                 const fallbackContainer = container.querySelector('#publikation-content-area') || container;
-                 fallbackContainer.innerHTML = initialContentHTML;
+                 console.error("Container #publikation-content-area nicht im Header-HTML gefunden. Fallback: Füge Inhalt direkt ein.");
+                 container.innerHTML += `<div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: calc(100vh - var(--sticky-header-offset) - 4rem - 2rem); overflow-y: auto;">${initialContentHTML}</div>`;
             }
 
 
             setTimeout(() => {
-                const contentArea = document.getElementById('publikation-content-area');
-                if (!contentArea) { // Double check if it was not found or created above
-                     const mainContentCol = document.querySelector('#publikation-tab-pane .col-md-9');
-                     if (mainContentCol) {
-                          const newContentArea = document.createElement('div');
-                          newContentArea.id = 'publikation-content-area';
-                          newContentArea.className = 'bg-white p-3 border rounded';
-                          newContentArea.style.minHeight = '400px';
-                          newContentArea.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)';
-                          newContentArea.style.overflowY = 'auto';
-                          newContentArea.innerHTML = initialContentHTML;
-                          mainContentCol.appendChild(newContentArea);
-                     }
-                }
-                publikationTabLogic.updateDynamicChartsForPublicationTab(currentSection, currentLang, currentKollektiv);
+                publikationTabLogic.updateDynamicContent(false); // Already initialized by refreshDataAndRender, just update UI parts
                 ui_helpers.updatePublikationUI(currentLang, currentSection, state.getCurrentPublikationBruteForceMetric());
                 ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
-            }, 10);
+            }, 50);
 
             return container.innerHTML;
         });
