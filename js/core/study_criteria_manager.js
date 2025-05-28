@@ -5,6 +5,7 @@ const studyT2CriteriaManager = (() => {
             id: 'rutegard_et_al_esgar',
             name: 'Rutegård et al. (2025) / ESGAR 2016',
             displayShortName: 'ESGAR 2016',
+            citationKey: 'rutegard2025',
             context: 'Primär-Staging (Baseline-MRT)',
             applicableKollektiv: 'direkt OP',
             criteria: Object.freeze({
@@ -16,7 +17,7 @@ const studyT2CriteriaManager = (() => {
             }),
             logic: 'KOMBINIERT',
             description: 'ESGAR 2016 Kriterien für Primär-Staging: Größe ≥ 9mm ODER (Größe 5-8mm UND ≥2 Merkmale [rund, irregulär, heterogen]) ODER (Größe < 5mm UND ALLE 3 Merkmale [rund, irregulär, heterogen]).',
-             studyInfo: Object.freeze({
+            studyInfo: Object.freeze({
                 reference: "Rutegård et al., Eur Radiol (2025); Beets-Tan et al., Eur Radiol (2018) [ESGAR Consensus]",
                 patientCohort: "Rutegård: N=46 (27 direkt OP, 19 nCRT) - Analyse auf Baseline-MRT. ESGAR: Konsensus.",
                 investigationType: "Primärstaging",
@@ -28,6 +29,7 @@ const studyT2CriteriaManager = (() => {
             id: 'koh_2008_morphology',
             name: 'Koh et al. (2008)',
             displayShortName: 'Koh et al.',
+            citationKey: 'koh2008',
             context: 'Primär & Restaging (Urspr. Studie fokussiert auf Post-nCRT)',
             applicableKollektiv: 'Gesamt',
             criteria: Object.freeze({
@@ -51,17 +53,18 @@ const studyT2CriteriaManager = (() => {
             id: 'barbaro_2024_restaging',
             name: 'Barbaro et al. (2024)',
             displayShortName: 'Barbaro et al.',
+            citationKey: 'barbaro2024',
             context: 'Restaging nach nCRT',
             applicableKollektiv: 'nRCT',
             criteria: Object.freeze({
-                size: Object.freeze({ active: true, threshold: 2.3, condition: '>=' }),
+                size: Object.freeze({ active: true, threshold: 2.3, condition: '>=' }), // Angepasst von 2.2mm auf 2.3mm basierend auf Daten in Barbaro_2024.pdf (AUC Optimal Cutoff)
                 form: Object.freeze({ active: false, value: null }),
                 kontur: Object.freeze({ active: false, value: null }),
                 homogenitaet: Object.freeze({ active: false, value: null }),
                 signal: Object.freeze({ active: false, value: null })
             }),
-            logic: 'ODER',
-            description: 'Barbaro et al. (2024): Optimaler Cut-off für Kurzachse im Restaging nach nRCT: ≥ 2.3mm (Original 2.2mm).',
+            logic: 'ODER', // Implizit ODER, da nur ein Kriterium aktiv
+            description: 'Barbaro et al. (2024): Optimaler Cut-off für Kurzachse im Restaging nach nRCT: ≥ 2.3mm (Originalstudie 2.2mm, hier angepasst).',
              studyInfo: Object.freeze({
                 reference: "Barbaro et al., Radiother Oncol (2024)",
                 patientCohort: "N=191 (alle nCRT, LARC)",
@@ -72,7 +75,7 @@ const studyT2CriteriaManager = (() => {
         })
     ]);
 
-    function formatCriteriaForDisplay(criteria, logic = null, shortFormat = false) {
+    function formatCriteriaForDisplayWorker(criteria, logic = null, shortFormat = false) {
         if (!criteria || typeof criteria !== 'object') return 'N/A';
 
         const parts = [];
@@ -85,7 +88,7 @@ const studyT2CriteriaManager = (() => {
             if (key === 'size') {
                 const formattedThreshold = formatNumber(criterion.threshold, 1, '?');
                 const prefix = isShort ? 'Gr.' : 'Größe';
-                return `${prefix} ${criterion.condition || '>='} ${formattedThreshold}mm`;
+                return `${prefix} ${criterion.condition || '>='}${formattedThreshold}mm`;
             }
             let value = criterion.value || '?';
             if (isShort) {
@@ -113,28 +116,44 @@ const studyT2CriteriaManager = (() => {
         };
 
         const priorityOrder = ['size', 'kontur', 'homogenitaet', 'form', 'signal'];
-        const sortedActiveKeys = [...activeKeys].sort((a, b) => priorityOrder.indexOf(a) - priorityOrder.indexOf(b));
+        const sortedActiveKeys = [...activeKeys].sort((a, b) => {
+            const indexA = priorityOrder.indexOf(a);
+            const indexB = priorityOrder.indexOf(b);
+            if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+        });
+
 
         sortedActiveKeys.forEach(key => {
              parts.push(formatValue(key, criteria[key], shortFormat));
         });
 
         const effectiveLogic = logic || criteria.logic || 'ODER';
+        const uiLogicText = UI_TEXTS && UI_TEXTS.t2LogicDisplayNames ? (UI_TEXTS.t2LogicDisplayNames[effectiveLogic] || effectiveLogic) : effectiveLogic;
+
 
         if (effectiveLogic === 'KOMBINIERT') {
              const studySet = studyT2CriteriaSets.find(s => s.logic === 'KOMBINIERT' && JSON.stringify(s.criteria) === JSON.stringify(criteria));
-             if (studySet?.description) {
-                 return shortFormat ? (studySet.displayShortName || studySet.name) : studySet.description;
+             if (studySet?.studyInfo?.keyCriteriaSummary) {
+                 return shortFormat ? (studySet.displayShortName || studySet.name) : studySet.studyInfo.keyCriteriaSummary;
              }
-             return criteria.note || 'Kombinierte ESGAR Logik (Details siehe Originalpublikation)';
+             return criteria.note || (UI_TEXTS && UI_TEXTS.t2LogicDisplayNames && UI_TEXTS.t2LogicDisplayNames.KOMBINIERT ? UI_TEXTS.t2LogicDisplayNames.KOMBINIERT : 'Kombinierte Logik') + ' (Details siehe Originalpublikation)';
         }
         const separator = (effectiveLogic === 'UND') ? ' UND ' : ' ODER ';
 
-        if (shortFormat && parts.length > 2) {
-             return parts.slice(0, 2).join(separator) + ' ...';
+        let displayString = parts.join(separator);
+        if (parts.length > 1 && logic && logic !== 'KOMBINIERT' && !shortFormat) {
+            displayString = `(${uiLogicText}) ${displayString}`;
+        } else if (parts.length === 1 && logic && logic !== 'KOMBINIERT' && !shortFormat) {
+            displayString = `(${uiLogicText}) ${displayString}`;
+        } else if (shortFormat && parts.length > 2) {
+             displayString = parts.slice(0, 2).join(separator) + ' ...';
         }
 
-        return parts.join(separator);
+
+        return displayString;
     }
 
     function getAllStudyCriteriaSets() {
@@ -155,14 +174,19 @@ const studyT2CriteriaManager = (() => {
         if (!lymphNode || typeof lymphNode !== 'object' || !criteria || typeof criteria !== 'object') return checkResult;
 
         const nodeSize = (typeof lymphNode.groesse === 'number' && !isNaN(lymphNode.groesse)) ? lymphNode.groesse : -1;
-        const hasRoundShape = lymphNode.form === criteria.form?.value;
-        const hasIrregularBorder = lymphNode.kontur === criteria.kontur?.value;
-        const hasHeterogeneousSignal = lymphNode.homogenitaet === criteria.homogenitaet?.value;
+
+        const formCriterion = criteria.form;
+        const konturCriterion = criteria.kontur;
+        const homogenitaetCriterion = criteria.homogenitaet;
+
+        const hasRoundShape = formCriterion?.active && lymphNode.form === formCriterion.value;
+        const hasIrregularBorder = konturCriterion?.active && lymphNode.kontur === konturCriterion.value;
+        const hasHeterogeneousSignal = homogenitaetCriterion?.active && lymphNode.homogenitaet === homogenitaetCriterion.value;
 
         let morphologyCount = 0;
-        if (criteria.form?.active && hasRoundShape) morphologyCount++;
-        if (criteria.kontur?.active && hasIrregularBorder) morphologyCount++;
-        if (criteria.homogenitaet?.active && hasHeterogeneousSignal) morphologyCount++;
+        if (hasRoundShape) morphologyCount++;
+        if (hasIrregularBorder) morphologyCount++;
+        if (hasHeterogeneousSignal) morphologyCount++;
 
         checkResult.size_val = nodeSize >=0 ? nodeSize : null;
         checkResult.form_val = lymphNode.form;
@@ -171,26 +195,31 @@ const studyT2CriteriaManager = (() => {
         checkResult.signal_val = lymphNode.signal;
 
         checkResult.size = (criteria.size?.active && nodeSize >= (criteria.size.threshold || 9.0));
-        checkResult.form = (criteria.form?.active && hasRoundShape);
-        checkResult.kontur = (criteria.kontur?.active && hasIrregularBorder);
-        checkResult.homogenitaet = (criteria.homogenitaet?.active && hasHeterogeneousSignal);
+        checkResult.form = hasRoundShape;
+        checkResult.kontur = hasIrregularBorder;
+        checkResult.homogenitaet = hasHeterogeneousSignal;
+
         checkResult.esgarMorphologyCount = morphologyCount;
 
-        if (nodeSize >= 9.0) {
+        if (nodeSize >= 9.0 && criteria.size?.active) {
             checkResult.isPositive = true;
             checkResult.esgarCategory = '≥9mm';
-        } else if (nodeSize >= 5.0 && nodeSize < 9.0) {
+        } else if (nodeSize >= 5.0 && nodeSize < 9.0 && criteria.size?.active) {
             checkResult.esgarCategory = '5-8mm';
             if (morphologyCount >= 2) {
                 checkResult.isPositive = true;
             }
-        } else if (nodeSize >= 0 && nodeSize < 5.0) {
+        } else if (nodeSize >= 0 && nodeSize < 5.0 && criteria.size?.active) {
              checkResult.esgarCategory = '<5mm';
-             if (morphologyCount >= 3) {
+             if (morphologyCount >= 3) { // Alle 3 morphologischen Kriterien müssen aktiv und erfüllt sein
                  checkResult.isPositive = true;
              }
-        } else {
+        } else if (nodeSize < 0) { // Größe nicht vorhanden
             checkResult.esgarCategory = 'N/A (Größe ungültig)';
+            checkResult.isPositive = false;
+        } else { // Größe vorhanden, aber <5mm und nicht alle 3 Kriterien erfüllt ODER size-Kriterium nicht aktiv
+            checkResult.esgarCategory = (nodeSize >= 0 && nodeSize < 5.0) ? '<5mm' : 'N/A (Größenbereich nicht abgedeckt)';
+            checkResult.isPositive = false;
         }
 
         return checkResult;
@@ -227,7 +256,7 @@ const studyT2CriteriaManager = (() => {
 
     function applyStudyT2CriteriaToPatient(patient, studyCriteriaSet) {
         const defaultReturn = { t2Status: null, positiveLKCount: 0, bewerteteLK: [] };
-        if (!patient || typeof patient !== 'object' || !studyCriteriaSet || typeof studyCriteriaSet !== 'object') {
+        if (!patient || typeof patient !== 'object' || !studyCriteriaSet || typeof studyCriteriaSet !== 'object' || !studyCriteriaSet.criteria) {
             return defaultReturn;
         }
 
@@ -245,14 +274,14 @@ const studyT2CriteriaManager = (() => {
         const activeCriteriaKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true);
 
 
-        if (lymphNodes.length === 0 && activeCriteriaKeys.length > 0) {
+        if (lymphNodes.length === 0 && activeCriteriaKeys.length > 0 && logic !== 'KOMBINIERT') {
             return { t2Status: '-', positiveLKCount: 0, bewerteteLK: [] };
         }
+         if (lymphNodes.length === 0 && logic === 'KOMBINIERT' && studyCriteriaSet.id === 'rutegard_et_al_esgar') {
+             return { t2Status: '-', positiveLKCount: 0, bewerteteLK: [] }; // ESGAR Kriterien können auch ohne LK nicht erfüllt sein (impliziert negativ)
+         }
         if (lymphNodes.length === 0 && activeCriteriaKeys.length === 0 && logic !== 'KOMBINIERT') {
             return { t2Status: null, positiveLKCount: 0, bewerteteLK: [] };
-        }
-         if (lymphNodes.length === 0 && logic === 'KOMBINIERT') {
-            return { t2Status: '-', positiveLKCount: 0, bewerteteLK: [] };
         }
 
 
@@ -263,18 +292,18 @@ const studyT2CriteriaManager = (() => {
             }
 
             let lkIsPositive = false;
-            let checkResult = null;
+            let checkResultFull = null;
 
             if (logic === 'KOMBINIERT' && studyCriteriaSet.id === 'rutegard_et_al_esgar') {
-                checkResult = _checkSingleNodeESGAR(lk, criteria);
-                lkIsPositive = checkResult.isPositive;
+                checkResultFull = _checkSingleNodeESGAR(lk, criteria);
+                lkIsPositive = checkResultFull.isPositive;
             } else {
-                checkResult = _checkSingleNodeSimple(lk, criteria);
+                checkResultFull = _checkSingleNodeSimple(lk, criteria);
                 if (activeCriteriaKeys.length > 0) {
                    if (logic === 'UND') {
-                       lkIsPositive = activeCriteriaKeys.every(key => checkResult[key] === true);
-                   } else {
-                       lkIsPositive = activeCriteriaKeys.some(key => checkResult[key] === true);
+                       lkIsPositive = activeCriteriaKeys.every(key => checkResultFull[key] === true);
+                   } else { // ODER
+                       lkIsPositive = activeCriteriaKeys.some(key => checkResultFull[key] === true);
                    }
                 }
             }
@@ -290,7 +319,7 @@ const studyT2CriteriaManager = (() => {
                 homogenitaet: lk.homogenitaet ?? null,
                 signal: lk.signal ?? null,
                 isPositive: lkIsPositive,
-                checkResult: checkResult
+                checkResult: checkResultFull
             };
             bewerteteLK.push(bewerteterLK);
         });
@@ -334,27 +363,33 @@ const studyT2CriteriaManager = (() => {
          }).filter(p => p !== null);
     }
 
-    function formatStudyCriteriaForDisplay(studyCriteriaSet) {
+    function formatCompleteStudyCriteriaSetForDisplay(studyCriteriaSet) {
         if (!studyCriteriaSet) return 'N/A';
         const criteria = studyCriteriaSet.criteria;
         const logic = studyCriteriaSet.logic;
 
-        if (logic === 'KOMBINIERT' && studyCriteriaSet.description) {
-             return studyCriteriaSet.description;
+        if (logic === 'KOMBINIERT' && studyCriteriaSet.studyInfo?.keyCriteriaSummary) {
+             return studyCriteriaSet.studyInfo.keyCriteriaSummary;
         }
         if (!criteria) return `${studyCriteriaSet.name || studyCriteriaSet.id} (Keine Kriterien definiert)`;
 
-        const formattedCriteria = formatCriteriaForDisplay(criteria, logic);
-        return `(${studyCriteriaSet.name || studyCriteriaSet.id}): ${formattedCriteria}`;
+        const formattedCriteria = formatCriteriaForDisplayWorker(criteria, logic, false);
+        return formattedCriteria;
+    }
+    
+    function init() {
+        // Placeholder for future initialization logic if needed
     }
 
+
     return Object.freeze({
+        init,
         getAllStudyCriteriaSets,
         getStudyCriteriaSetById,
         applyStudyT2CriteriaToPatient,
         applyStudyT2CriteriaToDataset,
-        formatStudyCriteriaForDisplay,
-        formatCriteriaForDisplay
+        formatCriteriaForDisplay: formatCriteriaForDisplayWorker, // Expose the worker function
+        formatStudyCriteriaForDisplay: formatCompleteStudyCriteriaSetForDisplay // Renamed original
     });
 
 })();
