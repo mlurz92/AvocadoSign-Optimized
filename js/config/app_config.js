@@ -1,6 +1,6 @@
 const APP_CONFIG = Object.freeze({
     APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
-    APP_VERSION: "2.3.0",
+    APP_VERSION: "2.5.0",
 
     DEFAULT_SETTINGS: Object.freeze({
         KOLLEKTIV: 'Gesamt',
@@ -23,24 +23,28 @@ const APP_CONFIG = Object.freeze({
             'barbaro_2024_restaging'
         ]),
         CHART_COLOR_SCHEME: 'default',
-        BRUTE_FORCE_METRIC: 'Balanced Accuracy'
+        BRUTE_FORCE_METRIC: 'Balanced Accuracy',
+        BRUTE_FORCE_TOP_N_RESULTS: 10,
+        CHART_EXPORT_PNG_DEFAULT_DPI: 300,
+        CHART_EXPORT_PNG_DPI_OPTIONS: Object.freeze([150, 300, 600])
     }),
 
     STORAGE_KEYS: Object.freeze({
-        APPLIED_CRITERIA: 'appliedT2Criteria_v4.2_detailed',
-        APPLIED_LOGIC: 'appliedT2Logic_v4.2_detailed',
-        CURRENT_KOLLEKTIV: 'currentKollektiv_v4.2_detailed',
-        PUBLIKATION_LANG: 'currentPublikationLang_v4.2_detailed',
-        PUBLIKATION_SECTION: 'currentPublikationSection_v4.2_detailed',
-        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v4.2_detailed',
-        STATS_LAYOUT: 'currentStatsLayout_v4.2_detailed',
-        STATS_KOLLEKTIV1: 'currentStatsKollektiv1_v4.2_detailed',
-        STATS_KOLLEKTIV2: 'currentStatsKollektiv2_v4.2_detailed',
-        PRESENTATION_VIEW: 'currentPresentationView_v4.2_detailed',
-        PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
-        CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
-        CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
-        FIRST_APP_START: 'appFirstStart_v2.3'
+        APPLIED_CRITERIA: 'appliedT2Criteria_v2.5.0',
+        APPLIED_LOGIC: 'appliedT2Logic_v2.5.0',
+        CURRENT_KOLLEKTIV: 'currentKollektiv_v2.5.0',
+        PUBLIKATION_LANG: 'currentPublikationLang_v2.5.0',
+        PUBLIKATION_SECTION: 'currentPublikationSection_v2.5.0',
+        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v2.5.0',
+        STATS_LAYOUT: 'currentStatsLayout_v2.5.0',
+        STATS_KOLLEKTIV1: 'currentStatsKollektiv1_v2.5.0',
+        STATS_KOLLEKTIV2: 'currentStatsKollektiv2_v2.5.0',
+        PRESENTATION_VIEW: 'currentPresentationView_v2.5.0',
+        PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v2.5.0',
+        CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v2.5.0',
+        CHART_COLOR_SCHEME: 'chartColorScheme_v2.5.0',
+        FIRST_APP_START: 'appFirstStart_v2.5.0',
+        APP_STATE_SNAPSHOTS: 'appStateSnapshots_v2.5.0'
     }),
 
     PATHS: Object.freeze({
@@ -50,7 +54,8 @@ const APP_CONFIG = Object.freeze({
     PERFORMANCE_SETTINGS: Object.freeze({
         DEBOUNCE_DELAY_MS: 250,
         ENABLE_GPU_ACCELERATION_CSS: true,
-        CHART_ANIMATION_THRESHOLD: 50
+        CHART_ANIMATION_THRESHOLD: 50,
+        BRUTE_FORCE_WORKER_REPORT_INTERVAL_FACTOR: 200
     }),
 
     STATISTICAL_CONSTANTS: Object.freeze({
@@ -64,7 +69,9 @@ const APP_CONFIG = Object.freeze({
         ]),
         DEFAULT_CI_METHOD_PROPORTION: 'Wilson Score',
         DEFAULT_CI_METHOD_EFFECTSIZE: 'Bootstrap Percentile',
-        FISHER_EXACT_THRESHOLD: 5
+        FISHER_EXACT_THRESHOLD: 5,
+        CI_WARNING_SAMPLE_SIZE_THRESHOLD: 10,
+        LIKELIHOOD_RATIO_EPSILON: 1e-9
     }),
 
     T2_CRITERIA_SETTINGS: Object.freeze({
@@ -108,7 +115,9 @@ const APP_CONFIG = Object.freeze({
         GRIDLINE_COLOR: '#e9ecef',
         ENABLE_GRIDLINES: true,
         POINT_RADIUS: 4,
-        LINE_STROKE_WIDTH: 2
+        LINE_STROKE_WIDTH: 2,
+        SVG_EXPORT_FONT_FAMILY: 'Arial, sans-serif',
+        SVG_EXPORT_EMBED_FONTS: false
     }),
 
     EXPORT_SETTINGS: Object.freeze({
@@ -120,25 +129,27 @@ const APP_CONFIG = Object.freeze({
         COMPREHENSIVE_REPORT_LOGO_URL: '',
         INCLUDE_TIMESTAMP_IN_FILENAME: false,
         FILENAME_TYPES: Object.freeze({
-            STATS_CSV: 'StatistikCSV',
-            BRUTEFORCE_TXT: 'BruteForceTXT',
-            DESKRIPTIV_MD: 'DeskriptiveStatistikMD',
-            DATEN_MD: 'DatenlisteMD',
-            AUSWERTUNG_MD: 'AuswertungTabelleMD',
-            CHARTS_PNG: 'ChartsPNG',
-            CHARTS_SVG: 'ChartsSVG',
-            ALL_ZIP: 'GesamtPaketZIP',
-            CSV_ZIP: 'CSVPaketZIP',
-            MD_ZIP: 'MDPaketZIP',
-            PNG_ZIP: 'PNGPaketZIP',
-            SVG_ZIP: 'SVGPaketZIP',
-            XLSX_ZIP: 'XLSXPaketZIP',
-            FILTERED_DATA_CSV: 'GefilterteDatenCSV',
-            FILTERED_DATA_XLSX: 'GefilterteDatenXLSX',
-            COMPREHENSIVE_REPORT_HTML: 'AnalyseberichtHTML',
-            AUSWERTUNG_XLSX: 'AuswertungTabelleXLSX',
-            DATEN_XLSX: 'DatenlisteXLSX',
-            STATISTIK_XLSX: 'StatistikUebersichtXLSX',
+            STATS_CSV: 'StatistikUebersicht_CSV',
+            BRUTEFORCE_TXT: 'BruteForceBericht_TXT',
+            BRUTEFORCE_DETAILED_CSV: 'BruteForceAlleErgebnisse_CSV',
+            DESKRIPTIV_MD: 'DeskriptiveStatistik_MD',
+            DATEN_MD: 'Datenliste_MD',
+            AUSWERTUNG_MD: 'AuswertungTabelle_MD',
+            CHARTS_PNG_ZIP: 'AlleCharts_PNG_ZIP',
+            CHARTS_SVG_ZIP: 'AlleCharts_SVG_ZIP',
+            PUBLICATION_CHARTS_ZIP: 'PublikationsCharts_ZIP',
+            ALL_ZIP: 'GesamtPaket_ZIP',
+            CSV_ZIP: 'CSVPaket_ZIP',
+            MD_ZIP: 'MDPaket_ZIP',
+            PNG_ZIP: 'PNGPaket_ZIP',
+            SVG_ZIP: 'SVGPaket_ZIP',
+            XLSX_ZIP: 'XLSXPaket_ZIP',
+            FILTERED_DATA_CSV: 'GefilterteDaten_CSV',
+            FILTERED_DATA_XLSX: 'GefilterteDaten_XLSX',
+            COMPREHENSIVE_REPORT_HTML: 'Analysebericht_HTML',
+            AUSWERTUNG_XLSX: 'AuswertungTabelle_XLSX',
+            DATEN_XLSX: 'Datenliste_XLSX',
+            STATISTIK_XLSX: 'StatistikUebersicht_XLSX',
             CHART_SINGLE_PNG: '{ChartName}_PNG',
             CHART_SINGLE_SVG: '{ChartName}_SVG',
             PRAES_DEMOGRAPHICS_MD: 'PraesDemographicsASPUR_MD',
@@ -150,9 +161,10 @@ const APP_CONFIG = Object.freeze({
             PRAES_AS_VS_T2_CHART_PNG: 'PraesChartASvsT2_{StudyID}_PNG',
             PRAES_AS_VS_T2_CHART_SVG: 'PraesChartASvsT2_{StudyID}_SVG',
             TABLE_PNG_EXPORT: '{TableName}_PNG',
-            CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
-            PUBLIKATION_METHODEN_MD: 'Publikation_{SectionName}_MD',
-            PUBLIKATION_ERGEBNISSE_MD: 'Publikation_{SectionName}_MD'
+            CRITERIA_COMPARISON_MD: 'Kriterienvergleich_MD',
+            PUBLIKATION_METHODEN_MD: 'Publikation_Methoden_{SectionName}_MD',
+            PUBLIKATION_ERGEBNISSE_MD: 'Publikation_Ergebnisse_{SectionName}_MD',
+            PUBLIKATION_COMPLETE_MD: 'Publikation_Gesamt_MethodenErgebnisse_MD'
         }),
         EXCEL_SHEET_NAME_DATEN: 'Datenliste',
         EXCEL_SHEET_NAME_AUSWERTUNG: 'Auswertung',
@@ -175,7 +187,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.3.0"}`,
+        REPORT_AUTHOR: `Generiert durch Avocado Sign Analyse Tool v${"2.5.0"}`,
         REPORT_LOGO_ALT_TEXT: 'Institutslogo'
     }),
 
@@ -184,6 +196,39 @@ const APP_CONFIG = Object.freeze({
         APPLIED_CRITERIA_DISPLAY_NAME: 'Eingestellte T2 Kriterien',
         AVOCADO_SIGN_ID: 'avocado_sign',
         AVOCADO_SIGN_DISPLAY_NAME: 'Avocado Sign'
+    }),
+
+    REFERENCES_FOR_PUBLICATION: Object.freeze({
+        LURZ_SCHAEFER_2025: {
+            key: "LurzSchaefer2025",
+            full: "Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11462-y",
+            short: "Lurz & Schäfer (2025) [1]"
+        },
+        KOH_2008: {
+            key: "Koh2008",
+            full: "Koh DM, Chau I, Tait D, Wotherspoon A, Cunningham D, Brown G. Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. Int J Radiat Oncol Biol Phys. 2008;71(2):456-461. DOI: 10.1016/j.ijrobp.2007.10.016",
+            short: "Koh et al. (2008) [2]"
+        },
+        BARBARO_2024: {
+            key: "Barbaro2024",
+            full: "Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: A single center experience. Radiother Oncol. 2024;193:110124. DOI: 10.1016/j.radonc.2024.110124",
+            short: "Barbaro et al. (2024) [3]"
+        },
+        RUTEGARD_2025: {
+            key: "Rutegard2025",
+            full: "Rutegård MK, Båtsman M, Blomqvist L, et al. Evaluation of MRI characterisation of histopathologically matched lymph nodes and other mesorectal nodal structures in rectal cancer. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11361-2",
+            short: "Rutegård et al. (2025) [4]"
+        },
+        BEETS_TAN_2018_ESGAR: {
+            key: "BeetsTan2018ESGAR",
+            full: "Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for clinical management of rectal cancer: updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. Eur Radiol. 2018;28(4):1465-1475. DOI: 10.1007/s00330-017-5026-2",
+            short: "Beets-Tan et al., ESGAR (2018) [5]"
+        },
+        ETHICS_VOTE_AVOCADO_SIGN: {
+            key: "EthicsVoteAvocadoSign",
+            full: "Ethikvotum Nr. 2023-101, Ethikkommission der Sächsischen Landesärztekammer, Dresden, Deutschland.",
+            short: "[Ethikvotum Avocado Sign]"
+        }
     })
 });
 
