@@ -3,17 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avocado Sign vs. T2 Kriterien Analyse v2.5.0</title>
+    <title>Avocado Sign vs. T2 Kriterien Analyse v2.3.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/_layout.css">
-    <link rel="stylesheet" href="css/_tables.css">
-    <link rel="stylesheet" href="css/_charts.css">
-    <link rel="stylesheet" href="css/_forms.css">
-    <link rel="stylesheet" href="css/_modals.css">
-    <link rel="stylesheet" href="css/_tooltips.css">
-    <link rel="stylesheet" href="css/_print.css">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🥑%3C/text%3E%3C/svg%3E">
 </head>
 <body>
@@ -21,17 +14,17 @@
         <div class="container-fluid">
              <h1 class="app-title">Lymphknoten T2 - Avocado Sign</h1>
              <div class="header-meta ms-md-auto me-md-3">
-                <span data-tippy-content-key="tooltip.headerStats.kollektiv">Kollektiv: <strong id="header-kollektiv">--</strong></span>
-                <span data-tippy-content-key="tooltip.headerStats.anzahlPatienten">Pat.: <strong id="header-anzahl-patienten">--</strong></span>
-                <span data-tippy-content-key="tooltip.headerStats.statusN">N: <strong id="header-status-n">--</strong></span>
-                <span data-tippy-content-key="tooltip.headerStats.statusAS">AS: <strong id="header-status-as">--</strong></span>
-                <span data-tippy-content-key="tooltip.headerStats.statusT2">T2: <strong id="header-status-t2">--</strong></span>
+                <span data-tippy-content="Aktuell ausgewähltes Analysekollektiv">Kollektiv: <strong id="header-kollektiv">--</strong></span>
+                <span data-tippy-content="Anzahl Patienten im aktuellen Kollektiv">Pat.: <strong id="header-anzahl-patienten">--</strong></span>
+                <span data-tippy-content="Anteil N+ Patienten (Pathologie)">N: <strong id="header-status-n">--</strong></span>
+                <span data-tippy-content="Anteil AS+ Patienten (Vorhersage)">AS: <strong id="header-status-as">--</strong></span>
+                <span data-tippy-content="Anteil T2+ Patienten (angew. Kriterien)">T2: <strong id="header-status-t2">--</strong></span>
             </div>
             <div class="d-flex align-items-center">
-                <button class="btn btn-sm btn-outline-secondary me-2" id="btn-kurzanleitung" data-tippy-content-key="tooltip.kurzanleitungButton.description">
+                <button class="btn btn-sm btn-outline-secondary me-2" id="btn-kurzanleitung" data-tippy-content="Kurzanleitung anzeigen">
                     <i class="fas fa-question-circle"></i>
                 </button>
-                <div class="btn-group" role="group" aria-label="Kollektiv Auswahl" data-tippy-content-key="tooltip.kollektivButtons.description">
+                <div class="btn-group" role="group" aria-label="Kollektiv Auswahl" data-tippy-content="Wählen Sie das Patientenkollektiv für die Analyse aus.">
                     <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-gesamt" data-kollektiv="Gesamt">Gesamt</button>
                     <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-direkt-op" data-kollektiv="direkt OP">Direkt OP</button>
                     <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-nrct" data-kollektiv="nRCT">nRCT</button>
@@ -44,32 +37,32 @@
         <div class="container-fluid">
             <ul class="nav nav-tabs" id="mainTab" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="daten-tab" data-bs-toggle="tab" data-bs-target="#daten-tab-pane" type="button" role="tab" aria-controls="daten-tab-pane" aria-selected="false" data-tippy-content-key="tooltip.mainTabs.daten">
+                    <button class="nav-link" id="daten-tab" data-bs-toggle="tab" data-bs-target="#daten-tab-pane" type="button" role="tab" aria-controls="daten-tab-pane" aria-selected="false" data-tippy-content="Patientendaten anzeigen.">
                         <i class="fas fa-database fa-fw me-1"></i>Daten
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="auswertung-tab" data-bs-toggle="tab" data-bs-target="#auswertung-tab-pane" type="button" role="tab" aria-controls="auswertung-tab-pane" aria-selected="false" data-tippy-content-key="tooltip.mainTabs.auswertung">
+                    <button class="nav-link" id="auswertung-tab" data-bs-toggle="tab" data-bs-target="#auswertung-tab-pane" type="button" role="tab" aria-controls="auswertung-tab-pane" aria-selected="false" data-tippy-content="T2-Kriterien definieren und Ergebnisse auswerten.">
                         <i class="fas fa-tasks fa-fw me-1"></i>Auswertung
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="statistik-tab" data-bs-toggle="tab" data-bs-target="#statistik-tab-pane" type="button" role="tab" aria-controls="statistik-tab-pane" aria-selected="false" data-tippy-content-key="tooltip.mainTabs.statistik">
+                    <button class="nav-link" id="statistik-tab" data-bs-toggle="tab" data-bs-target="#statistik-tab-pane" type="button" role="tab" aria-controls="statistik-tab-pane" aria-selected="false" data-tippy-content="Detaillierte statistische Analysen durchführen.">
                         <i class="fas fa-chart-bar fa-fw me-1"></i>Statistik
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="praesentation-tab" data-bs-toggle="tab" data-bs-target="#praesentation-tab-pane" type="button" role="tab" aria-controls="praesentation-tab-pane" aria-selected="false" data-tippy-content-key="tooltip.mainTabs.praesentation">
+                    <button class="nav-link" id="praesentation-tab" data-bs-toggle="tab" data-bs-target="#praesentation-tab-pane" type="button" role="tab" aria-controls="praesentation-tab-pane" aria-selected="false" data-tippy-content="Ergebnisse präsentationsfreundlich darstellen.">
                         <i class="fas fa-slideshare fa-fw me-1"></i>Präsentation
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="publikation-tab" data-bs-toggle="tab" data-bs-target="#publikation-tab-pane" type="button" role="tab" aria-controls="publikation-tab-pane" aria-selected="true" data-tippy-content-key="tooltip.mainTabs.publikation">
+                    <button class="nav-link active" id="publikation-tab" data-bs-toggle="tab" data-bs-target="#publikation-tab-pane" type="button" role="tab" aria-controls="publikation-tab-pane" aria-selected="true" data-tippy-content="Textvorschläge und Materialien für Publikationen generieren.">
                         <i class="fas fa-feather-alt fa-fw me-1"></i>Publikation
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-tab-pane" type="button" role="tab" aria-controls="export-tab-pane" aria-selected="false" data-tippy-content-key="tooltip.mainTabs.export">
+                    <button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-tab-pane" type="button" role="tab" aria-controls="export-tab-pane" aria-selected="false" data-tippy-content="Daten und Analyseergebnisse exportieren.">
                         <i class="fas fa-download fa-fw me-1"></i>Export
                     </button>
                 </li>
@@ -120,11 +113,8 @@
              <p class="text-center text-muted">Ergebnisse werden geladen...</p>
           </div>
           <div class="modal-footer">
-             <button type="button" class="btn btn-outline-secondary btn-sm" id="export-bruteforce-modal-csv" disabled data-tippy-content-key="tooltip.bruteForceModal.exportAllButton">
-                <i class="fas fa-file-csv me-1"></i> Alle Kombinationen (CSV)
-             </button>
-             <button type="button" class="btn btn-outline-primary btn-sm" id="export-bruteforce-modal-txt" disabled data-tippy-content-key="tooltip.bruteForceModal.exportButton">
-                 <i class="fas fa-file-alt me-1"></i> Top-Ergebnisse Bericht (TXT)
+             <button type="button" class="btn btn-outline-primary btn-sm" id="export-bruteforce-modal-txt" disabled data-tippy-content="Exportiert den detaillierten Brute-Force-Bericht als TXT.">
+                 <i class="fas fa-file-alt me-1"></i> Bericht exportieren (.txt)
              </button>
             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" data-tippy-content="Schließt dieses Fenster ohne weitere Aktion.">Schließen</button>
           </div>
@@ -159,32 +149,33 @@
 
     <script src="data/data.js"></script>
 
+    <script src="js/utils/utils.js"></script>
+
     <script src="js/config/app_config.js"></script>
     <script src="js/config/text_config.js"></script>
     <script src="js/config/publication_config.js"></script>
 
-    <script src="js/utils/utils.js"></script>
-
     <script src="js/core/data_processor.js"></script>
-    <script src="js/core/kollektiv_store.js"></script>
     <script src="js/core/t2_criteria_manager.js"></script>
     <script src="js/core/study_criteria_manager.js"></script>
 
     <script src="js/services/statistics_service.js"></script>
     <script src="js/services/brute_force_manager.js"></script>
     <script src="js/services/export_service.js"></script>
-    <script src="js/services/dynamic_module_loader.js"></script>
 
     <script src="js/ui/core/ui_helpers.js"></script>
     <script src="js/ui/core/ui_components.js"></script>
-
-    <script src="js/ui/managers/table_manager.js"></script>
-    <script src="js/ui/managers/chart_manager.js"></script>
 
     <script src="js/ui/renderers/table_renderer.js"></script>
     <script src="js/ui/renderers/chart_renderer.js"></script>
     <script src="js/ui/renderers/publication_text_generator.js"></script>
     <script src="js/ui/renderers/publication_renderer.js"></script>
+
+    <script src="js/ui/view_logic/data_tab_logic.js"></script>
+    <script src="js/ui/view_logic/auswertung_tab_logic.js"></script>
+    <script src="js/ui/view_logic/statistik_tab_logic.js"></script>
+    <script src="js/ui/view_logic/praesentation_tab_logic.js"></script>
+    <script src="js/ui/view_logic/publikation_tab_logic.js"></script>
 
     <script src="js/ui/event_handlers/general_event_handlers.js"></script>
     <script src="js/ui/event_handlers/auswertung_event_handlers.js"></script>

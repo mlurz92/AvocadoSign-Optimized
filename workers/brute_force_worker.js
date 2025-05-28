@@ -68,6 +68,7 @@ function cloneDeepWorker(obj) {
              return JSON.parse(JSON.stringify(obj));
          }
      } catch(e) {
+         console.error("BruteForceWorker: Fehler beim Klonen (structuredClone/JSON), Fallback...", e, obj);
          if (Array.isArray(obj)) {
              const arrCopy = [];
              for(let i = 0; i < obj.length; i++){
@@ -140,10 +141,9 @@ function applyT2CriteriaToPatientWorker(patient, criteria, logic) {
      return '-';
 }
 
-function calculateMetricValues(data, criteria, logic) {
+function calculateMetric(data, criteria, logic, metricName) {
     let rp = 0, fp = 0, fn = 0, rn = 0;
-    const defaultMetrics = { rp:0, fp:0, fn:0, rn:0, sens: NaN, spez: NaN, ppv: NaN, npv: NaN, acc: NaN, balAcc: NaN, f1: NaN };
-    if (!Array.isArray(data)) return defaultMetrics;
+    if (!Array.isArray(data)) return NaN;
 
     data.forEach(p => {
         if(!p || typeof p !== 'object') return;
@@ -162,32 +162,36 @@ function calculateMetricValues(data, criteria, logic) {
     });
 
     const total = rp + fp + fn + rn;
-    if (total === 0) return { ...defaultMetrics, rp, fp, fn, rn };
+    if (total === 0) return NaN;
 
-    const sens = (rp + fn) > 0 ? rp / (rp + fn) : ((rp === 0 && fn === 0) ? NaN : 0);
-    const spez = (fp + rn) > 0 ? rn / (fp + rn) : ((fp === 0 && rn === 0) ? NaN : 0);
-    const ppv = (rp + fp) > 0 ? rp / (rp + fp) : ((rp === 0 && fp === 0) ? NaN : 0);
-    const npv = (fn + rn) > 0 ? rn / (fn + rn) : ((fn === 0 && rn === 0) ? NaN : 0);
-    const acc = (rp + rn) / total;
-    const balAcc = (isNaN(sens) || isNaN(spez)) ? NaN : (sens + spez) / 2.0;
-    const f1 = (isNaN(ppv) || isNaN(sens) || (ppv + sens) <= 1e-9) ? ((ppv === 0 && sens === 0) ? 0 : NaN) : 2.0 * (ppv * sens) / (ppv + sens);
-
-    return { rp, fp, fn, rn, sens, spez, ppv, npv, acc, balAcc, f1 };
-}
-
-function getTargetMetricValue(metricValues, metricName) {
+    const sens = (rp + fn) > 0 ? rp / (rp + fn) : 0;
+    const spez = (fp + rn) > 0 ? rn / (fp + rn) : 0;
+    const ppv = (rp + fp) > 0 ? rp / (rp + fp) : 0;
+    const npv = (fn + rn) > 0 ? rn / (fn + rn) : 0;
     let result;
+
     switch (metricName) {
-        case 'Accuracy': result = metricValues.acc; break;
-        case 'Balanced Accuracy': result = metricValues.balAcc; break;
-        case 'F1-Score': result = metricValues.f1; break;
-        case 'PPV': result = metricValues.ppv; break;
-        case 'NPV': result = metricValues.npv; break;
-        default: result = metricValues.balAcc; break;
+        case 'Accuracy':
+            result = (rp + rn) / total;
+            break;
+        case 'Balanced Accuracy':
+            result = (isNaN(sens) || isNaN(spez)) ? NaN : (sens + spez) / 2.0;
+            break;
+        case 'F1-Score':
+            result = (isNaN(ppv) || isNaN(sens) || (ppv + sens) <= 1e-9) ? ((ppv === 0 && sens === 0) ? 0 : NaN) : 2.0 * (ppv * sens) / (ppv + sens);
+            break;
+        case 'PPV':
+            result = ppv;
+            break;
+        case 'NPV':
+            result = npv;
+            break;
+        default:
+            result = (isNaN(sens) || isNaN(spez)) ? NaN : (sens + spez) / 2.0;
+            break;
     }
     return isNaN(result) ? -Infinity : result;
 }
-
 
 function generateCriteriaCombinations() {
     const CRITERIA_KEYS = ['size', 'form', 'kontur', 'homogenitaet', 'signal'];
@@ -206,18 +210,15 @@ function generateCriteriaCombinations() {
              VALUE_OPTIONS.size.push(parseFloat((s / 10).toFixed(1)));
         }
         if (!VALUE_OPTIONS.size.includes(min)) VALUE_OPTIONS.size.unshift(min);
-        if (VALUE_OPTIONS.size.length > 0 && !VALUE_OPTIONS.size.includes(max) && max > VALUE_OPTIONS.size[VALUE_OPTIONS.size.length-1]) {
-             VALUE_OPTIONS.size.push(max);
-        } else if (VALUE_OPTIONS.size.length === 0 && max >= min) {
-            VALUE_OPTIONS.size.push(min);
-            if (max > min) VALUE_OPTIONS.size.push(max);
-        }
+        if (!VALUE_OPTIONS.size.includes(max) && max > VALUE_OPTIONS.size[VALUE_OPTIONS.size.length-1]) VALUE_OPTIONS.size.push(max);
         VALUE_OPTIONS.size = [...new Set(VALUE_OPTIONS.size)].sort((a, b) => a - b);
          if (VALUE_OPTIONS.size.length === 0) {
+             console.warn("BruteForceWorker: t2SizeRange führte zu leerer VALUE_OPTIONS.size, verwende Standardgrößen.");
              VALUE_OPTIONS.size = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
          }
     } else {
         VALUE_OPTIONS.size = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+        console.warn("BruteForceWorker: t2SizeRange nicht korrekt definiert oder ungültig, verwende Standardgrößen.");
     }
 
 
@@ -281,7 +282,7 @@ function runBruteForce() {
     startTime = performance.now();
     combinationsTested = 0;
     allResults = [];
-    bestResult = { metricValue: -Infinity, criteria: null, logic: null, rp: 0, fp: 0, fn: 0, rn: 0, sens: NaN, spez: NaN, ppv: NaN, npv: NaN, acc: NaN, balAcc: NaN, f1: NaN };
+    bestResult = { metricValue: -Infinity, criteria: null, logic: null };
 
     const allCombinations = generateCriteriaCombinations();
     if (totalCombinations === 0 || allCombinations.length === 0) {
@@ -299,23 +300,16 @@ function runBruteForce() {
         if (!isRunning) break;
 
         const combo = allCombinations[i];
-        let metricValues;
-        let targetMetricVal = -Infinity;
+        let metricValue = -Infinity;
 
         try {
-            metricValues = calculateMetricValues(currentData, combo.criteria, combo.logic);
-            targetMetricVal = getTargetMetricValue(metricValues, targetMetric);
+            metricValue = calculateMetric(currentData, combo.criteria, combo.logic, targetMetric);
         } catch (error) {
-            metricValues = { rp:0, fp:0, fn:0, rn:0, sens: NaN, spez: NaN, ppv: NaN, npv: NaN, acc: NaN, balAcc: NaN, f1: NaN };
-            targetMetricVal = -Infinity;
+            console.error("BruteForceWorker: Fehler in calculateMetric für Kombination:", combo, "Fehler:", error);
+            metricValue = -Infinity;
         }
 
-        const result = {
-            logic: combo.logic,
-            criteria: combo.criteria,
-            metricValue: targetMetricVal,
-            ...metricValues
-        };
+        const result = { logic: combo.logic, criteria: combo.criteria, metricValue: metricValue };
         allResults.push(result);
 
         if (result.metricValue > bestResult.metricValue && isFinite(result.metricValue)) {
@@ -344,9 +338,10 @@ function runBruteForce() {
         const validResults = allResults.filter(r => r && isFinite(r.metricValue));
         validResults.sort((a, b) => b.metricValue - a.metricValue);
 
-        const topResultsRaw = [];
+        const topResults = [];
         const precision = 1e-8;
         let rank = 0;
+        let countAtRank = 0;
         let lastScore = Infinity;
 
         for(let i = 0; i < validResults.length; i++) {
@@ -355,20 +350,23 @@ function runBruteForce() {
 
             if(isNewRank) {
                 rank = i + 1;
+                countAtRank = 1;
+            } else {
+                countAtRank++;
             }
             lastScore = currentScore;
 
-            if (rank <= 10) {
-                topResultsRaw.push(validResults[i]);
-            } else {
-                if(rank === 11 && Math.abs(currentScore - (topResultsRaw[topResultsRaw.length - 1]?.metricValue ?? -Infinity)) < precision) {
-                    topResultsRaw.push(validResults[i]);
+            if (rank <= 10) { // Immer die Top 10 Ränge nehmen
+                topResults.push(validResults[i]);
+            } else { // Wenn der 11. Rang den gleichen Score hat wie der letzte der Top 10, auch nehmen
+                if(rank === 11 && Math.abs(currentScore - (topResults[topResults.length - 1]?.metricValue ?? -Infinity)) < precision) {
+                    topResults.push(validResults[i]);
                 } else {
-                    break;
+                    break; // Sobald ein neuer, niedrigerer Rang nach den Top 10 beginnt, abbrechen
                 }
             }
         }
-        const finalBest = bestResult.criteria ? cloneDeepWorker(bestResult) : (topResultsRaw[0] ? cloneDeepWorker(topResultsRaw[0]) : null);
+        const finalBest = bestResult.criteria ? cloneDeepWorker(bestResult) : (topResults[0] ? cloneDeepWorker(topResults[0]) : null);
 
         let nGesamt = 0;
         let nPlus = 0;
@@ -385,13 +383,10 @@ function runBruteForce() {
         self.postMessage({
             type: 'result',
             payload: {
-                results: topResultsRaw.map(r => ({
+                results: topResults.map(r => ({
                     logic: r.logic,
                     criteria: r.criteria,
-                    metricValue: r.metricValue,
-                    rp: r.rp, fp: r.fp, fn: r.fn, rn: r.rn,
-                    sens: r.sens, spez: r.spez, ppv: r.ppv, npv: r.npv,
-                    acc: r.acc, balAcc: r.balAcc, f1: r.f1
+                    metricValue: r.metricValue
                 })),
                 bestResult: finalBest,
                 metric: targetMetric,
@@ -411,6 +406,7 @@ function runBruteForce() {
 
 self.onmessage = function(event) {
     if (!event || !event.data) {
+        console.error("Worker: Ungültige Nachricht empfangen.");
         self.postMessage({ type: 'error', payload: { message: "Ungültige Nachricht vom Hauptthread empfangen." } });
         return;
     }
@@ -418,6 +414,7 @@ self.onmessage = function(event) {
 
     if (action === 'start') {
         if (isRunning) {
+            console.warn("BruteForceWorker: Worker läuft bereits. Startanfrage ignoriert.");
             self.postMessage({ type: 'error', payload: { message: "Worker läuft bereits." } });
             return;
         }
@@ -441,6 +438,7 @@ self.onmessage = function(event) {
             runBruteForce();
         }
         catch (error) {
+            console.error("BruteForceWorker: Initialisierungsfehler:", error);
             self.postMessage({ type: 'error', payload: { message: `Initialisierungsfehler im Worker: ${error.message}` } });
             isRunning = false;
         }
@@ -448,13 +446,18 @@ self.onmessage = function(event) {
         if (isRunning) {
             isRunning = false;
             self.postMessage({ type: 'cancelled', payload: { kollektiv: kollektivName } });
+            console.log("BruteForceWorker: Analyse abgebrochen.");
+        } else {
+            console.warn("BruteForceWorker: Keine laufende Analyse zum Abbrechen.");
         }
     } else {
+        console.warn(`BruteForceWorker: Unbekannte Aktion empfangen: ${action}`);
         self.postMessage({ type: 'error', payload: { message: `Unbekannte Aktion vom Hauptthread: ${action}` } });
     }
 };
 
 self.onerror = function(error) {
+    console.error("BruteForceWorker: Globaler Fehler im Worker:", error);
     self.postMessage({ type: 'error', payload: { message: `Globaler Worker Fehler: ${error.message || 'Unbekannter Fehler im Worker'}` } });
     isRunning = false;
 };
