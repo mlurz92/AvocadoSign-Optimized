@@ -1,6 +1,6 @@
 const APP_CONFIG = Object.freeze({
     APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
-    APP_VERSION: "2.3.0",
+    APP_VERSION: "2.5.0",
 
     DEFAULT_SETTINGS: Object.freeze({
         KOLLEKTIV: 'Gesamt',
@@ -23,34 +23,39 @@ const APP_CONFIG = Object.freeze({
             'barbaro_2024_restaging'
         ]),
         CHART_COLOR_SCHEME: 'default',
-        BRUTE_FORCE_METRIC: 'Balanced Accuracy'
+        BRUTE_FORCE_METRIC: 'Balanced Accuracy',
+        PNG_EXPORT_DPI: 300,
+        SVG_EXPORT_EMBED_FONTS: true,
+        SVG_EXPORT_INLINE_STYLES: true
     }),
 
     STORAGE_KEYS: Object.freeze({
-        APPLIED_CRITERIA: 'appliedT2Criteria_v4.2_detailed',
-        APPLIED_LOGIC: 'appliedT2Logic_v4.2_detailed',
-        CURRENT_KOLLEKTIV: 'currentKollektiv_v4.2_detailed',
-        PUBLIKATION_LANG: 'currentPublikationLang_v4.2_detailed',
-        PUBLIKATION_SECTION: 'currentPublikationSection_v4.2_detailed',
-        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v4.2_detailed',
-        STATS_LAYOUT: 'currentStatsLayout_v4.2_detailed',
-        STATS_KOLLEKTIV1: 'currentStatsKollektiv1_v4.2_detailed',
-        STATS_KOLLEKTIV2: 'currentStatsKollektiv2_v4.2_detailed',
-        PRESENTATION_VIEW: 'currentPresentationView_v4.2_detailed',
-        PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
-        CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
-        CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
-        FIRST_APP_START: 'appFirstStart_v2.3'
+        APPLIED_CRITERIA: 'appliedT2Criteria_v2.5_opt',
+        APPLIED_LOGIC: 'appliedT2Logic_v2.5_opt',
+        CURRENT_KOLLEKTIV: 'currentKollektiv_v2.5_opt',
+        PUBLIKATION_LANG: 'currentPublikationLang_v2.5_opt',
+        PUBLIKATION_SECTION: 'currentPublikationSection_v2.5_opt',
+        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v2.5_opt',
+        STATS_LAYOUT: 'currentStatsLayout_v2.5_opt',
+        STATS_KOLLEKTIV1: 'currentStatsKollektiv1_v2.5_opt',
+        STATS_KOLLEKTIV2: 'currentStatsKollektiv2_v2.5_opt',
+        PRESENTATION_VIEW: 'currentPresentationView_v2.5_opt',
+        PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v2.5_opt',
+        CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v2.5_opt',
+        CHART_COLOR_SCHEME: 'chartColorScheme_v2.5_opt',
+        FIRST_APP_START: 'appFirstStart_v2.5_opt'
     }),
 
     PATHS: Object.freeze({
-        BRUTE_FORCE_WORKER: 'workers/brute_force_worker.js'
+        BRUTE_FORCE_WORKER: 'workers/brute_force_worker.js',
+        DYNAMIC_MODULE_BASE_PATH: 'js/ui/'
     }),
 
     PERFORMANCE_SETTINGS: Object.freeze({
         DEBOUNCE_DELAY_MS: 250,
         ENABLE_GPU_ACCELERATION_CSS: true,
-        CHART_ANIMATION_THRESHOLD: 50
+        CHART_ANIMATION_THRESHOLD: 50,
+        MAX_BRUTE_FORCE_REPORTS_IN_MODAL: 10
     }),
 
     STATISTICAL_CONSTANTS: Object.freeze({
@@ -62,9 +67,24 @@ const APP_CONFIG = Object.freeze({
             { threshold: 0.01, symbol: '**' },
             { threshold: 0.05, symbol: '*' }
         ]),
+        LIKELIHOOD_RATIO_THRESHOLDS: Object.freeze({
+            LR_PLUS: Object.freeze([
+                { threshold: 10, interpretation: 'stark erhöhend' },
+                { threshold: 5, interpretation: 'moderat erhöhend' },
+                { threshold: 2, interpretation: 'schwach erhöhend' },
+                { threshold: 1, interpretation: 'kaum erhöhend' }
+            ]),
+            LR_MINUS: Object.freeze([
+                { threshold: 0.1, interpretation: 'stark erniedrigend' },
+                { threshold: 0.2, interpretation: 'moderat erniedrigend' },
+                { threshold: 0.5, interpretation: 'schwach erniedrigend' },
+                { threshold: 1, interpretation: 'kaum erniedrigend' }
+            ])
+        }),
         DEFAULT_CI_METHOD_PROPORTION: 'Wilson Score',
         DEFAULT_CI_METHOD_EFFECTSIZE: 'Bootstrap Percentile',
-        FISHER_EXACT_THRESHOLD: 5
+        FISHER_EXACT_THRESHOLD: 5,
+        CI_WARNING_SAMPLE_SIZE_THRESHOLD: 10
     }),
 
     T2_CRITERIA_SETTINGS: Object.freeze({
@@ -83,7 +103,7 @@ const APP_CONFIG = Object.freeze({
         DEFAULT_TABLE_ROWS_PER_PAGE: 50,
         TOOLTIP_DELAY: Object.freeze([200, 100]),
         TOAST_DURATION_MS: 4500,
-        TRANSITION_DURATION_MS: 350,
+        TRANSITION_DURATION_MS: 300,
         MODAL_BACKDROP_OPACITY: 0.6,
         SPINNER_DELAY_MS: 300,
         STICKY_HEADER_OFFSET: '111px'
@@ -116,23 +136,29 @@ const APP_CONFIG = Object.freeze({
         FILENAME_TEMPLATE: 'AvocadoSignT2_{TYPE}_{KOLLEKTIV}_{DATE}.{EXT}',
         TABLE_PNG_EXPORT_SCALE: 2,
         ENABLE_TABLE_PNG_EXPORT: true,
+        PNG_EXPORT_DPI_OPTIONS: Object.freeze([150, 300, 600]),
+        DEFAULT_PNG_DPI: 300,
+        SVG_EXPORT_OPTIONS: Object.freeze({
+            embedFonts: false,
+            inlineStyles: true
+        }),
         CSV_DELIMITER: ';',
         COMPREHENSIVE_REPORT_LOGO_URL: '',
         INCLUDE_TIMESTAMP_IN_FILENAME: false,
         FILENAME_TYPES: Object.freeze({
             STATS_CSV: 'StatistikCSV',
-            BRUTEFORCE_TXT: 'BruteForceTXT',
+            BRUTEFORCE_TXT: 'BruteForceBerichtTXT',
+            BRUTEFORCE_FULL_CSV: 'BruteForceAlleKombinationenCSV',
             DESKRIPTIV_MD: 'DeskriptiveStatistikMD',
             DATEN_MD: 'DatenlisteMD',
             AUSWERTUNG_MD: 'AuswertungTabelleMD',
-            CHARTS_PNG: 'ChartsPNG',
-            CHARTS_SVG: 'ChartsSVG',
             ALL_ZIP: 'GesamtPaketZIP',
             CSV_ZIP: 'CSVPaketZIP',
             MD_ZIP: 'MDPaketZIP',
             PNG_ZIP: 'PNGPaketZIP',
             SVG_ZIP: 'SVGPaketZIP',
             XLSX_ZIP: 'XLSXPaketZIP',
+            PUBLICATION_CHARTS_ZIP: 'PublikationChartsZIP',
             FILTERED_DATA_CSV: 'GefilterteDatenCSV',
             FILTERED_DATA_XLSX: 'GefilterteDatenXLSX',
             COMPREHENSIVE_REPORT_HTML: 'AnalyseberichtHTML',
@@ -141,18 +167,14 @@ const APP_CONFIG = Object.freeze({
             STATISTIK_XLSX: 'StatistikUebersichtXLSX',
             CHART_SINGLE_PNG: '{ChartName}_PNG',
             CHART_SINGLE_SVG: '{ChartName}_SVG',
-            PRAES_DEMOGRAPHICS_MD: 'PraesDemographicsASPUR_MD',
             PRAES_AS_PERF_CSV: 'PraesPerformanceASPUR_CSV',
             PRAES_AS_PERF_MD: 'PraesPerformanceASPUR_MD',
             PRAES_AS_VS_T2_PERF_CSV: 'PraesPerformanceASvsT2_{StudyID}_CSV',
             PRAES_AS_VS_T2_COMP_MD: 'PraesMetricsASvsT2_{StudyID}_MD',
             PRAES_AS_VS_T2_TESTS_MD: 'PraesTestsASvsT2_{StudyID}_MD',
-            PRAES_AS_VS_T2_CHART_PNG: 'PraesChartASvsT2_{StudyID}_PNG',
-            PRAES_AS_VS_T2_CHART_SVG: 'PraesChartASvsT2_{StudyID}_SVG',
             TABLE_PNG_EXPORT: '{TableName}_PNG',
             CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
-            PUBLIKATION_METHODEN_MD: 'Publikation_{SectionName}_MD',
-            PUBLIKATION_ERGEBNISSE_MD: 'Publikation_{SectionName}_MD'
+            PUBLIKATION_SECTION_MD: 'Publikation_{SectionName}_MD'
         }),
         EXCEL_SHEET_NAME_DATEN: 'Datenliste',
         EXCEL_SHEET_NAME_AUSWERTUNG: 'Auswertung',
@@ -175,7 +197,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.3.0"}`,
+        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.5.0"}`,
         REPORT_LOGO_ALT_TEXT: 'Institutslogo'
     }),
 
@@ -184,6 +206,44 @@ const APP_CONFIG = Object.freeze({
         APPLIED_CRITERIA_DISPLAY_NAME: 'Eingestellte T2 Kriterien',
         AVOCADO_SIGN_ID: 'avocado_sign',
         AVOCADO_SIGN_DISPLAY_NAME: 'Avocado Sign'
+    }),
+
+    REFERENCES_FOR_PUBLICATION: Object.freeze({
+        lurzSchaefer2025: {
+            key: "LurzSchaefer2025",
+            full: "Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11462-y",
+            short: "Lurz & Schäfer (2025)"
+        },
+        koh2008: {
+            key: "Koh2008",
+            full: "Koh DM, Chau I, Tait D, Wotherspoon A, Cunningham D, Brown G. Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. Int J Radiat Oncol Biol Phys. 2008;71(2):456-461.",
+            short: "Koh et al. (2008)"
+        },
+        barbaro2024: {
+            key: "Barbaro2024",
+            full: "Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: A single center experience. Radiother Oncol. 2024;193:110124.",
+            short: "Barbaro et al. (2024)"
+        },
+        rutegard2025: {
+            key: "Rutegard2025",
+            full: "Rutegård MK, Båtsman M, Blomqvist L, et al. Evaluation of MRI characterisation of histopathologically matched lymph nodes and other mesorectal nodal structures in rectal cancer. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11361-2",
+            short: "Rutegård et al. (2025)"
+        },
+        beetsTan2018ESGAR: {
+            key: "BeetsTan2018ESGAR",
+            full: "Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for clinical management of rectal cancer: updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. Eur Radiol. 2018;28(4):1465-1475.",
+            short: "Beets-Tan et al. (2018, ESGAR Consensus)"
+        },
+        ethicsVote: {
+            key: "EthicsVoteAS",
+            full: "Ethikvotum Nr. 2023-101, Ethikkommission der Landesärztekammer Sachsen",
+            short: "Ethikvotum LÄK Sachsen 2023-101"
+        },
+        lurzSchaefer2025StudyPeriod: "Januar 2020 und November 2023",
+        lurzSchaefer2025MRISystem: "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers, Erlangen, Deutschland)",
+        lurzSchaefer2025ContrastAgent: "Gadoteridol (ProHance; Bracco Imaging, Konstanz, Deutschland)",
+        lurzSchaefer2025T2SliceThickness: "2-3 mm",
+        lurzSchaefer2025RadiologistExperience: ["29", "7", "19"]
     })
 });
 
