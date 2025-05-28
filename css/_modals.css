@@ -1,0 +1,87 @@
+/* css/_modals.css */
+.modal-dialog {
+    margin-top: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+}
+
+.modal-content {
+    border-radius: var(--border-radius-lg);
+    border: none;
+    box-shadow: var(--shadow-lg);
+}
+
+.modal-glass .modal-content {
+    background-color: var(--modal-content-bg);
+    backdrop-filter: blur(var(--modal-glass-blur));
+    -webkit-backdrop-filter: blur(var(--modal-glass-blur));
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+    padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.modal-title {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-color-dark);
+}
+
+.modal-body {
+    padding: var(--spacing-lg);
+    line-height: var(--line-height-base);
+}
+
+.modal-body h6 {
+    font-size: 1rem;
+    font-weight: var(--font-weight-semibold);
+    margin-top: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    color: var(--color-primary);
+}
+
+.modal-body p {
+    margin-bottom: var(--spacing-sm);
+}
+
+.modal-body ul,
+.modal-body ol {
+    margin-bottom: var(--spacing-md);
+    padding-left: var(--spacing-lg);
+}
+
+.modal-body .table {
+    margin-top: var(--spacing-sm);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+    padding: var(--spacing-md) var(--spacing-lg);
+    background-color: var(--bg-color-light-gray);
+    border-bottom-left-radius: var(--border-radius-lg);
+    border-bottom-right-radius: var(--border-radius-lg);
+}
+
+.btn-close {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='M.293.293a1 1 0 011.414 0L8 6.586 14.293.293a1 1 0 111.414 1.414L9.414 8l6.293 6.293a1 1 0 01-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 01-1.414-1.414L6.586 8 .293 1.707a1 1 0 010-1.414z'/%3e%3c/svg%3e");
+    opacity: 0.7;
+}
+
+.btn-close:hover {
+    opacity: 1;
+}
+
+.btn-close:focus {
+    box-shadow: 0 0 0 0.2rem var(--color-primary-light);
+    opacity: 1;
+}
+
+.modal-xl {
+    max-width: min(1140px, 95vw); /* From original style */
+}
+
+@media (max-width: 575.98px) {
+    .modal-dialog {
+        margin: var(--spacing-sm);
+    }
+}
