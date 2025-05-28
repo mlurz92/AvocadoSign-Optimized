@@ -5,17 +5,17 @@ const auswertungTabLogic = (() => {
             console.error("createAuswertungTableHTML: Ungültige Daten für Auswertungstabelle, Array erwartet.");
             return '<p class="text-danger">Fehler: Ungültige Auswertungsdaten für Tabelle.</p>';
         }
-
+        const currentTooltipContent = getUITexts().TOOLTIP_CONTENT.auswertungTable || {};
         const tableId = 'auswertung-table';
         const columns = [
-            { key: 'nr', label: 'Nr', tooltip: TOOLTIP_CONTENT.auswertungTable.nr || 'Fortlaufende Nummer des Patienten.' },
-            { key: 'name', label: 'Name', tooltip: TOOLTIP_CONTENT.auswertungTable.name || 'Nachname des Patienten (anonymisiert/kodiert).' },
-            { key: 'therapie', label: 'Therapie', tooltip: TOOLTIP_CONTENT.auswertungTable.therapie || 'Angewandte Therapie vor der Operation.' },
-            { key: 'status', label: 'N/AS/T2', tooltip: TOOLTIP_CONTENT.auswertungTable.n_as_t2 || 'Status: Pathologie (N), Avocado Sign (AS), T2 (aktuelle Kriterien). Klicken Sie auf N, AS oder T2 im Spaltenkopf zur Sub-Sortierung.', subKeys: [{key: 'n', label: 'N'}, {key: 'as', label: 'AS'}, {key: 't2', label: 'T2'}]},
-            { key: 'anzahl_patho_lk', label: 'N+/N ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.n_counts || 'Pathologisch N+ LK / Gesamt N LK.', textAlign: 'center' },
-            { key: 'anzahl_as_lk', label: 'AS+/AS ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.as_counts || 'Avocado Sign (AS)+ LK / Gesamt AS LK.', textAlign: 'center' },
-            { key: 'anzahl_t2_lk', label: 'T2+/T2 ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.t2_counts || 'T2+ LK (aktuelle Kriterien) / Gesamt T2 LK.', textAlign: 'center' },
-            { key: 'details', label: '', width: '30px'}
+            { key: 'nr', label: 'Nr', tooltip: currentTooltipContent.nr || 'Fortlaufende Nummer des Patienten.' },
+            { key: 'name', label: 'Name', tooltip: currentTooltipContent.name || 'Nachname des Patienten (anonymisiert/kodiert).' },
+            { key: 'therapie', label: 'Therapie', tooltip: currentTooltipContent.therapie || 'Angewandte Therapie vor der Operation.' },
+            { key: 'status', label: 'N/AS/T2', tooltip: currentTooltipContent.n_as_t2 || 'Status: Pathologie (N), Avocado Sign (AS), T2 (aktuelle Kriterien). Klicken Sie auf N, AS oder T2 im Spaltenkopf zur Sub-Sortierung.', subKeys: [{key: 'n', label: 'N'}, {key: 'as', label: 'AS'}, {key: 't2', label: 'T2'}]},
+            { key: 'anzahl_patho_lk', label: 'N+/N ges.', tooltip: currentTooltipContent.n_counts || 'Pathologisch N+ LK / Gesamt N LK.', textAlign: 'center' },
+            { key: 'anzahl_as_lk', label: 'AS+/AS ges.', tooltip: currentTooltipContent.as_counts || 'Avocado Sign (AS)+ LK / Gesamt AS LK.', textAlign: 'center' },
+            { key: 'anzahl_t2_lk', label: 'T2+/T2 ges.', tooltip: currentTooltipContent.t2_counts || 'T2+ LK (aktuelle Kriterien) / Gesamt T2 LK.', textAlign: 'center' },
+            { key: 'details', label: '', width: '30px', tooltip: currentTooltipContent.expandRow || 'Details zur T2-Bewertung anzeigen/ausblenden'}
         ];
 
         let tableHTML = `<table class="table table-sm table-hover table-striped data-table" id="${tableId}">`;
@@ -57,7 +57,7 @@ const auswertungTabLogic = (() => {
                 }
             }
             
-            const baseTooltipContent = col.tooltip || col.label;
+            const baseTooltipContent = col.tooltip || col.label; // col.tooltip is now language-aware
 
             const subHeaders = col.subKeys ? col.subKeys.map(sk => {
                  const isActiveSubSort = activeSubKey === sk.key;
@@ -67,7 +67,7 @@ const auswertungTabLogic = (() => {
                  return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="${subTooltip}">${subLabel}</span>`;
              }).join(' / ') : '';
 
-            const mainTooltip = col.subKeys ? `${baseTooltipContent} Klicken Sie auf N, AS oder T2 für Sub-Sortierung.` : (col.key === 'details' ? (TOOLTIP_CONTENT.auswertungTable.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
+            const mainTooltip = col.subKeys ? `${baseTooltipContent}` : (col.key === 'details' ? (baseTooltipContent || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
             const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys || col.key === 'details' ? '' : 'style="cursor: pointer;"'}`;
             const thClass = mainHeaderClass;
 
@@ -83,14 +83,20 @@ const auswertungTabLogic = (() => {
 
     function createAuswertungTableCardHTML(data, sortState, appliedCriteria, appliedLogic) {
         const tableHTML = createAuswertungTableHTML(data, sortState, appliedCriteria, appliedLogic);
-        const toggleButtonTooltip = TOOLTIP_CONTENT.auswertungTable.expandAll || 'Alle Detailansichten (Bewertung einzelner T2-LKs) für Patienten in dieser Tabelle ein- oder ausblenden.';
+        const currentTooltipContent = getUITexts().TOOLTIP_CONTENT.auswertungTable || {};
+        const toggleButtonTooltip = currentTooltipContent.expandAll || 'Alle Detailansichten (Bewertung einzelner T2-LKs) für Patienten in dieser Tabelle ein- oder ausblenden.';
+        
+        // Button text could be localized too, but keeping it simple for now
+        const buttonTextExpand = 'Alle Details Anzeigen'; // Example, could be from UI_TEXTS
+        const buttonTextCollapse = 'Alle Details Ausblenden'; // Example
+
         return `
             <div class="col-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Patientenübersicht & Auswertungsergebnisse (basierend auf angewandten T2-Kriterien)</span>
                         <button id="auswertung-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="expand" data-tippy-content="${toggleButtonTooltip}">
-                           Alle Details <i class="fas fa-chevron-down ms-1"></i>
+                           ${buttonTextExpand} <i class="fas fa-chevron-down ms-1"></i>
                        </button>
                     </div>
                     <div class="card-body p-0">
