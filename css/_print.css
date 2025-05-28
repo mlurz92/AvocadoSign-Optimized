@@ -20,13 +20,13 @@
     .chart-download-btn,
     .card-header-buttons,
     #btn-kurzanleitung,
-    #publikation-tab-pane .sticky-top .d-flex.justify-content-end, /* Controls in pub tab */
-    #brute-force-metric, /* Brute force select */
+    #publikation-tab-pane .sticky-top .d-flex.justify-content-end,
+    #brute-force-metric,
     #btn-start-brute-force,
     #btn-cancel-brute-force,
     #btn-apply-best-bf-criteria,
     #btn-show-brute-force-details,
-    .form-switch /* Generally hide interactive form elements */
+    .form-switch
      {
         display: none !important;
     }
@@ -69,19 +69,18 @@
         border: 1px solid #cccccc !important;
         background-color: var(--bg-color-white) !important;
         color: #000000 !important;
-        word-wrap: break-word; /* Ensure long words don't overflow */
+        word-wrap: break-word;
     }
 
     .data-table thead.sticky-top th,
     .publication-table th {
         background-color: #f2f2f2 !important;
-        font-weight: var(--font-weight-bold); /* Bootstrap uses bold, ensure this for print */
+        font-weight: var(--font-weight-bold);
     }
     .data-table th:first-child,
     .data-table td:first-child {
-        position: static !important; /* Remove sticky for print */
+        position: static !important;
     }
-
 
     .table caption {
         caption-side: top;
@@ -103,7 +102,7 @@
         border: 1px solid #cccccc !important;
         background-color: var(--bg-color-white) !important;
         display: block !important;
-        max-width: 100% !important; /* Ensure charts scale down */
+        max-width: 100% !important;
         height: auto !important;
     }
 
@@ -119,7 +118,7 @@
     }
     .axis text, .axis-label, .legend text, .auc-label, .bar text, .pie-group text {
         fill: #000000 !important;
-        font-family: var(--chart-font-family) !important; /* Use defined chart font */
+        font-family: var(--chart-font-family) !important;
     }
     .legend-item rect {
         stroke: #333333 !important;
@@ -130,17 +129,16 @@
         color: black !important;
     }
     a[href]::after {
-        content: "" !important; /* Remove URL printing for internal links */
+        content: "" !important;
     }
     a[href^="http"]::after {
-        content: " (" attr(href) ")"; /* Print external URLs */
+        content: " (" attr(href) ")";
         font-size: 0.8em;
         color: #555555;
     }
 
-
     .sub-row, .collapse {
-        display: block !important; /* Ensure collapsed content is printed */
+        display: block !important;
         height: auto !important;
         visibility: visible !important;
         opacity: 1 !important;
@@ -168,11 +166,11 @@
     }
 
     .status-plus {
-        color: #B00000 !important; /* Darker red for print */
+        color: #B00000 !important;
         font-weight: var(--font-weight-bold);
     }
     .status-minus {
-        color: #007000 !important; /* Darker green for print */
+        color: #007000 !important;
     }
     .status-unknown {
         color: #555555 !important;
@@ -184,8 +182,8 @@
         color: #000000 !important;
         padding: 0.2em 0.4em;
     }
-    .bg-danger.text-white, .bg-success.text-white { /* Specific for badges */
-         background-color: #eeeeee !important; /* Make them neutral for print */
+    .bg-danger.text-white, .bg-success.text-white {
+         background-color: #eeeeee !important;
          color: #000000 !important;
     }
 
@@ -197,7 +195,7 @@
     }
 
     .presentation-comparison-row {
-        display: block !important; /* Stack columns for print */
+        display: block !important;
     }
 
     .presentation-comparison-col-left,
@@ -214,11 +212,11 @@
         background-color: transparent !important;
     }
 
-    #publikation-tab-pane .row > .col-md-3 { /* Nav column */
+    #publikation-tab-pane .row > .col-md-3 {
         display: none !important;
     }
 
-    #publikation-tab-pane .row > .col-md-9 { /* Content column */
+    #publikation-tab-pane .row > .col-md-9 {
         width: 100% !important;
         flex-basis: 100% !important;
         max-width:100% !important;
@@ -247,7 +245,7 @@
         color: #000000 !important;
     }
     #publikation-content-area p {
-        text-align: left; /* Justify can be hard to read in print */
+        text-align: left;
     }
 
     .element-flash-highlight {
