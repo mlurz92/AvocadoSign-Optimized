@@ -18,29 +18,28 @@ const t2CriteriaManager = (() => {
         isCriteriaUnsaved = false;
     }
 
-    function getCurrentT2Criteria() {
+    function getCurrentCriteria() {
         return cloneDeep(currentT2Criteria);
     }
 
-    function getAppliedT2Criteria() {
+    function getAppliedCriteria() {
         return cloneDeep(appliedT2Criteria);
     }
 
-    function getCurrentT2Logic() {
+    function getCurrentLogic() {
         return currentT2Logic;
     }
 
-    function getAppliedT2Logic() {
+    function getAppliedLogic() {
         return appliedT2Logic;
     }
 
-    function isT2CriteriaUnsaved() {
+    function isUnsaved() {
         return isCriteriaUnsaved;
     }
 
-    function updateCurrentT2CriterionProperty(key, property, value) {
+    function updateCriterionProperty(key, property, value) {
         if (!currentT2Criteria || !currentT2Criteria.hasOwnProperty(key) || typeof currentT2Criteria[key] !== 'object') {
-            console.warn(`updateCurrentT2CriterionProperty: Ungültiger Kriterienschlüssel '${key}'`);
             return false;
         }
         if (currentT2Criteria[key][property] !== value) {
@@ -51,9 +50,8 @@ const t2CriteriaManager = (() => {
         return false;
     }
 
-     function updateCurrentT2CriteriaValue(key, value) {
+     function updateCriterionValue(key, value) {
          if (!currentT2Criteria || !currentT2Criteria.hasOwnProperty(key) || typeof currentT2Criteria[key] !== 'object') {
-            console.warn(`updateCurrentT2CriteriaValue: Ungültiger Kriterienschlüssel '${key}'`);
             return false;
          }
          let isValidValue = true;
@@ -68,16 +66,13 @@ const t2CriteriaManager = (() => {
              currentT2Criteria[key].value = value;
              isCriteriaUnsaved = true;
              return true;
-         } else if (!isValidValue) {
-             console.warn(`updateCurrentT2CriteriaValue: Ungültiger Wert '${value}' für Kriterium '${key}'`);
          }
          return false;
      }
 
-      function updateCurrentT2CriteriaThreshold(value) {
+      function updateCriterionThreshold(value) {
           const numValue = parseFloat(value);
           if (!currentT2Criteria || !currentT2Criteria.size || isNaN(numValue) || !isFinite(numValue)) {
-               console.warn(`updateCurrentT2CriteriaThreshold: Ungültiger Schwellenwert '${value}'`);
               return false;
           }
           const clampedValue = clampNumber(numValue, APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min, APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max);
@@ -90,9 +85,8 @@ const t2CriteriaManager = (() => {
           return false;
       }
 
-     function toggleCurrentT2CriterionActive(key, isActive) {
+     function toggleCriterionActive(key, isActive) {
           if (!currentT2Criteria || !currentT2Criteria.hasOwnProperty(key) || typeof currentT2Criteria[key] !== 'object') {
-            console.warn(`toggleCurrentT2CriterionActive: Ungültiger Kriterienschlüssel '${key}'`);
             return false;
           }
           const isActiveBool = !!isActive;
@@ -104,7 +98,7 @@ const t2CriteriaManager = (() => {
           return false;
      }
 
-    function updateCurrentT2Logic(logic) {
+    function updateLogic(logic) {
         if ((logic === 'UND' || logic === 'ODER') && currentT2Logic !== logic) {
             currentT2Logic = logic;
             isCriteriaUnsaved = true;
@@ -113,14 +107,14 @@ const t2CriteriaManager = (() => {
         return false;
     }
 
-    function resetCurrentT2Criteria() {
+    function resetCriteria() {
         const defaultCriteria = getDefaultT2Criteria();
         currentT2Criteria = cloneDeep(defaultCriteria);
         currentT2Logic = defaultCriteria.logic;
         isCriteriaUnsaved = true;
     }
 
-    function applyCurrentT2Criteria() {
+    function applyCriteria() {
         appliedT2Criteria = cloneDeep(currentT2Criteria);
         appliedT2Logic = currentT2Logic;
 
@@ -130,7 +124,7 @@ const t2CriteriaManager = (() => {
         isCriteriaUnsaved = false;
     }
 
-    function checkSingleLymphNode(lymphNode, criteria) {
+    function checkSingleNode(lymphNode, criteria) {
         const checkResult = {
             size: null,
             form: null,
@@ -188,7 +182,7 @@ const t2CriteriaManager = (() => {
         return checkResult;
     }
 
-    function applyT2CriteriaToPatient(patient, criteria, logic) {
+    function evaluatePatient(patient, criteria, logic) {
         const defaultReturn = { t2Status: null, positiveLKCount: 0, bewerteteLK: [] };
         if (!patient || !criteria || (logic !== 'UND' && logic !== 'ODER')) {
             return defaultReturn;
@@ -218,7 +212,7 @@ const t2CriteriaManager = (() => {
                  bewerteteLK.push(null);
                  return;
             }
-            const checkResult = checkSingleLymphNode(lk, criteria);
+            const checkResult = checkSingleNode(lk, criteria);
             let lkIsPositive = false;
 
             if (activeCriteriaKeys.length > 0) {
@@ -251,7 +245,6 @@ const t2CriteriaManager = (() => {
             finalT2Status = patientIsPositive ? '+' : '-';
         }
 
-
         return {
             t2Status: finalT2Status,
             positiveLKCount: positiveLKCount,
@@ -261,11 +254,9 @@ const t2CriteriaManager = (() => {
 
     function evaluateDataset(dataset, criteria, logic) {
         if (!Array.isArray(dataset)) {
-            console.error("evaluateDataset: Ungültige Eingabedaten, Array erwartet.");
             return [];
         }
         if (!criteria || (logic !== 'UND' && logic !== 'ODER')) {
-             console.error("evaluateDataset: Ungültige Kriterien oder Logik.");
              return dataset.map(p => {
                  const pCopy = cloneDeep(p);
                  pCopy.t2 = null;
@@ -278,7 +269,7 @@ const t2CriteriaManager = (() => {
         return dataset.map(patient => {
             if (!patient) return null;
             const patientCopy = cloneDeep(patient);
-            const { t2Status, positiveLKCount, bewerteteLK } = applyT2CriteriaToPatient(patientCopy, criteria, logic);
+            const { t2Status, positiveLKCount, bewerteteLK } = evaluatePatient(patientCopy, criteria, logic);
             patientCopy.t2 = t2Status;
             patientCopy.anzahl_t2_plus_lk = positiveLKCount;
             patientCopy.lymphknoten_t2_bewertet = bewerteteLK;
@@ -288,20 +279,20 @@ const t2CriteriaManager = (() => {
 
     return Object.freeze({
         initialize: initializeT2CriteriaState,
-        getCurrentCriteria: getCurrentT2Criteria,
-        getAppliedCriteria: getAppliedT2Criteria,
-        getCurrentLogic: getCurrentT2Logic,
-        getAppliedLogic: getAppliedT2Logic,
-        isUnsaved: isT2CriteriaUnsaved,
-        updateCriterionProperty: updateCurrentT2CriterionProperty,
-        updateCriterionValue: updateCurrentT2CriteriaValue,
-        updateCriterionThreshold: updateCurrentT2CriteriaThreshold,
-        toggleCriterionActive: toggleCurrentT2CriterionActive,
-        updateLogic: updateCurrentT2Logic,
-        resetCriteria: resetCurrentT2Criteria,
-        applyCriteria: applyCurrentT2Criteria,
-        checkSingleNode: checkSingleLymphNode,
-        evaluatePatient: applyT2CriteriaToPatient,
+        getCurrentCriteria: getCurrentCriteria,
+        getAppliedCriteria: getAppliedCriteria,
+        getCurrentLogic: getCurrentLogic,
+        getAppliedLogic: getAppliedLogic,
+        isUnsaved: isUnsaved,
+        updateCriterionProperty: updateCriterionProperty,
+        updateCriterionValue: updateCriterionValue,
+        updateCriterionThreshold: updateCriterionThreshold,
+        toggleCriterionActive: toggleCriterionActive,
+        updateLogic: updateLogic,
+        resetCriteria: resetCriteria,
+        applyCriteria: applyCriteria,
+        checkSingleNode: checkSingleNode,
+        evaluatePatient: evaluatePatient,
         evaluateDataset: evaluateDataset
     });
 })();
