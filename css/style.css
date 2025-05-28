@@ -2162,18 +2162,3 @@ tr[aria-expanded="true"] .row-toggle-button {
     }
 }
 /* END: _print.css */
-
-/* Remaining styles from original style.css that were not moved or were specific overrides */
-/* Ensure any very specific overrides or very global helpers from old style.css are here if not better placed elsewhere */
-/* For example, if there were any global utility classes like .text-bold that aren't bootstrap and are widely used */
-
-/* Example: if .icon-t2 had global margin/display not specific to table cells */
-.icon-t2 {
-    display: inline-block; /* Already in _tables.css, but ensure it's consistent if used elsewhere */
-    vertical-align: -0.15em; /* From original */
-    flex-shrink: 0; /* From original, useful for flex layouts */
-}
-
-/* If there are any very specific overrides, they might go here, but ideally, they'd be in their component's CSS file */
-/* For now, this file will mostly be empty if all styles are correctly modularized. */
-/* It acts as the main entry point that would traditionally use @import. */
