@@ -11,7 +11,10 @@ const ui_helpers = (() => {
         return text.replace(/[\\`*_{}[\]()#+\-.!|]/g, match => map[match]);
     }
 
-    function showToast(message, type = 'info', duration = APP_CONFIG.UI_SETTINGS.TOAST_DURATION_MS) {
+    function showToast(message, type = 'info', duration = null) {
+          const appConfig = getAppConfig();
+          const toastDuration = duration ?? appConfig.UI_SETTINGS.TOAST_DURATION_MS;
+
           const toastContainer = document.getElementById('toast-container');
           if (!toastContainer) { console.error("showToast: Toast-Container Element 'toast-container' nicht gefunden."); return; }
           if (typeof message !== 'string' || message.trim() === '') { console.warn("showToast: Ungültige oder leere Nachricht."); return; }
@@ -29,7 +32,7 @@ const ui_helpers = (() => {
           const toastElement = document.createElement('div');
           toastElement.id = toastId; toastElement.className = `toast align-items-center ${textClass} ${bgClass} border-0 fade`;
           toastElement.setAttribute('role', 'alert'); toastElement.setAttribute('aria-live', 'assertive'); toastElement.setAttribute('aria-atomic', 'true');
-          toastElement.setAttribute('data-bs-delay', String(duration));
+          toastElement.setAttribute('data-bs-delay', String(toastDuration));
           toastElement.setAttribute('data-bs-autohide', 'true');
 
 
@@ -37,7 +40,7 @@ const ui_helpers = (() => {
           toastContainer.appendChild(toastElement);
 
           try {
-              const toastInstance = new bootstrap.Toast(toastElement, { delay: duration, autohide: true });
+              const toastInstance = new bootstrap.Toast(toastElement, { delay: toastDuration, autohide: true });
               toastElement.addEventListener('hidden.bs.toast', () => { if(toastContainer.contains(toastElement)) { toastElement.remove(); } }, { once: true });
               toastInstance.show();
           } catch (e) { console.error("Fehler beim Erstellen/Anzeigen des Toasts:", e); if(toastContainer.contains(toastElement)) { toastElement.remove(); } }
@@ -48,6 +51,7 @@ const ui_helpers = (() => {
 
         const elementsInScope = Array.from(scope.matches('[data-tippy-content]') ? [scope] : scope.querySelectorAll('[data-tippy-content]'));
         const elementSet = new Set(elementsInScope);
+        const appConfig = getAppConfig();
 
         globalTippyInstances = globalTippyInstances.filter(instance => {
             if (!instance || !instance.reference || !document.body.contains(instance.reference)) { try { instance?.destroy(); } catch(e){} return false; }
@@ -61,7 +65,7 @@ const ui_helpers = (() => {
         if (elementsInScope.length > 0) {
            const newInstances = tippy(elementsInScope, {
                allowHTML: true, theme: 'glass', placement: 'top', animation: 'fade',
-               interactive: false, appendTo: () => document.body, delay: APP_CONFIG.UI_SETTINGS.TOOLTIP_DELAY || [150, 50],
+               interactive: false, appendTo: () => document.body, delay: appConfig.UI_SETTINGS.TOOLTIP_DELAY || [150, 50],
                maxWidth: 400, duration: [150, 150], zIndex: 3050,
                onCreate(instance) { if (!instance.props.content || String(instance.props.content).trim() === '') { instance.disable(); } },
                onShow(instance) { const content = instance.reference.getAttribute('data-tippy-content'); if (content && String(content).trim() !== '') { instance.setContent(content); return true; } else { return false; } }
@@ -83,7 +87,7 @@ const ui_helpers = (() => {
 
     function toggleElementClass(elementId, className, add) {
         const element = document.getElementById(elementId);
-        if (element && className) { element.classList.toggle(className, add); }
+        if (element) { element.classList.toggle(className, add); }
     }
 
     function setElementDisabled(elementId, isDisabled) {
@@ -121,28 +125,30 @@ const ui_helpers = (() => {
     function updateSortIcons(tableHeaderId, sortState) {
         const tableHeader = document.getElementById(tableHeaderId);
         if (!tableHeader || !sortState) return;
-        const currentTooltipContent = getUITexts().TOOLTIP_CONTENT;
+        const currentTooltipContent = getTooltipContent();
 
         tableHeader.querySelectorAll('th[data-sort-key]').forEach(th => {
             const key = th.dataset.sortKey; const icon = th.querySelector('i.fas'); if (!icon) return;
             icon.className = 'fas fa-sort text-muted opacity-50 ms-1';
             const subSpans = th.querySelectorAll('.sortable-sub-header'); let isSubKeySortActive = false;
             let baseTooltipContent = th.getAttribute('data-tippy-content') || th.textContent.trim();
-            if (currentTooltipContent.datenTable[key]) baseTooltipContent = currentTooltipContent.datenTable[key]; // Try to get from config
-            else if (currentTooltipContent.auswertungTable[key]) baseTooltipContent = currentTooltipContent.auswertungTable[key];
+            
+            // Access TOOLTIP_CONTENT dynamically via getter
+            if (currentTooltipContent.datenTable && currentTooltipContent.datenTable[key]) baseTooltipContent = currentTooltipContent.datenTable[key];
+            else if (currentTooltipContent.auswertungTable && currentTooltipContent.auswertungTable[key]) baseTooltipContent = currentTooltipContent.auswertungTable[key];
 
 
             if (subSpans.length > 0) {
                 subSpans.forEach(span => {
                     const subKey = span.dataset.subKey;
-                    const isActiveSort = (key === sortState.key && subKey === sortState.subKey);
-                    span.style.fontWeight = isActiveSort ? 'bold' : 'normal';
-                    span.style.textDecoration = isActiveSort ? 'underline' : 'none';
-                    span.style.color = isActiveSort ? 'var(--primary-color)' : 'inherit';
+                    const isActiveSubSort = (key === sortState.key && subKey === sortState.subKey);
+                    span.style.fontWeight = isActiveSubSort ? 'bold' : 'normal';
+                    span.style.textDecoration = isActiveSubSort ? 'underline' : 'none';
+                    span.style.color = isActiveSubSort ? 'var(--primary-color)' : 'inherit';
                     const thLabel = th.textContent.split('(')[0].trim() || key;
                     const spanLabel = span.textContent.trim();
                     span.setAttribute('data-tippy-content', `Sortieren nach: ${thLabel} -> ${spanLabel}`);
-                    if (isActiveSort) {
+                    if (isActiveSubSort) {
                         icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
                         isSubKeySortActive = true;
                     }
@@ -193,13 +199,14 @@ const ui_helpers = (() => {
         const newAction = expand ? 'collapse' : 'expand';
         button.dataset.action = newAction;
         const iconClass = expand ? 'fa-chevron-up' : 'fa-chevron-down';
-        const buttonText = expand ? 'Alle Details Ausblenden' : 'Alle Details Einblenden'; // Keep German for button text for now, could be localized
+        const buttonText = expand ? currentTexts.uiElements.buttonTextCollapseAllDetails : currentTexts.uiElements.buttonTextExpandAllDetails;
 
         let tooltipKeyBase = '';
         if (buttonId === 'daten-toggle-details') tooltipKeyBase = 'datenTable';
         else if (buttonId === 'auswertung-toggle-details') tooltipKeyBase = 'auswertungTable';
         
-        const tooltipContentBase = currentTexts.TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll || 'Alle Details ein-/ausblenden';
+        // Access TOOLTIP_CONTENT dynamically via getter
+        const tooltipContentBase = getTooltipContent()?.[tooltipKeyBase]?.expandAll || 'Alle Details ein-/ausblenden';
         const currentTooltipText = expand ? tooltipContentBase.replace('ein-', 'aus-').replace('anzeigen', 'ausblenden') : tooltipContentBase.replace('aus-', 'ein-').replace('ausblenden', 'anzeigen');
 
         updateElementHTML(buttonId, `${buttonText} <i class="fas ${iconClass} ms-1"></i>`);
@@ -220,7 +227,7 @@ const ui_helpers = (() => {
 
         if (icon) {
             icon.classList.toggle('fa-chevron-up', isShowing);
-            icon.classList.toggle('fa-chevron-down', !isShowing && isHiding); // Corrected logic
+            icon.classList.toggle('fa-chevron-down', !isShowing && isHiding);
         }
         triggerRow.setAttribute('aria-expanded', String(isShowing));
     }
@@ -233,9 +240,10 @@ const ui_helpers = (() => {
     }
 
     function getT2IconSVG(type, value) {
-        const s = APP_CONFIG.UI_SETTINGS.ICON_SIZE || 20;
-        const sw = APP_CONFIG.UI_SETTINGS.ICON_STROKE_WIDTH || 1.5;
-        const iconColor = APP_CONFIG.UI_SETTINGS.ICON_COLOR || '#212529';
+        const appConfig = getAppConfig(); // Access APP_CONFIG dynamically
+        const s = appConfig.UI_SETTINGS.ICON_SIZE || 20;
+        const sw = appConfig.UI_SETTINGS.ICON_STROKE_WIDTH || 1.5;
+        const iconColor = appConfig.UI_SETTINGS.ICON_COLOR || '#212529';
         const c = s / 2;
         const r = Math.max(1, (s - sw) / 2);
         const sq = Math.max(1, s - sw * 1.5);
@@ -244,7 +252,7 @@ const ui_helpers = (() => {
         let extraClass = '';
         let fillColor = 'none';
         let strokeColor = iconColor;
-        const currentTooltipContent = getUITexts().TOOLTIP_CONTENT;
+        // const currentTooltipContent = getTooltipContent(); // Not directly used in this function, but for context
 
         const unknownIconSVG = `<rect x="${sqPos}" y="${sqPos}" width="${sq}" height="${sq}" fill="none" stroke="${iconColor}" stroke-width="${sw/2}" stroke-dasharray="2 2" /><line x1="${sqPos}" y1="${sqPos}" x2="${sqPos+sq}" y2="${sqPos+sq}" stroke="${iconColor}" stroke-width="${sw/2}" stroke-linecap="round"/><line x1="${sqPos+sq}" y1="${sqPos}" x2="${sqPos}" y2="${sqPos+sq}" stroke="${iconColor}" stroke-width="${sw/2}" stroke-linecap="round"/>`;
 
@@ -278,7 +286,7 @@ const ui_helpers = (() => {
                 break;
             case 'ruler-horizontal':
                 svgContent = `<path d="M${sw/2} ${c} H${s-sw/2} M${c} ${sw/2} V${s-sw/2} M${s*0.2} ${c-s*0.15} L${s*0.2} ${c+s*0.15} M${s*0.4} ${c-s*0.1} L${s*0.4} ${c+s*0.1} M${s*0.6} ${c-s*0.1} L${s*0.6} ${c+s*0.1} M${s*0.8} ${c-s*0.15} L${s*0.8} ${c+s*0.15}" stroke="${iconColor}" stroke-width="${sw/2}" stroke-linecap="round"/>`;
-                type = 'size'; // Correct type for tooltip key
+                type = 'size';
                 break;
             default:
                 svgContent = unknownIconSVG;
@@ -290,6 +298,7 @@ const ui_helpers = (() => {
 
     function updateT2CriteriaControlsUI(currentCriteria, currentLogic) {
         const currentTexts = getUITexts();
+        const appConfig = getAppConfig();
         const logicSwitch = document.getElementById('t2-logic-switch');
         const logicLabel = document.getElementById('t2-logic-label');
         if (logicSwitch && logicLabel) {
@@ -330,7 +339,7 @@ const ui_helpers = (() => {
                     const range = document.getElementById('range-size');
                     const input = document.getElementById('input-size');
                     const valueDisplay = document.getElementById('value-size');
-                    const thresholdValue = criterion.threshold ?? getDefaultT2Criteria().size.threshold;
+                    const thresholdValue = criterion.threshold ?? getDefaultT2Criteria()?.size?.threshold; // Use getDefaultT2Criteria from its module
                     if (range) range.value = formatNumber(thresholdValue, 1, '', true);
                     if (input) input.value = formatNumber(thresholdValue, 1, '', true);
                     if (valueDisplay) valueDisplay.textContent = formatNumber(thresholdValue, 1);
@@ -345,11 +354,12 @@ const ui_helpers = (() => {
         if (!card || !statusTextElement) return;
 
         const currentTexts = getUITexts();
+        const currentTooltipContent = getTooltipContent();
         const shouldShowIndicator = !!isUnsaved;
         card.classList.toggle('criteria-unsaved-indicator', shouldShowIndicator);
 
-        const tooltipContentCard = currentTexts.TOOLTIP_CONTENT.t2CriteriaCard.unsavedIndicator || "Ungespeicherte Änderungen vorhanden.";
-        const statusTextDisplay = shouldShowIndicator ? (currentTexts.TOOLTIP_CONTENT.t2CriteriaCard.statusNotApplied || "Status: Ungespeicherte Änderungen") : (currentTexts.TOOLTIP_CONTENT.t2CriteriaCard.statusApplied || "Status: Angewandte Kriterien geladen");
+        const tooltipContentCard = currentTooltipContent.t2CriteriaCard?.unsavedIndicator || "Ungespeicherte Änderungen vorhanden.";
+        const statusTextDisplay = shouldShowIndicator ? (currentTexts.t2CriteriaCard?.statusNotApplied || "Status: Ungespeicherte Änderungen") : (currentTexts.t2CriteriaCard?.statusApplied || "Status: Angewandte Kriterien geladen");
         
         updateElementText('t2-criteria-status-text', statusTextDisplay);
 
@@ -375,18 +385,20 @@ const ui_helpers = (() => {
         const select2 = document.getElementById('statistik-kollektiv-select-2');
         const isVergleich = layout === 'vergleich';
         const currentTexts = getUITexts();
+        const currentTooltipContent = getTooltipContent();
 
         if (toggleBtn) {
             toggleBtn.classList.toggle('active', isVergleich);
             toggleBtn.setAttribute('aria-pressed', String(isVergleich));
-            updateElementHTML(toggleBtn.id, isVergleich ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv'); // Consider localizing button text
-            if(toggleBtn._tippy && currentTexts.TOOLTIP_CONTENT.statistikToggleVergleich?.description) toggleBtn._tippy.setContent(currentTexts.TOOLTIP_CONTENT.statistikToggleVergleich.description);
+            updateElementHTML(toggleBtn.id, isVergleich ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv');
+            if(toggleBtn._tippy && currentTooltipContent.statistikToggleVergleich?.description) toggleBtn._tippy.setContent(currentTooltipContent.statistikToggleVergleich.description);
             else initializeTooltips(toggleBtn.parentElement || toggleBtn);
         }
         if (container1) container1.classList.toggle('d-none', !isVergleich);
         if (container2) container2.classList.toggle('d-none', !isVergleich);
-        if (select1) select1.value = kollektiv1 || APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1;
-        if (select2) select2.value = kollektiv2 || APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2;
+        // Use getAppConfig() for default settings
+        if (select1) select1.value = kollektiv1 || getAppConfig().DEFAULT_SETTINGS.STATS_KOLLEKTIV1;
+        if (select2) select2.value = kollektiv2 || getAppConfig().DEFAULT_SETTINGS.STATS_KOLLEKTIV2;
     }
 
     function updatePresentationViewSelectorUI(currentView) {
@@ -435,10 +447,12 @@ const ui_helpers = (() => {
             applyBestBtn: document.getElementById('btn-apply-best-bf-criteria')
         };
         const currentTexts = getUITexts();
+        const currentTooltipContent = getTooltipContent();
         const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
         const getKollektivNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
         const isRunning = state === 'start' || state === 'started' || state === 'progress';
         const hasResults = state === 'result' && data.results && data.results.length > 0 && data.bestResult && data.bestResult.criteria;
+        const appConfig = getAppConfig();
 
         if (elements.progressContainer) toggleElementClass(elements.progressContainer.id, 'd-none', !isRunning);
         if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', state !== 'result' || !hasResults);
@@ -450,7 +464,7 @@ const ui_helpers = (() => {
         const startButtonText = isRunning ? '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Läuft...' : `<i class="fas fa-cogs me-1"></i> ${workerAvailable ? 'Optimierung starten' : 'Starten (Worker fehlt)'}`;
         if (elements.startBtn) updateElementHTML(elements.startBtn.id, startButtonText);
 
-        const kollektivToDisplayForInfo = data?.kollektiv || currentKollektiv || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
+        const kollektivToDisplayForInfo = data?.kollektiv || currentKollektiv || appConfig.DEFAULT_SETTINGS.KOLLEKTIV;
         if (elements.bfInfoKollektiv) {
             updateElementText(elements.bfInfoKollektiv.id, getKollektivNameFunc(kollektivToDisplayForInfo));
         }
@@ -473,7 +487,7 @@ const ui_helpers = (() => {
         };
         
         const bfInfoElement = elements.bfInfoKollektiv?.closest('#brute-force-info');
-        const bfInfoDescriptionBase = currentTexts.TOOLTIP_CONTENT.bruteForceInfo?.description || 'Status des Optimierungs-Workers und aktuelles Kollektiv.';
+        const bfInfoDescriptionBase = currentTooltipContent.bruteForceInfo?.description || 'Status des Optimierungs-Workers und aktuelles Kollektiv.';
 
 
         switch (state) {
@@ -507,7 +521,7 @@ const ui_helpers = (() => {
                 if (elements.totalCount) updateElementText(elements.totalCount.id, totalComb);
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Teste...');
                 if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, bfInfoDescriptionBase.replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: Teste ${totalComb} Kombinationen...`);
-                if (elements.progressContainer) addOrUpdateTooltip(elements.progressContainer, (currentTexts.TOOLTIP_CONTENT.bruteForceProgress?.description || '').replace('[TOTAL]', totalComb));
+                if (elements.progressContainer) addOrUpdateTooltip(elements.progressContainer, (currentTooltipContent.bruteForceProgress?.description || '').replace('[TOTAL]', totalComb));
                 break;
             case 'progress':
                 const percent = (data?.total && data.total > 0) ? Math.round((data.tested / data.total) * 100) : 0;
@@ -553,7 +567,7 @@ const ui_helpers = (() => {
                     if (elements.resultKollektivNminus) updateElementText(elements.resultKollektivNminus.id, formatNumber(data.nMinus,0,'--'));
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig.');
                      if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, bfInfoDescriptionBase.replace('[KOLLEKTIV_NAME]', `<strong>${resultKollektivName}</strong>`) + ` Status: Fertig.`);
-                     if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, (currentTexts.TOOLTIP_CONTENT.bruteForceResult.description || '').replace('[N_GESAMT]', formatNumber(data.nGesamt,0,'?')).replace('[N_PLUS]', formatNumber(data.nPlus,0,'?')).replace('[N_MINUS]', formatNumber(data.nMinus,0,'?')) );
+                     if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, (currentTooltipContent.bruteForceResult?.description || '').replace('[N_GESAMT]', formatNumber(data.nGesamt,0,'?')).replace('[N_PLUS]', formatNumber(data.nPlus,0,'?')).replace('[N_MINUS]', formatNumber(data.nMinus,0,'?')) );
                 } else {
                     if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true);
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig (kein valides Ergebnis).');
@@ -564,6 +578,7 @@ const ui_helpers = (() => {
     }
 
     function updateExportButtonStates(activeTabId, hasBruteForceResults, canExportDataDependent) {
+        const appConfig = getAppConfig();
         const bfDisabled = !hasBruteForceResults;
         const dataDisabled = !canExportDataDependent;
         const trySetDisabled = (id, disabled) => { const e = document.getElementById(id); if (e) e.disabled = disabled; };
@@ -575,6 +590,8 @@ const ui_helpers = (() => {
         trySetDisabled('export-auswertung-md', dataDisabled);
         trySetDisabled('export-filtered-data-csv', dataDisabled);
         trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled);
+        // APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHARTS_PNG, etc. will be accessed via getAppConfig() in export_service.js.
+        // Here we just check the general data dependency.
         trySetDisabled('export-charts-png', dataDisabled);
         trySetDisabled('export-charts-svg', dataDisabled);
 
@@ -584,7 +601,6 @@ const ui_helpers = (() => {
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
 
-        // Excel exports are currently not implemented/disabled in original code
         trySetDisabled('export-statistik-xlsx', true);
         trySetDisabled('export-daten-xlsx', true);
         trySetDisabled('export-auswertung-xlsx', true);
@@ -615,6 +631,7 @@ const ui_helpers = (() => {
 
     function updatePublikationUI(currentLang, currentSection, currentBfMetric) {
         const currentUITexts = getUITexts(); // Use getter for current language texts
+        const appConfig = getAppConfig();
         const langSwitch = document.getElementById('publikation-sprache-switch');
         const langLabel = document.getElementById('publikation-sprache-label');
         if (langSwitch && langLabel) {
@@ -633,27 +650,29 @@ const ui_helpers = (() => {
     }
 
     function getMetricDescriptionHTML(key, methode = '') {
-       const currentTooltipContent = getUITexts().TOOLTIP_CONTENT;
-       const desc = currentTooltipContent.statMetrics[key]?.description || key;
+       const currentTooltipContent = getTooltipContent();
+       const desc = currentTooltipContent.statMetrics?.[key]?.description || key;
        return desc.replace(/\[METHODE\]/g, `<strong>${methode}</strong>`);
     }
 
     function getMetricInterpretationHTML(key, metricData, methode = '', kollektivName = '') {
-        const currentTooltipContent = getUITexts().TOOLTIP_CONTENT;
-        const interpretationTemplate = currentTooltipContent.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
+        const currentTooltipContent = getTooltipContent();
+        const currentUITexts = getUITexts();
+        const interpretationTemplate = currentTooltipContent.statMetrics?.[key]?.interpretation || 'Keine Interpretation verfügbar.';
         const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: null };
         const na = '--';
         const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
         const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na, true); // useStandardFormat for consistency with other displays
+        const formattedValue = formatNumber(data?.value, digits, na, true);
         const lowerStr = formatNumber(data?.ci?.lower, digits, na, true);
         const upperStr = formatNumber(data?.ci?.upper, digits, na, true);
         const ciMethodStr = data?.method || 'N/A';
         const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value) : ((key === 'phi') ? getPhiBewertung(data?.value) : '');
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
+        const appConfig = getAppConfig();
 
         let ciWarning = '';
-        const ciWarningThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 10;
+        const ciWarningThreshold = appConfig.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 10;
         if (data?.n_trials !== undefined && data?.n_trials < ciWarningThreshold && (key === 'sens' || key === 'spez' || key === 'ppv' || key === 'npv' || key === 'acc')) {
             ciWarning = `<hr class="my-1"><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahl (Nenner=${data.n_trials}).</i>`;
         } else if (data?.matrix_components && (key === 'balAcc' || key === 'f1' || key === 'auc')) {
@@ -662,7 +681,7 @@ const ui_helpers = (() => {
                  ciWarning = `<hr class="my-1"><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahlen in der Konfusionsmatrix (Gesamt=${mc.total}).</i>`;
             }
         }
-        const currentStatMetricTexts = getUITexts().statMetrics;
+        const currentStatMetricTexts = currentUITexts.statMetrics;
 
         let interpretation = interpretationTemplate
             .replace(/\[METHODE\]/g, `<strong>${methode}</strong>`)
@@ -677,21 +696,22 @@ const ui_helpers = (() => {
              interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
              interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
         }
-        interpretation = interpretation.replace(/, p=\[P_WERT\], \[SIGNIFIKANZ\]/g,''); // Remove p-value part if not applicable
-        interpretation = interpretation.replace(/<hr.*?>.*$/, ''); // Remove any existing hr before adding a new one
+        interpretation = interpretation.replace(/, p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
+        interpretation = interpretation.replace(/<hr.*?>.*$/, '');
         interpretation += ciWarning;
         return interpretation;
     }
 
     function getTestDescriptionHTML(key, t2ShortName = 'T2') {
-        const currentTooltipContent = getUITexts().TOOLTIP_CONTENT;
-        const desc = currentTooltipContent.statMetrics[key]?.description || key;
+        const currentTooltipContent = getTooltipContent();
+        const desc = currentTooltipContent.statMetrics?.[key]?.description || key;
         return desc.replace(/\[T2_SHORT_NAME\]/g, `<strong>${t2ShortName}</strong>`);
     }
 
     function getTestInterpretationHTML(key, testData, kollektivName = '', t2ShortName = 'T2') {
-        const currentTooltipContent = getUITexts().TOOLTIP_CONTENT;
-        const interpretationTemplate = currentTooltipContent.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
+        const currentTooltipContent = getTooltipContent();
+        const currentUITexts = getUITexts();
+        const interpretationTemplate = currentTooltipContent.statMetrics?.[key]?.interpretation || 'Keine Interpretation verfügbar.';
          if (!testData) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
         const pValue = testData?.pValue;
@@ -709,15 +729,16 @@ const ui_helpers = (() => {
     }
 
     function getAssociationInterpretationHTML(key, assocObj, merkmalName, kollektivName) {
-        const currentTooltipContent = getUITexts().TOOLTIP_CONTENT;
-        const currentStatMetricTexts = getUITexts().statMetrics;
-        const interpretationTemplate = currentTooltipContent.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
+        const currentTooltipContent = getTooltipContent();
+        const currentUITexts = getUITexts();
+        const interpretationTemplate = currentTooltipContent.statMetrics?.[key]?.interpretation || 'Keine Interpretation verfügbar.';
         if (!assocObj) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
         let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '', pVal = NaN, ciWarning = '';
         const assozPValue = assocObj?.pValue;
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
-        const ciWarningThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 10;
+        const appConfig = getAppConfig();
+        const ciWarningThreshold = appConfig.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 10;
 
         if(assocObj.matrix && (key === 'or' || key === 'rd' || key === 'phi')) {
             const m = assocObj.matrix;
@@ -749,7 +770,7 @@ const ui_helpers = (() => {
              pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na, true)) : na;
              sigSymbol = getStatisticalSignificanceSymbol(pVal);
              sigText = getStatisticalSignificanceText(pVal);
-             const templateToUse = currentTooltipContent.statMetrics[key]?.interpretation || currentTooltipContent.statMetrics.defaultP.interpretation;
+             const templateToUse = currentTooltipContent.statMetrics?.[key]?.interpretation || currentTooltipContent.statMetrics?.defaultP?.interpretation;
              return templateToUse
                  .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
                  .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
@@ -790,6 +811,7 @@ const ui_helpers = (() => {
     function showKurzanleitung() {
         const modalElement = document.getElementById('kurzanleitung-modal');
         const currentUITexts = getUITexts();
+        const appConfig = getAppConfig();
         
         if (!modalElement) {
             const modalHTML = `
@@ -798,13 +820,13 @@ const ui_helpers = (() => {
                     <div class="modal-content modal-glass">
                       <div class="modal-header">
                         <h5 class="modal-title" id="kurzanleitungModalLabel">${currentUITexts.kurzanleitung.title}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="${currentUITexts.uiElements.closeButtonText}"></button>
                       </div>
                       <div class="modal-body">
                         ${currentUITexts.kurzanleitung.content}
                       </div>
                       <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Schließen</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${currentUITexts.uiElements.closeButtonText}</button>
                       </div>
                     </div>
                   </div>
@@ -818,14 +840,19 @@ const ui_helpers = (() => {
         // Update content if modal already exists, in case language changed
         const modalTitleEl = modalElement.querySelector('#kurzanleitungModalLabel');
         const modalBodyEl = modalElement.querySelector('.modal-body');
+        const modalCloseBtn = modalElement.querySelector('.modal-footer .btn-secondary');
+
         if(modalTitleEl) modalTitleEl.innerHTML = currentUITexts.kurzanleitung.title;
         if(modalBodyEl) modalBodyEl.innerHTML = currentUITexts.kurzanleitung.content;
+        if(modalCloseBtn) modalCloseBtn.textContent = currentUITexts.uiElements.closeButtonText;
 
 
         if (kurzanleitungModalInstance && modalElement && !modalElement.classList.contains('show')) {
-            if (!initialTabRenderFixed && typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
+            // Check if mainAppInterface is defined before adding listener
+            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
                 modalElement.addEventListener('hidden.bs.modal', () => {
-                    if (!initialTabRenderFixed && state.getActiveTabId() === APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION) {
+                    // Only refresh if the publication tab is the default first tab and not already rendered
+                    if (!initialTabRenderFixed && state.getActiveTabId() === appConfig.DEFAULT_SETTINGS.PUBLIKATION_SECTION) {
                         mainAppInterface.refreshCurrentTab();
                     }
                     initialTabRenderFixed = true; 
