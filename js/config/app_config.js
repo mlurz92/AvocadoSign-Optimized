@@ -1,6 +1,6 @@
 const APP_CONFIG = Object.freeze({
     APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
-    APP_VERSION: "2.3.0",
+    APP_VERSION: "2.5.0",
 
     DEFAULT_SETTINGS: Object.freeze({
         KOLLEKTIV: 'Gesamt',
@@ -40,7 +40,7 @@ const APP_CONFIG = Object.freeze({
         PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
         CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
         CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
-        FIRST_APP_START: 'appFirstStart_v2.3'
+        FIRST_APP_START: 'appFirstStart_v2.5' // Updated for v2.5.0 to potentially re-trigger first start logic
     }),
 
     PATHS: Object.freeze({
@@ -64,7 +64,8 @@ const APP_CONFIG = Object.freeze({
         ]),
         DEFAULT_CI_METHOD_PROPORTION: 'Wilson Score',
         DEFAULT_CI_METHOD_EFFECTSIZE: 'Bootstrap Percentile',
-        FISHER_EXACT_THRESHOLD: 5
+        FISHER_EXACT_THRESHOLD: 5,
+        CI_WARNING_SAMPLE_SIZE_THRESHOLD: 10
     }),
 
     T2_CRITERIA_SETTINGS: Object.freeze({
@@ -97,8 +98,8 @@ const APP_CONFIG = Object.freeze({
         NEW_PRIMARY_COLOR_BLUE: '#4472C4',
         NEW_SECONDARY_COLOR_YELLOW_GREEN: '#E0DC2C',
         TERTIARY_COLOR_GREEN: '#2ca02c',
-        AS_COLOR: '#4472C4',
-        T2_COLOR: '#E0DC2C',
+        AS_COLOR: '#4472C4', // Existing primary color for AS
+        T2_COLOR: '#E0DC2C', // Existing secondary color for T2 (general app use)
         ANIMATION_DURATION_MS: 750,
         AXIS_LABEL_FONT_SIZE: '11px',
         TICK_LABEL_FONT_SIZE: '10px',
@@ -175,7 +176,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.3.0"}`,
+        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.5.0"}`, // Updated version
         REPORT_LOGO_ALT_TEXT: 'Institutslogo'
     }),
 
@@ -184,6 +185,20 @@ const APP_CONFIG = Object.freeze({
         APPLIED_CRITERIA_DISPLAY_NAME: 'Eingestellte T2 Kriterien',
         AVOCADO_SIGN_ID: 'avocado_sign',
         AVOCADO_SIGN_DISPLAY_NAME: 'Avocado Sign'
+    }),
+
+    REFERENCES_FOR_PUBLICATION: Object.freeze({
+        lurzSchaefer2025: "Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025; https://doi.org/10.1007/s00330-025-11462-y",
+        koh2008: "Koh DM, Chau I, Tait D, et al. Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. Int J Radiat Oncol Biol Phys. 2008;71(2):456-461. https://doi.org/10.1016/j.ijrobp.2007.10.016",
+        barbaro2024: "Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: A single center experience. Radiother Oncol. 2024;193:110124. https://doi.org/10.1016/j.radonc.2024.110124",
+        rutegard2025: "Rutegård MK, Båtsman M, Blomqvist L, et al. Evaluation of MRI characterisation of histopathologically matched lymph nodes and other mesorectal nodal structures in rectal cancer. Eur Radiol. 2025; https://doi.org/10.1007/s00330-025-11361-2",
+        beetsTan2018ESGAR: "Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for clinical management of rectal cancer: updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. Eur Radiol. 2018;28(4):1465-1475. https://doi.org/10.1007/s00330-017-5026-2",
+        ethicsVote: "Ethikvotum Nr. 2023-101, Ethikkommission der Sächsischen Landesärztekammer",
+        lurzSchaefer2025StudyPeriod: "Januar 2020 und November 2023",
+        lurzSchaefer2025MRISystem: "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers, Erlangen, Deutschland)",
+        lurzSchaefer2025ContrastAgent: "Gadoteridol (ProHance; Bracco Imaging Deutschland GmbH, Konstanz, Deutschland)",
+        lurzSchaefer2025T2SliceThickness: "2-3 mm",
+        lurzSchaefer2025RadiologistExperience: ["29", "7", "19"]
     })
 });
 
@@ -196,4 +211,33 @@ function getDefaultT2Criteria() {
         homogenitaet: { active: false, value: 'heterogen' },
         signal: { active: false, value: 'signalreich' }
     });
+}
+
+if (typeof Object.freeze === 'function') {
+    Object.freeze(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT);
+    Object.freeze(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
+    Object.freeze(APP_CONFIG.DEFAULT_SETTINGS.CRITERIA_COMPARISON_SETS);
+    Object.freeze(APP_CONFIG.DEFAULT_SETTINGS);
+    Object.freeze(APP_CONFIG.STORAGE_KEYS);
+    Object.freeze(APP_CONFIG.PATHS);
+    Object.freeze(APP_CONFIG.PERFORMANCE_SETTINGS);
+    Object.freeze(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS);
+    Object.freeze(APP_CONFIG.STATISTICAL_CONSTANTS);
+    Object.freeze(APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE);
+    Object.freeze(APP_CONFIG.T2_CRITERIA_SETTINGS.FORM_VALUES);
+    Object.freeze(APP_CONFIG.T2_CRITERIA_SETTINGS.KONTUR_VALUES);
+    Object.freeze(APP_CONFIG.T2_CRITERIA_SETTINGS.HOMOGENITAET_VALUES);
+    Object.freeze(APP_CONFIG.T2_CRITERIA_SETTINGS.SIGNAL_VALUES);
+    Object.freeze(APP_CONFIG.T2_CRITERIA_SETTINGS);
+    Object.freeze(APP_CONFIG.UI_SETTINGS.TOOLTIP_DELAY);
+    Object.freeze(APP_CONFIG.UI_SETTINGS);
+    Object.freeze(APP_CONFIG.CHART_SETTINGS.DEFAULT_MARGIN);
+    Object.freeze(APP_CONFIG.CHART_SETTINGS.COMPACT_PIE_MARGIN);
+    Object.freeze(APP_CONFIG.CHART_SETTINGS);
+    Object.freeze(APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES);
+    Object.freeze(APP_CONFIG.EXPORT_SETTINGS);
+    Object.freeze(APP_CONFIG.REPORT_SETTINGS);
+    Object.freeze(APP_CONFIG.SPECIAL_IDS);
+    Object.freeze(APP_CONFIG.REFERENCES_FOR_PUBLICATION);
+    Object.freeze(APP_CONFIG);
 }
