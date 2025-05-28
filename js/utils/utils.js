@@ -1,5 +1,6 @@
 function getKollektivDisplayName(kollektivId) {
-    const displayName = UI_TEXTS?.kollektivDisplayNames?.[kollektivId] || kollektivId || 'Unbekannt';
+    // UI_TEXTS is now a function call
+    const displayName = getUITexts()?.kollektivDisplayNames?.[kollektivId] || kollektivId || 'Unbekannt';
     return displayName;
 }
 
@@ -292,8 +293,14 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
 
 function getStatisticalSignificanceSymbol(pValue) {
     if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return '';
-    const significanceLevels = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS; // Bereits absteigend sortiert
-    const overallSignificanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL;
+    // APP_CONFIG is now a function call as well. Ensure it is available.
+    const significanceLevels = getAppConfig()?.STATISTICAL_CONSTANTS?.SIGNIFICANCE_SYMBOLS; // Bereits absteigend sortiert
+    const overallSignificanceLevel = getAppConfig()?.STATISTICAL_CONSTANTS?.SIGNIFICANCE_LEVEL;
+
+    if (!Array.isArray(significanceLevels) || significanceLevels.length === 0 || typeof overallSignificanceLevel !== 'number') {
+        console.warn("getStatisticalSignificanceSymbol: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS or .SIGNIFICANCE_LEVEL not properly defined.");
+        return pValue < 0.05 ? '*' : 'ns'; // Basic fallback
+    }
 
     for (const level of significanceLevels) {
         if (pValue < level.threshold) {
@@ -306,18 +313,20 @@ function getStatisticalSignificanceSymbol(pValue) {
     return 'ns'; // not significant
 }
 
-function getStatisticalSignificanceText(pValue, significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL) {
+function getStatisticalSignificanceText(pValue, significanceLevel = null) {
      if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return '';
-     const level = significanceLevel;
-     return pValue < level
-         ? UI_TEXTS.statMetrics.signifikanzTexte.SIGNIFIKANT || 'statistisch signifikant'
-         : UI_TEXTS.statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT || 'statistisch nicht signifikant';
+     const currentLevel = significanceLevel !== null ? significanceLevel : getAppConfig()?.STATISTICAL_CONSTANTS?.SIGNIFICANCE_LEVEL || 0.05;
+     // UI_TEXTS is now a function call
+     return pValue < currentLevel
+         ? getUITexts().statMetrics.signifikanzTexte.SIGNIFIKANT || 'statistisch signifikant'
+         : getUITexts().statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT || 'statistisch nicht signifikant';
 }
 
 function getPValueText(pValue, lang = 'de') {
     if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return 'N/A';
 
-    const pLessThanThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS[0]?.threshold || 0.001; // kleinster Schwellenwert für 'p < ...'
+    // APP_CONFIG is now a function call
+    const pLessThanThreshold = getAppConfig()?.STATISTICAL_CONSTANTS?.SIGNIFICANCE_SYMBOLS?.[0]?.threshold || 0.001;
     if (pValue < pLessThanThreshold) {
         const thresholdStr = String(pLessThanThreshold).replace('.', lang === 'de' ? ',' : '.');
         return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','.')}`;
@@ -377,21 +386,75 @@ function arraysAreEqual(arr1, arr2) {
 
 function getAUCBewertung(aucValue) {
     const value = parseFloat(aucValue);
-    if (isNaN(value) || value < 0 || value > 1) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_bestimmbar || 'N/A';
-    if (value >= 0.9) return 'exzellent';
-    if (value >= 0.8) return 'gut';
-    if (value >= 0.7) return 'moderat';
-    if (value > 0.5) return 'schwach';
-    return 'nicht informativ';
+    if (isNaN(value) || value < 0 || value > 1) return getUITexts().statMetrics.assoziationStaerkeTexte.nicht_bestimmbar || 'N/A';
+    // UI_TEXTS is now a function call
+    if (value >= 0.9) return getUITexts().statMetrics.assoziationStaerkeTexte.exzellent || 'exzellent';
+    if (value >= 0.8) return getUITexts().statMetrics.assoziationStaerkeTexte.gut || 'gut';
+    if (value >= 0.7) return getUITexts().statMetrics.assoziationStaerkeTexte.moderat || 'moderat';
+    if (value > 0.5) return getUITexts().statMetrics.assoziationStaerkeTexte.schwach || 'schwach';
+    return getUITexts().statMetrics.assoziationStaerkeTexte.nicht_informativ || 'nicht informativ';
 }
 
 function getPhiBewertung(phiValue) {
     const value = parseFloat(phiValue);
-    if (isNaN(value)) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_bestimmbar || 'N/A';
+    if (isNaN(value)) return getUITexts().statMetrics.assoziationStaerkeTexte.nicht_bestimmbar || 'N/A';
     const absPhi = Math.abs(value);
-    const texts = UI_TEXTS.statMetrics.assoziationStaerkeTexte || {};
+    // UI_TEXTS is now a function call
+    const texts = getUITexts().statMetrics.assoziationStaerkeTexte || {};
     if (absPhi >= 0.5) return texts.stark || 'stark';
     if (absPhi >= 0.3) return texts.moderat || 'moderat';
     if (absPhi >= 0.1) return texts.schwach || 'schwach';
     return texts.sehr_schwach || 'sehr schwach';
+}
+
+// New global getters for APP_CONFIG and UI_TEXTS to avoid direct global variable access issues
+// These functions will be defined globally and provide access to the respective configurations.
+function getAppConfig() {
+    // APP_CONFIG is globally defined in app_config.js. We just return it.
+    // This is safe because app_config.js is loaded before utils.js.
+    if (typeof APP_CONFIG === 'undefined') {
+        console.error("APP_CONFIG is not defined when getAppConfig() is called. Ensure app_config.js is loaded first.");
+        return {}; // Return an empty object or a fallback if APP_CONFIG is not yet available
+    }
+    return APP_CONFIG;
+}
+
+function getUITexts() {
+    // UI_TEXTS_DE and UI_TEXTS_EN are globally defined in text_config.js
+    // We expect text_config.js to be loaded after app_config.js and utils.js.
+    // The state object should be initialized by main.js after text_config.js.
+    // This function will get the current language from the state and return the correct text object.
+    
+    // Check if state and its method exist, otherwise use default language.
+    const lang = (typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function') 
+                 ? state.getCurrentPublikationLang() 
+                 : getAppConfig().DEFAULT_SETTINGS.PUBLIKATION_LANG;
+
+    if (lang === 'en' && typeof UI_TEXTS_EN !== 'undefined') {
+        return UI_TEXTS_EN;
+    }
+    if (typeof UI_TEXTS_DE !== 'undefined') {
+        return UI_TEXTS_DE;
+    }
+
+    console.error("UI_TEXTS_DE or UI_TEXTS_EN are not defined when getUITexts() is called. Ensure text_config.js is loaded correctly.");
+    return {}; // Fallback if texts are not defined
+}
+
+function getTooltipContent() {
+    // TOOLTIP_CONTENT_DE and TOOLTIP_CONTENT_EN are globally defined in text_config.js
+    // This function acts as the single point of access, merging/selecting based on language.
+
+    const lang = (typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function') 
+                 ? state.getCurrentPublikationLang() 
+                 : getAppConfig().DEFAULT_SETTINGS.PUBLIKATION_LANG;
+
+    const baseTooltips = (typeof TOOLTIP_CONTENT_DE !== 'undefined') ? cloneDeep(TOOLTIP_CONTENT_DE) : {};
+
+    if (lang === 'en' && typeof TOOLTIP_CONTENT_EN === 'object' && TOOLTIP_CONTENT_EN !== null && Object.keys(TOOLTIP_CONTENT_EN).length > 0) {
+        // Deep merge for English content, allowing it to override German.
+        return deepMerge(baseTooltips, TOOLTIP_CONTENT_EN);
+    }
+    
+    return baseTooltips;
 }
