@@ -1,488 +1,513 @@
 const uiComponents = (() => {
 
-    function _createHeaderButtonHTML(buttons, targetId, defaultTitle = 'Element') {
-        let headerButtonHtml = '';
-        if (buttons && buttons.length > 0 && targetId) {
-            headerButtonHtml = buttons.map(btn => {
-                const btnId = btn.id || `dl-${targetId.replace(/[^a-zA-Z0-9_-]/g, '')}-${btn.format || 'action'}`;
-                const iconClass = btn.icon || 'fa-download';
-                let tooltip = btn.tooltip || `Als ${String(btn.format || 'Aktion').toUpperCase()} herunterladen`;
+    function createCard(options = {}) {
+        const { id, headerText, bodyContent, footerContent, cardClass = '', headerClass = '', bodyClass = '', footerClass = '', isCollapsible = false, startCollapsed = false, extraAttributes = {} } = options;
+        const cardId = id || `card-${generateUUID()}`;
+        const collapseId = `collapse-${cardId}`;
 
-                const safeDefaultTitle = String(defaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
-                const safeChartName = String(btn.chartName || safeDefaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
-                const safeTableName = String(btn.tableName || safeDefaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
+        const cardDiv = ui_helpers.createElementWithAttributes('div', { class: `card ${cardClass}`, id: cardId, ...extraAttributes });
 
-                if (btn.format === 'png' && btn.chartId && TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description) {
-                    tooltip = TOOLTIP_CONTENT.exportTab.chartSinglePNG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
-                } else if (btn.format === 'svg' && btn.chartId && TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description) {
-                    tooltip = TOOLTIP_CONTENT.exportTab.chartSingleSVG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
-                } else if (btn.format === 'png' && btn.tableId && TOOLTIP_CONTENT.exportTab.tableSinglePNG?.description) {
-                    tooltip = TOOLTIP_CONTENT.exportTab.tableSinglePNG.description.replace('{TableName}', `<strong>${safeTableName}</strong>`);
-                }
-
-
-                const dataAttributes = [];
-                if (btn.chartId) dataAttributes.push(`data-chart-id="${btn.chartId}"`);
-                if (btn.tableId) dataAttributes.push(`data-table-id="${btn.tableId}"`);
-                
-                if (btn.tableName) dataAttributes.push(`data-table-name="${safeTableName.replace(/\s/g, '_')}"`);
-                else if (btn.chartId) dataAttributes.push(`data-chart-name="${safeChartName.replace(/\s/g, '_')}"`);
-                else dataAttributes.push(`data-default-name="${safeDefaultTitle.replace(/\s/g, '_')}"`);
-
-
-                if (btn.format) dataAttributes.push(`data-format="${btn.format}"`);
-
-                return `<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 ${btn.tableId ? 'table-download-png-btn' : (btn.chartId ? 'chart-download-btn' : '')}" id="${btnId}" ${dataAttributes.join(' ')} data-tippy-content="${tooltip}"><i class="fas ${iconClass}"></i></button>`;
-            }).join('');
-        }
-        return headerButtonHtml;
-    }
-
-    function createDashboardCard(title, content, chartId = null, cardClasses = '', headerClasses = '', bodyClasses = '', downloadButtons = []) {
-        const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, chartId || title.replace(/[^a-z0-9]/gi, '_'), title);
-        const tooltipKey = chartId ? chartId.replace(/^chart-dash-/, '') : title.toLowerCase().replace(/\s+/g, '');
-        let tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik[tooltipKey]?.description || title || '';
-        if(tooltipKey === 'ageDistribution' || tooltipKey === 'alter') tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.chartAge?.description || title;
-        else if(tooltipKey === 'genderDistribution' || tooltipKey === 'geschlecht') tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.chartGender?.description || title;
-
-
-        return `
-            <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 dashboard-card-col ${cardClasses}">
-                <div class="card h-100 dashboard-card">
-                    <div class="card-header ${headerClasses} d-flex justify-content-between align-items-center" data-tippy-content="${tooltipContent.replace('[KOLLEKTIV]', '<strong>dem aktuellen Kollektiv</strong>')}">
-                        <span class="text-truncate">${title}</span>
-                        <span class="card-header-buttons flex-shrink-0 ps-1">${headerButtonHtml}</span>
-                    </div>
-                    <div class="card-body d-flex flex-column justify-content-between ${bodyClasses}">
-                        <div class="dashboard-card-content">${content}</div>
-                        ${chartId ? `<div id="${chartId}" class="mt-1 w-100 dashboard-chart-container" style="min-height: 120px; flex-grow: 1;"></div>` : ''}
-                    </div>
-                </div>
-            </div>`;
-    }
-
-    function createT2CriteriaControls(initialCriteria, initialLogic) {
-        if (!initialCriteria || !initialLogic) return '<p class="text-danger">Fehler: Initialkriterien konnten nicht geladen werden.</p>';
-        const logicChecked = initialLogic === 'ODER';
-        const defaultCriteriaForSize = getDefaultT2Criteria();
-        const sizeThreshold = initialCriteria.size?.threshold ?? defaultCriteriaForSize?.size?.threshold ?? 5.0;
-        const sizeMin = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min;
-        const sizeMax = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max;
-        const sizeStep = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step;
-        const formattedThreshold = formatNumber(sizeThreshold, 1, '5.0', true);
-
-        const createButtonOptions = (key, isChecked, criterionLabel) => {
-            const valuesKey = key.toUpperCase() + '_VALUES';
-            const values = APP_CONFIG.T2_CRITERIA_SETTINGS[valuesKey] || [];
-            const currentValue = initialCriteria[key]?.value;
-            return values.map(value => {
-                const isActiveValue = isChecked && currentValue === value;
-                const icon = ui_helpers.getT2IconSVG(key, value);
-                const buttonTooltip = `Kriterium '${criterionLabel}' auf '${value}' setzen. ${isChecked ? '' : '(Kriterium ist derzeit inaktiv)'}`;
-                return `<button class="btn t2-criteria-button criteria-icon-button ${isActiveValue ? 'active' : ''} ${isChecked ? '' : 'inactive-option'}" data-criterion="${key}" data-value="${value}" data-tippy-content="${buttonTooltip}" ${isChecked ? '' : 'disabled'}>${icon}</button>`;
-            }).join('');
-        };
-
-        const createCriteriaGroup = (key, label, tooltipKey, contentGenerator) => {
-            const isChecked = initialCriteria[key]?.active === true;
-            const tooltip = TOOLTIP_CONTENT[tooltipKey]?.description || label;
-            return `
-                <div class="col-md-6 criteria-group">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input criteria-checkbox" type="checkbox" value="${key}" id="check-${key}" ${isChecked ? 'checked' : ''}>
-                        <label class="form-check-label fw-bold" for="check-${key}">${label}</label>
-                         <span data-tippy-content="${tooltip}"> <i class="fas fa-info-circle text-muted ms-1"></i></span>
-                    </div>
-                    <div class="criteria-options-container ps-3">
-                        ${contentGenerator(key, isChecked, label)}
-                    </div>
-                </div>`;
-        };
-
-        return `
-            <div class="card criteria-card" id="t2-criteria-card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>T2 Malignitäts-Kriterien Definieren</span>
-                    <div class="form-check form-switch" data-tippy-content="${TOOLTIP_CONTENT.t2Logic.description}">
-                         <label class="form-check-label small me-2" for="t2-logic-switch" id="t2-logic-label-prefix">Logik:</label>
-                         <input class="form-check-input" type="checkbox" role="switch" id="t2-logic-switch" ${logicChecked ? 'checked' : ''}>
-                         <label class="form-check-label fw-bold" for="t2-logic-switch" id="t2-logic-label">${initialLogic}</label>
-                     </div>
-                </div>
-                <div class="card-body">
-                     <div class="row g-4">
-                        ${createCriteriaGroup('size', 'Größe', 't2Size', (key, isChecked) => `
-                            <div class="d-flex align-items-center flex-wrap">
-                                 <span class="me-1 small text-muted">≥</span>
-                                 <input type="range" class="form-range criteria-range flex-grow-1 me-2" id="range-size" min="${sizeMin}" max="${sizeMax}" step="${sizeStep}" value="${formattedThreshold}" ${isChecked ? '' : 'disabled'} data-tippy-content="Schwellenwert für Kurzachsendurchmesser (≥) einstellen.">
-                                 <span class="criteria-value-display text-end me-1 fw-bold" id="value-size">${formatNumber(sizeThreshold, 1)}</span><span class="me-2 small text-muted">mm</span>
-                                 <input type="number" class="form-control form-control-sm criteria-input-manual" id="input-size" min="${sizeMin}" max="${sizeMax}" step="${sizeStep}" value="${formattedThreshold}" ${isChecked ? '' : 'disabled'} style="width: 70px;" aria-label="Größe manuell eingeben" data-tippy-content="Schwellenwert manuell eingeben oder anpassen.">
-                            </div>
-                        `)}
-                        ${createCriteriaGroup('form', 'Form', 't2Form', createButtonOptions)}
-                        ${createCriteriaGroup('kontur', 'Kontur', 't2Kontur', createButtonOptions)}
-                        ${createCriteriaGroup('homogenitaet', 'Homogenität', 't2Homogenitaet', createButtonOptions)}
-                        ${createCriteriaGroup('signal', 'Signal', 't2Signal', (key, isChecked, label) => `
-                            <div>${createButtonOptions(key, isChecked, label)}</div>
-                            <small class="text-muted d-block mt-1">Hinweis: Lymphknoten mit Signal 'null' (d.h. nicht beurteilbar/nicht vorhanden) erfüllen das Signal-Kriterium nie.</small>
-                        `)}
-                        <div class="col-12 d-flex justify-content-end align-items-center border-top pt-3 mt-3">
-                            <button class="btn btn-sm btn-outline-secondary me-2" id="btn-reset-criteria" data-tippy-content="${TOOLTIP_CONTENT.t2Actions.reset}">
-                                <i class="fas fa-undo me-1"></i> Zurücksetzen (Standard)
-                            </button>
-                            <button class="btn btn-sm btn-primary" id="btn-apply-criteria" data-tippy-content="${TOOLTIP_CONTENT.t2Actions.apply}">
-                                <i class="fas fa-check me-1"></i> Anwenden & Speichern
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-    }
-
-    function createBruteForceCard(currentKollektivName, workerAvailable) {
-        const disabledAttribute = !workerAvailable ? 'disabled' : '';
-        const startButtonText = workerAvailable ? '<i class="fas fa-cogs me-1"></i> Optimierung starten' : '<i class="fas fa-times-circle me-1"></i> Worker nicht verfügbar';
-        const statusText = workerAvailable ? 'Bereit.' : 'Worker konnte nicht initialisiert werden.';
-        const defaultMetric = APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC || 'Balanced Accuracy';
-        const displayKollektivName = getKollektivDisplayName(currentKollektivName);
-        const resultContainerTooltip = (TOOLTIP_CONTENT.bruteForceResult.description || 'Ergebnis der Optimierung.')
-                                      .replace('[N_GESAMT]', '--')
-                                      .replace('[N_PLUS]', '--')
-                                      .replace('[N_MINUS]', '--');
-
-
-        return `
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">Kriterien-Optimierung (Brute-Force)</div>
-                <div class="card-body">
-                    <p class="card-text small">Findet automatisch die Kombination von T2-Kriterien (Größe, Form, Kontur, Homogenität, Signal) und Logik (UND/ODER), die eine gewählte diagnostische Metrik im Vergleich zum N-Status maximiert.</p>
-                    <div class="row g-3 align-items-end mb-3">
-                        <div class="col-md-4">
-                            <label for="brute-force-metric" class="form-label form-label-sm">Zielmetrik:</label>
-                            <select class="form-select form-select-sm" id="brute-force-metric" data-tippy-content="${TOOLTIP_CONTENT.bruteForceMetric.description}">
-                                <option value="Accuracy" ${defaultMetric === 'Accuracy' ? 'selected' : ''}>Accuracy</option>
-                                <option value="Balanced Accuracy" ${defaultMetric === 'Balanced Accuracy' ? 'selected' : ''}>Balanced Accuracy</option>
-                                <option value="F1-Score" ${defaultMetric === 'F1-Score' ? 'selected' : ''}>F1-Score</option>
-                                <option value="PPV" ${defaultMetric === 'PPV' ? 'selected' : ''}>Positiver Prädiktiver Wert (PPV)</option>
-                                <option value="NPV" ${defaultMetric === 'NPV' ? 'selected' : ''}>Negativer Prädiktiver Wert (NPV)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                             <button class="btn btn-primary btn-sm w-100" id="btn-start-brute-force" data-tippy-content="${TOOLTIP_CONTENT.bruteForceStart.description}" ${disabledAttribute}>
-                                 ${startButtonText}
-                             </button>
-                        </div>
-                         <div class="col-md-4">
-                             <div id="brute-force-info" class="text-muted small text-md-end" data-tippy-content="${(TOOLTIP_CONTENT.bruteForceInfo.description || 'Status des Optimierungs-Workers und aktuelles Kollektiv.').replace('[KOLLEKTIV_NAME]', `<strong>${displayKollektivName}</strong>`)}">
-                                 Status: <span id="bf-status-text" class="fw-bold">${statusText}</span><br>Kollektiv: <strong id="bf-kollektiv-info">${displayKollektivName}</strong>
-                             </div>
-                         </div>
-                    </div>
-                     <div id="brute-force-progress-container" class="mt-3 d-none" data-tippy-content="${(TOOLTIP_CONTENT.bruteForceProgress.description || 'Fortschritt der laufenden Optimierung.').replace('[TOTAL]', '0')}">
-                         <div class="d-flex justify-content-between mb-1 small">
-                            <span>Fortschritt: <span id="bf-tested-count">0</span> / <span id="bf-total-count">0</span></span>
-                            <span id="bf-progress-percent">0%</span>
-                         </div>
-                         <div class="progress" style="height: 8px;">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" id="bf-progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                         </div>
-                         <div class="mt-2 small">
-                            Beste <span id="bf-metric-label" class="fw-bold">Metrik</span> bisher: <span id="bf-best-metric" class="fw-bold" data-tippy-content="Bester bisher gefundener Wert für die Zielmetrik.">--</span>
-                            <div id="bf-best-criteria" class="mt-1 text-muted" style="word-break: break-word;" data-tippy-content="Kriterienkombination und Logik für den besten bisherigen Metrikwert.">Beste Kriterien: --</div>
-                         </div>
-                          <button class="btn btn-danger btn-sm mt-2 d-none" id="btn-cancel-brute-force" data-tippy-content="Bricht die laufende Brute-Force-Optimierung ab. Bereits gefundene Ergebnisse gehen verloren.">
-                            <i class="fas fa-times me-1"></i> Abbrechen
-                         </button>
-                     </div>
-                     <div id="brute-force-result-container" class="mt-3 d-none alert alert-success p-2" role="alert" data-tippy-content="${resultContainerTooltip}">
-                         <h6 class="alert-heading small">Optimierung Abgeschlossen</h6>
-                         <p class="mb-1 small">Beste Kombi für <strong id="bf-result-metric"></strong> (Koll.: <strong id="bf-result-kollektiv"></strong>):</p>
-                         <ul class="list-unstyled mb-1 small">
-                            <li><strong>Wert:</strong> <span id="bf-result-value" class="fw-bold"></span></li>
-                            <li><strong>Logik:</strong> <span id="bf-result-logic" class="fw-bold"></span></li>
-                            <li style="word-break: break-word;"><strong>Kriterien:</strong> <span id="bf-result-criteria" class="fw-bold"></span></li>
-                         </ul>
-                         <p class="mb-1 small text-muted">Dauer: <span id="bf-result-duration"></span>s | Getestet: <span id="bf-result-total-tested"></span></p>
-                         <p class="mb-0 small text-muted" data-tippy-content="${TOOLTIP_CONTENT.bruteForceResult.kollektivStats || 'Statistik des für diese Optimierung verwendeten Kollektivs.'}">Kollektiv N: <span id="bf-result-kollektiv-n">--</span> (N+: <span id="bf-result-kollektiv-nplus">--</span>, N-: <span id="bf-result-kollektiv-nminus">--</span>)</p>
-                         <hr class="my-1">
-                         <button class="btn btn-success btn-sm me-2" id="btn-apply-best-bf-criteria" data-tippy-content="Wendet die beste gefundene Kriterienkombination an und speichert sie. Die Auswertungstabelle und alle Statistiken werden aktualisiert.">
-                             <i class="fas fa-check me-1"></i> Anwenden
-                         </button>
-                         <button class="btn btn-outline-secondary btn-sm" id="btn-show-brute-force-details" data-bs-toggle="modal" data-bs-target="#brute-force-modal" data-tippy-content="${TOOLTIP_CONTENT.bruteForceDetailsButton.description || 'Zeigt die Top 10 Ergebnisse und weitere Details.'}">
-                             <i class="fas fa-list-ol me-1"></i> Top 10
-                         </button>
-                     </div>
-                </div>
-            </div>
-        </div>
-        `;
-    }
-
-    function createStatistikCard(id, title, content = '', addPadding = true, tooltipKey = null, downloadButtons = [], tableId = null) {
-        const cardTooltipHtml = tooltipKey && TOOLTIP_CONTENT[tooltipKey]?.cardTitle
-            ? `data-tippy-content="${(TOOLTIP_CONTENT[tooltipKey].cardTitle || title).replace('[KOLLEKTIV]', '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>')}"`
-            : `data-tippy-content="${title}"`;
-
-        const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, id + '-content', title);
-
-        let finalButtonHtml = headerButtonHtml;
-        if (APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT && tableId && !downloadButtons.some(b => b.tableId === tableId)) {
-             const pngExportButton = { id: `dl-card-${id}-${tableId}-png`, icon: 'fa-image', tooltip: `Tabelle '${title}' als PNG herunterladen.`, format: 'png', tableId: tableId, tableName: title };
-             finalButtonHtml += _createHeaderButtonHTML([pngExportButton], tableId, title);
+        if (headerText) {
+            const cardHeader = ui_helpers.createElementWithAttributes('div', { class: `card-header ${headerClass}` });
+            if (isCollapsible) {
+                const button = ui_helpers.createElementWithAttributes('button', {
+                    class: `btn btn-link p-0 text-start text-decoration-none text-dark fw-bold w-100 ${startCollapsed ? 'collapsed' : ''}`,
+                    type: 'button', 'data-bs-toggle': 'collapse', 'data-bs-target': `#${collapseId}`,
+                    'aria-expanded': startCollapsed ? 'false' : 'true', 'aria-controls': collapseId
+                });
+                button.innerHTML = `${ui_helpers.escapeHTML(headerText)} <i class="fas fa-chevron-down float-end transition-transform"></i>`;
+                cardHeader.appendChild(button);
+            } else {
+                cardHeader.textContent = headerText;
+            }
+            cardDiv.appendChild(cardHeader);
         }
 
-        return `
-            <div class="col-12 stat-card" id="${id}-card-container">
-                <div class="card h-100">
-                    <div class="card-header" ${cardTooltipHtml}>
-                         ${title}
-                         <span class="float-end card-header-buttons">
-                            ${finalButtonHtml}
-                         </span>
-                     </div>
-                    <div class="card-body ${addPadding ? '' : 'p-0'}" style="overflow-y: auto; overflow-x: hidden;">
-                        <div id="${id}-content">
-                            ${content}
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-    }
-
-    function createExportOptions(currentKollektiv) {
-        const dateStr = getCurrentDateString(APP_CONFIG.EXPORT_SETTINGS.DATE_FORMAT);
-        const safeKollektiv = getKollektivDisplayName(currentKollektiv).replace(/[^a-z0-9_-]/gi, '_').replace(/_+/g, '_');
-        const fileNameTemplate = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TEMPLATE;
-
-        const generateButtonHTML = (idSuffix, iconClass, text, tooltipKey, disabled = false, experimental = false) => {
-            const config = TOOLTIP_CONTENT.exportTab[tooltipKey]; if (!config || !APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]) return ``;
-            const type = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]; const ext = config.ext; const filename = fileNameTemplate.replace('{TYPE}', type).replace('{KOLLEKTIV}', safeKollektiv).replace('{DATE}', dateStr).replace('{EXT}', ext); const tooltipHtml = `data-tippy-content="${config.description}<br><small>Datei: ${filename}</small>"`; const disabledAttr = disabled ? 'disabled' : ''; const experimentalBadge = experimental ? '<span class="badge bg-warning text-dark ms-1 small">Experimentell</span>' : ''; const buttonClass = disabled ? 'btn-outline-secondary' : 'btn-outline-primary';
-            return `<button class="btn ${buttonClass} w-100 mb-2 d-flex justify-content-start align-items-center" id="export-${idSuffix}" ${tooltipHtml} ${disabledAttr}><i class="${iconClass} fa-fw me-2"></i> <span class="flex-grow-1 text-start">${text} (.${ext})</span> ${experimentalBadge}</button>`;
-        };
-
-         const generateZipButtonHTML = (idSuffix, iconClass, text, tooltipKey, disabled = false) => {
-            const config = TOOLTIP_CONTENT.exportTab[tooltipKey]; if (!config || !APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]) return ``;
-            const type = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]; const ext = config.ext; const filename = fileNameTemplate.replace('{TYPE}', type).replace('{KOLLEKTIV}', safeKollektiv).replace('{DATE}', dateStr).replace('{EXT}', ext); const tooltipHtml = `data-tippy-content="${config.description}<br><small>Datei: ${filename}</small>"`; const disabledAttr = disabled ? 'disabled' : ''; const buttonClass = idSuffix === 'all-zip' ? 'btn-primary' : 'btn-outline-secondary';
-            return `<button class="btn ${buttonClass} w-100 mb-2 d-flex justify-content-start align-items-center" id="export-${idSuffix}" ${tooltipHtml} ${disabledAttr}><i class="${iconClass} fa-fw me-2"></i> <span class="flex-grow-1 text-start">${text} (.${ext})</span></button>`;
-         };
-
-        const exportDesc = TOOLTIP_CONTENT.exportTab.description.replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(currentKollektiv)}</strong>`);
-
-        return `
-            <div class="row export-options-container">
-                <div class="col-lg-6 col-xl-4 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header">${TOOLTIP_CONTENT.exportTab.singleExports}</div>
-                        <div class="card-body">
-                            <p class="small text-muted mb-3">${exportDesc}</p>
-                            <h6 class="text-muted small text-uppercase mb-2">Berichte & Statistiken</h6>
-                            ${generateButtonHTML('statistik-csv', 'fas fa-file-csv', 'Statistik Ergebnisse', 'statsCSV')}
-                            ${generateButtonHTML('bruteforce-txt', 'fas fa-file-alt', 'Brute-Force Bericht', 'bruteForceTXT', true)}
-                            ${generateButtonHTML('deskriptiv-md', 'fab fa-markdown', 'Deskriptive Statistik', 'deskriptivMD')}
-                            ${generateButtonHTML('comprehensive-report-html', 'fas fa-file-invoice', 'Umfassender Bericht', 'comprehensiveReportHTML')}
-                             <h6 class="mt-3 text-muted small text-uppercase mb-2">Tabellen & Rohdaten</h6>
-                             ${generateButtonHTML('daten-md', 'fab fa-markdown', 'Datenliste', 'datenMD')}
-                             ${generateButtonHTML('auswertung-md', 'fab fa-markdown', 'Auswertungstabelle', 'auswertungMD')}
-                             ${generateButtonHTML('filtered-data-csv', 'fas fa-database', 'Gefilterte Rohdaten', 'filteredDataCSV')}
-                             <h6 class="mt-3 text-muted small text-uppercase mb-2">Diagramme & Tabellen (als Bilder)</h6>
-                             ${generateButtonHTML('charts-png', 'fas fa-images', 'Diagramme & Tabellen (PNG)', 'pngZIP')}
-                             ${generateButtonHTML('charts-svg', 'fas fa-file-code', 'Diagramme (SVG)', 'svgZIP')}
-                        </div>
-                    </div>
-                </div>
-                 <div class="col-lg-6 col-xl-4 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header">${TOOLTIP_CONTENT.exportTab.exportPackages}</div>
-                        <div class="card-body">
-                             <p class="small text-muted mb-3">Bündelt mehrere thematisch zusammengehörige Exportdateien in einem ZIP-Archiv für das Kollektiv <strong>${getKollektivDisplayName(currentKollektiv)}</strong>.</p>
-                            ${generateZipButtonHTML('all-zip', 'fas fa-file-archive', 'Gesamtpaket (Alle Dateien)', 'allZIP')}
-                            ${generateZipButtonHTML('csv-zip', 'fas fa-file-csv', 'Nur CSVs', 'csvZIP')}
-                            ${generateZipButtonHTML('md-zip', 'fab fa-markdown', 'Nur Markdown', 'mdZIP')}
-                            ${generateZipButtonHTML('png-zip', 'fas fa-images', 'Nur Diagramm/Tabellen-PNGs', 'pngZIP')}
-                            ${generateZipButtonHTML('svg-zip', 'fas fa-file-code', 'Nur Diagramm-SVGs', 'svgZIP')}
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-12 col-xl-4 mb-3">
-                   <div class="card h-100"> <div class="card-header">Hinweise zum Export</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV:** Für Statistiksoftware; Trennzeichen: Semikolon (;).</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** Für Dokumentation.</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** Brute-Force-Bericht.</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht:** Umfassend, druckbar.</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** Pixelbasiert (Diagramme/Tabellen).</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** Vektorbasiert (Diagramme), skalierbar.</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>ZIP-Exporte für Diagramme/Tabellen erfassen nur aktuell im Statistik- oder Auswertungstab sichtbare/gerenderte Elemente. Einzel-Downloads sind direkt am Element möglich (z.B. auch im Präsentationstab).</li> </ul> </div> </div>
-                </div>
-            </div>
-        `;
-    }
-
-    function createT2MetricsOverview(stats, kollektivName) {
-        const displayKollektivName = getKollektivDisplayName(kollektivName);
-        const cardTooltip = (TOOLTIP_CONTENT.t2MetricsOverview.cardTitle || 'Kurzübersicht der diagnostischen Güte (T2 vs. N) für Kollektiv [KOLLEKTIV].').replace('[KOLLEKTIV]', `<strong>${displayKollektivName}</strong>`);
-        if (!stats || !stats.matrix || stats.matrix.rp === undefined) {
-             return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)</div><div class="card-body p-2"><p class="m-0 text-muted small">Metriken für T2 nicht verfügbar für Kollektiv ${displayKollektivName}.</p></div></div>`;
-        }
-        const metrics = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'f1', 'auc'];
-        const metricDisplayNames = { sens: 'Sens', spez: 'Spez', ppv: 'PPV', npv: 'NPV', acc: 'Acc', balAcc: 'BalAcc', f1: 'F1', auc: 'AUC' };
-        const na = '--';
-
-        let contentHTML = '<div class="d-flex flex-wrap justify-content-around small text-center">';
-
-        metrics.forEach((key, index) => {
-            const metricData = stats[key];
-            const metricDescription = (TOOLTIP_CONTENT.t2MetricsOverview?.[key] || TOOLTIP_CONTENT.statMetrics[key]?.description || key).replace(/\[METHODE\]/g, '<strong>T2 (angewandt)</strong>');
-            const interpretationHTML = ui_helpers.getMetricInterpretationHTML(key, metricData, 'T2 (angewandt)', displayKollektivName);
-            const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
-            const isPercent = !(key === 'f1' || key === 'auc');
-            const formattedValue = formatCI(metricData?.value, metricData?.ci?.lower, metricData?.ci?.upper, digits, isPercent, na);
-
-            contentHTML += `
-                <div class="p-1 flex-fill bd-highlight ${index > 0 ? 'border-start' : ''}">
-                    <strong data-tippy-content="${metricDescription}">${metricDisplayNames[key]}:</strong>
-                    <span data-tippy-content="${interpretationHTML}"> ${formattedValue}</span>
-                </div>`;
+        const collapseDiv = ui_helpers.createElementWithAttributes('div', {
+            class: `collapse ${isCollapsible && !startCollapsed ? 'show' : ''}`,
+            id: collapseId
         });
 
-        contentHTML += '</div>';
+        if (bodyContent) {
+            const cardBody = ui_helpers.createElementWithAttributes('div', { class: `card-body ${bodyClass}` });
+            if (typeof bodyContent === 'string') {
+                cardBody.innerHTML = bodyContent;
+            } else if (bodyContent instanceof HTMLElement) {
+                cardBody.appendChild(bodyContent);
+            }
+            collapseDiv.appendChild(cardBody);
+        }
+        cardDiv.appendChild(collapseDiv);
 
-        return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)</div><div class="card-body p-2">${contentHTML}</div></div>`;
+
+        if (footerContent) {
+            const cardFooter = ui_helpers.createElementWithAttributes('div', { class: `card-footer ${footerClass}` });
+            if (typeof footerContent === 'string') {
+                cardFooter.innerHTML = footerContent;
+            } else if (footerContent instanceof HTMLElement) {
+                cardFooter.appendChild(footerContent);
+            }
+            cardDiv.appendChild(cardFooter);
+        }
+        return cardDiv;
     }
 
-    function createBruteForceModalContent(resultsData) {
+    function createButton(options = {}) {
+        const { id, text, iconClass, btnClass = 'btn-primary', sizeClass = '', onClick, tooltipKey, tooltipPlacement = 'top', extraAttributes = {}, innerHTML } = options;
+        const button = ui_helpers.createElementWithAttributes('button', { type: 'button', class: `btn ${btnClass} ${sizeClass}`, ...extraAttributes });
+        if (id) button.id = id;
+
+        if (innerHTML) {
+            button.innerHTML = innerHTML;
+        } else {
+            let buttonText = '';
+            if (iconClass) {
+                const iconHTML = ui_helpers.getIcon(iconClass, { class: 'me-1' });
+                buttonText += iconHTML;
+            }
+            if (text) {
+                buttonText += ui_helpers.escapeHTML(text);
+            }
+            button.innerHTML = buttonText;
+        }
+
+        if (onClick && typeof onClick === 'function') {
+            button.addEventListener('click', onClick);
+        }
+        if (tooltipKey) {
+            button.setAttribute('data-tippy-content-key', tooltipKey);
+            button.setAttribute('data-tippy-placement', tooltipPlacement);
+        }
+        return button;
+    }
+
+    function createIconElement(iconName, options = {}) {
+        return ui_helpers.createIcon(iconName, options);
+    }
+
+    function createSelect(options = {}) {
+        const { id, label, selectOptions, value, selectClass = '', labelClass = '', wrapperClass = 'mb-3', onChange, tooltipKey, name = '', disabled = false } = options;
+        const selectId = id || `select-${generateUUID()}`;
+        const wrapper = ui_helpers.createElementWithAttributes('div', { class: wrapperClass });
+
+        if (label) {
+            const labelEl = ui_helpers.createElementWithAttributes('label', { for: selectId, class: `form-label ${labelClass}` }, label);
+            wrapper.appendChild(labelEl);
+        }
+
+        const select = ui_helpers.createElementWithAttributes('select', { class: `form-select ${selectClass}`, id: selectId, name });
+        if (disabled) select.disabled = true;
+
+        (selectOptions || []).forEach(opt => {
+            const optionEl = ui_helpers.createElementWithAttributes('option', { value: opt.value }, opt.text);
+            if (opt.value === value) {
+                optionEl.selected = true;
+            }
+            if (opt.disabled) {
+                optionEl.disabled = true;
+            }
+            select.appendChild(optionEl);
+        });
+
+        if (onChange && typeof onChange === 'function') {
+            select.addEventListener('change', onChange);
+        }
+        if (tooltipKey) {
+            select.setAttribute('data-tippy-content-key', tooltipKey);
+        }
+        wrapper.appendChild(select);
+        return wrapper;
+    }
+
+    function createRangeInput(options = {}) {
+        const { id, label, min, max, step, value, rangeClass = '', labelClass = '', wrapperClass = 'mb-3', onInput, tooltipKey, name = '', unit = '', showValue = true, disabled = false } = options;
+        const rangeId = id || `range-${generateUUID()}`;
+        const wrapper = ui_helpers.createElementWithAttributes('div', { class: wrapperClass });
+
+        if (label) {
+            const labelEl = ui_helpers.createElementWithAttributes('label', { for: rangeId, class: `form-label ${labelClass}` }, label);
+            wrapper.appendChild(labelEl);
+        }
+
+        const inputGroup = ui_helpers.createElementWithAttributes('div', { class: 'input-group input-group-sm' });
+        const range = ui_helpers.createElementWithAttributes('input', { type: 'range', class: `form-range ${rangeClass}`, id: rangeId, min, max, step, value, name });
+        if (disabled) range.disabled = true;
+        inputGroup.appendChild(range);
+
+        let valueDisplay = null;
+        if (showValue) {
+            valueDisplay = ui_helpers.createElementWithAttributes('span', { class: 'input-group-text criteria-value-display', id: `${rangeId}-value` }, `${formatNumber(value,1)}${unit}`);
+            inputGroup.appendChild(valueDisplay);
+        }
+
+        if (onInput && typeof onInput === 'function') {
+            range.addEventListener('input', (event) => {
+                onInput(event);
+                if (valueDisplay) valueDisplay.textContent = `${formatNumber(event.target.value,1)}${unit}`;
+            });
+        }
+        if (tooltipKey) {
+            range.setAttribute('data-tippy-content-key', tooltipKey);
+        }
+        wrapper.appendChild(inputGroup);
+        return wrapper;
+    }
+
+     function createCheckbox(options = {}) {
+        const { id, label, checked = false, wrapperClass = 'form-check mb-2', inputClass = 'form-check-input', labelClass = 'form-check-label', onChange, tooltipKey, name = '', value = '', disabled = false, isSwitch = false } = options;
+        const checkId = id || `check-${generateUUID()}`;
+        const finalWrapperClass = isSwitch ? `${wrapperClass} form-switch` : wrapperClass;
+        const wrapper = ui_helpers.createElementWithAttributes('div', { class: finalWrapperClass });
+        const input = ui_helpers.createElementWithAttributes('input', { type: 'checkbox', class: inputClass, id: checkId, name, value });
+        if (checked) input.checked = true;
+        if (disabled) input.disabled = true;
+        const labelEl = ui_helpers.createElementWithAttributes('label', { class: labelClass, for: checkId }, label);
+
+        if (onChange && typeof onChange === 'function') {
+            input.addEventListener('change', onChange);
+        }
+        if (tooltipKey) {
+            wrapper.setAttribute('data-tippy-content-key', tooltipKey);
+        }
+        wrapper.appendChild(input);
+        wrapper.appendChild(labelEl);
+        return wrapper;
+    }
+
+
+    function createT2CriteriaControl(criterionKey, criterionConfig, currentCriterionState, options = {}) {
+        const { onActiveChange, onValueChange, onThresholdChange, onLogicChange } = options;
+        const controlIdBase = `t2-criterion-${criterionKey}`;
+        const wrapper = ui_helpers.createElementWithAttributes('div', { class: 'mb-3 border p-3 rounded criteria-group' + (currentCriterionState.active ? '' : ' disabled-criterion-control') });
+        const mainLabelText = criterionConfig.label || criterionKey.charAt(0).toUpperCase() + criterionKey.slice(1);
+
+        const headerDiv = ui_helpers.createElementWithAttributes('div', {class: 'd-flex justify-content-between align-items-center mb-2'});
+        const activeCheckbox = createCheckbox({
+            id: `${controlIdBase}-active`,
+            label: mainLabelText,
+            checked: currentCriterionState.active,
+            isSwitch: true,
+            wrapperClass: 'form-check m-0',
+            onChange: (e) => {
+                if (onActiveChange) onActiveChange(criterionKey, e.target.checked);
+                wrapper.classList.toggle('disabled-criterion-control', !e.target.checked);
+            },
+            tooltipKey: `tooltip.t2${criterionKey.charAt(0).toUpperCase() + criterionKey.slice(1)}`
+        });
+        headerDiv.appendChild(activeCheckbox);
+        wrapper.appendChild(headerDiv);
+
+        const optionsContainer = ui_helpers.createElementWithAttributes('div', {class: 'criteria-options-container' + (currentCriterionState.active ? '' : ' d-none') });
+
+        if (criterionKey === 'size') {
+            const rangeInput = createRangeInput({
+                id: `${controlIdBase}-threshold`,
+                min: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min,
+                max: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max,
+                step: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step,
+                value: currentCriterionState.threshold,
+                unit: 'mm',
+                wrapperClass: 'mt-2',
+                disabled: !currentCriterionState.active,
+                onInput: (e) => {
+                    if (onThresholdChange) onThresholdChange(criterionKey, parseFloat(e.target.value));
+                }
+            });
+            optionsContainer.appendChild(rangeInput);
+        } else {
+            const valueOptions = APP_CONFIG.T2_CRITERIA_SETTINGS[`${criterionKey.toUpperCase()}_VALUES`] || [];
+            const buttonGroup = ui_helpers.createElementWithAttributes('div', { class: 'btn-group flex-wrap mt-2', role: 'group', 'aria-label': `${mainLabelText} Optionen`});
+            valueOptions.forEach(valOpt => {
+                const btn = createButton({
+                    id: `${controlIdBase}-value-${valOpt.replace(/\s/g, '_')}`,
+                    text: valOpt,
+                    btnClass: `btn-sm t2-criteria-button ${currentCriterionState.value === valOpt ? 'active' : ''}`,
+                    onClick: () => {
+                        if(onValueChange) onValueChange(criterionKey, valOpt);
+                        Array.from(buttonGroup.querySelectorAll('.t2-criteria-button')).forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                    },
+                    extraAttributes: { 'data-value': valOpt, disabled: !currentCriterionState.active }
+                });
+                buttonGroup.appendChild(btn);
+            });
+            optionsContainer.appendChild(buttonGroup);
+        }
+        wrapper.appendChild(optionsContainer);
+
+        activeCheckbox.querySelector('input').addEventListener('change', (e) => {
+           optionsContainer.classList.toggle('d-none', !e.target.checked);
+           optionsContainer.querySelectorAll('input, button').forEach(el => el.disabled = !e.target.checked);
+        });
+         optionsContainer.querySelectorAll('input, button').forEach(el => el.disabled = !currentCriterionState.active);
+
+        return wrapper;
+    }
+
+    function createBruteForceResultItem(result, rank, targetMetric) {
+        const li = ui_helpers.createElementWithAttributes('li', { class: 'list-group-item d-flex justify-content-between align-items-start flex-wrap' });
+        const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c,l) => 'N/A';
+        const criteriaString = formatCriteriaFunc(result.criteria, result.logic);
+        const mainContent = ui_helpers.createElementWithAttributes('div', {class: 'ms-2 me-auto'});
+        const title = ui_helpers.createElementWithAttributes('div', {class: 'fw-bold'}, `Rang ${rank}: ${formatNumber(result.metricValue, 4)} (${targetMetric})`);
+        const criteriaDesc = ui_helpers.createElementWithAttributes('small', {class: 'd-block text-muted'}, `${result.logic.toUpperCase()}: ${criteriaString}`);
+        mainContent.appendChild(title);
+        mainContent.appendChild(criteriaDesc);
+
+        const metricsContainer = ui_helpers.createElementWithAttributes('div', { class: 'mt-2 w-100 border-top pt-2' });
+        const metricsGrid = ui_helpers.createElementWithAttributes('div', {style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 5px; font-size: 0.8rem;'});
+
+        const metricsToShow = {
+            "Sens.": formatPercent(result.sens, 1), "Spez.": formatPercent(result.spez, 1),
+            "PPV": formatPercent(result.ppv, 1), "NPV": formatPercent(result.npv, 1),
+            "Acc.": formatPercent(result.acc, 1), "Bal. Acc.": formatNumber(result.balAcc, 3),
+            "F1": formatNumber(result.f1, 3)
+        };
+        for (const [key, value] of Object.entries(metricsToShow)) {
+            metricsGrid.appendChild(ui_helpers.createElementWithAttributes('div', {}, `<strong>${key}:</strong> ${value}`));
+        }
+
+        const confusionMatrixDiv = ui_helpers.createElementWithAttributes('div', { class: 'mt-1' },
+            `<strong>Matrix:</strong> RP=${result.rp}, FP=${result.fp}, FN=${result.fn}, RN=${result.rn}`
+        );
+        metricsGrid.appendChild(confusionMatrixDiv);
+        metricsContainer.appendChild(metricsGrid);
+
+        li.appendChild(mainContent);
+        li.appendChild(metricsContainer);
+        return li;
+    }
+
+
+    function createBruteForceResultsModalContent(resultsData) {
+        if (!resultsData || !resultsData.results || resultsData.results.length === 0) {
+            return ui_helpers.createElementWithAttributes('p', {class: 'text-muted text-center'}, 'Keine Ergebnisse für diese Optimierung vorhanden.');
+        }
         const { results, metric, kollektiv, duration, totalTested, nGesamt, nPlus, nMinus } = resultsData;
-        if (!results || results.length === 0) return '<p class="text-muted">Keine Ergebnisse gefunden.</p>';
+        const wrapper = document.createDocumentFragment();
+        const kollektivName = getKollektivDisplayName(kollektiv);
 
-        const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
-        const getKollektivNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
-        const bestResult = results[0];
-        const kollektivName = getKollektivNameFunc(kollektiv);
-        const metricDisplayName = metric === 'PPV' ? 'PPV' : metric === 'NPV' ? 'NPV' : metric;
-        const resultContainerTooltip = (TOOLTIP_CONTENT.bruteForceResult.description || 'Ergebnis der Optimierung.')
-                                      .replace('[N_GESAMT]', formatNumber(nGesamt,0,'?'))
-                                      .replace('[N_PLUS]', formatNumber(nPlus,0,'?'))
-                                      .replace('[N_MINUS]', formatNumber(nMinus,0,'?'));
+        const infoDiv = ui_helpers.createElementWithAttributes('div', {class: 'alert alert-info small'});
+        infoDiv.innerHTML = `
+            <strong>Kollektiv:</strong> ${ui_helpers.escapeHTML(kollektivName)} (N=${formatNumber(nGesamt,0)}, N+=${formatNumber(nPlus,0)}, N-=${formatNumber(nMinus,0)})<br>
+            <strong>Zielmetrik:</strong> ${ui_helpers.escapeHTML(metric)}<br>
+            <strong>Getestete Kombinationen:</strong> ${formatNumber(totalTested,0)}<br>
+            <strong>Dauer:</strong> ${formatNumber((duration || 0) / 1000, 1)} Sekunden
+        `;
+        wrapper.appendChild(infoDiv);
 
-        let tableHTML = `
-            <div class="alert alert-light small p-2 mb-3" data-tippy-content="${resultContainerTooltip}">
-                <p class="mb-1"><strong>Beste Kombi für '${metricDisplayName}' (Koll.: '${kollektivName}'):</strong></p>
-                <ul class="list-unstyled mb-1">
-                    <li><strong>Wert:</strong> ${formatNumber(bestResult.metricValue, 4)}</li>
-                    <li><strong>Logik:</strong> ${bestResult.logic.toUpperCase()}</li>
-                    <li><strong>Kriterien:</strong> ${formatCriteriaFunc(bestResult.criteria, bestResult.logic)}</li>
-                </ul>
-                <p class="mb-1 text-muted"><small>Dauer: ${formatNumber(duration / 1000, 1)}s | Getestet: ${formatNumber(totalTested, 0)}</small></p>
-                <p class="mb-0 text-muted" data-tippy-content="${TOOLTIP_CONTENT.bruteForceResult.kollektivStats || 'Statistik des für diese Optimierung verwendeten Kollektivs.'}"><small>Kollektiv N=${formatNumber(nGesamt,0,'N/A')} (N+: ${formatNumber(nPlus,0,'N/A')}, N-: ${formatNumber(nMinus,0,'N/A')})</small></p>
-            </div>
-            <h6 class="mb-2">Top Ergebnisse (inkl. identischer Werte):</h6>
-            <div class="table-responsive">
-                <table class="table table-sm table-striped table-hover small" id="bruteforce-results-table">
-                    <thead class="small">
-                        <tr>
-                            <th data-tippy-content="Rang des Ergebnisses.">Rang</th>
-                            <th data-tippy-content="Erreichter Wert der Zielmetrik (${metricDisplayName}). Höher ist besser.">${metricDisplayName}</th>
-                            <th data-tippy-content="Sensitivität dieser Kriterienkombination.">Sens.</th>
-                            <th data-tippy-content="Spezifität dieser Kriterienkombination.">Spez.</th>
-                            <th data-tippy-content="Positiver Prädiktiver Wert dieser Kriterienkombination.">PPV</th>
-                            <th data-tippy-content="Negativer Prädiktiver Wert dieser Kriterienkombination.">NPV</th>
-                            <th data-tippy-content="Verwendete logische Verknüpfung (UND/ODER).">Logik</th>
-                            <th data-tippy-content="Kombination der T2-Malignitätskriterien.">Kriterien</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-
-        let rank = 1, displayedCount = 0, lastMetricValue = -Infinity;
+        const list = ui_helpers.createElementWithAttributes('ul', { class: 'list-group list-group-flush' });
+        let rank = 1;
+        let lastMetricValue = -Infinity;
         const precision = 8;
 
-        for (let i = 0; i < results.length; i++) {
-            const result = results[i];
-            if (!result || typeof result.metricValue !== 'number' || !isFinite(result.metricValue)) continue;
-
+        results.forEach((result, index) => {
+            if (!result || typeof result.metricValue !== 'number' || !isFinite(result.metricValue)) return;
             const currentMetricValueRounded = parseFloat(result.metricValue.toFixed(precision));
             const lastMetricValueRounded = parseFloat(lastMetricValue.toFixed(precision));
-            let currentRank = rank;
-
-            const isNewRank = Math.abs(currentMetricValueRounded - lastMetricValueRounded) > 1e-8;
-
-            if (i > 0 && isNewRank) {
-                rank = displayedCount + 1;
-                currentRank = rank;
-            } else if (i > 0) {
-                currentRank = rank;
+            if (index > 0 && Math.abs(currentMetricValueRounded - lastMetricValueRounded) > 1e-8) {
+                rank = index + 1;
             }
+            lastMetricValue = result.metricValue;
+            list.appendChild(createBruteForceResultItem(result, rank, metric));
+        });
+        wrapper.appendChild(list);
+        return wrapper;
+    }
 
-            if (rank > 10 && isNewRank && i >=10 ) break; // Ensure at least 10 distinct ranks or more items if scores are tied
+    function createDashboardMetricsCard(id, title, value, tooltipKey = null, iconClass = null, trend = null) {
+        const cardId = `dashboard-card-${id}`;
+        const cardHeader = ui_helpers.createElementWithAttributes('div', {class: 'card-header dashboard-card-header'}, title);
+        const cardBody = ui_helpers.createElementWithAttributes('div', {class: 'card-body text-center'});
+        const valueDisplay = ui_helpers.createElementWithAttributes('h4', {class: 'display-6 my-2', id: `${cardId}-value` }, value);
+        cardBody.appendChild(valueDisplay);
 
-            tableHTML += `
-                <tr>
-                    <td>${currentRank}.</td>
-                    <td>${formatNumber(result.metricValue, 4)}</td>
-                    <td>${result.sens !== undefined ? formatPercent(result.sens, 1) : 'N/A'}</td>
-                    <td>${result.spez !== undefined ? formatPercent(result.spez, 1) : 'N/A'}</td>
-                    <td>${result.ppv !== undefined ? formatPercent(result.ppv, 1) : 'N/A'}</td>
-                    <td>${result.npv !== undefined ? formatPercent(result.npv, 1) : 'N/A'}</td>
-                    <td>${result.logic.toUpperCase()}</td>
-                    <td>${formatCriteriaFunc(result.criteria, result.logic)}</td>
-                </tr>`;
-
-            if (isNewRank || i === 0) {
-                lastMetricValue = result.metricValue;
-            }
-            displayedCount++;
+        if (iconClass) {
+            const iconEl = createIconElement(iconClass, { size: 22, class: 'position-absolute top-0 end-0 m-2 text-muted opacity-50'});
+            cardBody.appendChild(iconEl);
         }
-        tableHTML += `</tbody></table></div>`;
-        return tableHTML;
+        if(trend !== null && !isNaN(trend)){
+            const trendIconClass = trend > 0 ? 'fa-arrow-up text-success' : (trend < 0 ? 'fa-arrow-down text-danger' : 'fa-minus text-secondary');
+            const trendEl = ui_helpers.createElementWithAttributes('small', {class: 'd-block text-muted'}, ui_helpers.getIcon(trendIconClass, { class: 'me-1'}) + `${formatNumber(Math.abs(trend),1)}%`);
+            cardBody.appendChild(trendEl);
+        }
+
+        const card = createCard({id: cardId, headerContent: cardHeader, bodyContent: cardBody, cardClass: 'dashboard-card shadow-sm h-100'});
+        if(tooltipKey) card.setAttribute('data-tippy-content-key', tooltipKey);
+        return card;
     }
 
-    function createPublikationTabHeader() {
-        const lang = state.getCurrentPublikationLang() || PUBLICATION_CONFIG.defaultLanguage;
-        const currentBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+    function createCriteriaComparisonTable(results, currentGlobalKollektiv) {
+        const table = ui_helpers.createElementWithAttributes('table', { class: 'table table-sm table-hover data-table publication-table mt-0' });
+        const thead = ui_helpers.createElementWithAttributes('thead', { class: 'sticky-top' });
+        const tbody = document.createElement('tbody');
+        const headers = ['Methode/Kriteriensatz', 'Sens.', 'Spez.', 'PPV', 'NPV', 'Acc.', 'AUC/BalAcc'];
+        const headerRow = document.createElement('tr');
+        headers.forEach(headerText => {
+            headerRow.appendChild(ui_helpers.createElementWithAttributes('th', {}, headerText));
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
 
-        const sectionNavItems = PUBLICATION_CONFIG.sections.map(mainSection => {
-            const sectionTooltip = TOOLTIP_CONTENT.publikationTabTooltips[mainSection.id]?.description || UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey;
-            return `
-                <li class="nav-item">
-                    <a class="nav-link py-2 publikation-section-link" href="#" data-section-id="${mainSection.id}" data-tippy-content="${sectionTooltip}">
-                        ${UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}
-                    </a>
-                </li>`;
-        }).join('');
+        results.forEach(result => {
+            const row = document.createElement('tr');
+            let name = result.name || 'Unbekannt';
+            let nameSuffix = '';
+            if (result.id === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) name = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME;
+            else if (result.id === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID) name = APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME;
 
-        const bfMetricOptions = PUBLICATION_CONFIG.bruteForceMetricsForPublication.map(opt =>
-            `<option value="${opt.value}" ${opt.value === currentBfMetric ? 'selected' : ''}>${opt.label}</option>`
-        ).join('');
-
-        return `
-            <div class="row mb-3 sticky-top bg-light py-2 shadow-sm" style="top: var(--sticky-header-offset); z-index: 1015;">
-                <div class="col-md-3">
-                    <h5 class="mb-2">Abschnitte</h5>
-                    <nav id="publikation-sections-nav" class="nav flex-column nav-pills" data-tippy-content="${TOOLTIP_CONTENT.publikationTabTooltips.sectionSelect?.description || 'Wählen Sie einen Publikationsabschnitt.'}">
-                        ${sectionNavItems}
-                    </nav>
-                </div>
-                <div class="col-md-9">
-                    <div class="d-flex justify-content-end align-items-center mb-2">
-                        <div class="me-3">
-                           <label for="publikation-bf-metric-select" class="form-label form-label-sm mb-0 me-1">${UI_TEXTS.publikationTab.bruteForceMetricSelectLabel}</label>
-                           <select class="form-select form-select-sm d-inline-block" id="publikation-bf-metric-select" style="width: auto;" data-tippy-content="${TOOLTIP_CONTENT.publikationTabTooltips.bruteForceMetricSelect.description}">
-                               ${bfMetricOptions}
-                           </select>
-                        </div>
-                        <div class="form-check form-switch" data-tippy-content="${TOOLTIP_CONTENT.publikationTabTooltips.spracheSwitch.description}">
-                            <input class="form-check-input" type="checkbox" role="switch" id="publikation-sprache-switch" ${lang === 'en' ? 'checked' : ''}>
-                            <label class="form-check-label fw-bold" for="publikation-sprache-switch" id="publikation-sprache-label">${UI_TEXTS.publikationTab.spracheSwitchLabel[lang]}</label>
-                        </div>
-                    </div>
-                    <div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: calc(100vh - var(--sticky-header-offset) - 4rem - 2rem); overflow-y: auto;">
-                        <p class="text-muted">Bitte wählen Sie einen Abschnitt aus der Navigation.</p>
-                    </div>
-                </div>
-            </div>`;
+            if (result.specificKollektivName && result.specificKollektivName !== currentGlobalKollektiv && result.id !== APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID && result.id !== APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID) {
+                nameSuffix = ` (eval. auf ${getKollektivDisplayName(result.specificKollektivName)}, N=${result.specificKollektivN || '?'})`;
+            } else if (result.specificKollektivN !== undefined) {
+                 nameSuffix = ` (N=${result.specificKollektivN || '?'})`;
+            }
+            row.appendChild(ui_helpers.createElementWithAttributes('td', {}, `${ui_helpers.escapeHTML(name)}${ui_helpers.escapeHTML(nameSuffix)}`));
+            ['sens', 'spez', 'ppv', 'npv', 'acc'].forEach(metric => {
+                row.appendChild(ui_helpers.createElementWithAttributes('td', {}, formatPercent(result[metric], 1)));
+            });
+            row.appendChild(ui_helpers.createElementWithAttributes('td', {}, formatNumber(result.auc, 3)));
+            tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        return table;
     }
+
+    function createPatientCharacteristicTable(stats, tableId, captionText) {
+         const table = ui_helpers.createElementWithAttributes('table', {class: 'table table-sm table-bordered data-table publication-table', id: tableId});
+         const caption = ui_helpers.createElementWithAttributes('caption', {}, captionText); table.appendChild(caption);
+         const thead = document.createElement('thead'); const tbody = document.createElement('tbody');
+         const headers = ['Merkmal', 'Wert']; const headerRow = document.createElement('tr'); headers.forEach(h => headerRow.appendChild(ui_helpers.createElementWithAttributes('th',{},h))); thead.appendChild(headerRow);
+         const addRow = (label, value) => { const r = document.createElement('tr'); r.appendChild(ui_helpers.createElementWithAttributes('td',{},label)); r.appendChild(ui_helpers.createElementWithAttributes('td',{},value)); tbody.appendChild(r);};
+         if (stats) {
+             addRow('Anzahl Patienten', stats.anzahlPatienten);
+             addRow('Median Alter (Jahre) [Min-Max]', `${formatNumber(stats.alter.median,1)} [${formatNumber(stats.alter.min,0)}-${formatNumber(stats.alter.max,0)}]`);
+             addRow('Mittleres Alter ± SD (Jahre)', `${formatNumber(stats.alter.mean,1)} ± ${formatNumber(stats.alter.sd,1)}`);
+             addRow('Geschlecht (männlich / weiblich) (n (%))', `${stats.geschlecht.m} (${formatPercent(stats.geschlecht.m/stats.anzahlPatienten,1)}) / ${stats.geschlecht.f} (${formatPercent(stats.geschlecht.f/stats.anzahlPatienten,1)})`);
+             addRow('Therapie (Direkt OP / nRCT) (n (%))', `${stats.therapie['direkt OP']} (${formatPercent(stats.therapie['direkt OP']/stats.anzahlPatienten,1)}) / ${stats.therapie.nRCT} (${formatPercent(stats.therapie.nRCT/stats.anzahlPatienten,1)})`);
+             addRow('Pathologischer N-Status (N+ / N-) (n (%))', `${stats.nStatus.plus} (${formatPercent(stats.nStatus.plus/stats.anzahlPatienten,1)}) / ${stats.nStatus.minus} (${formatPercent(stats.nStatus.minus/stats.anzahlPatienten,1)})`);
+         } else { addRow('Daten nicht verfügbar', '--'); }
+         table.appendChild(thead); table.appendChild(tbody); return table;
+    }
+
+    function createPerformanceTable(performanceData, methodName, tableId, captionText) {
+        const table = ui_helpers.createElementWithAttributes('table', {class: 'table table-sm table-bordered data-table publication-table', id: tableId});
+        const caption = ui_helpers.createElementWithAttributes('caption', {}, captionText); table.appendChild(caption);
+        const thead = document.createElement('thead'); const tbody = document.createElement('tbody');
+        const headers = ['Metrik', 'Wert (95% CI)']; const headerRow = document.createElement('tr'); headers.forEach(h => headerRow.appendChild(ui_helpers.createElementWithAttributes('th',{},h))); thead.appendChild(headerRow);
+        const addRow = (label, metricObj, digits = 1, isPercent = true) => { const r = document.createElement('tr'); r.appendChild(ui_helpers.createElementWithAttributes('td',{},label)); r.appendChild(ui_helpers.createElementWithAttributes('td',{},formatCI(metricObj?.value, metricObj?.ci?.lower, metricObj?.ci?.upper, digits, isPercent, '--'))); tbody.appendChild(r);};
+        if (performanceData) {
+            addRow('Sensitivität', performanceData.sens); addRow('Spezifität', performanceData.spez); addRow('PPV', performanceData.ppv); addRow('NPV', performanceData.npv); addRow('Accuracy', performanceData.acc); addRow('Balanced Accuracy', performanceData.balAcc); addRow('F1-Score', performanceData.f1, 3, false); addRow('AUC', performanceData.auc, 3, false);
+            addRow('LR+', performanceData.lrPlus, 2, false); addRow('LR-', performanceData.lrMinus, 2, false);
+        } else { addRow('Daten nicht verfügbar', null); }
+        table.appendChild(thead); table.appendChild(tbody); return table;
+    }
+
+     function createComparisonTestTable(comparisonData, method1Name, method2Name, tableId, captionText) {
+        const table = ui_helpers.createElementWithAttributes('table', {class: 'table table-sm table-bordered data-table publication-table', id: tableId});
+        const caption = ui_helpers.createElementWithAttributes('caption', {}, captionText); table.appendChild(caption);
+        const thead = document.createElement('thead'); const tbody = document.createElement('tbody');
+        const headers = ['Vergleich', 'Test Statistik', 'p-Wert', 'Methode']; const headerRow = document.createElement('tr'); headers.forEach(h => headerRow.appendChild(ui_helpers.createElementWithAttributes('th',{},h))); thead.appendChild(headerRow);
+        const addRow = (label, testObj) => { const r = document.createElement('tr'); r.appendChild(ui_helpers.createElementWithAttributes('td',{},label)); r.appendChild(ui_helpers.createElementWithAttributes('td',{}, testObj?.statistic !== undefined && !isNaN(testObj.statistic) ? `${testObj.Z !== undefined && !isNaN(testObj.Z) ? 'Z=' : ''}${formatNumber(testObj.statistic ?? testObj.Z,3)} ${testObj.df ? `(df=${testObj.df})` : ''}` : '--')); r.appendChild(ui_helpers.createElementWithAttributes('td',{},`${getPValueText(testObj?.pValue)} ${getStatisticalSignificanceSymbol(testObj?.pValue)}`)); r.appendChild(ui_helpers.createElementWithAttributes('td',{},testObj?.method || '--')); tbody.appendChild(r);};
+        if (comparisonData) {
+            addRow(`Vergleich Accuracy (${method1Name} vs. ${method2Name})`, comparisonData.mcnemar);
+            addRow(`Vergleich AUC (${method1Name} vs. ${method2Name})`, comparisonData.delong);
+        } else { addRow('Daten nicht verfügbar', null); }
+        table.appendChild(thead); table.appendChild(tbody); return table;
+    }
+
+    function createT2BasisInfoCard(t2Set, currentKollektivForComparisonName) {
+        if (!t2Set) return ui_helpers.createElementWithAttributes('p', {class: 'text-muted'}, 'Keine T2-Basisinformationen verfügbar.');
+        const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c,l) => 'N/A';
+        const body = document.createElement('dl');
+        const addDef = (term, def) => { if(def){ body.appendChild(ui_helpers.createElementWithAttributes('dt', {}, term)); body.appendChild(ui_helpers.createElementWithAttributes('dd', {}, ui_helpers.escapeHTML(def))); } };
+
+        let displayName = t2Set.id === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID ? APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME : t2Set.name;
+        let criteriaStringToDisplay = t2Set.id === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID && typeof t2CriteriaManager !== 'undefined' ? formatCriteriaFunc(t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic()) : formatCriteriaFunc(t2Set.criteria, t2Set.logic);
+
+        addDef('Name', displayName);
+        addDef('Referenz', t2Set.reference);
+        addDef('Analyse auf Kollektiv', getKollektivDisplayName(currentKollektivForComparisonName || t2Set.applicableKollektiv || 'Unbekannt'));
+        addDef('Untersuchungsart (Original)', t2Set.investigationType);
+        addDef('Fokus (Original)', t2Set.focus);
+        addDef('Kriterien', criteriaStringToDisplay);
+
+        return createCard({
+            headerText: UI_TEXTS.praesentation.t2BasisInfoCard.title,
+            bodyContent: body,
+            cardClass: 'praes-t2-basis-info-card h-100',
+            tooltipKey: 'praesentation.t2BasisInfoCard.description'
+        });
+    }
+
+    function createDropdown(buttonOptions, items, dropdownId) {
+        const dropdownWrapper = ui_helpers.createElementWithAttributes('div', { class: 'dropdown d-inline-block' });
+        const button = createButton({ ...buttonOptions, class: `${buttonOptions.btnClass || 'btn-secondary'} dropdown-toggle`, extraAttributes: { 'data-bs-toggle': 'dropdown', 'aria-expanded': 'false', id: dropdownId } });
+        const ul = ui_helpers.createElementWithAttributes('ul', { class: 'dropdown-menu', 'aria-labelledby': dropdownId });
+
+        items.forEach(item => {
+            const li = document.createElement('li');
+            if (item.type === 'divider') {
+                li.appendChild(ui_helpers.createElementWithAttributes('hr', { class: 'dropdown-divider' }));
+            } else if (item.type === 'header') {
+                li.appendChild(ui_helpers.createElementWithAttributes('h6', { class: 'dropdown-header' }, item.text));
+            } else {
+                const itemElement = ui_helpers.createElementWithAttributes(item.href ? 'a' : 'button', {
+                    class: `dropdown-item ${item.itemClass || ''} ${item.isActive ? 'active' : ''} ${item.isDisabled ? 'disabled' : ''}`,
+                    type: item.href ? null : 'button',
+                    href: item.href || '#'
+                });
+                if (item.text) itemElement.textContent = item.text;
+                if (item.html) itemElement.innerHTML = item.html;
+                if (item.onClick && typeof item.onClick === 'function') itemElement.addEventListener('click', item.onClick);
+                if (item.dataset) { Object.entries(item.dataset).forEach(([key, value]) => itemElement.setAttribute(`data-${key}`, value)); }
+                li.appendChild(itemElement);
+            }
+            ul.appendChild(li);
+        });
+        dropdownWrapper.appendChild(button);
+        dropdownWrapper.appendChild(ul);
+        return dropdownWrapper;
+    }
+
+     function createListGroupItem(options = {}) {
+        const { text, html, badgeText, badgeClass = 'bg-primary', itemClass = '', onClick, href, target, id } = options;
+        const itemType = href ? 'a' : 'li';
+        const itemAttrs = { class: `list-group-item d-flex justify-content-between align-items-center ${itemClass}` };
+        if (id) itemAttrs.id = id;
+        if (href) itemAttrs.href = href;
+        if (target && href) itemAttrs.target = target;
+        if (onClick && typeof onClick === 'function' && itemType === 'li') itemAttrs.role = 'button';
+
+        const item = ui_helpers.createElementWithAttributes(itemType, itemAttrs);
+        if (text) item.textContent = text;
+        if (html) item.innerHTML = html;
+
+        if (badgeText) {
+            const badge = ui_helpers.createElementWithAttributes('span', { class: `badge rounded-pill ${badgeClass}` }, badgeText);
+            item.appendChild(badge);
+        }
+        if (onClick && typeof onClick === 'function') item.addEventListener('click', onClick);
+        return item;
+    }
+
 
     return Object.freeze({
-        createDashboardCard,
-        createT2CriteriaControls,
-        createBruteForceCard,
-        createStatistikCard,
-        createExportOptions,
-        createT2MetricsOverview,
-        createBruteForceModalContent,
-        createPublikationTabHeader
+        createCard,
+        createButton,
+        createIcon: createIconElement,
+        createSelect,
+        createRangeInput,
+        createCheckbox,
+        createT2CriteriaControl,
+        createBruteForceResultItem,
+        createBruteForceResultsModalContent,
+        createDashboardMetricsCard,
+        createCriteriaComparisonTable,
+        createPatientCharacteristicTable,
+        createPerformanceTable,
+        createComparisonTestTable,
+        createT2BasisInfoCard,
+        createDropdown,
+        createListGroupItem
     });
-
 })();
