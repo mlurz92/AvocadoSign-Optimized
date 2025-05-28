@@ -12,7 +12,9 @@ const viewRenderer = (() => {
         const moduleConfig = tabModulesConfig[tabId];
         if (!moduleConfig) {
             console.error(`Keine Modulkonfiguration für Tab-ID '${tabId}' gefunden.`);
-            ui_helpers.showLoadingSpinner(tabId, `Fehler: Konfiguration für '${tabId}' fehlt.`);
+            if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showLoadingSpinner === 'function') {
+                ui_helpers.showLoadingSpinner(tabId, `Fehler: Konfiguration für '${tabId}' fehlt.`);
+            }
             return null;
         }
 
@@ -20,20 +22,29 @@ const viewRenderer = (() => {
             return moduleConfig.module;
         }
 
-        ui_helpers.showLoadingSpinner(tabId, `Lade Modul für '${tabId.replace('-tab-pane','')}'-Tab...`);
+        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showLoadingSpinner === 'function') {
+            ui_helpers.showLoadingSpinner(tabId, `Lade Modul für '${tabId.replace('-tab-pane','')}'-Tab...`);
+        }
 
         try {
             if (!moduleConfig.module) {
+                if (typeof dynamicModuleLoader === 'undefined' || typeof dynamicModuleLoader.loadModule !== 'function') {
+                    throw new Error("dynamicModuleLoader ist nicht verfügbar.");
+                }
                 moduleConfig.module = await dynamicModuleLoader.loadModule(moduleConfig.name, moduleConfig.path);
             }
 
             if (moduleConfig.module && typeof moduleConfig.module.init === 'function' && !moduleConfig.initialized) {
                 await moduleConfig.module.init();
                 moduleConfig.initialized = true;
-                ui_helpers.hideLoadingSpinner(tabId);
+                if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.hideLoadingSpinner === 'function') {
+                    ui_helpers.hideLoadingSpinner(tabId);
+                }
             } else if (moduleConfig.module && moduleConfig.initialized && typeof moduleConfig.module.render === 'function') {
                  await moduleConfig.module.render();
-                 ui_helpers.hideLoadingSpinner(tabId);
+                 if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.hideLoadingSpinner === 'function') {
+                    ui_helpers.hideLoadingSpinner(tabId);
+                 }
             } else if (!moduleConfig.module) {
                 throw new Error(`Modul '${moduleConfig.name}' konnte nicht geladen oder gefunden werden.`);
             }
@@ -44,7 +55,9 @@ const viewRenderer = (() => {
             if (container) {
                 container.innerHTML = `<div class="alert alert-danger m-3" role="alert">Fehler beim Laden des Tabs '${tabId.replace('-tab-pane','')}'. Details in der Konsole.</div>`;
             }
-            ui_helpers.showToast(`Fehler beim Laden des Tabs '${tabId.replace('-tab-pane','')}'.`, 'danger');
+            if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showToast === 'function') {
+                ui_helpers.showToast(`Fehler beim Laden des Tabs '${tabId.replace('-tab-pane','')}'.`, 'danger');
+            }
             return null;
         }
     }
@@ -52,39 +65,54 @@ const viewRenderer = (() => {
     async function renderView(tabId) {
         if (!tabId) return;
 
-        ui_helpers.destroyTooltips(document.getElementById(tabId));
-        const module = await loadAndInitializeModule(tabId);
+        const tabPaneElement = document.getElementById(tabId);
+        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.destroyTooltips === 'function' && tabPaneElement) {
+            ui_helpers.destroyTooltips(tabPaneElement);
+        }
 
-        if (module) {
+        const module = await loadAndInitializeModule(tabId);
+        const moduleConfig = tabModulesConfig[tabId]; // Modulkonfiguration hier holen
+
+        if (module && moduleConfig) { // Sicherstellen, dass module und moduleConfig existieren
             if (moduleConfig.initialized && typeof module.render === 'function') {
                  await module.render();
             } else if (moduleConfig.initialized && typeof module.refresh === 'function') {
+                 // Wenn render nicht existiert, aber refresh, dann refresh aufrufen
                  await module.refresh();
             }
-            ui_helpers.initTooltips(document.getElementById(tabId));
+            if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.initTooltips === 'function' && tabPaneElement) {
+                ui_helpers.initTooltips(tabPaneElement);
+            }
         }
     }
 
     async function refreshView(tabId) {
         const moduleConfig = tabModulesConfig[tabId];
+        const tabPaneElement = document.getElementById(tabId);
+
         if (moduleConfig && moduleConfig.initialized && moduleConfig.module) {
-            if (typeof moduleConfig.module.refresh === 'function') {
-                ui_helpers.destroyTooltips(document.getElementById(tabId));
-                await moduleConfig.module.refresh();
-                ui_helpers.initTooltips(document.getElementById(tabId));
-            } else if (typeof moduleConfig.module.render === 'function') {
-                ui_helpers.destroyTooltips(document.getElementById(tabId));
-                await moduleConfig.module.render();
-                 ui_helpers.initTooltips(document.getElementById(tabId));
+            if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.destroyTooltips === 'function' && tabPaneElement) {
+                ui_helpers.destroyTooltips(tabPaneElement);
             }
+            if (typeof moduleConfig.module.refresh === 'function') {
+                await moduleConfig.module.refresh();
+            } else if (typeof moduleConfig.module.render === 'function') {
+                await moduleConfig.module.render();
+            }
+            if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.initTooltips === 'function' && tabPaneElement) {
+                ui_helpers.initTooltips(tabPaneElement);
+            }
+        } else if (moduleConfig && !moduleConfig.initialized && tabPaneElement) {
+            // Modul war noch nicht initialisiert, versuche es zu rendern (was auch die Initialisierung auslöst)
+            await renderView(tabId);
         }
     }
-
 
     async function updateAllViews(currentTabId = null) {
         for (const tabId in tabModulesConfig) {
             if (Object.prototype.hasOwnProperty.call(tabModulesConfig, tabId)) {
                 const moduleConfig = tabModulesConfig[tabId];
+                // Nur initialisierte und nicht-aktive Tabs aktualisieren
                 if (tabId !== currentTabId && moduleConfig.initialized && moduleConfig.module) {
                     if (typeof moduleConfig.module.handleGlobalDataChange === 'function') {
                          await moduleConfig.module.handleGlobalDataChange();
@@ -99,6 +127,7 @@ const viewRenderer = (() => {
     return Object.freeze({
         renderView,
         refreshView,
-        updateAllViews
+        updateAllViews,
+        tabModulesConfig // Nur für Debugging oder interne Zwecke verfügbar machen, falls wirklich nötig
     });
 })();
