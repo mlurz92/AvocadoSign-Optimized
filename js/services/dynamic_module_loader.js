@@ -9,7 +9,6 @@ const dynamicModuleLoader = (() => {
                 return;
             }
 
-            // Prüfen, ob das Modul bereits global existiert (z.B. durch statisches Laden)
             const preExistingModule = window[moduleName] || (typeof self !== 'undefined' ? self[moduleName] : undefined);
             if (preExistingModule) {
                 loadedModules[moduleName] = preExistingModule;
@@ -33,8 +32,6 @@ const dynamicModuleLoader = (() => {
                         loadedModules[moduleName] = moduleObject;
                         resolve(moduleObject);
                     } else {
-                        // Dieser Fall sollte seltener auftreten, wenn das Skript tatsächlich erfolgreich ausgeführt wurde
-                        // und die Modulvariable global deklariert hat.
                         reject(new Error(`Modul '${moduleName}' wurde via Skript-Tag geladen, aber die Modulvariable ist nicht im globalen Scope (window/self) verfügbar. Überprüfen Sie das Skript '${modulePath}' auf interne Fehler oder korrekte Deklaration.`));
                     }
                 } catch (e) {
@@ -55,29 +52,21 @@ const dynamicModuleLoader = (() => {
 
             script.addEventListener('load', handleLoad);
             script.addEventListener('error', handleError);
-
-            // Erstelle ein neues Promise für diesen Ladevorgang
+            
             loadingPromises[moduleName] = new Promise((innerResolve, innerReject) => {
-                // Dieses interne Promise wird durch handleLoad oder handleError aufgelöst/abgelehnt.
-                // Wir leiten resolve und reject des äußeren Promises weiter.
                 const originalResolve = resolve;
                 const originalReject = reject;
                 resolve = (value) => { delete loadingPromises[moduleName]; originalResolve(value); };
                 reject = (reason) => { delete loadingPromises[moduleName]; originalReject(reason); };
             });
-            // Wir fügen die Listener erneut hinzu, da resolve/reject überschrieben wurden.
-            // Das ist nicht ideal, handleLoad/handleError sollten direkt das loadingPromises[moduleName] auflösen.
-            // Korrekter wäre:
-            // loadingPromises[moduleName] = new Promise((resolve, reject) => {
-            //     script.onload = () => { /* in handleLoad */ resolve(moduleObject); /* etc */ };
-            //     script.onerror = () => { /* in handleError */ reject(error); /* etc */ };
-            // });
-            // Die aktuelle Struktur mit finally in handleLoad/handleError ist aber schon vorhanden.
+            
+            script.addEventListener('load', handleLoad);
+            script.addEventListener('error', handleError);
 
             try {
                 document.head.appendChild(script);
             } catch (error) {
-                 delete loadingPromises[moduleName]; // Sicherstellen, dass das Promise entfernt wird
+                 delete loadingPromises[moduleName]; 
                  reject(new Error(`Fehler beim Anhängen des Skripts '${moduleName}' ('${modulePath}') an den DOM: ${error.message}`));
             }
         });
@@ -108,22 +97,17 @@ const dynamicModuleLoader = (() => {
             return loadingPromises[moduleName];
         }
 
-        // Setze das loadingPromise *bevor* der Ladevorgang gestartet wird,
-        // um parallele Anfragen für dasselbe Modul abzufangen.
         const loadPromise = loadScript(fullPath, moduleName);
         loadingPromises[moduleName] = loadPromise;
         
         try {
             const moduleInstance = await loadPromise;
-            // Nach erfolgreichem Laden, entferne das Promise aus loadingPromises,
-            // da das Modul jetzt in loadedModules ist.
             delete loadingPromises[moduleName];
             return moduleInstance;
         } catch (error) {
-            // Bei Fehler, entferne das Promise ebenfalls.
             delete loadingPromises[moduleName];
             console.error(`DynamicModuleLoader: Fehler beim Laden des Moduls '${moduleName}' von Pfad '${fullPath}'.`, error);
-            throw error; // Fehler weitergeben, damit view_renderer ihn behandeln kann
+            throw error; 
         }
     }
 
