@@ -23,7 +23,9 @@ const generalEventHandlers = (() => {
 
         headerKollektivEl.textContent = getKollektivDisplayName(currentKollektiv) || '--';
 
-        const rawDataForKollektiv = dataProcessor.filterDataByKollektiv(kollektivStore.getCurrentKollektivRawData(), currentKollektiv);
+        const allProcessedData = kollektivStore.getAllProcessedData();
+        const rawDataForKollektiv = dataProcessor.filterDataByKollektiv(allProcessedData, currentKollektiv);
+        
         headerAnzahlEl.textContent = rawDataForKollektiv.length.toString();
 
         if (rawDataForKollektiv.length === 0) {
@@ -41,14 +43,16 @@ const generalEventHandlers = (() => {
         let validNCount = 0, validASCount = 0, validT2Count = 0;
 
         evaluatedData.forEach(p => {
-            if (p.n === '+') { nPlusCount++; validNCount++; }
-            else if (p.n === '-') { validNCount++;}
+            if (p && typeof p === 'object') {
+                if (p.n === '+') { nPlusCount++; validNCount++; }
+                else if (p.n === '-') { validNCount++;}
 
-            if (p.as === '+') { asPlusCount++; validASCount++; }
-            else if (p.as === '-') { validASCount++;}
+                if (p.as === '+') { asPlusCount++; validASCount++; }
+                else if (p.as === '-') { validASCount++;}
 
-            if (p.t2 === '+') { t2PlusCount++; validT2Count++; }
-            else if (p.t2 === '-') { validT2Count++;}
+                if (p.t2 === '+') { t2PlusCount++; validT2Count++; }
+                else if (p.t2 === '-') { validT2Count++;}
+            }
         });
 
         headerStatusNEl.textContent = validNCount > 0 ? `${formatPercent(nPlusCount / validNCount, 0)} (+)` : '--';
@@ -62,7 +66,7 @@ const generalEventHandlers = (() => {
         mainTabList.forEach(tabEl => {
             tabEl.addEventListener('shown.bs.tab', async (event) => {
                 const newTabId = event.target.getAttribute('aria-controls');
-                const previousTabId = event.relatedTarget ? event.relatedTarget.getAttribute('aria-controls') : null;
+                // const previousTabId = event.relatedTarget ? event.relatedTarget.getAttribute('aria-controls') : null;
 
                 if (state.setActiveTabId(newTabId)) {
                     await viewRenderer.renderView(newTabId);
@@ -78,8 +82,10 @@ const generalEventHandlers = (() => {
                     updateHeaderStats();
 
                     const currentActiveTabId = state.getActiveTabId();
-                    await viewRenderer.renderView(currentActiveTabId);
-                    await viewRenderer.updateAllViews(currentActiveTabId);
+                    if (currentActiveTabId) { // Ensure there is an active tab
+                        await viewRenderer.refreshView(currentActiveTabId); // Use refreshView for existing tabs
+                        await viewRenderer.updateAllViews(currentActiveTabId);
+                    }
 
                     const kollektivChangedEvent = new CustomEvent('kollektivChanged', { detail: { kollektiv: selectedKollektiv } });
                     document.dispatchEvent(kollektivChangedEvent);
@@ -96,7 +102,7 @@ const generalEventHandlers = (() => {
                     let content = UI_TEXTS.kurzanleitung.content;
                     content = content.replace(/{APP_VERSION}/g, APP_CONFIG.APP_VERSION);
                     content = content.replace(/{SIGNIFICANCE_LEVEL}/g, formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, 3, undefined, true));
-                    modalBody.innerHTML = content;
+                    modalBody.innerHTML = content; // Ensure HTML is rendered
                 }
                 const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
                 if (modalInstance) modalInstance.show();
@@ -104,7 +110,9 @@ const generalEventHandlers = (() => {
         }
         updateKollektivButtons(state.getCurrentKollektiv());
         updateHeaderStats();
-        ui_helpers.initTooltips(document.body);
+        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.initTooltips === 'function'){
+            ui_helpers.initTooltips(document.body);
+        }
     }
 
     return Object.freeze({
