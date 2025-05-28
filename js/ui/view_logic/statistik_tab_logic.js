@@ -1,4 +1,4 @@
-const statistikTabLogic = (() => {
+window.statistikTabLogic = (() => {
     const TAB_ID = 'statistik-tab-pane';
     let currentStatsData = null;
     let currentSelectedKollektivEinzel = null;
@@ -468,14 +468,14 @@ const statistikTabLogic = (() => {
     }
     function handleKollektiv1Change(event) {
         const newKollektiv = event.target.value;
-         if (state.setCurrentStatsKollektiv1(newKollektiv)) { // state manages persistence
+         if (state.setCurrentStatsKollektiv1(newKollektiv)) { 
             currentSelectedKollektiv1 = newKollektiv;
             if (currentLayout === 'vergleich') updateStatistikContent();
         }
     }
     function handleKollektiv2Change(event) {
         const newKollektiv = event.target.value;
-         if (state.setCurrentStatsKollektiv2(newKollektiv)) { // state manages persistence
+         if (state.setCurrentStatsKollektiv2(newKollektiv)) { 
             currentSelectedKollektiv2 = newKollektiv;
             if (currentLayout === 'vergleich') updateStatistikContent();
         }
