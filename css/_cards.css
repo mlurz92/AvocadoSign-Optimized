@@ -1,0 +1,163 @@
+/* css/_cards.css */
+.card {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--spacing-lg);
+    background-color: var(--bg-color-white);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition: box-shadow var(--transition-duration-base) var(--transition-timing-function);
+    overflow: hidden;
+    will-change: box-shadow;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.card-header {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-color-light-gray);
+    font-weight: var(--font-weight-semibold);
+    font-size: 1rem;
+    color: var(--text-color-dark);
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-header-sm {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.9rem;
+}
+
+.card-body {
+    padding: var(--spacing-md);
+    flex-grow: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.card-body.p-0 {
+    padding: 0 !important;
+}
+
+.card-footer {
+    background-color: var(--bg-color-light-gray);
+    border-top: 1px solid var(--border-color);
+    padding: var(--spacing-sm) var(--spacing-md);
+    flex-shrink: 0;
+}
+
+.card-header-buttons {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.card-header-buttons .btn {
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.dashboard-card .card-body {
+    padding: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+}
+
+.dashboard-card .dashboard-chart-container {
+    min-height: 125px; /* Default min height */
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dashboard-card .card-header {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.9rem;
+    text-align: center;
+    background-color: var(--bg-color-white);
+    border-bottom: 1px solid var(--border-color-light);
+}
+
+.dashboard-card .card-header-buttons .btn {
+    padding: 0 var(--spacing-xs);
+    margin-left: var(--spacing-xxs);
+}
+
+.dashboard-card-content {
+    min-height: 2.5em; /* Enough space for text content before chart */
+    text-align: center;
+}
+
+.criteria-card.criteria-unsaved-indicator {
+    border: 2px dashed var(--color-warning);
+    box-shadow: 0 0 8px var(--color-warning-light);
+    transition: border-color var(--transition-duration-base) var(--transition-timing-function), box-shadow var(--transition-duration-base) var(--transition-timing-function);
+}
+
+.stat-card .card-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.praes-t2-basis-info-card .card-body {
+    font-size: var(--font-size-sm);
+}
+
+.praes-t2-basis-info-card dl {
+    margin-bottom: 0;
+}
+
+.praes-t2-basis-info-card dt {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-color-medium);
+    margin-bottom: var(--spacing-xs);
+}
+
+.praes-t2-basis-info-card dd {
+    margin-bottom: var(--spacing-sm);
+    padding-left: 0.5em;
+}
+
+/* Responsive adjustments for cards within specific layouts */
+@media (max-width: 1200px) {
+    .dashboard-card-col {
+        flex-basis: 33.333%;
+        max-width: 33.333%;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .dashboard-card-col {
+        flex-basis: 50%;
+        max-width: 50%;
+    }
+    .stat-card .card-body {
+        padding: var(--spacing-sm);
+    }
+}
+
+@media (max-width: 767.98px) {
+    .card-header {
+        font-size: 0.95rem;
+    }
+     .dashboard-card .dashboard-chart-container {
+        min-height: 110px !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .dashboard-card-col {
+        flex-basis: 100%;
+        max-width: 100%;
+    }
+     .dashboard-card .dashboard-chart-container {
+        min-height: 130px !important;
+    }
+}
