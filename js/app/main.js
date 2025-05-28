@@ -1,18 +1,30 @@
 (async () => {
     async function initializeApp() {
         try {
-            if (typeof kollektivStore === 'undefined' || typeof PATIENT_DATA === 'undefined') {
-                document.body.innerHTML = '<div class="alert alert-danger m-5" role="alert">Fehler: Kritische Datenquelle (kollektivStore oder PATIENT_DATA) nicht verfügbar. Anwendung kann nicht starten.</div>';
-                console.error("kollektivStore oder PATIENT_DATA nicht definiert.");
+            // Verwende patientDataRaw direkt, da dies in data.js definiert ist.
+            // kollektivStore wird später als Modul eingeführt und hier verwendet.
+            if (typeof patientDataRaw === 'undefined') {
+                document.body.innerHTML = '<div class="alert alert-danger m-5" role="alert">Fehler: Kritische Datenquelle (patientDataRaw) nicht verfügbar. Anwendung kann nicht starten.</div>';
+                console.error("patientDataRaw nicht definiert.");
                 return;
             }
-            kollektivStore.setRawData(PATIENT_DATA);
+
+            // Initialisiere den kollektivStore und setze die Rohdaten
+            // Diese Zeile setzt voraus, dass kollektivStore.js bereits geladen wurde und kollektivStore global verfügbar ist.
+            if (typeof kollektivStore === 'undefined' || typeof kollektivStore.setRawData !== 'function') {
+                document.body.innerHTML = '<div class="alert alert-danger m-5" role="alert">Fehler: kollektivStore nicht verfügbar oder fehlerhaft. Anwendung kann nicht starten.</div>';
+                console.error("kollektivStore nicht definiert oder setRawData Funktion fehlt.");
+                return;
+            }
+            kollektivStore.setRawData(patientDataRaw); // patientDataRaw statt PATIENT_DATA
 
             if (typeof state === 'undefined' || typeof state.init !== 'function') { throw new Error("State-Modul nicht verfügbar."); }
             state.init();
 
-            if (typeof dataProcessor === 'undefined' || typeof dataProcessor.init !== 'function') { throw new Error("DataProcessor-Modul nicht verfügbar."); }
-            dataProcessor.init(kollektivStore.getAllData());
+            if (typeof dataProcessor === 'undefined' || typeof dataProcessor.processPatientData !== 'function') { throw new Error("DataProcessor-Modul nicht verfügbar."); }
+            // dataProcessor.init wurde entfernt, da die Datenaufbereitung nun direkt beim Setzen in den Store oder bei Bedarf erfolgt.
+            // Die Logik zur direkten Initialisierung von dataProcessor mit Daten wird überarbeitet,
+            // da die Daten nun primär über kollektivStore bezogen werden.
 
             if (typeof t2CriteriaManager === 'undefined' || typeof t2CriteriaManager.initialize !== 'function') { throw new Error("T2CriteriaManager-Modul nicht verfügbar."); }
             t2CriteriaManager.initialize();
@@ -33,18 +45,37 @@
             praesentationEventHandlers.setupPraesentationTabEventHandlers();
 
             if (typeof publikationEventHandlers === 'undefined' || typeof publikationEventHandlers.setupPublicationTabEventHandlers !== 'function') { throw new Error("PublikationEventHandlers-Modul nicht verfügbar."); }
-            publikationEventHandlers.setupPublicationTabEventHandlers();
+            // Die setupPublicationTabEventHandlers benötigt möglicherweise eine Referenz auf die mainAppInterface,
+            // um Callbacks für Sprach- oder Metrikänderungen zu registrieren.
+            // Dies wird hier als mainAppInterface an die Funktion übergeben.
+            const mainAppInterface = {
+                updateGlobalUIState: () => {
+                    generalEventHandlers.updateHeaderStats();
+                    // Weitere globale UI Updates hier, falls nötig
+                },
+                refreshCurrentTab: async () => {
+                    const activeTabId = state.getActiveTabId();
+                    if (activeTabId) {
+                       await viewRenderer.refreshView(activeTabId);
+                    }
+                }
+            };
+            publikationEventHandlers.setupPublicationTabEventHandlers(mainAppInterface);
 
 
             if (typeof viewRenderer === 'undefined' || typeof viewRenderer.renderView !== 'function') { throw new Error("ViewRenderer-Modul nicht verfügbar."); }
-            const initialTabId = state.getActiveTabId() || 'publikation-tab-pane';
+            const initialTabId = state.getActiveTabId() || 'publikation-tab-pane'; // Bevorzugt den gespeicherten Tab oder Fallback
             const initialTabButton = document.getElementById(initialTabId.replace('-pane',''));
+
 
             if (initialTabButton) {
                  const tabInstance = bootstrap.Tab.getOrCreateInstance(initialTabButton);
-                 if(tabInstance) tabInstance.show();
+                 if(tabInstance) tabInstance.show(); // Löst 'shown.bs.tab' Event aus, das renderView aufruft
+            } else {
+                // Fallback, falls kein initialer Tab-Button gefunden wird (z.B. wenn ID falsch)
+                // Dann manuell den View rendern
+                 await viewRenderer.renderView(initialTabId);
             }
-            await viewRenderer.renderView(initialTabId);
 
 
             window.onbeforeunload = () => {
