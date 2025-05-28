@@ -1,4 +1,4 @@
-const auswertungTabLogic = (() => {
+window.auswertungTabLogic = (() => {
     const TAB_ID = 'auswertung-tab-pane';
     let currentData = [];
     let appliedT2CriteriaForTable = null;
@@ -12,7 +12,7 @@ const auswertungTabLogic = (() => {
 
     function renderAuswertungTab(sortConfig = state.getAuswertungTableSort()) {
         const currentKollektiv = state.getCurrentKollektiv();
-        currentData = dataProcessor.getFilteredData(kollektivStore.getCurrentKollektivRawData(), currentKollektiv);
+        currentData = dataProcessor.filterDataByKollektiv(kollektivStore.getAllProcessedData(), currentKollektiv);
         appliedT2CriteriaForTable = t2CriteriaManager.getAppliedCriteria();
         appliedT2LogicForTable = t2CriteriaManager.getAppliedLogic();
 
@@ -89,7 +89,7 @@ const auswertungTabLogic = (() => {
         criteriaKeys.forEach(key => {
             const config = APP_CONFIG.T2_CRITERIA_SETTINGS[key.toUpperCase() + '_VALUES']
                 ? { label: key.charAt(0).toUpperCase() + key.slice(1), options: APP_CONFIG.T2_CRITERIA_SETTINGS[key.toUpperCase() + '_VALUES'] }
-                : { label: key.charAt(0).toUpperCase() + key.slice(1) }; // For size
+                : { label: key.charAt(0).toUpperCase() + key.slice(1) }; 
 
             const control = uiComponents.createT2CriteriaControl(key, config, currentT2Criteria[key] || {}, {
                 onActiveChange: auswertungEventHandlers.handleT2CriterionActiveChange,
@@ -283,7 +283,7 @@ const auswertungTabLogic = (() => {
         const tableContainer = ui_helpers.createElementWithAttributes('div', { class: 'table-responsive' });
 
         const sortedData = dataProcessor.sortData(evaluatedData, sortConfig.key, sortConfig.direction, sortConfig.subKey);
-        const table = tableRenderer.renderAuswertungTable(sortedData);
+        const table = tableRenderer.createAuswertungTable(sortedData, appliedT2CriteriaForTable, appliedT2LogicForTable);
         tableContainer.appendChild(table);
         card.querySelector('.card-body').appendChild(tableContainer);
         section.appendChild(card);
@@ -295,7 +295,7 @@ const auswertungTabLogic = (() => {
         if (currentSort.key === sortKey && currentSort.subKey === subKey) {
             state.updateAuswertungTableSortDirection(sortKey, subKey);
         } else {
-            state.updateAuswertungTableSortDirection(sortKey, subKey); // Sets to 'asc'
+            state.updateAuswertungTableSortDirection(sortKey, subKey);
         }
         renderAuswertungTab(state.getAuswertungTableSort());
     }
