@@ -21,17 +21,17 @@
         <div class="container-fluid">
              <h1 class="app-title">Lymphknoten T2 - Avocado Sign</h1>
              <div class="header-meta ms-md-auto me-md-3">
-                <span data-tippy-content="Aktuell ausgewähltes Analysekollektiv">Kollektiv: <strong id="header-kollektiv">--</strong></span>
-                <span data-tippy-content="Anzahl Patienten im aktuellen Kollektiv">Pat.: <strong id="header-anzahl-patienten">--</strong></span>
-                <span data-tippy-content="Anteil N+ Patienten (Pathologie)">N: <strong id="header-status-n">--</strong></span>
-                <span data-tippy-content="Anteil AS+ Patienten (Vorhersage)">AS: <strong id="header-status-as">--</strong></span>
-                <span data-tippy-content="Anteil T2+ Patienten (angew. Kriterien)">T2: <strong id="header-status-t2">--</strong></span>
+                <span data-tippy-content-key="tooltip.headerStats.kollektiv">Kollektiv: <strong id="header-kollektiv">--</strong></span>
+                <span data-tippy-content-key="tooltip.headerStats.anzahlPatienten">Pat.: <strong id="header-anzahl-patienten">--</strong></span>
+                <span data-tippy-content-key="tooltip.headerStats.statusN">N: <strong id="header-status-n">--</strong></span>
+                <span data-tippy-content-key="tooltip.headerStats.statusAS">AS: <strong id="header-status-as">--</strong></span>
+                <span data-tippy-content-key="tooltip.headerStats.statusT2">T2: <strong id="header-status-t2">--</strong></span>
             </div>
             <div class="d-flex align-items-center">
-                <button class="btn btn-sm btn-outline-secondary me-2" id="btn-kurzanleitung" data-tippy-content="Kurzanleitung anzeigen">
+                <button class="btn btn-sm btn-outline-secondary me-2" id="btn-kurzanleitung" data-tippy-content-key="tooltip.kurzanleitungButton.description">
                     <i class="fas fa-question-circle"></i>
                 </button>
-                <div class="btn-group" role="group" aria-label="Kollektiv Auswahl">
+                <div class="btn-group" role="group" aria-label="Kollektiv Auswahl" data-tippy-content-key="tooltip.kollektivButtons.description">
                     <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-gesamt" data-kollektiv="Gesamt">Gesamt</button>
                     <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-direkt-op" data-kollektiv="direkt OP">Direkt OP</button>
                     <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-nrct" data-kollektiv="nRCT">nRCT</button>
@@ -44,32 +44,32 @@
         <div class="container-fluid">
             <ul class="nav nav-tabs" id="mainTab" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="daten-tab" data-bs-toggle="tab" data-bs-target="#daten-tab-pane" type="button" role="tab" aria-controls="daten-tab-pane" aria-selected="false">
+                    <button class="nav-link" id="daten-tab" data-bs-toggle="tab" data-bs-target="#daten-tab-pane" type="button" role="tab" aria-controls="daten-tab-pane" aria-selected="false" data-tippy-content-key="tooltip.mainTabs.daten">
                         <i class="fas fa-database fa-fw me-1"></i>Daten
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="auswertung-tab" data-bs-toggle="tab" data-bs-target="#auswertung-tab-pane" type="button" role="tab" aria-controls="auswertung-tab-pane" aria-selected="false">
+                    <button class="nav-link" id="auswertung-tab" data-bs-toggle="tab" data-bs-target="#auswertung-tab-pane" type="button" role="tab" aria-controls="auswertung-tab-pane" aria-selected="false" data-tippy-content-key="tooltip.mainTabs.auswertung">
                         <i class="fas fa-tasks fa-fw me-1"></i>Auswertung
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="statistik-tab" data-bs-toggle="tab" data-bs-target="#statistik-tab-pane" type="button" role="tab" aria-controls="statistik-tab-pane" aria-selected="false">
+                    <button class="nav-link" id="statistik-tab" data-bs-toggle="tab" data-bs-target="#statistik-tab-pane" type="button" role="tab" aria-controls="statistik-tab-pane" aria-selected="false" data-tippy-content-key="tooltip.mainTabs.statistik">
                         <i class="fas fa-chart-bar fa-fw me-1"></i>Statistik
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="praesentation-tab" data-bs-toggle="tab" data-bs-target="#praesentation-tab-pane" type="button" role="tab" aria-controls="praesentation-tab-pane" aria-selected="false">
+                    <button class="nav-link" id="praesentation-tab" data-bs-toggle="tab" data-bs-target="#praesentation-tab-pane" type="button" role="tab" aria-controls="praesentation-tab-pane" aria-selected="false" data-tippy-content-key="tooltip.mainTabs.praesentation">
                         <i class="fas fa-slideshare fa-fw me-1"></i>Präsentation
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="publikation-tab" data-bs-toggle="tab" data-bs-target="#publikation-tab-pane" type="button" role="tab" aria-controls="publikation-tab-pane" aria-selected="true">
+                    <button class="nav-link active" id="publikation-tab" data-bs-toggle="tab" data-bs-target="#publikation-tab-pane" type="button" role="tab" aria-controls="publikation-tab-pane" aria-selected="true" data-tippy-content-key="tooltip.mainTabs.publikation">
                         <i class="fas fa-feather-alt fa-fw me-1"></i>Publikation
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-tab-pane" type="button" role="tab" aria-controls="export-tab-pane" aria-selected="false">
+                    <button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-tab-pane" type="button" role="tab" aria-controls="export-tab-pane" aria-selected="false" data-tippy-content-key="tooltip.mainTabs.export">
                         <i class="fas fa-download fa-fw me-1"></i>Export
                     </button>
                 </li>
@@ -120,10 +120,10 @@
              <p class="text-center text-muted">Ergebnisse werden geladen...</p>
           </div>
           <div class="modal-footer">
-             <button type="button" class="btn btn-outline-secondary btn-sm" id="export-bruteforce-modal-csv" disabled data-tippy-content="Exportiert alle getesteten Kombinationen als CSV.">
+             <button type="button" class="btn btn-outline-secondary btn-sm" id="export-bruteforce-modal-csv" disabled data-tippy-content-key="tooltip.bruteForceModal.exportAllButton">
                 <i class="fas fa-file-csv me-1"></i> Alle Kombinationen (CSV)
              </button>
-             <button type="button" class="btn btn-outline-primary btn-sm" id="export-bruteforce-modal-txt" disabled data-tippy-content="Exportiert den detaillierten Brute-Force-Bericht als TXT.">
+             <button type="button" class="btn btn-outline-primary btn-sm" id="export-bruteforce-modal-txt" disabled data-tippy-content-key="tooltip.bruteForceModal.exportButton">
                  <i class="fas fa-file-alt me-1"></i> Top-Ergebnisse Bericht (TXT)
              </button>
             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" data-tippy-content="Schließt dieses Fenster ohne weitere Aktion.">Schließen</button>
@@ -159,13 +159,14 @@
 
     <script src="data/data.js"></script>
 
-    <script src="js/utils/utils.js"></script>
-
     <script src="js/config/app_config.js"></script>
     <script src="js/config/text_config.js"></script>
     <script src="js/config/publication_config.js"></script>
 
+    <script src="js/utils/utils.js"></script>
+
     <script src="js/core/data_processor.js"></script>
+    <script src="js/core/kollektiv_store.js"></script>
     <script src="js/core/t2_criteria_manager.js"></script>
     <script src="js/core/study_criteria_manager.js"></script>
 
@@ -190,6 +191,7 @@
     <script src="js/ui/view_logic/statistik_tab_logic.js"></script>
     <script src="js/ui/view_logic/praesentation_tab_logic.js"></script>
     <script src="js/ui/view_logic/publikation_tab_logic.js"></script>
+    <script src="js/ui/view_logic/export_tab_logic.js"></script>
 
     <script src="js/ui/event_handlers/general_event_handlers.js"></script>
     <script src="js/ui/event_handlers/auswertung_event_handlers.js"></script>
