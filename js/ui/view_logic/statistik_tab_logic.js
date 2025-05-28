@@ -1,38 +1,53 @@
 const statistikTabLogic = (() => {
     const TAB_ID = 'statistik-tab-pane';
     let currentStatsData = null;
-    let currentSelectedKollektiv = null;
+    let currentSelectedKollektivEinzel = null;
     let currentSelectedKollektiv1 = null;
     let currentSelectedKollektiv2 = null;
     let currentLayout = 'einzel';
 
     function initializeStatistikTab() {
         currentLayout = state.getCurrentStatsLayout() || 'einzel';
-        currentSelectedKollektiv = state.getCurrentKollektiv();
+        currentSelectedKollektivEinzel = state.getCurrentKollektiv();
         currentSelectedKollektiv1 = state.getCurrentStatsKollektiv1() || 'Gesamt';
         currentSelectedKollektiv2 = state.getCurrentStatsKollektiv2() || 'nRCT';
 
         renderStatistikTab();
-        statistikEventHandlers.setupStatistikTabEventHandlers();
+        if (typeof statistikEventHandlers !== 'undefined' && typeof statistikEventHandlers.setupStatistikTabEventHandlers === 'function') {
+            statistikEventHandlers.setupStatistikTabEventHandlers();
+        }
     }
 
     function renderStatistikTab() {
         const tabContainer = document.getElementById(TAB_ID);
         if (!tabContainer) {
-            ui_helpers.showLoadingSpinner(TAB_ID, `Container '${TAB_ID}' nicht gefunden.`);
+            if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showLoadingSpinner === 'function') {
+                ui_helpers.showLoadingSpinner(TAB_ID, `Container '${TAB_ID}' nicht gefunden.`);
+            }
             return;
         }
-        ui_helpers.showLoadingSpinner(TAB_ID, 'Lade Statistikdaten...');
+        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showLoadingSpinner === 'function') {
+            ui_helpers.showLoadingSpinner(TAB_ID, 'Lade Statistikdaten...');
+        }
 
-        const rawData = kollektivStore.getCurrentKollektivRawData();
+        const allRawData = kollektivStore.getAllProcessedData();
         const appliedT2Criteria = t2CriteriaManager.getAppliedCriteria();
         const appliedT2Logic = t2CriteriaManager.getAppliedLogic();
         const allBruteForceResults = bruteForceManager.getAllResults();
 
-        currentStatsData = statisticsService.calculateAllStatsForPublication(rawData, appliedT2Criteria, appliedT2Logic, allBruteForceResults);
+        if (typeof statisticsService !== 'undefined' && typeof statisticsService.calculateAllStatsForPublication === 'function') {
+            currentStatsData = statisticsService.calculateAllStatsForPublication(allRawData, appliedT2Criteria, appliedT2Logic, allBruteForceResults);
+        } else {
+            currentStatsData = null;
+            console.error("statisticsService.calculateAllStatsForPublication ist nicht verfügbar.");
+        }
+
 
         if (!currentStatsData) {
-            tabContainer.innerHTML = '<p class="text-center text-muted p-5">Fehler beim Laden der Statistikdaten.</p>';
+            tabContainer.innerHTML = '<p class="text-center text-muted p-5">Fehler beim Laden der Statistikdaten oder Statistik-Service nicht verfügbar.</p>';
+            if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.hideLoadingSpinner === 'function') {
+                 ui_helpers.hideLoadingSpinner(TAB_ID);
+            }
             return;
         }
         tabContainer.innerHTML = '';
@@ -44,7 +59,12 @@ const statistikTabLogic = (() => {
         tabContainer.appendChild(contentWrapper);
 
         updateStatistikContent();
-        ui_helpers.initTooltips(tabContainer);
+        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.initTooltips === 'function') {
+            ui_helpers.initTooltips(tabContainer);
+        }
+         if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.hideLoadingSpinner === 'function') {
+            ui_helpers.hideLoadingSpinner(TAB_ID);
+        }
     }
 
     function createLayoutControls() {
@@ -52,7 +72,7 @@ const statistikTabLogic = (() => {
         const form = ui_helpers.createElementWithAttributes('form', { class: 'row gy-2 gx-3 align-items-center' });
 
         const layoutGroup = ui_helpers.createElementWithAttributes('div', { class: 'col-auto' });
-        layoutGroup.appendChild(ui_helpers.createElementWithAttributes('label', { class: 'form-label me-2' }, 'Ansicht:'));
+        layoutGroup.appendChild(ui_helpers.createElementWithAttributes('label', { class: 'form-label me-2 d-block' }, 'Ansicht:'));
         const radioEinzel = uiComponents.createCheckbox({ id: 'stats-layout-einzel', name: 'statsLayout', label: 'Einzelnes Kollektiv', value: 'einzel', checked: currentLayout === 'einzel', wrapperClass: 'form-check form-check-inline', onChange: handleLayoutChange });
         const radioVergleich = uiComponents.createCheckbox({ id: 'stats-layout-vergleich', name: 'statsLayout', label: 'Kollektivvergleich', value: 'vergleich', checked: currentLayout === 'vergleich', wrapperClass: 'form-check form-check-inline', onChange: handleLayoutChange });
         layoutGroup.appendChild(radioEinzel);
@@ -60,10 +80,14 @@ const statistikTabLogic = (() => {
         form.appendChild(layoutGroup);
 
         const kollektivOptions = [
-            { value: 'Gesamt', text: 'Gesamt' },
-            { value: 'direkt OP', text: 'Direkt OP' },
-            { value: 'nRCT', text: 'nRCT' }
+            { value: 'Gesamt', text: getKollektivDisplayName('Gesamt') || 'Gesamt' },
+            { value: 'direkt OP', text: getKollektivDisplayName('direkt OP') || 'Direkt OP' },
+            { value: 'nRCT', text: getKollektivDisplayName('nRCT') || 'nRCT' }
         ];
+
+        const kollektivEinzelGroup = ui_helpers.createElementWithAttributes('div', { class: 'col-auto', id: 'stats-kollektiv-einzel-group' });
+        kollektivEinzelGroup.appendChild(uiComponents.createSelect({ id: 'stats-kollektiv-einzel-select', name: 'statsKollektivEinzel', label: 'Kollektiv (Einzelansicht):', selectOptions: kollektivOptions, value: currentSelectedKollektivEinzel, selectClass: 'form-select-sm', wrapperClass: 'mb-0', onChange: handleKollektivEinzelChange, tooltipKey: 'tooltip.statistikKollektiv1'}));
+        form.appendChild(kollektivEinzelGroup);
 
         const kollektiv1Group = ui_helpers.createElementWithAttributes('div', { class: 'col-auto', id: 'stats-kollektiv1-group' });
         kollektiv1Group.appendChild(uiComponents.createSelect({ id: 'stats-kollektiv1-select', name: 'statsKollektiv1', label: 'Kollektiv 1:', selectOptions: kollektivOptions, value: currentSelectedKollektiv1, selectClass: 'form-select-sm', wrapperClass: 'mb-0', onChange: handleKollektiv1Change, tooltipKey: 'tooltip.statistikKollektiv1' }));
@@ -79,40 +103,56 @@ const statistikTabLogic = (() => {
     }
 
     function toggleKollektivSelectsVisibility() {
+        const kollektivEinzelGroup = document.getElementById('stats-kollektiv-einzel-group');
         const kollektiv1Group = document.getElementById('stats-kollektiv1-group');
         const kollektiv2Group = document.getElementById('stats-kollektiv2-group');
-        if (kollektiv1Group && kollektiv2Group) {
+
+        if (kollektivEinzelGroup) {
+            kollektivEinzelGroup.style.display = currentLayout === 'einzel' ? 'block' : 'none';
+        }
+        if (kollektiv1Group) {
             kollektiv1Group.style.display = currentLayout === 'vergleich' ? 'block' : 'none';
+        }
+        if (kollektiv2Group) {
             kollektiv2Group.style.display = currentLayout === 'vergleich' ? 'block' : 'none';
-            const label1 = kollektiv1Group.querySelector('label');
-            if (label1) label1.textContent = currentLayout === 'vergleich' ? 'Kollektiv 1:' : 'Kollektiv (Einzelansicht):';
         }
     }
 
     function updateStatistikContent() {
         const contentWrapper = document.getElementById('statistik-content-wrapper');
         if (!contentWrapper || !currentStatsData) return;
-        contentWrapper.innerHTML = '';
-        ui_helpers.showLoadingSpinner('statistik-content-wrapper', 'Statistiken werden aufbereitet...');
 
-        setTimeout(() => { // Allow spinner to render
+        contentWrapper.innerHTML = '';
+        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showLoadingSpinner === 'function') {
+            ui_helpers.showLoadingSpinner('statistik-content-wrapper', 'Statistiken werden aufbereitet...');
+        }
+
+        setTimeout(() => {
             if (currentLayout === 'einzel') {
-                const dataForKollektiv = currentStatsData[currentSelectedKollektiv];
+                const dataForKollektiv = currentStatsData[currentSelectedKollektivEinzel];
                 if (dataForKollektiv) {
-                    contentWrapper.appendChild(renderSingleKollektivStats(dataForKollektiv, currentSelectedKollektiv));
+                    contentWrapper.appendChild(renderSingleKollektivStats(dataForKollektiv, currentSelectedKollektivEinzel));
                 } else {
-                    contentWrapper.innerHTML = `<p class="text-center text-muted p-4">Keine Daten für Kollektiv '${getKollektivDisplayName(currentSelectedKollektiv)}' verfügbar.</p>`;
+                    contentWrapper.innerHTML = `<p class="text-center text-muted p-4">Keine Daten für Kollektiv '${getKollektivDisplayName(currentSelectedKollektivEinzel)}' verfügbar.</p>`;
                 }
             } else if (currentLayout === 'vergleich') {
                 const dataKoll1 = currentStatsData[currentSelectedKollektiv1];
                 const dataKoll2 = currentStatsData[currentSelectedKollektiv2];
                 if (dataKoll1 && dataKoll2) {
-                    contentWrapper.appendChild(renderVergleichKollektivStats(dataKoll1, dataKoll2, currentSelectedKollektiv1, currentSelectedKollektiv2));
+                    const allRawData = kollektivStore.getAllProcessedData();
+                    const data1Filtered = dataProcessor.filterDataByKollektiv(allRawData, currentSelectedKollektiv1);
+                    const data2Filtered = dataProcessor.filterDataByKollektiv(allRawData, currentSelectedKollektiv2);
+                    contentWrapper.appendChild(renderVergleichKollektivStats(dataKoll1, dataKoll2, currentSelectedKollektiv1, currentSelectedKollektiv2, data1Filtered, data2Filtered));
                 } else {
                     contentWrapper.innerHTML = `<p class="text-center text-muted p-4">Nicht genügend Daten für Kollektivvergleich vorhanden.</p>`;
                 }
             }
-            ui_helpers.initTooltips(contentWrapper);
+            if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.initTooltips === 'function') {
+                ui_helpers.initTooltips(contentWrapper);
+            }
+            if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.hideLoadingSpinner === 'function') {
+                ui_helpers.hideLoadingSpinner('statistik-content-wrapper');
+            }
         }, 50);
     }
 
@@ -124,21 +164,21 @@ const statistikTabLogic = (() => {
         }
 
         const appliedT2Criteria = t2CriteriaManager.getAppliedCriteria();
-        const appliedT2Logic = t2CriteriaManager.getAppliedLogic();
         const appliedCriteriaDisplayName = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME;
+        const kollektivDisplayName = getKollektivDisplayName(kollektivId);
 
-        fragment.appendChild(createSectionCard('Deskriptive Statistik', renderDescriptiveStatsSection(stats.deskriptiv, kollektivId), 'tooltip.deskriptiveStatistik.cardTitle', {KOLLEKTIV: getKollektivDisplayName(kollektivId)}));
-        fragment.appendChild(createSectionCard('Diagnostische Güte: Avocado Sign (AS)', renderDiagnosticPerformanceSection(stats.gueteAS, 'AS', kollektivId, 'as'), 'tooltip.diagnostischeGueteAS.cardTitle', {KOLLEKTIV: getKollektivDisplayName(kollektivId)}));
-        fragment.appendChild(createSectionCard(`Diagnostische Güte: ${appliedCriteriaDisplayName}`, renderDiagnosticPerformanceSection(stats.gueteT2_angewandt, appliedCriteriaDisplayName, kollektivId, 't2'), 'tooltip.diagnostischeGueteT2.cardTitle', {KOLLEKTIV: getKollektivDisplayName(kollektivId)}));
-        fragment.appendChild(createSectionCard(`Statistischer Vergleich: AS vs. ${appliedCriteriaDisplayName}`, renderComparisonSection(stats.vergleichASvsT2_angewandt, 'AS', appliedCriteriaDisplayName, kollektivId), 'tooltip.statistischerVergleichASvsT2.cardTitle', {KOLLEKTIV: getKollektivDisplayName(kollektivId)}));
-        fragment.appendChild(createSectionCard('Assoziation mit N-Status', renderAssociationSection(stats.assoziation_angewandt, kollektivId, appliedT2Criteria), 'tooltip.assoziationEinzelkriterien.cardTitle', {KOLLEKTIV: getKollektivDisplayName(kollektivId)}));
-        fragment.appendChild(createSectionCard('Explorative Lymphknoten-Ebene Analyse', renderLymphNodeLevelSection(stats.lymphknotenEbene, kollektivId), 'tooltip.explorativeLKAnalyse.cardTitle', {KOLLEKTIV: getKollektivDisplayName(kollektivId)}));
-        fragment.appendChild(createSectionCard('Vergleich verschiedener Kriteriensets', renderCriteriaComparisonSection(currentStatsData, kollektivId), 'tooltip.criteriaComparisonTable.cardTitle', {GLOBAL_KOLLEKTIV_NAME: getKollektivDisplayName(kollektivId)}));
+        fragment.appendChild(createSectionCard('Deskriptive Statistik', renderDescriptiveStatsSection(stats.deskriptiv, kollektivId), 'tooltip.deskriptiveStatistik.cardTitle', {KOLLEKTIV: kollektivDisplayName}));
+        fragment.appendChild(createSectionCard('Diagnostische Güte: Avocado Sign (AS)', renderDiagnosticPerformanceSection(stats.gueteAS, 'AS', kollektivId, 'as'), 'tooltip.diagnostischeGueteAS.cardTitle', {KOLLEKTIV: kollektivDisplayName}));
+        fragment.appendChild(createSectionCard(`Diagnostische Güte: ${appliedCriteriaDisplayName}`, renderDiagnosticPerformanceSection(stats.gueteT2_angewandt, appliedCriteriaDisplayName, kollektivId, 't2_applied'), 'tooltip.diagnostischeGueteT2.cardTitle', {KOLLEKTIV: kollektivDisplayName}));
+        fragment.appendChild(createSectionCard(`Statistischer Vergleich: AS vs. ${appliedCriteriaDisplayName}`, renderComparisonSection(stats.vergleichASvsT2_angewandt, 'AS', appliedCriteriaDisplayName, kollektivId), 'tooltip.statistischerVergleichASvsT2.cardTitle', {KOLLEKTIV: kollektivDisplayName}));
+        fragment.appendChild(createSectionCard('Assoziation mit N-Status', renderAssociationSection(stats.assoziation_angewandt, kollektivId, appliedT2Criteria), 'tooltip.assoziationEinzelkriterien.cardTitle', {KOLLEKTIV: kollektivDisplayName}));
+        fragment.appendChild(createSectionCard('Explorative Lymphknoten-Ebene Analyse', renderLymphNodeLevelSection(stats.lymphknotenEbene, kollektivId), 'tooltip.explorativeLKAnalyse.cardTitle', {KOLLEKTIV: kollektivDisplayName}));
+        fragment.appendChild(createSectionCard('Vergleich verschiedener Kriteriensets', renderCriteriaComparisonSection(currentStatsData, kollektivId), 'tooltip.criteriaComparisonTable.cardTitle', {GLOBAL_KOLLEKTIV_NAME: kollektivDisplayName}));
 
         return fragment;
     }
 
-    function renderVergleichKollektivStats(statsKoll1, statsKoll2, kollektivId1, kollektivId2) {
+    function renderVergleichKollektivStats(statsKoll1, statsKoll2, kollektivId1, kollektivId2, rawDataKoll1, rawDataKoll2) {
         const fragment = document.createDocumentFragment();
         if (!statsKoll1 || !statsKoll2) {
             fragment.appendChild(ui_helpers.createElementWithAttributes('p', {class: 'text-muted p-3'}, 'Daten für Kollektivvergleich unvollständig.'));
@@ -146,8 +186,8 @@ const statistikTabLogic = (() => {
         }
 
         const comparisonResults = statisticsService.compareCohorts(
-            dataProcessor.getFilteredData(kollektivStore.getCurrentKollektivRawData(), kollektivId1),
-            dataProcessor.getFilteredData(kollektivStore.getCurrentKollektivRawData(), kollektivId2),
+            rawDataKoll1,
+            rawDataKoll2,
             t2CriteriaManager.getAppliedCriteria(),
             t2CriteriaManager.getAppliedLogic()
         );
@@ -156,13 +196,13 @@ const statistikTabLogic = (() => {
 
         const headerKoll1 = `Details für Kollektiv 1: ${getKollektivDisplayName(kollektivId1)}`;
         const sectionKoll1 = ui_helpers.createElementWithAttributes('div', {class: 'mt-4'});
-        sectionKoll1.appendChild(ui_helpers.createElementWithAttributes('h3', {class: 'mb-3'}, headerKoll1));
+        sectionKoll1.appendChild(ui_helpers.createElementWithAttributes('h3', {class: 'mb-3 h5'}, headerKoll1));
         sectionKoll1.appendChild(renderSingleKollektivStats(statsKoll1, kollektivId1));
         fragment.appendChild(sectionKoll1);
 
         const headerKoll2 = `Details für Kollektiv 2: ${getKollektivDisplayName(kollektivId2)}`;
         const sectionKoll2 = ui_helpers.createElementWithAttributes('div', {class: 'mt-4'});
-        sectionKoll2.appendChild(ui_helpers.createElementWithAttributes('h3', {class: 'mb-3'}, headerKoll2));
+        sectionKoll2.appendChild(ui_helpers.createElementWithAttributes('h3', {class: 'mb-3 h5'}, headerKoll2));
         sectionKoll2.appendChild(renderSingleKollektivStats(statsKoll2, kollektivId2));
         fragment.appendChild(sectionKoll2);
 
@@ -174,6 +214,8 @@ const statistikTabLogic = (() => {
             headerText: headerText,
             bodyContent: bodyElement,
             cardClass: 'mb-3 shadow-sm stats-section-card',
+            bodyClass: 'p-3',
+            headerClass: 'bg-primary-light',
             extraAttributes: tooltipKey ? { 'data-tippy-content-key': tooltipKey, 'data-tippy-replacements': JSON.stringify(tooltipReplacements) } : {}
         });
     }
@@ -188,17 +230,18 @@ const statistikTabLogic = (() => {
         const chartRow = ui_helpers.createElementWithAttributes('div', {class: 'row mt-3 g-3'});
         const ageChartCol = ui_helpers.createElementWithAttributes('div', {class: 'col-md-6'});
         const ageChartContainerId = `chart-stat-age-${kollektivId.replace(/\s/g,'_')}`;
-        ageChartCol.appendChild(ui_helpers.createElementWithAttributes('div', {id: ageChartContainerId, class: 'chart-container-wrapper'}));
+        ageChartCol.appendChild(ui_helpers.createElementWithAttributes('div', {id: ageChartContainerId, class: 'chart-container-wrapper', style: 'min-height: 300px'}));
         chartRow.appendChild(ageChartCol);
-        setTimeout(() => chartManager.manageChartContainer(ageChartContainerId, chartRenderer.renderHistogram, deskriptivStats.alterData, {xAxisLabel: UI_TEXTS.axisLabels.age, yAxisLabel: UI_TEXTS.axisLabels.patientCount, title: UI_TEXTS.chartTitles.ageDistribution, kollektivForExport: kollektivId, chartNameForFilename: 'Altersverteilung'}), 0);
+
+        setTimeout(() => chartManager.manageChartContainer(ageChartContainerId, chartRenderer.renderHistogram, deskriptivStats.alterData || [], {xAxisLabel: UI_TEXTS.axisLabels.age, yAxisLabel: UI_TEXTS.axisLabels.patientCount, title: UI_TEXTS.chartTitles.ageDistribution.replace('{Kollektiv}', getKollektivDisplayName(kollektivId)), kollektivForExport: kollektivId, chartNameForFilename: 'Altersverteilung'}), 0);
 
         const genderChartCol = ui_helpers.createElementWithAttributes('div', {class: 'col-md-6'});
         const genderChartContainerId = `chart-stat-gender-${kollektivId.replace(/\s/g,'_')}`;
-        genderChartCol.appendChild(ui_helpers.createElementWithAttributes('div', {id: genderChartContainerId, class: 'chart-container-wrapper'}));
+        genderChartCol.appendChild(ui_helpers.createElementWithAttributes('div', {id: genderChartContainerId, class: 'chart-container-wrapper', style: 'min-height: 300px'}));
         chartRow.appendChild(genderChartCol);
         const genderData = [{label: UI_TEXTS.legendLabels.male, value: deskriptivStats.geschlecht.m}, {label: UI_TEXTS.legendLabels.female, value: deskriptivStats.geschlecht.f}];
         if(deskriptivStats.geschlecht.unbekannt > 0) genderData.push({label: UI_TEXTS.legendLabels.unknownGender, value: deskriptivStats.geschlecht.unbekannt});
-        setTimeout(() => chartManager.manageChartContainer(genderChartContainerId, chartRenderer.renderPieChart, genderData, {title: UI_TEXTS.chartTitles.genderDistribution, kollektivForExport: kollektivId, chartNameForFilename: 'Geschlechterverteilung'}), 0);
+        setTimeout(() => chartManager.manageChartContainer(genderChartContainerId, chartRenderer.renderPieChart, genderData, {title: UI_TEXTS.chartTitles.genderDistribution.replace('{Kollektiv}', getKollektivDisplayName(kollektivId)), kollektivForExport: kollektivId, chartNameForFilename: 'Geschlechterverteilung'}), 0);
 
         wrapper.appendChild(chartRow);
         return wrapper;
@@ -219,7 +262,7 @@ const statistikTabLogic = (() => {
             auc_ci_upper: performanceData.auc?.ci?.upper,
         };
         const rocChartContainerId = `chart-roc-${methodKey}-${kollektivId.replace(/\s/g,'_')}`;
-        wrapper.appendChild(ui_helpers.createElementWithAttributes('div', {id: rocChartContainerId, class: 'chart-container-wrapper mt-3'}));
+        wrapper.appendChild(ui_helpers.createElementWithAttributes('div', {id: rocChartContainerId, class: 'chart-container-wrapper mt-3', style: 'min-height: 350px'}));
         setTimeout(() => chartManager.manageChartContainer(rocChartContainerId, chartRenderer.renderROCCurve, rocData, {title: `${UI_TEXTS.chartTitles.rocCurve.replace('{Method}', methodName)}`, kollektivForExport: kollektivId, chartNameForFilename: `ROC_${methodName}`}), 0);
 
         return wrapper;
@@ -294,12 +337,12 @@ const statistikTabLogic = (() => {
 
         if (forestPlotDataOR.length > 0) {
             const forestORContainerId = `chart-forest-or-${kollektivId.replace(/\s/g,'_')}`;
-            wrapper.appendChild(ui_helpers.createElementWithAttributes('div', {id: forestORContainerId, class: 'chart-container-wrapper mt-3'}));
+            wrapper.appendChild(ui_helpers.createElementWithAttributes('div', {id: forestORContainerId, class: 'chart-container-wrapper mt-3', style: 'min-height: 300px'}));
             setTimeout(() => chartManager.manageChartContainer(forestORContainerId, chartRenderer.renderForestPlot, forestPlotDataOR, { title: 'Forest Plot: Odds Ratios vs. N-Status', xAxisLabel: UI_TEXTS.axisLabels.oddsRatio, effectMeasureName: 'OR', logScale: true, kollektivForExport: kollektivId, chartNameForFilename: `Forest_OR`}), 0);
         }
         if (forestPlotDataRD.length > 0) {
             const forestRDContainerId = `chart-forest-rd-${kollektivId.replace(/\s/g,'_')}`;
-            wrapper.appendChild(ui_helpers.createElementWithAttributes('div', {id: forestRDContainerId, class: 'chart-container-wrapper mt-3'}));
+            wrapper.appendChild(ui_helpers.createElementWithAttributes('div', {id: forestRDContainerId, class: 'chart-container-wrapper mt-3', style: 'min-height: 300px'}));
             setTimeout(() => chartManager.manageChartContainer(forestRDContainerId, chartRenderer.renderForestPlot, forestPlotDataRD, { title: 'Forest Plot: Risk Differences vs. N-Status', xAxisLabel: UI_TEXTS.axisLabels.riskDifference, effectMeasureName: 'RD (%)', logScale: false, kollektivForExport: kollektivId, chartNameForFilename: `Forest_RD`}), 0);
         }
         return wrapper;
@@ -338,13 +381,14 @@ const statistikTabLogic = (() => {
     function renderCriteriaComparisonSection(allStats, currentKollektivId) {
         const wrapper = ui_helpers.createElementWithAttributes('div');
         const dataForTable = [];
+        const kollektivDisplayName = getKollektivDisplayName(currentKollektivId);
 
         if(allStats[currentKollektivId]?.gueteAS) {
             const asPerf = allStats[currentKollektivId].gueteAS;
             dataForTable.push({
                 id: APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID, name: APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME,
                 sens: asPerf.sens.value, spez: asPerf.spez.value, ppv: asPerf.ppv.value, npv: asPerf.npv.value, acc: asPerf.acc.value, auc: asPerf.auc.value,
-                specificKollektivN: allStats[currentKollektivId].deskriptiv?.anzahlPatienten
+                specificKollektivN: allStats[currentKollektivId].deskriptiv?.anzahlPatienten, specificKollektivName: kollektivDisplayName
             });
         }
         if(allStats[currentKollektivId]?.gueteT2_angewandt) {
@@ -352,26 +396,21 @@ const statistikTabLogic = (() => {
             dataForTable.push({
                 id: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME,
                 sens: t2Perf.sens.value, spez: t2Perf.spez.value, ppv: t2Perf.ppv.value, npv: t2Perf.npv.value, acc: t2Perf.acc.value, auc: t2Perf.auc.value,
-                specificKollektivN: allStats[currentKollektivId].deskriptiv?.anzahlPatienten
+                specificKollektivN: allStats[currentKollektivId].deskriptiv?.anzahlPatienten, specificKollektivName: kollektivDisplayName
             });
         }
         if (allStats[currentKollektivId]?.gueteT2_literatur) {
             PUBLICATION_CONFIG.literatureCriteriaSets.forEach(studySetConf => {
-                const perfData = allStats[currentKollektivId].gueteT2_literatur[studySetConf.id];
+                const studyDetails = studyT2CriteriaManager.getStudyCriteriaSetById(studySetConf.id);
+                let kollektivForEval = studyDetails?.applicableKollektiv || currentKollektivId;
+                const perfData = allStats[kollektivForEval]?.gueteT2_literatur?.[studySetConf.id];
+
                 if (perfData) {
-                    const studyDetails = studyT2CriteriaManager.getStudyCriteriaSetById(studySetConf.id);
-                    let kollektivForEval = currentKollektivId;
-                    let nForEval = allStats[currentKollektivId].deskriptiv?.anzahlPatienten;
-
-                    if (studyDetails?.applicableKollektiv && studyDetails.applicableKollektiv !== currentKollektivId) {
-                        kollektivForEval = studyDetails.applicableKollektiv;
-                        nForEval = allStats[kollektivForEval]?.deskriptiv?.anzahlPatienten;
-                    }
-
+                    let nForEval = allStats[kollektivForEval]?.deskriptiv?.anzahlPatienten;
                     dataForTable.push({
                         id: studySetConf.id, name: studyDetails?.name || studySetConf.id,
                         sens: perfData.sens.value, spez: perfData.spez.value, ppv: perfData.ppv.value, npv: perfData.npv.value, acc: perfData.acc.value, auc: perfData.auc.value,
-                        specificKollektivName: kollektivForEval,
+                        specificKollektivName: getKollektivDisplayName(kollektivForEval),
                         specificKollektivN: nForEval
                     });
                 }
@@ -397,7 +436,8 @@ const statistikTabLogic = (() => {
         const addRow = (metricName, method, compObj) => { const r = document.createElement('tr'); r.appendChild(ui_helpers.createElementWithAttributes('td',{},metricName)); r.appendChild(ui_helpers.createElementWithAttributes('td',{},method)); r.appendChild(ui_helpers.createElementWithAttributes('td',{},`${getPValueText(compObj?.pValue)} ${getStatisticalSignificanceSymbol(compObj?.pValue)}`)); r.appendChild(ui_helpers.createElementWithAttributes('td',{},compObj?.testName || '--')); tbody.appendChild(r);};
 
         ['Accuracy', 'AUC', 'Sensitivität', 'Spezifität'].forEach(metricDisplayName => {
-            const metricKey = metricDisplayName.toLowerCase() + "Comparison";
+            const metricKeyLookup = { 'Accuracy': 'accuracyComparison', 'AUC': 'aucComparison', 'Sensitivität': 'sensitivityComparison', 'Spezifität': 'specificityComparison'};
+            const metricKey = metricKeyLookup[metricDisplayName];
             if (comparisonResults[metricKey]) {
                 if(comparisonResults[metricKey].as) addRow(metricDisplayName, 'AS', comparisonResults[metricKey].as);
                 if(comparisonResults[metricKey].t2) addRow(metricDisplayName, 'T2 (angewandt)', comparisonResults[metricKey].t2);
@@ -417,25 +457,40 @@ const statistikTabLogic = (() => {
             updateStatistikContent();
         }
     }
-
+    function handleKollektivEinzelChange(event) {
+        const newKollektiv = event.target.value;
+        if (currentSelectedKollektivEinzel !== newKollektiv) {
+            currentSelectedKollektivEinzel = newKollektiv;
+            if (currentLayout === 'einzel') {
+                updateStatistikContent();
+            }
+        }
+    }
     function handleKollektiv1Change(event) {
         const newKollektiv = event.target.value;
-        if (state.setCurrentStatsKollektiv1(newKollektiv)) {
+         if (state.setCurrentStatsKollektiv1(newKollektiv)) { // state manages persistence
             currentSelectedKollektiv1 = newKollektiv;
             if (currentLayout === 'vergleich') updateStatistikContent();
         }
     }
     function handleKollektiv2Change(event) {
         const newKollektiv = event.target.value;
-         if (state.setCurrentStatsKollektiv2(newKollektiv)) {
+         if (state.setCurrentStatsKollektiv2(newKollektiv)) { // state manages persistence
             currentSelectedKollektiv2 = newKollektiv;
             if (currentLayout === 'vergleich') updateStatistikContent();
         }
     }
-     function handleGlobalKollektivChange() {
-        currentSelectedKollektiv = state.getCurrentKollektiv();
-        if (currentLayout === 'einzel') {
-            updateStatistikContent();
+     function handleGlobalDataChange() {
+        const newGlobalKollektiv = state.getCurrentKollektiv();
+        if (currentSelectedKollektivEinzel !== newGlobalKollektiv) {
+            currentSelectedKollektivEinzel = newGlobalKollektiv;
+            if (currentLayout === 'einzel') {
+                 if (document.getElementById(TAB_ID)?.classList.contains('active')) {
+                    renderStatistikTab();
+                 }
+            }
+        } else if (document.getElementById(TAB_ID)?.classList.contains('active')) {
+             renderStatistikTab();
         }
     }
 
@@ -443,6 +498,6 @@ const statistikTabLogic = (() => {
         init: initializeStatistikTab,
         render: renderStatistikTab,
         refresh: renderStatistikTab,
-        handleGlobalKollektivChange
+        handleGlobalDataChange
     };
 })();
