@@ -1,38 +1,42 @@
 const state = (() => {
     let currentState = {};
 
-    const defaultState = {
-        currentKollektiv: APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV,
-        datenTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT),
-        auswertungTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT),
-        currentPublikationLang: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG,
-        currentPublikationSection: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION,
-        currentPublikationBruteForceMetric: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC,
-        currentStatsLayout: APP_CONFIG.DEFAULT_SETTINGS.STATS_LAYOUT,
-        currentStatsKollektiv1: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1,
-        currentStatsKollektiv2: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2,
-        currentPresentationView: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW,
-        currentPresentationStudyId: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID,
-        activeTabId: 'publikation-tab'
-    };
-
     function init() {
+        // Use getAppConfig() to ensure APP_CONFIG is fully loaded and available
+        const appConfig = getAppConfig();
+
+        const defaultState = {
+            currentKollektiv: appConfig.DEFAULT_SETTINGS.KOLLEKTIV,
+            datenTableSort: cloneDeep(appConfig.DEFAULT_SETTINGS.DATEN_TABLE_SORT),
+            auswertungTableSort: cloneDeep(appConfig.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT),
+            currentPublikationLang: appConfig.DEFAULT_SETTINGS.PUBLIKATION_LANG,
+            currentPublikationSection: appConfig.DEFAULT_SETTINGS.PUBLIKATION_SECTION,
+            currentPublikationBruteForceMetric: appConfig.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC,
+            currentStatsLayout: appConfig.DEFAULT_SETTINGS.STATS_LAYOUT,
+            currentStatsKollektiv1: appConfig.DEFAULT_SETTINGS.STATS_KOLLEKTIV1,
+            currentStatsKollektiv2: appConfig.DEFAULT_SETTINGS.STATS_KOLLEKTIV2,
+            currentPresentationView: appConfig.DEFAULT_SETTINGS.PRESENTATION_VIEW,
+            currentPresentationStudyId: appConfig.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID,
+            activeTabId: 'publikation-tab'
+        };
+
         currentState = {
-            currentKollektiv: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV) ?? defaultState.currentKollektiv,
-            currentPublikationLang: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG) ?? defaultState.currentPublikationLang,
-            currentPublikationSection: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION) ?? defaultState.currentPublikationSection,
-            currentPublikationBruteForceMetric: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC) ?? defaultState.currentPublikationBruteForceMetric,
-            currentStatsLayout: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT) ?? defaultState.currentStatsLayout,
-            currentStatsKollektiv1: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1) ?? defaultState.currentStatsKollektiv1,
-            currentStatsKollektiv2: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2) ?? defaultState.currentStatsKollektiv2,
-            currentPresentationView: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW) ?? defaultState.currentPresentationView,
-            currentPresentationStudyId: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID) ?? defaultState.currentPresentationStudyId,
+            currentKollektiv: loadFromLocalStorage(appConfig.STORAGE_KEYS.CURRENT_KOLLEKTIV) ?? defaultState.currentKollektiv,
+            currentPublikationLang: loadFromLocalStorage(appConfig.STORAGE_KEYS.PUBLIKATION_LANG) ?? defaultState.currentPublikationLang,
+            currentPublikationSection: loadFromLocalStorage(appConfig.STORAGE_KEYS.PUBLIKATION_SECTION) ?? defaultState.currentPublikationSection,
+            currentPublikationBruteForceMetric: loadFromLocalStorage(appConfig.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC) ?? defaultState.currentPublikationBruteForceMetric,
+            currentStatsLayout: loadFromLocalStorage(appConfig.STORAGE_KEYS.STATS_LAYOUT) ?? defaultState.currentStatsLayout,
+            currentStatsKollektiv1: loadFromLocalStorage(appConfig.STORAGE_KEYS.STATS_KOLLEKTIV1) ?? defaultState.currentStatsKollektiv1,
+            currentStatsKollektiv2: loadFromLocalStorage(appConfig.STORAGE_KEYS.STATS_KOLLEKTIV2) ?? defaultState.currentStatsKollektiv2,
+            currentPresentationView: loadFromLocalStorage(appConfig.STORAGE_KEYS.PRESENTATION_VIEW) ?? defaultState.currentPresentationView,
+            currentPresentationStudyId: loadFromLocalStorage(appConfig.STORAGE_KEYS.PRESENTATION_STUDY_ID) ?? defaultState.currentPresentationStudyId,
             datenTableSort: cloneDeep(defaultState.datenTableSort),
             auswertungTableSort: cloneDeep(defaultState.auswertungTableSort),
             activeTabId: defaultState.activeTabId
         };
-        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) {
-            localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
+        // Remove old storage key if it exists, to ensure consistency
+        if (localStorage.getItem('methodenLang')) { // Old key was 'methodenLang'
+            localStorage.removeItem('methodenLang');
         }
         console.log("State Manager initialisiert mit:", currentState);
     }
@@ -44,7 +48,7 @@ const state = (() => {
     function setCurrentKollektiv(newKollektiv) {
         if (typeof newKollektiv === 'string' && currentState.currentKollektiv !== newKollektiv) {
             currentState.currentKollektiv = newKollektiv;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV, currentState.currentKollektiv);
+            saveToLocalStorage(getAppConfig().STORAGE_KEYS.CURRENT_KOLLEKTIV, currentState.currentKollektiv);
             return true;
         }
         return false;
@@ -85,7 +89,7 @@ const state = (() => {
     function setCurrentPublikationLang(newLang) {
         if ((newLang === 'de' || newLang === 'en') && currentState.currentPublikationLang !== newLang) {
             currentState.currentPublikationLang = newLang;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG, currentState.currentPublikationLang);
+            saveToLocalStorage(getAppConfig().STORAGE_KEYS.PUBLIKATION_LANG, currentState.currentPublikationLang);
             return true;
         }
         return false;
@@ -96,10 +100,12 @@ const state = (() => {
     }
 
     function setCurrentPublikationSection(newSectionId) {
-        const isValidSection = PUBLICATION_CONFIG.sections.some(section => section.id === newSectionId);
+        // Use getAppConfig() to access PUBLICATION_CONFIG safely
+        const publicationConfig = getAppConfig().PUBLICATION_CONFIG;
+        const isValidSection = publicationConfig.sections.some(section => section.id === newSectionId);
         if (typeof newSectionId === 'string' && isValidSection && currentState.currentPublikationSection !== newSectionId) {
             currentState.currentPublikationSection = newSectionId;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION, currentState.currentPublikationSection);
+            saveToLocalStorage(getAppConfig().STORAGE_KEYS.PUBLIKATION_SECTION, currentState.currentPublikationSection);
             return true;
         }
         if (!isValidSection) {
@@ -113,10 +119,12 @@ const state = (() => {
     }
 
     function setCurrentPublikationBruteForceMetric(newMetric) {
-        const isValidMetric = PUBLICATION_CONFIG.bruteForceMetricsForPublication.some(m => m.value === newMetric);
+        // Use getAppConfig() to access PUBLICATION_CONFIG safely
+        const publicationConfig = getAppConfig().PUBLICATION_CONFIG;
+        const isValidMetric = publicationConfig.bruteForceMetricsForPublication.some(m => m.value === newMetric);
         if (isValidMetric && currentState.currentPublikationBruteForceMetric !== newMetric) {
             currentState.currentPublikationBruteForceMetric = newMetric;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC, currentState.currentPublikationBruteForceMetric);
+            saveToLocalStorage(getAppConfig().STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC, currentState.currentPublikationBruteForceMetric);
             return true;
         }
         return false;
@@ -129,7 +137,7 @@ const state = (() => {
     function setCurrentStatsLayout(newLayout) {
         if ((newLayout === 'einzel' || newLayout === 'vergleich') && currentState.currentStatsLayout !== newLayout) {
             currentState.currentStatsLayout = newLayout;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT, currentState.currentStatsLayout);
+            saveToLocalStorage(getAppConfig().STORAGE_KEYS.STATS_LAYOUT, currentState.currentStatsLayout);
             return true;
         }
         return false;
@@ -142,7 +150,7 @@ const state = (() => {
     function setCurrentStatsKollektiv1(newKollektiv) {
          if (typeof newKollektiv === 'string' && currentState.currentStatsKollektiv1 !== newKollektiv) {
             currentState.currentStatsKollektiv1 = newKollektiv;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1, currentState.currentStatsKollektiv1);
+            saveToLocalStorage(getAppConfig().STORAGE_KEYS.STATS_KOLLEKTIV1, currentState.currentStatsKollektiv1);
             return true;
         }
         return false;
@@ -155,7 +163,7 @@ const state = (() => {
     function setCurrentStatsKollektiv2(newKollektiv) {
          if (typeof newKollektiv === 'string' && currentState.currentStatsKollektiv2 !== newKollektiv) {
             currentState.currentStatsKollektiv2 = newKollektiv;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2, currentState.currentStatsKollektiv2);
+            saveToLocalStorage(getAppConfig().STORAGE_KEYS.STATS_KOLLEKTIV2, currentState.currentStatsKollektiv2);
             return true;
         }
         return false;
@@ -168,11 +176,11 @@ const state = (() => {
     function setCurrentPresentationView(newView) {
         if ((newView === 'as-pur' || newView === 'as-vs-t2') && currentState.currentPresentationView !== newView) {
             currentState.currentPresentationView = newView;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW, currentState.currentPresentationView);
+            saveToLocalStorage(getAppConfig().STORAGE_KEYS.PRESENTATION_VIEW, currentState.currentPresentationView);
             if (newView === 'as-pur') {
                 setCurrentPresentationStudyId(null); 
             } else if (!currentState.currentPresentationStudyId && newView === 'as-vs-t2') {
-                setCurrentPresentationStudyId(APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID);
+                setCurrentPresentationStudyId(getAppConfig().SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID);
             }
             return true;
         }
@@ -187,7 +195,7 @@ const state = (() => {
         const newStudyIdValue = newStudyId === undefined ? null : newStudyId;
         if (currentState.currentPresentationStudyId !== newStudyIdValue) {
             currentState.currentPresentationStudyId = newStudyIdValue;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID, currentState.currentPresentationStudyId);
+            saveToLocalStorage(getAppConfig().STORAGE_KEYS.PRESENTATION_STUDY_ID, currentState.currentPresentationStudyId);
             return true;
         }
         return false;
@@ -203,6 +211,15 @@ const state = (() => {
             return true;
         }
         return false;
+    }
+
+    function getCurrentChartSettings() {
+        // This function retrieves chart settings from APP_CONFIG.
+        // It does not directly manage state within the state module itself,
+        // but provides a centralized access point for other modules to get these settings.
+        // This is necessary because chart settings are not stored in localStorage
+        // as part of the dynamic user preferences handled by the state manager.
+        return getAppConfig().CHART_SETTINGS;
     }
 
     return Object.freeze({
@@ -230,7 +247,7 @@ const state = (() => {
         getCurrentPresentationStudyId,
         setCurrentPresentationStudyId,
         getActiveTabId,
-        setActiveTabId
+        setActiveTabId,
+        getCurrentChartSettings // Expose this getter
     });
-
 })();
