@@ -41,9 +41,14 @@ const uiComponents = (() => {
     function createDashboardCard(title, content, chartId = null, cardClasses = '', headerClasses = '', bodyClasses = '', downloadButtons = []) {
         const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, chartId || title.replace(/[^a-z0-9]/gi, '_'), title);
         const tooltipKey = chartId ? chartId.replace(/^chart-dash-/, '') : title.toLowerCase().replace(/\s+/g, '');
-        let tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik[tooltipKey]?.description || title || '';
-        if(tooltipKey === 'ageDistribution' || tooltipKey === 'alter') tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.chartAge?.description || title;
-        else if(tooltipKey === 'genderDistribution' || tooltipKey === 'geschlecht') tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.chartGender?.description || title;
+        let tooltipContent = TOOLTIP_CONTENT_DE.deskriptiveStatistik[tooltipKey]?.description || title || ''; // Use DE as base, will be updated if lang changes
+        if (typeof getUITexts === 'function') { // ensure getUITexts is available
+            const currentTexts = getUITexts();
+            tooltipContent = currentTexts.TOOLTIP_CONTENT?.deskriptiveStatistik?.[tooltipKey]?.description || title || '';
+        }
+
+        if(tooltipKey === 'ageDistribution' || tooltipKey === 'alter') tooltipContent = (getUITexts().TOOLTIP_CONTENT?.deskriptiveStatistik?.chartAge?.description || title);
+        else if(tooltipKey === 'genderDistribution' || tooltipKey === 'geschlecht') tooltipContent = (getUITexts().TOOLTIP_CONTENT?.deskriptiveStatistik?.chartGender?.description || title);
 
 
         return `
@@ -70,6 +75,7 @@ const uiComponents = (() => {
         const sizeMax = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max;
         const sizeStep = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step;
         const formattedThreshold = formatNumber(sizeThreshold, 1, '5.0', true);
+        const currentTexts = getUITexts();
 
         const createButtonOptions = (key, isChecked, criterionLabel) => {
             const valuesKey = key.toUpperCase() + '_VALUES';
@@ -85,7 +91,7 @@ const uiComponents = (() => {
 
         const createCriteriaGroup = (key, label, tooltipKey, contentGenerator) => {
             const isChecked = initialCriteria[key]?.active === true;
-            const tooltip = TOOLTIP_CONTENT[tooltipKey]?.description || label;
+            const tooltip = currentTexts.TOOLTIP_CONTENT[tooltipKey]?.description || label;
             return `
                 <div class="col-md-6 criteria-group">
                     <div class="form-check mb-2">
@@ -98,15 +104,20 @@ const uiComponents = (() => {
                     </div>
                 </div>`;
         };
+        
+        const t2LogicLabelKey = currentLogic === 'ODER' ? currentTexts.t2LogicDisplayNames.ODER : currentTexts.t2LogicDisplayNames.UND;
 
         return `
             <div class="card criteria-card" id="t2-criteria-card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>T2 Malignitäts-Kriterien Definieren</span>
-                    <div class="form-check form-switch" data-tippy-content="${TOOLTIP_CONTENT.t2Logic.description}">
+                    <div>
+                        <span>T2 Malignitäts-Kriterien Definieren</span>
+                        <span id="t2-criteria-status-text" class="ms-2 small text-muted"></span>
+                    </div>
+                    <div class="form-check form-switch" data-tippy-content="${currentTexts.TOOLTIP_CONTENT.t2Logic.description}">
                          <label class="form-check-label small me-2" for="t2-logic-switch" id="t2-logic-label-prefix">Logik:</label>
                          <input class="form-check-input" type="checkbox" role="switch" id="t2-logic-switch" ${logicChecked ? 'checked' : ''}>
-                         <label class="form-check-label fw-bold" for="t2-logic-switch" id="t2-logic-label">${initialLogic}</label>
+                         <label class="form-check-label fw-bold" for="t2-logic-switch" id="t2-logic-label">${t2LogicLabelKey}</label>
                      </div>
                 </div>
                 <div class="card-body">
@@ -127,10 +138,10 @@ const uiComponents = (() => {
                             <small class="text-muted d-block mt-1">Hinweis: Lymphknoten mit Signal 'null' (d.h. nicht beurteilbar/nicht vorhanden) erfüllen das Signal-Kriterium nie.</small>
                         `)}
                         <div class="col-12 d-flex justify-content-end align-items-center border-top pt-3 mt-3">
-                            <button class="btn btn-sm btn-outline-secondary me-2" id="btn-reset-criteria" data-tippy-content="${TOOLTIP_CONTENT.t2Actions.reset}">
+                            <button class="btn btn-sm btn-outline-secondary me-2" id="btn-reset-criteria" data-tippy-content="${currentTexts.TOOLTIP_CONTENT.t2Actions.reset}">
                                 <i class="fas fa-undo me-1"></i> Zurücksetzen (Standard)
                             </button>
-                            <button class="btn btn-sm btn-primary" id="btn-apply-criteria" data-tippy-content="${TOOLTIP_CONTENT.t2Actions.apply}">
+                            <button class="btn btn-sm btn-primary" id="btn-apply-criteria" data-tippy-content="${currentTexts.TOOLTIP_CONTENT.t2Actions.apply}">
                                 <i class="fas fa-check me-1"></i> Anwenden & Speichern
                             </button>
                         </div>
@@ -145,10 +156,15 @@ const uiComponents = (() => {
         const statusText = workerAvailable ? 'Bereit.' : 'Worker konnte nicht initialisiert werden.';
         const defaultMetric = APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC || 'Balanced Accuracy';
         const displayKollektivName = getKollektivDisplayName(currentKollektivName);
-        const resultContainerTooltip = (TOOLTIP_CONTENT.bruteForceResult.description || 'Ergebnis der Optimierung.')
+        const currentTexts = getUITexts();
+        const resultContainerTooltip = (currentTexts.TOOLTIP_CONTENT.bruteForceResult.description || 'Ergebnis der Optimierung.')
                                       .replace('[N_GESAMT]', '--')
                                       .replace('[N_PLUS]', '--')
                                       .replace('[N_MINUS]', '--');
+        const bfInfoTooltip = (currentTexts.TOOLTIP_CONTENT.bruteForceInfo.description || 'Status des Optimierungs-Workers und aktuelles Kollektiv.')
+                                      .replace('[KOLLEKTIV_NAME]', `<strong>${displayKollektivName}</strong>`);
+        const bfProgressTooltip = (currentTexts.TOOLTIP_CONTENT.bruteForceProgress.description || 'Fortschritt der laufenden Optimierung.')
+                                      .replace('[TOTAL]', '0');
 
 
         return `
@@ -160,7 +176,7 @@ const uiComponents = (() => {
                     <div class="row g-3 align-items-end mb-3">
                         <div class="col-md-4">
                             <label for="brute-force-metric" class="form-label form-label-sm">Zielmetrik:</label>
-                            <select class="form-select form-select-sm" id="brute-force-metric" data-tippy-content="${TOOLTIP_CONTENT.bruteForceMetric.description}">
+                            <select class="form-select form-select-sm" id="brute-force-metric" data-tippy-content="${currentTexts.TOOLTIP_CONTENT.bruteForceMetric.description}">
                                 <option value="Accuracy" ${defaultMetric === 'Accuracy' ? 'selected' : ''}>Accuracy</option>
                                 <option value="Balanced Accuracy" ${defaultMetric === 'Balanced Accuracy' ? 'selected' : ''}>Balanced Accuracy</option>
                                 <option value="F1-Score" ${defaultMetric === 'F1-Score' ? 'selected' : ''}>F1-Score</option>
@@ -169,17 +185,17 @@ const uiComponents = (() => {
                             </select>
                         </div>
                         <div class="col-md-4">
-                             <button class="btn btn-primary btn-sm w-100" id="btn-start-brute-force" data-tippy-content="${TOOLTIP_CONTENT.bruteForceStart.description}" ${disabledAttribute}>
+                             <button class="btn btn-primary btn-sm w-100" id="btn-start-brute-force" data-tippy-content="${currentTexts.TOOLTIP_CONTENT.bruteForceStart.description}" ${disabledAttribute}>
                                  ${startButtonText}
                              </button>
                         </div>
                          <div class="col-md-4">
-                             <div id="brute-force-info" class="text-muted small text-md-end" data-tippy-content="${(TOOLTIP_CONTENT.bruteForceInfo.description || 'Status des Optimierungs-Workers und aktuelles Kollektiv.').replace('[KOLLEKTIV_NAME]', `<strong>${displayKollektivName}</strong>`)}">
+                             <div id="brute-force-info" class="text-muted small text-md-end" data-tippy-content="${bfInfoTooltip}">
                                  Status: <span id="bf-status-text" class="fw-bold">${statusText}</span><br>Kollektiv: <strong id="bf-kollektiv-info">${displayKollektivName}</strong>
                              </div>
                          </div>
                     </div>
-                     <div id="brute-force-progress-container" class="mt-3 d-none" data-tippy-content="${(TOOLTIP_CONTENT.bruteForceProgress.description || 'Fortschritt der laufenden Optimierung.').replace('[TOTAL]', '0')}">
+                     <div id="brute-force-progress-container" class="mt-3 d-none" data-tippy-content="${bfProgressTooltip}">
                          <div class="d-flex justify-content-between mb-1 small">
                             <span>Fortschritt: <span id="bf-tested-count">0</span> / <span id="bf-total-count">0</span></span>
                             <span id="bf-progress-percent">0%</span>
@@ -204,13 +220,13 @@ const uiComponents = (() => {
                             <li style="word-break: break-word;"><strong>Kriterien:</strong> <span id="bf-result-criteria" class="fw-bold"></span></li>
                          </ul>
                          <p class="mb-1 small text-muted">Dauer: <span id="bf-result-duration"></span>s | Getestet: <span id="bf-result-total-tested"></span></p>
-                         <p class="mb-0 small text-muted" data-tippy-content="${TOOLTIP_CONTENT.bruteForceResult.kollektivStats || 'Statistik des für diese Optimierung verwendeten Kollektivs.'}">Kollektiv N: <span id="bf-result-kollektiv-n">--</span> (N+: <span id="bf-result-kollektiv-nplus">--</span>, N-: <span id="bf-result-kollektiv-nminus">--</span>)</p>
+                         <p class="mb-0 small text-muted" data-tippy-content="${currentTexts.TOOLTIP_CONTENT.bruteForceResult.kollektivStats || 'Statistik des für diese Optimierung verwendeten Kollektivs.'}">Kollektiv N: <span id="bf-result-kollektiv-n">--</span> (N+: <span id="bf-result-kollektiv-nplus">--</span>, N-: <span id="bf-result-kollektiv-nminus">--</span>)</p>
                          <hr class="my-1">
                          <button class="btn btn-success btn-sm me-2" id="btn-apply-best-bf-criteria" data-tippy-content="Wendet die beste gefundene Kriterienkombination an und speichert sie. Die Auswertungstabelle und alle Statistiken werden aktualisiert.">
                              <i class="fas fa-check me-1"></i> Anwenden
                          </button>
-                         <button class="btn btn-outline-secondary btn-sm" id="btn-show-brute-force-details" data-bs-toggle="modal" data-bs-target="#brute-force-modal" data-tippy-content="${TOOLTIP_CONTENT.bruteForceDetailsButton.description || 'Zeigt die Top 10 Ergebnisse und weitere Details.'}">
-                             <i class="fas fa-list-ol me-1"></i> Top 10
+                         <button class="btn btn-outline-secondary btn-sm" id="btn-show-brute-force-details" data-bs-toggle="modal" data-bs-target="#brute-force-modal" data-tippy-content="${currentTexts.TOOLTIP_CONTENT.bruteForceDetailsButton.description || 'Zeigt die Top Ergebnisse und weitere Details.'}">
+                             <i class="fas fa-list-ol me-1"></i> Details & Top Ergebnisse
                          </button>
                      </div>
                 </div>
@@ -220,8 +236,9 @@ const uiComponents = (() => {
     }
 
     function createStatistikCard(id, title, content = '', addPadding = true, tooltipKey = null, downloadButtons = [], tableId = null) {
-        const cardTooltipHtml = tooltipKey && TOOLTIP_CONTENT[tooltipKey]?.cardTitle
-            ? `data-tippy-content="${(TOOLTIP_CONTENT[tooltipKey].cardTitle || title).replace('[KOLLEKTIV]', '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>')}"`
+        const currentTexts = getUITexts();
+        const cardTooltipHtml = tooltipKey && currentTexts.TOOLTIP_CONTENT[tooltipKey]?.cardTitle
+            ? `data-tippy-content="${(currentTexts.TOOLTIP_CONTENT[tooltipKey].cardTitle || title).replace('[KOLLEKTIV]', '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>')}"`
             : `data-tippy-content="${title}"`;
 
         const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, id + '-content', title);
@@ -251,29 +268,30 @@ const uiComponents = (() => {
     }
 
     function createExportOptions(currentKollektiv) {
+        const currentTexts = getUITexts();
         const dateStr = getCurrentDateString(APP_CONFIG.EXPORT_SETTINGS.DATE_FORMAT);
         const safeKollektiv = getKollektivDisplayName(currentKollektiv).replace(/[^a-z0-9_-]/gi, '_').replace(/_+/g, '_');
         const fileNameTemplate = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TEMPLATE;
 
         const generateButtonHTML = (idSuffix, iconClass, text, tooltipKey, disabled = false, experimental = false) => {
-            const config = TOOLTIP_CONTENT.exportTab[tooltipKey]; if (!config || !APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]) return ``;
+            const config = currentTexts.TOOLTIP_CONTENT.exportTab[tooltipKey]; if (!config || !APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]) return ``;
             const type = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]; const ext = config.ext; const filename = fileNameTemplate.replace('{TYPE}', type).replace('{KOLLEKTIV}', safeKollektiv).replace('{DATE}', dateStr).replace('{EXT}', ext); const tooltipHtml = `data-tippy-content="${config.description}<br><small>Datei: ${filename}</small>"`; const disabledAttr = disabled ? 'disabled' : ''; const experimentalBadge = experimental ? '<span class="badge bg-warning text-dark ms-1 small">Experimentell</span>' : ''; const buttonClass = disabled ? 'btn-outline-secondary' : 'btn-outline-primary';
             return `<button class="btn ${buttonClass} w-100 mb-2 d-flex justify-content-start align-items-center" id="export-${idSuffix}" ${tooltipHtml} ${disabledAttr}><i class="${iconClass} fa-fw me-2"></i> <span class="flex-grow-1 text-start">${text} (.${ext})</span> ${experimentalBadge}</button>`;
         };
 
          const generateZipButtonHTML = (idSuffix, iconClass, text, tooltipKey, disabled = false) => {
-            const config = TOOLTIP_CONTENT.exportTab[tooltipKey]; if (!config || !APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]) return ``;
+            const config = currentTexts.TOOLTIP_CONTENT.exportTab[tooltipKey]; if (!config || !APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]) return ``;
             const type = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]; const ext = config.ext; const filename = fileNameTemplate.replace('{TYPE}', type).replace('{KOLLEKTIV}', safeKollektiv).replace('{DATE}', dateStr).replace('{EXT}', ext); const tooltipHtml = `data-tippy-content="${config.description}<br><small>Datei: ${filename}</small>"`; const disabledAttr = disabled ? 'disabled' : ''; const buttonClass = idSuffix === 'all-zip' ? 'btn-primary' : 'btn-outline-secondary';
             return `<button class="btn ${buttonClass} w-100 mb-2 d-flex justify-content-start align-items-center" id="export-${idSuffix}" ${tooltipHtml} ${disabledAttr}><i class="${iconClass} fa-fw me-2"></i> <span class="flex-grow-1 text-start">${text} (.${ext})</span></button>`;
          };
 
-        const exportDesc = TOOLTIP_CONTENT.exportTab.description.replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(currentKollektiv)}</strong>`);
+        const exportDesc = (currentTexts.TOOLTIP_CONTENT.exportTab.description || '').replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(currentKollektiv)}</strong>`);
 
         return `
             <div class="row export-options-container">
                 <div class="col-lg-6 col-xl-4 mb-3">
                     <div class="card h-100">
-                        <div class="card-header">${TOOLTIP_CONTENT.exportTab.singleExports}</div>
+                        <div class="card-header">${currentTexts.TOOLTIP_CONTENT.exportTab.singleExports}</div>
                         <div class="card-body">
                             <p class="small text-muted mb-3">${exportDesc}</p>
                             <h6 class="text-muted small text-uppercase mb-2">Berichte & Statistiken</h6>
@@ -293,7 +311,7 @@ const uiComponents = (() => {
                 </div>
                  <div class="col-lg-6 col-xl-4 mb-3">
                     <div class="card h-100">
-                        <div class="card-header">${TOOLTIP_CONTENT.exportTab.exportPackages}</div>
+                        <div class="card-header">${currentTexts.TOOLTIP_CONTENT.exportTab.exportPackages}</div>
                         <div class="card-body">
                              <p class="small text-muted mb-3">Bündelt mehrere thematisch zusammengehörige Exportdateien in einem ZIP-Archiv für das Kollektiv <strong>${getKollektivDisplayName(currentKollektiv)}</strong>.</p>
                             ${generateZipButtonHTML('all-zip', 'fas fa-file-archive', 'Gesamtpaket (Alle Dateien)', 'allZIP')}
@@ -305,15 +323,16 @@ const uiComponents = (() => {
                     </div>
                 </div>
                 <div class="col-lg-12 col-xl-4 mb-3">
-                   <div class="card h-100"> <div class="card-header">Hinweise zum Export</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV:** Für Statistiksoftware; Trennzeichen: Semikolon (;).</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** Für Dokumentation.</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** Brute-Force-Bericht.</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht:** Umfassend, druckbar.</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** Pixelbasiert (Diagramme/Tabellen).</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** Vektorbasiert (Diagramme), skalierbar.</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>ZIP-Exporte für Diagramme/Tabellen erfassen nur aktuell im Statistik- oder Auswertungstab sichtbare/gerenderte Elemente. Einzel-Downloads sind direkt am Element möglich (z.B. auch im Präsentationstab).</li> </ul> </div> </div>
+                   <div class="card h-100"> <div class="card-header">Hinweise zum Export</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV:** Für Statistiksoftware; Trennzeichen: Semikolon (;).</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** Für Dokumentation.</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** Brute-Force-Bericht.</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht:** Umfassend, druckbar.</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** Pixelbasiert (Diagramme/Tabellen). Diagramme werden in Englisch exportiert.</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** Vektorbasiert (Diagramme), skalierbar. Diagramme werden in Englisch exportiert.</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>ZIP-Exporte für Diagramme/Tabellen erfassen nur aktuell im Statistik- oder Auswertungstab sichtbare/gerenderte Elemente. Einzel-Downloads sind direkt am Element möglich (z.B. auch im Präsentationstab).</li> </ul> </div> </div>
                 </div>
             </div>
         `;
     }
 
     function createT2MetricsOverview(stats, kollektivName) {
+        const currentTexts = getUITexts();
         const displayKollektivName = getKollektivDisplayName(kollektivName);
-        const cardTooltip = (TOOLTIP_CONTENT.t2MetricsOverview.cardTitle || 'Kurzübersicht der diagnostischen Güte (T2 vs. N) für Kollektiv [KOLLEKTIV].').replace('[KOLLEKTIV]', `<strong>${displayKollektivName}</strong>`);
+        const cardTooltip = (currentTexts.TOOLTIP_CONTENT.t2MetricsOverview.cardTitle || 'Kurzübersicht der diagnostischen Güte (T2 vs. N) für Kollektiv [KOLLEKTIV].').replace('[KOLLEKTIV]', `<strong>${displayKollektivName}</strong>`);
         if (!stats || !stats.matrix || stats.matrix.rp === undefined) {
              return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)</div><div class="card-body p-2"><p class="m-0 text-muted small">Metriken für T2 nicht verfügbar für Kollektiv ${displayKollektivName}.</p></div></div>`;
         }
@@ -325,7 +344,7 @@ const uiComponents = (() => {
 
         metrics.forEach((key, index) => {
             const metricData = stats[key];
-            const metricDescription = (TOOLTIP_CONTENT.t2MetricsOverview?.[key] || TOOLTIP_CONTENT.statMetrics[key]?.description || key).replace(/\[METHODE\]/g, '<strong>T2 (angewandt)</strong>');
+            const metricDescription = (currentTexts.TOOLTIP_CONTENT.t2MetricsOverview?.[key] || currentTexts.TOOLTIP_CONTENT.statMetrics[key]?.description || key).replace(/\[METHODE\]/g, '<strong>T2 (angewandt)</strong>');
             const interpretationHTML = ui_helpers.getMetricInterpretationHTML(key, metricData, 'T2 (angewandt)', displayKollektivName);
             const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
             const isPercent = !(key === 'f1' || key === 'auc');
@@ -346,13 +365,14 @@ const uiComponents = (() => {
     function createBruteForceModalContent(resultsData) {
         const { results, metric, kollektiv, duration, totalTested, nGesamt, nPlus, nMinus } = resultsData;
         if (!results || results.length === 0) return '<p class="text-muted">Keine Ergebnisse gefunden.</p>';
+        const currentTexts = getUITexts();
 
         const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
         const getKollektivNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
-        const bestResult = results[0];
+        const bestResult = results[0]; // Bestes Ergebnis ist das erste nach Sortierung
         const kollektivName = getKollektivNameFunc(kollektiv);
         const metricDisplayName = metric === 'PPV' ? 'PPV' : metric === 'NPV' ? 'NPV' : metric;
-        const resultContainerTooltip = (TOOLTIP_CONTENT.bruteForceResult.description || 'Ergebnis der Optimierung.')
+        const resultContainerTooltip = (currentTexts.TOOLTIP_CONTENT.bruteForceResult.description || 'Ergebnis der Optimierung.')
                                       .replace('[N_GESAMT]', formatNumber(nGesamt,0,'?'))
                                       .replace('[N_PLUS]', formatNumber(nPlus,0,'?'))
                                       .replace('[N_MINUS]', formatNumber(nMinus,0,'?'));
@@ -365,8 +385,8 @@ const uiComponents = (() => {
                     <li><strong>Logik:</strong> ${bestResult.logic.toUpperCase()}</li>
                     <li><strong>Kriterien:</strong> ${formatCriteriaFunc(bestResult.criteria, bestResult.logic)}</li>
                 </ul>
-                <p class="mb-1 text-muted"><small>Dauer: ${formatNumber(duration / 1000, 1)}s | Getestet: ${formatNumber(totalTested, 0)}</small></p>
-                <p class="mb-0 text-muted" data-tippy-content="${TOOLTIP_CONTENT.bruteForceResult.kollektivStats || 'Statistik des für diese Optimierung verwendeten Kollektivs.'}"><small>Kollektiv N=${formatNumber(nGesamt,0,'N/A')} (N+: ${formatNumber(nPlus,0,'N/A')}, N-: ${formatNumber(nMinus,0,'N/A')})</small></p>
+                <p class="mb-1 text-muted"><small>Dauer: ${formatNumber((duration || 0) / 1000, 1)}s | Getestet: ${formatNumber(totalTested, 0)}</small></p>
+                <p class="mb-0 text-muted" data-tippy-content="${currentTexts.TOOLTIP_CONTENT.bruteForceResult.kollektivStats || 'Statistik des für diese Optimierung verwendeten Kollektivs.'}"><small>Kollektiv N=${formatNumber(nGesamt,0,'N/A')} (N+: ${formatNumber(nPlus,0,'N/A')}, N-: ${formatNumber(nMinus,0,'N/A')})</small></p>
             </div>
             <h6 class="mb-2">Top Ergebnisse (inkl. identischer Werte):</h6>
             <div class="table-responsive">
@@ -375,10 +395,12 @@ const uiComponents = (() => {
                         <tr>
                             <th data-tippy-content="Rang des Ergebnisses.">Rang</th>
                             <th data-tippy-content="Erreichter Wert der Zielmetrik (${metricDisplayName}). Höher ist besser.">${metricDisplayName}</th>
-                            <th data-tippy-content="Sensitivität dieser Kriterienkombination.">Sens.</th>
-                            <th data-tippy-content="Spezifität dieser Kriterienkombination.">Spez.</th>
-                            <th data-tippy-content="Positiver Prädiktiver Wert dieser Kriterienkombination.">PPV</th>
-                            <th data-tippy-content="Negativer Prädiktiver Wert dieser Kriterienkombination.">NPV</th>
+                            <th data-tippy-content="${currentTexts.TOOLTIP_CONTENT.bruteForceModal.sensCol || 'Sensitivität'}">Sens.</th>
+                            <th data-tippy-content="${currentTexts.TOOLTIP_CONTENT.bruteForceModal.spezCol || 'Spezifität'}">Spez.</th>
+                            <th data-tippy-content="${currentTexts.TOOLTIP_CONTENT.bruteForceModal.ppvCol || 'PPV'}">PPV</th>
+                            <th data-tippy-content="${currentTexts.TOOLTIP_CONTENT.bruteForceModal.npvCol || 'NPV'}">NPV</th>
+                            <th data-tippy-content="Accuracy dieser Kriterienkombination.">Acc.</th>
+                            <th data-tippy-content="Balanced Accuracy dieser Kriterienkombination.">Bal. Acc.</th>
                             <th data-tippy-content="Verwendete logische Verknüpfung (UND/ODER).">Logik</th>
                             <th data-tippy-content="Kombination der T2-Malignitätskriterien.">Kriterien</th>
                         </tr>
@@ -390,7 +412,7 @@ const uiComponents = (() => {
 
         for (let i = 0; i < results.length; i++) {
             const result = results[i];
-            if (!result || typeof result.metricValue !== 'number' || !isFinite(result.metricValue)) continue;
+            if (!result || typeof result.metricValue !== 'number' || !isFinite(result.metricValue) || !result.metrics) continue;
 
             const currentMetricValueRounded = parseFloat(result.metricValue.toFixed(precision));
             const lastMetricValueRounded = parseFloat(lastMetricValue.toFixed(precision));
@@ -405,16 +427,18 @@ const uiComponents = (() => {
                 currentRank = rank;
             }
 
-            if (rank > 10 && isNewRank && i >=10 ) break; // Ensure at least 10 distinct ranks or more items if scores are tied
+            if (rank > 10 && isNewRank && i >=10 ) break;
 
             tableHTML += `
                 <tr>
                     <td>${currentRank}.</td>
                     <td>${formatNumber(result.metricValue, 4)}</td>
-                    <td>${result.sens !== undefined ? formatPercent(result.sens, 1) : 'N/A'}</td>
-                    <td>${result.spez !== undefined ? formatPercent(result.spez, 1) : 'N/A'}</td>
-                    <td>${result.ppv !== undefined ? formatPercent(result.ppv, 1) : 'N/A'}</td>
-                    <td>${result.npv !== undefined ? formatPercent(result.npv, 1) : 'N/A'}</td>
+                    <td>${result.metrics.sens !== undefined && !isNaN(result.metrics.sens) ? formatPercent(result.metrics.sens, 1) : 'N/A'}</td>
+                    <td>${result.metrics.spez !== undefined && !isNaN(result.metrics.spez) ? formatPercent(result.metrics.spez, 1) : 'N/A'}</td>
+                    <td>${result.metrics.ppv !== undefined && !isNaN(result.metrics.ppv) ? formatPercent(result.metrics.ppv, 1) : 'N/A'}</td>
+                    <td>${result.metrics.npv !== undefined && !isNaN(result.metrics.npv) ? formatPercent(result.metrics.npv, 1) : 'N/A'}</td>
+                    <td>${result.metrics.acc !== undefined && !isNaN(result.metrics.acc) ? formatPercent(result.metrics.acc, 1) : 'N/A'}</td>
+                    <td>${result.metrics.balAcc !== undefined && !isNaN(result.metrics.balAcc) ? formatNumber(result.metrics.balAcc, 3) : 'N/A'}</td>
                     <td>${result.logic.toUpperCase()}</td>
                     <td>${formatCriteriaFunc(result.criteria, result.logic)}</td>
                 </tr>`;
@@ -429,15 +453,17 @@ const uiComponents = (() => {
     }
 
     function createPublikationTabHeader() {
+        const currentTexts = getUITexts();
         const lang = state.getCurrentPublikationLang() || PUBLICATION_CONFIG.defaultLanguage;
         const currentBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
         const sectionNavItems = PUBLICATION_CONFIG.sections.map(mainSection => {
-            const sectionTooltip = TOOLTIP_CONTENT.publikationTabTooltips[mainSection.id]?.description || UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey;
+            const sectionLabel = currentTexts.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey;
+            const sectionTooltip = currentTexts.TOOLTIP_CONTENT.publikationTabTooltips[mainSection.id]?.description || sectionLabel;
             return `
                 <li class="nav-item">
                     <a class="nav-link py-2 publikation-section-link" href="#" data-section-id="${mainSection.id}" data-tippy-content="${sectionTooltip}">
-                        ${UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}
+                        ${sectionLabel}
                     </a>
                 </li>`;
         }).join('');
@@ -449,22 +475,22 @@ const uiComponents = (() => {
         return `
             <div class="row mb-3 sticky-top bg-light py-2 shadow-sm" style="top: var(--sticky-header-offset); z-index: 1015;">
                 <div class="col-md-3">
-                    <h5 class="mb-2">Abschnitte</h5>
-                    <nav id="publikation-sections-nav" class="nav flex-column nav-pills" data-tippy-content="${TOOLTIP_CONTENT.publikationTabTooltips.sectionSelect?.description || 'Wählen Sie einen Publikationsabschnitt.'}">
+                    <h5 class="mb-2">${currentTexts.publikationTab.sectionLabels.methoden.includes('Abschnitte') ? 'Abschnitte' : 'Sections'}</h5>
+                    <nav id="publikation-sections-nav" class="nav flex-column nav-pills" data-tippy-content="${currentTexts.TOOLTIP_CONTENT.publikationTabTooltips.sectionSelect?.description || 'Wählen Sie einen Publikationsabschnitt.'}">
                         ${sectionNavItems}
                     </nav>
                 </div>
                 <div class="col-md-9">
                     <div class="d-flex justify-content-end align-items-center mb-2">
                         <div class="me-3">
-                           <label for="publikation-bf-metric-select" class="form-label form-label-sm mb-0 me-1">${UI_TEXTS.publikationTab.bruteForceMetricSelectLabel}</label>
-                           <select class="form-select form-select-sm d-inline-block" id="publikation-bf-metric-select" style="width: auto;" data-tippy-content="${TOOLTIP_CONTENT.publikationTabTooltips.bruteForceMetricSelect.description}">
+                           <label for="publikation-bf-metric-select" class="form-label form-label-sm mb-0 me-1">${currentTexts.publikationTab.bruteForceMetricSelectLabel}</label>
+                           <select class="form-select form-select-sm d-inline-block" id="publikation-bf-metric-select" style="width: auto;" data-tippy-content="${currentTexts.TOOLTIP_CONTENT.publikationTabTooltips.bruteForceMetricSelect.description}">
                                ${bfMetricOptions}
                            </select>
                         </div>
-                        <div class="form-check form-switch" data-tippy-content="${TOOLTIP_CONTENT.publikationTabTooltips.spracheSwitch.description}">
+                        <div class="form-check form-switch" data-tippy-content="${currentTexts.TOOLTIP_CONTENT.publikationTabTooltips.spracheSwitch.description}">
                             <input class="form-check-input" type="checkbox" role="switch" id="publikation-sprache-switch" ${lang === 'en' ? 'checked' : ''}>
-                            <label class="form-check-label fw-bold" for="publikation-sprache-switch" id="publikation-sprache-label">${UI_TEXTS.publikationTab.spracheSwitchLabel[lang]}</label>
+                            <label class="form-check-label fw-bold" for="publikation-sprache-switch" id="publikation-sprache-label">${currentTexts.publikationTab.spracheSwitchLabel}</label>
                         </div>
                     </div>
                     <div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: calc(100vh - var(--sticky-header-offset) - 4rem - 2rem); overflow-y: auto;">
