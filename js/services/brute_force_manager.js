@@ -29,7 +29,7 @@ const bruteForceManager = (() => {
                 if (onErrorCallback) onErrorCallback({ message: 'Worker-Kommunikationsfehler (messageerror).' });
                  isRunningState = false;
                  currentKollektivRunning = null;
-                 worker = null;
+                 worker = null; // Set worker to null to allow re-initialization attempt
             };
             console.log("BruteForceManager: Worker erfolgreich initialisiert.");
             return true;
@@ -60,10 +60,12 @@ const bruteForceManager = (() => {
             case 'result':
                 isRunningState = false;
                 const resultKollektiv = payload?.kollektiv || currentKollektivRunning;
-                if (resultKollektiv && payload && payload.bestResult) {
+                if (resultKollektiv && payload && payload.bestResult && payload.results) {
+                    // The payload from worker now contains the full 'metrics' object for each result.
+                    // cloneDeep will correctly copy this richer structure.
                     allKollektivResults[resultKollektiv] = cloneDeep(payload);
                 } else {
-                    console.warn("BruteForceManager: Unvollständiges Ergebnis vom Worker, Kollektiv-Info fehlt oder kein bestResult. Payload:", payload, "CurrentKollektivRunning:", currentKollektivRunning);
+                    console.warn("BruteForceManager: Unvollständiges Ergebnis vom Worker. Payload:", payload, "CurrentKollektivRunning:", currentKollektivRunning);
                 }
                 currentKollektivRunning = null;
                 if (onResultCallback) onResultCallback(payload);
@@ -81,6 +83,8 @@ const bruteForceManager = (() => {
                 console.error(`BruteForceManager: Fehler vom Worker für Kollektiv '${errorKollektiv}':`, payload?.message);
                 currentKollektivRunning = null;
                 if (onErrorCallback) onErrorCallback(payload);
+                // Worker might be in an unusable state, consider re-initializing or nullifying
+                // worker = null; // Decided against auto-nullifying here to allow explicit re-init attempt
                 break;
             default:
                 console.warn(`BruteForceManager: Unbekannter Nachrichtentyp vom Worker: ${type}`, payload);
@@ -93,7 +97,7 @@ const bruteForceManager = (() => {
         const erroredKollektiv = currentKollektivRunning;
         currentKollektivRunning = null;
         if (onErrorCallback) onErrorCallback({ message: error.message || 'Unbekannter Worker-Fehler', kollektiv: erroredKollektiv });
-        worker = null;
+        worker = null; // Worker is likely broken, set to null for re-initialization attempt.
     }
 
     function init(callbacks = {}) {
@@ -102,7 +106,7 @@ const bruteForceManager = (() => {
         onErrorCallback = callbacks.onError || null;
         onCancelledCallback = callbacks.onCancelled || null;
         onStartedCallback = callbacks.onStarted || null;
-        allKollektivResults = {};
+        allKollektivResults = {}; // Reset results on init
         return initializeWorker();
     }
 
@@ -127,15 +131,15 @@ const bruteForceManager = (() => {
         }
 
         currentKollektivRunning = kollektiv;
-        isRunningState = true;
+        isRunningState = true; // Set running state immediately
 
         worker.postMessage({
             action: 'start',
             payload: {
-                data: data,
+                data: data, // Ensure data is properly structured for the worker
                 metric: metric,
                 kollektiv: kollektiv,
-                t2SizeRange: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE
+                t2SizeRange: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE // Ensure this is always passed
             }
         });
         console.log(`BruteForceManager: Analyse gestartet für Kollektiv '${kollektiv}' mit Metrik '${metric}'.`);
@@ -148,15 +152,18 @@ const bruteForceManager = (() => {
             return false;
         }
         worker.postMessage({ action: 'cancel' });
+        // isRunningState will be set to false by the worker's 'cancelled' message
         console.log("BruteForceManager: Abbruchanfrage an Worker gesendet.");
         return true;
     }
 
     function getResultsForKollektiv(kollektivId) {
+        // Returns a deep clone to prevent modification of stored results
         return allKollektivResults[kollektivId] ? cloneDeep(allKollektivResults[kollektivId]) : null;
     }
 
     function getAllResults() {
+        // Returns a deep clone of all results
         return cloneDeep(allKollektivResults);
     }
 
@@ -177,6 +184,39 @@ const bruteForceManager = (() => {
             console.log("BruteForceManager: Worker terminiert.");
         }
     }
+
+    // Expose cloneDeep for use by other modules if necessary, or keep it internal.
+    // For now, assume it's primarily for internal use by the manager itself.
+    function cloneDeep(obj) {
+        if (obj === null || typeof obj !== 'object') return obj;
+        try {
+            if (typeof self !== 'undefined' && self.structuredClone) {
+                return self.structuredClone(obj);
+            } else {
+                return JSON.parse(JSON.stringify(obj));
+            }
+        } catch(e) {
+            console.error("BruteForceManager: Fehler beim Klonen, Fallback...", e, obj);
+            if (Array.isArray(obj)) {
+                const arrCopy = [];
+                for(let i = 0; i < obj.length; i++){
+                    arrCopy[i] = cloneDeep(obj[i]);
+                }
+                return arrCopy;
+            }
+            if (typeof obj === 'object') {
+                const objCopy = {};
+                for(const key in obj) {
+                    if(Object.prototype.hasOwnProperty.call(obj, key)) {
+                        objCopy[key] = cloneDeep(obj[key]);
+                    }
+                }
+                return objCopy;
+            }
+            return obj;
+        }
+    }
+
 
     return Object.freeze({
         init,
