@@ -1,4 +1,4 @@
-const dataTabLogic = (() => {
+window.dataTabLogic = (() => {
 
     function createDatenTableHTML(data, sortState) {
         if (!Array.isArray(data)) {
