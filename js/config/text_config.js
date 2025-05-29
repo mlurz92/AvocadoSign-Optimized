@@ -160,6 +160,16 @@ const UI_TEXTS = {
             <p class="small">Der pathologische N-Status dient als Referenzstandard für alle diagnostischen Güteberechnungen.</p>
             <p class="small">Diese Anwendung ist ein Forschungswerkzeug und nicht für die klinische Diagnostik vorgesehen.</p>
         `
+    },
+    chartErrors: {
+        noData: "Keine Daten für dieses Diagramm verfügbar.",
+        noAgeData: "Keine Altersdaten verfügbar.",
+        noComparisonData: "Keine Vergleichsdaten für dieses Diagramm verfügbar.",
+        noPerformanceData: "Performance-Daten nicht verfügbar.",
+        incompleteData: "Unvollständige Daten für Diagrammerstellung.",
+        notEnoughDataROC: "Nicht genügend Datenpunkte für ROC-Kurve.",
+        invalidSize: "Diagrammgröße ungültig oder zu klein zum Rendern.",
+        tooSmall: "Visualisierung zu klein zum Rendern."
     }
 };
 
@@ -230,7 +240,7 @@ const TOOLTIP_CONTENT = {
     bruteForceMetric: { description: "Wählen Sie die Zielmetrik für die Brute-Force-Optimierung.<br><strong>Accuracy:</strong> Anteil korrekt klassifizierter Fälle.<br><strong>Balanced Accuracy:</strong> (Sens+Spez)/2; gut bei ungleichen Klassengrößen.<br><strong>F1-Score:</strong> Harmonisches Mittel aus PPV & Sensitivität.<br><strong>PPV:</strong> Präzision bei positiver Vorhersage.<br><strong>NPV:</strong> Präzision bei negativer Vorhersage." },
     bruteForceStart: { description: "Startet die Brute-Force-Suche nach der T2-Kriterienkombination, die die gewählte Zielmetrik im aktuellen Kollektiv maximiert. Dies kann einige Zeit in Anspruch nehmen und läuft im Hintergrund." },
     bruteForceInfo: { description: "Zeigt den Status des Brute-Force Optimierungs-Workers und das aktuell analysierte Patientenkollektiv: <strong>[KOLLEKTIV_NAME]</strong>." },
-    bruteForceProgress: { description: "Fortschritt der Optimierung: Getestete Kombinationen / Gesamtanzahl ([TOTAL]). Angezeigt werden die aktuelle beste Metrik und die zugehörigen Kriterien." },
+    bruteForceProgress: { description: "Fortschritt der laufenden Optimierung: Getestete Kombinationen / Gesamtanzahl ([TOTAL]). Angezeigt werden die aktuelle beste Metrik und die zugehörigen Kriterien." },
     bruteForceResult: {
         description: "Bestes Ergebnis der abgeschlossenen Brute-Force-Optimierung für das gewählte Kollektiv ([N_GESAMT] Patienten, davon [N_PLUS] N+ und [N_MINUS] N-) und die Zielmetrik.",
         kollektivStats: "Statistik des für diese Optimierung verwendeten Kollektivs: N (Gesamtanzahl), N+ (Anzahl N-positiv), N- (Anzahl N-negativ)."
@@ -353,10 +363,10 @@ const TOOLTIP_CONTENT = {
         sectionSelect: { description: "Wählen Sie den Abschnitt der wissenschaftlichen Publikation, für den Textvorschläge und relevante Daten/Grafiken angezeigt werden sollen." },
         bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, deren Brute-Force-Optimierungsergebnisse im Ergebnisteil der generierten Publikation verwendet werden sollen. Standardtexte beziehen sich meist auf die Default-Optimierungsmetrik (Balanced Accuracy)." },
         abstract: {
-            description: "Kurze Zusammenfassung der Studie (Hintergrund, Methoden, Ergebnisse, Schlussfolgerung)."
+            description: "Kurze Zusammenfassung der Studie (Hintergrund, Methoden, Ergebnisse, Schlussfolgerung). Wird aktuell nur als Platzhalterstruktur generiert."
         },
         einleitung: {
-            description: "Hintergrundinformationen zum Thema, Stand der Forschung und Zielsetzung der aktuellen Studie."
+            description: "Hintergrundinformationen zum Thema, Stand der Forschung und Zielsetzung der aktuellen Studie. Wird aktuell nur als Platzhalterstruktur generiert."
         },
         methoden: {
             description: "Detaillierte Beschreibung des Studiendesigns, Patientenkollektivs, der MRT-Protokolle, Bildanalyse (AS, T2), des Referenzstandards und der statistischen Methoden.",
@@ -379,7 +389,7 @@ const TOOLTIP_CONTENT = {
             vergleich_as_vs_optimierte_t2: "Statistischer Vergleich AS vs. optimierte T2."
         },
         diskussion: {
-            description: "Interpretation der Ergebnisse, Vergleich mit Literatur, Limitationen und Ausblick.",
+            description: "Interpretation der Ergebnisse, Vergleich mit Literatur, Limitationen und Ausblick. Wird aktuell nur als Platzhalterstruktur generiert.",
             hauptbefunde: "Zusammenfassung und Diskussion der wichtigsten Ergebnisse.",
             vergleich_literatur: "Einordnung der Ergebnisse in den Kontext bestehender Studien.",
             staerken: "Diskussion der Stärken der vorliegenden Studie.",
@@ -387,7 +397,7 @@ const TOOLTIP_CONTENT = {
             implikationen_ausblick: "Klinische Implikationen und zukünftige Forschungsrichtungen."
         },
         schlussfolgerung: {
-            description: "Kurze und prägnante Zusammenfassung der wichtigsten Erkenntnisse.",
+            description: "Kurze und prägnante Zusammenfassung der wichtigsten Erkenntnisse. Wird aktuell nur als Platzhalterstruktur generiert.",
             summary: "Zentrale Schlussfolgerung der Studie."
         },
         referenzen: {
@@ -417,7 +427,7 @@ const TOOLTIP_CONTENT = {
         konfusionsmatrix: { description: "Kreuztabelle, die die Klassifikationsergebnisse der Methode [METHODE] mit dem tatsächlichen N-Status vergleicht: Richtig Positive (RP), Falsch Positive (FP), Falsch Negative (FN), Richtig Negative (RN)." },
         accComp: { name: "Accuracy Vergleich (ungepaart)", description: "Vergleicht die Accuracy der Methode [METHODE] zwischen zwei unabhängigen Kollektiven ([KOLLEKTIV1] vs. [KOLLEKTIV2]) mittels Fisher's Exact Test.<br><i>Nullhypothese (H0): Accuracy in Kollektiv1 = Accuracy in Kollektiv2.</i>", interpretation: "Der Unterschied in der Accuracy der Methode [METHODE] zwischen den Kollektiven [KOLLEKTIV1] und [KOLLEKTIV2] ist <strong>[SIGNIFIKANZ_TEXT]</strong> (p=[P_WERT])." },
         aucComp: { name: "AUC Vergleich (ungepaart)", description: "Vergleicht die AUC der Methode [METHODE] zwischen zwei unabhängigen Kollektiven ([KOLLEKTIV1] vs. [KOLLEKTIV2]) mittels eines Z-Tests basierend auf den Standardfehlern der AUCs.<br><i>Nullhypothese (H0): AUC in Kollektiv1 = AUC in Kollektiv2.</i>", interpretation: "Der Unterschied in der AUC der Methode [METHODE] zwischen den Kollektiven [KOLLEKTIV1] und [KOLLEKTIV2] ist <strong>[SIGNIFIKANZ_TEXT]</strong> (p=[P_WERT])." },
-        defaultP: { interpretation: `Der berechnete p-Wert beträgt <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Bei einem Signifikanzniveau von ${formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,2).replace('.',',')} ist das Ergebnis <strong>[SIGNIFIKANZ_TEXT]</strong>.` },
+        defaultP: { interpretation: `Der berechnete p-Wert beträgt <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Bei einem Signifikanzniveau von [SIGNIFICANCE_LEVEL_FORMATTED] ist das Ergebnis <strong>[SIGNIFIKANZ_TEXT]</strong>.` },
         size_mwu: {name: "LK Größe MWU", description: "Vergleich der medianen Lymphknotengrößen zwischen N+ und N- Patienten mittels Mann-Whitney-U-Test. Hier werden alle Lymphknoten der Patienten berücksichtigt, nicht Patienten-Level-Status.", interpretation: "Der Mann-Whitney-U-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies zeigt einen [SIGNIFIKANZ_TEXT] Unterschied in der Verteilung der Lymphknotengrößen zwischen den Lymphknoten von N+ und N- Patienten im Kollektiv [KOLLEKTIV]."}
     }
 };
