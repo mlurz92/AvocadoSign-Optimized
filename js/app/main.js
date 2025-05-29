@@ -39,7 +39,7 @@ const mainAppInterface = (() => {
             'statistik-tab': statistikTabLogic,
             'praesentation-tab': praesentationTabLogic,
             'publikation-tab': publicationTabLogic,
-            'export-tab': exportTabLogic
+            'export-tab': typeof exportTabLogic !== 'undefined' ? exportTabLogic : null
         };
 
         tabIdsArray.forEach(tabId => {
@@ -76,16 +76,16 @@ const mainAppInterface = (() => {
 
         const allButtonsAndInputs = document.querySelectorAll('button, input, select, a.nav-link');
         allButtonsAndInputs.forEach(el => {
-            if (!el.closest('#global-ui-block-overlay') && !el.closest('#toast-container') && !el.closest('.modal')) { // Interaktion im Overlay/Toast/Modal erlauben
+            if (!el.closest('#global-ui-block-overlay') && !el.closest('#toast-container') && !el.closest('.modal')) {
                 if(el.id === 'btn-cancel-brute-force' && !isInteractive){
-                     el.disabled = false; // Cancel button should always be enabled if overlay is shown due to BF
+                     el.disabled = false;
                 } else {
                      el.disabled = !isInteractive;
                 }
             }
         });
          const activeBruteForceCancelButton = document.getElementById('btn-cancel-brute-force');
-         if (activeBruteForceCancelButton && !isInteractive && bruteForceManager?.isRunning()) {
+         if (activeBruteForceCancelButton && !isInteractive && typeof bruteForceManager !== 'undefined' && bruteForceManager.isRunning()) {
              activeBruteForceCancelButton.disabled = false;
          }
 
@@ -111,15 +111,16 @@ const mainAppInterface = (() => {
         refreshSpecificTabs,
         setUIInteraction,
         updateHeader,
-        getAllData
+        getAllData,
+        processedData
     });
 })();
 
 
 function _initializeApplication() {
     if (typeof APP_CONFIG === 'undefined' || typeof UI_TEXTS === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined' || typeof PATIENT_RAW_DATA === 'undefined') {
-        document.body.innerHTML = '<div class="alert alert-danger m-5" role="alert"><strong>Kritischer Fehler:</strong> Kernkonfigurationen oder Rohdaten konnten nicht geladen werden. Die Anwendung kann nicht gestartet werden. Bitte überprüfen Sie die Konsolenausgabe und die Einbindung der Skripte.</div>';
-        console.error("Kritischer Initialisierungsfehler: APP_CONFIG, UI_TEXTS, TOOLTIP_CONTENT oder PATIENT_RAW_DATA fehlt.");
+        document.body.innerHTML = '<div class="alert alert-danger m-5" role="alert"><strong>Kritischer Fehler:</strong> Eine oder mehrere Kernkonfigurationen (APP_CONFIG, UI_TEXTS, TOOLTIP_CONTENT) oder die Rohdaten (PATIENT_RAW_DATA) konnten nicht geladen werden. Die Anwendung kann nicht gestartet werden. Bitte überprüfen Sie die Browser-Konsole auf vorhergehende Fehler, die das Laden dieser essentiellen Skripte verhindert haben könnten, sowie die korrekte Einbindung aller Skriptdateien in der HTML-Datei.</div>';
+        console.error("Kritischer Initialisierungsfehler: APP_CONFIG, UI_TEXTS, TOOLTIP_CONTENT oder PATIENT_RAW_DATA fehlt. Dies ist oft ein Folgefehler eines Problems beim Laden oder Ausführen einer der Konfigurationsskripte.");
         return;
     }
 
@@ -127,7 +128,7 @@ function _initializeApplication() {
         state.initializeState();
         mainAppInterface.processedData = dataProcessor.processPatientData(PATIENT_RAW_DATA);
         if (!mainAppInterface.processedData || mainAppInterface.processedData.length === 0) {
-            throw new Error("Datenverarbeitung lieferte keine Ergebnisse.");
+            throw new Error("Datenverarbeitung (dataProcessor.processPatientData) lieferte keine Ergebnisse oder die Rohdaten (PATIENT_RAW_DATA) sind leer/ungültig.");
         }
 
         t2CriteriaManager.initialize();
@@ -155,12 +156,13 @@ function _initializeApplication() {
         console.log(`Anwendung ${APP_CONFIG.APP_NAME} v${APP_CONFIG.APP_VERSION} erfolgreich initialisiert.`);
 
     } catch (error) {
-        console.error("Fehler während der Anwendungsinitialisierung:", error);
+        console.error("Fehler während der Anwendungsinitialisierung (_initializeApplication):", error);
         const appContainer = document.getElementById('app-container');
+        const errorMessage = `<strong>Initialisierungsfehler in der Anwendung:</strong> ${error.message}. Bitte überprüfen Sie die Browser-Konsole auf detaillierte Fehlermeldungen und vorhergehende Fehler. Es ist möglich, dass kritische Skripte oder Daten nicht korrekt geladen oder verarbeitet werden konnten.`;
         if (appContainer) {
-             appContainer.innerHTML = `<div class="alert alert-danger m-3" role="alert"><strong>Initialisierungsfehler:</strong> ${error.message}. Details siehe Konsole.</div>`;
+             appContainer.innerHTML = `<div class="alert alert-danger m-3" role="alert">${errorMessage}</div>`;
         } else {
-            document.body.innerHTML = `<div class="alert alert-danger m-5" role="alert"><strong>Schwerwiegender Initialisierungsfehler:</strong> ${error.message}. Die Anwendung kann nicht korrekt gestartet werden. Details siehe Konsole.</div>`;
+            document.body.innerHTML = `<div class="alert alert-danger m-5" role="alert">${errorMessage}</div>`;
         }
         if (typeof ui_helpers !== 'undefined' && ui_helpers.showToast) {
             ui_helpers.showToast(`Initialisierungsfehler: ${error.message}`, 'danger', 10000);
