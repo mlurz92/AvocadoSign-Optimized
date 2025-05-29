@@ -1,136 +1,162 @@
-const praesentationEventHandlers = (() => {
+const praesentationTabEventHandlers = (() => {
 
-    function handlePresentationViewChange(view, mainAppInterface) {
-        if (!mainAppInterface || typeof mainAppInterface.updateGlobalUIState !== 'function' || typeof mainAppInterface.refreshCurrentTab !== 'function') {
-            console.error("praesentationEventHandlers.handlePresentationViewChange: Ungültiges mainAppInterface.");
+    function handleViewChange(event) {
+        if (typeof state === 'undefined' || typeof praesentationTabLogic === 'undefined') {
+            console.error("Präsentation Event Handler: State oder PraesentationTabLogic nicht initialisiert.");
             return;
         }
-
-        if (state.setCurrentPresentationView(view)) { // setCurrentPresentationView already handles resetting studyId or setting default
-            mainAppInterface.updateGlobalUIState();
-            if (state.getActiveTabId() === 'praesentation-tab') {
-                mainAppInterface.refreshCurrentTab();
-            }
+        const target = event.target;
+        if (target.name === 'praesentationAnsicht' && target.checked) {
+            state.setPresentationView(target.value);
+            praesentationTabLogic.renderTabContent();
         }
     }
 
-    function handlePresentationStudySelectChange(studyId, mainAppInterface) {
-        if (!studyId || !mainAppInterface || typeof mainAppInterface.updateGlobalUIState !== 'function' || typeof mainAppInterface.refreshCurrentTab !== 'function') {
-            console.error("praesentationEventHandlers.handlePresentationStudySelectChange: Ungültige Parameter.");
+    function handleStudySelectChange(event) {
+        if (typeof state === 'undefined' || typeof praesentationTabLogic === 'undefined') {
+            console.error("Präsentation Event Handler: State oder PraesentationTabLogic nicht initialisiert.");
             return;
         }
-        if(state.getCurrentPresentationStudyId() === studyId) return;
-
-        const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studyId);
-        let kollektivChanged = false;
-        let refreshNeeded = false;
-
-        if (studySet?.applicableKollektiv) {
-            const targetKollektiv = studySet.applicableKollektiv;
-            if (state.getCurrentKollektiv() !== targetKollektiv && mainAppInterface.handleGlobalKollektivChange) {
-                kollektivChanged = mainAppInterface.handleGlobalKollektivChange(targetKollektiv, "auto_praesentation");
-                refreshNeeded = kollektivChanged;
-            }
+        const selectedStudyId = event.target.value;
+        if (selectedStudyId === "null" || selectedStudyId === "") {
+             state.setPresentationStudyId(null);
+        } else {
+             state.setPresentationStudyId(selectedStudyId);
         }
-
-        const studyIdChanged = state.setCurrentPresentationStudyId(studyId);
-        if (studyIdChanged && !refreshNeeded) {
-            refreshNeeded = true;
-        }
-
-        if (refreshNeeded) {
-            mainAppInterface.updateGlobalUIState();
-            if (state.getActiveTabId() === 'praesentation-tab') {
-                mainAppInterface.refreshCurrentTab();
-            }
-        }
+        praesentationTabLogic.renderTabContent();
     }
 
-    function handlePresentationDownloadClick(button, mainAppInterface) {
-        if (!button || !mainAppInterface || typeof mainAppInterface.getRawData !== 'function' || typeof mainAppInterface.getProcessedData !== 'function') {
-            console.error("praesentationEventHandlers.handlePresentationDownloadClick: Ungültige Parameter oder mainAppInterface unvollständig.");
-            ui_helpers.showToast("Fehler beim Präsentationsexport: Interne Konfiguration.", "danger");
+    async function handlePraesentationDownloadClick(event) {
+        const button = event.target.closest('button[id^="download-praes-"]');
+        if (!button || button.disabled || typeof exportService === 'undefined' || typeof state === 'undefined' || typeof praesentationTabLogic === 'undefined') {
+            if (typeof ui_helpers !== 'undefined' && ui_helpers.showToast) {
+                 ui_helpers.showToast("Exportfunktion nicht bereit oder Button ungültig.", "warning");
+            }
             return;
         }
-        const actionId = button.id;
-        const currentGlobalKollektiv = state.getCurrentKollektiv();
-        const processedDataFull = mainAppInterface.getProcessedData(); // Annahme: gibt alle prozessierten Daten zurück, nicht nur die aktuell gefilterten
-        
-        let presentationData = {};
-        const globalKollektivDaten = dataProcessor.filterDataByKollektiv(processedDataFull, currentGlobalKollektiv);
 
-        presentationData.kollektiv = currentGlobalKollektiv;
-        presentationData.patientCount = globalKollektivDaten?.length ?? 0;
-
+        const buttonId = button.id;
         const currentView = state.getCurrentPresentationView();
+        const currentStudyId = state.getCurrentPresentationStudyId();
+        const currentKollektiv = state.getCurrentKollektiv();
+        const lang = state.getCurrentPublikationLang();
+        const exportData = praesentationTabLogic.getPresentationDataForExport(currentView, currentStudyId);
 
-        if (currentView === 'as-pur') {
-            presentationData.statsGesamt = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'Gesamt'), 'as', 'n');
-            presentationData.statsDirektOP = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'direkt OP'), 'as', 'n');
-            presentationData.statsNRCT = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'nRCT'), 'as', 'n');
-            presentationData.statsCurrentKollektiv = statisticsService.calculateDiagnosticPerformance(globalKollektivDaten, 'as', 'n');
-        } else if (currentView === 'as-vs-t2') {
-            const selectedStudyId = state.getCurrentPresentationStudyId();
-            let comparisonCohortData = globalKollektivDaten;
-            let comparisonKollektivName = currentGlobalKollektiv;
+        let filenameType = null;
+        let contentToExport = null;
+        let exportFunctionName = null;
+        let customNamePart = '';
+        let fileExtension = '';
 
-            if (selectedStudyId && selectedStudyId !== APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) {
-                const studySetForKollektiv = studyT2CriteriaManager.getStudyCriteriaSetById(selectedStudyId);
-                if (studySetForKollektiv?.applicableKollektiv && studySetForKollektiv.applicableKollektiv !== currentGlobalKollektiv) {
-                    comparisonKollektivName = studySetForKollektiv.applicableKollektiv;
-                    comparisonCohortData = dataProcessor.filterDataByKollektiv(processedDataFull, comparisonKollektivName);
-                }
-            }
-            presentationData.kollektivForComparison = comparisonKollektivName;
-            presentationData.patientCountForComparison = comparisonCohortData?.length ?? 0;
+        ui_helpers.showToast(`Export '${buttonId}' wird vorbereitet...`, 'info', 1500);
 
-            if (comparisonCohortData && comparisonCohortData.length > 0) {
-                presentationData.statsAS = statisticsService.calculateDiagnosticPerformance(comparisonCohortData, 'as', 'n');
-                let studySet = null;
-                let evaluatedDataT2 = null;
-                const isApplied = selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
-                const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
-                const appliedLogic = t2CriteriaManager.getAppliedLogic();
-
-                if(isApplied) {
-                    studySet = { criteria: appliedCriteria, logic: appliedLogic, id: selectedStudyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: "Angewandt", studyInfo: { reference: "Benutzerdefiniert (aktuell im Auswertungstab eingestellt)", patientCohort: `Vergleichskollektiv: ${getKollektivDisplayName(comparisonKollektivName)} (N=${presentationData.patientCountForComparison})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } };
-                    evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(comparisonCohortData), studySet.criteria, studySet.logic);
-                } else if (selectedStudyId) {
-                    studySet = studyT2CriteriaManager.getStudyCriteriaSetById(selectedStudyId);
-                    if(studySet) {
-                       evaluatedDataT2 = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(comparisonCohortData), studySet);
+        try {
+            switch (buttonId) {
+                case 'download-praes-demo-md':
+                    filenameType = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.PRAES_AS_PERF_MD;
+                    contentToExport = tableRenderer.renderDescriptiveStatsTable(exportData.tables.find(t=>t.name === 'Deskriptive_Statistik_AS_Basis')?.data[0], exportData.kollektiv, lang, true);
+                    exportFunctionName = '_exportText';
+                    customNamePart = 'Demographie_AS_Basis';
+                    fileExtension = 'md';
+                    break;
+                case 'download-praes-perf-as-pur-csv':
+                    filenameType = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.PRAES_AS_PERF_CSV;
+                    contentToExport = exportData.tables.find(t => t.name === 'AS_Performance_Uebersicht')?.data;
+                    exportFunctionName = '_exportDataAsCSV';
+                    customNamePart = 'Performance_AS_Pur';
+                    fileExtension = 'csv';
+                    break;
+                case 'download-praes-perf-as-pur-md':
+                     filenameType = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.PRAES_AS_PERF_MD; // Reuse MD type
+                     let mdContentASPerf = `### ${lang === 'de' ? 'Diagnostische Güte Avocado Sign' : 'Diagnostic Performance Avocado Sign'}\n\n`;
+                     const asPerfData = exportData.tables.find(t => t.name === 'AS_Performance_Uebersicht');
+                     if(asPerfData) mdContentASPerf += ui_helpers.escapeMarkdown(tableRenderer._createSimpleTable('temp-as-perf', asPerfData.headers.map(h=>({text:h})), asPerfData.data, '', null, [], 'table-sm', Object.keys(asPerfData.data[0]||{})));
+                     contentToExport = mdContentASPerf;
+                     exportFunctionName = '_exportText';
+                     customNamePart = 'Performance_AS_Pur';
+                     fileExtension = 'md';
+                    break;
+                case 'download-praes-perf-as-vs-t2-csv':
+                    filenameType = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.PRAES_AS_VS_T2_PERF_CSV;
+                    contentToExport = exportData.tables.find(t => t.name.startsWith('Performance_AS_vs_'))?.data;
+                    exportFunctionName = '_exportDataAsCSV';
+                    customNamePart = `Performance_AS_vs_${exportData.studyId || 'T2'}`;
+                    fileExtension = 'csv';
+                    break;
+                case 'download-praes-comp-table-as-vs-t2-md':
+                    filenameType = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.PRAES_AS_VS_T2_COMP_MD;
+                    let mdContentCompTable = `### ${lang === 'de' ? 'Vergleich Metriken: AS vs.' : 'Comparison Metrics: AS vs.'} ${exportData.studyId || 'T2'}\n\n`;
+                    const compTableData = exportData.tables.find(t => t.name.startsWith('Performance_AS_vs_'));
+                    if(compTableData) mdContentCompTable += ui_helpers.escapeMarkdown(tableRenderer._createSimpleTable('temp-comp-table', compTableData.headers.map(h=>({text:h})), compTableData.data, '', null, [], 'table-sm', Object.keys(compTableData.data[0]||{})));
+                    contentToExport = mdContentCompTable;
+                    exportFunctionName = '_exportText';
+                    customNamePart = `Vergleich_Metriken_AS_vs_${exportData.studyId || 'T2'}`;
+                    fileExtension = 'md';
+                    break;
+                case 'download-praes-tests-as-vs-t2-md':
+                    filenameType = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.PRAES_AS_VS_T2_TESTS_MD;
+                     let mdContentTests = `### ${lang === 'de' ? 'Statistische Tests: AS vs.' : 'Statistical Tests: AS vs.'} ${exportData.studyId || 'T2'}\n\n`;
+                     const testsData = exportData.tables.find(t => t.name.startsWith('Vergleichstests_AS_vs_'));
+                     if(testsData) mdContentTests += ui_helpers.escapeMarkdown(tableRenderer._createSimpleTable('temp-tests-table', testsData.headers.map(h=>({text:h})), testsData.data, '', null, [], 'table-sm', Object.keys(testsData.data[0]||{})));
+                    contentToExport = mdContentTests;
+                    exportFunctionName = '_exportText';
+                    customNamePart = `Vergleich_Tests_AS_vs_${exportData.studyId || 'T2'}`;
+                    fileExtension = 'md';
+                    break;
+                default:
+                    if (button.classList.contains('chart-download-btn') || button.classList.contains('table-download-png-btn')) {
+                         return;
                     }
-                }
+                    ui_helpers.showToast(`Unbekannter Download-Button-ID: ${buttonId}`, "warning");
+                    return;
+            }
 
-                if (studySet && evaluatedDataT2 && evaluatedDataT2.length > 0) {
-                    presentationData.statsT2 = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n');
-                    let asDataForDirectComparison = cloneDeep(comparisonCohortData); // Verwende die korrekten AS-Daten für den direkten Vergleich
-                    evaluatedDataT2.forEach((p, i) => { if (asDataForDirectComparison[i]) p.as = asDataForDirectComparison[i].as; });
-                    presentationData.vergleich = statisticsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n');
-                    presentationData.comparisonCriteriaSet = studySet;
-                    presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2';
-                    presentationData.t2CriteriaLabelFull = `${isApplied ? 'Aktuell angewandt' : (studySet.name || 'Studie')}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`;
-                } else if (studySet) {
-                    presentationData.statsT2 = null;
-                    presentationData.vergleich = null;
-                    presentationData.comparisonCriteriaSet = studySet;
-                    presentationData.t2CriteriaLabelShort = studySet.displayShortName || 'T2';
-                    presentationData.t2CriteriaLabelFull = `${studySet.name}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic)}`;
+            if (contentToExport !== null && contentToExport !== undefined) {
+                const filename = exportService._generateFilename(filenameType, exportData.kollektiv || currentKollektiv, fileExtension, customNamePart);
+                if (exportFunctionName === '_exportDataAsCSV') {
+                    exportService._exportDataAsCSV(contentToExport, filename);
+                } else if (exportFunctionName === '_exportText') {
+                    exportService._exportText(contentToExport, filename);
                 }
             } else {
-                 presentationData.statsAS = null;
-                 presentationData.statsT2 = null;
-                 presentationData.vergleich = null;
-                 if(selectedStudyId) presentationData.comparisonCriteriaSet = studyT2CriteriaManager.getStudyCriteriaSetById(selectedStudyId) || {name: selectedStudyId, displayShortName: 'Unbekannt', criteria: {}, logic: 'ODER', studyInfo:{}};
+                ui_helpers.showToast("Keine Daten für diesen Export verfügbar.", "warning");
             }
+
+        } catch (error) {
+            console.error(`Fehler beim Präsentation-Export '${buttonId}':`, error);
+            ui_helpers.showToast(`Fehler beim Export: ${error.message}`, "danger");
         }
-        exportService.exportPraesentationData(actionId, presentationData, currentGlobalKollektiv);
     }
 
 
+    function initialize() {
+        const viewSelectorContainer = document.getElementById('praesentation-view-selector');
+        if (viewSelectorContainer) {
+            viewSelectorContainer.removeEventListener('change', handleViewChange);
+            viewSelectorContainer.addEventListener('change', handleViewChange);
+        } else {
+            console.warn("Präsentation Ansichtsauswahl-Container nicht gefunden für Event Listener.");
+        }
+
+        const studySelectElement = document.getElementById('praes-study-select');
+        if (studySelectElement) {
+            studySelectElement.removeEventListener('change', handleStudySelectChange);
+            studySelectElement.addEventListener('change', handleStudySelectChange);
+        } else {
+            console.warn("Präsentation Studienauswahl nicht gefunden für Event Listener.");
+        }
+
+        const tabContentElement = document.getElementById('praesentation-tab-content');
+        if (tabContentElement) {
+             tabContentElement.removeEventListener('click', handlePraesentationDownloadClick);
+             tabContentElement.addEventListener('click', handlePraesentationDownloadClick);
+        } else {
+            console.warn("Präsentation Tab-Inhaltscontainer nicht gefunden für Download-Event Listener.");
+        }
+    }
+
     return Object.freeze({
-        handlePresentationViewChange,
-        handlePresentationStudySelectChange,
-        handlePresentationDownloadClick
+        initialize
     });
+
 })();
