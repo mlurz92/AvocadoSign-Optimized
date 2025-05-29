@@ -1,191 +1,222 @@
 const bruteForceManager = (() => {
-    let worker = null;
-    let isRunningState = false;
-    let currentKollektivRunning = null;
+    let workerInstance = null;
+    let isRunning = false;
+    let currentKollektivDataFunc = null;
+    let onUpdateCallback = null;
+    let onCompleteCallback = null;
+    let mainAppInterfaceRef = null;
+    let currentProgressData = null;
     let allKollektivResults = {};
+    let isWorkerReallyAvailable = false;
+    let currentRunConfig = {};
 
-    let onProgressCallback = null;
-    let onResultCallback = null;
-    let onErrorCallback = null;
-    let onCancelledCallback = null;
-    let onStartedCallback = null;
-
-    function initializeWorker() {
-        if (!window.Worker) {
-            console.error("BruteForceManager: Web Worker nicht unterstützt.");
-            if (onErrorCallback) onErrorCallback({ message: 'Web Worker nicht unterstützt.' });
-            return false;
-        }
+    function _initializeWorker() {
         try {
-            if (worker) {
-                worker.terminate();
-                worker = null;
+            if (typeof Worker === "undefined") {
+                console.error("BruteForceManager: Web Workers werden von diesem Browser nicht unterstützt.");
+                ui_helpers.showToast("Brute-Force-Optimierung nicht verfügbar (Browser-Inkompatibilität).", "danger");
+                isWorkerReallyAvailable = false;
+                return;
             }
-            worker = new Worker(APP_CONFIG.PATHS.BRUTE_FORCE_WORKER);
-            worker.onmessage = handleWorkerMessage;
-            worker.onerror = handleWorkerError;
-            worker.onmessageerror = (e) => {
-                console.error("BruteForceManager: Worker messageerror:", e);
-                if (onErrorCallback) onErrorCallback({ message: 'Worker-Kommunikationsfehler (messageerror).' });
-                 isRunningState = false;
-                 currentKollektivRunning = null;
-                 worker = null;
+            workerInstance = new Worker(APP_CONFIG.PATHS.BRUTE_FORCE_WORKER);
+            isWorkerReallyAvailable = true;
+
+            workerInstance.onmessage = (event) => {
+                const { type, payload } = event.data;
+                currentProgressData = payload;
+
+                switch (type) {
+                    case 'started':
+                        isRunning = true;
+                        if (mainAppInterfaceRef && typeof mainAppInterfaceRef.setUIInteraction === 'function') {
+                            mainAppInterfaceRef.setUIInteraction(false);
+                        }
+                        if (onUpdateCallback) onUpdateCallback('started', payload);
+                        break;
+                    case 'progress':
+                        if (onUpdateCallback) onUpdateCallback('progress', payload);
+                        break;
+                    case 'complete':
+                        isRunning = false;
+                        allKollektivResults[payload.kollektiv] = payload;
+                        if (mainAppInterfaceRef && typeof mainAppInterfaceRef.setUIInteraction === 'function') {
+                            mainAppInterfaceRef.setUIInteraction(true);
+                        }
+                        if (onUpdateCallback) onUpdateCallback('result', payload);
+                        if (onCompleteCallback) onCompleteCallback(payload.bestResult, payload.kollektiv);
+                        if (workerInstance) workerInstance.terminate();
+                        _initializeWorker();
+                        break;
+                    case 'error':
+                        isRunning = false;
+                        console.error("Fehler im Brute-Force Worker:", payload.message);
+                        ui_helpers.showToast(`Brute-Force Fehler: ${payload.message}`, "danger");
+                        if (mainAppInterfaceRef && typeof mainAppInterfaceRef.setUIInteraction === 'function') {
+                            mainAppInterfaceRef.setUIInteraction(true);
+                        }
+                        if (onUpdateCallback) onUpdateCallback('error', payload);
+                        if (workerInstance) workerInstance.terminate();
+                        _initializeWorker();
+                        break;
+                    default:
+                        console.warn("Unbekannter Nachrichtentyp vom Brute-Force Worker:", type);
+                }
             };
-            console.log("BruteForceManager: Worker erfolgreich initialisiert.");
-            return true;
+
+            workerInstance.onerror = (error) => {
+                isRunning = false;
+                console.error("Schwerwiegender Fehler im Brute-Force Worker:", error.message, error.filename, error.lineno);
+                ui_helpers.showToast(`Kritischer Fehler im Brute-Force Worker: ${error.message}. Optimierung abgebrochen.`, "danger");
+                currentProgressData = { message: error.message };
+                if (mainAppInterfaceRef && typeof mainAppInterfaceRef.setUIInteraction === 'function') {
+                    mainAppInterfaceRef.setUIInteraction(true);
+                }
+                if (onUpdateCallback) onUpdateCallback('error', currentProgressData);
+                if (workerInstance) workerInstance.terminate();
+                _initializeWorker();
+            };
+
         } catch (e) {
-            console.error("BruteForceManager: Fehler bei der Worker-Initialisierung:", e);
-            worker = null;
-            if (onErrorCallback) onErrorCallback({ message: `Worker-Initialisierungsfehler: ${e.message}` });
-            return false;
+            console.error("Fehler beim Initialisieren des Brute-Force Workers:", e);
+            ui_helpers.showToast("Brute-Force Worker konnte nicht gestartet werden.", "danger");
+            isWorkerReallyAvailable = false;
         }
     }
 
-    function handleWorkerMessage(event) {
-        if (!event || !event.data) {
-            console.warn("BruteForceManager: Ungültige Nachricht vom Worker empfangen.");
+    function initialize(kollektivDataFunc, updateCb, completeCb, mainAppInterface) {
+        currentKollektivDataFunc = kollektivDataFunc;
+        onUpdateCallback = updateCb;
+        onCompleteCallback = completeCb;
+        mainAppInterfaceRef = mainAppInterface;
+        allKollektivResults = {};
+        _initializeWorker();
+    }
+
+    function updateKollektivData(kollektivDataFunc) {
+        currentKollektivDataFunc = kollektivDataFunc;
+    }
+
+    function startBruteForce(targetMetric, currentKollektivName) {
+        if (isRunning) {
+            ui_helpers.showToast("Eine Brute-Force-Optimierung läuft bereits.", "warning");
             return;
         }
-        const { type, payload } = event.data;
-
-        switch (type) {
-            case 'started':
-                isRunningState = true;
-                currentKollektivRunning = payload?.kollektiv || currentKollektivRunning;
-                if (onStartedCallback) onStartedCallback(payload);
-                break;
-            case 'progress':
-                if (isRunningState && onProgressCallback) onProgressCallback(payload);
-                break;
-            case 'result':
-                isRunningState = false;
-                const resultKollektiv = payload?.kollektiv || currentKollektivRunning;
-                if (resultKollektiv && payload && payload.bestResult) {
-                    allKollektivResults[resultKollektiv] = cloneDeep(payload);
-                } else {
-                    console.warn("BruteForceManager: Unvollständiges Ergebnis vom Worker, Kollektiv-Info fehlt oder kein bestResult. Payload:", payload, "CurrentKollektivRunning:", currentKollektivRunning);
-                }
-                currentKollektivRunning = null;
-                if (onResultCallback) onResultCallback(payload);
-                break;
-            case 'cancelled':
-                isRunningState = false;
-                const cancelledKollektiv = payload?.kollektiv || currentKollektivRunning;
-                console.log(`BruteForceManager: Analyse für Kollektiv '${cancelledKollektiv}' abgebrochen.`);
-                currentKollektivRunning = null;
-                if (onCancelledCallback) onCancelledCallback(payload);
-                break;
-            case 'error':
-                isRunningState = false;
-                const errorKollektiv = payload?.kollektiv || currentKollektivRunning;
-                console.error(`BruteForceManager: Fehler vom Worker für Kollektiv '${errorKollektiv}':`, payload?.message);
-                currentKollektivRunning = null;
-                if (onErrorCallback) onErrorCallback(payload);
-                break;
-            default:
-                console.warn(`BruteForceManager: Unbekannter Nachrichtentyp vom Worker: ${type}`, payload);
-        }
-    }
-
-    function handleWorkerError(error) {
-        console.error("BruteForceManager: Globaler Fehler im Brute Force Worker:", error);
-        isRunningState = false;
-        const erroredKollektiv = currentKollektivRunning;
-        currentKollektivRunning = null;
-        if (onErrorCallback) onErrorCallback({ message: error.message || 'Unbekannter Worker-Fehler', kollektiv: erroredKollektiv });
-        worker = null;
-    }
-
-    function init(callbacks = {}) {
-        onProgressCallback = callbacks.onProgress || null;
-        onResultCallback = callbacks.onResult || null;
-        onErrorCallback = callbacks.onError || null;
-        onCancelledCallback = callbacks.onCancelled || null;
-        onStartedCallback = callbacks.onStarted || null;
-        allKollektivResults = {};
-        return initializeWorker();
-    }
-
-    function startAnalysis(data, metric, kollektiv) {
-        if (isRunningState) {
-            console.warn("BruteForceManager: Analyse läuft bereits. Startanfrage ignoriert.");
-            if (onErrorCallback) onErrorCallback({ message: "Eine Optimierung läuft bereits.", kollektiv: kollektiv });
-            return false;
-        }
-        if (!worker) {
-            const workerInitialized = initializeWorker();
-            if (!workerInitialized) {
-                console.error("BruteForceManager: Worker nicht verfügbar und konnte nicht initialisiert werden. Start abgebrochen.");
-                if (onErrorCallback) onErrorCallback({ message: "Worker nicht verfügbar und Initialisierung fehlgeschlagen.", kollektiv: kollektiv });
-                return false;
-            }
-        }
-        if (!data || data.length === 0) {
-            console.warn("BruteForceManager: Keine Daten für die Analyse übergeben.");
-             if (onErrorCallback) onErrorCallback({ message: "Keine Daten für Optimierung übergeben.", kollektiv: kollektiv });
-            return false;
+        if (!isWorkerReallyAvailable || !workerInstance) {
+             ui_helpers.showToast("Brute-Force Worker ist nicht verfügbar. Bitte Seite neu laden.", "danger");
+            _initializeWorker();
+            if(!isWorkerReallyAvailable) return;
         }
 
-        currentKollektivRunning = kollektiv;
-        isRunningState = true;
+        if (typeof currentKollektivDataFunc !== 'function') {
+            ui_helpers.showToast("Datenquelle für Brute-Force nicht korrekt initialisiert.", "danger");
+            return;
+        }
 
-        worker.postMessage({
-            action: 'start',
+        const filteredData = currentKollektivDataFunc();
+        if (!filteredData || filteredData.length === 0) {
+            ui_helpers.showToast(`Keine Daten im Kollektiv '${getKollektivDisplayName(currentKollektivName)}' für Brute-Force.`, "warning");
+            return;
+        }
+        if(filteredData.length < APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD * 2) {
+            ui_helpers.showToast(`Warnung: Sehr kleine Fallzahl (N=${filteredData.length}) im Kollektiv '${getKollektivDisplayName(currentKollektivName)}'. Ergebnisse der Brute-Force-Optimierung könnten instabil sein.`, "warning", 6000);
+        }
+
+
+        currentRunConfig = {
+            targetMetric,
+            kollektivName,
+            nGesamt: filteredData.length,
+            nPlus: filteredData.filter(p => p.n === '+').length,
+            nMinus: filteredData.filter(p => p.n === '-').length
+        };
+
+        currentProgressData = {
+             kollektiv: currentKollektivName,
+             metric: targetMetric,
+             nGesamt: currentRunConfig.nGesamt,
+             nPlus: currentRunConfig.nPlus,
+             nMinus: currentRunConfig.nMinus
+        };
+
+
+        if (onUpdateCallback) onUpdateCallback('start', currentProgressData);
+
+        workerInstance.postMessage({
+            type: 'start',
             payload: {
-                data: data,
-                metric: metric,
-                kollektiv: kollektiv,
-                t2SizeRange: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE
+                data: filteredData,
+                t2CriteriaSettings: cloneDeep(APP_CONFIG.T2_CRITERIA_SETTINGS),
+                metric: targetMetric,
+                kollektivName: currentKollektivName,
+                defaultT2Logic: APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC
             }
         });
-        console.log(`BruteForceManager: Analyse gestartet für Kollektiv '${kollektiv}' mit Metrik '${metric}'.`);
-        return true;
-    }
-
-    function cancelAnalysis() {
-        if (!isRunningState || !worker) {
-            console.warn("BruteForceManager: Keine laufende Analyse zum Abbrechen oder Worker nicht verfügbar.");
-            return false;
+        isRunning = true;
+        if (mainAppInterfaceRef && typeof mainAppInterfaceRef.setUIInteraction === 'function') {
+            mainAppInterfaceRef.setUIInteraction(false);
         }
-        worker.postMessage({ action: 'cancel' });
-        console.log("BruteForceManager: Abbruchanfrage an Worker gesendet.");
-        return true;
     }
 
-    function getResultsForKollektiv(kollektivId) {
-        return allKollektivResults[kollektivId] ? cloneDeep(allKollektivResults[kollektivId]) : null;
+    function cancelBruteForce() {
+        if (workerInstance && isRunning) {
+            workerInstance.terminate();
+            _initializeWorker();
+            isRunning = false;
+            currentProgressData = { message: 'Manuell abgebrochen.', kollektiv: currentRunConfig.kollektivName, metric: currentRunConfig.targetMetric, nGesamt: currentRunConfig.nGesamt, nPlus: currentRunConfig.nPlus, nMinus: currentRunConfig.nMinus };
+            if (mainAppInterfaceRef && typeof mainAppInterfaceRef.setUIInteraction === 'function') {
+                mainAppInterfaceRef.setUIInteraction(true);
+            }
+            if (onUpdateCallback) onUpdateCallback('cancelled', currentProgressData);
+            ui_helpers.showToast("Brute-Force-Optimierung abgebrochen.", "info");
+        }
+    }
+
+    function isWorkerAvailable() {
+        return isWorkerReallyAvailable;
+    }
+
+    function getIsRunning() {
+        return isRunning;
+    }
+
+    function getCurrentState() {
+        if (isRunning && currentProgressData?.type === 'started') return 'started';
+        if (isRunning && currentProgressData?.type === 'progress') return 'progress';
+        if (!isRunning && currentProgressData?.type === 'complete') return 'result';
+        if (!isRunning && currentProgressData?.type === 'cancelled') return 'cancelled';
+        if (!isRunning && currentProgressData?.type === 'error') return 'error';
+        return 'idle';
+    }
+
+    function getCurrentData() {
+        return currentProgressData ? cloneDeep(currentProgressData) : null;
+    }
+
+    function getResultsForKollektiv(kollektivName) {
+        return allKollektivResults[kollektivName] ? cloneDeep(allKollektivResults[kollektivName]) : null;
     }
 
     function getAllResults() {
         return cloneDeep(allKollektivResults);
     }
 
-    function isAnalysisRunning() {
-        return isRunningState;
+    function hasAnyResults() {
+        return Object.keys(allKollektivResults).length > 0;
     }
 
-    function isWorkerAvailable() {
-        return !!worker;
-    }
-
-    function terminateWorker() {
-        if (worker) {
-            worker.terminate();
-            worker = null;
-            isRunningState = false;
-            currentKollektivRunning = null;
-            console.log("BruteForceManager: Worker terminiert.");
-        }
-    }
 
     return Object.freeze({
-        init,
-        startAnalysis,
-        cancelAnalysis,
+        initialize,
+        updateKollektivData,
+        startBruteForce,
+        cancelBruteForce,
+        isWorkerAvailable,
+        isRunning: getIsRunning,
+        getCurrentState,
+        getCurrentData,
         getResultsForKollektiv,
         getAllResults,
-        isRunning: isAnalysisRunning,
-        isWorkerAvailable,
-        terminateWorker
+        hasAnyResults
     });
+
 })();
