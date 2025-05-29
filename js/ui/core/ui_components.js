@@ -24,7 +24,7 @@ const uiComponents = (() => {
                 const dataAttributes = [];
                 if (btn.chartId) dataAttributes.push(`data-chart-id="${btn.chartId}"`);
                 if (btn.tableId) dataAttributes.push(`data-table-id="${btn.tableId}"`);
-                
+
                 if (btn.tableName) dataAttributes.push(`data-table-name="${safeTableName.replace(/\s/g, '_')}"`);
                 else if (btn.chartId) dataAttributes.push(`data-chart-name="${safeChartName.replace(/\s/g, '_')}"`);
                 else dataAttributes.push(`data-default-name="${safeDefaultTitle.replace(/\s/g, '_')}"`);
@@ -41,9 +41,9 @@ const uiComponents = (() => {
     function createDashboardCard(title, content, chartId = null, cardClasses = '', headerClasses = '', bodyClasses = '', downloadButtons = []) {
         const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, chartId || title.replace(/[^a-z0-9]/gi, '_'), title);
         const tooltipKey = chartId ? chartId.replace(/^chart-dash-/, '') : title.toLowerCase().replace(/\s+/g, '');
-        let tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik[tooltipKey]?.description || title || '';
-        if(tooltipKey === 'ageDistribution' || tooltipKey === 'alter') tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.chartAge?.description || title;
-        else if(tooltipKey === 'genderDistribution' || tooltipKey === 'geschlecht') tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.chartGender?.description || title;
+        let tooltipContent = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.deskriptiveStatistik && TOOLTIP_CONTENT.deskriptiveStatistik[tooltipKey]?.description) || title || '';
+        if(tooltipKey === 'ageDistribution' || tooltipKey === 'alter') tooltipContent = (TOOLTIP_CONTENT?.deskriptiveStatistik?.chartAge?.description) || title;
+        else if(tooltipKey === 'genderDistribution' || tooltipKey === 'geschlecht') tooltipContent = (TOOLTIP_CONTENT?.deskriptiveStatistik?.chartGender?.description) || title;
 
 
         return `
@@ -85,7 +85,7 @@ const uiComponents = (() => {
 
         const createCriteriaGroup = (key, label, tooltipKey, contentGenerator) => {
             const isChecked = initialCriteria[key]?.active === true;
-            const tooltip = TOOLTIP_CONTENT[tooltipKey]?.description || label;
+            const tooltip = (TOOLTIP_CONTENT && TOOLTIP_CONTENT[tooltipKey]?.description) || label;
             return `
                 <div class="col-md-6 criteria-group">
                     <div class="form-check mb-2">
@@ -106,7 +106,7 @@ const uiComponents = (() => {
                     <div class="form-check form-switch" data-tippy-content="${TOOLTIP_CONTENT.t2Logic.description}">
                          <label class="form-check-label small me-2" for="t2-logic-switch" id="t2-logic-label-prefix">Logik:</label>
                          <input class="form-check-input" type="checkbox" role="switch" id="t2-logic-switch" ${logicChecked ? 'checked' : ''}>
-                         <label class="form-check-label fw-bold" for="t2-logic-switch" id="t2-logic-label">${initialLogic}</label>
+                         <label class="form-check-label fw-bold" for="t2-logic-switch" id="t2-logic-label">${UI_TEXTS.t2LogicDisplayNames[initialLogic] || initialLogic}</label>
                      </div>
                 </div>
                 <div class="card-body">
@@ -174,12 +174,12 @@ const uiComponents = (() => {
                              </button>
                         </div>
                          <div class="col-md-4">
-                             <div id="brute-force-info" class="text-muted small text-md-end" data-tippy-content="${(TOOLTIP_CONTENT.bruteForceInfo.description || 'Status des Optimierungs-Workers und aktuelles Kollektiv.').replace('[KOLLEKTIV_NAME]', `<strong>${displayKollektivName}</strong>`)}">
+                             <div id="brute-force-info" class="text-muted small text-md-end" data-tippy-content="${((TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${displayKollektivName}</strong>`))}">
                                  Status: <span id="bf-status-text" class="fw-bold">${statusText}</span><br>Kollektiv: <strong id="bf-kollektiv-info">${displayKollektivName}</strong>
                              </div>
                          </div>
                     </div>
-                     <div id="brute-force-progress-container" class="mt-3 d-none" data-tippy-content="${(TOOLTIP_CONTENT.bruteForceProgress.description || 'Fortschritt der laufenden Optimierung.').replace('[TOTAL]', '0')}">
+                     <div id="brute-force-progress-container" class="mt-3 d-none" data-tippy-content="${((TOOLTIP_CONTENT.bruteForceProgress.description || '').replace('[TOTAL]', '0'))}">
                          <div class="d-flex justify-content-between mb-1 small">
                             <span>Fortschritt: <span id="bf-tested-count">0</span> / <span id="bf-total-count">0</span></span>
                             <span id="bf-progress-percent">0%</span>
@@ -221,7 +221,7 @@ const uiComponents = (() => {
 
     function createStatistikCard(id, title, content = '', addPadding = true, tooltipKey = null, downloadButtons = [], tableId = null) {
         const cardTooltipHtml = tooltipKey && TOOLTIP_CONTENT[tooltipKey]?.cardTitle
-            ? `data-tippy-content="${(TOOLTIP_CONTENT[tooltipKey].cardTitle || title).replace('[KOLLEKTIV]', '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>')}"`
+            ? `data-tippy-content="${(TOOLTIP_CONTENT[tooltipKey].cardTitle || title).replace(/\[KOLLEKTIV_PLACEHOLDER\]/g, '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>').replace(/\[KOLLEKTIV\]/g, '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>')}"`
             : `data-tippy-content="${title}"`;
 
         const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, id + '-content', title);
@@ -278,13 +278,18 @@ const uiComponents = (() => {
                             <p class="small text-muted mb-3">${exportDesc}</p>
                             <h6 class="text-muted small text-uppercase mb-2">Berichte & Statistiken</h6>
                             ${generateButtonHTML('statistik-csv', 'fas fa-file-csv', 'Statistik Ergebnisse', 'statsCSV')}
+                            ${generateButtonHTML('statistik-xlsx', 'fas fa-file-excel', UI_TEXTS.excelExport.statistikLabel.replace(' (.xlsx)',''), 'statsXLSX', true)}
                             ${generateButtonHTML('bruteforce-txt', 'fas fa-file-alt', 'Brute-Force Bericht', 'bruteForceTXT', true)}
+                            ${generateButtonHTML('bruteforce-xlsx', 'fas fa-file-excel', 'Brute-Force Ergebnisse', 'bruteForceXLSX', true)}
                             ${generateButtonHTML('deskriptiv-md', 'fab fa-markdown', 'Deskriptive Statistik', 'deskriptivMD')}
                             ${generateButtonHTML('comprehensive-report-html', 'fas fa-file-invoice', 'Umfassender Bericht', 'comprehensiveReportHTML')}
                              <h6 class="mt-3 text-muted small text-uppercase mb-2">Tabellen & Rohdaten</h6>
                              ${generateButtonHTML('daten-md', 'fab fa-markdown', 'Datenliste', 'datenMD')}
+                             ${generateButtonHTML('daten-xlsx', 'fas fa-file-excel', UI_TEXTS.excelExport.datenLabel.replace(' (.xlsx)',''), 'datenXLSX', true)}
                              ${generateButtonHTML('auswertung-md', 'fab fa-markdown', 'Auswertungstabelle', 'auswertungMD')}
+                             ${generateButtonHTML('auswertung-xlsx', 'fas fa-file-excel', UI_TEXTS.excelExport.auswertungLabel.replace(' (.xlsx)',''), 'auswertungXLSX', true)}
                              ${generateButtonHTML('filtered-data-csv', 'fas fa-database', 'Gefilterte Rohdaten', 'filteredDataCSV')}
+                             ${generateButtonHTML('filtered-data-xlsx', 'fas fa-file-excel', UI_TEXTS.excelExport.filteredDataLabel.replace(' (.xlsx)',''), 'filteredDataXLSX', true)}
                              <h6 class="mt-3 text-muted small text-uppercase mb-2">Diagramme & Tabellen (als Bilder)</h6>
                              ${generateButtonHTML('charts-png', 'fas fa-images', 'Diagramme & Tabellen (PNG)', 'pngZIP')}
                              ${generateButtonHTML('charts-svg', 'fas fa-file-code', 'Diagramme (SVG)', 'svgZIP')}
@@ -298,6 +303,7 @@ const uiComponents = (() => {
                              <p class="small text-muted mb-3">Bündelt mehrere thematisch zusammengehörige Exportdateien in einem ZIP-Archiv für das Kollektiv <strong>${getKollektivDisplayName(currentKollektiv)}</strong>.</p>
                             ${generateZipButtonHTML('all-zip', 'fas fa-file-archive', 'Gesamtpaket (Alle Dateien)', 'allZIP')}
                             ${generateZipButtonHTML('csv-zip', 'fas fa-file-csv', 'Nur CSVs', 'csvZIP')}
+                            ${generateZipButtonHTML('xlsx-zip', 'fas fa-file-excel', UI_TEXTS.excelExport.zipLabel.replace(' (.zip)',''), 'xlsxZIP', true)}
                             ${generateZipButtonHTML('md-zip', 'fab fa-markdown', 'Nur Markdown', 'mdZIP')}
                             ${generateZipButtonHTML('png-zip', 'fas fa-images', 'Nur Diagramm/Tabellen-PNGs', 'pngZIP')}
                             ${generateZipButtonHTML('svg-zip', 'fas fa-file-code', 'Nur Diagramm-SVGs', 'svgZIP')}
@@ -305,7 +311,7 @@ const uiComponents = (() => {
                     </div>
                 </div>
                 <div class="col-lg-12 col-xl-4 mb-3">
-                   <div class="card h-100"> <div class="card-header">Hinweise zum Export</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV:** Für Statistiksoftware; Trennzeichen: Semikolon (;).</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** Für Dokumentation.</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** Brute-Force-Bericht.</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht:** Umfassend, druckbar.</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** Pixelbasiert (Diagramme/Tabellen).</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** Vektorbasiert (Diagramme), skalierbar.</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>ZIP-Exporte für Diagramme/Tabellen erfassen nur aktuell im Statistik- oder Auswertungstab sichtbare/gerenderte Elemente. Einzel-Downloads sind direkt am Element möglich (z.B. auch im Präsentationstab).</li> </ul> </div> </div>
+                   <div class="card h-100"> <div class="card-header">Hinweise zum Export</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV/XLSX:** Für Statistiksoftware/Tabellenkalkulation; CSV-Trennzeichen: Semikolon (;). XLSX ist oft flexibler.</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** Für Dokumentation in Texteditoren.</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** Brute-Force-Bericht als einfache Textdatei.</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht:** Umfassend, druckbar, eigenständig.</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** Pixelbasiert (Diagramme/Tabellen), gut für Präsentationen.</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** Vektorbasiert (Diagramme), ideal für hochwertige Publikationen, beliebig skalierbar.</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>ZIP-Exporte für Diagramme/Tabellen erfassen nur aktuell im Statistik- oder Auswertungstab sichtbare/gerenderte Elemente. Einzel-Downloads sind direkt am jeweiligen Element möglich (z.B. auch im Präsentationstab oder Publikationstab).</li> </ul> </div> </div>
                 </div>
             </div>
         `;
@@ -340,7 +346,7 @@ const uiComponents = (() => {
 
         contentHTML += '</div>';
 
-        return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)</div><div class="card-body p-2">${contentHTML}</div></div>`;
+        return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien) für Kollektiv ${displayKollektivName}</div><div class="card-body p-2">${contentHTML}</div></div>`;
     }
 
     function createBruteForceModalContent(resultsData) {
@@ -405,16 +411,16 @@ const uiComponents = (() => {
                 currentRank = rank;
             }
 
-            if (rank > 10 && isNewRank && i >=10 ) break; // Ensure at least 10 distinct ranks or more items if scores are tied
+            if (rank > 10 && isNewRank && i >=10 ) break;
 
             tableHTML += `
                 <tr>
                     <td>${currentRank}.</td>
                     <td>${formatNumber(result.metricValue, 4)}</td>
-                    <td>${result.sens !== undefined ? formatPercent(result.sens, 1) : 'N/A'}</td>
-                    <td>${result.spez !== undefined ? formatPercent(result.spez, 1) : 'N/A'}</td>
-                    <td>${result.ppv !== undefined ? formatPercent(result.ppv, 1) : 'N/A'}</td>
-                    <td>${result.npv !== undefined ? formatPercent(result.npv, 1) : 'N/A'}</td>
+                    <td>${result.sens !== undefined && isFinite(result.sens) ? formatPercent(result.sens, 1) : 'N/A'}</td>
+                    <td>${result.spez !== undefined && isFinite(result.spez) ? formatPercent(result.spez, 1) : 'N/A'}</td>
+                    <td>${result.ppv !== undefined && isFinite(result.ppv) ? formatPercent(result.ppv, 1) : 'N/A'}</td>
+                    <td>${result.npv !== undefined && isFinite(result.npv) ? formatPercent(result.npv, 1) : 'N/A'}</td>
                     <td>${result.logic.toUpperCase()}</td>
                     <td>${formatCriteriaFunc(result.criteria, result.logic)}</td>
                 </tr>`;
@@ -433,7 +439,7 @@ const uiComponents = (() => {
         const currentBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
         const sectionNavItems = PUBLICATION_CONFIG.sections.map(mainSection => {
-            const sectionTooltip = TOOLTIP_CONTENT.publikationTabTooltips[mainSection.id]?.description || UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey;
+            const sectionTooltip = (TOOLTIP_CONTENT.publikationTabTooltips[mainSection.id]?.description || UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey);
             return `
                 <li class="nav-item">
                     <a class="nav-link py-2 publikation-section-link" href="#" data-section-id="${mainSection.id}" data-tippy-content="${sectionTooltip}">
@@ -446,6 +452,9 @@ const uiComponents = (() => {
             `<option value="${opt.value}" ${opt.value === currentBfMetric ? 'selected' : ''}>${opt.label}</option>`
         ).join('');
 
+        const docxDownloadTooltip = TOOLTIP_CONTENT.exportTab.publicationDOCX.description.replace('{KOLLEKTIV}', getKollektivDisplayName(state.getCurrentKollektiv()));
+
+
         return `
             <div class="row mb-3 sticky-top bg-light py-2 shadow-sm" style="top: var(--sticky-header-offset); z-index: 1015;">
                 <div class="col-md-3">
@@ -456,6 +465,11 @@ const uiComponents = (() => {
                 </div>
                 <div class="col-md-9">
                     <div class="d-flex justify-content-end align-items-center mb-2">
+                        <div class="me-auto">
+                             <button class="btn btn-sm btn-outline-primary" id="btn-download-publication-docx" data-tippy-content="${docxDownloadTooltip}">
+                                <i class="fas fa-file-word me-1"></i> Text exportieren (.docx)
+                             </button>
+                        </div>
                         <div class="me-3">
                            <label for="publikation-bf-metric-select" class="form-label form-label-sm mb-0 me-1">${UI_TEXTS.publikationTab.bruteForceMetricSelectLabel}</label>
                            <select class="form-select form-select-sm d-inline-block" id="publikation-bf-metric-select" style="width: auto;" data-tippy-content="${TOOLTIP_CONTENT.publikationTabTooltips.bruteForceMetricSelect.description}">
