@@ -32,11 +32,12 @@ const UI_TEXTS = {
             en: 'English'
         },
         sectionLabels: {
+            abstract: 'Abstract',
+            einleitung: 'Einleitung',
             methoden: 'Methoden',
             ergebnisse: 'Ergebnisse',
             diskussion: 'Diskussion',
-            einleitung: 'Einleitung',
-            abstract: 'Abstract',
+            schlussfolgerung: 'Schlussfolgerung',
             referenzen: 'Referenzen'
         },
         bruteForceMetricSelectLabel: 'Optimierungsmetrik für T2 (BF):'
@@ -101,7 +102,8 @@ const UI_TEXTS = {
     },
     singleChartDownload: {
         pngLabel: "Als PNG herunterladen",
-        svgLabel: "Als SVG herunterladen"
+        svgLabel: "Als SVG herunterladen",
+        tiffLabel: "Als TIFF herunterladen"
     },
     statMetrics: {
         signifikanzTexte: {
@@ -135,7 +137,7 @@ const UI_TEXTS = {
                 <li><strong>Kollektiv-Auswahl (Header):</strong> Wählen Sie hier das globale Patientenkollektiv (Gesamt, Direkt OP, nRCT). Diese Auswahl beeinflusst alle Analysen und Darstellungen.</li>
                 <li><strong>Tab-Navigation:</strong> Wechseln Sie zwischen den Hauptfunktionen (Daten, Auswertung, Statistik, etc.).</li>
                 <li><strong>Tooltips:</strong> Fahren Sie mit der Maus über Elemente für detaillierte Erklärungen.</li>
-                <li><strong>Statistische Signifikanz:</strong> p-Werte werden mit Symbolen versehen: * p < 0.05, ** p < 0.01, *** p < 0.001. Das Signifikanzniveau ist α = ${APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL}.</li>
+                <li><strong>Statistische Signifikanz:</strong> p-Werte werden mit Symbolen versehen: * p < 0.05, ** p < 0.01, *** p < 0.001. Das Signifikanzniveau ist &alpha; = ${APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL}.</li>
             </ul>
             <h6>Wichtige Tabs:</h6>
             <ul>
@@ -149,7 +151,7 @@ const UI_TEXTS = {
                 </li>
                 <li><strong>Statistik:</strong> Detaillierte statistische Analysen. Wählen Sie "Einzelansicht" oder "Vergleich Aktiv" für Kollektivvergleiche. Konfidenzintervalle (CI) sind 95%-CIs.</li>
                 <li><strong>Präsentation:</strong> Aufbereitete Ergebnisse, ideal für Vorträge.</li>
-                <li><strong>Publikation:</strong> Generiert Textvorschläge und Materialien für eine wissenschaftliche Publikation.</li>
+                <li><strong>Publikation:</strong> Generiert einen umfassenden Erstentwurf einer wissenschaftlichen Publikation (Struktur ähnlich "Radiology") zum Vergleich von Avocado Sign mit verschiedenen T2-Kriteriensets.</li>
                 <li><strong>Export:</strong> Lädt Analyseergebnisse und Daten herunter.</li>
             </ul>
              <h6>T2-Kriterien Anwendung:</h6>
@@ -176,7 +178,7 @@ const TOOLTIP_CONTENT = {
         auswertung: "Zentraler Tab zur Definition von T2-Kriterien, Anzeige eines deskriptiven Dashboards, Durchführung der Brute-Force-Optimierung und detaillierte Auswertungsergebnisse pro Patient basierend auf den angewendeten Kriterien.",
         statistik: "Bietet detaillierte statistische Analysen (Gütekriterien, Vergleiche, Assoziationen) für das global gewählte Kollektiv oder einen Vergleich zweier spezifisch wählbarer Kollektive. Alle Konfidenzintervalle (CI) sind 95%-CIs.",
         praesentation: "Stellt Analyseergebnisse in einem aufbereiteten, präsentationsfreundlichen Format dar, fokussiert auf den Vergleich des Avocado Signs mit T2-basierten Ansätzen (angewandt oder Literatur).",
-        publikation: "Generiert Textvorschläge und Materialien für eine wissenschaftliche Publikation zum Vergleich von Avocado Sign mit verschiedenen T2-Kriteriensets.",
+        publikation: "Generiert einen umfassenden Erstentwurf einer wissenschaftlichen Publikation (Layout ähnlich \"Radiology\"), inklusive Methoden, Ergebnisse, Tabellen und Abbildungsreferenzen, basierend auf den aktuellen Daten und Analysen.",
         export: "Bietet umfangreiche Optionen zum Herunterladen von Rohdaten, Analyseergebnissen, Tabellen und Diagrammen in verschiedenen Dateiformaten.",
         moreTabsDropdown: "Weitere Tabs anzeigen."
     },
@@ -330,12 +332,16 @@ const TOOLTIP_CONTENT = {
         filteredDataCSV: { description: "Rohdaten des aktuell ausgewählten Kollektivs (inkl. T2-Bewertung) als CSV-Datei (.csv).", type: 'FILTERED_DATA_CSV', ext: "csv" },
         filteredDataXLSX: { description: "Rohdaten des aktuell ausgewählten Kollektivs (inkl. T2-Bewertung) als Excel-Datei (.xlsx).", type: 'FILTERED_DATA_XLSX', ext: "xlsx" },
         comprehensiveReportHTML: { description: "Umfassender Analysebericht als HTML-Datei (Statistiken, Konfigurationen, Diagramme), druckbar.", type: 'COMPREHENSIVE_REPORT_HTML', ext: "html" },
+        publicationDraftMD: { description: "Vollständiger Publikationsentwurf (basierend auf 'Publikation'-Tab) als Markdown-Datei (.md).", type: 'PUBLIKATION_DRAFT_MD', ext: "md"},
+        publicationDraftHTML: { description: "Vollständiger Publikationsentwurf (basierend auf 'Publikation'-Tab) als HTML-Datei (.html).", type: 'PUBLIKATION_DRAFT_HTML', ext: "html"},
         chartsPNG: { description: "Alle aktuell sichtbaren Diagramme (Statistik, Auswertung, Präsentation) und ausgewählte Tabellen als einzelne PNG-Dateien (ZIP-Archiv).", type: 'PNG_ZIP', ext: "zip" },
         chartsSVG: { description: "Alle aktuell sichtbaren Diagramme (Statistik, Auswertung, Präsentation) als einzelne SVG-Dateien (ZIP-Archiv).", type: 'SVG_ZIP', ext: "zip" },
+        chartsTIFF: { description: "Alle aktuell sichtbaren Diagramme (Statistik, Auswertung, Präsentation) als einzelne TIFF-Dateien (ZIP-Archiv, experimentell).", type: 'TIFF_ZIP', ext: "zip" },
         chartSinglePNG: { description: "Ausgewähltes Diagramm '{ChartName}' als PNG-Datei.", type: 'CHART_SINGLE_PNG', ext: "png"},
         chartSingleSVG: { description: "Ausgewähltes Diagramm '{ChartName}' als SVG-Datei (Vektorformat).", type: 'CHART_SINGLE_SVG', ext: "svg"},
+        chartSingleTIFF: { description: "Ausgewähltes Diagramm '{ChartName}' als TIFF-Datei (experimentell).", type: 'CHART_SINGLE_TIFF', ext: "tiff"},
         tableSinglePNG: { description: "Ausgewählte Tabelle '{TableName}' als PNG-Bilddatei.", type: 'TABLE_PNG_EXPORT', ext: "png"},
-        allZIP: { description: "Alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT, alle MDs, Rohdaten-CSV, HTML-Report) in einem ZIP-Archiv.", type: 'ALL_ZIP', ext: "zip"},
+        allZIP: { description: "Alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT, alle MDs, Rohdaten-CSV, HTML-Report, Publikationsentwürfe) in einem ZIP-Archiv.", type: 'ALL_ZIP', ext: "zip"},
         csvZIP: { description: "Alle verfügbaren CSV-Dateien (Statistik, Rohdaten) in einem ZIP-Archiv.", type: 'CSV_ZIP', ext: "zip"},
         mdZIP: { description: "Alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikationstexte) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "zip"},
         pngZIP: { description: "Identisch zum 'Diagramme & Tabellen (PNG)' Einzel-Export.", type: 'PNG_ZIP', ext: "zip"},
@@ -345,22 +351,48 @@ const TOOLTIP_CONTENT = {
     publikationTabTooltips: {
         spracheSwitch: { description: "Wechselt die Sprache der generierten Texte und einiger Beschriftungen im Publikation-Tab zwischen Deutsch und Englisch." },
         sectionSelect: { description: "Wählen Sie den Abschnitt der wissenschaftlichen Publikation, für den Textvorschläge und relevante Daten/Grafiken angezeigt werden sollen." },
-        bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, deren Brute-Force-Optimierungsergebnisse im Ergebnisteil angezeigt werden sollen. Standardtexte beziehen sich meist auf die Default-Optimierungsmetrik (Balanced Accuracy)." },
+        bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, deren Brute-Force-Optimierungsergebnisse im Ergebnisteil der generierten Publikation verwendet werden sollen. Standardtexte beziehen sich meist auf die Default-Optimierungsmetrik (Balanced Accuracy)." },
+        abstract: {
+            description: "Kurze Zusammenfassung der Studie (Hintergrund, Methoden, Ergebnisse, Schlussfolgerung)."
+        },
+        einleitung: {
+            description: "Hintergrundinformationen zum Thema, Stand der Forschung und Zielsetzung der aktuellen Studie."
+        },
         methoden: {
-            studienanlage: "Textvorschlag und Informationen zu Studiendesign, Ethik und Software.",
-            patientenkohorte: "Textvorschlag und Informationen zum Patientenkollektiv und der Datenbasis.",
-            mrtProtokoll: "Textvorschlag und Informationen zum MRT-Protokoll und Kontrastmittel.",
-            asDefinition: "Textvorschlag und Informationen zur Definition und Bewertung des Avocado Signs.",
-            t2Definition: "Textvorschlag und Informationen zur Definition und Bewertung der T2-Kriterien (Literatur, Brute-Force optimiert).",
-            referenzstandard: "Textvorschlag und Informationen zum Referenzstandard (Histopathologie).",
-            statistischeAnalyse: "Textvorschlag und Informationen zu den statistischen Analysemethoden."
+            description: "Detaillierte Beschreibung des Studiendesigns, Patientenkollektivs, der MRT-Protokolle, Bildanalyse (AS, T2), des Referenzstandards und der statistischen Methoden.",
+            studienanlage: "Studiendesign, Ethikvotum und Software-Beschreibung.",
+            patientenkollektiv: "Details zur Studienpopulation, Ein- und Ausschlusskriterien.",
+            mrt_protokoll: "MRT-Sequenzparameter und Kontrastmittelgabe.",
+            as_definition: "Definition und Bewertung des Avocado Signs.",
+            t2_definition_literatur: "Definition und Bewertung der Literatur-basierten T2-Kriterien.",
+            t2_definition_bruteforce: "Methodik der Brute-Force-Optimierung für T2-Kriterien.",
+            referenzstandard: "Definition des Goldstandards (Histopathologie).",
+            statistische_analyse: "Angewandte statistische Verfahren und Signifikanzniveau."
         },
         ergebnisse: {
-            patientencharakteristika: "Textvorschlag und relevante Tabellen/Diagramme zu den Patientencharakteristika.",
-            asPerformance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte des Avocado Signs.",
-            literaturT2Performance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Literatur-basierten T2-Kriterien.",
-            optimierteT2Performance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Brute-Force optimierten T2-Kriterien.",
-            vergleichPerformance: "Textvorschlag und relevante Tabellen/Diagramme zum statistischen Vergleich der diagnostischen Güte zwischen Avocado Sign und den T2-Kriteriensets."
+            description: "Präsentation der Studienergebnisse in Text, Tabellen und Abbildungen.",
+            patientencharakteristika: "Demographische und klinische Charakteristika der Studienpopulation.",
+            as_performance: "Diagnostische Güte des Avocado Signs.",
+            literatur_t2_performance: "Diagnostische Güte der Literatur-basierten T2-Kriterien.",
+            optimierte_t2_performance: "Diagnostische Güte der Brute-Force optimierten T2-Kriterien.",
+            vergleich_as_vs_literatur_t2: "Statistischer Vergleich AS vs. Literatur-T2.",
+            vergleich_as_vs_optimierte_t2: "Statistischer Vergleich AS vs. optimierte T2."
+        },
+        diskussion: {
+            description: "Interpretation der Ergebnisse, Vergleich mit Literatur, Limitationen und Ausblick.",
+            hauptbefunde: "Zusammenfassung und Diskussion der wichtigsten Ergebnisse.",
+            vergleich_literatur: "Einordnung der Ergebnisse in den Kontext bestehender Studien.",
+            staerken: "Diskussion der Stärken der vorliegenden Studie.",
+            limitationen: "Diskussion der Limitationen der Studie.",
+            implikationen_ausblick: "Klinische Implikationen und zukünftige Forschungsrichtungen."
+        },
+        schlussfolgerung: {
+            description: "Kurze und prägnante Zusammenfassung der wichtigsten Erkenntnisse.",
+            summary: "Zentrale Schlussfolgerung der Studie."
+        },
+        referenzen: {
+            description: "Literaturverzeichnis der zitierten Arbeiten.",
+            list: "Automatisch generierte Liste der im Text verwendeten Referenzen."
         }
     },
     statMetrics: {
@@ -368,6 +400,8 @@ const TOOLTIP_CONTENT = {
         spez: { name: "Spezifität", description: "Spezifität ([METHODE] vs. N): Anteil der tatsächlich negativen Fälle (N-), die durch die Methode [METHODE] korrekt als negativ erkannt wurden.<br><i>Formel: RN / (RN + FP)</i>", interpretation: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N- Patienten korrekt (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].<hr><i>Bei kleinen Fallzahlen für RN oder FP ist das CI ggf. sehr breit.</i>"},
         ppv: { name: "Pos. Prädiktiver Wert (PPV)", description: "PPV ([METHODE] vs. N): Wahrscheinlichkeit, dass ein Patient mit einem positiven Testergebnis durch Methode [METHODE] tatsächlich krank (N+) ist.<br><i>Formel: RP / (RP + FP)</i>", interpretation: "Wenn die Methode [METHODE] ein positives Ergebnis lieferte, lag die Wahrscheinlichkeit für einen tatsächlichen N+ Status bei <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]. Dieser Wert ist stark prävalenzabhängig.<hr><i>Bei kleinen Fallzahlen für RP oder FP ist das CI ggf. sehr breit.</i>"},
         npv: { name: "Neg. Prädiktiver Wert (NPV)", description: "NPV ([METHODE] vs. N): Wahrscheinlichkeit, dass ein Patient mit einem negativen Testergebnis durch Methode [METHODE] tatsächlich gesund (N-) ist.<br><i>Formel: RN / (RN + FN)</i>", interpretation: "Wenn die Methode [METHODE] ein negatives Ergebnis lieferte, lag die Wahrscheinlichkeit für einen tatsächlichen N- Status bei <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]. Dieser Wert ist stark prävalenzabhängig.<hr><i>Bei kleinen Fallzahlen für RN oder FN ist das CI ggf. sehr breit.</i>"},
+        lr_plus: { name: "Positiver Likelihood Ratio (LR+)", description: "LR+ ([METHODE] vs. N): Gibt an, um wie viel wahrscheinlicher ein positives Testergebnis ([METHODE]+) bei tatsächlich Kranken (N+) im Vergleich zu Gesunden (N-) ist.<br><i>Formel: Sensitivität / (1 - Spezifität)</i><br>Ein hoher LR+ (>10) spricht stark für die Krankheit.", interpretation: "Ein positives Ergebnis mit Methode [METHODE] war <strong>[WERT]</strong>-mal wahrscheinlicher bei N+ Patienten als bei N- Patienten (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]."},
+        lr_minus: { name: "Negativer Likelihood Ratio (LR-)", description: "LR- ([METHODE] vs. N): Gibt an, um wie viel wahrscheinlicher ein negatives Testergebnis ([METHODE]-) bei tatsächlich Kranken (N+) im Vergleich zu Gesunden (N-) ist.<br><i>Formel: (1 - Sensitivität) / Spezifität)</i><br>Ein niedriger LR- (<0.1) spricht stark gegen die Krankheit.", interpretation: "Ein negatives Ergebnis mit Methode [METHODE] war <strong>[WERT]</strong>-mal wahrscheinlicher bei N+ Patienten als bei N- Patienten (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]."},
         acc: { name: "Accuracy (Gesamtgenauigkeit)", description: "Accuracy ([METHODE] vs. N): Anteil aller Fälle, die durch die Methode [METHODE] korrekt klassifiziert wurden.<br><i>Formel: (RP + RN) / Gesamtanzahl</i>", interpretation: "Die Methode [METHODE] klassifizierte insgesamt <strong>[WERT]</strong> aller Patienten korrekt (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].<hr><i>Bei unausgeglichenen Gruppen (ungleiche Prävalenz von N+ und N-) kann die Accuracy irreführend sein.</i>"},
         balAcc: { name: "Balanced Accuracy", description: "Balanced Accuracy ([METHODE] vs. N): Der Mittelwert aus Sensitivität und Spezifität. Sinnvoll bei ungleichen Gruppengrößen (Prävalenz).<br><i>Formel: (Sensitivität + Spezifität) / 2</i>", interpretation: "Die Balanced Accuracy der Methode [METHODE], die Sensitivität und Spezifität gleich gewichtet, betrug <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]."},
         f1: { name: "F1-Score", description: "F1-Score ([METHODE] vs. N): Das harmonische Mittel aus PPV (Precision) und Sensitivität (Recall). Ein Wert von 1 ist optimal.<br><i>Formel: 2 * (PPV * Sensitivität) / (PPV + Sensitivität)</i>", interpretation: "Der F1-Score für die Methode [METHODE], der Präzision und Sensitivität kombiniert, beträgt <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]."},
