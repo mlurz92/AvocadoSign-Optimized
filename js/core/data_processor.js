@@ -37,7 +37,7 @@ const dataProcessor = (() => {
         processedPatient.n = (patient.n === '+' || patient.n === '-') ? patient.n : null;
         processedPatient.as = (patient.as === '+' || patient.as === '-') ? patient.as : null;
 
-        const validateCount = (value) => (typeof value === 'number' && value >= 0 && Number.isInteger(value)) ? value : 0;
+        const validateCount = (value) => (typeof value === 'number' && value >= 0 && Number.isInteger(value) && isFinite(value)) ? value : 0;
         processedPatient.anzahl_patho_lk = validateCount(patient.anzahl_patho_lk);
         processedPatient.anzahl_patho_n_plus_lk = validateCount(patient.anzahl_patho_n_plus_lk);
         processedPatient.anzahl_as_lk = validateCount(patient.anzahl_as_lk);
@@ -54,7 +54,7 @@ const dataProcessor = (() => {
             processedPatient.lymphknoten_t2 = rawLymphknotenT2.map(lk => {
                 if (typeof lk !== 'object' || lk === null) return null;
                 const processedLk = {};
-                processedLk.groesse = (typeof lk.groesse === 'number' && !isNaN(lk.groesse) && lk.groesse >= 0) ? lk.groesse : null;
+                processedLk.groesse = (typeof lk.groesse === 'number' && !isNaN(lk.groesse) && lk.groesse >= 0 && isFinite(lk.groesse)) ? lk.groesse : null;
 
                 const validateEnum = (value, allowedValues) => {
                      return (typeof value === 'string' && value !== null && allowedValues.includes(value.trim().toLowerCase()))
