@@ -6,7 +6,7 @@ const viewRenderer = (() => {
         'statistik-tab': statistikTabLogic,
         'praesentation-tab': praesentationTabLogic,
         'publikation-tab': publicationTabLogic,
-        'export-tab': exportTabLogic
+        'export-tab': typeof exportTabLogic !== 'undefined' ? exportTabLogic : null
     };
 
     const tabDefinitions = [
@@ -21,9 +21,12 @@ const viewRenderer = (() => {
 
     function _initializeTabLogics(processedData, currentSettings, mainAppInterface) {
         mainAppInterfaceRef = mainAppInterface;
-        Object.values(tabLogics).forEach(logic => {
+        Object.keys(tabLogics).forEach(tabId => {
+            const logic = tabLogics[tabId];
             if (logic && typeof logic.initialize === 'function') {
                 logic.initialize(processedData, currentSettings, mainAppInterface);
+            } else if (tabId === 'export-tab' && logic === null) {
+                console.warn("viewRenderer: exportTabLogic ist nicht verfügbar. Der Export-Tab wird möglicherweise nicht korrekt initialisiert.");
             }
         });
     }
@@ -41,18 +44,21 @@ const viewRenderer = (() => {
             const label = UI_TEXTS?.mainTabs?.[tab.labelKey]?.label || tab.labelKey.charAt(0).toUpperCase() + tab.labelKey.slice(1);
             const tooltip = TOOLTIP_CONTENT?.mainTabs?.[tab.labelKey] || label;
             const isActive = tab.id === activeTabId;
+            const isDisabled = tab.id === 'export-tab' && tabLogics['export-tab'] === null;
+            const disabledAttributes = isDisabled ? 'disabled aria-disabled="true" style="pointer-events: none; opacity: 0.65;"' : '';
+
             const linkHTML = `
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link ${isActive ? 'active' : ''}" id="${tab.id}-nav" data-bs-toggle="tab" data-bs-target="#${tab.id}-pane" type="button" role="tab" aria-controls="${tab.id}-pane" aria-selected="${isActive}" data-tab-id="${tab.id}" data-tippy-content="${tooltip}">
+                    <button class="nav-link ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}" id="${tab.id}-nav" data-bs-toggle="tab" data-bs-target="#${tab.id}-pane" type="button" role="tab" aria-controls="${tab.id}-pane" aria-selected="${isActive}" data-tab-id="${tab.id}" data-tippy-content="${tooltip}${isDisabled ? ' (Modul nicht geladen)' : ''}" ${disabledAttributes}>
                         <i class="fas ${tab.icon} fa-fw me-1"></i>${label}
                     </button>
                 </li>`;
 
-            if (tab.isMoreTab || visibleTabCount >= maxVisibleTabs -1 ) { // -1 because "More" itself counts as a tab
-                 if(tab.id === 'export-tab'){ // Specific logic for export tab in dropdown
-                    moreTabsHTML += `<li><button class="dropdown-item nav-link" id="${tab.id}-nav-dd" data-bs-toggle="tab" data-bs-target="#${tab.id}-pane" type="button" role="tab" aria-controls="${tab.id}-pane" aria-selected="${isActive}" data-tab-id="${tab.id}" data-tippy-content="${tooltip}"><i class="fas ${tab.icon} fa-fw me-1"></i>${label}</button></li>`;
-                 } else { // Generic handling for other potential "more" tabs
-                    navHTML += linkHTML; // Add to main nav if it's not export and exceeds limit
+            if (tab.isMoreTab || visibleTabCount >= maxVisibleTabs -1 ) {
+                 if(tab.id === 'export-tab'){
+                    moreTabsHTML += `<li><button class="dropdown-item nav-link ${isDisabled ? 'disabled' : ''}" id="${tab.id}-nav-dd" data-bs-toggle="tab" data-bs-target="#${tab.id}-pane" type="button" role="tab" aria-controls="${tab.id}-pane" aria-selected="${isActive}" data-tab-id="${tab.id}" data-tippy-content="${tooltip}${isDisabled ? ' (Modul nicht geladen)' : ''}" ${disabledAttributes}><i class="fas ${tab.icon} fa-fw me-1"></i>${label}</button></li>`;
+                 } else {
+                    navHTML += linkHTML;
                     visibleTabCount++;
                  }
             } else {
@@ -168,11 +174,14 @@ const viewRenderer = (() => {
                  activeTabContentArea.innerHTML = '';
             }
             logicModule.renderTabContent();
+        } else if (tabId === 'export-tab' && logicModule === null) {
+             activeTabContentArea.innerHTML = `<div class="alert alert-warning m-3" role="alert"><strong>Export-Tab nicht verfügbar:</strong> Das benötigte Modul (exportTabLogic) konnte aufgrund eines Ladefehlers (wahrscheinlich MIME-Typ) nicht initialisiert werden. Bitte überprüfen Sie die Serverkonfiguration und die Browser-Konsole.</div>`;
+             console.error(`Render-Logik für Tab '${tabId}' ist nicht verfügbar, da das Modul nicht geladen wurde.`);
         } else {
             activeTabContentArea.innerHTML = `<p class="text-danger p-3">Keine Render-Logik für Tab '${tabId}' definiert.</p>`;
             console.error(`Kein Logic-Modul oder renderTabContent-Funktion für Tab-ID '${tabId}' gefunden.`);
         }
-        ui_helpers.updateExportButtonStates(tabId, bruteForceManager.hasAnyResults(), true /*canExportDataDependent*/);
+        ui_helpers.updateExportButtonStates(tabId, bruteForceManager.hasAnyResults(), true);
         ui_helpers.initializeTooltips(document.getElementById('app-container'));
     }
 
@@ -181,7 +190,7 @@ const viewRenderer = (() => {
         document.querySelectorAll('#main-nav-tabs .nav-link, #more-tabs-dropdown-nav + .dropdown-menu .nav-link').forEach(link => {
             const isCurrentTab = link.dataset.tabId === activeTabId;
             link.classList.toggle('active', isCurrentTab);
-            link.setAttribute('aria-selected', isCurrentTab);
+            link.setAttribute('aria-selected', String(isCurrentTab));
 
             if (link.id === 'more-tabs-dropdown-nav') {
                 const dropdownMenu = link.nextElementSibling;
