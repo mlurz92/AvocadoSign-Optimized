@@ -1,9 +1,16 @@
-const publicationTabComponents = (publicationTabComponents => {
+window.publicationTabComponents = ((ns) => {
+    if (!ns) {
+        ns = {};
+    }
 
     function renderConsortDiagram(containerId, lang, nGesamt, nDirektOP, nNRCT) {
         const container = document.getElementById(containerId);
         if (!container) {
             console.error(`CONSORT Diagramm Container '${containerId}' nicht gefunden.`);
+            if (typeof ui_helpers !== 'undefined' && ui_helpers.showToast) {
+                ui_helpers.showToast(`Fehler: Diagramm-Container '${containerId}' nicht gefunden.`, "error");
+            }
+            container.innerHTML = `<p class="text-danger small p-3">Fehler: Diagramm-Container '${containerId}' nicht gefunden.</p>`;
             return;
         }
         container.innerHTML = '';
@@ -16,25 +23,31 @@ const publicationTabComponents = (publicationTabComponents => {
         const nRCTPatients = nNRCT || 0;
 
         const diagramWidth = 600;
-        const diagramHeight = 450;
-        const boxWidth = 220;
-        const boxHeight = 70;
+        const diagramHeight = 460;
+        const boxWidth = 240;
+        const boxHeight = 75;
         const arrowLength = 40;
         const verticalSpacing = boxHeight + arrowLength;
-        const horizontalBranchSpacing = 180;
+        const horizontalBranchSpacing = 200;
+        const textLineHeightFactor = 1.3;
 
         const fontFamily = getComputedStyle(document.body).fontFamily || 'Arial, sans-serif';
-        const fontSize = 13;
+        const fontSize = 12.5;
         const textFill = getComputedStyle(document.body).getPropertyValue('--bs-body-color') || '#212529';
         const boxStroke = textFill;
-        const boxFill = getComputedStyle(document.body).getPropertyValue('--bs-body-bg') || '#ffffff';
+        const boxFill = getComputedStyle(document.body).getPropertyValue('--bs-card-bg') || '#ffffff';
         const lineStroke = textFill;
 
-        svg.setAttribute("width", diagramWidth);
-        svg.setAttribute("height", diagramHeight);
+        svg.setAttribute("width", "100%");
+        svg.setAttribute("height", "100%");
         svg.setAttribute("viewBox", `0 0 ${diagramWidth} ${diagramHeight}`);
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
         svg.setAttribute("role", "img");
         svg.setAttribute("aria-labelledby", `${containerId}-title`);
+        svg.style.maxWidth = `${diagramWidth}px`;
+        svg.style.display = 'block';
+        svg.style.margin = 'auto';
+
 
         const titleElement = document.createElementNS(svgNS, "title");
         titleElement.id = `${containerId}-title`;
@@ -55,17 +68,18 @@ const publicationTabComponents = (publicationTabComponents => {
             rect.setAttribute("ry", "3");
             group.appendChild(rect);
 
-            const lineHeight = fontSize * 1.3;
-            const totalTextHeight = textLines.length * lineHeight;
-            const startY = y + (height - totalTextHeight) / 2 + fontSize * 0.8;
+            const lineHeight = fontSize * textLineHeightFactor;
+            const totalTextHeight = textLines.length * (fontSize * (textLineHeightFactor - 0.2)) - (textLineHeightFactor - 1.2) * fontSize ;
+            const startY = y + (height - totalTextHeight) / 2 + fontSize * 0.85;
+
 
             textLines.forEach((line, index) => {
                 const textElement = document.createElementNS(svgNS, "text");
-                textElement.setAttribute("x", x + width / 2);
-                textElement.setAttribute("y", startY + index * lineHeight);
+                textElement.setAttribute("x", String(x + width / 2));
+                textElement.setAttribute("y", String(startY + index * lineHeight));
                 textElement.setAttribute("text-anchor", "middle");
                 textElement.setAttribute("font-family", fontFamily);
-                textElement.setAttribute("font-size", fontSize);
+                textElement.setAttribute("font-size", String(fontSize));
                 textElement.setAttribute("fill", textFill);
                 textElement.textContent = line;
                 group.appendChild(textElement);
@@ -75,21 +89,21 @@ const publicationTabComponents = (publicationTabComponents => {
 
         function createArrow(x1, y1, x2, y2, hasMarker = true) {
             const line = document.createElementNS(svgNS, "line");
-            line.setAttribute("x1", x1);
-            line.setAttribute("y1", y1);
-            line.setAttribute("x2", x2);
-            line.setAttribute("y2", y2 - (hasMarker ? 5 : 0));
+            line.setAttribute("x1", String(x1));
+            line.setAttribute("y1", String(y1));
+            line.setAttribute("x2", String(x2));
+            line.setAttribute("y2", String(y2 - (hasMarker ? 5 : 0)));
             line.setAttribute("stroke", lineStroke);
             line.setAttribute("stroke-width", "1.5");
             if (hasMarker) {
-                line.setAttribute("marker-end", "url(#arrowhead)");
+                line.setAttribute("marker-end", "url(#arrowheadConsort)");
             }
             return line;
         }
 
         const defs = document.createElementNS(svgNS, "defs");
         const marker = document.createElementNS(svgNS, "marker");
-        marker.setAttribute("id", "arrowhead");
+        marker.setAttribute("id", "arrowheadConsort");
         marker.setAttribute("markerWidth", "10");
         marker.setAttribute("markerHeight", "7");
         marker.setAttribute("refX", "0");
@@ -123,19 +137,17 @@ const publicationTabComponents = (publicationTabComponents => {
         const branchYStart = box2Y + boxHeight;
         const branchYEnd = branchYStart + arrowLength * 0.8;
 
-        const branchLX1 = centerX - boxWidth / 2 + 5;
         const branchLX2 = centerX - horizontalBranchSpacing / 2;
-        const branchRX1 = centerX + boxWidth / 2 - 5;
         const branchRX2 = centerX + horizontalBranchSpacing / 2;
 
         svg.appendChild(createArrow(centerX, branchYStart, branchLX2, branchYEnd, false));
         svg.appendChild(createArrow(centerX, branchYStart, branchRX2, branchYEnd, false));
 
         const lineHorizontal = document.createElementNS(svgNS, "line");
-        lineHorizontal.setAttribute("x1", branchLX2);
-        lineHorizontal.setAttribute("y1", branchYEnd);
-        lineHorizontal.setAttribute("x2", branchRX2);
-        lineHorizontal.setAttribute("y2", branchYEnd);
+        lineHorizontal.setAttribute("x1", String(branchLX2));
+        lineHorizontal.setAttribute("y1", String(branchYEnd));
+        lineHorizontal.setAttribute("x2", String(branchRX2));
+        lineHorizontal.setAttribute("y2", String(branchYEnd));
         lineHorizontal.setAttribute("stroke", lineStroke);
         lineHorizontal.setAttribute("stroke-width", "1.5");
         svg.appendChild(lineHorizontal);
@@ -176,10 +188,7 @@ const publicationTabComponents = (publicationTabComponents => {
         container.appendChild(svg);
     }
 
-    publicationTabComponents = {
-        ...(publicationTabComponents || {}),
-        renderConsortDiagram
-    };
-    return publicationTabComponents;
+    ns.renderConsortDiagram = renderConsortDiagram;
+    return ns;
 
 })(window.publicationTabComponents || {});
