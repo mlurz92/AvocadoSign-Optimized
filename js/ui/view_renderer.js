@@ -26,7 +26,7 @@ const viewRenderer = (() => {
             if (logic && typeof logic.initialize === 'function') {
                 logic.initialize(processedData, currentSettings, mainAppInterface);
             } else if (tabId === 'export-tab' && logic === null) {
-                console.warn("viewRenderer: exportTabLogic ist nicht verfügbar. Der Export-Tab wird möglicherweise nicht korrekt initialisiert.");
+                console.warn("viewRenderer: exportTabLogic ist nicht verfügbar. Der Export-Tab kann nicht initialisiert werden. Mögliche Ursache: Skript-Ladefehler (z.B. falscher MIME-Typ auf dem Server). Bitte Serverkonfiguration und Browser-Konsole prüfen.");
             }
         });
     }
@@ -175,8 +175,8 @@ const viewRenderer = (() => {
             }
             logicModule.renderTabContent();
         } else if (tabId === 'export-tab' && logicModule === null) {
-             activeTabContentArea.innerHTML = `<div class="alert alert-warning m-3" role="alert"><strong>Export-Tab nicht verfügbar:</strong> Das benötigte Modul (exportTabLogic) konnte aufgrund eines Ladefehlers (wahrscheinlich MIME-Typ) nicht initialisiert werden. Bitte überprüfen Sie die Serverkonfiguration und die Browser-Konsole.</div>`;
-             console.error(`Render-Logik für Tab '${tabId}' ist nicht verfügbar, da das Modul nicht geladen wurde.`);
+             activeTabContentArea.innerHTML = `<div class="alert alert-warning m-3" role="alert"><strong>Export-Tab nicht verfügbar:</strong> Das benötigte Modul (<code>exportTabLogic.js</code>) konnte aufgrund eines Ladefehlers nicht initialisiert werden. Dies ist häufig auf einen falschen MIME-Typ zurückzuführen, der vom Server für die Skriptdatei gesendet wird (erwartet: <code>application/javascript</code>, erhalten: <code>text/html</code>). Bitte überprüfen Sie die Serverkonfiguration und die Browser-Konsole auf detaillierte Fehlermeldungen. Dieser Fehler muss serverseitig behoben werden.</div>`;
+             console.error(`Render-Logik für Tab '${tabId}' ist nicht verfügbar, da das Modul nicht geladen wurde. Prüfen Sie den MIME-Typ für exportTabLogic.js.`);
         } else {
             activeTabContentArea.innerHTML = `<p class="text-danger p-3">Keine Render-Logik für Tab '${tabId}' definiert.</p>`;
             console.error(`Kein Logic-Modul oder renderTabContent-Funktion für Tab-ID '${tabId}' gefunden.`);
