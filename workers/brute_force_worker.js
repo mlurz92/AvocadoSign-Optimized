@@ -141,16 +141,9 @@ function applyT2CriteriaToPatientWorker(patient, criteria, logic) {
      return '-';
 }
 
-function calculateMetric(data, criteria, logic, metricNameForTarget) {
+function calculateMetric(data, criteria, logic, metricName) {
     let rp = 0, fp = 0, fn = 0, rn = 0;
-    const metrics = {
-        targetMetricValue: -Infinity,
-        sens: NaN, spez: NaN, ppv: NaN, npv: NaN,
-        acc: NaN, balAcc: NaN, f1: NaN,
-        rp: 0, fp: 0, fn: 0, rn: 0
-    };
-
-    if (!Array.isArray(data)) return metrics;
+    if (!Array.isArray(data)) return NaN;
 
     data.forEach(p => {
         if(!p || typeof p !== 'object') return;
@@ -168,29 +161,36 @@ function calculateMetric(data, criteria, logic, metricNameForTarget) {
         }
     });
 
-    metrics.rp = rp; metrics.fp = fp; metrics.fn = fn; metrics.rn = rn;
     const total = rp + fp + fn + rn;
-    if (total === 0) return metrics;
+    if (total === 0) return NaN;
 
-    metrics.sens = (rp + fn) > 0 ? rp / (rp + fn) : ((rp === 0 && fn === 0) ? NaN : 0);
-    metrics.spez = (fp + rn) > 0 ? rn / (fp + rn) : ((fp === 0 && rn === 0) ? NaN : 0);
-    metrics.ppv = (rp + fp) > 0 ? rp / (rp + fp) : ((rp === 0 && fp === 0) ? NaN : 0);
-    metrics.npv = (fn + rn) > 0 ? rn / (fn + rn) : ((fn === 0 && rn === 0) ? NaN : 0);
-    metrics.acc = (rp + rn) / total;
-    metrics.balAcc = (isNaN(metrics.sens) || isNaN(metrics.spez)) ? NaN : (metrics.sens + metrics.spez) / 2.0;
-    metrics.f1 = (isNaN(metrics.ppv) || isNaN(metrics.sens) || (metrics.ppv + metrics.sens) <= 1e-9) ? ((metrics.ppv === 0 && metrics.sens === 0) ? 0 : NaN) : 2.0 * (metrics.ppv * metrics.sens) / (metrics.ppv + metrics.sens);
+    const sens = (rp + fn) > 0 ? rp / (rp + fn) : 0;
+    const spez = (fp + rn) > 0 ? rn / (fp + rn) : 0;
+    const ppv = (rp + fp) > 0 ? rp / (rp + fp) : 0;
+    const npv = (fn + rn) > 0 ? rn / (fn + rn) : 0;
+    let result;
 
-    let targetValue;
-    switch (metricNameForTarget) {
-        case 'Accuracy': targetValue = metrics.acc; break;
-        case 'Balanced Accuracy': targetValue = metrics.balAcc; break;
-        case 'F1-Score': targetValue = metrics.f1; break;
-        case 'PPV': targetValue = metrics.ppv; break;
-        case 'NPV': targetValue = metrics.npv; break;
-        default: targetValue = metrics.balAcc; break;
+    switch (metricName) {
+        case 'Accuracy':
+            result = (rp + rn) / total;
+            break;
+        case 'Balanced Accuracy':
+            result = (isNaN(sens) || isNaN(spez)) ? NaN : (sens + spez) / 2.0;
+            break;
+        case 'F1-Score':
+            result = (isNaN(ppv) || isNaN(sens) || (ppv + sens) <= 1e-9) ? ((ppv === 0 && sens === 0) ? 0 : NaN) : 2.0 * (ppv * sens) / (ppv + sens);
+            break;
+        case 'PPV':
+            result = ppv;
+            break;
+        case 'NPV':
+            result = npv;
+            break;
+        default:
+            result = (isNaN(sens) || isNaN(spez)) ? NaN : (sens + spez) / 2.0;
+            break;
     }
-    metrics.targetMetricValue = isNaN(targetValue) ? -Infinity : targetValue;
-    return metrics;
+    return isNaN(result) ? -Infinity : result;
 }
 
 function generateCriteriaCombinations() {
@@ -220,6 +220,7 @@ function generateCriteriaCombinations() {
         VALUE_OPTIONS.size = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         console.warn("BruteForceWorker: t2SizeRange nicht korrekt definiert oder ungültig, verwende Standardgrößen.");
     }
+
 
     const combinations = [];
     let calculatedTotal = 0;
@@ -281,7 +282,7 @@ function runBruteForce() {
     startTime = performance.now();
     combinationsTested = 0;
     allResults = [];
-    bestResult = { metricValue: -Infinity, criteria: null, logic: null, metrics: {} };
+    bestResult = { metricValue: -Infinity, criteria: null, logic: null };
 
     const allCombinations = generateCriteriaCombinations();
     if (totalCombinations === 0 || allCombinations.length === 0) {
@@ -299,21 +300,16 @@ function runBruteForce() {
         if (!isRunning) break;
 
         const combo = allCombinations[i];
-        let allMetricsForCombo;
+        let metricValue = -Infinity;
 
         try {
-            allMetricsForCombo = calculateMetric(currentData, combo.criteria, combo.logic, targetMetric);
+            metricValue = calculateMetric(currentData, combo.criteria, combo.logic, targetMetric);
         } catch (error) {
             console.error("BruteForceWorker: Fehler in calculateMetric für Kombination:", combo, "Fehler:", error);
-            allMetricsForCombo = { targetMetricValue: -Infinity, sens: NaN, spez: NaN, ppv: NaN, npv: NaN, acc: NaN, balAcc: NaN, f1: NaN, rp:0, fp:0, fn:0, rn:0 };
+            metricValue = -Infinity;
         }
 
-        const result = {
-            logic: combo.logic,
-            criteria: combo.criteria,
-            metrics: allMetricsForCombo,
-            metricValue: allMetricsForCombo.targetMetricValue
-        };
+        const result = { logic: combo.logic, criteria: combo.criteria, metricValue: metricValue };
         allResults.push(result);
 
         if (result.metricValue > bestResult.metricValue && isFinite(result.metricValue)) {
@@ -339,8 +335,8 @@ function runBruteForce() {
     const endTime = performance.now();
 
     if(isRunning) {
-        const validResults = allResults.filter(r => r && r.metrics && isFinite(r.metrics.targetMetricValue));
-        validResults.sort((a, b) => b.metrics.targetMetricValue - a.metrics.targetMetricValue);
+        const validResults = allResults.filter(r => r && isFinite(r.metricValue));
+        validResults.sort((a, b) => b.metricValue - a.metricValue);
 
         const topResults = [];
         const precision = 1e-8;
@@ -349,7 +345,7 @@ function runBruteForce() {
         let lastScore = Infinity;
 
         for(let i = 0; i < validResults.length; i++) {
-            const currentScore = validResults[i].metrics.targetMetricValue;
+            const currentScore = validResults[i].metricValue;
             const isNewRank = Math.abs(currentScore - lastScore) > precision;
 
             if(isNewRank) {
@@ -360,13 +356,13 @@ function runBruteForce() {
             }
             lastScore = currentScore;
 
-            if (rank <= 10) {
+            if (rank <= 10) { // Immer die Top 10 Ränge nehmen
                 topResults.push(validResults[i]);
-            } else {
-                if(rank === 11 && Math.abs(currentScore - (topResults[topResults.length - 1]?.metrics.targetMetricValue ?? -Infinity)) < precision) {
+            } else { // Wenn der 11. Rang den gleichen Score hat wie der letzte der Top 10, auch nehmen
+                if(rank === 11 && Math.abs(currentScore - (topResults[topResults.length - 1]?.metricValue ?? -Infinity)) < precision) {
                     topResults.push(validResults[i]);
                 } else {
-                    break;
+                    break; // Sobald ein neuer, niedrigerer Rang nach den Top 10 beginnt, abbrechen
                 }
             }
         }
@@ -383,14 +379,14 @@ function runBruteForce() {
             });
         }
 
+
         self.postMessage({
             type: 'result',
             payload: {
                 results: topResults.map(r => ({
                     logic: r.logic,
                     criteria: r.criteria,
-                    metrics: r.metrics, // Send full metrics object
-                    metricValue: r.metricValue // Keep target metric value for convenience
+                    metricValue: r.metricValue
                 })),
                 bestResult: finalBest,
                 metric: targetMetric,
