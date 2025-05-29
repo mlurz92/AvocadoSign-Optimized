@@ -1,90 +1,109 @@
 const dataTabLogic = (() => {
+    let allProcessedData = null;
+    let currentKollektiv = APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
+    let currentPage = 1;
+    let rowsPerPage = APP_CONFIG.UI_SETTINGS.DEFAULT_TABLE_ROWS_PER_PAGE;
+    let sortState = cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT);
 
-    function createDatenTableHTML(data, sortState) {
-        if (!Array.isArray(data)) {
-            console.error("createDatenTableHTML: Ungültige Daten für Tabelle, Array erwartet.");
-            return '<p class="text-danger">Fehler: Ungültige Daten für Tabelle.</p>';
-        }
+    const columns = Object.freeze([
+        Object.freeze({ key: 'nr', label: 'Nr.', sortable: true, tooltipKey: 'datenTable.nr' }),
+        Object.freeze({ key: 'name', label: 'Name, Vorname', sortable: true, tooltipKey: 'datenTable.name' }),
+        Object.freeze({ key: 'geschlecht', label: 'Geschl.', sortable: true, tooltipKey: 'datenTable.geschlecht' }),
+        Object.freeze({ key: 'alter', label: 'Alter', sortable: true, tooltipKey: 'datenTable.alter' }),
+        Object.freeze({ key: 'therapie', label: 'Therapie', sortable: true, tooltipKey: 'datenTable.therapie' }),
+        Object.freeze({ key: 'n_as_t2', label: 'N / AS / T2', sortable: true, isStatusColumn: true, subSortKeys: ['n', 'as', 't2'], tooltipKey: 'datenTable.n_as_t2' }),
+        Object.freeze({ key: 'bemerkung', label: 'Bemerkung', sortable: false, tooltipKey: 'datenTable.bemerkung' })
+    ]);
 
-        const tableId = 'daten-table';
-        const columns = [
-            { key: 'nr', label: 'Nr', tooltip: TOOLTIP_CONTENT.datenTable.nr || 'Fortlaufende Nummer des Patienten.' },
-            { key: 'name', label: 'Name', tooltip: TOOLTIP_CONTENT.datenTable.name || 'Nachname des Patienten (anonymisiert/kodiert).' },
-            { key: 'vorname', label: 'Vorname', tooltip: TOOLTIP_CONTENT.datenTable.vorname || 'Vorname des Patienten (anonymisiert/kodiert).' },
-            { key: 'geschlecht', label: 'Geschl.', tooltip: TOOLTIP_CONTENT.datenTable.geschlecht || 'Geschlecht des Patienten (m/w/unbekannt).' },
-            { key: 'alter', label: 'Alter', tooltip: TOOLTIP_CONTENT.datenTable.alter || 'Alter des Patienten zum Zeitpunkt der MRT-Untersuchung in Jahren.' },
-            { key: 'therapie', label: 'Therapie', tooltip: TOOLTIP_CONTENT.datenTable.therapie || 'Angewandte Therapie vor der Operation (nRCT: neoadjuvante Radiochemotherapie, direkt OP: keine Vorbehandlung).' },
-            { key: 'status', label: 'N/AS/T2', tooltip: TOOLTIP_CONTENT.datenTable.n_as_t2 || 'Status: Pathologie (N), Avocado Sign (AS), T2 (aktuelle Kriterien). Klicken Sie auf N, AS oder T2 im Spaltenkopf zur Sub-Sortierung.', subKeys: [{key: 'n', label: 'N'}, {key: 'as', label: 'AS'}, {key: 't2', label: 'T2'}] },
-            { key: 'bemerkung', label: 'Bemerkung', tooltip: TOOLTIP_CONTENT.datenTable.bemerkung || 'Zusätzliche klinische oder radiologische Bemerkungen zum Patientenfall, falls vorhanden.' },
-            { key: 'details', label: '', width: '30px'}
-        ];
-
-        let tableHTML = `<table class="table table-sm table-hover table-striped data-table" id="${tableId}">`;
-        tableHTML += _createTableHeaderHTML(tableId, sortState, columns);
-        tableHTML += `<tbody id="${tableId}-body">`;
-
-        if (data.length === 0) {
-            tableHTML += `<tr><td colspan="${columns.length}" class="text-center text-muted">Keine Daten im ausgewählten Kollektiv gefunden.</td></tr>`;
-        } else {
-            data.forEach(patient => {
-                tableHTML += tableRenderer.createDatenTableRow(patient);
-            });
-        }
-        tableHTML += `</tbody></table>`;
-        return tableHTML;
-    }
-
-    function _createTableHeaderHTML(tableId, sortState, columns) {
-        let headerHTML = `<thead class="small sticky-top bg-light" id="${tableId}-header"><tr>`;
-        columns.forEach(col => {
-            let sortIconHTML = '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>';
-            let mainHeaderClass = '';
-            let thStyle = col.width ? `style="width: ${col.width};"` : '';
-            if (col.textAlign) mainHeaderClass += ` text-${col.textAlign}`;
-
-            let isMainKeyActiveSort = false;
-            let activeSubKey = null;
-
-            if (sortState && sortState.key === col.key) {
-                if (col.subKeys && col.subKeys.some(sk => sk.key === sortState.subKey)) {
-                    isMainKeyActiveSort = true;
-                    activeSubKey = sortState.subKey;
-                    sortIconHTML = `<i class="fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1"></i>`;
-                } else if (!col.subKeys && (sortState.subKey === null || sortState.subKey === undefined)) {
-                    isMainKeyActiveSort = true;
-                    sortIconHTML = `<i class="fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1"></i>`;
-                    thStyle += (thStyle ? ' ' : 'style="') + 'color: var(--primary-color);"';
-                    if(!thStyle.endsWith('"')) thStyle += '"';
-                }
+    function initialize(processedData, initialSettings) {
+        allProcessedData = processedData;
+        if (initialSettings) {
+            currentKollektiv = initialSettings.currentKollektiv || currentKollektiv;
+            const savedSortState = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_SORT);
+            if (savedSortState) {
+                sortState = savedSortState;
             }
-            
-            const baseTooltipContent = col.tooltip || col.label;
-
-            const subHeaders = col.subKeys ? col.subKeys.map(sk => {
-                 const isActiveSubSort = activeSubKey === sk.key;
-                 const style = isActiveSubSort ? 'font-weight: bold; text-decoration: underline; color: var(--primary-color);' : '';
-                 const subLabel = sk.label || sk.key.toUpperCase();
-                 const subTooltip = `Sortieren nach Status ${subLabel}. ${baseTooltipContent}`;
-                 return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="${subTooltip}">${subLabel}</span>`;
-             }).join(' / ') : '';
-            
-            const mainTooltip = col.subKeys ? `${baseTooltipContent} Klicken Sie auf N, AS oder T2 für Sub-Sortierung.` : (col.key === 'details' ? (TOOLTIP_CONTENT.datenTable.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
-            const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys || col.key === 'details' ? '' : 'style="cursor: pointer;"'}`;
-            const thClass = mainHeaderClass;
-
-            if (col.subKeys) {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} data-tippy-content="${mainTooltip}" ${thStyle}>${col.label} ${subHeaders ? `(${subHeaders})` : ''} ${isMainKeyActiveSort && !activeSubKey ? sortIconHTML : '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>'}</th>`;
-             } else {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} data-tippy-content="${mainTooltip}" ${thStyle}>${col.label} ${col.key === 'details' ? '' : sortIconHTML}</th>`;
-             }
-        });
-        headerHTML += `</tr></thead>`;
-        return headerHTML;
+        }
+        currentPage = 1;
     }
 
+    function updateData(processedData, newSettings) {
+        allProcessedData = processedData;
+        if (newSettings) {
+            currentKollektiv = newSettings.currentKollektiv || currentKollektiv;
+            const savedSortState = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_SORT);
+            sortState = savedSortState || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT);
+        }
+        currentPage = 1;
+    }
+
+    function setSort(key, subKey = null) {
+        if (sortState.key === key && sortState.subKey === subKey) {
+            sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortState.key = key;
+            sortState.subKey = subKey;
+            sortState.direction = 'asc';
+        }
+        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_SORT, sortState);
+        currentPage = 1;
+        renderTabContent();
+    }
+
+    function setCurrentPage(page) {
+        const filteredData = dataProcessor.filterDataByKollektiv(allProcessedData, currentKollektiv);
+        const totalPages = Math.ceil((filteredData?.length || 0) / rowsPerPage);
+        currentPage = Math.max(1, Math.min(page, totalPages));
+        renderTabContent();
+    }
+
+    function renderTabContent() {
+        if (!allProcessedData) {
+            console.warn("DataTabLogic: allProcessedData ist nicht initialisiert.");
+            const container = document.getElementById('daten-tab-content');
+            if(container) ui_helpers.updateElementHTML('daten-tab-content', '<p class="text-danger p-3">Keine Daten zum Anzeigen vorhanden. Bitte laden Sie die Seite neu.</p>');
+            return;
+        }
+
+        const filteredData = dataProcessor.filterDataByKollektiv(allProcessedData, currentKollektiv);
+        const tableHeaderId = 'daten-tabelle-header';
+
+        tableRenderer.renderDatenTabelle(filteredData, currentPage, rowsPerPage, sortState, columns);
+        ui_helpers.updateSortIcons(tableHeaderId, sortState);
+
+        const anzahlPatientenInfoElement = document.getElementById('daten-anzahl-patienten-info');
+        if (anzahlPatientenInfoElement) {
+            const totalRows = filteredData.length;
+            const startRow = (currentPage - 1) * rowsPerPage + 1;
+            const endRow = Math.min(currentPage * rowsPerPage, totalRows);
+             if(totalRows > 0) {
+                anzahlPatientenInfoElement.textContent = `Zeige ${startRow}-${endRow} von ${totalRows} Patienten im Kollektiv '${getKollektivDisplayName(currentKollektiv)}'.`;
+             } else {
+                anzahlPatientenInfoElement.textContent = `Keine Patienten im Kollektiv '${getKollektivDisplayName(currentKollektiv)}'.`;
+             }
+        }
+        const tableElement = document.getElementById('daten-tabelle');
+        if(tableElement) ui_helpers.initializeTooltips(tableElement);
+        const paginationElement = document.getElementById('daten-pagination');
+        if(paginationElement) ui_helpers.initializeTooltips(paginationElement);
+        const headerElement = document.getElementById(tableHeaderId);
+        if(headerElement) ui_helpers.initializeTooltips(headerElement);
+
+    }
+
+    function getFilteredDataForExport() {
+        if (!allProcessedData) return [];
+        const filteredData = dataProcessor.filterDataByKollektiv(allProcessedData, currentKollektiv);
+        return filteredData.slice().sort(getSortFunction(sortState.key, sortState.direction, sortState.subKey));
+    }
 
     return Object.freeze({
-        createDatenTableHTML
+        initialize,
+        updateData,
+        setSort,
+        setCurrentPage,
+        renderTabContent,
+        getFilteredDataForExport,
+        getColumns: () => columns
     });
-
 })();
