@@ -1,5 +1,5 @@
 function getKollektivDisplayName(kollektivId) {
-    const displayName = UI_TEXTS?.kollektivDisplayNames?.[kollektivId] || kollektivId || 'Unbekannt';
+    const displayName = (typeof UI_TEXTS !== 'undefined' && UI_TEXTS?.kollektivDisplayNames?.[kollektivId]) || kollektivId || 'Unbekannt';
     return displayName;
 }
 
@@ -41,28 +41,27 @@ function formatPercent(num, digits = 1, placeholder = '--%') {
 
 function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeholder = '--') {
     const formatFn = isPercent ? formatPercent : formatNumber;
-    const formattedValue = formatFn(value, digits, placeholder, !isPercent); // Use standard format for non-percent numbers in CI
+    const formattedValue = formatFn(value, digits, placeholder, !isPercent);
 
-    if (formattedValue === placeholder && !(value === 0 && placeholder === '--')) { // Allow 0 to be formatted
+    if (formattedValue === placeholder && !(value === 0 && (placeholder === '--' || placeholder === '--%'))) {
         return placeholder;
     }
-    
+
     let valueToDisplay = formattedValue;
-    if (isPercent && formattedValue !== placeholder) {
+    if (isPercent && formattedValue !== placeholder && typeof formattedValue === 'string') {
          valueToDisplay = formattedValue.replace('%','');
     }
-
 
     const formattedLower = formatFn(ciLower, digits, null, !isPercent);
     const formattedUpper = formatFn(ciUpper, digits, null, !isPercent);
 
-    if (formattedLower !== null && formattedUpper !== null) {
-        const lowerStr = isPercent ? String(formattedLower).replace('%','') : String(formattedLower);
-        const upperStr = isPercent ? String(formattedUpper).replace('%','') : String(formattedUpper);
-        const ciStr = `(${lowerStr}\u00A0-\u00A0${upperStr})`; // Non-breaking space
+    if (formattedLower !== null && formattedUpper !== null && typeof formattedLower === 'string' && typeof formattedUpper === 'string') {
+        const lowerStr = isPercent ? formattedLower.replace('%','') : formattedLower;
+        const upperStr = isPercent ? formattedUpper.replace('%','') : formattedUpper;
+        const ciStr = `(${lowerStr}\u00A0-\u00A0${upperStr})`;
         return `${valueToDisplay} ${ciStr}${isPercent ? '%' : ''}`;
     } else {
-        return formattedValue; // Return value with % if applicable and CI is not available
+        return formattedValue;
     }
 }
 
@@ -91,7 +90,7 @@ function saveToLocalStorage(key, value) {
     } catch (e) {
         console.error(`Fehler beim Speichern im Local Storage (Schlüssel: ${key}):`, e);
         if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showToast === 'function') {
-            ui_helpers.showToast(`Speichern der Einstellung '${key}' fehlgeschlagen.`, 'warning');
+            ui_helpers.showToast(`Speichern der Einstellung '${key}' fehlgeschlagen: ${e.message}`, 'warning');
         }
     }
 }
@@ -144,14 +143,14 @@ function cloneDeep(obj) {
             return JSON.parse(JSON.stringify(obj));
          }
     } catch (e) {
-        console.warn("Fehler beim Deep Cloning via structuredClone/JSON, versuche Fallback:", e);
+        console.warn("Fehler beim Deep Cloning via structuredClone/JSON, versuche rekursiven Fallback:", e);
         if (Array.isArray(obj)) {
              const arrCopy = [];
              for(let i = 0; i < obj.length; i++){
                  arrCopy[i] = cloneDeep(obj[i]);
              }
              return arrCopy;
-         };
+         }
         if (typeof obj === 'object') {
              const objCopy = {};
              for(const key in obj) {
@@ -160,7 +159,7 @@ function cloneDeep(obj) {
                  }
              }
              return objCopy;
-         };
+         }
         return obj;
     }
 }
@@ -292,7 +291,7 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
 
 function getStatisticalSignificanceSymbol(pValue) {
     if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return '';
-    const significanceLevels = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS; // Bereits absteigend sortiert
+    const significanceLevels = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS;
     const overallSignificanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL;
 
     for (const level of significanceLevels) {
@@ -300,39 +299,50 @@ function getStatisticalSignificanceSymbol(pValue) {
             return level.symbol;
         }
     }
-    if (pValue < overallSignificanceLevel) { // Falls kein Symbol in der Liste passt, aber unter dem allgemeinen Niveau
-        return significanceLevels[significanceLevels.length - 1]?.symbol || '*'; // Fallback zum geringsten definierten Symbol
+    if (pValue < overallSignificanceLevel) {
+        return significanceLevels[significanceLevels.length - 1]?.symbol || '*';
     }
-    return 'ns'; // not significant
+    return 'ns';
 }
 
 function getStatisticalSignificanceText(pValue, significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL) {
      if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return '';
      const level = significanceLevel;
+     const uiTextRef = (typeof UI_TEXTS !== 'undefined' && UI_TEXTS?.statMetrics?.signifikanzTexte) ? UI_TEXTS.statMetrics.signifikanzTexte : {};
      return pValue < level
-         ? UI_TEXTS.statMetrics.signifikanzTexte.SIGNIFIKANT || 'statistisch signifikant'
-         : UI_TEXTS.statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT || 'statistisch nicht signifikant';
+         ? uiTextRef.SIGNIFIKANT || 'statistisch signifikant'
+         : uiTextRef.NICHT_SIGNIFIKANT || 'statistisch nicht signifikant';
 }
 
 function getPValueText(pValue, lang = 'de') {
     if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return 'N/A';
 
-    const pLessThanThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS[0]?.threshold || 0.001; // kleinster Schwellenwert für 'p < ...'
+    const pLessThanThresholdConfig = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS;
+    const pLessThanThreshold = pLessThanThresholdConfig && pLessThanThresholdConfig.length > 0 ? pLessThanThresholdConfig[0].threshold : 0.001;
+
     if (pValue < pLessThanThreshold) {
-        const thresholdStr = String(pLessThanThreshold).replace('.', lang === 'de' ? ',' : '.');
-        return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','.')}`;
+        let thresholdStr = String(pLessThanThreshold);
+        if (lang === 'de') thresholdStr = thresholdStr.replace('.', ',');
+        else thresholdStr = thresholdStr.replace('0,', '0.');
+        return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr}`;
     }
 
-    let pFormatted = formatNumber(pValue, 3, 'N/A', true); // useStandardFormat = true
-    if (pFormatted === '0.000' && pLessThanThreshold === 0.001) { // Spezifischer Fall, wenn p sehr klein, aber nicht <0.001 laut Formatierung
-         const thresholdStr = String(pLessThanThreshold).replace('.', lang === 'de' ? ',' : '.');
-         return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','.')}`;
+    let pFormatted = formatNumber(pValue, 3, 'N/A', true);
+    if (pFormatted === '0.000' && pValue > 0 && pValue < pLessThanThreshold) {
+         let thresholdStr = String(pLessThanThreshold);
+         if (lang === 'de') thresholdStr = thresholdStr.replace('.', ',');
+         else thresholdStr = thresholdStr.replace('0,', '0.');
+         return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr}`;
     }
+    if (pFormatted === '0.000' && pValue === 0) {
+        pFormatted = lang === 'de' ? '0,000' : '0.000';
+    }
+
 
     if (lang === 'de' && pFormatted !== 'N/A') {
         pFormatted = pFormatted.replace('.', ',');
     }
-    return `p = ${pFormatted}`;
+    return lang === 'de' ? `p = ${pFormatted}`: `P = ${pFormatted}`;
 }
 
 function generateUUID() {
@@ -362,7 +372,7 @@ function clampNumber(num, min, max) {
     if(isNaN(number) || isNaN(minVal) || isNaN(maxVal)) {
         console.warn(`Ungültige Eingabe für clampNumber: num=${num}, min=${min}, max=${max}`);
         return NaN;
-    };
+    }
     return Math.min(Math.max(number, minVal), maxVal);
 }
 
@@ -377,7 +387,8 @@ function arraysAreEqual(arr1, arr2) {
 
 function getAUCBewertung(aucValue) {
     const value = parseFloat(aucValue);
-    if (isNaN(value) || value < 0 || value > 1) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_bestimmbar || 'N/A';
+    const uiTextRef = (typeof UI_TEXTS !== 'undefined' && UI_TEXTS?.statMetrics?.assoziationStaerkeTexte) ? UI_TEXTS.statMetrics.assoziationStaerkeTexte : {};
+    if (isNaN(value) || value < 0 || value > 1) return uiTextRef.nicht_bestimmbar || 'N/A';
     if (value >= 0.9) return 'exzellent';
     if (value >= 0.8) return 'gut';
     if (value >= 0.7) return 'moderat';
@@ -387,11 +398,12 @@ function getAUCBewertung(aucValue) {
 
 function getPhiBewertung(phiValue) {
     const value = parseFloat(phiValue);
-    if (isNaN(value)) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_bestimmbar || 'N/A';
+    const uiTextRef = (typeof UI_TEXTS !== 'undefined' && UI_TEXTS?.statMetrics?.assoziationStaerkeTexte) ? UI_TEXTS.statMetrics.assoziationStaerkeTexte : {};
+    if (isNaN(value)) return uiTextRef.nicht_bestimmbar || 'N/A';
     const absPhi = Math.abs(value);
-    const texts = UI_TEXTS.statMetrics.assoziationStaerkeTexte || {};
-    if (absPhi >= 0.5) return texts.stark || 'stark';
-    if (absPhi >= 0.3) return texts.moderat || 'moderat';
-    if (absPhi >= 0.1) return texts.schwach || 'schwach';
-    return texts.sehr_schwach || 'sehr schwach';
+
+    if (absPhi >= 0.5) return uiTextRef.stark || 'stark';
+    if (absPhi >= 0.3) return uiTextRef.moderat || 'moderat';
+    if (absPhi >= 0.1) return uiTextRef.schwach || 'schwach';
+    return uiTextRef.sehr_schwach || 'sehr schwach oder keine';
 }
