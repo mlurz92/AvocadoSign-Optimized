@@ -6,7 +6,7 @@ const uiComponents = (() => {
             headerButtonHtml = buttons.map(btn => {
                 const btnId = btn.id || `dl-${targetId.replace(/[^a-zA-Z0-9_-]/g, '')}-${btn.format || 'action'}`;
                 const iconClass = btn.icon || 'fa-download';
-                let tooltip = btn.tooltip || `Als ${String(btn.format || 'Aktion').toUpperCase()} herunterladen`;
+                let tooltip = btn.tooltip || `Aktion für ${String(defaultTitle)}`;
 
                 const safeDefaultTitle = String(defaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
                 const safeChartName = String(btn.chartName || safeDefaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
@@ -16,6 +16,8 @@ const uiComponents = (() => {
                     tooltip = TOOLTIP_CONTENT.exportTab.chartSinglePNG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
                 } else if (btn.format === 'svg' && btn.chartId && TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description) {
                     tooltip = TOOLTIP_CONTENT.exportTab.chartSingleSVG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
+                } else if (btn.format === 'tiff' && btn.chartId && TOOLTIP_CONTENT.exportTab.chartSingleTIFF?.description) {
+                    tooltip = TOOLTIP_CONTENT.exportTab.chartSingleTIFF.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
                 } else if (btn.format === 'png' && btn.tableId && TOOLTIP_CONTENT.exportTab.tableSinglePNG?.description) {
                     tooltip = TOOLTIP_CONTENT.exportTab.tableSinglePNG.description.replace('{TableName}', `<strong>${safeTableName}</strong>`);
                 }
@@ -26,7 +28,8 @@ const uiComponents = (() => {
                 if (btn.tableId) dataAttributes.push(`data-table-id="${btn.tableId}"`);
                 
                 if (btn.tableName) dataAttributes.push(`data-table-name="${safeTableName.replace(/\s/g, '_')}"`);
-                else if (btn.chartId) dataAttributes.push(`data-chart-name="${safeChartName.replace(/\s/g, '_')}"`);
+                else if (btn.chartName) dataAttributes.push(`data-chart-name="${safeChartName.replace(/\s/g, '_')}"`);
+                else if (btn.chartId) dataAttributes.push(`data-chart-name="${safeChartName.replace(/\s/g, '_')}"`); // Fallback to chartName if tableName not present but chartId is
                 else dataAttributes.push(`data-default-name="${safeDefaultTitle.replace(/\s/g, '_')}"`);
 
 
@@ -280,7 +283,9 @@ const uiComponents = (() => {
                             ${generateButtonHTML('statistik-csv', 'fas fa-file-csv', 'Statistik Ergebnisse', 'statsCSV')}
                             ${generateButtonHTML('bruteforce-txt', 'fas fa-file-alt', 'Brute-Force Bericht', 'bruteForceTXT', true)}
                             ${generateButtonHTML('deskriptiv-md', 'fab fa-markdown', 'Deskriptive Statistik', 'deskriptivMD')}
-                            ${generateButtonHTML('comprehensive-report-html', 'fas fa-file-invoice', 'Umfassender Bericht', 'comprehensiveReportHTML')}
+                            ${generateButtonHTML('comprehensive-report-html', 'fas fa-file-invoice', 'Umfassender Analysebericht', 'comprehensiveReportHTML')}
+                            ${generateButtonHTML('publication-draft-md', 'fas fa-book-reader', 'Publikationsentwurf (MD)', 'publicationDraftMD')}
+                            ${generateButtonHTML('publication-draft-html', 'fas fa-globe', 'Publikationsentwurf (HTML)', 'publicationDraftHTML')}
                              <h6 class="mt-3 text-muted small text-uppercase mb-2">Tabellen & Rohdaten</h6>
                              ${generateButtonHTML('daten-md', 'fab fa-markdown', 'Datenliste', 'datenMD')}
                              ${generateButtonHTML('auswertung-md', 'fab fa-markdown', 'Auswertungstabelle', 'auswertungMD')}
@@ -288,6 +293,7 @@ const uiComponents = (() => {
                              <h6 class="mt-3 text-muted small text-uppercase mb-2">Diagramme & Tabellen (als Bilder)</h6>
                              ${generateButtonHTML('charts-png', 'fas fa-images', 'Diagramme & Tabellen (PNG)', 'pngZIP')}
                              ${generateButtonHTML('charts-svg', 'fas fa-file-code', 'Diagramme (SVG)', 'svgZIP')}
+                             ${generateButtonHTML('charts-tiff', 'fas fa-file-image', 'Diagramme (TIFF)', 'chartsTIFF', false, true)}
                         </div>
                     </div>
                 </div>
@@ -305,7 +311,7 @@ const uiComponents = (() => {
                     </div>
                 </div>
                 <div class="col-lg-12 col-xl-4 mb-3">
-                   <div class="card h-100"> <div class="card-header">Hinweise zum Export</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV:** Für Statistiksoftware; Trennzeichen: Semikolon (;).</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** Für Dokumentation.</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** Brute-Force-Bericht.</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht:** Umfassend, druckbar.</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** Pixelbasiert (Diagramme/Tabellen).</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** Vektorbasiert (Diagramme), skalierbar.</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>ZIP-Exporte für Diagramme/Tabellen erfassen nur aktuell im Statistik- oder Auswertungstab sichtbare/gerenderte Elemente. Einzel-Downloads sind direkt am Element möglich (z.B. auch im Präsentationstab).</li> </ul> </div> </div>
+                   <div class="card h-100"> <div class="card-header">Hinweise zum Export</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV:** Für Statistiksoftware; Trennzeichen: Semikolon (;).</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** Für Dokumentation und Weiterverarbeitung (z.B. Pandoc).</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** Brute-Force-Bericht (reiner Text).</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht/Publikation:** Umfassend, druckbar, direkt im Browser anzeigbar.</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** Pixelbasiert (Diagramme/Tabellen), gute Kompatibilität.</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** Vektorbasiert (Diagramme), verlustfrei skalierbar, ideal für Publikationen.</li> <li class="mb-2"><i class="fas fa-file-image fa-fw me-1 text-primary"></i>**TIFF:** Pixelbasiert (Diagramme), oft für Druck in hoher Qualität gefordert (experimentell).</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>ZIP-Exporte für Diagramme/Tabellen erfassen nur aktuell im Statistik-, Auswertungs- oder Präsentationstab sichtbare/gerenderte Elemente. Einzel-Downloads sind direkt am Element möglich. Der Publikationstab rendert seine Diagramme dynamisch bei Auswahl der Sektion.</li> </ul> </div> </div>
                 </div>
             </div>
         `;
@@ -317,8 +323,8 @@ const uiComponents = (() => {
         if (!stats || !stats.matrix || stats.matrix.rp === undefined) {
              return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)</div><div class="card-body p-2"><p class="m-0 text-muted small">Metriken für T2 nicht verfügbar für Kollektiv ${displayKollektivName}.</p></div></div>`;
         }
-        const metrics = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'f1', 'auc'];
-        const metricDisplayNames = { sens: 'Sens', spez: 'Spez', ppv: 'PPV', npv: 'NPV', acc: 'Acc', balAcc: 'BalAcc', f1: 'F1', auc: 'AUC' };
+        const metrics = ['sens', 'spez', 'ppv', 'npv', 'lr_plus', 'lr_minus', 'acc', 'balAcc', 'f1', 'auc'];
+        const metricDisplayNames = { sens: 'Sens', spez: 'Spez', ppv: 'PPV', npv: 'NPV', lr_plus: 'LR+', lr_minus: 'LR-', acc: 'Acc', balAcc: 'BalAcc', f1: 'F1', auc: 'AUC' };
         const na = '--';
 
         let contentHTML = '<div class="d-flex flex-wrap justify-content-around small text-center">';
@@ -327,8 +333,8 @@ const uiComponents = (() => {
             const metricData = stats[key];
             const metricDescription = (TOOLTIP_CONTENT.t2MetricsOverview?.[key] || TOOLTIP_CONTENT.statMetrics[key]?.description || key).replace(/\[METHODE\]/g, '<strong>T2 (angewandt)</strong>');
             const interpretationHTML = ui_helpers.getMetricInterpretationHTML(key, metricData, 'T2 (angewandt)', displayKollektivName);
-            const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
-            const isPercent = !(key === 'f1' || key === 'auc');
+            let digits = (key === 'f1' || key === 'auc' || key === 'lr_minus') ? 3 : (key === 'lr_plus' ? 2 : 1);
+            const isPercent = !['f1', 'auc', 'lr_plus', 'lr_minus'].includes(key);
             const formattedValue = formatCI(metricData?.value, metricData?.ci?.lower, metricData?.ci?.upper, digits, isPercent, na);
 
             contentHTML += `
@@ -405,16 +411,29 @@ const uiComponents = (() => {
                 currentRank = rank;
             }
 
-            if (rank > 10 && isNewRank && i >=10 ) break; // Ensure at least 10 distinct ranks or more items if scores are tied
+            if (rank > 10 && isNewRank && i >=10 ) break;
+
+            const tempDatasetForMetrics = currentData; // Should be the same dataset the worker used
+            let sens = NaN, spez = NaN, ppv = NaN, npv = NaN;
+            if (tempDatasetForMetrics && tempDatasetForMetrics.length > 0) {
+                 const perf = statisticsService.calculateDiagnosticPerformance(t2CriteriaManager.evaluateDataset(cloneDeep(tempDatasetForMetrics), result.criteria, result.logic), 't2', 'n');
+                 if (perf) {
+                     sens = perf.sens?.value;
+                     spez = perf.spez?.value;
+                     ppv = perf.ppv?.value;
+                     npv = perf.npv?.value;
+                 }
+            }
+
 
             tableHTML += `
                 <tr>
                     <td>${currentRank}.</td>
                     <td>${formatNumber(result.metricValue, 4)}</td>
-                    <td>${result.sens !== undefined ? formatPercent(result.sens, 1) : 'N/A'}</td>
-                    <td>${result.spez !== undefined ? formatPercent(result.spez, 1) : 'N/A'}</td>
-                    <td>${result.ppv !== undefined ? formatPercent(result.ppv, 1) : 'N/A'}</td>
-                    <td>${result.npv !== undefined ? formatPercent(result.npv, 1) : 'N/A'}</td>
+                    <td>${formatPercent(sens, 1)}</td>
+                    <td>${formatPercent(spez, 1)}</td>
+                    <td>${formatPercent(ppv, 1)}</td>
+                    <td>${formatPercent(npv, 1)}</td>
                     <td>${result.logic.toUpperCase()}</td>
                     <td>${formatCriteriaFunc(result.criteria, result.logic)}</td>
                 </tr>`;
@@ -433,11 +452,12 @@ const uiComponents = (() => {
         const currentBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
         const sectionNavItems = PUBLICATION_CONFIG.sections.map(mainSection => {
-            const sectionTooltip = TOOLTIP_CONTENT.publikationTabTooltips[mainSection.id]?.description || UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey;
+            const sectionLabel = UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey.charAt(0).toUpperCase() + mainSection.labelKey.slice(1);
+            const sectionTooltip = TOOLTIP_CONTENT.publikationTabTooltips[mainSection.id]?.description || sectionLabel;
             return `
                 <li class="nav-item">
                     <a class="nav-link py-2 publikation-section-link" href="#" data-section-id="${mainSection.id}" data-tippy-content="${sectionTooltip}">
-                        ${UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}
+                        ${sectionLabel}
                     </a>
                 </li>`;
         }).join('');
@@ -449,8 +469,8 @@ const uiComponents = (() => {
         return `
             <div class="row mb-3 sticky-top bg-light py-2 shadow-sm" style="top: var(--sticky-header-offset); z-index: 1015;">
                 <div class="col-md-3">
-                    <h5 class="mb-2">Abschnitte</h5>
-                    <nav id="publikation-sections-nav" class="nav flex-column nav-pills" data-tippy-content="${TOOLTIP_CONTENT.publikationTabTooltips.sectionSelect?.description || 'Wählen Sie einen Publikationsabschnitt.'}">
+                    <h5 class="mb-2">${lang === 'de' ? 'Publikationsaufbau' : 'Publication Outline'}</h5>
+                    <nav id="publikation-sections-nav" class="nav flex-column nav-pills" data-tippy-content="${TOOLTIP_CONTENT.publikationTabTooltips.sectionSelect?.description || (lang === 'de' ? 'Wählen Sie einen Publikationsabschnitt.' : 'Select a publication section.')}">
                         ${sectionNavItems}
                     </nav>
                 </div>
@@ -468,7 +488,7 @@ const uiComponents = (() => {
                         </div>
                     </div>
                     <div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: calc(100vh - var(--sticky-header-offset) - 4rem - 2rem); overflow-y: auto;">
-                        <p class="text-muted">Bitte wählen Sie einen Abschnitt aus der Navigation.</p>
+                        <p class="text-muted">${lang === 'de' ? 'Bitte wählen Sie einen Abschnitt aus der Navigation.' : 'Please select a section from the navigation.'}</p>
                     </div>
                 </div>
             </div>`;
