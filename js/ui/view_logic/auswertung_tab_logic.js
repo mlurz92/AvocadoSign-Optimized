@@ -1,111 +1,181 @@
 const auswertungTabLogic = (() => {
+    let allProcessedData = null;
+    let currentKollektiv = APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
+    let currentPage = 1;
+    let rowsPerPage = APP_CONFIG.UI_SETTINGS.DEFAULT_TABLE_ROWS_PER_PAGE;
+    let sortState = cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
+    let evaluatedDataForTable = [];
+    let mainAppInterfaceRef = null;
 
-    function createAuswertungTableHTML(data, sortState, appliedCriteria, appliedLogic) {
-        if (!Array.isArray(data)) {
-            console.error("createAuswertungTableHTML: Ungültige Daten für Auswertungstabelle, Array erwartet.");
-            return '<p class="text-danger">Fehler: Ungültige Auswertungsdaten für Tabelle.</p>';
+    const columns = Object.freeze([
+        Object.freeze({ key: 'nr', label: 'Nr.', sortable: true, tooltipKey: 'auswertungTable.nr' }),
+        Object.freeze({ key: 'name', label: 'Name, Vorname', sortable: true, tooltipKey: 'auswertungTable.name' }),
+        Object.freeze({ key: 'therapie', label: 'Therapie', sortable: true, tooltipKey: 'auswertungTable.therapie' }),
+        Object.freeze({ key: 'n_as_t2', label: 'N / AS / T2', sortable: true, isStatusColumn: true, subSortKeys: ['n', 'as', 't2'], tooltipKey: 'auswertungTable.n_as_t2' }),
+        Object.freeze({ key: 'n_counts', label: 'N LK (+/Ges.)', sortable: true, tooltipKey: 'auswertungTable.n_counts' }),
+        Object.freeze({ key: 'as_counts', label: 'AS LK (+/Ges.)', sortable: true, tooltipKey: 'auswertungTable.as_counts' }),
+        Object.freeze({ key: 't2_counts', label: 'T2 LK (+/Ges.)', sortable: true, tooltipKey: 'auswertungTable.t2_counts' })
+    ]);
+
+    function initialize(processedData, initialSettings, mainAppInterface) {
+        allProcessedData = processedData;
+        mainAppInterfaceRef = mainAppInterface;
+        if (initialSettings) {
+            currentKollektiv = initialSettings.currentKollektiv || currentKollektiv;
+            const savedSortState = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_SORT);
+            if (savedSortState) {
+                sortState = savedSortState;
+            }
         }
+        currentPage = 1;
+        t2CriteriaManager.initialize();
+        bruteForceManager.initialize(
+            () => dataProcessor.filterDataByKollektiv(allProcessedData, state.getCurrentKollektiv()),
+            (uiState, data) => ui_helpers.updateBruteForceUI(uiState, data, bruteForceManager.isWorkerAvailable(), state.getCurrentKollektiv()),
+            (bestResultData) => {
+                ui_helpers.showToast(`Brute-Force Optimierung abgeschlossen. Beste Metrik: ${formatNumber(bestResultData.metricValue, 4)}.`, 'success');
+                if (mainAppInterfaceRef && typeof mainAppInterfaceRef.refreshSpecificTabs === 'function') {
+                     mainAppInterfaceRef.refreshSpecificTabs(['statistik-tab', 'praesentation-tab', 'publikation-tab']);
+                }
+            },
+            mainAppInterfaceRef
+        );
+    }
 
-        const tableId = 'auswertung-table';
-        const columns = [
-            { key: 'nr', label: 'Nr', tooltip: TOOLTIP_CONTENT.auswertungTable.nr || 'Fortlaufende Nummer des Patienten.' },
-            { key: 'name', label: 'Name', tooltip: TOOLTIP_CONTENT.auswertungTable.name || 'Nachname des Patienten (anonymisiert/kodiert).' },
-            { key: 'therapie', label: 'Therapie', tooltip: TOOLTIP_CONTENT.auswertungTable.therapie || 'Angewandte Therapie vor der Operation.' },
-            { key: 'status', label: 'N/AS/T2', tooltip: TOOLTIP_CONTENT.auswertungTable.n_as_t2 || 'Status: Pathologie (N), Avocado Sign (AS), T2 (aktuelle Kriterien). Klicken Sie auf N, AS oder T2 im Spaltenkopf zur Sub-Sortierung.', subKeys: [{key: 'n', label: 'N'}, {key: 'as', label: 'AS'}, {key: 't2', label: 'T2'}]},
-            { key: 'anzahl_patho_lk', label: 'N+/N ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.n_counts || 'Pathologisch N+ LK / Gesamt N LK.', textAlign: 'center' },
-            { key: 'anzahl_as_lk', label: 'AS+/AS ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.as_counts || 'Avocado Sign (AS)+ LK / Gesamt AS LK.', textAlign: 'center' },
-            { key: 'anzahl_t2_lk', label: 'T2+/T2 ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.t2_counts || 'T2+ LK (aktuelle Kriterien) / Gesamt T2 LK.', textAlign: 'center' },
-            { key: 'details', label: '', width: '30px'}
+    function updateData(processedData, newSettings) {
+        allProcessedData = processedData;
+        if (newSettings) {
+            currentKollektiv = newSettings.currentKollektiv || currentKollektiv;
+            const savedSortState = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_SORT);
+            sortState = savedSortState || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
+        }
+        currentPage = 1;
+        bruteForceManager.updateKollektivData(() => dataProcessor.filterDataByKollektiv(allProcessedData, state.getCurrentKollektiv()));
+    }
+
+    function setSort(key, subKey = null) {
+        if (sortState.key === key && sortState.subKey === subKey) {
+            sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortState.key = key;
+            sortState.subKey = subKey;
+            sortState.direction = 'asc';
+        }
+        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_SORT, sortState);
+        currentPage = 1;
+        renderTabContent();
+    }
+
+    function setCurrentPage(page) {
+        const totalPages = Math.ceil((evaluatedDataForTable?.length || 0) / rowsPerPage);
+        currentPage = Math.max(1, Math.min(page, totalPages || 1));
+        renderTabContent();
+    }
+
+    function _renderDashboard() {
+        const dashboardContainer = document.getElementById('auswertung-dashboard-content');
+        if (!dashboardContainer || !evaluatedDataForTable) return;
+
+        dashboardContainer.innerHTML = '';
+        const kollektivName = currentKollektiv;
+        const stats = statisticsService.calculateDescriptiveStats(evaluatedDataForTable);
+
+        const cards = [
+            { title: UI_TEXTS.chartTitles.statusN, content: `<h3 class="metric-value">${stats.nStatus?.plus || 0} <span class="small">N+</span> / ${stats.nStatus?.minus || 0} <span class="small">N-</span></h3>`, chartId: null, tooltipKey: 'headerStats.statusN' },
+            { title: UI_TEXTS.chartTitles.statusAS, content: `<h3 class="metric-value">${stats.asStatus?.plus || 0} <span class="small">AS+</span> / ${stats.asStatus?.minus || 0} <span class="small">AS-</span></h3>`, chartId: null, tooltipKey: 'headerStats.statusAS' },
+            { title: UI_TEXTS.chartTitles.statusT2, content: `<h3 class="metric-value">${stats.t2Status?.plus || 0} <span class="small">T2+</span> / ${stats.t2Status?.minus || 0} <span class="small">T2-</span></h3>`, chartId: null, tooltipKey: 'headerStats.statusT2' },
+            { title: UI_TEXTS.chartTitles.ageDistribution, content: '', chartId: 'chart-dash-age', tooltipKey: 'deskriptiveStatistik.chartAge' },
+            { title: UI_TEXTS.chartTitles.genderDistribution, content: '', chartId: 'chart-dash-gender', tooltipKey: 'deskriptiveStatistik.chartGender' },
+            { title: UI_TEXTS.chartTitles.therapyDistribution, content: '', chartId: 'chart-dash-therapy', tooltipKey: 'deskriptiveStatistik.therapie' }
         ];
 
-        let tableHTML = `<table class="table table-sm table-hover table-striped data-table" id="${tableId}">`;
-        tableHTML += _createTableHeaderHTML(tableId, sortState, columns);
-        tableHTML += `<tbody id="${tableId}-body">`;
-
-        if (data.length === 0) {
-            tableHTML += `<tr><td colspan="${columns.length}" class="text-center text-muted">Keine Patienten im ausgewählten Kollektiv gefunden.</td></tr>`;
-        } else {
-            data.forEach(patient => {
-                tableHTML += tableRenderer.createAuswertungTableRow(patient, appliedCriteria, appliedLogic);
-            });
-        }
-        tableHTML += `</tbody></table>`;
-        return tableHTML;
-    }
-
-    function _createTableHeaderHTML(tableId, sortState, columns) {
-        let headerHTML = `<thead class="small sticky-top bg-light" id="${tableId}-header"><tr>`;
-        columns.forEach(col => {
-            let sortIconHTML = '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>';
-            let mainHeaderClass = '';
-            let thStyle = col.width ? `style="width: ${col.width};"` : '';
-             if (col.textAlign) mainHeaderClass += ` text-${col.textAlign}`;
-
-            let isMainKeyActiveSort = false;
-            let activeSubKey = null;
-
-            if (sortState && sortState.key === col.key) {
-                if (col.subKeys && col.subKeys.some(sk => sk.key === sortState.subKey)) {
-                    isMainKeyActiveSort = true;
-                    activeSubKey = sortState.subKey;
-                    sortIconHTML = `<i class="fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1"></i>`;
-                } else if (!col.subKeys && (sortState.subKey === null || sortState.subKey === undefined)) {
-                    isMainKeyActiveSort = true;
-                    sortIconHTML = `<i class="fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1"></i>`;
-                    thStyle += (thStyle ? ' ' : 'style="') + 'color: var(--primary-color);"';
-                    if(!thStyle.endsWith('"')) thStyle += '"';
-                }
-            }
-            
-            const baseTooltipContent = col.tooltip || col.label;
-
-            const subHeaders = col.subKeys ? col.subKeys.map(sk => {
-                 const isActiveSubSort = activeSubKey === sk.key;
-                 const style = isActiveSubSort ? 'font-weight: bold; text-decoration: underline; color: var(--primary-color);' : '';
-                 const subLabel = sk.label || sk.key.toUpperCase();
-                 const subTooltip = `Sortieren nach Status ${subLabel}. ${baseTooltipContent}`;
-                 return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="${subTooltip}">${subLabel}</span>`;
-             }).join(' / ') : '';
-
-            const mainTooltip = col.subKeys ? `${baseTooltipContent} Klicken Sie auf N, AS oder T2 für Sub-Sortierung.` : (col.key === 'details' ? (TOOLTIP_CONTENT.auswertungTable.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
-            const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys || col.key === 'details' ? '' : 'style="cursor: pointer;"'}`;
-            const thClass = mainHeaderClass;
-
-            if (col.subKeys) {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} data-tippy-content="${mainTooltip}" ${thStyle}>${col.label} ${subHeaders ? `(${subHeaders})` : ''} ${isMainKeyActiveSort && !activeSubKey ? sortIconHTML : '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>'}</th>`;
-             } else {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} data-tippy-content="${mainTooltip}" ${thStyle}>${col.label} ${col.key === 'details' ? '' : sortIconHTML}</th>`;
-             }
+        cards.forEach(card => {
+            const downloadButtons = card.chartId ? [
+                {icon:'fa-image', format:'png', chartId:card.chartId, chartName: card.title.replace(/\s+/g,'_')},
+                {icon:'fa-file-code', format:'svg', chartId:card.chartId, chartName: card.title.replace(/\s+/g,'_')}
+            ] : [];
+            dashboardContainer.insertAdjacentHTML('beforeend', uiComponents.createDashboardCard(card.title, card.content, card.chartId, 'mb-3', '', 'p-2', downloadButtons));
         });
-        headerHTML += `</tr></thead>`;
-        return headerHTML;
+
+        if (stats.alterData && stats.alterData.length > 0) {
+            chartRenderer.renderAgeDistributionChart(stats.alterData, 'chart-dash-age', { height: 180 });
+        }
+        if (stats.geschlecht) {
+            const genderData = [
+                { label: UI_TEXTS.legendLabels.male, value: stats.geschlecht.m || 0 },
+                { label: UI_TEXTS.legendLabels.female, value: stats.geschlecht.f || 0 },
+            ];
+             if (stats.geschlecht.unbekannt > 0) genderData.push({ label: UI_TEXTS.legendLabels.unknownGender, value: stats.geschlecht.unbekannt});
+             if(genderData.some(d => d.value > 0)) chartRenderer.renderPieChart(genderData, 'chart-dash-gender', { height: 180, innerRadiusFactor: 0, margin: APP_CONFIG.CHART_SETTINGS.COMPACT_PIE_MARGIN });
+        }
+         if (stats.therapie) {
+             const therapyData = [
+                 { label: getKollektivDisplayName('direkt OP'), value: stats.therapie['direkt OP'] || 0 },
+                 { label: getKollektivDisplayName('nRCT'), value: stats.therapie.nRCT || 0 }
+             ];
+              if (stats.therapie.unbekannt > 0) therapyData.push({ label: 'Unbekannt', value: stats.therapie.unbekannt});
+              if(therapyData.some(d=>d.value > 0)) chartRenderer.renderPieChart(therapyData, 'chart-dash-therapy', { height: 180, innerRadiusFactor: 0, margin: APP_CONFIG.CHART_SETTINGS.COMPACT_PIE_MARGIN });
+         }
     }
 
-    function createAuswertungTableCardHTML(data, sortState, appliedCriteria, appliedLogic) {
-        const tableHTML = createAuswertungTableHTML(data, sortState, appliedCriteria, appliedLogic);
-        const toggleButtonTooltip = TOOLTIP_CONTENT.auswertungTable.expandAll || 'Alle Detailansichten (Bewertung einzelner T2-LKs) für Patienten in dieser Tabelle ein- oder ausblenden.';
-        return `
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>Patientenübersicht & Auswertungsergebnisse (basierend auf angewandten T2-Kriterien)</span>
-                        <button id="auswertung-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="expand" data-tippy-content="${toggleButtonTooltip}">
-                           Alle Details <i class="fas fa-chevron-down ms-1"></i>
-                       </button>
-                    </div>
-                    <div class="card-body p-0">
-                        <div id="auswertung-table-container" class="table-responsive">
-                           ${tableHTML}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+    function _applyAndReEvaluateData() {
+        const filteredData = dataProcessor.filterDataByKollektiv(allProcessedData, currentKollektiv);
+        evaluatedDataForTable = t2CriteriaManager.evaluateDataset(filteredData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
+    }
+
+
+    function renderTabContent() {
+        if (!allProcessedData) {
+            console.warn("AuswertungTabLogic: allProcessedData ist nicht initialisiert.");
+             const container = document.getElementById('auswertung-tab-content');
+             if(container) ui_helpers.updateElementHTML('auswertung-tab-content', '<p class="text-danger p-3">Keine Daten zum Anzeigen vorhanden. Bitte laden Sie die Seite neu.</p>');
+            return;
+        }
+
+        const t2CriteriaContainer = document.getElementById('t2-criteria-definition-container');
+        if (t2CriteriaContainer) {
+            t2CriteriaContainer.innerHTML = uiComponents.createT2CriteriaControls(t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic());
+        }
+
+        const bruteForceContainer = document.getElementById('brute-force-container');
+        if (bruteForceContainer) {
+             bruteForceContainer.innerHTML = uiComponents.createBruteForceCard(currentKollektiv, bruteForceManager.isWorkerAvailable());
+             ui_helpers.updateBruteForceUI(bruteForceManager.getCurrentState(), bruteForceManager.getCurrentData(), bruteForceManager.isWorkerAvailable(), currentKollektiv);
+        }
+
+        _applyAndReEvaluateData();
+        _renderDashboard();
+
+        const t2MetricsContainer = document.getElementById('t2-metrics-overview-container');
+        if (t2MetricsContainer && evaluatedDataForTable.length > 0) {
+            const t2Performance = statisticsService.calculateDiagnosticPerformance(evaluatedDataForTable, 't2', 'n');
+            t2MetricsContainer.innerHTML = uiComponents.createT2MetricsOverview(t2Performance, currentKollektiv);
+        } else if (t2MetricsContainer) {
+            t2MetricsContainer.innerHTML = uiComponents.createT2MetricsOverview(null, currentKollektiv);
+        }
+
+        const tableHeaderId = 'auswertung-tabelle-header';
+        tableRenderer.renderAuswertungTabelle(evaluatedDataForTable, currentPage, rowsPerPage, sortState, columns);
+        ui_helpers.updateSortIcons(tableHeaderId, sortState);
+        ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
+
+        const tabContentElement = document.getElementById('auswertung-tab-pane');
+        if (tabContentElement) ui_helpers.initializeTooltips(tabContentElement);
+
+    }
+
+    function getAuswertungsDataForExport() {
+        if (!evaluatedDataForTable) return [];
+        return evaluatedDataForTable.slice().sort(getSortFunction(sortState.key, sortState.direction, sortState.subKey));
     }
 
     return Object.freeze({
-        createAuswertungTableHTML,
-        createAuswertungTableCardHTML
+        initialize,
+        updateData,
+        setSort,
+        setCurrentPage,
+        renderTabContent,
+        getAuswertungsDataForExport,
+        getColumns: () => columns
     });
-
 })();
