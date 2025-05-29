@@ -758,6 +758,21 @@ const ui_helpers = (() => {
 
     function showKurzanleitung() {
         const modalElement = document.getElementById('kurzanleitung-modal');
+        let modalContent = UI_TEXTS.kurzanleitung.content;
+
+        try {
+            if (typeof formatNumber === 'function' && typeof APP_CONFIG === 'object' && APP_CONFIG.STATISTICAL_CONSTANTS) {
+                const significanceLevelFormatted = formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, 2, '--', false);
+                modalContent = modalContent.replace('{SIGNIFICANCE_LEVEL_FORMATTED}', significanceLevelFormatted);
+            } else {
+                modalContent = modalContent.replace('{SIGNIFICANCE_LEVEL_FORMATTED}', String(APP_CONFIG?.STATISTICAL_CONSTANTS?.SIGNIFICANCE_LEVEL || '0.05'));
+                console.warn("showKurzanleitung: formatNumber oder APP_CONFIG nicht vollständig verfügbar für dynamische Ersetzung.");
+            }
+        } catch (e) {
+            console.error("Fehler beim Ersetzen des Platzhalters in Kurzanleitung:", e);
+            modalContent = modalContent.replace('{SIGNIFICANCE_LEVEL_FORMATTED}', String(APP_CONFIG?.STATISTICAL_CONSTANTS?.SIGNIFICANCE_LEVEL || '0.05'));
+        }
+
 
         if (!modalElement) {
             const modalHTML = `
@@ -769,7 +784,7 @@ const ui_helpers = (() => {
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
                       </div>
                       <div class="modal-body" id="kurzanleitung-modal-body">
-                        ${UI_TEXTS.kurzanleitung.content}
+                        ${modalContent}
                       </div>
                       <div class="modal-footer">
                         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Schließen</button>
@@ -782,10 +797,10 @@ const ui_helpers = (() => {
             if (newModalElement && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
                 kurzanleitungModalInstance = new bootstrap.Modal(newModalElement);
             }
-        } else if (!kurzanleitungModalInstance && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        } else if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
              kurzanleitungModalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
              const modalBody = document.getElementById('kurzanleitung-modal-body');
-             if (modalBody) modalBody.innerHTML = UI_TEXTS.kurzanleitung.content;
+             if (modalBody) modalBody.innerHTML = modalContent;
         }
 
 
@@ -793,7 +808,7 @@ const ui_helpers = (() => {
             if (!initialTabRenderFixed && typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
                 modalElement.addEventListener('hidden.bs.modal', () => {
                     if (!initialTabRenderFixed) {
-                        const activeTabId = typeof state !== 'undefined' ? state.getActiveTabId() : APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION + '-tab';
+                        const activeTabId = typeof state !== 'undefined' ? state.getActiveTabId() : APP_CONFIG.DEFAULT_SETTINGS.ACTIVE_TAB_ID;
                         if (activeTabId === APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION + '-tab') {
                              mainAppInterface.refreshCurrentTab();
                         }
