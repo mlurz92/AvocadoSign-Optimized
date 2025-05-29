@@ -1,255 +1,202 @@
 const viewRenderer = (() => {
-    let mainAppInterfaceInstance = null;
+    let mainAppInterfaceRef = null;
+    const tabLogics = {
+        'daten-tab': dataTabLogic,
+        'auswertung-tab': auswertungTabLogic,
+        'statistik-tab': statistikTabLogic,
+        'praesentation-tab': praesentationTabLogic,
+        'publikation-tab': publicationTabLogic,
+        'export-tab': exportTabLogic
+    };
 
-    function initializeUI(mainAppInterface, dataLoaded) {
-        mainAppInterfaceInstance = mainAppInterface;
-        const initialTabId = state.getActiveTabId() || 'daten-tab';
+    const tabDefinitions = [
+        { id: 'daten-tab', labelKey: 'daten', icon: 'fa-database' },
+        { id: 'auswertung-tab', labelKey: 'auswertung', icon: 'fa-cogs' },
+        { id: 'statistik-tab', labelKey: 'statistik', icon: 'fa-chart-bar' },
+        { id: 'praesentation-tab', labelKey: 'praesentation', icon: 'fa-slideshare' },
+        { id: 'publikation-tab', labelKey: 'publikation', icon: 'fa-file-alt' },
+        { id: 'export-tab', labelKey: 'export', icon: 'fa-download', isMoreTab: true }
+    ];
 
-        const tabContainer = document.getElementById('main-tab-content');
-        if (!tabContainer) {
-            console.error("Haupt-Tab-Container 'main-tab-content' nicht gefunden.");
-            return;
-        }
-        tabContainer.innerHTML = '';
 
-        const tabConfigs = [
-            { id: 'daten-tab', labelKey: 'daten', contentId: 'daten-tab-pane', logic: dataTabLogic },
-            { id: 'auswertung-tab', labelKey: 'auswertung', contentId: 'auswertung-tab-pane', logic: auswertungTabLogic },
-            { id: 'statistik-tab', labelKey: 'statistik', contentId: 'statistik-tab-pane', logic: statistikTabLogic },
-            { id: 'praesentation-tab', labelKey: 'praesentation', contentId: 'praesentation-tab-pane', logic: praesentationTabLogic },
-            { id: 'publikation-tab', labelKey: 'publikation', contentId: 'publikation-tab-pane', logic: publicationTabLogic },
-            { id: 'export-tab', labelKey: 'export', contentId: 'export-tab-pane', logic: null }
-        ];
-
-        tabConfigs.forEach(tabConfig => {
-            const pane = document.createElement('div');
-            pane.className = 'tab-pane fade';
-            pane.id = tabConfig.contentId;
-            pane.setAttribute('role', 'tabpanel');
-            pane.setAttribute('aria-labelledby', tabConfig.id);
-            if (tabConfig.id === initialTabId) {
-                pane.classList.add('show', 'active');
+    function _initializeTabLogics(processedData, currentSettings, mainAppInterface) {
+        mainAppInterfaceRef = mainAppInterface;
+        Object.values(tabLogics).forEach(logic => {
+            if (logic && typeof logic.initialize === 'function') {
+                logic.initialize(processedData, currentSettings, mainAppInterface);
             }
+        });
+    }
 
-            if (tabConfig.id === 'auswertung-tab') {
-                pane.innerHTML = `
-                    <div class="row">
-                        <div class="col-lg-5 col-xl-4 mb-3" id="t2-criteria-definition-container">
-                            <p class="text-muted">Lade T2 Kriterien Definition...</p>
+    function _renderTabNavigation(activeTabId) {
+        const navContainer = document.getElementById('main-nav-tabs');
+        if (!navContainer) return;
+
+        let navHTML = '';
+        let moreTabsHTML = '';
+        const maxVisibleTabs = 5;
+        let visibleTabCount = 0;
+
+        tabDefinitions.forEach(tab => {
+            const label = UI_TEXTS?.mainTabs?.[tab.labelKey]?.label || tab.labelKey.charAt(0).toUpperCase() + tab.labelKey.slice(1);
+            const tooltip = TOOLTIP_CONTENT?.mainTabs?.[tab.labelKey] || label;
+            const isActive = tab.id === activeTabId;
+            const linkHTML = `
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link ${isActive ? 'active' : ''}" id="${tab.id}-nav" data-bs-toggle="tab" data-bs-target="#${tab.id}-pane" type="button" role="tab" aria-controls="${tab.id}-pane" aria-selected="${isActive}" data-tab-id="${tab.id}" data-tippy-content="${tooltip}">
+                        <i class="fas ${tab.icon} fa-fw me-1"></i>${label}
+                    </button>
+                </li>`;
+
+            if (tab.isMoreTab || visibleTabCount >= maxVisibleTabs -1 ) { // -1 because "More" itself counts as a tab
+                 if(tab.id === 'export-tab'){ // Specific logic for export tab in dropdown
+                    moreTabsHTML += `<li><button class="dropdown-item nav-link" id="${tab.id}-nav-dd" data-bs-toggle="tab" data-bs-target="#${tab.id}-pane" type="button" role="tab" aria-controls="${tab.id}-pane" aria-selected="${isActive}" data-tab-id="${tab.id}" data-tippy-content="${tooltip}"><i class="fas ${tab.icon} fa-fw me-1"></i>${label}</button></li>`;
+                 } else { // Generic handling for other potential "more" tabs
+                    navHTML += linkHTML; // Add to main nav if it's not export and exceeds limit
+                    visibleTabCount++;
+                 }
+            } else {
+                navHTML += linkHTML;
+                visibleTabCount++;
+            }
+        });
+
+        if (moreTabsHTML.length > 0) {
+            const moreTabLabel = UI_TEXTS?.mainTabs?.moreTabsDropdown?.label || 'Mehr';
+            const moreTabTooltip = TOOLTIP_CONTENT?.mainTabs?.moreTabsDropdown || 'Weitere Optionen';
+            navHTML += `
+                <li class="nav-item dropdown">
+                    <button class="nav-link dropdown-toggle" id="more-tabs-dropdown-nav" data-bs-toggle="dropdown" aria-expanded="false" role="button" data-tippy-content="${moreTabTooltip}">
+                        <i class="fas fa-ellipsis-h fa-fw me-1"></i>${moreTabLabel}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="more-tabs-dropdown-nav">
+                        ${moreTabsHTML}
+                    </ul>
+                </li>`;
+        }
+        navContainer.innerHTML = navHTML;
+    }
+
+    function _renderTabPanes() {
+        const contentContainer = document.getElementById('main-tab-content');
+        if (!contentContainer) return;
+        let panesHTML = '';
+        tabDefinitions.forEach(tab => {
+            panesHTML += `<div class="tab-pane fade" id="${tab.id}-pane" role="tabpanel" aria-labelledby="${tab.id}-nav"><div id="${tab.id}-content-area" class="tab-content-area"></div></div>`;
+        });
+        contentContainer.innerHTML = panesHTML;
+    }
+
+    function renderAppShell() {
+        const appHeader = document.getElementById('app-header');
+        if (appHeader) {
+             appHeader.innerHTML = `
+                <div class="container-fluid">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="app-title">
+                            <h1>${APP_CONFIG.APP_NAME}</h1>
+                            <span class="app-version small text-muted">Version ${APP_CONFIG.APP_VERSION}</span>
                         </div>
-                        <div class="col-lg-7 col-xl-8">
-                            <div class="row" id="auswertung-dashboard-content">
-                                </div>
-                             <div id="brute-force-container" class="mt-3">
-                                </div>
-                        </div>
-                    </div>
-                    <hr class="my-3">
-                    <div id="t2-metrics-overview-container" class="mb-3">
-                        </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover table-sm" id="auswertung-tabelle">
-                            <thead id="auswertung-tabelle-header">
-                                <tr>
-                                    <th scope="col" class="sortable-header" data-sort-key="nr" data-tippy-content="${TOOLTIP_CONTENT.auswertungTable.nr?.description || 'Nr.'}">Nr. <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
-                                    <th scope="col" class="sortable-header" data-sort-key="name" data-tippy-content="${TOOLTIP_CONTENT.auswertungTable.name?.description || 'Name'}">Name <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
-                                    <th scope="col" class="sortable-header" data-sort-key="therapie" data-tippy-content="${TOOLTIP_CONTENT.auswertungTable.therapie?.description || 'Therapie'}">Therapie <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
-                                    <th scope="col" class="sortable-header" data-sort-key="n_as_t2" data-tippy-content="${TOOLTIP_CONTENT.auswertungTable.n_as_t2?.description || 'N/AS/T2 Status'}">
-                                        N <span class="sortable-sub-header" data-sub-key="n">(N)</span> /
-                                        AS <span class="sortable-sub-header" data-sub-key="as">(AS)</span> /
-                                        T2 <span class="sortable-sub-header" data-sub-key="t2">(T2)</span>
-                                        <i class="fas fa-sort text-muted opacity-50 ms-1"></i>
-                                    </th>
-                                    <th scope="col" class="sortable-header" data-sort-key="n_counts" data-tippy-content="${TOOLTIP_CONTENT.auswertungTable.n_counts?.description || 'N LK'}">N LK (+/Ges.) <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
-                                    <th scope="col" class="sortable-header" data-sort-key="as_counts" data-tippy-content="${TOOLTIP_CONTENT.auswertungTable.as_counts?.description || 'AS LK'}">AS LK (+/Ges.) <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
-                                    <th scope="col" class="sortable-header" data-sort-key="t2_counts" data-tippy-content="${TOOLTIP_CONTENT.auswertungTable.t2_counts?.description || 'T2 LK'}">T2 LK (+/Ges.) <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
-                                    <th scope="col" data-tippy-content="${TOOLTIP_CONTENT.auswertungTable.expandRow?.description || 'Details'}"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="auswertung-tabelle-body"></tbody>
-                        </table>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mt-2">
-                        <small id="auswertung-anzahl-patienten-info" class="text-muted"></small>
-                        <nav id="auswertung-pagination" aria-label="Auswertungstabellen Navigation"></nav>
-                    </div>`;
-            } else if (tabConfig.id === 'daten-tab') {
-                pane.innerHTML = `
-                    <div class="table-responsive">
-                        <table class="table table-hover table-sm" id="daten-tabelle">
-                            <thead id="daten-tabelle-header">
-                                 <tr>
-                                    <th scope="col" class="sortable-header" data-sort-key="nr" data-tippy-content="${TOOLTIP_CONTENT.datenTable.nr?.description || 'Nr.'}">Nr. <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
-                                    <th scope="col" class="sortable-header" data-sort-key="name" data-tippy-content="${TOOLTIP_CONTENT.datenTable.name?.description || 'Name'}">Name, Vorname <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
-                                    <th scope="col" class="sortable-header" data-sort-key="geschlecht" data-tippy-content="${TOOLTIP_CONTENT.datenTable.geschlecht?.description || 'Geschlecht'}">Geschl. <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
-                                    <th scope="col" class="sortable-header" data-sort-key="alter" data-tippy-content="${TOOLTIP_CONTENT.datenTable.alter?.description || 'Alter'}">Alter <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
-                                    <th scope="col" class="sortable-header" data-sort-key="therapie" data-tippy-content="${TOOLTIP_CONTENT.datenTable.therapie?.description || 'Therapie'}">Therapie <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
-                                    <th scope="col" class="sortable-header" data-sort-key="n_as_t2" data-tippy-content="${TOOLTIP_CONTENT.datenTable.n_as_t2?.description || 'N/AS/T2 Status'}">
-                                        N <span class="sortable-sub-header" data-sub-key="n">(N)</span> /
-                                        AS <span class="sortable-sub-header" data-sub-key="as">(AS)</span> /
-                                        T2 <span class="sortable-sub-header" data-sub-key="t2">(T2)</span>
-                                        <i class="fas fa-sort text-muted opacity-50 ms-1"></i>
-                                    </th>
-                                    <th scope="col" data-tippy-content="${TOOLTIP_CONTENT.datenTable.bemerkung?.description || 'Bemerkung'}">Bemerkung</th>
-                                    <th scope="col" data-tippy-content="${TOOLTIP_CONTENT.datenTable.expandRow?.description || 'Details'}"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="daten-tabelle-body"></tbody>
-                        </table>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mt-2">
-                        <small id="daten-anzahl-patienten-info" class="text-muted"></small>
-                        <nav id="daten-pagination" aria-label="Datentabellen Navigation"></nav>
-                    </div>`;
-            } else if (tabConfig.id === 'statistik-tab') {
-                 pane.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 id="statistik-tab-content-title" class="mb-0">Statistische Auswertung</h5>
-                        <div>
-                            <select id="statistik-kollektiv-select-1" class="form-select form-select-sm d-none me-2" style="width:auto;" aria-label="Kollektiv 1 Auswahl" data-tippy-content="${TOOLTIP_CONTENT.statistikKollektiv1?.description || 'Kollektiv 1'}"></select>
-                            <select id="statistik-kollektiv-select-2" class="form-select form-select-sm d-none me-2" style="width:auto;" aria-label="Kollektiv 2 Auswahl" data-tippy-content="${TOOLTIP_CONTENT.statistikKollektiv2?.description || 'Kollektiv 2'}"></select>
-                            <button id="statistik-toggle-vergleich" class="btn btn-sm btn-outline-secondary" data-tippy-content="${TOOLTIP_CONTENT.statistikLayout?.description || 'Layout umschalten'}">
-                                <i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv
+                        <div class="header-controls d-flex align-items-center">
+                             <div class="btn-group btn-group-sm me-3" role="group" aria-label="Kollektiv Auswahl" id="kollektiv-button-group" data-tippy-content="${TOOLTIP_CONTENT.kollektivButtons.description}">
+                                <button type="button" class="btn btn-outline-primary" data-kollektiv="Gesamt">${getKollektivDisplayName('Gesamt')}</button>
+                                <button type="button" class="btn btn-outline-primary" data-kollektiv="direkt OP">${getKollektivDisplayName('direkt OP')}</button>
+                                <button type="button" class="btn btn-outline-primary" data-kollektiv="nRCT">${getKollektivDisplayName('nRCT')}</button>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" id="btn-kurzanleitung" data-tippy-content="${TOOLTIP_CONTENT.kurzanleitungButton.description}">
+                                <i class="fas fa-question-circle me-1"></i>Kurzanleitung
                             </button>
                         </div>
                     </div>
-                    <div class="row g-3" id="statistik-tab-content">
-                        <p class="text-muted">Statistiken werden geladen...</p>
-                    </div>`;
-            } else if (tabConfig.id === 'praesentation-tab') {
-                pane.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 id="praesentation-tab-content-title" class="mb-0">Präsentationsansicht</h5>
-                        <div>
-                            <div class="btn-group btn-group-sm me-2" role="group" aria-label="Präsentationsansicht Auswahl" id="praesentation-view-selector" data-tippy-content="${TOOLTIP_CONTENT.praesentation?.viewSelect?.description || 'Ansicht auswählen'}">
-                                <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as-pur" value="as-pur" autocomplete="off">
-                                <label class="btn btn-outline-primary" for="praes-ansicht-as-pur">AS Performance</label>
-                                <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as-vs-t2" value="as-vs-t2" autocomplete="off">
-                                <label class="btn btn-outline-primary" for="praes-ansicht-as-vs-t2">AS vs. T2</label>
-                            </div>
-                             <select id="praes-study-select" class="form-select form-select-sm d-inline-block" style="width:auto; display:none;" aria-label="Studienauswahl für T2-Basis" data-tippy-content="${TOOLTIP_CONTENT.praesentation?.studySelect?.description || 'T2-Basis für Vergleich'}"></select>
-                        </div>
+                     <div id="header-stats-container" class="mt-2 small text-muted d-flex flex-wrap justify-content-start" data-tippy-content="${TOOLTIP_CONTENT.headerStats.description || 'Überblick aktuelle Daten'}">
+                        <span class="me-3" data-tippy-content="${TOOLTIP_CONTENT.headerStats.kollektiv}">Akt. Kollektiv: <strong id="header-kollektiv">--</strong></span>
+                        <span class="me-3" data-tippy-content="${TOOLTIP_CONTENT.headerStats.anzahlPatienten}">Patienten: <strong id="header-anzahl-patienten">--</strong></span>
+                        <span class="me-3" data-tippy-content="${TOOLTIP_CONTENT.headerStats.statusN}">N-Status (Patho): <strong id="header-status-n">--</strong></span>
+                        <span class="me-3" data-tippy-content="${TOOLTIP_CONTENT.headerStats.statusAS}">AS-Status (MRT): <strong id="header-status-as">--</strong></span>
+                        <span data-tippy-content="${TOOLTIP_CONTENT.headerStats.statusT2}">T2-Status (Angewandt): <strong id="header-status-t2">--</strong></span>
                     </div>
-                    <div class="card mb-3 d-none" id="praes-t2-basis-info-card">
-                        <div class="card-header card-header-sm" data-tippy-content="${TOOLTIP_CONTENT.praesentation?.t2BasisInfoCard?.title || 'Info T2-Basis'}">${TOOLTIP_CONTENT.praesentation?.t2BasisInfoCard?.title || 'Informationen zur T2-Vergleichsbasis'}</div>
-                        <div class="card-body p-2" id="praes-t2-basis-info-card-content"></div>
-                    </div>
-                    <div id="praesentation-tab-content">
-                        <p class="text-muted">Präsentationsdaten werden geladen...</p>
-                    </div>`;
-            } else if (tabConfig.id === 'publikation-tab') {
-                pane.innerHTML = uiComponents.createPublikationTabHeader();
-            } else if (tabConfig.id === 'export-tab') {
-                pane.innerHTML = `<div id="export-options-container"><p class="text-muted">Exportoptionen werden geladen...</p></div>`;
-            } else {
-                 pane.innerHTML = `<p class="text-muted">Inhalt für ${tabConfig.labelKey} wird geladen...</p>`;
-            }
-            tabContainer.appendChild(pane);
-        });
-
-        if (dataLoaded) {
-            renderTabContent(initialTabId, state.getCurrentAppState());
-        } else {
-            showLoadingState(true);
+                </div>`;
         }
-        ui_helpers.initializeTooltips(document.body);
+
+        const mainNavContainer = document.getElementById('main-nav-container');
+        if(mainNavContainer){
+            mainNavContainer.innerHTML = `<ul class="nav nav-tabs flex-grow-1" id="main-nav-tabs" role="tablist"></ul>`;
+        }
+        _renderTabNavigation(state.getActiveTabId() || APP_CONFIG.DEFAULT_SETTINGS.ACTIVE_TAB_ID || tabDefinitions[0].id);
+        _renderTabPanes();
+
+        const toastContainerHTML = '<div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;"></div>';
+        document.body.insertAdjacentHTML('beforeend', toastContainerHTML);
+
+        const modalContainer = document.createElement('div');
+        modalContainer.id = 'modal-container';
+        document.body.appendChild(modalContainer);
     }
 
-    function renderTabContent(tabId, appState) {
-        showLoadingState(true);
-        ui_helpers.updateKollektivButtonsUI(appState.currentKollektiv);
-        ui_helpers.updateHeaderStatsUI(appState.headerStats);
-        ui_helpers.updateExportButtonStates(tabId, bruteForceManager.hasAnyResults(), true);
-
-
-        const targetPane = document.getElementById(`${tabId}-pane`);
-        if (!targetPane) {
-            console.error(`Tab-Pane für ID '${tabId}' nicht gefunden.`);
-            showLoadingState(false);
-            return;
-        }
+    function renderTabContent(tabId, processedData, currentSettings) {
+        const activeTabPane = document.getElementById(`${tabId}-pane`);
+        const activeTabContentArea = document.getElementById(`${tabId}-content-area`);
 
         document.querySelectorAll('#main-tab-content .tab-pane').forEach(pane => {
             pane.classList.remove('show', 'active');
         });
-        targetPane.classList.add('show', 'active');
+        if (activeTabPane) {
+            activeTabPane.classList.add('show', 'active');
+        } else {
+            console.error(`Tab-Pane für ID '${tabId}' nicht gefunden.`);
+            return;
+        }
+        if (!activeTabContentArea) {
+             console.error(`Tab-Content-Area für ID '${tabId}' nicht gefunden.`);
+             return;
+        }
+        activeTabContentArea.innerHTML = '<div class="d-flex justify-content-center align-items-center" style="min-height: 200px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade...</span></div></div>';
 
-        document.querySelectorAll('#main-tabs .nav-link').forEach(link => {
-            link.classList.toggle('active', link.id === tabId);
-            link.setAttribute('aria-selected', String(link.id === tabId));
-        });
 
-
-        try {
-            switch (tabId) {
-                case 'daten-tab':
-                    dataTabLogic.updateData(appState.allProcessedData, appState);
-                    dataTabLogic.renderTabContent();
-                    break;
-                case 'auswertung-tab':
-                    auswertungTabLogic.updateData(appState.allProcessedData, appState);
-                    auswertungTabLogic.renderTabContent();
-                    break;
-                case 'statistik-tab':
-                    statistikTabLogic.updateData(appState.allProcessedData, appState);
-                    statistikTabLogic.renderTabContent();
-                    break;
-                case 'praesentation-tab':
-                    praesentationTabLogic.updateData(appState.allProcessedData, appState);
-                    praesentationTabLogic.renderTabContent();
-                    break;
-                case 'publikation-tab':
-                    const publicationContentArea = document.getElementById('publikation-content-area');
-                    if(publicationContentArea) publicationContentArea.innerHTML = `<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade...</span></div><p class="mt-2 text-muted">Inhalte werden generiert...</p></div>`;
-                    setTimeout(() => {
-                        publicationTabLogic.initializeData(appState.allProcessedData, appState.appliedT2Criteria, appState.appliedT2Logic, bruteForceManager.getAllResults());
-                        const contentHTML = publicationTabLogic.getRenderedSectionContent(appState.currentPublikationSection, appState.currentPublikationLang, appState.currentKollektiv);
-                        if(publicationContentArea) ui_helpers.updateElementHTML('publikation-content-area', contentHTML);
-                        ui_helpers.updatePublikationUI(appState.currentPublikationLang, appState.currentPublikationSection, appState.currentPublikationBruteForceMetric);
-                        setTimeout(() => {
-                           publicationTabLogic.updateDynamicChartsForPublicationTab(appState.currentPublikationSection, appState.currentPublikationLang, appState.currentKollektiv);
-                           if(publicationContentArea) ui_helpers.initializeTooltips(publicationContentArea);
-                        }, 50);
-                    },0);
-                    break;
-                case 'export-tab':
-                    const exportContainer = document.getElementById('export-options-container');
-                    if (exportContainer) {
-                        exportContainer.innerHTML = uiComponents.createExportOptions(appState.currentKollektiv);
-                        ui_helpers.initializeTooltips(exportContainer);
-                    }
-                    break;
-                default:
-                    console.warn(`Kein Renderer für Tab-ID '${tabId}' definiert.`);
-                    if(targetPane) targetPane.innerHTML = `<p class="text-warning">Kein Inhalt für diesen Tab definiert.</p>`;
+        const logicModule = tabLogics[tabId];
+        if (logicModule && typeof logicModule.renderTabContent === 'function') {
+            if (typeof logicModule.updateData === 'function') {
+                logicModule.updateData(processedData, currentSettings);
             }
-        } catch (error) {
-            console.error(`Fehler beim Rendern des Tabs '${tabId}':`, error);
-            showErrorMessage(`Fehler beim Laden des Tabs '${tabId}'. Details siehe Konsole.`, `${tabId}-pane`);
-        } finally {
-            showLoadingState(false);
+            if (tabId === 'publikation-tab') {
+                 activeTabContentArea.innerHTML = uiComponents.createPublikationTabHeader();
+                 const pubContentDiv = document.getElementById('publikation-content-area');
+                 if(pubContentDiv) {
+                     pubContentDiv.innerHTML = '<div class="d-flex justify-content-center align-items-center" style="min-height: 200px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade...</span></div></div>';
+                 }
+            } else {
+                 activeTabContentArea.innerHTML = '';
+            }
+            logicModule.renderTabContent();
+        } else {
+            activeTabContentArea.innerHTML = `<p class="text-danger p-3">Keine Render-Logik für Tab '${tabId}' definiert.</p>`;
+            console.error(`Kein Logic-Modul oder renderTabContent-Funktion für Tab-ID '${tabId}' gefunden.`);
         }
+        ui_helpers.updateExportButtonStates(tabId, bruteForceManager.hasAnyResults(), true /*canExportDataDependent*/);
+        ui_helpers.initializeTooltips(document.getElementById('app-container'));
     }
 
-    function showLoadingState(isLoading) {
-        const loader = document.getElementById('main-loader');
-        const content = document.getElementById('main-tab-content');
-        if (loader) loader.style.display = isLoading ? 'flex' : 'none';
-        if (content) content.style.display = isLoading ? 'none' : '';
-    }
 
-    function showErrorMessage(message, targetElementId = 'main-tab-content') {
-        const target = document.getElementById(targetElementId);
-        if (target) {
-            target.innerHTML = `<div class="alert alert-danger m-3" role="alert">${message}</div>`;
-        }
+    function updateActiveTabInNav(activeTabId) {
+        document.querySelectorAll('#main-nav-tabs .nav-link, #more-tabs-dropdown-nav + .dropdown-menu .nav-link').forEach(link => {
+            const isCurrentTab = link.dataset.tabId === activeTabId;
+            link.classList.toggle('active', isCurrentTab);
+            link.setAttribute('aria-selected', isCurrentTab);
+
+            if (link.id === 'more-tabs-dropdown-nav') {
+                const dropdownMenu = link.nextElementSibling;
+                const isAnyDropdownItemActive = dropdownMenu && dropdownMenu.querySelector('.nav-link.active');
+                link.classList.toggle('active', !!isAnyDropdownItemActive);
+            }
+        });
     }
 
     return Object.freeze({
-        initializeUI,
+        initializeTabLogics: _initializeTabLogics,
+        renderAppShell,
         renderTabContent,
-        showLoadingState,
-        showErrorMessage
+        updateActiveTabInNav,
+        getTabDefinitions: () => tabDefinitions
     });
 
 })();
