@@ -3,11 +3,16 @@ const viewRenderer = (() => {
 
     function _initializeTab(tabId, rendererFunction, ...args) {
         const tabPane = document.getElementById(tabId);
-        if (tabPane && !initializedTabs.has(tabId)) {
-            rendererFunction(...args);
-            initializedTabs.add(tabId);
+        if (tabPane && (!initializedTabs.has(tabId) || rendererFunction === renderAuswertungTab || rendererFunction === renderPublikationTab || rendererFunction === renderDatenTab || rendererFunction === renderStatistikTab || rendererFunction === renderPraesentationTab || rendererFunction === renderExportTab ) ) { // Auswertung, Publikation, Daten etc. immer neu rendern, da dynamisch
+            if (rendererFunction) {
+                rendererFunction(...args);
+            }
+            if (tabId !== 'auswertung-tab-pane' && tabId !== 'publikation-tab-pane' && tabId !== 'daten-tab-pane' && tabId !== 'statistik-tab-pane' && tabId !== 'praesentation-tab-pane' && tabId !== 'export-tab-pane') { // Controls etc. nur einmal initialisieren
+                 initializedTabs.add(tabId);
+            }
         } else if (tabPane && initializedTabs.has(tabId) && rendererFunction) {
-            rendererFunction(...args); // Re-render if needed on subsequent calls
+            // No re-render for already initialized static tabs,
+            // but dynamic tabs handled above.
         }
     }
 
@@ -18,25 +23,47 @@ const viewRenderer = (() => {
         const totalPages = Math.ceil(data.length / itemsPerPage);
         const currentPage = state.getCurrentDatenTablePage();
 
-        if (tableBody) {
+        if (tableBody && typeof tableRenderer !== 'undefined') {
             tableBody.innerHTML = '';
             const paginatedData = data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
             paginatedData.forEach(patient => {
-                if (typeof tableRenderer !== 'undefined') {
-                    tableBody.innerHTML += tableRenderer.createDatenTableRow(patient);
-                }
+                tableBody.innerHTML += tableRenderer.createDatenTableRow(patient);
             });
             ui_helpers.attachRowCollapseListeners(tableBody);
             ui_helpers.updateSortIcons('daten-table-header', sortState);
-            ui_helpers.initializeTooltips(tableBody);
         }
-        if (typeof paginationManager !== 'undefined' && paginationContainer) {
-             paginationContainer.innerHTML = paginationManager.createPaginationControls('daten', currentPage, totalPages);
-             paginationManager.attachPaginationEventListeners('daten', totalPages, (newPage) => {
-                state.setCurrentDatenTablePage(newPage);
-                renderDatenTab(data, sortState); // Re-render with new page
-             });
+
+        if (paginationContainer && typeof ui_helpers !== 'undefined') {
+            paginationContainer.innerHTML = ui_helpers.createPaginationControlsHTML('daten', currentPage, totalPages);
+            paginationContainer.querySelectorAll('.page-nav-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    if (button.parentElement.classList.contains('disabled') || button.parentElement.classList.contains('active')) return;
+                    
+                    const target = event.currentTarget;
+                    let newPage = currentPage;
+                    const pageAction = target.dataset.pageAction;
+                    const pageNumber = target.dataset.pageNumber;
+
+                    if (pageAction === 'prev') {
+                        newPage = Math.max(1, currentPage - 1);
+                    } else if (pageAction === 'next') {
+                        newPage = Math.min(totalPages, currentPage + 1);
+                    } else if (pageNumber) {
+                        newPage = parseInt(pageNumber, 10);
+                    }
+
+                    if (newPage !== currentPage && newPage >= 1 && newPage <= totalPages) {
+                        state.setCurrentDatenTablePage(newPage);
+                        if (typeof mainAppInterface !== 'undefined') {
+                            mainAppInterface.refreshCurrentTab('daten-tab-pane');
+                        }
+                    }
+                });
+            });
+            ui_helpers.initializeTooltips(paginationContainer);
         }
+        if (tableBody) ui_helpers.initializeTooltips(tableBody);
     }
 
     function renderAuswertungTab(data, appliedCriteria, appliedLogic, currentKollektiv, bfResults, bfWorkerAvailable) {
@@ -49,33 +76,33 @@ const viewRenderer = (() => {
         const totalPages = Math.ceil(data.length / itemsPerPage);
         const currentPage = state.getCurrentAuswertungTablePage();
 
-        if (auswertungControlsContainer && !initializedTabs.has('auswertung-tab-controls')) {
+        if (auswertungControlsContainer && !initializedTabs.has('auswertung-tab-controls-init')) {
             if (typeof ui_components !== 'undefined') {
                 auswertungControlsContainer.innerHTML = ui_components.createT2CriteriaControls(appliedCriteria, appliedLogic);
             }
-            initializedTabs.add('auswertung-tab-controls');
+            initializedTabs.add('auswertung-tab-controls-init');
         }
         ui_helpers.updateT2CriteriaControlsUI(appliedCriteria, appliedLogic);
         ui_helpers.markCriteriaSavedIndicator(state.getUnsavedCriteriaChanges());
 
-        if (bruteForceContainer && !initializedTabs.has('auswertung-tab-bf')) {
+        if (bruteForceContainer && !initializedTabs.has('auswertung-tab-bf-init')) {
             if (typeof ui_components !== 'undefined') {
                 bruteForceContainer.innerHTML = ui_components.createBruteForceCard(currentKollektiv, bfWorkerAvailable);
             }
-            initializedTabs.add('auswertung-tab-bf');
+            initializedTabs.add('auswertung-tab-bf-init');
         }
         ui_helpers.updateBruteForceUI(bfResults?.status || 'idle', bfResults || {}, bfWorkerAvailable, currentKollektiv);
 
 
-        if (t2MetricsOverviewContainer && typeof ui_components !== 'undefined') {
-            const evaluatedData = typeof t2CriteriaManager !== 'undefined' ? t2CriteriaManager.evaluateDataset(cloneDeep(data), appliedCriteria, appliedLogic) : data;
-            const perfStats = typeof statisticsService !== 'undefined' ? statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n') : null;
+        if (t2MetricsOverviewContainer && typeof ui_components !== 'undefined' && typeof statisticsService !== 'undefined' && typeof t2CriteriaManager !== 'undefined') {
+            const evaluatedData = t2CriteriaManager.evaluateDataset(cloneDeep(data), appliedCriteria, appliedLogic);
+            const perfStats = statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n');
             t2MetricsOverviewContainer.innerHTML = ui_components.createT2MetricsOverview(perfStats, currentKollektiv);
         }
 
-        if (auswertungTableBody && typeof tableRenderer !== 'undefined') {
+        if (auswertungTableBody && typeof tableRenderer !== 'undefined' && typeof t2CriteriaManager !== 'undefined') {
             auswertungTableBody.innerHTML = '';
-             const evaluatedDataForTable = typeof t2CriteriaManager !== 'undefined' ? t2CriteriaManager.evaluateDataset(cloneDeep(data), appliedCriteria, appliedLogic) : data;
+             const evaluatedDataForTable = t2CriteriaManager.evaluateDataset(cloneDeep(data), appliedCriteria, appliedLogic);
              const paginatedData = evaluatedDataForTable.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
             paginatedData.forEach(patient => {
                 auswertungTableBody.innerHTML += tableRenderer.createAuswertungTableRow(patient, appliedCriteria, appliedLogic);
@@ -84,14 +111,37 @@ const viewRenderer = (() => {
             ui_helpers.updateSortIcons('auswertung-table-header', state.getCurrentAuswertungTableSort() || APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
         }
 
-        if (typeof paginationManager !== 'undefined' && paginationContainer) {
-             paginationContainer.innerHTML = paginationManager.createPaginationControls('auswertung', currentPage, totalPages);
-             paginationManager.attachPaginationEventListeners('auswertung', totalPages, (newPage) => {
-                state.setCurrentAuswertungTablePage(newPage);
-                renderAuswertungTab(data, appliedCriteria, appliedLogic, currentKollektiv, bfResults, bfWorkerAvailable);
-             });
+        if (paginationContainer && typeof ui_helpers !== 'undefined') {
+             paginationContainer.innerHTML = ui_helpers.createPaginationControlsHTML('auswertung', currentPage, totalPages);
+             paginationContainer.querySelectorAll('.page-nav-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    if (button.parentElement.classList.contains('disabled') || button.parentElement.classList.contains('active')) return;
+
+                    const target = event.currentTarget;
+                    let newPage = currentPage;
+                     const pageAction = target.dataset.pageAction;
+                    const pageNumber = target.dataset.pageNumber;
+
+                    if (pageAction === 'prev') {
+                        newPage = Math.max(1, currentPage - 1);
+                    } else if (pageAction === 'next') {
+                        newPage = Math.min(totalPages, currentPage + 1);
+                    } else if (pageNumber) {
+                        newPage = parseInt(pageNumber, 10);
+                    }
+
+                    if (newPage !== currentPage && newPage >= 1 && newPage <= totalPages) {
+                        state.setCurrentAuswertungTablePage(newPage);
+                         if (typeof mainAppInterface !== 'undefined') {
+                            mainAppInterface.refreshCurrentTab('auswertung-tab-pane');
+                        }
+                    }
+                });
+            });
+            ui_helpers.initializeTooltips(paginationContainer);
         }
-        ui_helpers.initializeTooltips(document.getElementById('auswertung-tab-pane'));
+        if (document.getElementById('auswertung-tab-pane')) ui_helpers.initializeTooltips(document.getElementById('auswertung-tab-pane'));
     }
 
     function renderStatistikTab(currentKollektiv, statistikLayout, statistikKollektiv1, statistikKollektiv2) {
@@ -99,7 +149,7 @@ const viewRenderer = (() => {
         const spinner = document.getElementById('statistik-spinner');
         if (spinner) spinner.classList.remove('d-none');
 
-        if (statistikControlsContainer && !initializedTabs.has('statistik-tab-controls')) {
+        if (statistikControlsContainer && !initializedTabs.has('statistik-tab-controls-init')) {
             const selectOptions = ['Gesamt', 'direkt OP', 'nRCT'].map(k => `<option value="${k}" ${k === currentKollektiv ? 'selected' : ''}>${getKollektivDisplayName(k)}</option>`).join('');
             statistikControlsContainer.innerHTML = `
                 <div class="row align-items-center">
@@ -107,7 +157,7 @@ const viewRenderer = (() => {
                         <button class="btn btn-outline-primary btn-sm" id="statistik-toggle-vergleich" data-tippy-content="${TOOLTIP_CONTENT.statistikToggleVergleich.description}"><i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv</button>
                     </div>
                     <div class="col-md-auto mb-2 mb-md-0 d-none" id="statistik-kollektiv-select-1-container">
-                        <label for="statistik-kollektiv-select-1" class="form-label form-label-smvisually-hidden">Kollektiv 1</label>
+                        <label for="statistik-kollektiv-select-1" class="form-label form-label-sm visually-hidden">Kollektiv 1</label>
                         <select class="form-select form-select-sm" id="statistik-kollektiv-select-1" data-tippy-content="${TOOLTIP_CONTENT.statistikKollektiv1.description}">
                            ${selectOptions.replace(`value="${currentKollektiv}" selected`, `value="${statistikKollektiv1}" selected`)}
                         </select>
@@ -119,11 +169,11 @@ const viewRenderer = (() => {
                         </select>
                     </div>
                 </div>`;
-            initializedTabs.add('statistik-tab-controls');
+            initializedTabs.add('statistik-tab-controls-init');
         }
         ui_helpers.updateStatistikSelectorsUI(statistikLayout, statistikKollektiv1, statistikKollektiv2);
 
-        if (typeof statistikTabLogic !== 'undefined') {
+        if (typeof statistikTabLogic !== 'undefined' && typeof state !== 'undefined' && typeof t2CriteriaManager !== 'undefined' && typeof mainAppInterface !== 'undefined') {
             statistikTabLogic.displayStatistics(
                 state.getFilteredData(),
                 statistikLayout,
@@ -134,7 +184,7 @@ const viewRenderer = (() => {
             );
         }
         if (spinner) spinner.classList.add('d-none');
-        ui_helpers.initializeTooltips(document.getElementById('statistik-tab-pane'));
+        if (document.getElementById('statistik-tab-pane')) ui_helpers.initializeTooltips(document.getElementById('statistik-tab-pane'));
     }
 
     function renderPraesentationTab(currentView, currentStudyId, currentGlobalKollektiv) {
@@ -142,34 +192,36 @@ const viewRenderer = (() => {
         const spinner = document.getElementById('praesentation-spinner');
         if(spinner) spinner.classList.remove('d-none');
 
-        if (praesControlsContainer && !initializedTabs.has('praesentation-tab-controls')) {
-            const studyOptions = studyT2CriteriaManager.getAvailableStudySets().map(set =>
-                 `<option value="${set.id}" ${set.id === currentStudyId ? 'selected' : ''}>${set.name}</option>`
-            ).join('');
+        if (praesControlsContainer && !initializedTabs.has('praesentation-tab-controls-init')) {
+             if (typeof studyT2CriteriaManager !== 'undefined') {
+                const studyOptions = studyT2CriteriaManager.getAvailableStudySets().map(set =>
+                     `<option value="${set.id}" ${set.id === currentStudyId ? 'selected' : ''}>${set.name}</option>`
+                ).join('');
 
-            praesControlsContainer.innerHTML = `
-                <div class="row align-items-center justify-content-center">
-                    <div class="col-md-auto mb-2 mb-md-0">
-                         <div class="btn-group btn-group-sm" role="group" aria-label="Präsentationsansicht wählen" data-tippy-content="${TOOLTIP_CONTENT.praesentation.viewSelect.description}">
-                            <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as" value="as-pur" ${currentView === 'as-pur' ? 'checked' : ''} autocomplete="off">
-                            <label class="btn btn-outline-primary" for="praes-ansicht-as">Avocado Sign (Performance)</label>
-                            <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as-vs-t2" value="as-vs-t2" ${currentView === 'as-vs-t2' ? 'checked' : ''} autocomplete="off">
-                            <label class="btn btn-outline-primary" for="praes-ansicht-as-vs-t2">AS vs. T2 (Vergleich)</label>
+                praesControlsContainer.innerHTML = `
+                    <div class="row align-items-center justify-content-center">
+                        <div class="col-md-auto mb-2 mb-md-0">
+                             <div class="btn-group btn-group-sm" role="group" aria-label="Präsentationsansicht wählen" data-tippy-content="${TOOLTIP_CONTENT.praesentation.viewSelect.description}">
+                                <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as" value="as-pur" ${currentView === 'as-pur' ? 'checked' : ''} autocomplete="off">
+                                <label class="btn btn-outline-primary" for="praes-ansicht-as">Avocado Sign (Performance)</label>
+                                <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as-vs-t2" value="as-vs-t2" ${currentView === 'as-vs-t2' ? 'checked' : ''} autocomplete="off">
+                                <label class="btn btn-outline-primary" for="praes-ansicht-as-vs-t2">AS vs. T2 (Vergleich)</label>
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-md-auto mb-2 mb-md-0" id="praes-study-select-container" style="display: ${currentView === 'as-vs-t2' ? '' : 'none'};">
-                        <label for="praes-study-select" class="form-label form-label-sm visually-hidden">T2-Basis</label>
-                        <select class="form-select form-select-sm" id="praes-study-select" data-tippy-content="${TOOLTIP_CONTENT.praesentation.studySelect.description}">
-                            <option value="applied_criteria" ${'applied_criteria' === currentStudyId ? 'selected' : ''}>${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME}</option>
-                            ${studyOptions}
-                        </select>
-                    </div>
-                </div>`;
-            initializedTabs.add('praesentation-tab-controls');
+                        <div class="col-md-auto mb-2 mb-md-0" id="praes-study-select-container" style="display: ${currentView === 'as-vs-t2' ? '' : 'none'};">
+                            <label for="praes-study-select" class="form-label form-label-sm visually-hidden">T2-Basis</label>
+                            <select class="form-select form-select-sm" id="praes-study-select" data-tippy-content="${TOOLTIP_CONTENT.praesentation.studySelect.description}">
+                                <option value="applied_criteria" ${'applied_criteria' === currentStudyId ? 'selected' : ''}>${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME}</option>
+                                ${studyOptions}
+                            </select>
+                        </div>
+                    </div>`;
+                initializedTabs.add('praesentation-tab-controls-init');
+             }
         }
         ui_helpers.updatePresentationViewSelectorUI(currentView);
 
-        if (typeof praesentationTabLogic !== 'undefined') {
+        if (typeof praesentationTabLogic !== 'undefined' && typeof mainAppInterface !== 'undefined' && typeof t2CriteriaManager !== 'undefined') {
             const globalData = mainAppInterface.getGlobalData();
             const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
             const appliedLogic = t2CriteriaManager.getAppliedLogic();
@@ -177,7 +229,7 @@ const viewRenderer = (() => {
         }
 
         if(spinner) spinner.classList.add('d-none');
-        ui_helpers.initializeTooltips(document.getElementById('praesentation-tab-pane'));
+        if (document.getElementById('praesentation-tab-pane')) ui_helpers.initializeTooltips(document.getElementById('praesentation-tab-pane'));
     }
 
     function renderPublikationTab(currentSection, currentLang, currentGlobalKollektiv) {
@@ -186,16 +238,16 @@ const viewRenderer = (() => {
         if (spinner) spinner.classList.remove('d-none');
 
         if (publikationTabPane) {
-            if (!initializedTabs.has('publikation-tab-header')) {
+            if (!initializedTabs.has('publikation-tab-header-init')) {
                  if (typeof ui_components !== 'undefined' && typeof ui_components.createPublikationTabHeader === 'function') {
                     publikationTabPane.innerHTML = ui_components.createPublikationTabHeader();
                  }
-                 initializedTabs.add('publikation-tab-header');
+                 initializedTabs.add('publikation-tab-header-init');
             }
 
-            const currentPublicationBFMetric = state.getCurrentPublikationBruteForceMetric();
+            const currentPublicationBFMetric = typeof state !== 'undefined' ? state.getCurrentPublikationBruteForceMetric() : PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
-            if (typeof publikationTabLogic !== 'undefined') {
+            if (typeof publikationTabLogic !== 'undefined' && typeof mainAppInterface !== 'undefined' && typeof t2CriteriaManager !== 'undefined' && typeof bruteForceManager !== 'undefined') {
                 const globalData = mainAppInterface.getGlobalData();
                 const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
                 const appliedLogic = t2CriteriaManager.getAppliedLogic();
@@ -206,36 +258,32 @@ const viewRenderer = (() => {
 
                 const sectionToRender = currentSection || PUBLICATION_CONFIG.defaultSubSection;
                 publikationTabLogic.getRenderedSectionContent(sectionToRender, currentLang, currentGlobalKollektiv);
-                // Charts will be rendered after content is in DOM
                 publikationTabLogic.updateDynamicChartsForPublicationTab(sectionToRender, currentLang, currentGlobalKollektiv);
             }
         }
 
         if (spinner) spinner.classList.add('d-none');
-        ui_helpers.initializeTooltips(publikationTabPane);
+        if (publikationTabPane) ui_helpers.initializeTooltips(publikationTabPane);
     }
 
     function renderExportTab(currentKollektiv) {
         const exportContainer = document.getElementById('export-options-container');
-        if (exportContainer && !initializedTabs.has('export-tab-content')) {
+        if (exportContainer && !initializedTabs.has('export-tab-content-init')) {
             if (typeof ui_components !== 'undefined') {
                 exportContainer.innerHTML = ui_components.createExportOptions(currentKollektiv);
             }
-            initializedTabs.add('export-tab-content');
-        } else if (exportContainer && initializedTabs.has('export-tab-content')) {
-            // Update dynamic parts if needed, e.g., if currentKollektiv changes filename examples
-            // For now, re-rendering the whole options might be simpler if kollektiv affects more.
-            // Or more selectively update:
+            initializedTabs.add('export-tab-content-init');
+        } else if (exportContainer && initializedTabs.has('export-tab-content-init')) {
             const exportDescEl = exportContainer.querySelector('.small.text-muted.mb-3');
             if(exportDescEl) exportDescEl.innerHTML = TOOLTIP_CONTENT.exportTab.description.replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(currentKollektiv)}</strong>`);
         }
 
-        if (typeof exportService !== 'undefined') {
+        if (typeof exportService !== 'undefined' && typeof bruteForceManager !== 'undefined' && typeof mainAppInterface !== 'undefined' && typeof state !== 'undefined') {
             const hasBruteForceResults = bruteForceManager.hasAnyResults();
             const canExportDataDependent = mainAppInterface.getGlobalData()?.length > 0;
             ui_helpers.updateExportButtonStates(state.getActiveTabId(), hasBruteForceResults, canExportDataDependent);
         }
-        ui_helpers.initializeTooltips(document.getElementById('export-tab-pane'));
+        if (document.getElementById('export-tab-pane')) ui_helpers.initializeTooltips(document.getElementById('export-tab-pane'));
     }
 
 
@@ -259,12 +307,12 @@ const viewRenderer = (() => {
         });
 
         if (targetNavLink && targetTabPane) {
-            state.setActiveTabId(tabId);
+            if (typeof state !== 'undefined') state.setActiveTabId(tabId);
             refreshCurrentTab(tabId, true);
-            if (typeof ui_helpers !== 'undefined') {
+            if (typeof ui_helpers !== 'undefined' && typeof bruteForceManager !== 'undefined' && typeof mainAppInterface !== 'undefined' && typeof state !== 'undefined') {
                 ui_helpers.updateExportButtonStates(tabId, bruteForceManager.hasAnyResults(), mainAppInterface.getGlobalData()?.length > 0);
             }
-            setTimeout(() => { // ensure content is visible for Tippy
+            setTimeout(() => {
                if (document.getElementById(tabId)) ui_helpers.initializeTooltips(document.getElementById(tabId));
             }, 100);
         } else {
@@ -273,12 +321,12 @@ const viewRenderer = (() => {
     }
 
 
-    function refreshCurrentTab(activeTabId = state.getActiveTabId(), isTabSwitch = false) {
-        const currentKollektiv = state.getCurrentKollektiv();
-        if (typeof mainAppInterface === 'undefined' || !mainAppInterface.getGlobalData()) {
-            console.warn("mainAppInterface oder globale Daten nicht verfügbar in refreshCurrentTab.");
+    function refreshCurrentTab(activeTabId = (typeof state !== 'undefined' ? state.getActiveTabId() : 'daten-tab-pane'), isTabSwitch = false) {
+        if (typeof state === 'undefined' || typeof dataProcessor === 'undefined' || typeof t2CriteriaManager === 'undefined' || typeof mainAppInterface === 'undefined') {
+            console.warn("refreshCurrentTab: Notwendige Module (state, dataProcessor, t2CriteriaManager, mainAppInterface) nicht verfügbar.");
             return;
         }
+        const currentKollektiv = state.getCurrentKollektiv();
         const globalData = mainAppInterface.getGlobalData();
         const filteredData = dataProcessor.filterDataByKollektiv(globalData, currentKollektiv);
 
@@ -291,10 +339,11 @@ const viewRenderer = (() => {
             case 'auswertung-tab-pane':
                 const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
                 const appliedLogic = t2CriteriaManager.getAppliedLogic();
-                const bfResults = bruteForceManager.getAllResultsForKollektiv(currentKollektiv) || bruteForceManager.getGlobalStatus();
+                const bfResults = typeof bruteForceManager !== 'undefined' ? (bruteForceManager.getAllResultsForKollektiv(currentKollektiv) || bruteForceManager.getGlobalStatus()) : {};
+                const bfWorkerAvailable = typeof bruteForceManager !== 'undefined' ? bruteForceManager.isWorkerAvailable() : false;
                 const auswertungSortState = state.getCurrentAuswertungTableSort();
                 const sortedAuswertungData = dataProcessor.sortData(filteredData, auswertungSortState.key, auswertungSortState.direction, auswertungSortState.subKey);
-                renderAuswertungTab(sortedAuswertungData, appliedCriteria, appliedLogic, currentKollektiv, bfResults, bruteForceManager.isWorkerAvailable());
+                renderAuswertungTab(sortedAuswertungData, appliedCriteria, appliedLogic, currentKollektiv, bfResults, bfWorkerAvailable);
                 break;
             case 'statistik-tab-pane':
                 renderStatistikTab(currentKollektiv, state.getCurrentStatistikLayout(), state.getCurrentStatistikKollektiv1(), state.getCurrentStatistikKollektiv2());
@@ -309,7 +358,7 @@ const viewRenderer = (() => {
                 renderExportTab(currentKollektiv);
                 break;
         }
-         if (!isTabSwitch) {
+         if (!isTabSwitch) { // Tooltips for the whole tab pane, only if not a tab switch (showTab handles it)
              if (document.getElementById(activeTabId)) ui_helpers.initializeTooltips(document.getElementById(activeTabId));
          }
     }
