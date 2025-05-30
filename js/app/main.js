@@ -47,7 +47,7 @@ const mainAppInterface = (() => {
         _publikationTabLogic = typeof publikationTabLogic !== 'undefined' ? publikationTabLogic : null;
         _radiologyFormatter = typeof radiologyFormatter !== 'undefined' ? radiologyFormatter : null;
         _citationManager = typeof citationManager !== 'undefined' ? citationManager : null;
-        _utils = typeof utils !== 'undefined' ? utils : null;
+        _utils = typeof utils === 'object' && utils !== null ? utils : null;
 
         _generalEventHandlers = typeof generalEventHandlers !== 'undefined' ? generalEventHandlers : null;
         _auswertungEventHandlers = typeof auswertungEventHandlers !== 'undefined' ? auswertungEventHandlers : null;
@@ -134,7 +134,7 @@ const mainAppInterface = (() => {
                 onProgress: (progressData) => {
                     if (_uiHelpers && _viewRenderer && _bruteForceManager && _state) {
                         _uiHelpers.updateBruteForceUI('progress', progressData, _bruteForceManager.isWorkerAvailable(), progressData.kollektiv);
-                         if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
+                        if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
                     }
                 },
                 onResult: (resultData) => {
@@ -142,12 +142,12 @@ const mainAppInterface = (() => {
                         _uiHelpers.updateBruteForceUI('result', resultData, _bruteForceManager.isWorkerAvailable(), resultData.kollektiv);
                         const modalBody = document.getElementById('brute-force-modal-body');
                         if (modalBody && typeof _uiComponents.createBruteForceModalContent === 'function') {
-                             modalBody.innerHTML = _uiComponents.createBruteForceModalContent(resultData);
+                            modalBody.innerHTML = _uiComponents.createBruteForceModalContent(resultData);
                         }
                         if (_uiHelpers) _uiHelpers.initializeTooltips(modalBody);
-                         if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
+                        if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
                         const hasBruteForceResults = _bruteForceManager.getAllResults && Object.keys(_bruteForceManager.getAllResults() || {}).length > 0;
-                         _uiHelpers.updateExportButtonStates(_state.getActiveTabId(), hasBruteForceResults, (_processedData?.length ?? 0) > 0);
+                        _uiHelpers.updateExportButtonStates(_state.getActiveTabId(), hasBruteForceResults, (_processedData?.length ?? 0) > 0);
                     }
                 },
                 onError: (errorData) => {
@@ -161,17 +161,17 @@ const mainAppInterface = (() => {
                     if (_uiHelpers && _viewRenderer && _bruteForceManager && _state) {
                         _uiHelpers.showToast('Brute-Force Analyse abgebrochen.', 'warning');
                         _uiHelpers.updateBruteForceUI('cancelled', cancelData, _bruteForceManager.isWorkerAvailable(), cancelData.kollektiv);
-                         if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
+                        if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
                     }
                 },
                 onStarted: (startData) => {
-                     if (_uiHelpers && _viewRenderer && _bruteForceManager && _state) {
+                    if (_uiHelpers && _viewRenderer && _bruteForceManager && _state) {
                         _uiHelpers.updateBruteForceUI('started', startData, _bruteForceManager.isWorkerAvailable(), startData.kollektiv);
-                         if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
-                     }
+                        if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
+                    }
                 }
             });
-            if(!workerInitialized && _uiHelpers) {
+            if (!workerInitialized && _uiHelpers) {
                 _uiHelpers.showToast("Brute-Force Worker konnte nicht initialisiert werden.", "warning");
             }
         }
@@ -179,6 +179,14 @@ const mainAppInterface = (() => {
     }
 
     function _loadAndProcessData() {
+        if(!_utils) {
+            console.error("Utils Modul nicht verfügbar in _loadAndProcessData.");
+            _globalRawData = [];
+            _processedData = [];
+            if(_uiHelpers) _uiHelpers.showToast("Kritischer Fehler: Utils-Modul fehlt.", "danger");
+            return;
+        }
+
         if (typeof PATIENT_DATA !== 'undefined' && Array.isArray(PATIENT_DATA)) {
             _globalRawData = PATIENT_DATA;
         } else {
@@ -188,17 +196,17 @@ const mainAppInterface = (() => {
         }
 
         if (_dataProcessor && typeof _dataProcessor.processPatientData === 'function') {
-            _processedData = _dataProcessor.processPatientData(utils.cloneDeep(_globalRawData));
+            _processedData = _dataProcessor.processPatientData(_utils.cloneDeep(_globalRawData));
         } else {
             console.error("Data Processor nicht verfügbar. Daten können nicht verarbeitet werden.");
-            _processedData = utils.cloneDeep(_globalRawData);
+            _processedData = _utils.cloneDeep(_globalRawData);
         }
 
         if (_t2CriteriaManager && typeof _t2CriteriaManager.evaluateDataset === 'function' && _processedData) {
             _processedData = _t2CriteriaManager.evaluateDataset(_processedData, _t2CriteriaManager.getAppliedT2Criteria(), _t2CriteriaManager.getAppliedT2Logic());
         } else {
             console.error("T2CriteriaManager nicht verfügbar oder Daten fehlen. T2 Status kann nicht initial berechnet werden.");
-             if (_processedData) {
+            if (_processedData) {
                 _processedData.forEach(p => {
                     if(p) {
                         p.t2 = null;
@@ -211,7 +219,7 @@ const mainAppInterface = (() => {
     }
 
     function _updateGlobalUIState() {
-        if (!_state || !_uiHelpers || !_dataProcessor || !_processedData || !_utils) return;
+        if (!_state || !_uiHelpers || !_dataProcessor || !_processedData) return;
         const currentKollektiv = _state.getCurrentKollektiv();
         _uiHelpers.updateKollektivButtonsUI(currentKollektiv);
 
@@ -273,7 +281,7 @@ const mainAppInterface = (() => {
             if (sortSubHeader && sortHeader) {
                 _generalEventHandlers.handleSortClick(sortHeader, sortSubHeader, mainAppInterface);
             } else if (sortHeader && !sortHeader.querySelector('.sortable-sub-header')) {
-                 _generalEventHandlers.handleSortClick(sortHeader, null, mainAppInterface);
+                _generalEventHandlers.handleSortClick(sortHeader, null, mainAppInterface);
             }
 
             if (event.target.closest('#daten-toggle-details')) {
@@ -299,13 +307,13 @@ const mainAppInterface = (() => {
 
             const exportButton = event.target.closest('button[id^="export-"]');
             if (exportButton && exportButton.id !== 'export-bruteforce-modal-txt') {
-                 const exportActionId = exportButton.id;
-                 const currentKollektiv = _state.getCurrentKollektiv();
-                 const globalDataForExport = getGlobalData();
-                 const appliedCriteriaForExport = _t2CriteriaManager.getAppliedT2Criteria();
-                 const appliedLogicForExport = _t2CriteriaManager.getAppliedT2Logic();
-                 const bfResultsForExport = _bruteForceManager.getAllResults();
-                 const filteredDataForExport = _dataProcessor.filterDataByKollektiv(globalDataForExport, currentKollektiv);
+                const exportActionId = exportButton.id;
+                const currentKollektiv = _state.getCurrentKollektiv();
+                const globalDataForExport = getGlobalData();
+                const appliedCriteriaForExport = _t2CriteriaManager.getAppliedT2Criteria();
+                const appliedLogicForExport = _t2CriteriaManager.getAppliedT2Logic();
+                const bfResultsForExport = _bruteForceManager.getAllResults();
+                const filteredDataForExport = _dataProcessor.filterDataByKollektiv(globalDataForExport, currentKollektiv);
 
                 switch (exportActionId) {
                     case 'export-statistik-csv':
@@ -328,8 +336,8 @@ const mainAppInterface = (() => {
                         else console.warn('Exportfunktion exportTableMarkdown nicht gefunden.');
                         break;
                     case 'export-auswertung-md':
-                         if(typeof _exportService.exportTableMarkdown === 'function') _exportService.exportTableMarkdown(filteredDataForExport, 'auswertung', currentKollektiv, appliedCriteriaForExport, appliedLogicForExport);
-                         else console.warn('Exportfunktion exportTableMarkdown nicht gefunden.');
+                        if(typeof _exportService.exportTableMarkdown === 'function') _exportService.exportTableMarkdown(filteredDataForExport, 'auswertung', currentKollektiv, appliedCriteriaForExport, appliedLogicForExport);
+                        else console.warn('Exportfunktion exportTableMarkdown nicht gefunden.');
                         break;
                     case 'export-filtered-data-csv':
                         if(typeof _exportService.exportFilteredDataCSV === 'function') _exportService.exportFilteredDataCSV(filteredDataForExport, currentKollektiv);
@@ -340,12 +348,12 @@ const mainAppInterface = (() => {
                         else console.warn('Exportfunktion exportComprehensiveReportHTML nicht gefunden.');
                         break;
                     case 'export-publication-md':
-                         if (typeof _exportService.exportPublicationMarkdown === 'function') {
+                        if (typeof _exportService.exportPublicationMarkdown === 'function') {
                             _exportService.exportPublicationMarkdown(_state, _statisticsService, _dataProcessor, _bruteForceManager, mainAppInterface, _publicationTextGenerator, _publikationTabLogic);
-                         } else {
-                              console.warn("ExportService: exportPublicationMarkdown nicht implementiert.");
-                              _uiHelpers.showToast("Publikations-Markdown-Export (noch) nicht verfügbar.", "info");
-                         }
+                        } else {
+                             console.warn("ExportService: exportPublicationMarkdown nicht implementiert.");
+                             _uiHelpers.showToast("Publikations-Markdown-Export (noch) nicht verfügbar.", "info");
+                        }
                         break;
                     case 'export-charts-png':
                         if(typeof _exportService.exportChartsZip === 'function') _exportService.exportChartsZip('#app-container', 'PNG_ZIP', currentKollektiv, 'png');
@@ -358,7 +366,7 @@ const mainAppInterface = (() => {
                     case 'export-all-zip':
                     case 'export-csv-zip':
                     case 'export-md-zip':
-                         const category = exportActionId.replace('export-', '').replace('-zip','');
+                        const category = exportActionId.replace('export-', '').replace('-zip','');
                         if(typeof _exportService.exportCategoryZip === 'function') _exportService.exportCategoryZip(category, globalDataForExport, bfResultsForExport, currentKollektiv, appliedCriteriaForExport, appliedLogicForExport);
                         else console.warn('Exportfunktion exportCategoryZip nicht gefunden.');
                         break;
@@ -387,7 +395,11 @@ const mainAppInterface = (() => {
         _state.setCurrentAuswertungTablePage(1);
         _updateGlobalUIState();
         _viewRenderer.refreshCurrentTab();
-        if (source === "user") _uiHelpers.showToast(`Kollektiv auf '${_utils.getKollektivDisplayName(newKollektiv)}' geändert.`, 'info');
+        if (source === "user" && _utils && typeof _utils.getKollektivDisplayName === 'function') {
+            _uiHelpers.showToast(`Kollektiv auf '${_utils.getKollektivDisplayName(newKollektiv)}' geändert.`, 'info');
+        } else if (source === "user") {
+             _uiHelpers.showToast(`Kollektiv auf '${newKollektiv}' geändert.`, 'info');
+        }
         return true;
     }
 
@@ -431,7 +443,7 @@ const mainAppInterface = (() => {
         if(!_t2CriteriaManager || !_state || !_globalRawData || !_viewRenderer || !_dataProcessor || !_uiHelpers || !_utils) return;
         _t2CriteriaManager.applyCriteria();
         _state.setUnsavedCriteriaChanges(false);
-        _processedData = _t2CriteriaManager.evaluateDataset(utils.cloneDeep(_globalRawData), _t2CriteriaManager.getAppliedT2Criteria(), _t2CriteriaManager.getAppliedT2Logic());
+        _processedData = _t2CriteriaManager.evaluateDataset(_utils.cloneDeep(_globalRawData), _t2CriteriaManager.getAppliedT2Criteria(), _t2CriteriaManager.getAppliedT2Logic());
         _updateGlobalUIState();
         _viewRenderer.refreshCurrentTab();
     }
@@ -455,23 +467,23 @@ const mainAppInterface = (() => {
             if(loadingIndicator) loadingIndicator.style.display = 'none';
 
             if(_uiHelpers && typeof _uiHelpers.initializeTooltips === 'function'){
-                 setTimeout(() => _uiHelpers.initializeTooltips(document.body), 500);
+                setTimeout(() => _uiHelpers.initializeTooltips(document.body), 500);
             }
         });
     }
 
     return Object.freeze({
         init,
-        getGlobalData: () => _globalRawData ? utils.cloneDeep(_globalRawData) : [],
-        getRawData: () => _globalRawData ? utils.cloneDeep(_globalRawData) : [],
-        getProcessedData: () => _processedData ? utils.cloneDeep(_processedData) : [],
+        getGlobalData: () => (_globalRawData && _utils) ? _utils.cloneDeep(_globalRawData) : [],
+        getRawData: () => (_globalRawData && _utils) ? _utils.cloneDeep(_globalRawData) : [],
+        getProcessedData: () => (_processedData && _utils) ? _utils.cloneDeep(_processedData) : [],
         renderView: (tabId) => {
             if (_viewRenderer && typeof _viewRenderer.showTab === 'function') {
                 _viewRenderer.showTab(tabId);
             }
         },
         refreshCurrentTab: () => {
-             if (_viewRenderer && typeof _viewRenderer.refreshCurrentTab === 'function') {
+            if (_viewRenderer && typeof _viewRenderer.refreshCurrentTab === 'function') {
                 _viewRenderer.refreshCurrentTab();
             }
         },
