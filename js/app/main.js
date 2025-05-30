@@ -144,10 +144,10 @@ const mainAppInterface = (() => {
                         if (modalBody && typeof _uiComponents.createBruteForceModalContent === 'function') {
                             modalBody.innerHTML = _uiComponents.createBruteForceModalContent(resultData);
                         }
-                        if (_uiHelpers) _uiHelpers.initializeTooltips(modalBody);
+                        if (_uiHelpers && typeof _uiHelpers.initializeTooltips === 'function') _uiHelpers.initializeTooltips(modalBody);
                         if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
                         const hasBruteForceResults = _bruteForceManager.getAllResults && Object.keys(_bruteForceManager.getAllResults() || {}).length > 0;
-                        _uiHelpers.updateExportButtonStates(_state.getActiveTabId(), hasBruteForceResults, (_processedData?.length ?? 0) > 0);
+                        if (_uiHelpers && typeof _uiHelpers.updateExportButtonStates === 'function') _uiHelpers.updateExportButtonStates(_state.getActiveTabId(), hasBruteForceResults, (_processedData?.length ?? 0) > 0);
                     }
                 },
                 onError: (errorData) => {
@@ -183,7 +183,7 @@ const mainAppInterface = (() => {
             console.error("Utils Modul nicht verfügbar in _loadAndProcessData.");
             _globalRawData = [];
             _processedData = [];
-            if(_uiHelpers) _uiHelpers.showToast("Kritischer Fehler: Utils-Modul fehlt.", "danger");
+            if(_uiHelpers && typeof _uiHelpers.showToast === 'function') _uiHelpers.showToast("Kritischer Fehler: Utils-Modul fehlt.", "danger");
             return;
         }
 
@@ -192,7 +192,7 @@ const mainAppInterface = (() => {
         } else {
             console.error("Globale Patientendaten (PATIENT_DATA) nicht gefunden oder ungültig.");
             _globalRawData = [];
-            if(_uiHelpers) _uiHelpers.showToast("Fehler beim Laden der Patientendaten.", "danger");
+            if(_uiHelpers && typeof _uiHelpers.showToast === 'function') _uiHelpers.showToast("Fehler beim Laden der Patientendaten.", "danger");
         }
 
         if (_dataProcessor && typeof _dataProcessor.processPatientData === 'function') {
@@ -219,7 +219,7 @@ const mainAppInterface = (() => {
     }
 
     function _updateGlobalUIState() {
-        if (!_state || !_uiHelpers || !_dataProcessor || !_processedData) return;
+        if (!_state || !_uiHelpers || !_dataProcessor || !_processedData || !_utils) return;
         const currentKollektiv = _state.getCurrentKollektiv();
         _uiHelpers.updateKollektivButtonsUI(currentKollektiv);
 
@@ -228,7 +228,7 @@ const mainAppInterface = (() => {
         _uiHelpers.updateHeaderStatsUI(headerStats);
         if (_bruteForceManager && _uiHelpers && _state) {
             const hasBruteForceResults = _bruteForceManager.getAllResults && Object.keys(_bruteForceManager.getAllResults() || {}).length > 0;
-            _uiHelpers.updateExportButtonStates(_state.getActiveTabId(), hasBruteForceResults, (_processedData?.length ?? 0) > 0);
+            if(typeof _uiHelpers.updateExportButtonStates === 'function') _uiHelpers.updateExportButtonStates(_state.getActiveTabId(), hasBruteForceResults, (_processedData?.length ?? 0) > 0);
         }
     }
 
@@ -351,8 +351,8 @@ const mainAppInterface = (() => {
                         if (typeof _exportService.exportPublicationMarkdown === 'function') {
                             _exportService.exportPublicationMarkdown(_state, _statisticsService, _dataProcessor, _bruteForceManager, mainAppInterface, _publicationTextGenerator, _publikationTabLogic);
                         } else {
-                             console.warn("ExportService: exportPublicationMarkdown nicht implementiert.");
-                             _uiHelpers.showToast("Publikations-Markdown-Export (noch) nicht verfügbar.", "info");
+                            console.warn("ExportService: exportPublicationMarkdown nicht implementiert.");
+                            if (_uiHelpers && typeof _uiHelpers.showToast === 'function') _uiHelpers.showToast("Publikations-Markdown-Export (noch) nicht verfügbar.", "info");
                         }
                         break;
                     case 'export-charts-png':
@@ -373,7 +373,7 @@ const mainAppInterface = (() => {
                     default:
                         if (!exportActionId.startsWith('export-png-zip') && !exportActionId.startsWith('export-svg-zip') && !exportActionId.startsWith('export-xlsx-zip')) {
                             console.warn(`Unbekannte Export-Aktion: ${exportActionId}`);
-                            _uiHelpers.showToast("Unbekannte Export-Aktion.", "warning");
+                            if (_uiHelpers && typeof _uiHelpers.showToast === 'function') _uiHelpers.showToast("Unbekannte Export-Aktion.", "warning");
                         }
                         break;
                 }
@@ -397,7 +397,7 @@ const mainAppInterface = (() => {
         _viewRenderer.refreshCurrentTab();
         if (source === "user" && _utils && typeof _utils.getKollektivDisplayName === 'function') {
             _uiHelpers.showToast(`Kollektiv auf '${_utils.getKollektivDisplayName(newKollektiv)}' geändert.`, 'info');
-        } else if (source === "user") {
+        } else if (source === "user" && _uiHelpers && typeof _uiHelpers.showToast === 'function') {
              _uiHelpers.showToast(`Kollektiv auf '${newKollektiv}' geändert.`, 'info');
         }
         return true;
