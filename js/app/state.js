@@ -1,251 +1,210 @@
-const state = (() => {
-    let _currentState = {}; // Wird durch _loadState initialisiert
+const mainAppInterface = (() => {
+    let _globalRawData = null;
+    let _processedData = null;
 
-    let _unsavedCriteriaChanges = false;
+    let _dataProcessor = null;
+    let _t2CriteriaManager = null;
+    let _studyT2CriteriaManager = null;
+    let _statisticsService = null;
+    let _bruteForceManager = null;
+    let _exportService = null;
+    let _viewRenderer = null;
+    let _state = null;
+    let _uiHelpers = null;
+    let _uiComponents = null;
+    let _chartRenderer = null;
+    let _tableRenderer = null;
+    // _paginationManager wurde entfernt
+    let _publicationTextGenerator = null;
+    let _publicationRenderer = null;
+    let _publikationTabLogic = null;
+    let _radiologyFormatter = null;
+    let _citationManager = null;
 
-    const _saveState = () => {
-        if (typeof saveToLocalStorage === 'undefined' || typeof APP_CONFIG === 'undefined' || typeof APP_CONFIG.STORAGE_KEYS === 'undefined') {
-            console.error("state._saveState: Notwendige Funktionen oder Konfigurationen nicht verfügbar.");
+    let _generalEventHandlers = null;
+    let _auswertungEventHandlers = null;
+    let _statistikEventHandlers = null;
+    let _praesentationEventHandlers = null;
+    let _publikationEventHandlers = null;
+
+    function _initializeModules() {
+        _dataProcessor = typeof dataProcessor !== 'undefined' ? dataProcessor : null;
+        _t2CriteriaManager = typeof t2CriteriaManager !== 'undefined' ? t2CriteriaManager : null;
+        _studyT2CriteriaManager = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager : null;
+        _statisticsService = typeof statisticsService !== 'undefined' ? statisticsService : null;
+        _bruteForceManager = typeof bruteForceManager !== 'undefined' ? bruteForceManager : null;
+        _exportService = typeof exportService !== 'undefined' ? exportService : null;
+        _viewRenderer = typeof viewRenderer !== 'undefined' ? viewRenderer : null;
+        _state = typeof state !== 'undefined' ? state : null;
+        _uiHelpers = typeof ui_helpers !== 'undefined' ? ui_helpers : null;
+        _uiComponents = typeof ui_components !== 'undefined' ? ui_components : null;
+        _chartRenderer = typeof chart_renderer !== 'undefined' ? chart_renderer : null;
+        _tableRenderer = typeof tableRenderer !== 'undefined' ? tableRenderer : null;
+        _publicationTextGenerator = typeof publicationTextGenerator !== 'undefined' ? publicationTextGenerator : null;
+        _publicationRenderer = typeof publicationRenderer !== 'undefined' ? publicationRenderer : null;
+        _publikationTabLogic = typeof publikationTabLogic !== 'undefined' ? publikationTabLogic : null;
+        _radiologyFormatter = typeof radiologyFormatter !== 'undefined' ? radiologyFormatter : null;
+        _citationManager = typeof citationManager !== 'undefined' ? citationManager : null;
+
+        _generalEventHandlers = typeof generalEventHandlers !== 'undefined' ? generalEventHandlers : null;
+        _auswertungEventHandlers = typeof auswertungEventHandlers !== 'undefined' ? auswertungEventHandlers : null;
+        _statistikEventHandlers = typeof statistikEventHandlers !== 'undefined' ? statistikEventHandlers : null;
+        _praesentationEventHandlers = typeof praesentationEventHandlers !== 'undefined' ? praesentationEventHandlers : null;
+        _publikationEventHandlers = typeof publikationEventHandlers !== 'undefined' ? publikationEventHandlers : null;
+
+        if (_bruteForceManager && typeof _bruteForceManager.init === 'function') {
+            if (_t2CriteriaManager && _statisticsService && _dataProcessor) {
+                _bruteForceManager.init(APP_CONFIG.PATHS.BRUTE_FORCE_WORKER, _t2CriteriaManager, _statisticsService, _dataProcessor);
+            } else {
+                console.error("BruteForceManager konnte nicht initialisiert werden: Abhängigkeiten (T2CriteriaManager, StatisticsService, DataProcessor) fehlen.");
+            }
+        }
+
+        const modules = { _dataProcessor, _t2CriteriaManager, _studyT2CriteriaManager, _statisticsService, _bruteForceManager, _exportService, _viewRenderer, _state, _uiHelpers, _uiComponents, _chartRenderer, _tableRenderer, _publicationTextGenerator, _publicationRenderer, _publikationTabLogic, _radiologyFormatter, _citationManager, _generalEventHandlers, _auswertungEventHandlers, _statistikEventHandlers, _praesentationEventHandlers, _publikationEventHandlers };
+        for (const moduleName in modules) {
+            if (modules[moduleName] === null) {
+                console.error(`Modul ${moduleName.replace('_','')} konnte nicht initialisiert werden oder ist nicht verfügbar.`);
+            }
+        }
+
+        if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.PERFORMANCE_SETTINGS && APP_CONFIG.PERFORMANCE_SETTINGS.ENABLE_GPU_ACCELERATION_CSS) {
+            document.body.classList.add('gpu-accelerated-css');
+        }
+    }
+
+    function _loadAndProcessData() {
+        if (typeof PATIENT_DATA !== 'undefined' && Array.isArray(PATIENT_DATA)) {
+            _globalRawData = PATIENT_DATA;
+        } else {
+            console.error("Globale Patientendaten (PATIENT_DATA) nicht gefunden oder ungültig.");
+            _globalRawData = [];
+            if (_uiHelpers && typeof _uiHelpers.showToast === 'function') {
+                _uiHelpers.showToast("Fehler beim Laden der Patientendaten.", "danger");
+            }
+        }
+
+        if (_dataProcessor && typeof _dataProcessor.processData === 'function') {
+            _processedData = _dataProcessor.processData(_globalRawData);
+        } else {
+            console.error("Data Processor nicht verfügbar. Daten können nicht verarbeitet werden.");
+            _processedData = _globalRawData; 
+        }
+    }
+
+    function _setupInitialView() {
+        if (!_state || !_viewRenderer || !_uiHelpers || !_dataProcessor || !_t2CriteriaManager) {
+            console.error("UI Initialisierung fehlgeschlagen: Notwendige Module nicht verfügbar (State, ViewRenderer, UI Helpers, DataProcessor, T2CriteriaManager).");
             return;
         }
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV, _currentState.currentKollektiv);
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT, _currentState.currentStatistikLayout);
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1, _currentState.currentStatistikKollektiv1);
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2, _currentState.currentStatistikKollektiv2);
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW, _currentState.currentPresentationView);
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID, _currentState.currentPresentationStudyId);
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG, _currentState.currentPublikationLang);
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION, _currentState.currentPublikationSection);
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC, _currentState.currentPublikationBruteForceMetric);
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.CRITERIA_COMPARISON_SETS, _currentState.criteriaComparisonSets);
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.CHART_COLOR_SCHEME, _currentState.chartColorScheme);
-    };
+        _state.init();
+        const currentKollektiv = _state.getCurrentKollektiv();
+        _uiHelpers.updateKollektivButtonsUI(currentKollektiv);
 
-    const _loadState = () => {
-        if (typeof loadFromLocalStorage === 'undefined' || typeof APP_CONFIG === 'undefined' || typeof APP_CONFIG.DEFAULT_SETTINGS === 'undefined' || typeof APP_CONFIG.STORAGE_KEYS === 'undefined' || typeof PUBLICATION_CONFIG === 'undefined' || typeof cloneDeep === 'undefined') {
-            console.error("state._loadState: Notwendige Funktionen oder Konfigurationen nicht verfügbar. Fallback auf Defaults.");
-            _currentState = cloneDeep(APP_CONFIG?.DEFAULT_SETTINGS || {}); // Minimaler Fallback
-            if(APP_CONFIG?.DEFAULT_SETTINGS && PUBLICATION_CONFIG?.defaultSubSection) {
-                _currentState.currentPublikationSection = PUBLICATION_CONFIG.defaultSubSection;
+        const filteredData = _dataProcessor.filterDataByKollektiv(_processedData, currentKollektiv);
+        const headerStats = _dataProcessor.calculateHeaderStats(filteredData, _t2CriteriaManager.getAppliedCriteria(), _t2CriteriaManager.getAppliedLogic());
+        _uiHelpers.updateHeaderStatsUI(headerStats);
+
+        const initialTabId = _state.getActiveTabId() || APP_CONFIG?.DEFAULT_SETTINGS?.ACTIVE_TAB_ID || 'daten-tab-pane';
+        _viewRenderer.showTab(initialTabId);
+
+        let bfHasResults = false;
+        if (typeof _bruteForceManager !== 'undefined' && typeof _bruteForceManager.hasAnyResults === 'function') {
+            bfHasResults = _bruteForceManager.hasAnyResults();
+        }
+        _uiHelpers.updateExportButtonStates(initialTabId, bfHasResults, (_processedData?.length || 0) > 0);
+    }
+
+    function _attachGlobalEventListeners() {
+        if (!_generalEventHandlers || typeof _generalEventHandlers.attachEventListeners !== 'function') {
+            console.warn("General Event Handlers nicht verfügbar."); return;
+        }
+        _generalEventHandlers.attachEventListeners(mainAppInterface);
+    }
+
+    function _attachSpecificEventListeners() {
+        const handlers = [
+            _auswertungEventHandlers,
+            _statistikEventHandlers,
+            _praesentationEventHandlers,
+            _publikationEventHandlers
+        ];
+        handlers.forEach(handler => {
+            if (handler && typeof handler.attachEventListeners === 'function') {
+                handler.attachEventListeners(mainAppInterface);
+            } else {
+                const handlerName = Object.keys({_auswertungEventHandlers, _statistikEventHandlers, _praesentationEventHandlers, _publikationEventHandlers}).find(key => ({_auswertungEventHandlers, _statistikEventHandlers, _praesentationEventHandlers, _publikationEventHandlers}[key] === handler));
+                console.warn(`${handlerName || 'Spezifischer Event Handler'} nicht verfügbar.`);
             }
+        });
+    }
+
+    function init() {
+        if (typeof APP_CONFIG === 'undefined' || typeof UI_TEXTS === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined' || typeof PUBLICATION_CONFIG === 'undefined' || typeof RADIOLOGY_FORMAT_CONFIG === 'undefined') {
+            document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif; color: red; background: #fff1f1; border: 1px solid red;"><strong>Kritischer Fehler:</strong> Eine oder mehrere Konfigurationsdateien (APP_CONFIG, UI_TEXTS, etc.) konnten nicht geladen werden. Die Anwendung kann nicht gestartet werden. Bitte überprüfen Sie die Konsolenausgabe auf fehlende Skript-Dateien und deren korrekte Ladereihenfolge.</div>';
+            console.error("Kritischer Fehler: Konfigurationsdateien nicht geladen. Stellen Sie sicher, dass alle config/*.js Dateien vor anderen App-Skripten in index.html geladen werden.");
             return;
         }
 
-        _currentState.currentKollektiv = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV) ?? APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
-        _currentState.currentDatenTableSort = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_SORT) ?? cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT);
-        _currentState.currentDatenTablePage = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_PAGE) ?? APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_PAGE;
-        _currentState.currentAuswertungTableSort = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_SORT) ?? cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
-        _currentState.currentAuswertungTablePage = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_PAGE) ?? APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_PAGE;
-        _currentState.currentStatistikLayout = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT) ?? APP_CONFIG.DEFAULT_SETTINGS.STATS_LAYOUT;
-        _currentState.currentStatistikKollektiv1 = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1) ?? APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1;
-        _currentState.currentStatistikKollektiv2 = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2) ?? APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2;
-        _currentState.currentPresentationView = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW) ?? APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW;
-        _currentState.currentPresentationStudyId = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID) ?? APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID;
-        _currentState.currentPublikationLang = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG) ?? APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG;
-        _currentState.currentPublikationSection = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION) ?? PUBLICATION_CONFIG.defaultSubSection ?? APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION;
-        _currentState.currentPublikationBruteForceMetric = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC) ?? APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC;
-        _currentState.activeTabId = APP_CONFIG.DEFAULT_SETTINGS.ACTIVE_TAB_ID || 'daten-tab-pane';
-        _currentState.criteriaComparisonSets = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.CRITERIA_COMPARISON_SETS) ?? cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.CRITERIA_COMPARISON_SETS);
-        _currentState.chartColorScheme = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.CHART_COLOR_SCHEME) ?? APP_CONFIG.DEFAULT_SETTINGS.CHART_COLOR_SCHEME;
-    };
+        document.addEventListener('DOMContentLoaded', () => {
+            const appContainer = document.getElementById('app-container');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            
+            try {
+                _initializeModules();
+                _loadAndProcessData();
+                _setupInitialView();
+                _attachGlobalEventListeners();
+                _attachSpecificEventListeners();
 
-    const init = () => {
-        _loadState(); // Load initial state from localStorage or defaults
-        const firstStartFlagKey = APP_CONFIG.STORAGE_KEYS.FIRST_APP_START;
-        if (typeof loadFromLocalStorage !== 'undefined' && loadFromLocalStorage(firstStartFlagKey) === null) {
-            if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showKurzanleitung === 'function') {
-                 setTimeout(() => { ui_helpers.showKurzanleitung(); }, 1000);
+                if(_uiHelpers && typeof _uiHelpers.initializeTooltips === 'function'){
+                     setTimeout(() => _uiHelpers.initializeTooltips(document.body), 500);
+                }
+                
+                const appVersionFooter = document.getElementById('app-version-footer');
+                if(appVersionFooter && typeof APP_CONFIG !== 'undefined' && APP_CONFIG.APP_VERSION) {
+                    appVersionFooter.textContent = APP_CONFIG.APP_VERSION;
+                }
+                if(appContainer) appContainer.classList.remove('d-none'); // Show app only if all initializations likely succeeded
+                if(loadingIndicator) loadingIndicator.style.display = 'none';
+
+            } catch (error) {
+                 console.error("Schwerwiegender Fehler während der Initialisierung der Anwendung:", error);
+                 if (loadingIndicator) {
+                     loadingIndicator.innerHTML = `<p style="color: red; font-weight: bold;">Fehler beim Start der Anwendung. Bitte Konsole prüfen.</p><p style="font-size: 0.8em; color: #555;">Details: ${error.message}</p>`;
+                     loadingIndicator.style.display = 'flex'; // Ensure it's visible
+                 }
+                 if(appContainer) appContainer.classList.add('d-none'); // Hide app container on critical error
             }
-            if (typeof saveToLocalStorage !== 'undefined') {
-                 saveToLocalStorage(firstStartFlagKey, 'false');
-            }
-        }
-    };
+        });
+    }
 
-    const getCurrentKollektiv = () => _currentState.currentKollektiv;
-    const setCurrentKollektiv = (kollektiv) => {
-        if (_currentState.currentKollektiv !== kollektiv) {
-            _currentState.currentKollektiv = kollektiv;
-            _saveState();
-        }
-    };
+    function getGlobalData() {
+        return _processedData || [];
+    }
 
-    const getAppliedT2Criteria = () => {
-        if (typeof loadFromLocalStorage === 'undefined' || typeof APP_CONFIG === 'undefined' || typeof getDefaultT2Criteria === 'undefined') return getDefaultT2Criteria ? getDefaultT2Criteria() : {};
-        const loaded = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA);
-        return loaded ? cloneDeep(loaded) : getDefaultT2Criteria();
-    };
-    const setAppliedT2Criteria = (criteria) => {
-        if (typeof saveToLocalStorage === 'undefined' || typeof APP_CONFIG === 'undefined') return;
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA, criteria);
-        setUnsavedCriteriaChanges(false);
-    };
+    function renderView(tabId) {
+        if (_viewRenderer && typeof _viewRenderer.showTab === 'function') {
+            _viewRenderer.showTab(tabId);
+        } else {
+            console.error("ViewRenderer nicht verfügbar, Tab kann nicht gerendert werden.");
+        }
+    }
 
-    const getAppliedT2Logic = () => {
-        if (typeof loadFromLocalStorage === 'undefined' || typeof APP_CONFIG === 'undefined') return APP_CONFIG?.DEFAULT_SETTINGS?.T2_LOGIC || 'UND';
-        return loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC) ?? APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC;
-    };
-    const setAppliedT2Logic = (logic) => {
-        if (typeof saveToLocalStorage === 'undefined' || typeof APP_CONFIG === 'undefined') return;
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC, logic);
-        setUnsavedCriteriaChanges(false);
-    };
-
-    const getCurrentDatenTableSort = () => cloneDeep(_currentState.currentDatenTableSort);
-    const setCurrentDatenTableSort = (sortState) => {
-        _currentState.currentDatenTableSort = cloneDeep(sortState);
-        if (typeof saveToLocalStorage === 'undefined' || typeof APP_CONFIG === 'undefined') return;
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_SORT, sortState);
-    };
-    const getCurrentDatenTablePage = () => _currentState.currentDatenTablePage;
-    const setCurrentDatenTablePage = (page) => {
-        _currentState.currentDatenTablePage = page;
-        if (typeof saveToLocalStorage === 'undefined' || typeof APP_CONFIG === 'undefined') return;
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_PAGE, page);
-    };
-
-    const getCurrentAuswertungTableSort = () => cloneDeep(_currentState.currentAuswertungTableSort);
-    const setCurrentAuswertungTableSort = (sortState) => {
-        _currentState.currentAuswertungTableSort = cloneDeep(sortState);
-        if (typeof saveToLocalStorage === 'undefined' || typeof APP_CONFIG === 'undefined') return;
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_SORT, sortState);
-    };
-    const getCurrentAuswertungTablePage = () => _currentState.currentAuswertungTablePage;
-    const setCurrentAuswertungTablePage = (page) => {
-        _currentState.currentAuswertungTablePage = page;
-        if (typeof saveToLocalStorage === 'undefined' || typeof APP_CONFIG === 'undefined') return;
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_PAGE, page);
-    };
-
-    const getCurrentStatistikLayout = () => _currentState.currentStatistikLayout;
-    const setCurrentStatistikLayout = (layout) => {
-        if (_currentState.currentStatistikLayout !== layout) {
-            _currentState.currentStatistikLayout = layout;
-            _saveState();
+    function refreshCurrentTab(optionalTabId) {
+        if (_viewRenderer && typeof _viewRenderer.refreshCurrentTab === 'function') {
+            _viewRenderer.refreshCurrentTab(optionalTabId);
+        } else {
+            console.error("ViewRenderer nicht verfügbar, Tab kann nicht aktualisiert werden.");
         }
-    };
-    const getCurrentStatistikKollektiv1 = () => _currentState.currentStatistikKollektiv1;
-    const setCurrentStatistikKollektiv1 = (kollektiv) => {
-        if (_currentState.currentStatistikKollektiv1 !== kollektiv) {
-            _currentState.currentStatistikKollektiv1 = kollektiv;
-            _saveState();
-        }
-    };
-    const getCurrentStatistikKollektiv2 = () => _currentState.currentStatistikKollektiv2;
-    const setCurrentStatistikKollektiv2 = (kollektiv) => {
-        if (_currentState.currentStatistikKollektiv2 !== kollektiv) {
-            _currentState.currentStatistikKollektiv2 = kollektiv;
-            _saveState();
-        }
-    };
-
-    const getCurrentPresentationView = () => _currentState.currentPresentationView;
-    const setCurrentPresentationView = (view) => {
-        if (_currentState.currentPresentationView !== view) {
-            _currentState.currentPresentationView = view;
-            _saveState();
-        }
-    };
-    const getCurrentPresentationStudyId = () => _currentState.currentPresentationStudyId;
-    const setCurrentPresentationStudyId = (studyId) => {
-        if (_currentState.currentPresentationStudyId !== studyId) {
-            _currentState.currentPresentationStudyId = studyId;
-            _saveState();
-        }
-    };
-
-    const getCurrentPublikationLang = () => _currentState.currentPublikationLang;
-    const setCurrentPublikationLang = (lang) => {
-        if (_currentState.currentPublikationLang !== lang) {
-            _currentState.currentPublikationLang = lang;
-            _saveState();
-        }
-    };
-    const getCurrentPublikationSection = () => _currentState.currentPublikationSection;
-    const setCurrentPublikationSection = (sectionId) => {
-        if (_currentState.currentPublikationSection !== sectionId) {
-            _currentState.currentPublikationSection = sectionId;
-            _saveState();
-        }
-    };
-    const getCurrentPublikationBruteForceMetric = () => _currentState.currentPublikationBruteForceMetric;
-    const setCurrentPublikationBruteForceMetric = (metric) => {
-        if (_currentState.currentPublikationBruteForceMetric !== metric) {
-            _currentState.currentPublikationBruteForceMetric = metric;
-            _saveState();
-        }
-    };
-
-    const getUnsavedCriteriaChanges = () => _unsavedCriteriaChanges;
-    const setUnsavedCriteriaChanges = (hasChanges) => {
-        _unsavedCriteriaChanges = !!hasChanges;
-    };
-
-    const getActiveTabId = () => _currentState.activeTabId;
-    const setActiveTabId = (tabId) => {
-        if (_currentState.activeTabId !== tabId) {
-            _currentState.activeTabId = tabId;
-        }
-    };
-
-    const getCriteriaComparisonSets = () => cloneDeep(_currentState.criteriaComparisonSets);
-    const setCriteriaComparisonSets = (sets) => {
-        if (typeof arraysAreEqual === 'function' && !arraysAreEqual(_currentState.criteriaComparisonSets, sets)) {
-            _currentState.criteriaComparisonSets = cloneDeep(sets);
-            _saveState();
-        } else if (typeof arraysAreEqual !== 'function' && JSON.stringify(_currentState.criteriaComparisonSets) !== JSON.stringify(sets)) { // Fallback comparison
-            _currentState.criteriaComparisonSets = cloneDeep(sets);
-            _saveState();
-        }
-    };
-
-    const getChartColorScheme = () => _currentState.chartColorScheme;
-    const setChartColorScheme = (schemeName) => {
-         if (_currentState.chartColorScheme !== schemeName) {
-            _currentState.chartColorScheme = schemeName;
-            _saveState();
-        }
-    };
+    }
 
     return Object.freeze({
         init,
-        getCurrentKollektiv,
-        setCurrentKollektiv,
-        getAppliedT2Criteria,
-        setAppliedT2Criteria,
-        getAppliedT2Logic,
-        setAppliedT2Logic,
-        getCurrentDatenTableSort,
-        setCurrentDatenTableSort,
-        getCurrentDatenTablePage,
-        setCurrentDatenTablePage,
-        getCurrentAuswertungTableSort,
-        setCurrentAuswertungTableSort,
-        getCurrentAuswertungTablePage,
-        setCurrentAuswertungTablePage,
-        getCurrentStatistikLayout,
-        setCurrentStatistikLayout,
-        getCurrentStatistikKollektiv1,
-        setCurrentStatistikKollektiv1,
-        getCurrentStatistikKollektiv2,
-        setCurrentStatistikKollektiv2,
-        getCurrentPresentationView,
-        setCurrentPresentationView,
-        getCurrentPresentationStudyId,
-        setCurrentPresentationStudyId,
-        getCurrentPublikationLang,
-        setCurrentPublikationLang,
-        getCurrentPublikationSection,
-        setCurrentPublikationSection,
-        getCurrentPublikationBruteForceMetric,
-        setCurrentPublikationBruteForceMetric,
-        getUnsavedCriteriaChanges,
-        setUnsavedCriteriaChanges,
-        getActiveTabId,
-        setActiveTabId,
-        getCriteriaComparisonSets,
-        setCriteriaComparisonSets,
-        getChartColorScheme,
-        setChartColorScheme
+        getGlobalData,
+        renderView,
+        refreshCurrentTab
     });
+
 })();
+
+mainAppInterface.init();
