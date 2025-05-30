@@ -3,7 +3,7 @@ const ui_helpers = (() => {
     let globalTippyInstances = [];
     let collapseEventListenersAttached = new Set();
     let kurzanleitungModalInstance = null;
-    let initialTabRenderFixed = false; // Flag, um sicherzustellen, dass der Fix nur einmal angewendet wird
+    let initialTabRenderFixed = false;
 
     function escapeMarkdown(text) {
         if (typeof text !== 'string' || text === null) return text === null ? '' : String(text);
@@ -31,7 +31,6 @@ const ui_helpers = (() => {
           toastElement.setAttribute('role', 'alert'); toastElement.setAttribute('aria-live', 'assertive'); toastElement.setAttribute('aria-atomic', 'true');
           toastElement.setAttribute('data-bs-delay', String(duration));
           toastElement.setAttribute('data-bs-autohide', 'true');
-
 
           toastElement.innerHTML = `<div class="d-flex"><div class="toast-body"><i class="fas ${iconClass} fa-fw me-2"></i> ${escapeMarkdown(message)}</div><button type="button" class="btn-close me-2 m-auto ${textClass === 'text-white' ? 'btn-close-white' : ''}" data-bs-dismiss="toast" aria-label="Schließen"></button></div>`;
           toastContainer.appendChild(toastElement);
@@ -95,7 +94,7 @@ const ui_helpers = (() => {
         const element = document.getElementById(elementId);
         if (element) {
             element.classList.remove(highlightClass);
-            void element.offsetWidth; 
+            void element.offsetWidth;
             element.classList.add(highlightClass);
             setTimeout(() => {
                 if (element) element.classList.remove(highlightClass);
@@ -435,7 +434,7 @@ const ui_helpers = (() => {
         if (elements.bfInfoKollektiv) {
             updateElementText(elements.bfInfoKollektiv.id, getKollektivNameFunc(kollektivToDisplayForInfo));
         }
-
+        
         const addOrUpdateTooltip = (el, content) => {
             if (el) {
                 const currentTippy = el._tippy;
@@ -486,7 +485,7 @@ const ui_helpers = (() => {
                 if (elements.totalCount) updateElementText(elements.totalCount.id, totalComb);
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Teste...');
                 if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: Teste ${totalComb} Kombinationen...`);
-                if (elements.progressContainer) addOrUpdateTooltip(elements.progressContainer, (TOOLTIP_CONTENT.bruteForceProgress?.description || '').replace('[TOTAL]', totalComb));
+                if (elements.progressContainer) addOrUpdateTooltip(elements.progressContainer, (TOOLTIP_CONTENT.bruteForceProgress.description || '').replace('[TOTAL]', totalComb));
                 break;
             case 'progress':
                 const percent = (data?.total && data.total > 0) ? Math.round((data.tested / data.total) * 100) : 0;
@@ -553,7 +552,8 @@ const ui_helpers = (() => {
         trySetDisabled('export-daten-md', dataDisabled);
         trySetDisabled('export-auswertung-md', dataDisabled);
         trySetDisabled('export-filtered-data-csv', dataDisabled);
-        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled);
+        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled); // Report needs data, BF is optional but good
+        trySetDisabled('export-publication-md', dataDisabled); // Publication MD depends on data
         trySetDisabled('export-charts-png', dataDisabled);
         trySetDisabled('export-charts-svg', dataDisabled);
 
@@ -563,11 +563,13 @@ const ui_helpers = (() => {
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
 
+        // XLSX are currently not implemented, so keep them disabled
         trySetDisabled('export-statistik-xlsx', true);
         trySetDisabled('export-daten-xlsx', true);
         trySetDisabled('export-auswertung-xlsx', true);
         trySetDisabled('export-filtered-data-xlsx', true);
         trySetDisabled('export-xlsx-zip', true);
+
 
         const isPresentationTabActive = activeTabId === 'praesentation-tab';
         const praesButtons = [
@@ -591,7 +593,7 @@ const ui_helpers = (() => {
          }
     }
 
-    function updatePublikationUI(currentLang, currentSection, currentBfMetric) {
+    function updatePublikationUI(currentLang, currentSectionId, currentBfMetric) {
         const langSwitch = document.getElementById('publikation-sprache-switch');
         const langLabel = document.getElementById('publikation-sprache-label');
         if (langSwitch && langLabel) {
@@ -599,9 +601,25 @@ const ui_helpers = (() => {
             langLabel.textContent = UI_TEXTS?.publikationTab?.spracheSwitchLabel?.[currentLang] || (currentLang === 'en' ? 'English' : 'Deutsch');
         }
 
-        document.querySelectorAll('#publikation-sections-nav .nav-link').forEach(link => {
-            link.classList.toggle('active', link.dataset.sectionId === currentSection);
+        let activeMainSectionId = null;
+        if (currentSectionId) {
+            PUBLICATION_CONFIG.sections.forEach(mainSection => {
+                if (mainSection.subSections.some(sub => sub.id === currentSectionId)) {
+                    activeMainSectionId = mainSection.id;
+                } else if (mainSection.id === currentSectionId) { // For top-level sections like 'referenzen'
+                    activeMainSectionId = mainSection.id;
+                }
+            });
+        }
+        
+        document.querySelectorAll('#publikation-sections-nav .publikation-main-section-link').forEach(link => {
+            link.classList.toggle('active-main', link.dataset.mainSectionId === activeMainSectionId);
         });
+
+        document.querySelectorAll('#publikation-sections-nav .publikation-section-link').forEach(link => {
+            link.classList.toggle('active', link.dataset.sectionId === currentSectionId);
+        });
+
 
         const bfMetricSelect = document.getElementById('publikation-bf-metric-select');
         if (bfMetricSelect) {
@@ -610,33 +628,72 @@ const ui_helpers = (() => {
     }
 
     function getMetricDescriptionHTML(key, methode = '') {
-       const desc = TOOLTIP_CONTENT.statMetrics[key]?.description || key;
+       const metricKeyLower = typeof key === 'string' ? key.toLowerCase().replace(/\s+/g, '') : '';
+       const desc = TOOLTIP_CONTENT.statMetrics[metricKeyLower]?.description || key;
        return desc.replace(/\[METHODE\]/g, `<strong>${methode}</strong>`);
     }
 
     function getMetricInterpretationHTML(key, metricData, methode = '', kollektivName = '') {
-        const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
+        const metricKeyLower = typeof key === 'string' ? key.toLowerCase().replace(/\s+/g, '') : '';
+        const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[metricKeyLower]?.interpretation || 'Keine Interpretation verfügbar.';
         const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: null };
         const na = '--';
-        const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
-        const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na, true);
+
+        let digits;
+        let isPercent = false;
+
+        switch(metricKeyLower) {
+            case 'f1':
+            case 'auc':
+            case 'balacc': // Balanced Accuracy
+            case 'youden': // Youden's Index
+                digits = APP_CONFIG.STATISTICAL_CONSTANTS.METRIC_RATE_DECIMALS || 3;
+                isPercent = false;
+                break;
+            case 'lr_pos': // LR+
+            case 'lr_neg': // LR-
+                digits = 2;
+                isPercent = false;
+                break;
+            case 'sens':
+            case 'spez':
+            case 'ppv':
+            case 'npv':
+            case 'acc':
+                digits = APP_CONFIG.STATISTICAL_CONSTANTS.METRIC_PERCENT_DECIMALS || 1;
+                isPercent = true;
+                break;
+            default:
+                digits = 1;
+                isPercent = false;
+        }
+
+
+        const valueStr = formatNumber(data?.value, digits, na, true); // Use standard format for numbers in tooltips
         const lowerStr = formatNumber(data?.ci?.lower, digits, na, true);
         const upperStr = formatNumber(data?.ci?.upper, digits, na, true);
         const ciMethodStr = data?.method || 'N/A';
-        const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value) : ((key === 'phi') ? getPhiBewertung(data?.value) : '');
-        const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
 
+        let bewertungStr = '';
+        if (metricKeyLower === 'auc' || metricKeyLower === 'balacc') bewertungStr = getAUCBewertung(data?.value);
+        else if (metricKeyLower === 'phi') bewertungStr = getPhiBewertung(data?.value);
+        else if (metricKeyLower === 'lr_pos') bewertungStr = getLRBewertung(data?.value, 'pos');
+        else if (metricKeyLower === 'lr_neg') bewertungStr = getLRBewertung(data?.value, 'neg');
+
+
+        const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
         let ciWarning = '';
-        const ciWarningThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 10;
-        if (data?.n_trials !== undefined && data?.n_trials < ciWarningThreshold && (key === 'sens' || key === 'spez' || key === 'ppv' || key === 'npv' || key === 'acc')) {
-            ciWarning = `<hr><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahl (Nenner=${data.n_trials}).</i>`;
-        } else if (data?.matrix_components && (key === 'balAcc' || key === 'f1' || key === 'auc')) {
+        const ciWarningThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 20;
+
+        if (data?.n_trials !== undefined && data?.n_trials < ciWarningThreshold && (metricKeyLower === 'sens' || metricKeyLower === 'spez' || metricKeyLower === 'ppv' || metricKeyLower === 'npv' || metricKeyLower === 'acc')) {
+            ciWarning = `<hr class='my-1 border-secondary-subtle'><i class='fas fa-exclamation-triangle text-warning me-1'></i><small><i>Konfidenzintervall ggf. unsicher (Nenner=${data.n_trials}).</i></small>`;
+        } else if (data?.matrix_components && (metricKeyLower === 'balacc' || metricKeyLower === 'f1' || metricKeyLower === 'auc' || metricKeyLower === 'youden')) {
             const mc = data.matrix_components;
-            if (mc.total < ciWarningThreshold * 2 || mc.rp < ciWarningThreshold/2 || mc.fp < ciWarningThreshold/2 || mc.fn < ciWarningThreshold/2 || mc.rn < ciWarningThreshold/2 ) {
-                 ciWarning = `<hr><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahlen in der Konfusionsmatrix (Gesamt=${mc.total}).</i>`;
+            if (mc && (mc.total < ciWarningThreshold * 2 || mc.rp < ciWarningThreshold/2 || mc.fp < ciWarningThreshold/2 || mc.fn < ciWarningThreshold/2 || mc.rn < ciWarningThreshold/2) ) {
+                 ciWarning = `<hr class='my-1 border-secondary-subtle'><i class='fas fa-exclamation-triangle text-warning me-1'></i><small><i>Konfidenzintervall ggf. unsicher (Fallzahlen in Matrix niedrig, Gesamt=${mc.total}).</i></small>`;
             }
         }
+
 
         let interpretation = interpretationTemplate
             .replace(/\[METHODE\]/g, `<strong>${methode}</strong>`)
@@ -648,11 +705,11 @@ const ui_helpers = (() => {
             .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`);
 
         if (lowerStr === na || upperStr === na || ciMethodStr === na || !data?.ci) {
-             interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
+             interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, '(Keine KI-Daten verfügbar)');
              interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
         }
         interpretation = interpretation.replace(/, p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
-        interpretation = interpretation.replace(/<hr.*?>.*$/, ''); 
+        interpretation = interpretation.replace(/<hr.*?>.*$/, '');
         interpretation += ciWarning;
         return interpretation;
     }
@@ -667,7 +724,7 @@ const ui_helpers = (() => {
          if (!testData) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
         const pValue = testData?.pValue;
-        const pStr = (pValue !== null && !isNaN(pValue)) ? (pValue < 0.001 ? '&lt;0.001' : formatNumber(pValue, 3, na)) : na;
+        const pStr = (pValue !== null && !isNaN(pValue)) ? (pValue < 0.001 ? '&lt;0.001' : formatNumber(pValue, APP_CONFIG.STATISTICAL_CONSTANTS.P_VALUE_PRECISION || 3, na)) : na;
         const sigSymbol = getStatisticalSignificanceSymbol(pValue);
         const sigText = getStatisticalSignificanceText(pValue);
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
@@ -687,23 +744,22 @@ const ui_helpers = (() => {
         let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '', pVal = NaN, ciWarning = '';
         const assozPValue = assocObj?.pValue;
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
-        const ciWarningThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 10;
+        const ciWarningThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 20;
 
         if(assocObj.matrix && (key === 'or' || key === 'rd' || key === 'phi')) {
             const m = assocObj.matrix;
             const totalInMatrix = m.rp + m.fp + m.fn + m.rn;
-            if (totalInMatrix < ciWarningThreshold * 2 || m.rp < ciWarningThreshold/2 || m.fp < ciWarningThreshold/2 || m.fn < ciWarningThreshold/2 || m.rn < ciWarningThreshold/2) {
-                ciWarning = `<hr><i>Hinweis: Konfidenzintervall oder Maß ggf. unsicher aufgrund kleiner Fallzahlen in der zugrundeliegenden 2x2 Tabelle (Gesamt=${totalInMatrix}).</i>`;
+            if (totalInMatrix < ciWarningThreshold || m.rp < ciWarningThreshold/4 || m.fp < ciWarningThreshold/4 || m.fn < ciWarningThreshold/4 || m.rn < ciWarningThreshold/4 ) {
+                ciWarning = `<hr class='my-1 border-secondary-subtle'><i class='fas fa-exclamation-triangle text-warning me-1'></i><small><i>KI oder Maß ggf. unsicher (kleine Fallzahlen in 2x2 Tabelle, Gesamt=${totalInMatrix}).</i></small>`;
             }
         }
-
 
         if (key === 'or') {
             valueStr = formatNumber(assocObj.or?.value, 2, na, true);
             lowerStr = formatNumber(assocObj.or?.ci?.lower, 2, na, true);
             upperStr = formatNumber(assocObj.or?.ci?.upper, 2, na, true);
             ciMethodStr = assocObj.or?.method || na;
-            pStr = (assozPValue !== null && !isNaN(assozPValue)) ? (assozPValue < 0.001 ? '&lt;0.001' : formatNumber(assozPValue, 3, na, true)) : na;
+            pStr = (assozPValue !== null && !isNaN(assozPValue)) ? (assozPValue < 0.001 ? '&lt;0.001' : formatNumber(assozPValue, APP_CONFIG.STATISTICAL_CONSTANTS.P_VALUE_PRECISION || 3, na, true)) : na;
             sigSymbol = getStatisticalSignificanceSymbol(assozPValue);
             sigText = getStatisticalSignificanceText(assozPValue);
         } else if (key === 'rd') {
@@ -716,7 +772,7 @@ const ui_helpers = (() => {
             bewertungStr = getPhiBewertung(assocObj.phi?.value);
         } else if (key === 'fisher' || key === 'mannwhitney' || key === 'pvalue' || key === 'size_mwu' || key === 'defaultP') {
              pVal = assocObj?.pValue;
-             pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na, true)) : na;
+             pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, APP_CONFIG.STATISTICAL_CONSTANTS.P_VALUE_PRECISION || 3, na, true)) : na;
              sigSymbol = getStatisticalSignificanceSymbol(pVal);
              sigText = getStatisticalSignificanceText(pVal);
              const templateToUse = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || TOOLTIP_CONTENT.statMetrics.defaultP.interpretation;
@@ -746,7 +802,7 @@ const ui_helpers = (() => {
 
          if (key === 'or' || key === 'rd') {
             if (lowerStr === na || upperStr === na || ciMethodStr === na || !assocObj?.[key]?.ci) {
-                interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
+                interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, '(Keine KI-Daten verfügbar)');
                 interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
             }
          }
@@ -759,43 +815,33 @@ const ui_helpers = (() => {
 
     function showKurzanleitung() {
         const modalElement = document.getElementById('kurzanleitung-modal');
-        
+        const appContainer = document.getElementById('app-container'); // Für mainAppInterface Referenz
+
         if (!modalElement) {
-            const modalHTML = `
-                <div class="modal fade" id="kurzanleitung-modal" tabindex="-1" aria-labelledby="kurzanleitungModalLabel" aria-hidden="true">
-                  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-                    <div class="modal-content modal-glass">
-                      <div class="modal-header">
-                        <h5 class="modal-title" id="kurzanleitungModalLabel">${UI_TEXTS.kurzanleitung.title}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
-                      </div>
-                      <div class="modal-body">
-                        ${UI_TEXTS.kurzanleitung.content}
-                      </div>
-                      <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Schließen</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>`;
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
-            const newModalElement = document.getElementById('kurzanleitung-modal');
-            kurzanleitungModalInstance = new bootstrap.Modal(newModalElement);
-        } else if (!kurzanleitungModalInstance) {
+            // Dynamische Erstellung des Modals, falls es noch nicht existiert (sollte in index.html sein)
+            console.error("Kurzanleitung Modal Element nicht im DOM gefunden.");
+            return;
+        }
+        
+        if (!kurzanleitungModalInstance) {
              kurzanleitungModalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
         }
 
         if (kurzanleitungModalInstance && modalElement && !modalElement.classList.contains('show')) {
-            if (!initialTabRenderFixed) {
+            if (!initialTabRenderFixed && typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
+                // Dieser Fix war dafür gedacht, ein Problem beim ersten Laden des Publikationstabs zu beheben.
+                // Er sollte nur einmal ausgeführt werden.
                 modalElement.addEventListener('hidden.bs.modal', () => {
-                    if (!initialTabRenderFixed && typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
-                        const defaultInitialTabId = 'publikation-tab'; 
-                        if (state.getActiveTabId() === defaultInitialTabId) {
-                            console.log("Kurzanleitung Modal geschlossen, aktiver Tab ist Publikation. Erzwinge Refresh.");
+                    if (!initialTabRenderFixed) {
+                        const currentActiveTabId = state.getActiveTabId();
+                        // Prüfen, ob der initiale Tab (oft Publikationstab) ein Rendering-Problem hatte,
+                        // das durch das Modal-Öffnen/Schließen beeinflusst wurde.
+                        if (currentActiveTabId === 'publikation-tab') { // Oder ein anderer Tab, der Probleme machte
+                            console.log("Kurzanleitung Modal geschlossen, aktiver Tab ist Publikation. Erzwinge Refresh zur Sicherheit.");
                             mainAppInterface.refreshCurrentTab();
                         }
+                         initialTabRenderFixed = true;
                     }
-                    initialTabRenderFixed = true; 
                 }, { once: true });
             }
             kurzanleitungModalInstance.show();
