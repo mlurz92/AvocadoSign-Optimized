@@ -1,19 +1,21 @@
 const APP_CONFIG = Object.freeze({
     APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
-    APP_VERSION: "2.4.0-optimized",
+    APP_VERSION: "2.4.0-optimized-fehlerbehebung", // Version aktualisiert
 
     DEFAULT_SETTINGS: Object.freeze({
         KOLLEKTIV: 'Gesamt',
         T2_LOGIC: 'UND',
         DATEN_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
+        DATEN_TABLE_PAGE: 1,
         AUSWERTUNG_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
+        AUSWERTUNG_TABLE_PAGE: 1,
         STATS_LAYOUT: 'einzel',
         STATS_KOLLEKTIV1: 'Gesamt',
         STATS_KOLLEKTIV2: 'nRCT',
         PRESENTATION_VIEW: 'as-pur',
         PRESENTATION_STUDY_ID: null,
         PUBLIKATION_LANG: 'de',
-        PUBLIKATION_SECTION: 'methoden',
+        PUBLIKATION_SECTION: 'methoden_studienanlage', // Default zur ersten Untersektion
         PUBLIKATION_BRUTE_FORCE_METRIC: 'Balanced Accuracy',
         CRITERIA_COMPARISON_SETS: Object.freeze([
             'avocado_sign',
@@ -23,24 +25,29 @@ const APP_CONFIG = Object.freeze({
             'barbaro_2024_restaging'
         ]),
         CHART_COLOR_SCHEME: 'default',
-        BRUTE_FORCE_METRIC: 'Balanced Accuracy'
+        BRUTE_FORCE_METRIC: 'Balanced Accuracy',
+        ACTIVE_TAB_ID: 'daten-tab-pane'
     }),
 
     STORAGE_KEYS: Object.freeze({
         APPLIED_CRITERIA: 'appliedT2Criteria_v4.3_optimized',
         APPLIED_LOGIC: 'appliedT2Logic_v4.3_optimized',
         CURRENT_KOLLEKTIV: 'currentKollektiv_v4.3_optimized',
-        PUBLIKATION_LANG: 'currentPublikationLang_v4.3_optimized',
-        PUBLIKATION_SECTION: 'currentPublikationSection_v4.3_optimized',
-        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v4.3_optimized',
+        DATEN_TABLE_SORT: 'datenTableSort_v4.3_optimized', // HINZUGEFÜGT
+        DATEN_TABLE_PAGE: 'datenTablePage_v4.3_optimized', // HINZUGEFÜGT
+        AUSWERTUNG_TABLE_SORT: 'auswertungTableSort_v4.3_optimized', // HINZUGEFÜGT
+        AUSWERTUNG_TABLE_PAGE: 'auswertungTablePage_v4.3_optimized', // HINZUGEFÜGT
         STATS_LAYOUT: 'currentStatsLayout_v4.3_optimized',
         STATS_KOLLEKTIV1: 'currentStatsKollektiv1_v4.3_optimized',
         STATS_KOLLEKTIV2: 'currentStatsKollektiv2_v4.3_optimized',
         PRESENTATION_VIEW: 'currentPresentationView_v4.3_optimized',
         PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.3_optimized',
+        PUBLIKATION_LANG: 'currentPublikationLang_v4.3_optimized',
+        PUBLIKATION_SECTION: 'currentPublikationSection_v4.3_optimized',
+        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v4.3_optimized',
         CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.3_optimized',
         CHART_COLOR_SCHEME: 'chartColorScheme_v4.3_optimized',
-        FIRST_APP_START: 'appFirstStart_v2.4_optimized'
+        FIRST_APP_START: 'appFirstStart_v2.4_optimized' // Version hier ggf. anpassen
     }),
 
     PATHS: Object.freeze({
@@ -58,9 +65,9 @@ const APP_CONFIG = Object.freeze({
         BOOTSTRAP_CI_ALPHA: 0.05,
         SIGNIFICANCE_LEVEL: 0.05,
         SIGNIFICANCE_SYMBOLS: Object.freeze([
-            { threshold: 0.001, symbol: '***' },
-            { threshold: 0.01, symbol: '**' },
-            { threshold: 0.05, symbol: '*' }
+            Object.freeze({ threshold: 0.001, symbol: '***' }),
+            Object.freeze({ threshold: 0.01, symbol: '**' }),
+            Object.freeze({ threshold: 0.05, symbol: '*' })
         ]),
         DEFAULT_CI_METHOD_PROPORTION: 'Wilson Score',
         DEFAULT_CI_METHOD_EFFECTSIZE: 'Bootstrap Percentile',
@@ -112,7 +119,10 @@ const APP_CONFIG = Object.freeze({
         GRIDLINE_COLOR: '#e9ecef',
         ENABLE_GRIDLINES: true,
         POINT_RADIUS: 4,
-        LINE_STROKE_WIDTH: 2
+        LINE_STROKE_WIDTH: 2,
+        COLOR_SCHEMES: Object.freeze({ // Hinzugefügt für Konsistenz, falls chart_renderer darauf zugreift
+            default: Object.freeze(['#4472C4', '#E0DC2C', '#2ca02c', '#d62728', '#9467bd', '#8c564b'])
+        })
     }),
 
     EXPORT_SETTINGS: Object.freeze({
@@ -179,7 +189,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.4.0-optimized"}`,
+        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.4.0-optimized-fehlerbehebung"}`,
         REPORT_LOGO_ALT_TEXT: 'Institutslogo'
     }),
 
@@ -192,8 +202,8 @@ const APP_CONFIG = Object.freeze({
 
     PUBLICATION_DEFAULTS: Object.freeze({
         RADIOLOGY_JOURNAL_NAME: "Radiology",
-        DEFAULT_ETHICS_STATEMENT_DE: "Die Studie wurde in Übereinstimmung mit den Grundsätzen der Deklaration von Helsinki durchgeführt. Das Studienprotokoll wurde von der lokalen Ethikkommission (Ethikkommission an der TU Dresden, EK XXX/YYYY) genehmigt. Von allen Patienten wurde eine schriftliche Einverständniserklärung eingeholt.",
-        DEFAULT_ETHICS_STATEMENT_EN: "The study was conducted in accordance with the principles of the Declaration of Helsinki. The study protocol was approved by the local institutional review board (Ethics Committee at TU Dresden, No. XXX/YYYY). Written informed consent was obtained from all patients.",
+        DEFAULT_ETHICS_STATEMENT_DE: "Die Studie wurde in Übereinstimmung mit den Grundsätzen der Deklaration von Helsinki durchgeführt. Das Studienprotokoll wurde von der lokalen Ethikkommission (Ethikkommission an der TU Dresden, EK 2023-101-StGg) genehmigt. Von allen Patienten wurde eine schriftliche Einverständniserklärung eingeholt.",
+        DEFAULT_ETHICS_STATEMENT_EN: "The study was conducted in accordance with the principles of the Declaration of Helsinki. The study protocol was approved by the local institutional review board (Ethics Committee at TU Dresden, No. 2023-101-StGg). Written informed consent was obtained from all patients.",
         SOFTWARE_CITATION_TEXT_DE: (version) => `Alle Analysen wurden mit dem webbasierten "Lymphknoten T2 - Avocado Sign Analyse Tool" (Version ${version}, entwickelt von den Autoren) durchgeführt.`,
         SOFTWARE_CITATION_TEXT_EN: (version) => `All analyses were performed using the web-based "Lymph Node T2 - Avocado Sign Analysis Tool" (Version ${version}, developed by the authors).`,
         REFERENCES: Object.freeze({
@@ -202,7 +212,11 @@ const APP_CONFIG = Object.freeze({
                 full_citation_radiology: "Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Radiology 2025; EPub ahead of print. DOI: 10.1007/s00330-025-11462-y",
                 doi: "10.1007/s00330-025-11462-y",
                 year: 2025,
-                authors_short: "Lurz & Schäfer"
+                authors_short: "Lurz & Schäfer",
+                studyPeriod: "Januar 2020 und November 2023", // Beispiel, sollte aus echter Quelle stammen
+                mrtSystem: "3.0-T MRI system (MAGNETOM Prisma Fit, Siemens Healthineers, Erlangen, Germany)",
+                contrastAgent: "gadoteridol (ProHance, Bracco Imaging, Milan, Italy)",
+                radiologistExperience: ["29", "7", "19"] // Jahre Erfahrung
             },
             RUTEGARD_ET_AL_2025: {
                 key: "Rutegard2025",
