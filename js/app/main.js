@@ -171,7 +171,7 @@ const mainAppInterface = (() => {
                     }
                 }
             });
-            if (!workerInitialized && _uiHelpers) {
+            if (!workerInitialized && _uiHelpers && typeof _uiHelpers.showToast === 'function') {
                 _uiHelpers.showToast("Brute-Force Worker konnte nicht initialisiert werden.", "warning");
             }
         }
@@ -323,7 +323,7 @@ const mainAppInterface = (() => {
                     case 'export-bruteforce-txt':
                         const bfData = _bruteForceManager.getResultsForKollektiv(currentKollektiv);
                         if (bfData && typeof _exportService.exportBruteForceReport === 'function') _exportService.exportBruteForceReport(bfData);
-                        else if (!bfData) _uiHelpers.showToast("Keine Brute-Force Daten für Export.", "warning");
+                        else if (!bfData && _uiHelpers && typeof _uiHelpers.showToast === 'function') _uiHelpers.showToast("Keine Brute-Force Daten für Export.", "warning");
                         else console.warn('Exportfunktion exportBruteForceReport nicht gefunden.');
                         break;
                     case 'export-deskriptiv-md':
@@ -396,7 +396,7 @@ const mainAppInterface = (() => {
         _updateGlobalUIState();
         _viewRenderer.refreshCurrentTab();
         if (source === "user" && _utils && typeof _utils.getKollektivDisplayName === 'function') {
-            _uiHelpers.showToast(`Kollektiv auf '${_utils.getKollektivDisplayName(newKollektiv)}' geändert.`, 'info');
+            if (_uiHelpers && typeof _uiHelpers.showToast === 'function') _uiHelpers.showToast(`Kollektiv auf '${_utils.getKollektivDisplayName(newKollektiv)}' geändert.`, 'info');
         } else if (source === "user" && _uiHelpers && typeof _uiHelpers.showToast === 'function') {
              _uiHelpers.showToast(`Kollektiv auf '${newKollektiv}' geändert.`, 'info');
         }
