@@ -20,7 +20,6 @@ const uiComponents = (() => {
                     tooltip = TOOLTIP_CONTENT.exportTab.tableSinglePNG.description.replace('{TableName}', `<strong>${safeTableName}</strong>`);
                 }
 
-
                 const dataAttributes = [];
                 if (btn.chartId) dataAttributes.push(`data-chart-id="${btn.chartId}"`);
                 if (btn.tableId) dataAttributes.push(`data-table-id="${btn.tableId}"`);
@@ -28,7 +27,6 @@ const uiComponents = (() => {
                 if (btn.tableName) dataAttributes.push(`data-table-name="${safeTableName.replace(/\s/g, '_')}"`);
                 else if (btn.chartId) dataAttributes.push(`data-chart-name="${safeChartName.replace(/\s/g, '_')}"`);
                 else dataAttributes.push(`data-default-name="${safeDefaultTitle.replace(/\s/g, '_')}"`);
-
 
                 if (btn.format) dataAttributes.push(`data-format="${btn.format}"`);
 
@@ -44,7 +42,6 @@ const uiComponents = (() => {
         let tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik[tooltipKey]?.description || title || '';
         if(tooltipKey === 'ageDistribution' || tooltipKey === 'alter') tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.chartAge?.description || title;
         else if(tooltipKey === 'genderDistribution' || tooltipKey === 'geschlecht') tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.chartGender?.description || title;
-
 
         return `
             <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 dashboard-card-col ${cardClasses}">
@@ -149,7 +146,6 @@ const uiComponents = (() => {
                                       .replace('[N_GESAMT]', '--')
                                       .replace('[N_PLUS]', '--')
                                       .replace('[N_MINUS]', '--');
-
 
         return `
         <div class="col-12">
@@ -285,6 +281,8 @@ const uiComponents = (() => {
                              ${generateButtonHTML('daten-md', 'fab fa-markdown', 'Datenliste', 'datenMD')}
                              ${generateButtonHTML('auswertung-md', 'fab fa-markdown', 'Auswertungstabelle', 'auswertungMD')}
                              ${generateButtonHTML('filtered-data-csv', 'fas fa-database', 'Gefilterte Rohdaten', 'filteredDataCSV')}
+                             <h6 class="mt-3 text-muted small text-uppercase mb-2">Publikationsentwurf (Methoden & Ergebnisse)</h6>
+                             ${generateButtonHTML('publication-md', 'fas fa-file-medical-alt', 'Publikation (MD)', 'publicationMD')}
                              <h6 class="mt-3 text-muted small text-uppercase mb-2">Diagramme & Tabellen (als Bilder)</h6>
                              ${generateButtonHTML('charts-png', 'fas fa-images', 'Diagramme & Tabellen (PNG)', 'pngZIP')}
                              ${generateButtonHTML('charts-svg', 'fas fa-file-code', 'Diagramme (SVG)', 'svgZIP')}
@@ -305,7 +303,7 @@ const uiComponents = (() => {
                     </div>
                 </div>
                 <div class="col-lg-12 col-xl-4 mb-3">
-                   <div class="card h-100"> <div class="card-header">Hinweise zum Export</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV:** Für Statistiksoftware; Trennzeichen: Semikolon (;).</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** Für Dokumentation.</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** Brute-Force-Bericht.</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht:** Umfassend, druckbar.</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** Pixelbasiert (Diagramme/Tabellen).</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** Vektorbasiert (Diagramme), skalierbar.</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>ZIP-Exporte für Diagramme/Tabellen erfassen nur aktuell im Statistik- oder Auswertungstab sichtbare/gerenderte Elemente. Einzel-Downloads sind direkt am Element möglich (z.B. auch im Präsentationstab).</li> </ul> </div> </div>
+                   <div class="card h-100"> <div class="card-header">Hinweise zum Export</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV:** Für Statistiksoftware; Trennzeichen: Semikolon (;). Zahlen im internationalen Format (Punkt als Dezimaltrenner).</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** Für Dokumentation und Weiterverarbeitung (z.B. mit Pandoc).</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** Brute-Force-Bericht.</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht:** Umfassend, druckbar.</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** Pixelbasiert (Diagramme/Tabellen).</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** Vektorbasiert (Diagramme), skalierbar, ideal für Publikationen.</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>ZIP-Exporte für Diagramme/Tabellen erfassen nur aktuell im Statistik-, Auswertungs- oder Präsentationstab sichtbare/gerenderte Elemente. Einzel-Downloads sind direkt am Element möglich.</li> </ul> </div> </div>
                 </div>
             </div>
         `;
@@ -317,8 +315,8 @@ const uiComponents = (() => {
         if (!stats || !stats.matrix || stats.matrix.rp === undefined) {
              return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)</div><div class="card-body p-2"><p class="m-0 text-muted small">Metriken für T2 nicht verfügbar für Kollektiv ${displayKollektivName}.</p></div></div>`;
         }
-        const metrics = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'f1', 'auc'];
-        const metricDisplayNames = { sens: 'Sens', spez: 'Spez', ppv: 'PPV', npv: 'NPV', acc: 'Acc', balAcc: 'BalAcc', f1: 'F1', auc: 'AUC' };
+        const metrics = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'f1', 'auc', 'lr_pos', 'lr_neg', 'youden'];
+        const metricDisplayNames = { sens: 'Sens', spez: 'Spez', ppv: 'PPV', npv: 'NPV', acc: 'Acc', balAcc: 'BalAcc', f1: 'F1', auc: 'AUC', lr_pos: 'LR+', lr_neg: 'LR-', youden: 'Youden J' };
         const na = '--';
 
         let contentHTML = '<div class="d-flex flex-wrap justify-content-around small text-center">';
@@ -327,13 +325,15 @@ const uiComponents = (() => {
             const metricData = stats[key];
             const metricDescription = (TOOLTIP_CONTENT.t2MetricsOverview?.[key] || TOOLTIP_CONTENT.statMetrics[key]?.description || key).replace(/\[METHODE\]/g, '<strong>T2 (angewandt)</strong>');
             const interpretationHTML = ui_helpers.getMetricInterpretationHTML(key, metricData, 'T2 (angewandt)', displayKollektivName);
-            const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
-            const isPercent = !(key === 'f1' || key === 'auc');
+            let digits = (key === 'f1' || key === 'auc' || key === 'youden') ? (APP_CONFIG.STATISTICAL_CONSTANTS.METRIC_RATE_DECIMALS || 3) : (APP_CONFIG.STATISTICAL_CONSTANTS.METRIC_PERCENT_DECIMALS || 1);
+            if (key === 'lr_pos' || key === 'lr_neg') digits = 2;
+            const isPercent = ['sens', 'spez', 'ppv', 'npv', 'acc'].includes(key);
+
             const formattedValue = formatCI(metricData?.value, metricData?.ci?.lower, metricData?.ci?.upper, digits, isPercent, na);
 
             contentHTML += `
                 <div class="p-1 flex-fill bd-highlight ${index > 0 ? 'border-start' : ''}">
-                    <strong data-tippy-content="${metricDescription}">${metricDisplayNames[key]}:</strong>
+                    <strong data-tippy-content="${metricDescription}">${metricDisplayNames[key] || key.toUpperCase()}:</strong>
                     <span data-tippy-content="${interpretationHTML}"> ${formattedValue}</span>
                 </div>`;
         });
@@ -365,7 +365,7 @@ const uiComponents = (() => {
                     <li><strong>Logik:</strong> ${bestResult.logic.toUpperCase()}</li>
                     <li><strong>Kriterien:</strong> ${formatCriteriaFunc(bestResult.criteria, bestResult.logic)}</li>
                 </ul>
-                <p class="mb-1 text-muted"><small>Dauer: ${formatNumber(duration / 1000, 1)}s | Getestet: ${formatNumber(totalTested, 0)}</small></p>
+                <p class="mb-1 text-muted"><small>Dauer: ${formatNumber((duration || 0) / 1000, 1)}s | Getestet: ${formatNumber(totalTested, 0)}</small></p>
                 <p class="mb-0 text-muted" data-tippy-content="${TOOLTIP_CONTENT.bruteForceResult.kollektivStats || 'Statistik des für diese Optimierung verwendeten Kollektivs.'}"><small>Kollektiv N=${formatNumber(nGesamt,0,'N/A')} (N+: ${formatNumber(nPlus,0,'N/A')}, N-: ${formatNumber(nMinus,0,'N/A')})</small></p>
             </div>
             <h6 class="mb-2">Top Ergebnisse (inkl. identischer Werte):</h6>
@@ -405,7 +405,7 @@ const uiComponents = (() => {
                 currentRank = rank;
             }
 
-            if (rank > 10 && isNewRank && i >=10 ) break; // Ensure at least 10 distinct ranks or more items if scores are tied
+            if (rank > 10 && isNewRank && i >=10 ) break;
 
             tableHTML += `
                 <tr>
@@ -434,11 +434,27 @@ const uiComponents = (() => {
 
         const sectionNavItems = PUBLICATION_CONFIG.sections.map(mainSection => {
             const sectionTooltip = TOOLTIP_CONTENT.publikationTabTooltips[mainSection.id]?.description || UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey;
+            let subSectionLinks = '';
+            if(mainSection.subSections && mainSection.subSections.length > 0){
+                subSectionLinks = '<ul class="nav flex-column ps-3 nav-pills-nested">';
+                mainSection.subSections.forEach(subSect => {
+                     const subSectionTooltip = TOOLTIP_CONTENT.publikationTabTooltips[mainSection.id]?.[subSect.id] || subSect.label;
+                     subSectionLinks += `
+                        <li class="nav-item">
+                            <a class="nav-link py-1 publikation-section-link" href="#" data-section-id="${subSect.id}" data-tippy-content="${subSectionTooltip}">
+                                ${subSect.label}
+                            </a>
+                        </li>`;
+                });
+                subSectionLinks += '</ul>';
+            }
+
             return `
                 <li class="nav-item">
-                    <a class="nav-link py-2 publikation-section-link" href="#" data-section-id="${mainSection.id}" data-tippy-content="${sectionTooltip}">
+                    <a class="nav-link py-2 publikation-main-section-link disabled" href="#" data-main-section-id="${mainSection.id}" data-tippy-content="${sectionTooltip}">
                         ${UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}
                     </a>
+                    ${subSectionLinks}
                 </li>`;
         }).join('');
 
@@ -449,10 +465,19 @@ const uiComponents = (() => {
         return `
             <div class="row mb-3 sticky-top bg-light py-2 shadow-sm" style="top: var(--sticky-header-offset); z-index: 1015;">
                 <div class="col-md-3">
-                    <h5 class="mb-2">Abschnitte</h5>
+                    <h5 class="mb-2">${UI_TEXTS.publikationTab.sectionLabels.methoden} & ${UI_TEXTS.publikationTab.sectionLabels.ergebnisse}</h5>
                     <nav id="publikation-sections-nav" class="nav flex-column nav-pills" data-tippy-content="${TOOLTIP_CONTENT.publikationTabTooltips.sectionSelect?.description || 'Wählen Sie einen Publikationsabschnitt.'}">
                         ${sectionNavItems}
                     </nav>
+                     <hr class="my-3">
+                     <h5 class="mb-2">${UI_TEXTS.publikationTab.sectionLabels.referenzen}</h5>
+                     <nav class="nav flex-column nav-pills">
+                        <li class="nav-item">
+                             <a class="nav-link py-1 publikation-section-link" href="#" data-section-id="referenzen_liste" data-tippy-content="Zeigt die automatisch generierte Referenzliste.">
+                                Literaturverzeichnis
+                            </a>
+                        </li>
+                     </nav>
                 </div>
                 <div class="col-md-9">
                     <div class="d-flex justify-content-end align-items-center mb-2">
