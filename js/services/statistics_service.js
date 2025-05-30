@@ -333,11 +333,11 @@ const statisticsService = (() => {
         if (varU === 0) return { pValue: 1.0, U: U, Z: 0, testName: "Mann-Whitney U (Zero Variance)" };
 
         const stdDevU = Math.sqrt(varU);
-        const correction = (U < meanU) ? 0.5 : (U > meanU) ? -0.5 : 0;
+        const correction = (U < meanU) ? 0.5 : (U > meanU) ? -0.5 : 0; // Continuity correction for normal approximation
         const z = (U - meanU + correction) / stdDevU;
         if (isNaN(z) || !isFinite(z)) return { ...defaultReturn, U: U, testName: "Mann-Whitney U (Z Calculation Error)" };
 
-        const pValue = 2.0 * normalCDF(-Math.abs(z));
+        const pValue = 2.0 * normalCDF(-Math.abs(z)); // Two-tailed p-value
         return { pValue: Math.max(0.0, Math.min(1.0, pValue)), U: U, Z: z, testName: "Mann-Whitney U (Normal Approx. with Tie Correction)" };
     }
 
@@ -414,15 +414,15 @@ const statisticsService = (() => {
 
             const varDiff = (S10_1 / n_pos) + (S01_1 / n_neg) + (S10_2 / n_pos) + (S01_2 / n_neg) - 2 * ((Cov10 / n_pos) + (Cov01 / n_neg));
 
-            if (isNaN(varDiff) || varDiff <= 1e-12) {
-                const pVal = (Math.abs(auc1 - auc2) < 1e-9) ? 1.0 : NaN;
+            if (isNaN(varDiff) || varDiff <= 1e-12) { // Handle cases with zero or near-zero variance
+                const pVal = (Math.abs(auc1 - auc2) < 1e-9) ? 1.0 : NaN; // If AUCs are identical, p-value is 1
                 return { pValue: pVal, Z: (pVal === 1.0 ? 0 : NaN), diffAUC: auc1 - auc2, method: "DeLong Test (Near Zero/Zero Variance of Difference)" };
             }
             const seDiff = Math.sqrt(varDiff);
             const z = (auc1 - auc2) / seDiff;
             if (isNaN(z) || !isFinite(z)) return { ...defaultReturn, diffAUC: auc1 - auc2, method: "DeLong Test (Z Calculation Error)" };
 
-            const pValue = 2.0 * normalCDF(-Math.abs(z));
+            const pValue = 2.0 * normalCDF(-Math.abs(z)); // Two-tailed p-value
             return { pValue: Math.max(0.0, Math.min(1.0, pValue)), Z: z, diffAUC: auc1 - auc2, method: "DeLong Test" };
         } catch (error) {
             console.error("Error in DeLong Test:", error);
@@ -439,8 +439,8 @@ const statisticsService = (() => {
         const varDiff = var1 + var2;
 
         if (isNaN(varDiff) || varDiff < 0) return { ...defaultReturn, method: "Z-Test (AUC - Independent Samples, Variance Error)" };
-        if (varDiff <= 1e-12) {
-            const pVal = (Math.abs(auc1 - auc2) < 1e-9) ? 1.0 : NaN;
+        if (varDiff <= 1e-12) { // Handle near-zero variance
+            const pVal = (Math.abs(auc1 - auc2) < 1e-9) ? 1.0 : NaN; // If AUCs are identical, p-value is 1
             return { pValue: pVal, Z: (pVal === 1.0 ? 0 : NaN), method: "Z-Test (AUC - Independent Samples, Near Zero/Zero Variance)" };
         }
 
@@ -448,9 +448,10 @@ const statisticsService = (() => {
         const z = (auc1 - auc2) / seDiff;
         if (isNaN(z) || !isFinite(z)) return { ...defaultReturn, method: "Z-Test (AUC - Independent Samples, Z Calculation Error)" };
 
-        const pValue = 2.0 * (1.0 - normalCDF(Math.abs(z)));
+        const pValue = 2.0 * (1.0 - normalCDF(Math.abs(z))); // Two-tailed p-value
         return { pValue: Math.max(0.0, Math.min(1.0, pValue)), Z: z, method: "Z-Test (AUC - Independent Samples)" };
     }
+
 
     function calculateConfusionMatrix(data, predictionKey, referenceKey) {
         let rp = 0, fp = 0, fn = 0, rn = 0;
@@ -496,8 +497,10 @@ const statisticsService = (() => {
         const { rp, fp, fn, rn } = matrix;
         const total = rp + fp + fn + rn;
         const nullMetric = { value: NaN, ci: null, method: null, se: NaN, n_success: NaN, n_trials: NaN, matrix_components: null };
+        const nullMetricNoCI = { value: NaN, ci: null, method: null };
 
-        if (total === 0) return { matrix, sens: nullMetric, spez: nullMetric, ppv: nullMetric, npv: nullMetric, acc: nullMetric, balAcc: nullMetric, f1: nullMetric, auc: nullMetric };
+
+        if (total === 0) return { matrix, sens: nullMetric, spez: nullMetric, ppv: nullMetric, npv: nullMetric, acc: nullMetric, balAcc: nullMetric, f1: nullMetric, auc: nullMetric, lr_pos: nullMetricNoCI, lr_neg: nullMetricNoCI, youden: nullMetricNoCI };
 
         const sens_val = (rp + fn) > 0 ? rp / (rp + fn) : ((rp === 0 && fn === 0) ? NaN : 0) ;
         const spez_val = (fp + rn) > 0 ? rn / (fp + rn) : ((fp === 0 && rn === 0) ? NaN : 0) ;
@@ -507,6 +510,27 @@ const statisticsService = (() => {
         const balAcc_val = (!isNaN(sens_val) && !isNaN(spez_val)) ? (sens_val + spez_val) / 2.0 : NaN;
         const f1_val = (!isNaN(ppv_val) && !isNaN(sens_val) && (ppv_val + sens_val) > 1e-9) ? 2.0 * (ppv_val * sens_val) / (ppv_val + sens_val) : ((ppv_val === 0 && sens_val === 0) ? 0 : NaN);
         const auc_val = balAcc_val;
+
+        let lr_pos_val = NaN;
+        if (!isNaN(sens_val) && !isNaN(spez_val)) {
+            if (1 - spez_val === 0) { // Specificity is 1
+                lr_pos_val = (sens_val > 0) ? Infinity : NaN; // Undefined if sens is also 0 (0/0)
+            } else {
+                lr_pos_val = sens_val / (1 - spez_val);
+            }
+        }
+
+        let lr_neg_val = NaN;
+        if (!isNaN(sens_val) && !isNaN(spez_val)) {
+            if (spez_val === 0) { // Specificity is 0
+                lr_neg_val = (1 - sens_val > 0) ? Infinity : NaN; // Undefined if sens is 1 (0/0)
+            } else {
+                lr_neg_val = (1 - sens_val) / spez_val;
+            }
+        }
+
+        const youden_val = (!isNaN(sens_val) && !isNaN(spez_val)) ? (sens_val + spez_val - 1.0) : NaN;
+
 
         const n_sens = rp + fn;
         const n_spez = fp + rn;
@@ -540,7 +564,7 @@ const statisticsService = (() => {
         const balAccBootCIResult = !isNaN(balAcc_val) ? bootstrapCI(data, bootstrapStatFnFactory(predictionKey, referenceKey, 'balAcc')) : { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE, se: NaN };
         const f1BootCIResult = !isNaN(f1_val) ? bootstrapCI(data, bootstrapStatFnFactory(predictionKey, referenceKey, 'f1')) : { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE, se: NaN };
         const aucBootCIResult = balAccBootCIResult;
-        
+
         const matrixComponentsForBootstrap = { rp, fp, fn, rn, total };
 
         return {
@@ -552,7 +576,10 @@ const statisticsService = (() => {
             acc: { value: acc_val, ci: { lower: accCIResult.lower, upper: accCIResult.upper }, method: accCIResult.method, se: NaN, n_success: rp + rn, n_trials: n_acc, matrix_components: null },
             balAcc: { value: balAcc_val, ci: { lower: balAccBootCIResult.lower, upper: balAccBootCIResult.upper }, method: balAccBootCIResult.method, se: balAccBootCIResult.se, n_success: NaN, n_trials: NaN, matrix_components: matrixComponentsForBootstrap },
             f1: { value: f1_val, ci: { lower: f1BootCIResult.lower, upper: f1BootCIResult.upper }, method: f1BootCIResult.method, se: f1BootCIResult.se, n_success: NaN, n_trials: NaN, matrix_components: matrixComponentsForBootstrap },
-            auc: { value: auc_val, ci: { lower: aucBootCIResult.lower, upper: aucBootCIResult.upper }, method: aucBootCIResult.method, se: aucBootCIResult.se, n_success: NaN, n_trials: NaN, matrix_components: matrixComponentsForBootstrap }
+            auc: { value: auc_val, ci: { lower: aucBootCIResult.lower, upper: aucBootCIResult.upper }, method: aucBootCIResult.method, se: aucBootCIResult.se, n_success: NaN, n_trials: NaN, matrix_components: matrixComponentsForBootstrap },
+            lr_pos: { value: lr_pos_val, ci: null, method: null },
+            lr_neg: { value: lr_neg_val, ci: null, method: null },
+            youden: { value: youden_val, ci: null, method: null }
         };
     }
 
@@ -560,7 +587,7 @@ const statisticsService = (() => {
         const nullReturn = { mcnemar: { pValue: NaN, statistic: NaN, df: NaN, method: "McNemar's Test (Nicht berechnet)" }, delong: { pValue: NaN, Z: NaN, diffAUC: NaN, method: "DeLong Test (Nicht berechnet)" } };
         if (!Array.isArray(data) || data.length === 0 || !key1 || !key2 || !referenceKey) return nullReturn;
 
-        let b = 0, c = 0; // b: key1+/key2-, c: key1-/key2+
+        let b = 0, c = 0;
         data.forEach(p => {
             if (p && typeof p === 'object') {
                 const p1_is_plus = p[key1] === '+';
@@ -569,8 +596,8 @@ const statisticsService = (() => {
                 const valid_p2 = p[key2] === '+' || p[key2] === '-';
 
                 if (valid_p1 && valid_p2) {
-                    if (p1_is_plus && !p2_is_plus) b++; // Method 1 identified, Method 2 missed
-                    if (!p1_is_plus && p2_is_plus) c++; // Method 1 missed, Method 2 identified
+                    if (p1_is_plus && !p2_is_plus) b++;
+                    if (!p1_is_plus && p2_is_plus) c++;
                 }
             }
         });
@@ -640,7 +667,7 @@ const statisticsService = (() => {
                     threshold = t2Criteria[featureKey].threshold;
                     condition = t2Criteria[featureKey].condition || '>=';
                     if (threshold !== null && !isNaN(threshold)) {
-                        featureNameForDisplay = `T2 Größe ${condition} ${formatNumber(threshold, 1)}`;
+                        featureNameForDisplay = `T2 Größe ${condition} ${typeof radiologyFormatter !== 'undefined' ? radiologyFormatter.formatNumber(threshold,1, {useRadiologySeparators: false}) : threshold.toFixed(1)}`;
                     }
                 } else {
                     featureValue = t2Criteria[featureKey].value;
@@ -655,7 +682,7 @@ const statisticsService = (() => {
                 return;
             }
 
-            let a = 0, b = 0, c = 0, d = 0;
+            let a = 0, b = 0, c = 0, d = 0; // rp, fp, fn, rn for this specific feature vs N
             data.forEach(p => {
                 const validN = p?.[referenceKey] === '+' || p?.[referenceKey] === '-';
                 if (!validN || !Array.isArray(p.lymphknoten_t2)) return;
@@ -693,7 +720,7 @@ const statisticsService = (() => {
                     matrix: { rp: a, fp: b, fn: c, rn: d },
                     testName: fisherFeature.method,
                     pValue: fisherFeature.pValue,
-                    statistic: NaN,
+                    statistic: NaN, // Fisher doesn't have a single 'statistic' like chi2
                     or: calculateORCI(a, b, c, d),
                     rd: calculateRDCI(a, b, c, d),
                     phi: { value: calculatePhi(a, b, c, d), ci: null, method: 'Phi Coefficient' },
@@ -812,15 +839,16 @@ const statisticsService = (() => {
         const kollektive = ['Gesamt', 'direkt OP', 'nRCT'];
 
         kollektive.forEach(kollektivId => {
-            const filteredData = dataProcessor.filterDataByKollektiv(data, kollektivId);
-            if (filteredData.length === 0) {
-                results[kollektivId] = null;
+            const filteredDataRaw = dataProcessor.filterDataByKollektiv(data, kollektivId);
+            if (filteredDataRaw.length === 0) {
+                results[kollektivId] = null; // Store null if no data for this cohort
                 return;
             }
+            // Ensure data is cloned before evaluation to avoid side effects
+            const filteredDataForApplied = cloneDeep(filteredDataRaw);
+            const evaluatedDataApplied = t2CriteriaManager.evaluateDataset(filteredDataForApplied, appliedT2Criteria, appliedT2Logic);
 
-            const evaluatedDataApplied = t2CriteriaManager.evaluateDataset(cloneDeep(filteredData), appliedT2Criteria, appliedT2Logic);
-
-            results[kollektivId].deskriptiv = calculateDescriptiveStats(filteredData); // Verwendet gefilterte, aber nicht T2-evaluierte Daten für Basis-Deskriptiv
+            results[kollektivId].deskriptiv = calculateDescriptiveStats(filteredDataRaw); // Based on therapy-filtered, not T2-evaluated data for base descriptives
             results[kollektivId].gueteAS = calculateDiagnosticPerformance(evaluatedDataApplied, 'as', 'n');
             results[kollektivId].gueteT2_angewandt = calculateDiagnosticPerformance(evaluatedDataApplied, 't2', 'n');
             results[kollektivId].vergleichASvsT2_angewandt = compareDiagnosticMethods(evaluatedDataApplied, 'as', 't2', 'n');
@@ -832,13 +860,16 @@ const statisticsService = (() => {
                 if (studySet) {
                     let isApplicable = true;
                     if (studySet.applicableKollektiv && studySet.applicableKollektiv !== 'Gesamt' && studySet.applicableKollektiv !== kollektivId) {
-                        isApplicable = false;
+                        isApplicable = false; // This study set is not meant for the current kollektivId
                     }
 
                     if (isApplicable) {
-                        const evaluatedDataStudy = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredData), studySet);
+                        const filteredDataForStudy = cloneDeep(filteredDataRaw); // Use fresh copy for each study set
+                        const evaluatedDataStudy = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(filteredDataForStudy, studySet);
                         results[kollektivId].gueteT2_literatur[studySetConf.id] = calculateDiagnosticPerformance(evaluatedDataStudy, 't2', 'n');
-                        results[kollektivId][`vergleichASvsT2_literatur_${studySetConf.id}`] = compareDiagnosticMethods(evaluatedDataStudy, 'as', 't2', 'n');
+                        // For comparison, ensure 'as' status is on the same dataset as T2 evaluation
+                        const asDataForComparison = cloneDeep(evaluatedDataStudy); // Data already has AS status from original processing
+                        results[kollektivId][`vergleichASvsT2_literatur_${studySetConf.id}`] = compareDiagnosticMethods(asDataForComparison, 'as', 't2', 'n');
                     } else {
                         results[kollektivId].gueteT2_literatur[studySetConf.id] = null;
                         results[kollektivId][`vergleichASvsT2_literatur_${studySetConf.id}`] = null;
@@ -850,9 +881,12 @@ const statisticsService = (() => {
             if (bfResultForKollektiv && bfResultForKollektiv.bestResult && bfResultForKollektiv.bestResult.criteria) {
                 const bfCriteria = bfResultForKollektiv.bestResult.criteria;
                 const bfLogic = bfResultForKollektiv.bestResult.logic;
-                const evaluatedDataBF = t2CriteriaManager.evaluateDataset(cloneDeep(filteredData), bfCriteria, bfLogic);
+                const filteredDataForBF = cloneDeep(filteredDataRaw);
+                const evaluatedDataBF = t2CriteriaManager.evaluateDataset(filteredDataForBF, bfCriteria, bfLogic);
                 results[kollektivId].gueteT2_bruteforce = calculateDiagnosticPerformance(evaluatedDataBF, 't2', 'n');
-                results[kollektivId].vergleichASvsT2_bruteforce = compareDiagnosticMethods(evaluatedDataBF, 'as', 't2', 'n');
+                 // For comparison, ensure 'as' status is on the same dataset as T2 evaluation
+                const asDataForBFComparison = cloneDeep(evaluatedDataBF);
+                results[kollektivId].vergleichASvsT2_bruteforce = compareDiagnosticMethods(asDataForBFComparison, 'as', 't2', 'n');
                 results[kollektivId].bruteforce_definition = { criteria: bfCriteria, logic: bfLogic, metricValue: bfResultForKollektiv.bestResult.metricValue, metricName: bfResultForKollektiv.metric };
             } else {
                 results[kollektivId].gueteT2_bruteforce = null;
@@ -870,7 +904,22 @@ const statisticsService = (() => {
         calculateAssociations,
         compareCohorts,
         calculateDescriptiveStats,
-        calculateAllStatsForPublication
+        calculateAllStatsForPublication,
+        // Exporting internal helpers if they are broadly useful and tested,
+        // otherwise keep them internal (prefixed with _ or not exported).
+        getMedian,
+        getMean,
+        getStdDev,
+        calculateWilsonScoreCI,
+        bootstrapCI,
+        manualMcNemarTest,
+        manualFisherExactTest,
+        manualMannWhitneyUTest,
+        manualDeLongTest,
+        calculateZTestForAUCComparison,
+        calculateORCI,
+        calculateRDCI,
+        calculatePhi
     });
 
 })();
