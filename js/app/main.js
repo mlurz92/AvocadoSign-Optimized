@@ -14,7 +14,7 @@ const mainAppInterface = (() => {
     let _uiComponents = null;
     let _chartRenderer = null;
     let _tableRenderer = null;
-    let _paginationManager = null;
+    // _paginationManager wurde entfernt
     let _publicationTextGenerator = null;
     let _publicationRenderer = null;
     let _publikationTabLogic = null;
@@ -40,7 +40,7 @@ const mainAppInterface = (() => {
         _uiComponents = typeof ui_components !== 'undefined' ? ui_components : null;
         _chartRenderer = typeof chart_renderer !== 'undefined' ? chart_renderer : null;
         _tableRenderer = typeof tableRenderer !== 'undefined' ? tableRenderer : null;
-        _paginationManager = typeof paginationManager !== 'undefined' ? paginationManager : null;
+        // _paginationManager wurde entfernt
         _publicationTextGenerator = typeof publicationTextGenerator !== 'undefined' ? publicationTextGenerator : null;
         _publicationRenderer = typeof publicationRenderer !== 'undefined' ? publicationRenderer : null;
         _publikationTabLogic = typeof publikationTabLogic !== 'undefined' ? publikationTabLogic : null;
@@ -59,7 +59,7 @@ const mainAppInterface = (() => {
             _bruteForceManager.init(APP_CONFIG.PATHS.BRUTE_FORCE_WORKER, _t2CriteriaManager, _statisticsService, _dataProcessor);
         }
 
-        const modules = { _dataProcessor, _t2CriteriaManager, _studyT2CriteriaManager, _statisticsService, _bruteForceManager, _exportService, _viewRenderer, _state, _uiHelpers, _uiComponents, _chartRenderer, _tableRenderer, _paginationManager, _publicationTextGenerator, _publicationRenderer, _publikationTabLogic, _radiologyFormatter, _citationManager, _generalEventHandlers, _auswertungEventHandlers, _statistikEventHandlers, _praesentationEventHandlers, _publikationEventHandlers };
+        const modules = { _dataProcessor, _t2CriteriaManager, _studyT2CriteriaManager, _statisticsService, _bruteForceManager, _exportService, _viewRenderer, _state, _uiHelpers, _uiComponents, _chartRenderer, _tableRenderer, _publicationTextGenerator, _publicationRenderer, _publikationTabLogic, _radiologyFormatter, _citationManager, _generalEventHandlers, _auswertungEventHandlers, _statistikEventHandlers, _praesentationEventHandlers, _publikationEventHandlers };
         for (const moduleName in modules) {
             if (modules[moduleName] === null) {
                 console.error(`Modul ${moduleName.replace('_','')} konnte nicht initialisiert werden oder ist nicht verfügbar.`);
@@ -77,20 +77,22 @@ const mainAppInterface = (() => {
         } else {
             console.error("Globale Patientendaten (PATIENT_DATA) nicht gefunden oder ungültig.");
             _globalRawData = [];
-            _uiHelpers?.showToast("Fehler beim Laden der Patientendaten.", "danger");
+            if (_uiHelpers && typeof _uiHelpers.showToast === 'function') {
+                _uiHelpers.showToast("Fehler beim Laden der Patientendaten.", "danger");
+            }
         }
 
         if (_dataProcessor && typeof _dataProcessor.processData === 'function') {
             _processedData = _dataProcessor.processData(_globalRawData);
         } else {
             console.error("Data Processor nicht verfügbar. Daten können nicht verarbeitet werden.");
-            _processedData = _globalRawData; // Fallback auf Rohdaten, wenn Processor fehlt
+            _processedData = _globalRawData;
         }
     }
 
     function _setupInitialView() {
-        if (!_state || !_viewRenderer || !_uiHelpers) {
-            console.error("UI Initialisierung fehlgeschlagen: State, ViewRenderer oder UI Helpers nicht verfügbar.");
+        if (!_state || !_viewRenderer || !_uiHelpers || !_dataProcessor || !_t2CriteriaManager) {
+            console.error("UI Initialisierung fehlgeschlagen: State, ViewRenderer, UI Helpers, DataProcessor oder T2CriteriaManager nicht verfügbar.");
             return;
         }
         _state.init();
@@ -103,7 +105,12 @@ const mainAppInterface = (() => {
 
         const initialTabId = _state.getActiveTabId() || APP_CONFIG.DEFAULT_SETTINGS.ACTIVE_TAB_ID || 'daten-tab-pane';
         _viewRenderer.showTab(initialTabId);
-        _uiHelpers.updateExportButtonStates(initialTabId, _bruteForceManager.hasAnyResults(), _processedData.length > 0);
+
+        if (typeof _bruteForceManager !== 'undefined') {
+             _uiHelpers.updateExportButtonStates(initialTabId, _bruteForceManager.hasAnyResults(), _processedData.length > 0);
+        } else {
+            _uiHelpers.updateExportButtonStates(initialTabId, false, _processedData.length > 0);
+        }
     }
 
     function _attachGlobalEventListeners() {
@@ -132,8 +139,8 @@ const mainAppInterface = (() => {
 
     function init() {
         if (typeof APP_CONFIG === 'undefined' || typeof UI_TEXTS === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined' || typeof PUBLICATION_CONFIG === 'undefined' || typeof RADIOLOGY_FORMAT_CONFIG === 'undefined') {
-            document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif; color: red; background: #fff1f1; border: 1px solid red;"><strong>Kritischer Fehler:</strong> Eine oder mehrere Konfigurationsdateien (APP_CONFIG, UI_TEXTS, etc.) konnten nicht geladen werden. Die Anwendung kann nicht gestartet werden. Bitte überprüfen Sie die Konsolenausgabe auf fehlende Skript-Dateien.</div>';
-            console.error("Kritischer Fehler: Konfigurationsdateien nicht geladen.");
+            document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif; color: red; background: #fff1f1; border: 1px solid red;"><strong>Kritischer Fehler:</strong> Eine oder mehrere Konfigurationsdateien (APP_CONFIG, UI_TEXTS, etc.) konnten nicht geladen werden. Die Anwendung kann nicht gestartet werden. Bitte überprüfen Sie die Konsolenausgabe auf fehlende Skript-Dateien und deren korrekte Ladereihenfolge.</div>';
+            console.error("Kritischer Fehler: Konfigurationsdateien nicht geladen. Stellen Sie sicher, dass alle config/*.js Dateien vor anderen App-Skripten in index.html geladen werden.");
             return;
         }
 
@@ -150,8 +157,14 @@ const mainAppInterface = (() => {
             _attachSpecificEventListeners();
 
             if(_uiHelpers && typeof _uiHelpers.initializeTooltips === 'function'){
-                 setTimeout(() => _uiHelpers.initializeTooltips(document.body), 500); // Initial tooltips for whole body
+                 setTimeout(() => _uiHelpers.initializeTooltips(document.body), 500);
             }
+            
+            const appVersionFooter = document.getElementById('app-version-footer');
+            if(appVersionFooter && typeof APP_CONFIG !== 'undefined' && APP_CONFIG.APP_VERSION) {
+                appVersionFooter.textContent = APP_CONFIG.APP_VERSION;
+            }
+
         });
     }
 
@@ -167,9 +180,9 @@ const mainAppInterface = (() => {
         }
     }
 
-    function refreshCurrentTab() {
+    function refreshCurrentTab(optionalTabId) {
         if (_viewRenderer && typeof _viewRenderer.refreshCurrentTab === 'function') {
-            _viewRenderer.refreshCurrentTab();
+            _viewRenderer.refreshCurrentTab(optionalTabId);
         } else {
             console.error("ViewRenderer nicht verfügbar, Tab kann nicht aktualisiert werden.");
         }
