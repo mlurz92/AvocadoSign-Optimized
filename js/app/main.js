@@ -200,7 +200,7 @@ const mainAppInterface = (() => {
     }
 
     function _attachGlobalEventListeners() {
-        if(!_generalEventHandlers || !_uiHelpers || !_state || !_exportService) return;
+        if(!_generalEventHandlers || !_uiHelpers || !_state || !_exportService || !_dataProcessor || !_t2CriteriaManager || !_bruteForceManager || !_statisticsService) return;
 
         const kollektivButtons = document.querySelectorAll('#kollektiv-buttons-container button[data-kollektiv]');
         kollektivButtons.forEach(button => {
@@ -246,14 +246,15 @@ const mainAppInterface = (() => {
             if (exportButton && exportButton.id !== 'export-bruteforce-modal-txt') {
                  const exportActionId = exportButton.id;
                  const currentKollektiv = _state.getCurrentKollektiv();
-                 const globalData = getGlobalData();
-                 const appliedCriteria = _t2CriteriaManager.getAppliedT2Criteria();
-                 const appliedLogic = _t2CriteriaManager.getAppliedT2Logic();
-                 const bfResults = _bruteForceManager.getAllResults();
+                 const globalDataForExport = getGlobalData();
+                 const appliedCriteriaForExport = _t2CriteriaManager.getAppliedT2Criteria();
+                 const appliedLogicForExport = _t2CriteriaManager.getAppliedT2Logic();
+                 const bfResultsForExport = _bruteForceManager.getAllResults();
+                 const filteredDataForExport = _dataProcessor.filterDataByKollektiv(globalDataForExport, currentKollektiv);
 
                 switch (exportActionId) {
                     case 'export-statistik-csv':
-                        _exportService.exportStatistikCSV(globalData, currentKollektiv, appliedCriteria, appliedLogic);
+                        _exportService.exportStatistikCSV(globalDataForExport, currentKollektiv, appliedCriteriaForExport, appliedLogicForExport);
                         break;
                     case 'export-bruteforce-txt':
                         const bfData = _bruteForceManager.getResultsForKollektiv(currentKollektiv);
@@ -261,23 +262,28 @@ const mainAppInterface = (() => {
                         else _uiHelpers.showToast("Keine Brute-Force Daten für Export.", "warning");
                         break;
                     case 'export-deskriptiv-md':
-                        const statsData = _statisticsService.calculateDescriptiveStats(_dataProcessor.filterDataByKollektiv(globalData, currentKollektiv));
+                        const statsData = _statisticsService.calculateDescriptiveStats(filteredDataForExport);
                         _exportService.exportTableMarkdown(statsData, 'deskriptiv', currentKollektiv);
                         break;
                     case 'export-daten-md':
-                        _exportService.exportTableMarkdown(_dataProcessor.filterDataByKollektiv(globalData, currentKollektiv), 'daten', currentKollektiv);
+                        _exportService.exportTableMarkdown(filteredDataForExport, 'daten', currentKollektiv);
                         break;
                     case 'export-auswertung-md':
-                         _exportService.exportTableMarkdown(_dataProcessor.filterDataByKollektiv(globalData, currentKollektiv), 'auswertung', currentKollektiv, appliedCriteria, appliedLogic);
+                         _exportService.exportTableMarkdown(filteredDataForExport, 'auswertung', currentKollektiv, appliedCriteriaForExport, appliedLogicForExport);
                         break;
                     case 'export-filtered-data-csv':
-                        _exportService.exportFilteredDataCSV(_dataProcessor.filterDataByKollektiv(globalData, currentKollektiv), currentKollektiv);
+                        _exportService.exportFilteredDataCSV(filteredDataForExport, currentKollektiv);
                         break;
                     case 'export-comprehensive-report-html':
-                        _exportService.exportComprehensiveReportHTML(globalData, bfResults[currentKollektiv], currentKollektiv, appliedCriteria, appliedLogic);
+                        _exportService.exportComprehensiveReportHTML(globalDataForExport, bfResultsForExport[currentKollektiv], currentKollektiv, appliedCriteriaForExport, appliedLogicForExport);
                         break;
                     case 'export-publication-md':
-                        _exportService.exportPublicationMarkdown(_state, _statisticsService, _dataProcessor, _bruteForceManager, mainAppInterface);
+                         if (typeof _exportService.exportPublicationMarkdown === 'function') {
+                            _exportService.exportPublicationMarkdown(_state, _statisticsService, _dataProcessor, _bruteForceManager, mainAppInterface, _publicationTextGenerator, _publikationTabLogic);
+                         } else {
+                              console.error("ExportService: exportPublicationMarkdown nicht gefunden.");
+                              _uiHelpers.showToast("Publikations-Markdown-Exportfunktion nicht verfügbar.", "danger");
+                         }
                         break;
                     case 'export-charts-png':
                         _exportService.exportChartsZip('#app-container', 'PNG_ZIP', currentKollektiv, 'png');
@@ -288,14 +294,14 @@ const mainAppInterface = (() => {
                     case 'export-all-zip':
                     case 'export-csv-zip':
                     case 'export-md-zip':
-                    case 'export-png-zip': // Wird durch exportChartsZip gehandhabt
-                    case 'export-svg-zip': // Wird durch exportChartsZip gehandhabt
                          const category = exportActionId.replace('export-', '').replace('-zip','');
-                        _exportService.exportCategoryZip(category, globalData, bfResults, currentKollektiv, appliedCriteria, appliedLogic);
+                        _exportService.exportCategoryZip(category, globalDataForExport, bfResultsForExport, currentKollektiv, appliedCriteriaForExport, appliedLogicForExport);
                         break;
                     default:
-                        console.warn(`Unbekannte Export-Aktion: ${exportActionId}`);
-                        _uiHelpers.showToast("Unbekannte Export-Aktion.", "warning");
+                        if (!exportActionId.startsWith('export-png-zip') && !exportActionId.startsWith('export-svg-zip') && !exportActionId.startsWith('export-xlsx-zip')) {
+                            console.warn(`Unbekannte Export-Aktion: ${exportActionId}`);
+                            _uiHelpers.showToast("Unbekannte Export-Aktion.", "warning");
+                        }
                         break;
                 }
             }
@@ -392,15 +398,15 @@ const mainAppInterface = (() => {
 
     return Object.freeze({
         init,
-        getGlobalData: () => _globalRawData ? cloneDeep(_globalRawData) : [], // Gibt die Rohdaten zurück, da _processedData T2-abhängig ist
+        getGlobalData: () => _globalRawData ? cloneDeep(_globalRawData) : [],
         getRawData: () => _globalRawData ? cloneDeep(_globalRawData) : [],
-        getProcessedData: () => _processedData ? cloneDeep(_processedData) : [], // Gibt die aktuell verarbeiteten Daten zurück
-        renderView: (tabId) => { // Exponierte Methode
+        getProcessedData: () => _processedData ? cloneDeep(_processedData) : [],
+        renderView: (tabId) => {
             if (_viewRenderer && typeof _viewRenderer.showTab === 'function') {
                 _viewRenderer.showTab(tabId);
             }
         },
-        refreshCurrentTab: () => { // Exponierte Methode
+        refreshCurrentTab: () => {
              if (_viewRenderer && typeof _viewRenderer.refreshCurrentTab === 'function') {
                 _viewRenderer.refreshCurrentTab();
             }
