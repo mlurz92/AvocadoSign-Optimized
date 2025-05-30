@@ -20,6 +20,7 @@ const mainAppInterface = (() => {
     let _publikationTabLogic = null;
     let _radiologyFormatter = null;
     let _citationManager = null;
+    let _utils = null;
 
     let _generalEventHandlers = null;
     let _auswertungEventHandlers = null;
@@ -46,6 +47,7 @@ const mainAppInterface = (() => {
         _publikationTabLogic = typeof publikationTabLogic !== 'undefined' ? publikationTabLogic : null;
         _radiologyFormatter = typeof radiologyFormatter !== 'undefined' ? radiologyFormatter : null;
         _citationManager = typeof citationManager !== 'undefined' ? citationManager : null;
+        _utils = typeof utils !== 'undefined' ? utils : null;
 
         _generalEventHandlers = typeof generalEventHandlers !== 'undefined' ? generalEventHandlers : null;
         _auswertungEventHandlers = typeof auswertungEventHandlers !== 'undefined' ? auswertungEventHandlers : null;
@@ -54,24 +56,59 @@ const mainAppInterface = (() => {
         _publikationEventHandlers = typeof publikationEventHandlers !== 'undefined' ? publikationEventHandlers : null;
 
         const modules = {
-            _appConfig: typeof APP_CONFIG, _publicationConfig: typeof PUBLICATION_CONFIG, _radiologyFormatConfig: typeof RADIOLOGY_FORMAT_CONFIG, _textConfig: typeof UI_TEXTS, _tooltipConfig: typeof TOOLTIP_CONTENT,
-            _utils: typeof utils, _radiologyFormatterMod: _radiologyFormatter, _citationManagerMod: _citationManager,
-            _patientData: typeof PATIENT_DATA,
-            _dataProcessor, _t2CriteriaManager, _studyT2CriteriaManager,
-            _statisticsService, _bruteForceManager, _exportService,
-            _uiHelpers, _uiComponents, _paginationManager,
-            _tableRenderer, _chartRenderer, _publicationTextGenerator, _publicationRenderer,
-            _dataTabLogic: typeof dataTabLogic, _auswertungTabLogic: typeof auswertungTabLogic, _statistikTabLogic: typeof statistikTabLogic, _praesentationTabLogic: typeof praesentationTabLogic, _publikationTabLogicMod: _publikationTabLogic,
-            _viewRenderer,
-            _generalEventHandlers, _auswertungEventHandlers, _statistikEventHandlers, _praesentationEventHandlers, _publikationEventHandlers,
-            _state
+            _appConfig: typeof APP_CONFIG,
+            _publicationConfig: typeof PUBLICATION_CONFIG,
+            _radiologyFormatConfig: typeof RADIOLOGY_FORMAT_CONFIG,
+            _textConfig: typeof UI_TEXTS,
+            _tooltipConfig: typeof TOOLTIP_CONTENT,
+            _utilsMod: _utils,
+            _radiologyFormatterMod: _radiologyFormatter,
+            _citationManagerMod: _citationManager,
+            _patientDataGlobal: typeof PATIENT_DATA,
+            _dataProcessorMod: _dataProcessor,
+            _t2CriteriaManagerMod: _t2CriteriaManager,
+            _studyT2CriteriaManagerMod: _studyT2CriteriaManager,
+            _statisticsServiceMod: _statisticsService,
+            _bruteForceManagerMod: _bruteForceManager,
+            _exportServiceMod: _exportService,
+            _uiHelpersMod: _uiHelpers,
+            _uiComponentsMod: _uiComponents,
+            _paginationManagerMod: _paginationManager,
+            _tableRendererMod: _tableRenderer,
+            _chartRendererMod: _chartRenderer,
+            _publicationTextGeneratorMod: _publicationTextGenerator,
+            _publicationRendererMod: _publicationRenderer,
+            _dataTabLogicGlobal: typeof dataTabLogic,
+            _auswertungTabLogicGlobal: typeof auswertungTabLogic,
+            _statistikTabLogicGlobal: typeof statistikTabLogic,
+            _praesentationTabLogicGlobal: typeof praesentationTabLogic,
+            _publikationTabLogicMod: _publikationTabLogic,
+            _viewRendererMod: _viewRenderer,
+            _generalEventHandlersMod: _generalEventHandlers,
+            _auswertungEventHandlersMod: _auswertungEventHandlers,
+            _statistikEventHandlersMod: _statistikEventHandlers,
+            _praesentationEventHandlersMod: _praesentationEventHandlers,
+            _publikationEventHandlersMod: _publikationEventHandlers,
+            _stateMod: _state
         };
 
         let allModulesAvailable = true;
         for (const moduleName in modules) {
             const moduleValue = modules[moduleName];
-            if (moduleValue === null || moduleValue === 'undefined') { // Check for actual 'undefined' string for configs, and null for assigned modules
-                console.error(`Modul oder Konfiguration ${moduleName.replace('_','').replace('Mod','')} konnte nicht initialisiert werden oder ist nicht verfügbar.`);
+            let isUnavailable = false;
+
+            if (moduleName.endsWith('Global') || moduleName.startsWith('_appConfig') || moduleName.startsWith('_publicationConfig') || moduleName.startsWith('_radiologyFormatConfig') || moduleName.startsWith('_textConfig') || moduleName.startsWith('_tooltipConfig') || moduleName.startsWith('_patientDataGlobal')) {
+                if (moduleValue === 'undefined') {
+                    isUnavailable = true;
+                }
+            } else {
+                if (moduleValue === null) {
+                    isUnavailable = true;
+                }
+            }
+
+            if (isUnavailable) {
+                console.error(`Modul oder Konfiguration ${moduleName.replace('_','').replace('Mod','').replace('Global','')} konnte nicht initialisiert werden oder ist nicht verfügbar.`);
                 allModulesAvailable = false;
             }
         }
@@ -88,10 +125,9 @@ const mainAppInterface = (() => {
         if (_t2CriteriaManager && typeof _t2CriteriaManager.initialize === 'function') {
             _t2CriteriaManager.initialize();
         }
-         if (_citationManager && typeof _citationManager.init === 'function') {
+        if (_citationManager && typeof _citationManager.init === 'function') {
             _citationManager.init();
         }
-
 
         if (_bruteForceManager && typeof _bruteForceManager.init === 'function' && typeof APP_CONFIG !== 'undefined' && APP_CONFIG.PATHS?.BRUTE_FORCE_WORKER) {
             const workerInitialized = _bruteForceManager.init({
@@ -110,7 +146,7 @@ const mainAppInterface = (() => {
                         }
                         if (_uiHelpers) _uiHelpers.initializeTooltips(modalBody);
                          if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
-                        const hasBruteForceResults = _bruteForceManager.hasAnyResults ? _bruteForceManager.hasAnyResults() : Object.keys(_bruteForceManager.getAllResults() || {}).length > 0;
+                        const hasBruteForceResults = _bruteForceManager.getAllResults && Object.keys(_bruteForceManager.getAllResults() || {}).length > 0;
                          _uiHelpers.updateExportButtonStates(_state.getActiveTabId(), hasBruteForceResults, (_processedData?.length ?? 0) > 0);
                     }
                 },
@@ -135,9 +171,9 @@ const mainAppInterface = (() => {
                      }
                 }
             });
-             if(!workerInitialized && _uiHelpers) {
+            if(!workerInitialized && _uiHelpers) {
                 _uiHelpers.showToast("Brute-Force Worker konnte nicht initialisiert werden.", "warning");
-             }
+            }
         }
         return true;
     }
@@ -152,10 +188,10 @@ const mainAppInterface = (() => {
         }
 
         if (_dataProcessor && typeof _dataProcessor.processPatientData === 'function') {
-            _processedData = _dataProcessor.processPatientData(cloneDeep(_globalRawData));
+            _processedData = _dataProcessor.processPatientData(utils.cloneDeep(_globalRawData));
         } else {
             console.error("Data Processor nicht verfügbar. Daten können nicht verarbeitet werden.");
-            _processedData = cloneDeep(_globalRawData); // Fallback to raw data, potentially unprocessed
+            _processedData = utils.cloneDeep(_globalRawData);
         }
 
         if (_t2CriteriaManager && typeof _t2CriteriaManager.evaluateDataset === 'function' && _processedData) {
@@ -175,7 +211,7 @@ const mainAppInterface = (() => {
     }
 
     function _updateGlobalUIState() {
-        if (!_state || !_uiHelpers || !_dataProcessor || !_processedData) return;
+        if (!_state || !_uiHelpers || !_dataProcessor || !_processedData || !_utils) return;
         const currentKollektiv = _state.getCurrentKollektiv();
         _uiHelpers.updateKollektivButtonsUI(currentKollektiv);
 
@@ -183,8 +219,8 @@ const mainAppInterface = (() => {
         const headerStats = _dataProcessor.calculateHeaderStats(filteredData, currentKollektiv);
         _uiHelpers.updateHeaderStatsUI(headerStats);
         if (_bruteForceManager && _uiHelpers && _state) {
-            const hasBruteForceResults = _bruteForceManager.hasAnyResults ? _bruteForceManager.hasAnyResults() : Object.keys(_bruteForceManager.getAllResults() || {}).length > 0;
-             _uiHelpers.updateExportButtonStates(_state.getActiveTabId(), hasBruteForceResults, (_processedData?.length ?? 0) > 0);
+            const hasBruteForceResults = _bruteForceManager.getAllResults && Object.keys(_bruteForceManager.getAllResults() || {}).length > 0;
+            _uiHelpers.updateExportButtonStates(_state.getActiveTabId(), hasBruteForceResults, (_processedData?.length ?? 0) > 0);
         }
     }
 
@@ -201,7 +237,6 @@ const mainAppInterface = (() => {
             _viewRenderer.showTab(initialTabId);
         }
 
-
         const appVersionFooter = document.getElementById('app-version-footer');
         if (appVersionFooter && typeof APP_CONFIG !== 'undefined' && APP_CONFIG.APP_VERSION) {
             appVersionFooter.textContent = APP_CONFIG.APP_VERSION;
@@ -210,14 +245,14 @@ const mainAppInterface = (() => {
         if(kurzanleitungModalBody && typeof UI_TEXTS !== 'undefined' && UI_TEXTS.kurzanleitung && UI_TEXTS.kurzanleitung.content) {
             kurzanleitungModalBody.innerHTML = UI_TEXTS.kurzanleitung.content;
         }
-         const kurzanleitungModalLabel = document.getElementById('kurzanleitungModalLabel');
-         if(kurzanleitungModalLabel && typeof UI_TEXTS !== 'undefined' && UI_TEXTS.kurzanleitung && UI_TEXTS.kurzanleitung.title) {
+        const kurzanleitungModalLabel = document.getElementById('kurzanleitungModalLabel');
+        if(kurzanleitungModalLabel && typeof UI_TEXTS !== 'undefined' && UI_TEXTS.kurzanleitung && UI_TEXTS.kurzanleitung.title) {
             kurzanleitungModalLabel.innerHTML = `<i class="fas fa-info-circle me-2"></i> ${UI_TEXTS.kurzanleitung.title}`;
-         }
+        }
     }
 
     function _attachGlobalEventListeners() {
-        if(!_generalEventHandlers || !_uiHelpers || !_state || !_exportService || !_dataProcessor || !_t2CriteriaManager || !_bruteForceManager || !_statisticsService) {
+        if(!_generalEventHandlers || !_uiHelpers || !_state || !_exportService || !_dataProcessor || !_t2CriteriaManager || !_bruteForceManager || !_statisticsService || !_utils) {
             console.error("Einige Kernmodule für globale EventListener fehlen.");
             return;
         }
@@ -337,14 +372,14 @@ const mainAppInterface = (() => {
             }
         });
 
-        if (_auswertungEventHandlers) _auswertungEventHandlers.attachEventListeners(mainAppInterface);
-        if (_statistikEventHandlers) _statistikEventHandlers.attachEventListeners(mainAppInterface);
-        if (_praesentationEventHandlers) _praesentationEventHandlers.attachEventListeners(mainAppInterface);
-        if (_publikationEventHandlers) _publikationEventHandlers.attachEventListeners(mainAppInterface);
+        if (_auswertungEventHandlers && typeof _auswertungEventHandlers.attachEventListeners === 'function') _auswertungEventHandlers.attachEventListeners(mainAppInterface);
+        if (_statistikEventHandlers && typeof _statistikEventHandlers.attachEventListeners === 'function') _statistikEventHandlers.attachEventListeners(mainAppInterface);
+        if (_praesentationEventHandlers && typeof _praesentationEventHandlers.attachEventListeners === 'function') _praesentationEventHandlers.attachEventListeners(mainAppInterface);
+        if (_publikationEventHandlers && typeof _publikationEventHandlers.attachEventListeners === 'function') _publikationEventHandlers.attachEventListeners(mainAppInterface);
     }
 
     function _handleGlobalKollektivChange(newKollektiv, source = "user") {
-        if (!_state || !_dataProcessor || !_viewRenderer || !_uiHelpers) return false;
+        if (!_state || !_dataProcessor || !_viewRenderer || !_uiHelpers || !_utils) return false;
         if (_state.getCurrentKollektiv() === newKollektiv && source === "user") return false;
 
         _state.setCurrentKollektiv(newKollektiv);
@@ -352,7 +387,7 @@ const mainAppInterface = (() => {
         _state.setCurrentAuswertungTablePage(1);
         _updateGlobalUIState();
         _viewRenderer.refreshCurrentTab();
-        if (source === "user") _uiHelpers.showToast(`Kollektiv auf '${getKollektivDisplayName(newKollektiv)}' geändert.`, 'info');
+        if (source === "user") _uiHelpers.showToast(`Kollektiv auf '${_utils.getKollektivDisplayName(newKollektiv)}' geändert.`, 'info');
         return true;
     }
 
@@ -393,10 +428,10 @@ const mainAppInterface = (() => {
     }
 
     function _applyAndRefreshAll() {
-        if(!_t2CriteriaManager || !_state || !_globalRawData || !_viewRenderer || !_dataProcessor || !_uiHelpers) return;
+        if(!_t2CriteriaManager || !_state || !_globalRawData || !_viewRenderer || !_dataProcessor || !_uiHelpers || !_utils) return;
         _t2CriteriaManager.applyCriteria();
         _state.setUnsavedCriteriaChanges(false);
-        _processedData = _t2CriteriaManager.evaluateDataset(cloneDeep(_globalRawData), _t2CriteriaManager.getAppliedT2Criteria(), _t2CriteriaManager.getAppliedT2Logic());
+        _processedData = _t2CriteriaManager.evaluateDataset(utils.cloneDeep(_globalRawData), _t2CriteriaManager.getAppliedT2Criteria(), _t2CriteriaManager.getAppliedT2Logic());
         _updateGlobalUIState();
         _viewRenderer.refreshCurrentTab();
     }
@@ -416,7 +451,6 @@ const mainAppInterface = (() => {
             _setupInitialView();
             _attachGlobalEventListeners();
 
-
             if(appContainer) appContainer.classList.remove('d-none');
             if(loadingIndicator) loadingIndicator.style.display = 'none';
 
@@ -428,15 +462,15 @@ const mainAppInterface = (() => {
 
     return Object.freeze({
         init,
-        getGlobalData: () => _globalRawData ? cloneDeep(_globalRawData) : [],
-        getRawData: () => _globalRawData ? cloneDeep(_globalRawData) : [],
-        getProcessedData: () => _processedData ? cloneDeep(_processedData) : [],
-        renderView: (tabId) => { // Exponierte Methode für externe Aufrufe, falls nötig
+        getGlobalData: () => _globalRawData ? utils.cloneDeep(_globalRawData) : [],
+        getRawData: () => _globalRawData ? utils.cloneDeep(_globalRawData) : [],
+        getProcessedData: () => _processedData ? utils.cloneDeep(_processedData) : [],
+        renderView: (tabId) => {
             if (_viewRenderer && typeof _viewRenderer.showTab === 'function') {
                 _viewRenderer.showTab(tabId);
             }
         },
-        refreshCurrentTab: () => { // Exponierte Methode
+        refreshCurrentTab: () => {
              if (_viewRenderer && typeof _viewRenderer.refreshCurrentTab === 'function') {
                 _viewRenderer.refreshCurrentTab();
             }
