@@ -81,20 +81,25 @@ const dataProcessor = (() => {
 
     function processPatientData(rawData) {
         if (!Array.isArray(rawData)) {
-            console.error("processPatientData: Ungültige Eingabedaten, Array erwartet.");
+            console.error("dataProcessor.processPatientData: Ungültige Eingabedaten, Array erwartet.");
             return [];
         }
         if (typeof APP_CONFIG === 'undefined') {
-             console.error("processPatientData: APP_CONFIG ist nicht verfügbar.");
+             console.error("dataProcessor.processPatientData: APP_CONFIG ist nicht verfügbar.");
              return [];
         }
+        if (typeof PATIENT_DATA === 'undefined' && rawData.length === 0) {
+            console.warn("dataProcessor.processPatientData: PATIENT_DATA ist nicht definiert und rawData ist leer.");
+            return [];
+        }
+
 
         return rawData.map((patient, index) => processSinglePatient(patient, index, APP_CONFIG));
     }
 
     function filterDataByKollektiv(data, kollektiv) {
         if (!Array.isArray(data)) {
-            console.error("filterDataByKollektiv: Ungültige Eingabedaten, Array erwartet.");
+            console.error("dataProcessor.filterDataByKollektiv: Ungültige Eingabedaten, Array erwartet.");
             return [];
         }
         const filteredData = (kollektiv && kollektiv !== 'Gesamt')
@@ -106,7 +111,7 @@ const dataProcessor = (() => {
 
     function calculateHeaderStats(data, currentKollektiv) {
          const n = data?.length ?? 0;
-         const kollektivName = getKollektivDisplayName(currentKollektiv);
+         const kollektivName = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName(currentKollektiv) : currentKollektiv;
          const placeholder = '--';
 
          if (!Array.isArray(data) || n === 0) {
@@ -122,9 +127,11 @@ const dataProcessor = (() => {
              }
          });
 
+         const formatFn = typeof formatPercent === 'function' ? formatPercent : (val, dig) => `${(val * 100).toFixed(dig)}%`;
+
          const formatStatus = (pos, neg) => {
              const totalKnown = pos + neg;
-             return totalKnown > 0 ? `${formatPercent(pos / totalKnown, 1)} (+)` : placeholder;
+             return totalKnown > 0 ? `${formatFn(pos / totalKnown, 1)} (+)` : placeholder;
          };
 
          return {
@@ -142,10 +149,25 @@ const dataProcessor = (() => {
          };
     }
 
+    function sortData(data, key, direction = 'asc', subKey = null) {
+        if (!Array.isArray(data)) {
+            console.error("dataProcessor.sortData: Ungültige Eingabedaten, Array erwartet.");
+            return [];
+        }
+        if (typeof getSortFunction !== 'function') {
+            console.error("dataProcessor.sortData: Hilfsfunktion getSortFunction nicht verfügbar.");
+            return cloneDeep(data);
+        }
+
+        const sortFunction = getSortFunction(key, direction, subKey);
+        return [...data].sort(sortFunction);
+    }
+
     return Object.freeze({
         processPatientData,
         filterDataByKollektiv,
-        calculateHeaderStats
+        calculateHeaderStats,
+        sortData
     });
 
 })();
