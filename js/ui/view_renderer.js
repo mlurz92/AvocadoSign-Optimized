@@ -33,13 +33,20 @@ const viewRenderer = (() => {
                 ui_helpers.updateSortIcons('daten-table-header', sortState);
                 ui_helpers.initializeTooltips(tableBody);
             }
+        } else {
+            if (!tableBody) console.error("viewRenderer.renderDatenTab: tableBody 'daten-table-body' nicht gefunden.");
+            if (typeof tableRenderer === 'undefined' || typeof tableRenderer.createDatenTableRow !== 'function') console.error("viewRenderer.renderDatenTab: tableRenderer.createDatenTableRow nicht verfügbar.");
         }
+
         if (typeof paginationManager !== 'undefined' && paginationContainer) {
              paginationContainer.innerHTML = paginationManager.createPaginationControls('daten', currentPage, totalPages);
              paginationManager.attachPaginationEventListeners('daten', totalPages, (newPage) => {
                 if (typeof state !== 'undefined' && typeof state.setCurrentDatenTablePage === 'function') state.setCurrentDatenTablePage(newPage);
                 if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') mainAppInterface.refreshCurrentTab();
              });
+        } else {
+            if (typeof paginationManager === 'undefined') console.error("viewRenderer.renderDatenTab: paginationManager nicht verfügbar.");
+            if (!paginationContainer) console.warn("viewRenderer.renderDatenTab: paginationContainer 'daten-pagination-container' nicht gefunden.");
         }
     }
 
@@ -57,6 +64,9 @@ const viewRenderer = (() => {
         if (auswertungControlsContainer && !initializedTabs.has('auswertung-tab-controls')) {
             if (typeof ui_components !== 'undefined' && typeof ui_components.createT2CriteriaControls === 'function') {
                 auswertungControlsContainer.innerHTML = ui_components.createT2CriteriaControls(appliedCriteria, appliedLogic);
+            } else {
+                 if (!auswertungControlsContainer) console.error("viewRenderer.renderAuswertungTab: auswertungControlsContainer nicht gefunden.");
+                 if (typeof ui_components === 'undefined' || typeof ui_components.createT2CriteriaControls !== 'function') console.error("viewRenderer.renderAuswertungTab: ui_components.createT2CriteriaControls nicht verfügbar.");
             }
             initializedTabs.add('auswertung-tab-controls');
         }
@@ -71,6 +81,9 @@ const viewRenderer = (() => {
         if (bruteForceContainer && !initializedTabs.has('auswertung-tab-bf')) {
             if (typeof ui_components !== 'undefined' && typeof ui_components.createBruteForceCard === 'function') {
                 bruteForceContainer.innerHTML = ui_components.createBruteForceCard(currentKollektiv, bfWorkerAvailable);
+            } else {
+                if (!bruteForceContainer) console.error("viewRenderer.renderAuswertungTab: bruteForceContainer nicht gefunden.");
+                if (typeof ui_components === 'undefined' || typeof ui_components.createBruteForceCard !== 'function') console.error("viewRenderer.renderAuswertungTab: ui_components.createBruteForceCard nicht verfügbar.");
             }
             initializedTabs.add('auswertung-tab-bf');
         }
@@ -83,6 +96,9 @@ const viewRenderer = (() => {
             const evaluatedData = (typeof t2CriteriaManager !== 'undefined' && typeof t2CriteriaManager.evaluateDataset === 'function') ? t2CriteriaManager.evaluateDataset(cloneDeep(data), appliedCriteria, appliedLogic) : cloneDeep(data);
             const perfStats = (typeof statisticsService !== 'undefined' && typeof statisticsService.calculateDiagnosticPerformance === 'function') ? statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n') : null;
             t2MetricsOverviewContainer.innerHTML = ui_components.createT2MetricsOverview(perfStats, currentKollektiv);
+        } else {
+            if (!t2MetricsOverviewContainer) console.warn("viewRenderer.renderAuswertungTab: t2MetricsOverviewContainer nicht gefunden.");
+             if (typeof ui_components === 'undefined' || typeof ui_components.createT2MetricsOverview !== 'function') console.error("viewRenderer.renderAuswertungTab: ui_components.createT2MetricsOverview nicht verfügbar.");
         }
 
         if (auswertungTableBody && typeof tableRenderer !== 'undefined' && typeof tableRenderer.createAuswertungTableRow === 'function') {
@@ -103,6 +119,9 @@ const viewRenderer = (() => {
                 const defaultSort = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.DEFAULT_SETTINGS?.AUSWERTUNG_TABLE_SORT) ? APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT : { key: 'nr', direction: 'asc', subKey: null };
                 ui_helpers.updateSortIcons('auswertung-table-header', ((typeof state !== 'undefined' && typeof state.getCurrentAuswertungTableSort === 'function') ? state.getCurrentAuswertungTableSort() : null) || defaultSort);
             }
+        } else {
+            if (!auswertungTableBody) console.error("viewRenderer.renderAuswertungTab: auswertungTableBody nicht gefunden.");
+            if (typeof tableRenderer === 'undefined' || typeof tableRenderer.createAuswertungTableRow !== 'function') console.error("viewRenderer.renderAuswertungTab: tableRenderer.createAuswertungTableRow nicht verfügbar.");
         }
 
         if (typeof paginationManager !== 'undefined' && paginationContainer) {
@@ -111,6 +130,9 @@ const viewRenderer = (() => {
                 if(typeof state !== 'undefined' && typeof state.setCurrentAuswertungTablePage === 'function') state.setCurrentAuswertungTablePage(newPage);
                 if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') mainAppInterface.refreshCurrentTab();
              });
+        } else {
+            if (typeof paginationManager === 'undefined') console.error("viewRenderer.renderAuswertungTab: paginationManager nicht verfügbar.");
+            if (!paginationContainer) console.warn("viewRenderer.renderAuswertungTab: auswertung-pagination-container nicht gefunden.");
         }
         if (auswertungTabPane && typeof ui_helpers !== 'undefined') {
             ui_helpers.initializeTooltips(auswertungTabPane);
@@ -131,27 +153,34 @@ const viewRenderer = (() => {
                 const displayName = getDisplayNameFunc(k);
                 return `<option value="${k}">${displayName}</option>`;
             }).join('');
+            const toggleButtonTooltip = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.statistikToggleVergleich?.description) || 'Layout umschalten';
+            const kollektiv1Tooltip = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.statistikKollektiv1?.description) || 'Kollektiv 1 wählen';
+            const kollektiv2Tooltip = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.statistikKollektiv2?.description) || 'Kollektiv 2 wählen';
+
 
             statistikControlsContainer.innerHTML = `
                 <div class="row align-items-center">
                     <div class="col-md-auto mb-2 mb-md-0">
-                        <button class="btn btn-outline-primary btn-sm" id="statistik-toggle-vergleich" data-tippy-content="${(TOOLTIP_CONTENT.statistikToggleVergleich?.description || 'Layout umschalten')}"><i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv</button>
+                        <button class="btn btn-outline-primary btn-sm" id="statistik-toggle-vergleich" data-tippy-content="${toggleButtonTooltip}"><i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv</button>
                     </div>
                     <div class="col-md-auto mb-2 mb-md-0 d-none" id="statistik-kollektiv-select-1-container">
                         <label for="statistik-kollektiv-select-1" class="form-label form-label-sm visually-hidden">Kollektiv 1</label>
-                        <select class="form-select form-select-sm" id="statistik-kollektiv-select-1" data-tippy-content="${(TOOLTIP_CONTENT.statistikKollektiv1?.description || 'Kollektiv 1 wählen')}">
+                        <select class="form-select form-select-sm" id="statistik-kollektiv-select-1" data-tippy-content="${kollektiv1Tooltip}">
                            ${selectOptionsHTML}
                         </select>
                     </div>
                     <div class="col-md-auto mb-2 mb-md-0 d-none" id="statistik-kollektiv-select-2-container">
                         <label for="statistik-kollektiv-select-2" class="form-label form-label-sm visually-hidden">Kollektiv 2</label>
-                        <select class="form-select form-select-sm" id="statistik-kollektiv-select-2" data-tippy-content="${(TOOLTIP_CONTENT.statistikKollektiv2?.description || 'Kollektiv 2 wählen')}">
+                        <select class="form-select form-select-sm" id="statistik-kollektiv-select-2" data-tippy-content="${kollektiv2Tooltip}">
                             ${selectOptionsHTML}
                         </select>
                     </div>
                 </div>`;
             initializedTabs.add('statistik-tab-controls');
+        } else if (!statistikControlsContainer) {
+            console.error("viewRenderer.renderStatistikTab: statistikControlsContainer nicht gefunden.");
         }
+
         if (typeof ui_helpers !== 'undefined') {
             ui_helpers.updateStatistikSelectorsUI(statistikLayout, statistikKollektiv1, statistikKollektiv2);
         }
@@ -168,6 +197,8 @@ const viewRenderer = (() => {
                 t2CriteriaManager.getAppliedT2Criteria(),
                 t2CriteriaManager.getAppliedT2Logic()
             );
+        } else {
+            console.error("viewRenderer.renderStatistikTab: Abhängigkeiten für statistikTabLogic.displayStatistics nicht erfüllt.");
         }
         if (spinner) spinner.classList.add('d-none');
         if (statistikTabPane && typeof ui_helpers !== 'undefined') {
@@ -187,11 +218,14 @@ const viewRenderer = (() => {
                  `<option value="${set.id}" ${set.id === currentStudyId ? 'selected' : ''}>${set.name || set.id}</option>`
             ).join('');
             const appliedCriteriaDisplayName = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.SPECIAL_IDS?.APPLIED_CRITERIA_DISPLAY_NAME) ? APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME : "Eingestellte Kriterien";
+            const appliedCriteriaId = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.SPECIAL_IDS?.APPLIED_CRITERIA_STUDY_ID) ? APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID : "applied_criteria";
+            const viewSelectTooltip = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.praesentation?.viewSelect?.description) || 'Ansicht wählen';
+            const studySelectTooltip = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.praesentation?.studySelect?.description) || 'T2-Basis wählen';
 
             praesControlsContainer.innerHTML = `
                 <div class="row align-items-center justify-content-center">
                     <div class="col-md-auto mb-2 mb-md-0">
-                         <div class="btn-group btn-group-sm" role="group" aria-label="Präsentationsansicht wählen" data-tippy-content="${(TOOLTIP_CONTENT.praesentation?.viewSelect?.description || 'Ansicht wählen')}">
+                         <div class="btn-group btn-group-sm" role="group" aria-label="Präsentationsansicht wählen" data-tippy-content="${viewSelectTooltip}">
                             <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as" value="as-pur" ${currentView === 'as-pur' ? 'checked' : ''} autocomplete="off">
                             <label class="btn btn-outline-primary" for="praes-ansicht-as">Avocado Sign (Performance)</label>
                             <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as-vs-t2" value="as-vs-t2" ${currentView === 'as-vs-t2' ? 'checked' : ''} autocomplete="off">
@@ -200,14 +234,17 @@ const viewRenderer = (() => {
                     </div>
                     <div class="col-md-auto mb-2 mb-md-0" id="praes-study-select-container" style="display: ${currentView === 'as-vs-t2' ? '' : 'none'};">
                         <label for="praes-study-select" class="form-label form-label-sm visually-hidden">T2-Basis</label>
-                        <select class="form-select form-select-sm" id="praes-study-select" data-tippy-content="${(TOOLTIP_CONTENT.praesentation?.studySelect?.description || 'T2-Basis wählen')}">
-                            <option value="${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID}" ${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID === currentStudyId ? 'selected' : ''}>${appliedCriteriaDisplayName}</option>
+                        <select class="form-select form-select-sm" id="praes-study-select" data-tippy-content="${studySelectTooltip}">
+                            <option value="${appliedCriteriaId}" ${appliedCriteriaId === currentStudyId ? 'selected' : ''}>${appliedCriteriaDisplayName}</option>
                             ${studyOptions}
                         </select>
                     </div>
                 </div>`;
             initializedTabs.add('praesentation-tab-controls');
+        } else if (!praesControlsContainer) {
+            console.error("viewRenderer.renderPraesentationTab: praesControlsContainer nicht gefunden.");
         }
+
         if (typeof ui_helpers !== 'undefined') {
             ui_helpers.updatePresentationViewSelectorUI(currentView);
         }
@@ -219,6 +256,8 @@ const viewRenderer = (() => {
             const appliedCriteria = t2CriteriaManager.getAppliedT2Criteria();
             const appliedLogic = t2CriteriaManager.getAppliedT2Logic();
             praesentationTabLogic.renderPresentation(globalData, currentView, currentStudyId, currentGlobalKollektiv, appliedCriteria, appliedLogic);
+        } else {
+            console.error("viewRenderer.renderPraesentationTab: Abhängigkeiten für praesentationTabLogic.renderPresentation nicht erfüllt.");
         }
 
         if(spinner) spinner.classList.add('d-none');
@@ -236,6 +275,8 @@ const viewRenderer = (() => {
             if (!initializedTabs.has('publikation-tab-header')) {
                  if (typeof ui_components !== 'undefined' && typeof ui_components.createPublikationTabHeader === 'function') {
                     publikationTabPane.innerHTML = ui_components.createPublikationTabHeader();
+                 } else {
+                    console.error("viewRenderer.renderPublikationTab: ui_components.createPublikationTabHeader nicht verfügbar.");
                  }
                  initializedTabs.add('publikation-tab-header');
             }
@@ -254,11 +295,17 @@ const viewRenderer = (() => {
                 ui_helpers.updatePublikationUI(currentLang, currentSection, currentPublicationBFMetric);
 
                 const sectionToRender = currentSection || PUBLICATION_CONFIG.defaultSubSection;
-                publikationTabLogic.getRenderedSectionContent(sectionToRender, currentLang, currentGlobalKollektiv);
+                if (typeof publikationTabLogic.getRenderedSectionContent === 'function') {
+                    publikationTabLogic.getRenderedSectionContent(sectionToRender, currentLang, currentGlobalKollektiv);
+                }
                 if(typeof publikationTabLogic.updateDynamicChartsForPublicationTab === 'function') {
                     publikationTabLogic.updateDynamicChartsForPublicationTab(sectionToRender, currentLang, currentGlobalKollektiv);
                 }
+            } else {
+                 console.error("viewRenderer.renderPublikationTab: Abhängigkeiten für publikationTabLogic nicht erfüllt.");
             }
+        } else {
+             console.error("viewRenderer.renderPublikationTab: publikationTabPane nicht gefunden.");
         }
 
         if (spinner) spinner.classList.add('d-none');
@@ -274,6 +321,8 @@ const viewRenderer = (() => {
         if (exportContainer && !initializedTabs.has('export-tab-content')) {
             if (typeof ui_components !== 'undefined' && typeof ui_components.createExportOptions === 'function') {
                 exportContainer.innerHTML = ui_components.createExportOptions(currentKollektiv);
+            } else {
+                 console.error("viewRenderer.renderExportTab: ui_components.createExportOptions nicht verfügbar.");
             }
             initializedTabs.add('export-tab-content');
         } else if (exportContainer && initializedTabs.has('export-tab-content')) {
@@ -281,13 +330,18 @@ const viewRenderer = (() => {
             if(exportDescEl && typeof getKollektivDisplayName === 'function' && typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.exportTab?.description) {
                 exportDescEl.innerHTML = TOOLTIP_CONTENT.exportTab.description.replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(currentKollektiv)}</strong>`);
             }
+        } else if (!exportContainer) {
+            console.error("viewRenderer.renderExportTab: exportContainer nicht gefunden.");
         }
+
 
         if (typeof exportService !== 'undefined' && typeof bruteForceManager !== 'undefined' &&
             typeof mainAppInterface !== 'undefined' && typeof ui_helpers !== 'undefined' && typeof state !== 'undefined') {
             const hasBruteForceResults = bruteForceManager.hasAnyResults ? bruteForceManager.hasAnyResults() : Object.keys(bruteForceManager.getAllResults() || {}).length > 0;
             const canExportDataDependent = (mainAppInterface.getGlobalData()?.length ?? 0) > 0;
             ui_helpers.updateExportButtonStates(state.getActiveTabId(), hasBruteForceResults, canExportDataDependent);
+        } else {
+             console.warn("viewRenderer.renderExportTab: Abhängigkeiten für updateExportButtonStates nicht vollständig erfüllt.");
         }
         if (exportTabPane && typeof ui_helpers !== 'undefined') {
             ui_helpers.initializeTooltips(exportTabPane);
@@ -317,7 +371,7 @@ const viewRenderer = (() => {
         if (targetNavLink && targetTabPane && typeof state !== 'undefined' && typeof ui_helpers !== 'undefined' &&
             typeof bruteForceManager !== 'undefined' && typeof mainAppInterface !== 'undefined') {
             state.setActiveTabId(tabId);
-            refreshCurrentTab(tabId, true);
+            refreshCurrentTab(tabId, true); // Call this module's refreshCurrentTab
             const hasBruteForceResults = bruteForceManager.hasAnyResults ? bruteForceManager.hasAnyResults() : Object.keys(bruteForceManager.getAllResults() || {}).length > 0;
             ui_helpers.updateExportButtonStates(tabId, hasBruteForceResults, (mainAppInterface.getGlobalData()?.length ?? 0) > 0);
             setTimeout(() => {
@@ -332,19 +386,23 @@ const viewRenderer = (() => {
 
     function refreshCurrentTab(activeTabId = (typeof state !== 'undefined' && typeof state.getActiveTabId === 'function' ? state.getActiveTabId() : null), isTabSwitch = false) {
         if (!activeTabId) {
-             console.warn("refreshCurrentTab: Keine aktive Tab-ID verfügbar.");
+             console.warn("viewRenderer.refreshCurrentTab: Keine aktive Tab-ID verfügbar.");
              return;
         }
         const currentKollektiv = (typeof state !== 'undefined' && typeof state.getCurrentKollektiv === 'function') ? state.getCurrentKollektiv() : ( (typeof APP_CONFIG !== 'undefined') ? APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV : 'Gesamt');
 
         if (typeof mainAppInterface === 'undefined' || typeof mainAppInterface.getGlobalData !== 'function') {
-            console.warn("mainAppInterface oder globale Daten nicht verfügbar in refreshCurrentTab.");
+            console.warn("viewRenderer.refreshCurrentTab: mainAppInterface oder globale Daten nicht verfügbar.");
             return;
         }
         const globalData = mainAppInterface.getGlobalData();
 
         if (!globalData || typeof dataProcessor === 'undefined' || typeof dataProcessor.filterDataByKollektiv !== 'function' || typeof dataProcessor.sortData !== 'function') {
-            console.warn("Globale Daten oder dataProcessor-Funktionen nicht verfügbar für Tab-Aktualisierung.");
+            console.warn("viewRenderer.refreshCurrentTab: Globale Daten oder dataProcessor-Funktionen nicht verfügbar.");
+            if (isTabSwitch) { // Prevent infinite loop if called during tab switch with missing deps
+                const targetPane = document.getElementById(activeTabId);
+                if (targetPane) targetPane.innerHTML = "<p class='text-danger p-3'>Fehler beim Laden der Tab-Daten: Kernmodule fehlen.</p>";
+            }
             return;
         }
         const filteredData = dataProcessor.filterDataByKollektiv(globalData, currentKollektiv);
@@ -377,12 +435,14 @@ const viewRenderer = (() => {
                 break;
             case 'publikation-tab-pane':
                 if (typeof state !== 'undefined' && typeof state.getCurrentPublikationSection === 'function') {
-                    renderPublikationTab(state.getCurrentPublikationSection(), state.getCurrentPublikationLang(), currentKollektiv);
+                    renderPublikationTab(state.getCurrentPublikationSection(), state.getCurrentPublikationLang(), currentGlobalKollektiv);
                 }
                 break;
             case 'export-tab-pane':
                 renderExportTab(currentKollektiv);
                 break;
+            default:
+                console.warn(`viewRenderer.refreshCurrentTab: Unbekannte Tab-ID '${activeTabId}'`);
         }
          if (!isTabSwitch && typeof ui_helpers !== 'undefined') {
              const activeTabElement = document.getElementById(activeTabId);
