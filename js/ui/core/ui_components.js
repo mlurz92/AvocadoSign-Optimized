@@ -2,9 +2,9 @@ const uiComponents = (() => {
 
     function _createHeaderButtonHTML(buttons, targetId, defaultTitle = 'Element') {
         let headerButtonHtml = '';
-        if (buttons && buttons.length > 0 && targetId) {
+        if (buttons && Array.isArray(buttons) && buttons.length > 0 && targetId) {
             headerButtonHtml = buttons.map(btn => {
-                const btnId = btn.id || `dl-${targetId.replace(/[^a-zA-Z0-9_-]/g, '')}-${btn.format || 'action'}`;
+                const btnId = btn.id || `dl-${String(targetId).replace(/[^a-zA-Z0-9_-]/g, '')}-${btn.format || 'action'}`;
                 const iconClass = btn.icon || 'fa-download';
                 let tooltip = btn.tooltip || `Als ${String(btn.format || 'Aktion').toUpperCase()} herunterladen`;
 
@@ -12,21 +12,25 @@ const uiComponents = (() => {
                 const safeChartName = String(btn.chartName || safeDefaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
                 const safeTableName = String(btn.tableName || safeDefaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
 
-                if (btn.format === 'png' && btn.chartId && TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description) {
-                    tooltip = TOOLTIP_CONTENT.exportTab.chartSinglePNG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
-                } else if (btn.format === 'svg' && btn.chartId && TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description) {
-                    tooltip = TOOLTIP_CONTENT.exportTab.chartSingleSVG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
-                } else if (btn.format === 'png' && btn.tableId && TOOLTIP_CONTENT.exportTab.tableSinglePNG?.description) {
-                    tooltip = TOOLTIP_CONTENT.exportTab.tableSinglePNG.description.replace('{TableName}', `<strong>${safeTableName}</strong>`);
+                if (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.exportTab) {
+                    if (btn.format === 'png' && btn.chartId && TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description) {
+                        tooltip = TOOLTIP_CONTENT.exportTab.chartSinglePNG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
+                    } else if (btn.format === 'svg' && btn.chartId && TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description) {
+                        tooltip = TOOLTIP_CONTENT.exportTab.chartSingleSVG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
+                    } else if (btn.format === 'png' && btn.tableId && TOOLTIP_CONTENT.exportTab.tableSinglePNG?.description) {
+                        tooltip = TOOLTIP_CONTENT.exportTab.tableSinglePNG.description.replace('{TableName}', `<strong>${safeTableName}</strong>`);
+                    }
                 }
+
 
                 const dataAttributes = [];
                 if (btn.chartId) dataAttributes.push(`data-chart-id="${btn.chartId}"`);
                 if (btn.tableId) dataAttributes.push(`data-table-id="${btn.tableId}"`);
-                
+
                 if (btn.tableName) dataAttributes.push(`data-table-name="${safeTableName.replace(/\s/g, '_')}"`);
-                else if (btn.chartId) dataAttributes.push(`data-chart-name="${safeChartName.replace(/\s/g, '_')}"`);
+                else if (btn.chartName) dataAttributes.push(`data-chart-name="${safeChartName.replace(/\s/g, '_')}"`);
                 else dataAttributes.push(`data-default-name="${safeDefaultTitle.replace(/\s/g, '_')}"`);
+
 
                 if (btn.format) dataAttributes.push(`data-format="${btn.format}"`);
 
@@ -37,11 +41,15 @@ const uiComponents = (() => {
     }
 
     function createDashboardCard(title, content, chartId = null, cardClasses = '', headerClasses = '', bodyClasses = '', downloadButtons = []) {
-        const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, chartId || title.replace(/[^a-z0-9]/gi, '_'), title);
-        const tooltipKey = chartId ? chartId.replace(/^chart-dash-/, '') : title.toLowerCase().replace(/\s+/g, '');
-        let tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik[tooltipKey]?.description || title || '';
-        if(tooltipKey === 'ageDistribution' || tooltipKey === 'alter') tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.chartAge?.description || title;
-        else if(tooltipKey === 'genderDistribution' || tooltipKey === 'geschlecht') tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.chartGender?.description || title;
+        const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, chartId || String(title).replace(/[^a-z0-9]/gi, '_'), title);
+        const tooltipKey = chartId ? chartId.replace(/^chart-dash-/, '') : String(title).toLowerCase().replace(/\s+/g, '');
+        let tooltipContent = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.deskriptiveStatistik && TOOLTIP_CONTENT.deskriptiveStatistik[tooltipKey]?.description) || title || '';
+
+        if (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.deskriptiveStatistik) {
+            if(tooltipKey === 'ageDistribution' || tooltipKey === 'alter') tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.chartAge?.description || title;
+            else if(tooltipKey === 'genderDistribution' || tooltipKey === 'geschlecht') tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.chartGender?.description || title;
+        }
+
 
         return `
             <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 dashboard-card-col ${cardClasses}">
@@ -59,14 +67,16 @@ const uiComponents = (() => {
     }
 
     function createT2CriteriaControls(initialCriteria, initialLogic) {
-        if (!initialCriteria || !initialLogic) return '<p class="text-danger">Fehler: Initialkriterien konnten nicht geladen werden.</p>';
+        if (!initialCriteria || !initialLogic || typeof APP_CONFIG === 'undefined' || typeof getDefaultT2Criteria !== 'function' || typeof ui_helpers === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined') {
+            return '<p class="text-danger">Fehler: Initialkriterien oder benötigte Konfigurationen konnten nicht geladen werden.</p>';
+        }
         const logicChecked = initialLogic === 'ODER';
         const defaultCriteriaForSize = getDefaultT2Criteria();
         const sizeThreshold = initialCriteria.size?.threshold ?? defaultCriteriaForSize?.size?.threshold ?? 5.0;
         const sizeMin = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min;
         const sizeMax = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max;
         const sizeStep = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step;
-        const formattedThreshold = formatNumber(sizeThreshold, 1, '5.0', true);
+        const formattedThreshold = typeof formatNumber === 'function' ? formatNumber(sizeThreshold, 1, '5.0', true) : String(sizeThreshold.toFixed(1));
 
         const createButtonOptions = (key, isChecked, criterionLabel) => {
             const valuesKey = key.toUpperCase() + '_VALUES';
@@ -95,7 +105,7 @@ const uiComponents = (() => {
                     </div>
                 </div>`;
         };
-
+        const currentFormattedThreshold = typeof formatNumber === 'function' ? formatNumber(sizeThreshold, 1) : String(sizeThreshold.toFixed(1));
         return `
             <div class="card criteria-card" id="t2-criteria-card">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -112,7 +122,7 @@ const uiComponents = (() => {
                             <div class="d-flex align-items-center flex-wrap">
                                  <span class="me-1 small text-muted">≥</span>
                                  <input type="range" class="form-range criteria-range flex-grow-1 me-2" id="range-size" min="${sizeMin}" max="${sizeMax}" step="${sizeStep}" value="${formattedThreshold}" ${isChecked ? '' : 'disabled'} data-tippy-content="Schwellenwert für Kurzachsendurchmesser (≥) einstellen.">
-                                 <span class="criteria-value-display text-end me-1 fw-bold" id="value-size">${formatNumber(sizeThreshold, 1)}</span><span class="me-2 small text-muted">mm</span>
+                                 <span class="criteria-value-display text-end me-1 fw-bold" id="value-size">${currentFormattedThreshold}</span><span class="me-2 small text-muted">mm</span>
                                  <input type="number" class="form-control form-control-sm criteria-input-manual" id="input-size" min="${sizeMin}" max="${sizeMax}" step="${sizeStep}" value="${formattedThreshold}" ${isChecked ? '' : 'disabled'} style="width: 70px;" aria-label="Größe manuell eingeben" data-tippy-content="Schwellenwert manuell eingeben oder anpassen.">
                             </div>
                         `)}
@@ -137,6 +147,9 @@ const uiComponents = (() => {
     }
 
     function createBruteForceCard(currentKollektivName, workerAvailable) {
+        if (typeof APP_CONFIG === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined' || typeof getKollektivDisplayName !== 'function') {
+             return '<p class="text-danger">Fehler: Brute-Force-Konfigurationen konnten nicht geladen werden.</p>';
+        }
         const disabledAttribute = !workerAvailable ? 'disabled' : '';
         const startButtonText = workerAvailable ? '<i class="fas fa-cogs me-1"></i> Optimierung starten' : '<i class="fas fa-times-circle me-1"></i> Worker nicht verfügbar';
         const statusText = workerAvailable ? 'Bereit.' : 'Worker konnte nicht initialisiert werden.';
@@ -216,14 +229,15 @@ const uiComponents = (() => {
     }
 
     function createStatistikCard(id, title, content = '', addPadding = true, tooltipKey = null, downloadButtons = [], tableId = null) {
-        const cardTooltipHtml = tooltipKey && TOOLTIP_CONTENT[tooltipKey]?.cardTitle
-            ? `data-tippy-content="${(TOOLTIP_CONTENT[tooltipKey].cardTitle || title).replace('[KOLLEKTIV]', '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>')}"`
-            : `data-tippy-content="${title}"`;
+        let cardTooltipHtml = `data-tippy-content="${title}"`;
+        if (tooltipKey && typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT[tooltipKey]?.cardTitle) {
+            cardTooltipHtml = `data-tippy-content="${(TOOLTIP_CONTENT[tooltipKey].cardTitle || title).replace('[KOLLEKTIV]', '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>')}"`;
+        }
 
         const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, id + '-content', title);
-
         let finalButtonHtml = headerButtonHtml;
-        if (APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT && tableId && !downloadButtons.some(b => b.tableId === tableId)) {
+
+        if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT && tableId && !downloadButtons.some(b => b.tableId === tableId)) {
              const pngExportButton = { id: `dl-card-${id}-${tableId}-png`, icon: 'fa-image', tooltip: `Tabelle '${title}' als PNG herunterladen.`, format: 'png', tableId: tableId, tableName: title };
              finalButtonHtml += _createHeaderButtonHTML([pngExportButton], tableId, title);
         }
@@ -247,6 +261,9 @@ const uiComponents = (() => {
     }
 
     function createExportOptions(currentKollektiv) {
+        if (typeof APP_CONFIG === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined' || typeof getCurrentDateString !== 'function' || typeof getKollektivDisplayName !== 'function') {
+            return '<p class="text-danger">Fehler: Export-Konfigurationen konnten nicht geladen werden.</p>';
+        }
         const dateStr = getCurrentDateString(APP_CONFIG.EXPORT_SETTINGS.DATE_FORMAT);
         const safeKollektiv = getKollektivDisplayName(currentKollektiv).replace(/[^a-z0-9_-]/gi, '_').replace(/_+/g, '_');
         const fileNameTemplate = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TEMPLATE;
@@ -310,8 +327,10 @@ const uiComponents = (() => {
     }
 
     function createT2MetricsOverview(stats, kollektivName) {
-        const displayKollektivName = getKollektivDisplayName(kollektivName);
-        const cardTooltip = (TOOLTIP_CONTENT.t2MetricsOverview.cardTitle || 'Kurzübersicht der diagnostischen Güte (T2 vs. N) für Kollektiv [KOLLEKTIV].').replace('[KOLLEKTIV]', `<strong>${displayKollektivName}</strong>`);
+        const getDisplayNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
+        const displayKollektivName = getDisplayNameFunc(kollektivName);
+        const cardTooltip = ((typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.t2MetricsOverview?.cardTitle) || 'Kurzübersicht der diagnostischen Güte (T2 vs. N) für Kollektiv [KOLLEKTIV].').replace('[KOLLEKTIV]', `<strong>${displayKollektivName}</strong>`);
+
         if (!stats || !stats.matrix || stats.matrix.rp === undefined) {
              return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)</div><div class="card-body p-2"><p class="m-0 text-muted small">Metriken für T2 nicht verfügbar für Kollektiv ${displayKollektivName}.</p></div></div>`;
         }
@@ -320,16 +339,17 @@ const uiComponents = (() => {
         const na = '--';
 
         let contentHTML = '<div class="d-flex flex-wrap justify-content-around small text-center">';
+        const statMetricTooltips = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.statMetrics) || {};
 
         metrics.forEach((key, index) => {
             const metricData = stats[key];
-            const metricDescription = (TOOLTIP_CONTENT.t2MetricsOverview?.[key] || TOOLTIP_CONTENT.statMetrics[key]?.description || key).replace(/\[METHODE\]/g, '<strong>T2 (angewandt)</strong>');
-            const interpretationHTML = ui_helpers.getMetricInterpretationHTML(key, metricData, 'T2 (angewandt)', displayKollektivName);
-            let digits = (key === 'f1' || key === 'auc' || key === 'youden') ? (APP_CONFIG.STATISTICAL_CONSTANTS.METRIC_RATE_DECIMALS || 3) : (APP_CONFIG.STATISTICAL_CONSTANTS.METRIC_PERCENT_DECIMALS || 1);
+            const metricDescription = ( (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.t2MetricsOverview?.[key]) || statMetricTooltips[key]?.description || key).replace(/\[METHODE\]/g, '<strong>T2 (angewandt)</strong>');
+            const interpretationHTML = (typeof ui_helpers !== 'undefined' && typeof ui_helpers.getMetricInterpretationHTML === 'function') ? ui_helpers.getMetricInterpretationHTML(key, metricData, 'T2 (angewandt)', displayKollektivName) : 'Keine Interpretation verfügbar.';
+            let digits = (key === 'f1' || key === 'auc' || key === 'youden') ? ((typeof APP_CONFIG !== 'undefined' && APP_CONFIG.STATISTICAL_CONSTANTS?.METRIC_RATE_DECIMALS) || 3) : ((typeof APP_CONFIG !== 'undefined' && APP_CONFIG.STATISTICAL_CONSTANTS?.METRIC_PERCENT_DECIMALS) || 1);
             if (key === 'lr_pos' || key === 'lr_neg') digits = 2;
             const isPercent = ['sens', 'spez', 'ppv', 'npv', 'acc'].includes(key);
 
-            const formattedValue = formatCI(metricData?.value, metricData?.ci?.lower, metricData?.ci?.upper, digits, isPercent, na);
+            const formattedValue = typeof formatCI === 'function' ? formatCI(metricData?.value, metricData?.ci?.lower, metricData?.ci?.upper, digits, isPercent, na) : na;
 
             contentHTML += `
                 <div class="p-1 flex-fill bd-highlight ${index > 0 ? 'border-start' : ''}">
@@ -344,29 +364,31 @@ const uiComponents = (() => {
     }
 
     function createBruteForceModalContent(resultsData) {
-        const { results, metric, kollektiv, duration, totalTested, nGesamt, nPlus, nMinus } = resultsData;
-        if (!results || results.length === 0) return '<p class="text-muted">Keine Ergebnisse gefunden.</p>';
+        if (!resultsData || !resultsData.results || resultsData.results.length === 0) return '<p class="text-muted">Keine Ergebnisse gefunden.</p>';
 
         const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
         const getKollektivNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
+        const { results, metric, kollektiv, duration, totalTested, nGesamt, nPlus, nMinus } = resultsData;
         const bestResult = results[0];
         const kollektivName = getKollektivNameFunc(kollektiv);
         const metricDisplayName = metric === 'PPV' ? 'PPV' : metric === 'NPV' ? 'NPV' : metric;
-        const resultContainerTooltip = (TOOLTIP_CONTENT.bruteForceResult.description || 'Ergebnis der Optimierung.')
-                                      .replace('[N_GESAMT]', formatNumber(nGesamt,0,'?'))
-                                      .replace('[N_PLUS]', formatNumber(nPlus,0,'?'))
-                                      .replace('[N_MINUS]', formatNumber(nMinus,0,'?'));
+        const resultContainerTooltip = ((typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.bruteForceResult?.description) || 'Ergebnis der Optimierung.')
+                                      .replace('[N_GESAMT]', typeof formatNumber === 'function' ? formatNumber(nGesamt,0,'?') : '?')
+                                      .replace('[N_PLUS]', typeof formatNumber === 'function' ? formatNumber(nPlus,0,'?') : '?')
+                                      .replace('[N_MINUS]', typeof formatNumber === 'function' ? formatNumber(nMinus,0,'?') : '?');
+        const kollektivStatsTooltip = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.bruteForceResult?.kollektivStats) || 'Statistik des für diese Optimierung verwendeten Kollektivs.';
+
 
         let tableHTML = `
             <div class="alert alert-light small p-2 mb-3" data-tippy-content="${resultContainerTooltip}">
                 <p class="mb-1"><strong>Beste Kombi für '${metricDisplayName}' (Koll.: '${kollektivName}'):</strong></p>
                 <ul class="list-unstyled mb-1">
-                    <li><strong>Wert:</strong> ${formatNumber(bestResult.metricValue, 4)}</li>
+                    <li><strong>Wert:</strong> ${typeof formatNumber === 'function' ? formatNumber(bestResult.metricValue, 4) : bestResult.metricValue}</li>
                     <li><strong>Logik:</strong> ${bestResult.logic.toUpperCase()}</li>
                     <li><strong>Kriterien:</strong> ${formatCriteriaFunc(bestResult.criteria, bestResult.logic)}</li>
                 </ul>
-                <p class="mb-1 text-muted"><small>Dauer: ${formatNumber((duration || 0) / 1000, 1)}s | Getestet: ${formatNumber(totalTested, 0)}</small></p>
-                <p class="mb-0 text-muted" data-tippy-content="${TOOLTIP_CONTENT.bruteForceResult.kollektivStats || 'Statistik des für diese Optimierung verwendeten Kollektivs.'}"><small>Kollektiv N=${formatNumber(nGesamt,0,'N/A')} (N+: ${formatNumber(nPlus,0,'N/A')}, N-: ${formatNumber(nMinus,0,'N/A')})</small></p>
+                <p class="mb-1 text-muted"><small>Dauer: ${typeof formatNumber === 'function' ? formatNumber((duration || 0) / 1000, 1) : (duration/1000)}s | Getestet: ${typeof formatNumber === 'function' ? formatNumber(totalTested, 0) : totalTested}</small></p>
+                <p class="mb-0 text-muted" data-tippy-content="${kollektivStatsTooltip}"><small>Kollektiv N=${typeof formatNumber === 'function' ? formatNumber(nGesamt,0,'N/A') : 'N/A'} (N+: ${typeof formatNumber === 'function' ? formatNumber(nPlus,0,'N/A') : 'N/A'}, N-: ${typeof formatNumber === 'function' ? formatNumber(nMinus,0,'N/A') : 'N/A'})</small></p>
             </div>
             <h6 class="mb-2">Top Ergebnisse (inkl. identischer Werte):</h6>
             <div class="table-responsive">
@@ -410,11 +432,11 @@ const uiComponents = (() => {
             tableHTML += `
                 <tr>
                     <td>${currentRank}.</td>
-                    <td>${formatNumber(result.metricValue, 4)}</td>
-                    <td>${result.sens !== undefined ? formatPercent(result.sens, 1) : 'N/A'}</td>
-                    <td>${result.spez !== undefined ? formatPercent(result.spez, 1) : 'N/A'}</td>
-                    <td>${result.ppv !== undefined ? formatPercent(result.ppv, 1) : 'N/A'}</td>
-                    <td>${result.npv !== undefined ? formatPercent(result.npv, 1) : 'N/A'}</td>
+                    <td>${typeof formatNumber === 'function' ? formatNumber(result.metricValue, 4) : result.metricValue}</td>
+                    <td>${result.sens !== undefined && typeof formatPercent === 'function' ? formatPercent(result.sens, 1) : 'N/A'}</td>
+                    <td>${result.spez !== undefined && typeof formatPercent === 'function' ? formatPercent(result.spez, 1) : 'N/A'}</td>
+                    <td>${result.ppv !== undefined && typeof formatPercent === 'function' ? formatPercent(result.ppv, 1) : 'N/A'}</td>
+                    <td>${result.npv !== undefined && typeof formatPercent === 'function' ? formatPercent(result.npv, 1) : 'N/A'}</td>
                     <td>${result.logic.toUpperCase()}</td>
                     <td>${formatCriteriaFunc(result.criteria, result.logic)}</td>
                 </tr>`;
@@ -429,6 +451,9 @@ const uiComponents = (() => {
     }
 
     function createPublikationTabHeader() {
+        if (typeof state === 'undefined' || typeof PUBLICATION_CONFIG === 'undefined' || typeof UI_TEXTS === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined') {
+            return '<p class="text-danger">Fehler: Publikations-Header Konfigurationen konnten nicht geladen werden.</p>';
+        }
         const lang = state.getCurrentPublikationLang() || PUBLICATION_CONFIG.defaultLanguage;
         const currentBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
@@ -438,7 +463,7 @@ const uiComponents = (() => {
             if(mainSection.subSections && mainSection.subSections.length > 0){
                 subSectionLinks = '<ul class="nav flex-column ps-3 nav-pills-nested">';
                 mainSection.subSections.forEach(subSect => {
-                     const subSectionTooltip = TOOLTIP_CONTENT.publikationTabTooltips[mainSection.id]?.[subSect.id] || subSect.label;
+                     const subSectionTooltip = (TOOLTIP_CONTENT.publikationTabTooltips[mainSection.id] && TOOLTIP_CONTENT.publikationTabTooltips[mainSection.id][subSect.id]) || subSect.label;
                      subSectionLinks += `
                         <li class="nav-item">
                             <a class="nav-link py-1 publikation-section-link" href="#" data-section-id="${subSect.id}" data-tippy-content="${subSectionTooltip}">
