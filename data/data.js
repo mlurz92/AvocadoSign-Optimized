@@ -1,4 +1,4 @@
-const patientDataRaw = [
+const PATIENT_DATA = [
   {
     nr: 1,
     name: "John",
