@@ -1,110 +1,95 @@
 const viewRenderer = (() => {
     const initializedTabs = new Set();
 
-    function _initializeTab(tabId, rendererFunction, ...args) {
-        const tabPane = document.getElementById(tabId);
-        if (tabPane && !initializedTabs.has(tabId) && typeof rendererFunction === 'function') {
-            rendererFunction(...args);
-            initializedTabs.add(tabId);
-        } else if (tabPane && initializedTabs.has(tabId) && typeof rendererFunction === 'function') {
-            rendererFunction(...args);
+    function _checkDependencies(functionName, requiredModules) {
+        for (const moduleName in requiredModules) {
+            if (typeof requiredModules[moduleName] === 'undefined' || requiredModules[moduleName] === null) {
+                console.error(`viewRenderer.${functionName}: Abhängigkeit '${moduleName}' ist nicht verfügbar.`);
+                return false;
+            }
+            if (typeof requiredModules[moduleName] === 'object' && requiredModules[moduleName] !== null) {
+                for(const method in requiredModules[moduleName].methods) {
+                    if(typeof requiredModules[moduleName].obj[method] !== 'function'){
+                         console.error(`viewRenderer.${functionName}: Methode '${method}' von Abhängigkeit '${moduleName}' ist nicht verfügbar.`);
+                         return false;
+                    }
+                }
+            }
         }
+        return true;
     }
 
     function renderDatenTab(data, sortState) {
+        const deps = { APP_CONFIG, state, tableRenderer, ui_helpers, paginationManager, mainAppInterface };
+        if (!_checkDependencies('renderDatenTab', deps)) return;
+
         const tableBody = document.getElementById('daten-table-body');
         const paginationContainer = document.getElementById('daten-pagination-container');
-        const itemsPerPage = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.UI_SETTINGS?.DEFAULT_TABLE_ROWS_PER_PAGE) ? APP_CONFIG.UI_SETTINGS.DEFAULT_TABLE_ROWS_PER_PAGE : 50;
+        const itemsPerPage = APP_CONFIG.UI_SETTINGS?.DEFAULT_TABLE_ROWS_PER_PAGE || 50;
         const totalPages = Array.isArray(data) ? Math.ceil(data.length / itemsPerPage) : 0;
-        const currentPage = (typeof state !== 'undefined' && typeof state.getCurrentDatenTablePage === 'function') ? state.getCurrentDatenTablePage() : 1;
+        const currentPage = state.getCurrentDatenTablePage() || 1;
 
-        if (tableBody && typeof tableRenderer !== 'undefined' && typeof tableRenderer.createDatenTableRow === 'function') {
-            tableBody.innerHTML = '';
-            if (Array.isArray(data) && data.length > 0) {
-                const paginatedData = data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-                paginatedData.forEach(patient => {
-                    tableBody.innerHTML += tableRenderer.createDatenTableRow(patient);
-                });
-            } else {
-                tableBody.innerHTML = `<tr><td colspan="9" class="text-center text-muted">Keine Daten im ausgewählten Kollektiv gefunden.</td></tr>`;
-            }
-            if (typeof ui_helpers !== 'undefined') {
-                ui_helpers.attachRowCollapseListeners(tableBody);
-                ui_helpers.updateSortIcons('daten-table-header', sortState);
-                ui_helpers.initializeTooltips(tableBody);
-            }
+        if (!tableBody) { console.error("viewRenderer.renderDatenTab: tableBody 'daten-table-body' nicht gefunden."); return; }
+        tableBody.innerHTML = '';
+        if (Array.isArray(data) && data.length > 0) {
+            const paginatedData = data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+            paginatedData.forEach(patient => {
+                tableBody.innerHTML += tableRenderer.createDatenTableRow(patient);
+            });
         } else {
-            if (!tableBody) console.error("viewRenderer.renderDatenTab: tableBody 'daten-table-body' nicht gefunden.");
-            if (typeof tableRenderer === 'undefined' || typeof tableRenderer.createDatenTableRow !== 'function') console.error("viewRenderer.renderDatenTab: tableRenderer.createDatenTableRow nicht verfügbar.");
+            tableBody.innerHTML = `<tr><td colspan="9" class="text-center text-muted">Keine Daten im ausgewählten Kollektiv gefunden.</td></tr>`;
         }
+        ui_helpers.attachRowCollapseListeners(tableBody);
+        ui_helpers.updateSortIcons('daten-table-header', sortState);
+        ui_helpers.initializeTooltips(tableBody);
 
-        if (typeof paginationManager !== 'undefined' && paginationContainer) {
-             paginationContainer.innerHTML = paginationManager.createPaginationControls('daten', currentPage, totalPages);
-             paginationManager.attachPaginationEventListeners('daten', totalPages, (newPage) => {
-                if (typeof state !== 'undefined' && typeof state.setCurrentDatenTablePage === 'function') state.setCurrentDatenTablePage(newPage);
-                if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') mainAppInterface.refreshCurrentTab();
-             });
-        } else {
-            if (typeof paginationManager === 'undefined') console.error("viewRenderer.renderDatenTab: paginationManager nicht verfügbar.");
-            if (!paginationContainer) console.warn("viewRenderer.renderDatenTab: paginationContainer 'daten-pagination-container' nicht gefunden.");
+        if (!paginationContainer) { console.warn("viewRenderer.renderDatenTab: paginationContainer 'daten-pagination-container' nicht gefunden."); }
+        else {
+            paginationContainer.innerHTML = paginationManager.createPaginationControls('daten', currentPage, totalPages);
+            paginationManager.attachPaginationEventListeners('daten', totalPages, (newPage) => {
+                state.setCurrentDatenTablePage(newPage);
+                mainAppInterface.refreshCurrentTab();
+            });
         }
     }
 
     function renderAuswertungTab(data, appliedCriteria, appliedLogic, currentKollektiv, bfResults, bfWorkerAvailable) {
+        const deps = { APP_CONFIG, state, ui_components, ui_helpers, t2CriteriaManager, statisticsService, tableRenderer, paginationManager, mainAppInterface, cloneDeep };
+        if (!_checkDependencies('renderAuswertungTab', deps)) return;
+
         const auswertungControlsContainer = document.getElementById('auswertung-t2-kriterien-controls-container');
         const auswertungTableBody = document.getElementById('auswertung-table-body');
         const t2MetricsOverviewContainer = document.getElementById('t2-metrics-overview-container');
         const bruteForceContainer = document.getElementById('brute-force-container');
         const paginationContainer = document.getElementById('auswertung-pagination-container');
-        const itemsPerPage = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.UI_SETTINGS?.DEFAULT_TABLE_ROWS_PER_PAGE) ? APP_CONFIG.UI_SETTINGS.DEFAULT_TABLE_ROWS_PER_PAGE : 50;
+        const itemsPerPage = APP_CONFIG.UI_SETTINGS?.DEFAULT_TABLE_ROWS_PER_PAGE || 50;
         const totalPages = Array.isArray(data) ? Math.ceil(data.length / itemsPerPage) : 0;
-        const currentPage = (typeof state !== 'undefined' && typeof state.getCurrentAuswertungTablePage === 'function') ? state.getCurrentAuswertungTablePage() : 1;
+        const currentPage = state.getCurrentAuswertungTablePage() || 1;
         const auswertungTabPane = document.getElementById('auswertung-tab-pane');
 
         if (auswertungControlsContainer && !initializedTabs.has('auswertung-tab-controls')) {
-            if (typeof ui_components !== 'undefined' && typeof ui_components.createT2CriteriaControls === 'function') {
-                auswertungControlsContainer.innerHTML = ui_components.createT2CriteriaControls(appliedCriteria, appliedLogic);
-            } else {
-                 if (!auswertungControlsContainer) console.error("viewRenderer.renderAuswertungTab: auswertungControlsContainer nicht gefunden.");
-                 if (typeof ui_components === 'undefined' || typeof ui_components.createT2CriteriaControls !== 'function') console.error("viewRenderer.renderAuswertungTab: ui_components.createT2CriteriaControls nicht verfügbar.");
-            }
+            auswertungControlsContainer.innerHTML = ui_components.createT2CriteriaControls(appliedCriteria, appliedLogic);
             initializedTabs.add('auswertung-tab-controls');
-        }
+        } else if (!auswertungControlsContainer) { console.error("viewRenderer.renderAuswertungTab: auswertungControlsContainer nicht gefunden."); }
 
-        if (typeof ui_helpers !== 'undefined') {
-            ui_helpers.updateT2CriteriaControlsUI(appliedCriteria, appliedLogic);
-            if (typeof t2CriteriaManager !== 'undefined' && typeof t2CriteriaManager.isUnsaved === 'function') {
-                 ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
-            }
-        }
+        ui_helpers.updateT2CriteriaControlsUI(appliedCriteria, appliedLogic);
+        ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
 
         if (bruteForceContainer && !initializedTabs.has('auswertung-tab-bf')) {
-            if (typeof ui_components !== 'undefined' && typeof ui_components.createBruteForceCard === 'function') {
-                bruteForceContainer.innerHTML = ui_components.createBruteForceCard(currentKollektiv, bfWorkerAvailable);
-            } else {
-                if (!bruteForceContainer) console.error("viewRenderer.renderAuswertungTab: bruteForceContainer nicht gefunden.");
-                if (typeof ui_components === 'undefined' || typeof ui_components.createBruteForceCard !== 'function') console.error("viewRenderer.renderAuswertungTab: ui_components.createBruteForceCard nicht verfügbar.");
-            }
+            bruteForceContainer.innerHTML = ui_components.createBruteForceCard(currentKollektiv, bfWorkerAvailable);
             initializedTabs.add('auswertung-tab-bf');
-        }
-         if (typeof ui_helpers !== 'undefined') {
-            ui_helpers.updateBruteForceUI(bfResults?.status || 'idle', bfResults || {}, bfWorkerAvailable, currentKollektiv);
-         }
+        } else if (!bruteForceContainer) { console.error("viewRenderer.renderAuswertungTab: bruteForceContainer nicht gefunden."); }
+        ui_helpers.updateBruteForceUI(bfResults?.status || 'idle', bfResults || {}, bfWorkerAvailable, currentKollektiv);
 
-
-        if (t2MetricsOverviewContainer && typeof ui_components !== 'undefined' && typeof ui_components.createT2MetricsOverview === 'function') {
-            const evaluatedData = (typeof t2CriteriaManager !== 'undefined' && typeof t2CriteriaManager.evaluateDataset === 'function') ? t2CriteriaManager.evaluateDataset(cloneDeep(data), appliedCriteria, appliedLogic) : cloneDeep(data);
-            const perfStats = (typeof statisticsService !== 'undefined' && typeof statisticsService.calculateDiagnosticPerformance === 'function') ? statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n') : null;
+        if (t2MetricsOverviewContainer) {
+            const evaluatedData = t2CriteriaManager.evaluateDataset(cloneDeep(data), appliedCriteria, appliedLogic);
+            const perfStats = statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n');
             t2MetricsOverviewContainer.innerHTML = ui_components.createT2MetricsOverview(perfStats, currentKollektiv);
-        } else {
-            if (!t2MetricsOverviewContainer) console.warn("viewRenderer.renderAuswertungTab: t2MetricsOverviewContainer nicht gefunden.");
-             if (typeof ui_components === 'undefined' || typeof ui_components.createT2MetricsOverview !== 'function') console.error("viewRenderer.renderAuswertungTab: ui_components.createT2MetricsOverview nicht verfügbar.");
-        }
+        } else { console.warn("viewRenderer.renderAuswertungTab: t2MetricsOverviewContainer nicht gefunden."); }
 
-        if (auswertungTableBody && typeof tableRenderer !== 'undefined' && typeof tableRenderer.createAuswertungTableRow === 'function') {
+        if (auswertungTableBody) {
             auswertungTableBody.innerHTML = '';
-             const evaluatedDataForTable = (typeof t2CriteriaManager !== 'undefined' && typeof t2CriteriaManager.evaluateDataset === 'function') ? t2CriteriaManager.evaluateDataset(cloneDeep(data), appliedCriteria, appliedLogic) : cloneDeep(data);
-
+            const evaluatedDataForTable = t2CriteriaManager.evaluateDataset(cloneDeep(data), appliedCriteria, appliedLogic);
             if (Array.isArray(evaluatedDataForTable) && evaluatedDataForTable.length > 0) {
                 const paginatedData = evaluatedDataForTable.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
                 paginatedData.forEach(patient => {
@@ -113,33 +98,26 @@ const viewRenderer = (() => {
             } else {
                  auswertungTableBody.innerHTML = `<tr><td colspan="8" class="text-center text-muted">Keine Patienten im ausgewählten Kollektiv gefunden.</td></tr>`;
             }
+            ui_helpers.attachRowCollapseListeners(auswertungTableBody);
+            const defaultSort = APP_CONFIG.DEFAULT_SETTINGS?.AUSWERTUNG_TABLE_SORT || { key: 'nr', direction: 'asc', subKey: null };
+            ui_helpers.updateSortIcons('auswertung-table-header', state.getCurrentAuswertungTableSort() || defaultSort);
+        } else { console.error("viewRenderer.renderAuswertungTab: auswertungTableBody nicht gefunden."); }
 
-            if (typeof ui_helpers !== 'undefined') {
-                ui_helpers.attachRowCollapseListeners(auswertungTableBody);
-                const defaultSort = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.DEFAULT_SETTINGS?.AUSWERTUNG_TABLE_SORT) ? APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT : { key: 'nr', direction: 'asc', subKey: null };
-                ui_helpers.updateSortIcons('auswertung-table-header', ((typeof state !== 'undefined' && typeof state.getCurrentAuswertungTableSort === 'function') ? state.getCurrentAuswertungTableSort() : null) || defaultSort);
-            }
-        } else {
-            if (!auswertungTableBody) console.error("viewRenderer.renderAuswertungTab: auswertungTableBody nicht gefunden.");
-            if (typeof tableRenderer === 'undefined' || typeof tableRenderer.createAuswertungTableRow !== 'function') console.error("viewRenderer.renderAuswertungTab: tableRenderer.createAuswertungTableRow nicht verfügbar.");
-        }
-
-        if (typeof paginationManager !== 'undefined' && paginationContainer) {
+        if (paginationContainer) {
              paginationContainer.innerHTML = paginationManager.createPaginationControls('auswertung', currentPage, totalPages);
              paginationManager.attachPaginationEventListeners('auswertung', totalPages, (newPage) => {
-                if(typeof state !== 'undefined' && typeof state.setCurrentAuswertungTablePage === 'function') state.setCurrentAuswertungTablePage(newPage);
-                if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') mainAppInterface.refreshCurrentTab();
+                state.setCurrentAuswertungTablePage(newPage);
+                mainAppInterface.refreshCurrentTab();
              });
-        } else {
-            if (typeof paginationManager === 'undefined') console.error("viewRenderer.renderAuswertungTab: paginationManager nicht verfügbar.");
-            if (!paginationContainer) console.warn("viewRenderer.renderAuswertungTab: auswertung-pagination-container nicht gefunden.");
-        }
-        if (auswertungTabPane && typeof ui_helpers !== 'undefined') {
-            ui_helpers.initializeTooltips(auswertungTabPane);
-        }
+        } else { console.warn("viewRenderer.renderAuswertungTab: auswertung-pagination-container nicht gefunden.");}
+
+        if (auswertungTabPane) ui_helpers.initializeTooltips(auswertungTabPane);
     }
 
     function renderStatistikTab(currentKollektiv, statistikLayout, statistikKollektiv1, statistikKollektiv2) {
+        const deps = { TOOLTIP_CONTENT, getKollektivDisplayName, ui_helpers, statistikTabLogic, mainAppInterface, t2CriteriaManager, state };
+        if (!_checkDependencies('renderStatistikTab', deps)) return;
+
         const statistikControlsContainer = document.getElementById('statistik-controls-container');
         const spinner = document.getElementById('statistik-spinner');
         const statistikTabPane = document.getElementById('statistik-tab-pane');
@@ -148,15 +126,11 @@ const viewRenderer = (() => {
 
         if (statistikControlsContainer && !initializedTabs.has('statistik-tab-controls')) {
             const kollektivOptions = ['Gesamt', 'direkt OP', 'nRCT'];
-            const getDisplayNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
-            const selectOptionsHTML = kollektivOptions.map(k => {
-                const displayName = getDisplayNameFunc(k);
-                return `<option value="${k}">${displayName}</option>`;
-            }).join('');
-            const toggleButtonTooltip = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.statistikToggleVergleich?.description) || 'Layout umschalten';
-            const kollektiv1Tooltip = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.statistikKollektiv1?.description) || 'Kollektiv 1 wählen';
-            const kollektiv2Tooltip = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.statistikKollektiv2?.description) || 'Kollektiv 2 wählen';
-
+            const getDisplayNameFunc = getKollektivDisplayName;
+            const selectOptionsHTML = kollektivOptions.map(k => `<option value="${k}">${getDisplayNameFunc(k)}</option>`).join('');
+            const toggleButtonTooltip = TOOLTIP_CONTENT.statistikToggleVergleich?.description || 'Layout umschalten';
+            const kollektiv1Tooltip = TOOLTIP_CONTENT.statistikKollektiv1?.description || 'Kollektiv 1 wählen';
+            const kollektiv2Tooltip = TOOLTIP_CONTENT.statistikKollektiv2?.description || 'Kollektiv 2 wählen';
 
             statistikControlsContainer.innerHTML = `
                 <div class="row align-items-center">
@@ -165,48 +139,27 @@ const viewRenderer = (() => {
                     </div>
                     <div class="col-md-auto mb-2 mb-md-0 d-none" id="statistik-kollektiv-select-1-container">
                         <label for="statistik-kollektiv-select-1" class="form-label form-label-sm visually-hidden">Kollektiv 1</label>
-                        <select class="form-select form-select-sm" id="statistik-kollektiv-select-1" data-tippy-content="${kollektiv1Tooltip}">
-                           ${selectOptionsHTML}
-                        </select>
+                        <select class="form-select form-select-sm" id="statistik-kollektiv-select-1" data-tippy-content="${kollektiv1Tooltip}">${selectOptionsHTML}</select>
                     </div>
                     <div class="col-md-auto mb-2 mb-md-0 d-none" id="statistik-kollektiv-select-2-container">
                         <label for="statistik-kollektiv-select-2" class="form-label form-label-sm visually-hidden">Kollektiv 2</label>
-                        <select class="form-select form-select-sm" id="statistik-kollektiv-select-2" data-tippy-content="${kollektiv2Tooltip}">
-                            ${selectOptionsHTML}
-                        </select>
+                        <select class="form-select form-select-sm" id="statistik-kollektiv-select-2" data-tippy-content="${kollektiv2Tooltip}">${selectOptionsHTML}</select>
                     </div>
                 </div>`;
             initializedTabs.add('statistik-tab-controls');
-        } else if (!statistikControlsContainer) {
-            console.error("viewRenderer.renderStatistikTab: statistikControlsContainer nicht gefunden.");
-        }
+        } else if (!statistikControlsContainer) { console.error("viewRenderer.renderStatistikTab: statistikControlsContainer nicht gefunden."); }
 
-        if (typeof ui_helpers !== 'undefined') {
-            ui_helpers.updateStatistikSelectorsUI(statistikLayout, statistikKollektiv1, statistikKollektiv2);
-        }
+        ui_helpers.updateStatistikSelectorsUI(statistikLayout, statistikKollektiv1, statistikKollektiv2);
+        statistikTabLogic.displayStatistics(mainAppInterface.getGlobalData(), statistikLayout, statistikKollektiv1, statistikKollektiv2, t2CriteriaManager.getAppliedT2Criteria(), t2CriteriaManager.getAppliedT2Logic());
 
-        if (typeof statistikTabLogic !== 'undefined' && typeof statistikTabLogic.displayStatistics === 'function' &&
-            typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.getGlobalData === 'function' &&
-            typeof t2CriteriaManager !== 'undefined' && typeof t2CriteriaManager.getAppliedT2Criteria === 'function' &&
-            typeof state !== 'undefined') {
-            statistikTabLogic.displayStatistics(
-                mainAppInterface.getGlobalData(),
-                statistikLayout,
-                statistikKollektiv1,
-                statistikKollektiv2,
-                t2CriteriaManager.getAppliedT2Criteria(),
-                t2CriteriaManager.getAppliedT2Logic()
-            );
-        } else {
-            console.error("viewRenderer.renderStatistikTab: Abhängigkeiten für statistikTabLogic.displayStatistics nicht erfüllt.");
-        }
         if (spinner) spinner.classList.add('d-none');
-        if (statistikTabPane && typeof ui_helpers !== 'undefined') {
-            ui_helpers.initializeTooltips(statistikTabPane);
-        }
+        if (statistikTabPane) ui_helpers.initializeTooltips(statistikTabPane);
     }
 
     function renderPraesentationTab(currentView, currentStudyId, currentGlobalKollektiv) {
+        const deps = { APP_CONFIG, TOOLTIP_CONTENT, studyT2CriteriaManager, ui_helpers, praesentationTabLogic, mainAppInterface, t2CriteriaManager };
+        if (!_checkDependencies('renderPraesentationTab', deps)) return;
+
         const praesControlsContainer = document.getElementById('praesentation-controls-container');
         const spinner = document.getElementById('praesentation-spinner');
         const praesentationTabPane = document.getElementById('praesentation-tab-pane');
@@ -214,13 +167,11 @@ const viewRenderer = (() => {
         if(spinner) spinner.classList.remove('d-none');
 
         if (praesControlsContainer && !initializedTabs.has('praesentation-tab-controls')) {
-            const studyOptions = (typeof studyT2CriteriaManager !== 'undefined' && typeof studyT2CriteriaManager.getAllStudyCriteriaSets === 'function' ? studyT2CriteriaManager.getAllStudyCriteriaSets() : []).map(set =>
-                 `<option value="${set.id}" ${set.id === currentStudyId ? 'selected' : ''}>${set.name || set.id}</option>`
-            ).join('');
-            const appliedCriteriaDisplayName = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.SPECIAL_IDS?.APPLIED_CRITERIA_DISPLAY_NAME) ? APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME : "Eingestellte Kriterien";
-            const appliedCriteriaId = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.SPECIAL_IDS?.APPLIED_CRITERIA_STUDY_ID) ? APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID : "applied_criteria";
-            const viewSelectTooltip = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.praesentation?.viewSelect?.description) || 'Ansicht wählen';
-            const studySelectTooltip = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.praesentation?.studySelect?.description) || 'T2-Basis wählen';
+            const studyOptions = studyT2CriteriaManager.getAllStudyCriteriaSets().map(set => `<option value="${set.id}" ${set.id === currentStudyId ? 'selected' : ''}>${set.name || set.id}</option>`).join('');
+            const appliedCriteriaDisplayName = APP_CONFIG.SPECIAL_IDS?.APPLIED_CRITERIA_DISPLAY_NAME || "Eingestellte Kriterien";
+            const appliedCriteriaId = APP_CONFIG.SPECIAL_IDS?.APPLIED_CRITERIA_STUDY_ID || "applied_criteria";
+            const viewSelectTooltip = TOOLTIP_CONTENT.praesentation?.viewSelect?.description || 'Ansicht wählen';
+            const studySelectTooltip = TOOLTIP_CONTENT.praesentation?.studySelect?.description || 'T2-Basis wählen';
 
             praesControlsContainer.innerHTML = `
                 <div class="row align-items-center justify-content-center">
@@ -241,115 +192,75 @@ const viewRenderer = (() => {
                     </div>
                 </div>`;
             initializedTabs.add('praesentation-tab-controls');
-        } else if (!praesControlsContainer) {
-            console.error("viewRenderer.renderPraesentationTab: praesControlsContainer nicht gefunden.");
-        }
+        } else if (!praesControlsContainer) { console.error("viewRenderer.renderPraesentationTab: praesControlsContainer nicht gefunden."); }
 
-        if (typeof ui_helpers !== 'undefined') {
-            ui_helpers.updatePresentationViewSelectorUI(currentView);
-        }
-
-        if (typeof praesentationTabLogic !== 'undefined' && typeof praesentationTabLogic.renderPresentation === 'function' &&
-            typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.getGlobalData === 'function' &&
-            typeof t2CriteriaManager !== 'undefined') {
-            const globalData = mainAppInterface.getGlobalData();
-            const appliedCriteria = t2CriteriaManager.getAppliedT2Criteria();
-            const appliedLogic = t2CriteriaManager.getAppliedT2Logic();
-            praesentationTabLogic.renderPresentation(globalData, currentView, currentStudyId, currentGlobalKollektiv, appliedCriteria, appliedLogic);
-        } else {
-            console.error("viewRenderer.renderPraesentationTab: Abhängigkeiten für praesentationTabLogic.renderPresentation nicht erfüllt.");
-        }
+        ui_helpers.updatePresentationViewSelectorUI(currentView);
+        const globalData = mainAppInterface.getGlobalData();
+        const appliedCriteria = t2CriteriaManager.getAppliedT2Criteria();
+        const appliedLogic = t2CriteriaManager.getAppliedT2Logic();
+        praesentationTabLogic.renderPresentation(globalData, currentView, currentStudyId, currentGlobalKollektiv, appliedCriteria, appliedLogic);
 
         if(spinner) spinner.classList.add('d-none');
-        if (praesentationTabPane && typeof ui_helpers !== 'undefined') {
-            ui_helpers.initializeTooltips(praesentationTabPane);
-        }
+        if (praesentationTabPane) ui_helpers.initializeTooltips(praesentationTabPane);
     }
 
     function renderPublikationTab(currentSection, currentLang, currentGlobalKollektiv) {
+        const deps = { state, PUBLICATION_CONFIG, UI_TEXTS, TOOLTIP_CONTENT, ui_components, publikationTabLogic, mainAppInterface, t2CriteriaManager, bruteForceManager, ui_helpers };
+        if (!_checkDependencies('renderPublikationTab', deps)) return;
+
         const publikationTabPane = document.getElementById('publikation-tab-pane');
         const spinner = document.getElementById('publikation-spinner');
         if (spinner) spinner.classList.remove('d-none');
 
         if (publikationTabPane) {
             if (!initializedTabs.has('publikation-tab-header')) {
-                 if (typeof ui_components !== 'undefined' && typeof ui_components.createPublikationTabHeader === 'function') {
-                    publikationTabPane.innerHTML = ui_components.createPublikationTabHeader();
-                 } else {
-                    console.error("viewRenderer.renderPublikationTab: ui_components.createPublikationTabHeader nicht verfügbar.");
-                 }
-                 initializedTabs.add('publikation-tab-header');
+                publikationTabPane.innerHTML = ui_components.createPublikationTabHeader();
+                initializedTabs.add('publikation-tab-header');
             }
+            const currentPublicationBFMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+            const globalData = mainAppInterface.getGlobalData();
+            const appliedCriteria = t2CriteriaManager.getAppliedT2Criteria();
+            const appliedLogic = t2CriteriaManager.getAppliedT2Logic();
+            const bfResults = bruteForceManager.getAllResults();
 
-            const currentPublicationBFMetric = ((typeof state !== 'undefined' && typeof state.getCurrentPublikationBruteForceMetric === 'function') ? state.getCurrentPublikationBruteForceMetric() : null) || ((typeof PUBLICATION_CONFIG !== 'undefined') ? PUBLICATION_CONFIG.defaultBruteForceMetricForPublication : 'Balanced Accuracy');
-
-            if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.initializeData === 'function' &&
-                typeof mainAppInterface !== 'undefined' && typeof t2CriteriaManager !== 'undefined' &&
-                typeof bruteForceManager !== 'undefined' && typeof PUBLICATION_CONFIG !== 'undefined' && typeof ui_helpers !== 'undefined') {
-                const globalData = mainAppInterface.getGlobalData();
-                const appliedCriteria = t2CriteriaManager.getAppliedT2Criteria();
-                const appliedLogic = t2CriteriaManager.getAppliedT2Logic();
-                const bfResults = bruteForceManager.getAllResults();
-
-                publikationTabLogic.initializeData(globalData, appliedCriteria, appliedLogic, bfResults);
-                ui_helpers.updatePublikationUI(currentLang, currentSection, currentPublicationBFMetric);
-
-                const sectionToRender = currentSection || PUBLICATION_CONFIG.defaultSubSection;
-                if (typeof publikationTabLogic.getRenderedSectionContent === 'function') {
-                    publikationTabLogic.getRenderedSectionContent(sectionToRender, currentLang, currentGlobalKollektiv);
-                }
-                if(typeof publikationTabLogic.updateDynamicChartsForPublicationTab === 'function') {
-                    publikationTabLogic.updateDynamicChartsForPublicationTab(sectionToRender, currentLang, currentGlobalKollektiv);
-                }
-            } else {
-                 console.error("viewRenderer.renderPublikationTab: Abhängigkeiten für publikationTabLogic nicht erfüllt.");
+            publikationTabLogic.initializeData(globalData, appliedCriteria, appliedLogic, bfResults);
+            ui_helpers.updatePublikationUI(currentLang, currentSection, currentPublicationBFMetric);
+            const sectionToRender = currentSection || PUBLICATION_CONFIG.defaultSubSection;
+            publikationTabLogic.getRenderedSectionContent(sectionToRender, currentLang, currentGlobalKollektiv);
+            if(typeof publikationTabLogic.updateDynamicChartsForPublicationTab === 'function') {
+                publikationTabLogic.updateDynamicChartsForPublicationTab(sectionToRender, currentLang, currentGlobalKollektiv);
             }
-        } else {
-             console.error("viewRenderer.renderPublikationTab: publikationTabPane nicht gefunden.");
-        }
+        } else { console.error("viewRenderer.renderPublikationTab: publikationTabPane nicht gefunden."); }
 
         if (spinner) spinner.classList.add('d-none');
-        if (publikationTabPane && typeof ui_helpers !== 'undefined') {
-            ui_helpers.initializeTooltips(publikationTabPane);
-        }
+        if (publikationTabPane) ui_helpers.initializeTooltips(publikationTabPane);
     }
 
     function renderExportTab(currentKollektiv) {
+        const deps = { ui_components, TOOLTIP_CONTENT, getKollektivDisplayName, exportService, bruteForceManager, mainAppInterface, ui_helpers, state };
+        if (!_checkDependencies('renderExportTab', deps)) return;
+
         const exportContainer = document.getElementById('export-options-container');
         const exportTabPane = document.getElementById('export-tab-pane');
 
         if (exportContainer && !initializedTabs.has('export-tab-content')) {
-            if (typeof ui_components !== 'undefined' && typeof ui_components.createExportOptions === 'function') {
-                exportContainer.innerHTML = ui_components.createExportOptions(currentKollektiv);
-            } else {
-                 console.error("viewRenderer.renderExportTab: ui_components.createExportOptions nicht verfügbar.");
-            }
+            exportContainer.innerHTML = ui_components.createExportOptions(currentKollektiv);
             initializedTabs.add('export-tab-content');
         } else if (exportContainer && initializedTabs.has('export-tab-content')) {
             const exportDescEl = exportContainer.querySelector('.small.text-muted.mb-3');
-            if(exportDescEl && typeof getKollektivDisplayName === 'function' && typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.exportTab?.description) {
-                exportDescEl.innerHTML = TOOLTIP_CONTENT.exportTab.description.replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(currentKollektiv)}</strong>`);
-            }
-        } else if (!exportContainer) {
-            console.error("viewRenderer.renderExportTab: exportContainer nicht gefunden.");
-        }
+            if(exportDescEl) exportDescEl.innerHTML = TOOLTIP_CONTENT.exportTab.description.replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(currentKollektiv)}</strong>`);
+        } else if (!exportContainer) { console.error("viewRenderer.renderExportTab: exportContainer nicht gefunden."); }
 
-
-        if (typeof exportService !== 'undefined' && typeof bruteForceManager !== 'undefined' &&
-            typeof mainAppInterface !== 'undefined' && typeof ui_helpers !== 'undefined' && typeof state !== 'undefined') {
-            const hasBruteForceResults = bruteForceManager.hasAnyResults ? bruteForceManager.hasAnyResults() : Object.keys(bruteForceManager.getAllResults() || {}).length > 0;
-            const canExportDataDependent = (mainAppInterface.getGlobalData()?.length ?? 0) > 0;
-            ui_helpers.updateExportButtonStates(state.getActiveTabId(), hasBruteForceResults, canExportDataDependent);
-        } else {
-             console.warn("viewRenderer.renderExportTab: Abhängigkeiten für updateExportButtonStates nicht vollständig erfüllt.");
-        }
-        if (exportTabPane && typeof ui_helpers !== 'undefined') {
-            ui_helpers.initializeTooltips(exportTabPane);
-        }
+        const hasBruteForceResults = bruteForceManager.hasAnyResults ? bruteForceManager.hasAnyResults() : Object.keys(bruteForceManager.getAllResults() || {}).length > 0;
+        const canExportDataDependent = (mainAppInterface.getGlobalData()?.length ?? 0) > 0;
+        ui_helpers.updateExportButtonStates(state.getActiveTabId(), hasBruteForceResults, canExportDataDependent);
+        if (exportTabPane) ui_helpers.initializeTooltips(exportTabPane);
     }
 
-
     function showTab(tabId) {
+        const deps = { state, ui_helpers, bruteForceManager, mainAppInterface };
+        if (!_checkDependencies('showTab', deps)) return;
+
         const tabPanes = document.querySelectorAll('.tab-pane');
         const navLinks = document.querySelectorAll('.nav-tabs .nav-link, .nav-pills .nav-link');
         let targetTabPane = null;
@@ -368,10 +279,9 @@ const viewRenderer = (() => {
             if (linkIsTarget) targetNavLink = link;
         });
 
-        if (targetNavLink && targetTabPane && typeof state !== 'undefined' && typeof ui_helpers !== 'undefined' &&
-            typeof bruteForceManager !== 'undefined' && typeof mainAppInterface !== 'undefined') {
+        if (targetNavLink && targetTabPane) {
             state.setActiveTabId(tabId);
-            refreshCurrentTab(tabId, true); // Call this module's refreshCurrentTab
+            refreshCurrentTab(tabId, true);
             const hasBruteForceResults = bruteForceManager.hasAnyResults ? bruteForceManager.hasAnyResults() : Object.keys(bruteForceManager.getAllResults() || {}).length > 0;
             ui_helpers.updateExportButtonStates(tabId, hasBruteForceResults, (mainAppInterface.getGlobalData()?.length ?? 0) > 0);
             setTimeout(() => {
@@ -379,64 +289,48 @@ const viewRenderer = (() => {
                if (currentTabElement) ui_helpers.initializeTooltips(currentTabElement);
             }, 150);
         } else {
-            console.warn(`Tab mit ID '${tabId}' oder zugehöriger Nav-Link nicht gefunden, oder Kernmodule nicht verfügbar.`);
+            console.warn(`viewRenderer.showTab: Tab mit ID '${tabId}' oder zugehöriger Nav-Link nicht gefunden.`);
         }
     }
 
-
-    function refreshCurrentTab(activeTabId = (typeof state !== 'undefined' && typeof state.getActiveTabId === 'function' ? state.getActiveTabId() : null), isTabSwitch = false) {
-        if (!activeTabId) {
-             console.warn("viewRenderer.refreshCurrentTab: Keine aktive Tab-ID verfügbar.");
-             return;
-        }
-        const currentKollektiv = (typeof state !== 'undefined' && typeof state.getCurrentKollektiv === 'function') ? state.getCurrentKollektiv() : ( (typeof APP_CONFIG !== 'undefined') ? APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV : 'Gesamt');
-
-        if (typeof mainAppInterface === 'undefined' || typeof mainAppInterface.getGlobalData !== 'function') {
-            console.warn("viewRenderer.refreshCurrentTab: mainAppInterface oder globale Daten nicht verfügbar.");
-            return;
-        }
-        const globalData = mainAppInterface.getGlobalData();
-
-        if (!globalData || typeof dataProcessor === 'undefined' || typeof dataProcessor.filterDataByKollektiv !== 'function' || typeof dataProcessor.sortData !== 'function') {
-            console.warn("viewRenderer.refreshCurrentTab: Globale Daten oder dataProcessor-Funktionen nicht verfügbar.");
-            if (isTabSwitch) { // Prevent infinite loop if called during tab switch with missing deps
+    function refreshCurrentTab(activeTabIdParam = null, isTabSwitch = false) {
+        const activeTabId = activeTabIdParam || (typeof state !== 'undefined' ? state.getActiveTabId() : null);
+        const deps = { state, APP_CONFIG, mainAppInterface, dataProcessor, t2CriteriaManager, bruteForceManager, ui_helpers };
+         if (!activeTabId) { console.warn("viewRenderer.refreshCurrentTab: Keine aktive Tab-ID verfügbar."); return; }
+        if (!_checkDependencies('refreshCurrentTab', deps)) {
+            if (isTabSwitch) {
                 const targetPane = document.getElementById(activeTabId);
-                if (targetPane) targetPane.innerHTML = "<p class='text-danger p-3'>Fehler beim Laden der Tab-Daten: Kernmodule fehlen.</p>";
+                if (targetPane) targetPane.innerHTML = "<p class='text-danger p-3'>Fehler beim Laden der Tab-Daten: Abhängigkeiten fehlen.</p>";
             }
             return;
         }
+
+        const currentKollektiv = state.getCurrentKollektiv() || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
+        const globalData = mainAppInterface.getGlobalData();
         const filteredData = dataProcessor.filterDataByKollektiv(globalData, currentKollektiv);
 
         switch (activeTabId) {
             case 'daten-tab-pane':
-                const datenSortState = ((typeof state !== 'undefined' && typeof state.getCurrentDatenTableSort === 'function') ? state.getCurrentDatenTableSort() : null) || (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT : { key: 'nr', direction: 'asc', subKey: null });
+                const datenSortState = state.getCurrentDatenTableSort() || APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT;
                 const sortedData = dataProcessor.sortData(filteredData, datenSortState.key, datenSortState.direction, datenSortState.subKey);
                 renderDatenTab(sortedData, datenSortState);
                 break;
             case 'auswertung-tab-pane':
-                if (typeof t2CriteriaManager !== 'undefined' && typeof bruteForceManager !== 'undefined') {
-                    const appliedCriteria = t2CriteriaManager.getAppliedT2Criteria();
-                    const appliedLogic = t2CriteriaManager.getAppliedT2Logic();
-                    const bfResults = bruteForceManager.getResultsForKollektiv(currentKollektiv) || bruteForceManager.getAllResults()?.[currentKollektiv] || { status: 'idle' };
-                    const auswertungSortState = ((typeof state !== 'undefined' && typeof state.getCurrentAuswertungTableSort === 'function') ? state.getCurrentAuswertungTableSort() : null) || (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT : { key: 'nr', direction: 'asc', subKey: null });
-                    const sortedAuswertungData = dataProcessor.sortData(filteredData, auswertungSortState.key, auswertungSortState.direction, auswertungSortState.subKey);
-                    renderAuswertungTab(sortedAuswertungData, appliedCriteria, appliedLogic, currentKollektiv, bfResults, bruteForceManager.isWorkerAvailable());
-                }
+                const appliedCriteria = t2CriteriaManager.getAppliedT2Criteria();
+                const appliedLogic = t2CriteriaManager.getAppliedT2Logic();
+                const bfResults = bruteForceManager.getResultsForKollektiv(currentKollektiv) || bruteForceManager.getAllResults()?.[currentKollektiv] || { status: 'idle' };
+                const auswertungSortState = state.getCurrentAuswertungTableSort() || APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT;
+                const sortedAuswertungData = dataProcessor.sortData(filteredData, auswertungSortState.key, auswertungSortState.direction, auswertungSortState.subKey);
+                renderAuswertungTab(sortedAuswertungData, appliedCriteria, appliedLogic, currentKollektiv, bfResults, bruteForceManager.isWorkerAvailable());
                 break;
             case 'statistik-tab-pane':
-                if (typeof state !== 'undefined' && typeof state.getCurrentStatistikLayout === 'function') {
-                    renderStatistikTab(currentKollektiv, state.getCurrentStatistikLayout(), state.getCurrentStatistikKollektiv1(), state.getCurrentStatistikKollektiv2());
-                }
+                renderStatistikTab(currentKollektiv, state.getCurrentStatistikLayout(), state.getCurrentStatistikKollektiv1(), state.getCurrentStatistikKollektiv2());
                 break;
             case 'praesentation-tab-pane':
-                 if (typeof state !== 'undefined' && typeof state.getCurrentPresentationView === 'function') {
-                    renderPraesentationTab(state.getCurrentPresentationView(), state.getCurrentPresentationStudyId(), currentKollektiv);
-                 }
+                renderPraesentationTab(state.getCurrentPresentationView(), state.getCurrentPresentationStudyId(), currentKollektiv);
                 break;
             case 'publikation-tab-pane':
-                if (typeof state !== 'undefined' && typeof state.getCurrentPublikationSection === 'function') {
-                    renderPublikationTab(state.getCurrentPublikationSection(), state.getCurrentPublikationLang(), currentGlobalKollektiv);
-                }
+                renderPublikationTab(state.getCurrentPublikationSection(), state.getCurrentPublikationLang(), currentKollektiv);
                 break;
             case 'export-tab-pane':
                 renderExportTab(currentKollektiv);
@@ -444,20 +338,13 @@ const viewRenderer = (() => {
             default:
                 console.warn(`viewRenderer.refreshCurrentTab: Unbekannte Tab-ID '${activeTabId}'`);
         }
-         if (!isTabSwitch && typeof ui_helpers !== 'undefined') {
+         if (!isTabSwitch) {
              const activeTabElement = document.getElementById(activeTabId);
              if (activeTabElement) ui_helpers.initializeTooltips(activeTabElement);
          }
     }
 
-
     return Object.freeze({
-        renderDatenTab,
-        renderAuswertungTab,
-        renderStatistikTab,
-        renderPraesentationTab,
-        renderPublikationTab,
-        renderExportTab,
         showTab,
         refreshCurrentTab
     });
