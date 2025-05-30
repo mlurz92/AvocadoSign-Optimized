@@ -119,21 +119,21 @@ const UI_TEXTS = {
             GLEICH: "gleich"
         },
         assoziationStaerkeTexte: {
-            stark: "stark", // Phi >= 0.5
-            moderat: "moderat", // Phi 0.3 - 0.49
-            schwach: "schwach", // Phi 0.1 - 0.29
-            sehr_schwach: "sehr schwach oder kein", // Phi < 0.1
+            stark: "stark",
+            moderat: "moderat",
+            schwach: "schwach",
+            sehr_schwach: "sehr schwach oder kein",
             nicht_bestimmbar: "nicht bestimmbar"
         },
         lrBewertungTexte: {
-            exzellent_pos: "exzellent zur Bestätigung", // LR+ > 10
-            gut_pos: "gut zur Bestätigung",           // LR+ 5-10
-            moderat_pos: "moderat zur Bestätigung",     // LR+ 2-5
-            schwach_pos: "schwach zur Bestätigung",   // LR+ 1-2
-            exzellent_neg: "exzellent zum Ausschluss",// LR- < 0.1
-            gut_neg: "gut zum Ausschluss",          // LR- 0.1-0.2
-            moderat_neg: "moderat zum Ausschluss",    // LR- 0.2-0.5
-            schwach_neg: "schwach zum Ausschluss",  // LR- 0.5-1
+            exzellent_pos: "exzellent zur Bestätigung",
+            gut_pos: "gut zur Bestätigung",
+            moderat_pos: "moderat zur Bestätigung",
+            schwach_pos: "schwach zur Bestätigung",
+            exzellent_neg: "exzellent zum Ausschluss",
+            gut_neg: "gut zum Ausschluss",
+            moderat_neg: "moderat zum Ausschluss",
+            schwach_neg: "schwach zum Ausschluss",
             nicht_informativ: "nicht informativ"
         }
     },
@@ -398,7 +398,7 @@ const TOOLTIP_CONTENT = {
         konfusionsmatrix: { description: "Kreuztabelle, die die Klassifikationsergebnisse der Methode [METHODE] mit dem tatsächlichen N-Status vergleicht: Richtig Positive (RP), Falsch Positive (FP), Falsch Negative (FN), Richtig Negative (RN)." },
         accComp: { name: "Accuracy Vergleich (ungepaart)", description: "Vergleicht die Accuracy der Methode [METHODE] zwischen zwei unabhängigen Kollektiven ([KOLLEKTIV1] vs. [KOLLEKTIV2]) mittels Fisher's Exact Test.<br><i>Nullhypothese (H0): Accuracy in Kollektiv1 = Accuracy in Kollektiv2.</i>", interpretation: "Der Unterschied in der Accuracy der Methode [METHODE] zwischen den Kollektiven [KOLLEKTIV1] und [KOLLEKTIV2] ist <strong>[SIGNIFIKANZ_TEXT]</strong> (p=[P_WERT])." },
         aucComp: { name: "AUC Vergleich (ungepaart)", description: "Vergleicht die AUC der Methode [METHODE] zwischen zwei unabhängigen Kollektiven ([KOLLEKTIV1] vs. [KOLLEKTIV2]) mittels eines Z-Tests basierend auf den Standardfehlern der AUCs.<br><i>Nullhypothese (H0): AUC in Kollektiv1 = AUC in Kollektiv2.</i>", interpretation: "Der Unterschied in der AUC der Methode [METHODE] zwischen den Kollektiven [KOLLEKTIV1] und [KOLLEKTIV2] ist <strong>[SIGNIFIKANZ_TEXT]</strong> (p=[P_WERT])." },
-        defaultP: { interpretation: `Der berechnete p-Wert beträgt <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Bei einem Signifikanzniveau von ${formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,2).replace('.',',')} ist das Ergebnis <strong>[SIGNIFIKANZ_TEXT]</strong>.` },
+        defaultP: { interpretation: `Der berechnete p-Wert beträgt <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Bei einem Signifikanzniveau von [SIGNIFICANCE_LEVEL_FORMATTED] ist das Ergebnis <strong>[SIGNIFIKANZ_TEXT]</strong>.` },
         size_mwu: {name: "LK Größe MWU", description: "Vergleich der medianen Lymphknotengrößen zwischen N+ und N- Patienten mittels Mann-Whitney-U-Test. Hier werden alle Lymphknoten der Patienten berücksichtigt, nicht Patienten-Level-Status.", interpretation: "Der Mann-Whitney-U-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies zeigt einen [SIGNIFIKANZ_TEXT] Unterschied in der Verteilung der Lymphknotengrößen zwischen den Lymphknoten von N+ und N- Patienten im Kollektiv [KOLLEKTIV]."}
     }
 };
