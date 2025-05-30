@@ -121,12 +121,11 @@ const tableRenderer = (() => {
                 const checkFailed = checkResultForLK[key] === false;
                 let hlClass = '';
 
-                if (lk.isPositive) { // Highlight only if the LK itself is positive overall
+                if (lk.isPositive) {
                     if (checkMet && (appliedLogic === 'ODER' || (appliedLogic === 'UND' && activeCriteriaKeys.every(k => checkResultForLK[k] === true)))) {
                         hlClass = 'highlight-suspekt-feature';
                     }
                 }
-
 
                 const icon = ui_helpers.getT2IconSVG(iconType || key, valueText);
                 const text = valueText || naPlaceholder;
