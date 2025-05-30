@@ -119,34 +119,34 @@ const UI_TEXTS = {
             GLEICH: "gleich"
         },
         assoziationStaerkeTexte: {
-            stark: "stark", // Phi >= 0.5
-            moderat: "moderat", // Phi 0.3 - 0.49
-            schwach: "schwach", // Phi 0.1 - 0.29
-            sehr_schwach: "sehr schwach oder kein", // Phi < 0.1
+            stark: "stark",
+            moderat: "moderat",
+            schwach: "schwach",
+            sehr_schwach: "sehr schwach oder kein",
             nicht_bestimmbar: "nicht bestimmbar"
         },
         lrBewertungTexte: {
-            exzellent_pos: "exzellent zur Bestätigung", // LR+ > 10
-            gut_pos: "gut zur Bestätigung",           // LR+ 5-10
-            moderat_pos: "moderat zur Bestätigung",     // LR+ 2-5
-            schwach_pos: "schwach zur Bestätigung",   // LR+ 1-2
-            exzellent_neg: "exzellent zum Ausschluss",// LR- < 0.1
-            gut_neg: "gut zum Ausschluss",          // LR- 0.1-0.2
-            moderat_neg: "moderat zum Ausschluss",    // LR- 0.2-0.5
-            schwach_neg: "schwach zum Ausschluss",  // LR- 0.5-1
+            exzellent_pos: "exzellent zur Bestätigung",
+            gut_pos: "gut zur Bestätigung",
+            moderat_pos: "moderat zur Bestätigung",
+            schwach_pos: "schwach zur Bestätigung",
+            exzellent_neg: "exzellent zum Ausschluss",
+            gut_neg: "gut zum Ausschluss",
+            moderat_neg: "moderat zum Ausschluss",
+            schwach_neg: "schwach zum Ausschluss",
             nicht_informativ: "nicht informativ"
         }
     },
     kurzanleitung: {
-        title: `Kurzanleitung & Wichtige Hinweise (v${APP_CONFIG.APP_VERSION})`,
+        title: `Kurzanleitung & Wichtige Hinweise (v${ typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.APP_VERSION : '?.?.?'})`,
         content: `
-            <p>Willkommen zum <strong>${APP_CONFIG.APP_NAME} v${APP_CONFIG.APP_VERSION}</strong>.</p>
+            <p>Willkommen zum <strong>${ typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.APP_NAME : 'Analyse Tool'} v${ typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.APP_VERSION : '?.?.?'}</strong>.</p>
             <h6>Allgemeine Bedienung:</h6>
             <ul>
                 <li><strong>Kollektiv-Auswahl (Header):</strong> Wählen Sie hier das globale Patientenkollektiv (Gesamt, Direkt OP, nRCT). Diese Auswahl beeinflusst alle Analysen und Darstellungen.</li>
                 <li><strong>Tab-Navigation:</strong> Wechseln Sie zwischen den Hauptfunktionen (Daten, Auswertung, Statistik, etc.).</li>
                 <li><strong>Tooltips:</strong> Fahren Sie mit der Maus über Elemente für detaillierte Erklärungen.</li>
-                <li><strong>Statistische Signifikanz:</strong> p-Werte werden mit Symbolen versehen: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Das Signifikanzniveau ist &alpha; = ${APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL}. Konfidenzintervalle (KI) sind, wenn nicht anders angegeben, 95%-KIs.</li>
+                <li><strong>Statistische Signifikanz:</strong> p-Werte werden mit Symbolen versehen: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Das Signifikanzniveau ist &alpha; = ${ typeof APP_CONFIG !== 'undefined' ? (APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL || 0.05) : 0.05}. Konfidenzintervalle (KI) sind, wenn nicht anders angegeben, 95%-KIs.</li>
             </ul>
             <h6>Wichtige Tabs:</h6>
             <ul>
@@ -215,7 +215,7 @@ const TOOLTIP_CONTENT = {
         expandRow: "Klicken Sie hier oder auf den Pfeil-Button, um die detaillierte Bewertung der einzelnen T2-gewichteten Lymphknoten dieses Patienten gemäß der aktuell angewendeten Kriterien anzuzeigen/auszublenden. Erfüllte Positiv-Kriterien werden hervorgehoben."
     },
     t2Logic: { description: `Logische Verknüpfung der aktiven T2-Kriterien: <strong>UND</strong> (Ein Lymphknoten ist nur positiv, wenn ALLE aktivierten Kriterien erfüllt sind). <strong>ODER</strong> (Ein Lymphknoten ist positiv, wenn MINDESTENS EIN aktiviertes Kriterium erfüllt ist). Die Wahl beeinflusst die Berechnung des T2-Status.` },
-    t2Size: { description: `Größenkriterium (Kurzachse): Lymphknoten mit einem Durchmesser <strong>größer oder gleich (≥)</strong> dem eingestellten Schwellenwert gelten als suspekt. Einstellbarer Bereich: ${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min} - ${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max} mm (Schritt: ${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step} mm). Aktivieren/Deaktivieren mit Checkbox.` },
+    t2Size: { description: `Größenkriterium (Kurzachse): Lymphknoten mit einem Durchmesser <strong>größer oder gleich (≥)</strong> dem eingestellten Schwellenwert gelten als suspekt. Einstellbarer Bereich: ${typeof APP_CONFIG !== 'undefined' ? (APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min) : '0.1'} - ${typeof APP_CONFIG !== 'undefined' ? (APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max) : '25.0'} mm (Schritt: ${typeof APP_CONFIG !== 'undefined' ? (APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step) : '0.1'} mm). Aktivieren/Deaktivieren mit Checkbox.` },
     t2Form: { description: "Formkriterium: Wählen Sie, welche Form ('rund' oder 'oval') als suspekt gilt. Aktivieren/Deaktivieren mit Checkbox." },
     t2Kontur: { description: "Konturkriterium: Wählen Sie, welche Kontur ('scharf' berandet oder 'irregulär') als suspekt gilt. Aktivieren/Deaktivieren mit Checkbox." },
     t2Homogenitaet: { description: "Homogenitätskriterium: Wählen Sie, ob ein 'homogenes' oder 'heterogenes' Binnensignal auf T2w als suspekt gilt. Aktivieren/Deaktivieren mit Checkbox." },
@@ -234,7 +234,10 @@ const TOOLTIP_CONTENT = {
         acc: "Accuracy (T2 vs. N): Gesamtanteil der korrekt klassifizierten Fälle.",
         balAcc: "Balanced Accuracy (T2 vs. N): Mittelwert aus Sensitivität und Spezifität.",
         f1: "F1-Score (T2 vs. N): Harmonisches Mittel aus PPV und Sensitivität.",
-        auc: "AUC (T2 vs. N): Fläche unter der ROC-Kurve; für binäre Tests wie hier äquivalent zur Balanced Accuracy."
+        auc: "AUC (T2 vs. N): Fläche unter der ROC-Kurve; für binäre Tests wie hier äquivalent zur Balanced Accuracy.",
+        lr_pos: "Positive Likelihood Ratio (LR+, T2 vs. N): Um wie viel wahrscheinlicher ist ein T2+ Ergebnis bei N+ als bei N- Fällen?",
+        lr_neg: "Negative Likelihood Ratio (LR-, T2 vs. N): Um wie viel wahrscheinlicher ist ein T2- Ergebnis bei N+ als bei N- Fällen?",
+        youden: "Youden's Index (J, T2 vs. N): Sensitivität + Spezifität - 1. Ein Maß der Gesamtperformance."
      },
     bruteForceMetric: { description: "Wählen Sie die Zielmetrik für die Brute-Force-Optimierung.<br><strong>Accuracy:</strong> Anteil korrekt klassifizierter Fälle.<br><strong>Balanced Accuracy:</strong> (Sens+Spez)/2; gut bei ungleichen Klassengrößen.<br><strong>F1-Score:</strong> Harmonisches Mittel aus PPV & Sensitivität.<br><strong>PPV:</strong> Präzision bei positiver Vorhersage.<br><strong>NPV:</strong> Präzision bei negativer Vorhersage." },
     bruteForceStart: { description: "Startet die Brute-Force-Suche nach der T2-Kriterienkombination, die die gewählte Zielmetrik im aktuellen Kollektiv maximiert. Dies kann einige Zeit in Anspruch nehmen und läuft im Hintergrund." },
@@ -348,11 +351,11 @@ const TOOLTIP_CONTENT = {
         tableSinglePNG: { description: "Ausgewählte Tabelle '{TableName}' als PNG-Bilddatei.", type: 'TABLE_PNG_EXPORT', ext: "png"},
         allZIP: { description: "Alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT, alle MDs, Rohdaten-CSV, HTML-Report) in einem ZIP-Archiv.", type: 'ALL_ZIP', ext: "zip"},
         csvZIP: { description: "Alle verfügbaren CSV-Dateien (Statistik, Rohdaten) in einem ZIP-Archiv.", type: 'CSV_ZIP', ext: "zip"},
-        mdZIP: { description: "Alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikationstexte) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "zip"},
+        mdZIP: { description: "Alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikationstexte) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "md"},
         pngZIP: { description: "Identisch zum 'Diagramme & Tabellen (PNG)' Einzel-Export.", type: 'PNG_ZIP', ext: "zip"},
         svgZIP: { description: "Identisch zum 'Diagramme (SVG)' Einzel-Export.", type: 'SVG_ZIP', ext: "zip"},
         xlsxZIP: { description: "Alle verfügbaren Excel-Dateien in einem ZIP-Archiv.", type: 'XLSX_ZIP', ext: "xlsx"},
-        publicationMD: { description: "Generierter Publikationstext (Methoden & Ergebnisse) als Markdown (.md).", type: 'PUBLICATION_FULL_MD', ext: "md" }
+        publicationMD: { description: "Generierter Publikationstext (Methoden & Ergebnisse) als Markdown (.md).", type: 'PUBLIKATION_FULL_MD', ext: "md" }
     },
     publikationTabTooltips: {
         spracheSwitch: { description: "Wechselt die Sprache der generierten Texte und einiger Beschriftungen im Publikation-Tab zwischen Deutsch und Englisch." },
@@ -380,7 +383,7 @@ const TOOLTIP_CONTENT = {
         spez: { name: "Spezifität", description: "Spezifität ([METHODE] vs. N): Anteil der tatsächlich negativen Fälle (N-), die durch die Methode [METHODE] korrekt als negativ erkannt wurden.<br><i>Formel: RN / (RN + FP)</i>", interpretation: "Die Spezifität der Methode [METHODE] zur korrekten Identifikation von N- Lymphknoten betrug <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER]–[UPPER]) im untersuchten Kollektiv [KOLLEKTIV]. Das bedeutet, dass [WERT] der Patienten ohne pathologisch gesicherten Lymphknotenbefall korrekt als negativ klassifiziert wurden."},
         ppv: { name: "Pos. Prädiktiver Wert (PPV)", description: "PPV ([METHODE] vs. N): Wahrscheinlichkeit, dass ein Patient mit einem positiven Testergebnis durch Methode [METHODE] tatsächlich krank (N+) ist.<br><i>Formel: RP / (RP + FP)</i>", interpretation: "Bei einem positiven Ergebnis der Methode [METHODE] lag die Wahrscheinlichkeit für einen tatsächlichen N+ Status bei <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER]–[UPPER]) im Kollektiv [KOLLEKTIV]. Dieser Wert ist stark prävalenzabhängig."},
         npv: { name: "Neg. Prädiktiver Wert (NPV)", description: "NPV ([METHODE] vs. N): Wahrscheinlichkeit, dass ein Patient mit einem negativen Testergebnis durch Methode [METHODE] tatsächlich gesund (N-) ist.<br><i>Formel: RN / (RN + FN)</i>", interpretation: "Bei einem negativen Ergebnis der Methode [METHODE] lag die Wahrscheinlichkeit für einen tatsächlichen N- Status bei <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER]–[UPPER]) im Kollektiv [KOLLEKTIV]. Dieser Wert ist stark prävalenzabhängig."},
-        acc: { name: "Accuracy (Gesamtgenauigkeit)", description: "Accuracy ([METHODE] vs. N): Anteil aller Fälle, die durch die Methode [METHODE] korrekt klassifiziert wurden.<br><i>Formel: (RP + RN) / Gesamtanzahl</i>", interpretation: "Die Methode [METHODE] klassifizierte insgesamt <strong>[WERT]</strong> aller Patienten korrekt (95%-KI nach [METHOD_CI]: [LOWER]–[UPPER]) im Kollektiv [KOLLEKTIV].<hr><i>Bei unausgeglichenen Gruppen (ungleiche Prävalenz von N+ und N-) kann die Accuracy irreführend sein. Die Balanced Accuracy ist hier oft aussagekräftiger.</i>"},
+        acc: { name: "Accuracy (Gesamtgenauigkeit)", description: "Accuracy ([METHODE] vs. N): Anteil aller Fälle, die durch die Methode [METHODE] korrekt klassifiziert wurden.<br><i>Formel: (RP + RN) / Gesamtanzahl</i>", interpretation: "Die Methode [METHODE] klassifizierte insgesamt <strong>[WERT]</strong> aller Patienten korrekt (95%-KI nach [METHOD_CI]: [LOWER]–[UPPER]) im Kollektiv [KOLLEKTIV].<hr class='my-1 border-secondary-subtle'><i>Bei unausgeglichenen Gruppen (ungleiche Prävalenz von N+ und N-) kann die Accuracy irreführend sein. Die Balanced Accuracy ist hier oft aussagekräftiger.</i>"},
         balAcc: { name: "Balanced Accuracy", description: "Balanced Accuracy ([METHODE] vs. N): Der Mittelwert aus Sensitivität und Spezifität. Sinnvoll bei ungleichen Gruppengrößen (Prävalenz).<br><i>Formel: (Sensitivität + Spezifität) / 2</i>", interpretation: "Die Balanced Accuracy der Methode [METHODE], die Sensitivität und Spezifität gleich gewichtet, betrug <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER]–[UPPER]) im Kollektiv [KOLLEKTIV]. Ein Wert nahe 1.0 indiziert eine hohe Gesamtleistung."},
         f1: { name: "F1-Score", description: "F1-Score ([METHODE] vs. N): Das harmonische Mittel aus PPV (Precision) und Sensitivität (Recall). Ein Wert von 1 ist optimal, besonders relevant bei unbalancierten Datensätzen.<br><i>Formel: 2 * (PPV * Sensitivität) / (PPV + Sensitivität)</i>", interpretation: "Der F1-Score für die Methode [METHODE], der Präzision und Sensitivität kombiniert, beträgt <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER]–[UPPER]) im Kollektiv [KOLLEKTIV]."},
         auc: { name: "Area Under Curve (AUC)", description: "AUC ([METHODE] vs. N): Fläche unter der Receiver Operating Characteristic (ROC)-Kurve. Repräsentiert die Fähigkeit einer Methode, zwischen positiven und negativen Fällen über alle möglichen Schwellenwerte hinweg zu unterscheiden. 0.5 entspricht Zufall, 1.0 perfekter Trennung.<br><i>Für binäre Tests (wie AS oder eine feste T2-Regel) ist AUC = Balanced Accuracy.</i>", interpretation: "Die AUC der Methode [METHODE] von <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER]–[UPPER]) deutet auf eine <strong>[BEWERTUNG]</strong> generelle Trennschärfe zwischen N+ und N- Fällen im Kollektiv [KOLLEKTIV] hin."},
@@ -398,7 +401,7 @@ const TOOLTIP_CONTENT = {
         konfusionsmatrix: { description: "Kreuztabelle, die die Klassifikationsergebnisse der Methode [METHODE] mit dem tatsächlichen N-Status vergleicht: Richtig Positive (RP), Falsch Positive (FP), Falsch Negative (FN), Richtig Negative (RN)." },
         accComp: { name: "Accuracy Vergleich (ungepaart)", description: "Vergleicht die Accuracy der Methode [METHODE] zwischen zwei unabhängigen Kollektiven ([KOLLEKTIV1] vs. [KOLLEKTIV2]) mittels Fisher's Exact Test.<br><i>Nullhypothese (H0): Accuracy in Kollektiv1 = Accuracy in Kollektiv2.</i>", interpretation: "Der Unterschied in der Accuracy der Methode [METHODE] zwischen den Kollektiven [KOLLEKTIV1] und [KOLLEKTIV2] ist <strong>[SIGNIFIKANZ_TEXT]</strong> (p=[P_WERT])." },
         aucComp: { name: "AUC Vergleich (ungepaart)", description: "Vergleicht die AUC der Methode [METHODE] zwischen zwei unabhängigen Kollektiven ([KOLLEKTIV1] vs. [KOLLEKTIV2]) mittels eines Z-Tests basierend auf den Standardfehlern der AUCs.<br><i>Nullhypothese (H0): AUC in Kollektiv1 = AUC in Kollektiv2.</i>", interpretation: "Der Unterschied in der AUC der Methode [METHODE] zwischen den Kollektiven [KOLLEKTIV1] und [KOLLEKTIV2] ist <strong>[SIGNIFIKANZ_TEXT]</strong> (p=[P_WERT])." },
-        defaultP: { interpretation: `Der berechnete p-Wert beträgt <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Bei einem Signifikanzniveau von ${formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,2).replace('.',',')} ist das Ergebnis <strong>[SIGNIFIKANZ_TEXT]</strong>.` },
+        defaultP: { interpretation: `Der berechnete p-Wert beträgt <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Bei einem Signifikanzniveau von ${typeof APP_CONFIG !== 'undefined' && typeof formatNumber === 'function' ? formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,2).replace('.',',') : '0,05'} ist das Ergebnis <strong>[SIGNIFIKANZ_TEXT]</strong>.` },
         size_mwu: {name: "LK Größe MWU", description: "Vergleich der medianen Lymphknotengrößen zwischen N+ und N- Patienten mittels Mann-Whitney-U-Test. Hier werden alle Lymphknoten der Patienten berücksichtigt, nicht Patienten-Level-Status.", interpretation: "Der Mann-Whitney-U-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies zeigt einen [SIGNIFIKANZ_TEXT] Unterschied in der Verteilung der Lymphknotengrößen zwischen den Lymphknoten von N+ und N- Patienten im Kollektiv [KOLLEKTIV]."}
     }
 };
