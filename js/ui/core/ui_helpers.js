@@ -552,8 +552,8 @@ const ui_helpers = (() => {
         trySetDisabled('export-daten-md', dataDisabled);
         trySetDisabled('export-auswertung-md', dataDisabled);
         trySetDisabled('export-filtered-data-csv', dataDisabled);
-        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled); // Report needs data, BF is optional but good
-        trySetDisabled('export-publication-md', dataDisabled); // Publication MD depends on data
+        trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled);
+        trySetDisabled('export-publication-md', dataDisabled);
         trySetDisabled('export-charts-png', dataDisabled);
         trySetDisabled('export-charts-svg', dataDisabled);
 
@@ -563,7 +563,6 @@ const ui_helpers = (() => {
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
 
-        // XLSX are currently not implemented, so keep them disabled
         trySetDisabled('export-statistik-xlsx', true);
         trySetDisabled('export-daten-xlsx', true);
         trySetDisabled('export-auswertung-xlsx', true);
@@ -571,7 +570,7 @@ const ui_helpers = (() => {
         trySetDisabled('export-xlsx-zip', true);
 
 
-        const isPresentationTabActive = activeTabId === 'praesentation-tab';
+        const isPresentationTabActive = activeTabId === 'praesentation-tab-pane';
         const praesButtons = [
             'download-performance-as-pur-csv', 'download-performance-as-pur-md',
             'download-performance-as-vs-t2-csv',
@@ -579,14 +578,15 @@ const ui_helpers = (() => {
             'download-tests-as-vs-t2-md'
         ];
         praesButtons.forEach(id => {
-            trySetDisabled(id, !isPresentationTabActive || dataDisabled);
+            const el = document.getElementById(id);
+            if (el) trySetDisabled(id, !isPresentationTabActive || dataDisabled);
         });
 
         document.querySelectorAll('.chart-download-btn, .table-download-png-btn').forEach(btn => {
-            if (btn.closest('#statistik-tab-pane')) btn.disabled = activeTabId !== 'statistik-tab' || dataDisabled;
-            else if (btn.closest('#auswertung-tab-pane .dashboard-card-col')) btn.disabled = activeTabId !== 'auswertung-tab' || dataDisabled;
-            else if (btn.closest('#praesentation-tab-pane')) btn.disabled = activeTabId !== 'praesentation-tab' || dataDisabled;
-            else if (btn.closest('#publikation-tab-pane')) btn.disabled = activeTabId !== 'publikation-tab' || dataDisabled;
+            if (btn.closest('#statistik-tab-pane')) btn.disabled = activeTabId !== 'statistik-tab-pane' || dataDisabled;
+            else if (btn.closest('#auswertung-tab-pane .dashboard-card-col')) btn.disabled = activeTabId !== 'auswertung-tab-pane' || dataDisabled;
+            else if (btn.closest('#praesentation-tab-pane')) btn.disabled = activeTabId !== 'praesentation-tab-pane' || dataDisabled;
+            else if (btn.closest('#publikation-tab-pane')) btn.disabled = activeTabId !== 'publikation-tab-pane' || dataDisabled;
         });
          if(document.getElementById('export-bruteforce-modal-txt')) {
             trySetDisabled('export-bruteforce-modal-txt', bfDisabled);
@@ -606,7 +606,7 @@ const ui_helpers = (() => {
             PUBLICATION_CONFIG.sections.forEach(mainSection => {
                 if (mainSection.subSections.some(sub => sub.id === currentSectionId)) {
                     activeMainSectionId = mainSection.id;
-                } else if (mainSection.id === currentSectionId) { // For top-level sections like 'referenzen'
+                } else if (mainSection.id === currentSectionId || mainSection.subSections.some(sub => sub.id === currentSectionId && sub.id.startsWith(mainSection.id))) {
                     activeMainSectionId = mainSection.id;
                 }
             });
@@ -618,6 +618,10 @@ const ui_helpers = (() => {
 
         document.querySelectorAll('#publikation-sections-nav .publikation-section-link').forEach(link => {
             link.classList.toggle('active', link.dataset.sectionId === currentSectionId);
+             if (link.dataset.sectionId === currentSectionId) {
+                const parentMainLink = link.closest('li.nav-item')?.querySelector('.publikation-main-section-link');
+                if(parentMainLink) parentMainLink.classList.add('active-main');
+             }
         });
 
 
@@ -645,13 +649,13 @@ const ui_helpers = (() => {
         switch(metricKeyLower) {
             case 'f1':
             case 'auc':
-            case 'balacc': // Balanced Accuracy
-            case 'youden': // Youden's Index
+            case 'balacc':
+            case 'youden':
                 digits = APP_CONFIG.STATISTICAL_CONSTANTS.METRIC_RATE_DECIMALS || 3;
                 isPercent = false;
                 break;
-            case 'lr_pos': // LR+
-            case 'lr_neg': // LR-
+            case 'lr_pos':
+            case 'lr_neg':
                 digits = 2;
                 isPercent = false;
                 break;
@@ -669,7 +673,7 @@ const ui_helpers = (() => {
         }
 
 
-        const valueStr = formatNumber(data?.value, digits, na, true); // Use standard format for numbers in tooltips
+        const valueStr = formatNumber(data?.value, digits, na, true);
         const lowerStr = formatNumber(data?.ci?.lower, digits, na, true);
         const upperStr = formatNumber(data?.ci?.upper, digits, na, true);
         const ciMethodStr = data?.method || 'N/A';
@@ -775,7 +779,13 @@ const ui_helpers = (() => {
              pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, APP_CONFIG.STATISTICAL_CONSTANTS.P_VALUE_PRECISION || 3, na, true)) : na;
              sigSymbol = getStatisticalSignificanceSymbol(pVal);
              sigText = getStatisticalSignificanceText(pVal);
-             const templateToUse = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || TOOLTIP_CONTENT.statMetrics.defaultP.interpretation;
+             let templateToUse = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || TOOLTIP_CONTENT.statMetrics.defaultP.interpretation;
+
+             if (key === 'defaultP') {
+                 const formattedSigLevel = formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, 2).replace('.',',');
+                 templateToUse = templateToUse.replace(/\[SIGNIFICANCE_LEVEL_FORMATTED\]/g, formattedSigLevel);
+             }
+
              return templateToUse
                  .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
                  .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
@@ -815,10 +825,7 @@ const ui_helpers = (() => {
 
     function showKurzanleitung() {
         const modalElement = document.getElementById('kurzanleitung-modal');
-        const appContainer = document.getElementById('app-container'); // Für mainAppInterface Referenz
-
         if (!modalElement) {
-            // Dynamische Erstellung des Modals, falls es noch nicht existiert (sollte in index.html sein)
             console.error("Kurzanleitung Modal Element nicht im DOM gefunden.");
             return;
         }
@@ -829,15 +836,11 @@ const ui_helpers = (() => {
 
         if (kurzanleitungModalInstance && modalElement && !modalElement.classList.contains('show')) {
             if (!initialTabRenderFixed && typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
-                // Dieser Fix war dafür gedacht, ein Problem beim ersten Laden des Publikationstabs zu beheben.
-                // Er sollte nur einmal ausgeführt werden.
                 modalElement.addEventListener('hidden.bs.modal', () => {
                     if (!initialTabRenderFixed) {
-                        const currentActiveTabId = state.getActiveTabId();
-                        // Prüfen, ob der initiale Tab (oft Publikationstab) ein Rendering-Problem hatte,
-                        // das durch das Modal-Öffnen/Schließen beeinflusst wurde.
-                        if (currentActiveTabId === 'publikation-tab') { // Oder ein anderer Tab, der Probleme machte
-                            console.log("Kurzanleitung Modal geschlossen, aktiver Tab ist Publikation. Erzwinge Refresh zur Sicherheit.");
+                        const currentActiveTabId = typeof state !== 'undefined' ? state.getActiveTabId() : '';
+                        if (currentActiveTabId === 'publikation-tab-pane') {
+                            console.log("Kurzanleitung Modal geschlossen, aktiver Tab ist Publikation. Erzwinge Refresh.");
                             mainAppInterface.refreshCurrentTab();
                         }
                          initialTabRenderFixed = true;
@@ -846,6 +849,68 @@ const ui_helpers = (() => {
             }
             kurzanleitungModalInstance.show();
         }
+    }
+
+    function createPaginationControlsHTML(baseId, currentPage, totalPages, maxVisibleButtons = 5) {
+        if (totalPages <= 1) return '';
+
+        let html = `<nav aria-label="Tabellennavigation ${baseId}"><ul class="pagination pagination-sm justify-content-center">`;
+        const disabledPrev = (currentPage === 1) ? 'disabled' : '';
+        const prevPage = currentPage - 1;
+        html += `<li class="page-item ${disabledPrev}" data-tippy-content="Vorherige Seite anzeigen">
+                    <a class="page-link page-nav-btn" href="#" data-page-action="prev" data-target-page="${prevPage}" aria-label="Zurück">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                 </li>`;
+
+        let startPage, endPage;
+        if (totalPages <= maxVisibleButtons) {
+            startPage = 1;
+            endPage = totalPages;
+        } else {
+            const maxPagesBeforeCurrent = Math.floor(maxVisibleButtons / 2);
+            const maxPagesAfterCurrent = Math.ceil(maxVisibleButtons / 2) - 1;
+            if (currentPage <= maxPagesBeforeCurrent) {
+                startPage = 1;
+                endPage = maxVisibleButtons;
+            } else if (currentPage + maxPagesAfterCurrent >= totalPages) {
+                startPage = totalPages - maxVisibleButtons + 1;
+                endPage = totalPages;
+            } else {
+                startPage = currentPage - maxPagesBeforeCurrent;
+                endPage = currentPage + maxPagesAfterCurrent;
+            }
+        }
+        if (startPage > 1) {
+            html += `<li class="page-item" data-tippy-content="Zur Seite 1 springen"><a class="page-link page-nav-btn" href="#" data-page-number="1">1</a></li>`;
+            if (startPage > 2) {
+                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const activeClass = (i === currentPage) ? 'active' : '';
+            html += `<li class="page-item ${activeClass}" data-tippy-content="Zur Seite ${i} springen">
+                        <a class="page-link page-nav-btn" href="#" data-page-number="${i}">${i}</a>
+                     </li>`;
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+            html += `<li class="page-item" data-tippy-content="Zur Seite ${totalPages} springen"><a class="page-link page-nav-btn" href="#" data-page-number="${totalPages}">${totalPages}</a></li>`;
+        }
+
+        const disabledNext = (currentPage === totalPages) ? 'disabled' : '';
+        const nextPage = currentPage + 1;
+        html += `<li class="page-item ${disabledNext}" data-tippy-content="Nächste Seite anzeigen">
+                    <a class="page-link page-nav-btn" href="#" data-page-action="next" data-target-page="${nextPage}" aria-label="Weiter">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                 </li>`;
+        html += '</ul></nav>';
+        return html;
     }
 
 
@@ -877,7 +942,8 @@ const ui_helpers = (() => {
         getTestDescriptionHTML,
         getTestInterpretationHTML,
         getAssociationInterpretationHTML,
-        showKurzanleitung
+        showKurzanleitung,
+        createPaginationControlsHTML
     });
 
 })();
