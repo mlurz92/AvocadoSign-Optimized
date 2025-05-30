@@ -1,236 +1,145 @@
 const state = (() => {
-    let currentState = {};
+    let _currentState = {};
+    let _unsavedCriteriaChanges = false;
 
-    const defaultState = {
-        currentKollektiv: APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV,
-        datenTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT),
-        auswertungTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT),
-        currentPublikationLang: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG,
-        currentPublikationSection: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION,
-        currentPublikationBruteForceMetric: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC,
-        currentStatsLayout: APP_CONFIG.DEFAULT_SETTINGS.STATS_LAYOUT,
-        currentStatsKollektiv1: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1,
-        currentStatsKollektiv2: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2,
-        currentPresentationView: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW,
-        currentPresentationStudyId: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID,
-        activeTabId: 'publikation-tab'
+    const _getDefaultSortState = (key) => {
+        if (key === APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_SORT) {
+            return cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT);
+        } else if (key === APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_SORT) {
+            return cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
+        }
+        return null;
     };
 
-    function init() {
-        currentState = {
-            currentKollektiv: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV) ?? defaultState.currentKollektiv,
-            currentPublikationLang: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG) ?? defaultState.currentPublikationLang,
-            currentPublikationSection: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION) ?? defaultState.currentPublikationSection,
-            currentPublikationBruteForceMetric: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC) ?? defaultState.currentPublikationBruteForceMetric,
-            currentStatsLayout: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT) ?? defaultState.currentStatsLayout,
-            currentStatsKollektiv1: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1) ?? defaultState.currentStatsKollektiv1,
-            currentStatsKollektiv2: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2) ?? defaultState.currentStatsKollektiv2,
-            currentPresentationView: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW) ?? defaultState.currentPresentationView,
-            currentPresentationStudyId: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID) ?? defaultState.currentPresentationStudyId,
-            datenTableSort: cloneDeep(defaultState.datenTableSort),
-            auswertungTableSort: cloneDeep(defaultState.auswertungTableSort),
-            activeTabId: defaultState.activeTabId
-        };
-        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) {
-            localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
-        }
-        console.log("State Manager initialisiert mit:", currentState);
-    }
+    function initializeState(defaultTabId) {
+        _currentState.activeTabId = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.ACTIVE_TAB_ID) || defaultTabId || 'daten-tab-pane';
+        _currentState.currentKollektiv = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV) || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
 
-    function getCurrentKollektiv() {
-        return currentState.currentKollektiv;
-    }
+        _currentState.appliedT2Criteria = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA) || getDefaultT2Criteria();
+        _currentState.appliedT2Logic = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC) || APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC;
 
-    function setCurrentKollektiv(newKollektiv) {
-        if (typeof newKollektiv === 'string' && currentState.currentKollektiv !== newKollektiv) {
-            currentState.currentKollektiv = newKollektiv;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV, currentState.currentKollektiv);
-            return true;
-        }
-        return false;
-    }
+        _currentState.currentDatenTableSort = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_SORT) || _getDefaultSortState(APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_SORT);
+        _currentState.currentAuswertungTableSort = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_SORT) || _getDefaultSortState(APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_SORT);
+        _currentState.currentDatenTablePage = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_PAGE) || 1;
+        _currentState.currentAuswertungTablePage = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_PAGE) || 1;
 
-    function getDatenTableSort() {
-        return cloneDeep(currentState.datenTableSort);
-    }
+        _currentState.currentStatistikLayout = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT) || APP_CONFIG.DEFAULT_SETTINGS.STATS_LAYOUT;
+        _currentState.currentStatistikKollektiv1 = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1) || APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1;
+        _currentState.currentStatistikKollektiv2 = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2) || APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2;
 
-    function updateDatenTableSortDirection(key, subKey = null) {
-        if (!key) return false;
-        if (currentState.datenTableSort.key === key && currentState.datenTableSort.subKey === subKey) {
-            currentState.datenTableSort.direction = currentState.datenTableSort.direction === 'asc' ? 'desc' : 'asc';
+        _currentState.currentPresentationView = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW) || APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW;
+        _currentState.currentPresentationStudyId = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID) || APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID;
+
+        _currentState.currentPublikationLang = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG) || APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG;
+        _currentState.currentPublikationSection = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION) || PUBLICATION_CONFIG.defaultSubSection || APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION;
+        _currentState.currentPublikationBruteForceMetric = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC) || APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC;
+
+        _currentState.criteriaComparisonSets = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.CRITERIA_COMPARISON_SETS) || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.CRITERIA_COMPARISON_SETS);
+        _currentState.chartColorScheme = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.CHART_COLOR_SCHEME) || APP_CONFIG.DEFAULT_SETTINGS.CHART_COLOR_SCHEME;
+        _currentState.bruteForceMetric = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_METRIC) || APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC;
+
+        if (loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START) === null) {
+            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, 'false');
+            _currentState.showKurzanleitungOnLoad = true;
         } else {
-            currentState.datenTableSort = { key: key, direction: 'asc', subKey: subKey };
+            _currentState.showKurzanleitungOnLoad = false;
         }
-        return true;
-     }
-
-    function getAuswertungTableSort() {
-        return cloneDeep(currentState.auswertungTableSort);
     }
 
-     function updateAuswertungTableSortDirection(key, subKey = null) {
-         if (!key) return false;
-         if (currentState.auswertungTableSort.key === key && currentState.auswertungTableSort.subKey === subKey) {
-            currentState.auswertungTableSort.direction = currentState.auswertungTableSort.direction === 'asc' ? 'desc' : 'asc';
-        } else {
-            currentState.auswertungTableSort = { key: key, direction: 'asc', subKey: subKey };
+    function hasStateChanged(key, newValue) {
+        const oldValue = _currentState[key];
+        if (typeof oldValue === 'object' && oldValue !== null && typeof newValue === 'object' && newValue !== null) {
+            return JSON.stringify(oldValue) !== JSON.stringify(newValue);
         }
-        return true;
-     }
-
-    function getCurrentPublikationLang() {
-        return currentState.currentPublikationLang;
+        return oldValue !== newValue;
     }
 
-    function setCurrentPublikationLang(newLang) {
-        if ((newLang === 'de' || newLang === 'en') && currentState.currentPublikationLang !== newLang) {
-            currentState.currentPublikationLang = newLang;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG, currentState.currentPublikationLang);
-            return true;
-        }
-        return false;
-    }
+    function getActiveTabId() { return _currentState.activeTabId; }
+    function setActiveTabId(tabId) { if(hasStateChanged('activeTabId', tabId)) { _currentState.activeTabId = tabId; saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.ACTIVE_TAB_ID, tabId); }}
 
-    function getCurrentPublikationSection() {
-        return currentState.currentPublikationSection;
-    }
+    function getCurrentKollektiv() { return _currentState.currentKollektiv; }
+    function setCurrentKollektiv(kollektiv) { if(hasStateChanged('currentKollektiv', kollektiv)) { _currentState.currentKollektiv = kollektiv; saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV, kollektiv); }}
 
-    function setCurrentPublikationSection(newSectionId) {
-        const isValidSection = PUBLICATION_CONFIG.sections.some(section => section.id === newSectionId);
-        if (typeof newSectionId === 'string' && isValidSection && currentState.currentPublikationSection !== newSectionId) {
-            currentState.currentPublikationSection = newSectionId;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION, currentState.currentPublikationSection);
-            return true;
-        }
-        if (!isValidSection) {
-            console.warn(`setCurrentPublikationSection: Ungültige Sektions-ID '${newSectionId}'`);
-        }
-        return false;
-    }
+    function getAppliedT2Criteria() { return cloneDeep(_currentState.appliedT2Criteria); } // Return a copy
+    function setAppliedT2Criteria(criteria) { if(hasStateChanged('appliedT2Criteria', criteria)) { _currentState.appliedT2Criteria = cloneDeep(criteria); saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA, criteria); }}
 
-    function getCurrentPublikationBruteForceMetric() {
-        return currentState.currentPublikationBruteForceMetric;
-    }
+    function getAppliedT2Logic() { return _currentState.appliedT2Logic; }
+    function setAppliedT2Logic(logic) { if(hasStateChanged('appliedT2Logic', logic)) { _currentState.appliedT2Logic = logic; saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC, logic); }}
 
-    function setCurrentPublikationBruteForceMetric(newMetric) {
-        const isValidMetric = PUBLICATION_CONFIG.bruteForceMetricsForPublication.some(m => m.value === newMetric);
-        if (isValidMetric && currentState.currentPublikationBruteForceMetric !== newMetric) {
-            currentState.currentPublikationBruteForceMetric = newMetric;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC, currentState.currentPublikationBruteForceMetric);
-            return true;
-        }
-        return false;
-    }
+    function getCurrentDatenTableSort() { return cloneDeep(_currentState.currentDatenTableSort); }
+    function setCurrentDatenTableSort(sortState) { if(hasStateChanged('currentDatenTableSort', sortState)) { _currentState.currentDatenTableSort = cloneDeep(sortState); saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_SORT, sortState); }}
 
-    function getCurrentStatsLayout() {
-        return currentState.currentStatsLayout;
-    }
+    function getCurrentAuswertungTableSort() { return cloneDeep(_currentState.currentAuswertungTableSort); }
+    function setCurrentAuswertungTableSort(sortState) { if(hasStateChanged('currentAuswertungTableSort', sortState)) { _currentState.currentAuswertungTableSort = cloneDeep(sortState); saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_SORT, sortState); }}
 
-    function setCurrentStatsLayout(newLayout) {
-        if ((newLayout === 'einzel' || newLayout === 'vergleich') && currentState.currentStatsLayout !== newLayout) {
-            currentState.currentStatsLayout = newLayout;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT, currentState.currentStatsLayout);
-            return true;
-        }
-        return false;
-    }
+    function getCurrentDatenTablePage() { return _currentState.currentDatenTablePage; }
+    function setCurrentDatenTablePage(page) { const numPage = parseInt(page, 10); if (!isNaN(numPage) && hasStateChanged('currentDatenTablePage', numPage)) { _currentState.currentDatenTablePage = numPage; saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_PAGE, numPage); }}
 
-    function getCurrentStatsKollektiv1() {
-        return currentState.currentStatsKollektiv1;
-    }
+    function getCurrentAuswertungTablePage() { return _currentState.currentAuswertungTablePage; }
+    function setCurrentAuswertungTablePage(page) { const numPage = parseInt(page, 10); if (!isNaN(numPage) && hasStateChanged('currentAuswertungTablePage', numPage)) { _currentState.currentAuswertungTablePage = numPage; saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_PAGE, numPage); }}
 
-    function setCurrentStatsKollektiv1(newKollektiv) {
-         if (typeof newKollektiv === 'string' && currentState.currentStatsKollektiv1 !== newKollektiv) {
-            currentState.currentStatsKollektiv1 = newKollektiv;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1, currentState.currentStatsKollektiv1);
-            return true;
-        }
-        return false;
-    }
+    function getCurrentStatistikLayout() { return _currentState.currentStatistikLayout; }
+    function setCurrentStatistikLayout(layout) { if(hasStateChanged('currentStatistikLayout', layout)) { _currentState.currentStatistikLayout = layout; saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT, layout); }}
 
-    function getCurrentStatsKollektiv2() {
-        return currentState.currentStatsKollektiv2;
-    }
+    function getCurrentStatistikKollektiv1() { return _currentState.currentStatistikKollektiv1; }
+    function setCurrentStatistikKollektiv1(kollektiv) { if(hasStateChanged('currentStatistikKollektiv1', kollektiv)) { _currentState.currentStatistikKollektiv1 = kollektiv; saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1, kollektiv); }}
 
-    function setCurrentStatsKollektiv2(newKollektiv) {
-         if (typeof newKollektiv === 'string' && currentState.currentStatsKollektiv2 !== newKollektiv) {
-            currentState.currentStatsKollektiv2 = newKollektiv;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2, currentState.currentStatsKollektiv2);
-            return true;
-        }
-        return false;
-    }
+    function getCurrentStatistikKollektiv2() { return _currentState.currentStatistikKollektiv2; }
+    function setCurrentStatistikKollektiv2(kollektiv) { if(hasStateChanged('currentStatistikKollektiv2', kollektiv)) { _currentState.currentStatistikKollektiv2 = kollektiv; saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2, kollektiv); }}
 
-    function getCurrentPresentationView() {
-        return currentState.currentPresentationView;
-    }
+    function getCurrentPresentationView() { return _currentState.currentPresentationView; }
+    function setCurrentPresentationView(view) { if(hasStateChanged('currentPresentationView', view)) { _currentState.currentPresentationView = view; saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW, view); }}
 
-    function setCurrentPresentationView(newView) {
-        if ((newView === 'as-pur' || newView === 'as-vs-t2') && currentState.currentPresentationView !== newView) {
-            currentState.currentPresentationView = newView;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW, currentState.currentPresentationView);
-            if (newView === 'as-pur') {
-                setCurrentPresentationStudyId(null); 
-            } else if (!currentState.currentPresentationStudyId && newView === 'as-vs-t2') {
-                setCurrentPresentationStudyId(APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID);
-            }
-            return true;
-        }
-        return false;
-    }
+    function getCurrentPresentationStudyId() { return _currentState.currentPresentationStudyId; }
+    function setCurrentPresentationStudyId(studyId) { if(hasStateChanged('currentPresentationStudyId', studyId)) { _currentState.currentPresentationStudyId = studyId; saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID, studyId); }}
 
-    function getCurrentPresentationStudyId() {
-        return currentState.currentPresentationStudyId;
-    }
+    function getCurrentPublikationLang() { return _currentState.currentPublikationLang; }
+    function setCurrentPublikationLang(lang) { if(hasStateChanged('currentPublikationLang', lang)) { _currentState.currentPublikationLang = lang; saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG, lang); }}
 
-    function setCurrentPresentationStudyId(newStudyId) {
-        const newStudyIdValue = newStudyId === undefined ? null : newStudyId;
-        if (currentState.currentPresentationStudyId !== newStudyIdValue) {
-            currentState.currentPresentationStudyId = newStudyIdValue;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID, currentState.currentPresentationStudyId);
-            return true;
-        }
-        return false;
-    }
+    function getCurrentPublikationSection() { return _currentState.currentPublikationSection; }
+    function setCurrentPublikationSection(sectionId) { if(hasStateChanged('currentPublikationSection', sectionId)) { _currentState.currentPublikationSection = sectionId; saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION, sectionId); }}
 
-    function getActiveTabId() {
-        return currentState.activeTabId;
-    }
+    function getCurrentPublikationBruteForceMetric() { return _currentState.currentPublikationBruteForceMetric; }
+    function setCurrentPublikationBruteForceMetric(metric) { if(hasStateChanged('currentPublikationBruteForceMetric', metric)) { _currentState.currentPublikationBruteForceMetric = metric; saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC, metric); }}
 
-    function setActiveTabId(newTabId) {
-        if (typeof newTabId === 'string' && currentState.activeTabId !== newTabId) {
-            currentState.activeTabId = newTabId;
-            return true;
-        }
-        return false;
-    }
+    function getUnsavedCriteriaChanges() { return _unsavedCriteriaChanges; }
+    function setUnsavedCriteriaChanges(hasChanges) { _unsavedCriteriaChanges = !!hasChanges; }
+
+    function getCriteriaComparisonSets() { return cloneDeep(_currentState.criteriaComparisonSets); }
+    function setCriteriaComparisonSets(sets) { if (Array.isArray(sets) && hasStateChanged('criteriaComparisonSets', sets)) { _currentState.criteriaComparisonSets = cloneDeep(sets); saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.CRITERIA_COMPARISON_SETS, sets); }}
+
+    function getChartColorScheme() { return _currentState.chartColorScheme; }
+    function setChartColorScheme(scheme) { if(hasStateChanged('chartColorScheme', scheme)) { _currentState.chartColorScheme = scheme; saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.CHART_COLOR_SCHEME, scheme); }}
+
+    function getBruteForceMetric() { return _currentState.bruteForceMetric; }
+    function setBruteForceMetric(metric) { if (hasStateChanged('bruteForceMetric', metric)) { _currentState.bruteForceMetric = metric; saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_METRIC, metric); }}
+
+    function shouldShowKurzanleitungOnLoad() { return _currentState.showKurzanleitungOnLoad; }
+    function setKurzanleitungShown() { _currentState.showKurzanleitungOnLoad = false; }
+
 
     return Object.freeze({
-        init,
-        getCurrentKollektiv,
-        setCurrentKollektiv,
-        getDatenTableSort,
-        updateDatenTableSortDirection,
-        getAuswertungTableSort,
-        updateAuswertungTableSortDirection,
-        getCurrentPublikationLang,
-        setCurrentPublikationLang,
-        getCurrentPublikationSection,
-        setCurrentPublikationSection,
-        getCurrentPublikationBruteForceMetric,
-        setCurrentPublikationBruteForceMetric,
-        getCurrentStatsLayout,
-        setCurrentStatsLayout,
-        getCurrentStatsKollektiv1,
-        setCurrentStatsKollektiv1,
-        getCurrentStatsKollektiv2,
-        setCurrentStatsKollektiv2,
-        getCurrentPresentationView,
-        setCurrentPresentationView,
-        getCurrentPresentationStudyId,
-        setCurrentPresentationStudyId,
-        getActiveTabId,
-        setActiveTabId
+        initializeState,
+        getActiveTabId, setActiveTabId,
+        getCurrentKollektiv, setCurrentKollektiv,
+        getAppliedT2Criteria, setAppliedT2Criteria,
+        getAppliedT2Logic, setAppliedT2Logic,
+        getCurrentDatenTableSort, setCurrentDatenTableSort,
+        getCurrentAuswertungTableSort, setCurrentAuswertungTableSort,
+        getCurrentDatenTablePage, setCurrentDatenTablePage,
+        getCurrentAuswertungTablePage, setCurrentAuswertungTablePage,
+        getCurrentStatistikLayout, setCurrentStatistikLayout,
+        getCurrentStatistikKollektiv1, setCurrentStatistikKollektiv1,
+        getCurrentStatistikKollektiv2, setCurrentStatistikKollektiv2,
+        getCurrentPresentationView, setCurrentPresentationView,
+        getCurrentPresentationStudyId, setCurrentPresentationStudyId,
+        getCurrentPublikationLang, setCurrentPublikationLang,
+        getCurrentPublikationSection, setCurrentPublikationSection,
+        getCurrentPublikationBruteForceMetric, setCurrentPublikationBruteForceMetric,
+        getUnsavedCriteriaChanges, setUnsavedCriteriaChanges,
+        getCriteriaComparisonSets, setCriteriaComparisonSets,
+        getChartColorScheme, setChartColorScheme,
+        getBruteForceMetric, setBruteForceMetric,
+        shouldShowKurzanleitungOnLoad, setKurzanleitungShown
     });
-
 })();
