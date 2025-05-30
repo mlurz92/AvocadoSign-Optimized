@@ -72,45 +72,49 @@ const mainAppInterface = (() => {
             _t2CriteriaManager.initialize();
         }
 
-        if (_bruteForceManager && typeof _bruteForceManager.init === 'function') {
-            _bruteForceManager.init({
+        if (_bruteForceManager && typeof _bruteForceManager.init === 'function' && typeof APP_CONFIG !== 'undefined' && APP_CONFIG.PATHS?.BRUTE_FORCE_WORKER) {
+            const workerInitialized = _bruteForceManager.init({
                 onProgress: (progressData) => {
-                    if (_uiHelpers && _viewRenderer) {
+                    if (_uiHelpers && _viewRenderer && _bruteForceManager && _state) {
                         _uiHelpers.updateBruteForceUI('progress', progressData, _bruteForceManager.isWorkerAvailable(), progressData.kollektiv);
-                        if (_state.getActiveTabId() === 'auswertung-tab-pane') _viewRenderer.refreshCurrentTab();
+                         if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
                     }
                 },
                 onResult: (resultData) => {
-                    if (_uiHelpers && _viewRenderer) {
+                    if (_uiHelpers && _viewRenderer && _bruteForceManager && _state && _uiComponents) {
                         _uiHelpers.updateBruteForceUI('result', resultData, _bruteForceManager.isWorkerAvailable(), resultData.kollektiv);
                         const modalBody = document.getElementById('brute-force-modal-body');
-                        if (modalBody && _uiComponents) modalBody.innerHTML = _uiComponents.createBruteForceModalContent(resultData);
+                        if (modalBody) modalBody.innerHTML = _uiComponents.createBruteForceModalContent(resultData);
                         if (_uiHelpers) _uiHelpers.initializeTooltips(modalBody);
-                        if (_state.getActiveTabId() === 'auswertung-tab-pane') _viewRenderer.refreshCurrentTab();
-                         _uiHelpers.updateExportButtonStates(_state.getActiveTabId(), _bruteForceManager.hasAnyResults(), _processedData.length > 0);
+                         if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
+                        const hasBruteForceResults = _bruteForceManager.hasAnyResults ? _bruteForceManager.hasAnyResults() : Object.keys(_bruteForceManager.getAllResults() || {}).length > 0;
+                         _uiHelpers.updateExportButtonStates(_state.getActiveTabId(), hasBruteForceResults, (_processedData?.length ?? 0) > 0);
                     }
                 },
                 onError: (errorData) => {
-                    if (_uiHelpers && _viewRenderer) {
+                    if (_uiHelpers && _viewRenderer && _bruteForceManager && _state) {
                         _uiHelpers.showToast(`Brute-Force Fehler: ${errorData.message}`, 'danger');
                         _uiHelpers.updateBruteForceUI('error', errorData, _bruteForceManager.isWorkerAvailable(), errorData.kollektiv);
-                        if (_state.getActiveTabId() === 'auswertung-tab-pane') _viewRenderer.refreshCurrentTab();
+                        if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
                     }
                 },
                 onCancelled: (cancelData) => {
-                    if (_uiHelpers && _viewRenderer) {
+                    if (_uiHelpers && _viewRenderer && _bruteForceManager && _state) {
                         _uiHelpers.showToast('Brute-Force Analyse abgebrochen.', 'warning');
                         _uiHelpers.updateBruteForceUI('cancelled', cancelData, _bruteForceManager.isWorkerAvailable(), cancelData.kollektiv);
-                         if (_state.getActiveTabId() === 'auswertung-tab-pane') _viewRenderer.refreshCurrentTab();
+                         if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
                     }
                 },
                 onStarted: (startData) => {
-                     if (_uiHelpers && _viewRenderer) {
+                     if (_uiHelpers && _viewRenderer && _bruteForceManager && _state) {
                         _uiHelpers.updateBruteForceUI('started', startData, _bruteForceManager.isWorkerAvailable(), startData.kollektiv);
-                         if (_state.getActiveTabId() === 'auswertung-tab-pane') _viewRenderer.refreshCurrentTab();
+                         if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
                      }
                 }
             });
+             if(!workerInitialized && _uiHelpers) {
+                _uiHelpers.showToast("Brute-Force Worker konnte nicht initialisiert werden.", "warning");
+             }
         }
         return true;
     }
@@ -125,7 +129,7 @@ const mainAppInterface = (() => {
         }
 
         if (_dataProcessor && typeof _dataProcessor.processPatientData === 'function') {
-            _processedData = _dataProcessor.processPatientData(_globalRawData);
+            _processedData = _dataProcessor.processPatientData(cloneDeep(_globalRawData));
         } else {
             console.error("Data Processor nicht verfügbar. Daten können nicht verarbeitet werden.");
             _processedData = cloneDeep(_globalRawData);
@@ -135,6 +139,13 @@ const mainAppInterface = (() => {
             _processedData = _t2CriteriaManager.evaluateDataset(_processedData, _t2CriteriaManager.getAppliedT2Criteria(), _t2CriteriaManager.getAppliedT2Logic());
         } else {
             console.error("T2CriteriaManager nicht verfügbar oder Daten fehlen. T2 Status kann nicht initial berechnet werden.");
+             if (_processedData) {
+                _processedData.forEach(p => {
+                    p.t2 = null;
+                    p.anzahl_t2_plus_lk = 0;
+                    p.lymphknoten_t2_bewertet = (p.lymphknoten_t2 || []).map(lk => ({...lk, isPositive: false, checkResult: {}}));
+                });
+            }
         }
     }
 
@@ -146,7 +157,10 @@ const mainAppInterface = (() => {
         const filteredData = _dataProcessor.filterDataByKollektiv(_processedData, currentKollektiv);
         const headerStats = _dataProcessor.calculateHeaderStats(filteredData, currentKollektiv);
         _uiHelpers.updateHeaderStatsUI(headerStats);
-        _uiHelpers.updateExportButtonStates(_state.getActiveTabId(), _bruteForceManager.hasAnyResults(), _processedData.length > 0);
+        if (_bruteForceManager && _uiHelpers && _state) {
+            const hasBruteForceResults = _bruteForceManager.hasAnyResults ? _bruteForceManager.hasAnyResults() : Object.keys(_bruteForceManager.getAllResults() || {}).length > 0;
+             _uiHelpers.updateExportButtonStates(_state.getActiveTabId(), hasBruteForceResults, (_processedData?.length ?? 0) > 0);
+        }
     }
 
     function _setupInitialView() {
@@ -157,24 +171,26 @@ const mainAppInterface = (() => {
         _state.init();
         _updateGlobalUIState();
 
-        const initialTabId = _state.getActiveTabId() || APP_CONFIG.DEFAULT_SETTINGS.ACTIVE_TAB_ID || 'daten-tab-pane';
+        const initialTabId = _state.getActiveTabId() || (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.DEFAULT_SETTINGS.ACTIVE_TAB_ID : null) || 'daten-tab-pane';
         _viewRenderer.showTab(initialTabId);
 
         const appVersionFooter = document.getElementById('app-version-footer');
-        if (appVersionFooter && APP_CONFIG.APP_VERSION) {
+        if (appVersionFooter && typeof APP_CONFIG !== 'undefined' && APP_CONFIG.APP_VERSION) {
             appVersionFooter.textContent = APP_CONFIG.APP_VERSION;
         }
         const kurzanleitungModalBody = document.getElementById('kurzanleitung-modal-body');
-        if(kurzanleitungModalBody && UI_TEXTS.kurzanleitung && UI_TEXTS.kurzanleitung.content) {
+        if(kurzanleitungModalBody && typeof UI_TEXTS !== 'undefined' && UI_TEXTS.kurzanleitung && UI_TEXTS.kurzanleitung.content) {
             kurzanleitungModalBody.innerHTML = UI_TEXTS.kurzanleitung.content;
         }
          const kurzanleitungModalLabel = document.getElementById('kurzanleitungModalLabel');
-         if(kurzanleitungModalLabel && UI_TEXTS.kurzanleitung && UI_TEXTS.kurzanleitung.title) {
+         if(kurzanleitungModalLabel && typeof UI_TEXTS !== 'undefined' && UI_TEXTS.kurzanleitung && UI_TEXTS.kurzanleitung.title) {
             kurzanleitungModalLabel.innerHTML = `<i class="fas fa-info-circle me-2"></i> ${UI_TEXTS.kurzanleitung.title}`;
          }
     }
 
     function _attachGlobalEventListeners() {
+        if(!_generalEventHandlers || !_uiHelpers || !_state) return;
+
         const kollektivButtons = document.querySelectorAll('#kollektiv-buttons-container button[data-kollektiv]');
         kollektivButtons.forEach(button => {
             button.addEventListener('click', () => _generalEventHandlers.handleKollektivChange(button.dataset.kollektiv, mainAppInterface));
@@ -207,11 +223,11 @@ const mainAppInterface = (() => {
                 _generalEventHandlers.handleModalExportBruteForceClick();
             }
             const chartDownloadBtn = event.target.closest('.chart-download-btn');
-            if(chartDownloadBtn) {
+            if(chartDownloadBtn && _exportService) {
                 _generalEventHandlers.handleSingleChartDownload(chartDownloadBtn);
             }
             const tableDownloadPngBtn = event.target.closest('.table-download-png-btn');
-            if(tableDownloadPngBtn) {
+            if(tableDownloadPngBtn && _exportService) {
                 _generalEventHandlers.handleSingleTableDownload(tableDownloadPngBtn);
             }
         });
@@ -226,38 +242,47 @@ const mainAppInterface = (() => {
             exportTab.addEventListener('click', (event) => {
                 const button = event.target.closest('button[id^="export-"]');
                 if (button) {
-                    _exportService.handleExportAction(
-                        button.id,
-                        _processedData,
-                        _state.getCurrentKollektiv(),
-                        _t2CriteriaManager.getAppliedT2Criteria(),
-                        _t2CriteriaManager.getAppliedT2Logic(),
-                        _bruteForceManager.getAllResults(),
-                        _state,
-                        mainAppInterface
-                    );
+                    if (typeof _exportService.handleExportAction === 'function') {
+                         _exportService.handleExportAction(
+                            button.id,
+                            _processedData,
+                            _state.getCurrentKollektiv(),
+                            _t2CriteriaManager.getAppliedT2Criteria(),
+                            _t2CriteriaManager.getAppliedT2Logic(),
+                            _bruteForceManager.getAllResults(),
+                            _state,
+                            mainAppInterface
+                        );
+                    } else {
+                        console.error("ExportService: handleExportAction nicht gefunden.");
+                        _uiHelpers.showToast("Exportfunktion nicht verfügbar.", "danger");
+                    }
                 }
             });
         }
     }
 
     function _handleGlobalKollektivChange(newKollektiv, source = "user") {
+        if (!_state || !_dataProcessor || !_viewRenderer || !_uiHelpers) return false;
         if (_state.getCurrentKollektiv() === newKollektiv && source === "user") return false;
+
         _state.setCurrentKollektiv(newKollektiv);
         _state.setCurrentDatenTablePage(1);
         _state.setCurrentAuswertungTablePage(1);
         _updateGlobalUIState();
         _viewRenderer.refreshCurrentTab();
-        if (_uiHelpers && source === "user") _uiHelpers.showToast(`Kollektiv auf '${getKollektivDisplayName(newKollektiv)}' geändert.`, 'info');
+        if (source === "user") _uiHelpers.showToast(`Kollektiv auf '${getKollektivDisplayName(newKollektiv)}' geändert.`, 'info');
         return true;
     }
 
     function _processTabChange(targetTabId) {
+        if(!_state || !_viewRenderer) return;
         _state.setActiveTabId(targetTabId);
         _viewRenderer.refreshCurrentTab(targetTabId, true);
     }
 
     function _handleSortRequest(tableContext, key, subKey = null) {
+        if(!_state || !_viewRenderer) return;
         let currentSort, pageSetter, newPage = 1;
 
         if (tableContext === 'daten') {
@@ -287,9 +312,10 @@ const mainAppInterface = (() => {
     }
 
     function _applyAndRefreshAll() {
+        if(!_t2CriteriaManager || !_state || !_processedData || !_viewRenderer || !_dataProcessor) return;
         _t2CriteriaManager.applyCriteria();
         _state.setUnsavedCriteriaChanges(false);
-        _processedData = _t2CriteriaManager.evaluateDataset(getGlobalData(), _t2CriteriaManager.getAppliedT2Criteria(), _t2CriteriaManager.getAppliedT2Logic());
+        _processedData = _t2CriteriaManager.evaluateDataset(cloneDeep(_globalRawData), _t2CriteriaManager.getAppliedT2Criteria(), _t2CriteriaManager.getAppliedT2Logic());
         _updateGlobalUIState();
         _viewRenderer.refreshCurrentTab();
     }
@@ -321,7 +347,7 @@ const mainAppInterface = (() => {
 
     return Object.freeze({
         init,
-        getGlobalData: () => _processedData ? cloneDeep(_processedData) : [],
+        getGlobalData: () => _globalRawData ? cloneDeep(_globalRawData) : [],
         getRawData: () => _globalRawData ? cloneDeep(_globalRawData) : [],
         getProcessedData: () => _processedData ? cloneDeep(_processedData) : [],
         renderView,
