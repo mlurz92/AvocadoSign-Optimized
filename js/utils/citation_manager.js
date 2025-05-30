@@ -1,13 +1,13 @@
 const citationManager = (() => {
     let _allReferences = {};
-    let _citedOrder = []; // Stores refKeys in order of first citation
-    let _refDetails = {}; // Stores { number: X, data: originalRefData } for each cited refKey
+    let _citedOrder = [];
+    let _refDetails = {};
 
     function init() {
         if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.PUBLICATION_DEFAULTS && APP_CONFIG.PUBLICATION_DEFAULTS.REFERENCES) {
             _allReferences = cloneDeep(APP_CONFIG.PUBLICATION_DEFAULTS.REFERENCES);
         } else {
-            console.error("citationManager: APP_CONFIG.PUBLICATION_DEFAULTS.REFERENCES is not defined.");
+            console.error("citationManager.init: APP_CONFIG.PUBLICATION_DEFAULTS.REFERENCES is not defined.");
             _allReferences = {};
         }
         reset();
@@ -52,11 +52,11 @@ const citationManager = (() => {
                 }
                 if (current === rangeStart) {
                     result += `${current}`;
-                } else if (current === rangeStart + 1) { // Avoid 1-2, prefer 1, 2
+                } else if (current === rangeStart + 1) {
                     result += `${rangeStart}, ${current}`;
                 }
                 else {
-                    result += `${rangeStart}–${current}`; // En-dash
+                    result += `${rangeStart}–${current}`;
                 }
                 rangeStart = -1;
             }
@@ -66,8 +66,8 @@ const citationManager = (() => {
 
     function cite(refKeysInput) {
         if (!_allReferences || Object.keys(_allReferences).length === 0) {
-            console.warn("citationManager.cite: No references initialized.");
-            return "[REFERENCES_NOT_INITIALIZED]";
+            console.warn("citationManager.cite: No references initialized. Call init() first if APP_CONFIG is available after load.");
+            return "[REFERENCES_NOT_READY]";
         }
 
         const refKeys = Array.isArray(refKeysInput) ? refKeysInput : [refKeysInput];
@@ -81,7 +81,7 @@ const citationManager = (() => {
             }
             const refData = _getRefData(key);
             if (!refData) {
-                citationNumbers.push(`?${key}`); // Mark missing ref
+                citationNumbers.push(`?${key}`);
                 return;
             }
 
@@ -96,7 +96,7 @@ const citationManager = (() => {
             citationNumbers.push(_refDetails[key].number);
         });
 
-        if (citationNumbers.some(n => typeof n === 'string')) { // Contains '?' or '?KEY'
+        if (citationNumbers.some(n => typeof n === 'string')) {
              return `[${citationNumbers.join(", ")}]`;
         }
 
@@ -107,19 +107,18 @@ const citationManager = (() => {
     function getShortCitation(refKey, options = {}) {
         const {
             includeYear = false,
-            style = RADIOLOGY_FORMAT_CONFIG.citation.style || "radiology", // 'radiology' implies numeric only for in-text
-            authorThreshold = RADIOLOGY_FORMAT_CONFIG.citation.authorDisplayThreshold || 2,
-            etAl = RADIOLOGY_FORMAT_CONFIG.citation.etAlString || " et al."
+            style = (typeof RADIOLOGY_FORMAT_CONFIG !== 'undefined' && RADIOLOGY_FORMAT_CONFIG.citation?.style) || "radiology",
+            authorThreshold = (typeof RADIOLOGY_FORMAT_CONFIG !== 'undefined' && RADIOLOGY_FORMAT_CONFIG.citation?.authorDisplayThreshold) || 2,
+            etAl = (typeof RADIOLOGY_FORMAT_CONFIG !== 'undefined' && RADIOLOGY_FORMAT_CONFIG.citation?.etAlString) || " et al."
         } = options;
 
         if (!_refDetails.hasOwnProperty(refKey) && !_allReferences.hasOwnProperty(refKey)) {
             console.warn(`citationManager.getShortCitation: Reference key "${refKey}" not cited yet or not found.`);
             return `[${refKey}_NOT_FOUND]`;
         }
-        
-        // Ensure the ref is in _refDetails if it's valid, to get its number
+
         if (!_refDetails.hasOwnProperty(refKey) && _allReferences.hasOwnProperty(refKey)) {
-            cite(refKey); // This will add it and assign a number
+            cite(refKey);
         }
 
         const details = _refDetails[refKey];
@@ -128,15 +127,14 @@ const citationManager = (() => {
         const refNumber = details.number;
         const refData = details.data;
 
-        if (style === "radiology") { // Standard Radiology numeric citation
+        if (style === "radiology") {
             return `[${refNumber}]`;
         }
 
-        // Fallback for other styles (e.g., author_year_number)
         let authorStr = refData.authors_short || "Unknown Author";
         if (refData.authors_list && refData.authors_list.length > authorThreshold) {
             authorStr = refData.authors_list[0].lastName ? `${refData.authors_list[0].lastName}${etAl}` : `${authorStr}${etAl}`;
-        } else if (refData.authors_list) {
+        } else if (refData.authors_list && refData.authors_list.length > 0) {
             authorStr = refData.authors_list.map(a => a.lastName || a.name).join(" & ");
         }
 
@@ -151,7 +149,7 @@ const citationManager = (() => {
 
     function getFormattedReferenceList(options = {}) {
         const {
-            format = "html", // 'html', 'markdown'
+            format = "html",
             startNumber = 1
         } = options;
 
@@ -160,12 +158,12 @@ const citationManager = (() => {
         }
 
         let listItems = "";
-        _citedOrder.forEach((refKey, index) => {
+        _citedOrder.forEach((refKey) => {
             const details = _refDetails[refKey];
             if (details && details.data) {
-                const number = details.number; // This is already the correct order
+                const number = details.number;
                 const fullCitation = details.data.full_citation_radiology || `${details.data.authors_short || 'N.A.'} (${details.data.year || 'N.D.'}). Title N/A. Journal N/A. DOI: ${details.data.doi || 'N/A'}`;
-                
+
                 if (format === 'html') {
                     listItems += `<li><span class="ref-number">${number}.</span> <span class="ref-text">${fullCitation}</span></li>\n`;
                 } else if (format === 'markdown') {
@@ -177,9 +175,6 @@ const citationManager = (() => {
         if (format === 'html') {
             return `<ol class="publication-references" start="${startNumber}">${listItems}</ol>`;
         } else if (format === 'markdown') {
-            // For markdown, if startNumber is not 1, it's harder to represent directly in standard MD list.
-            // The generator will need to handle this if a specific start number is required for MD.
-            // For now, assume MD list always starts implicitly at 1.
             return listItems;
         }
         return "Unsupported format for reference list.";
@@ -193,9 +188,8 @@ const citationManager = (() => {
         }));
     }
 
-    // Initialize with references from APP_CONFIG
     if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.PUBLICATION_DEFAULTS && APP_CONFIG.PUBLICATION_DEFAULTS.REFERENCES) {
-         _allReferences = cloneDeep(APP_CONFIG.PUBLICATION_DEFAULTS.REFERENCES);
+         _allReferences = (typeof cloneDeep === 'function' ? cloneDeep(APP_CONFIG.PUBLICATION_DEFAULTS.REFERENCES) : JSON.parse(JSON.stringify(APP_CONFIG.PUBLICATION_DEFAULTS.REFERENCES)));
     } else {
         console.error("citationManager: APP_CONFIG.PUBLICATION_DEFAULTS.REFERENCES is not defined at load time.");
     }
