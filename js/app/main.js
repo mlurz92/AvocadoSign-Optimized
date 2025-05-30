@@ -71,6 +71,10 @@ const mainAppInterface = (() => {
         if (_t2CriteriaManager && typeof _t2CriteriaManager.initialize === 'function') {
             _t2CriteriaManager.initialize();
         }
+         if (_citationManager && typeof _citationManager.init === 'function') {
+            _citationManager.init();
+        }
+
 
         if (_bruteForceManager && typeof _bruteForceManager.init === 'function' && typeof APP_CONFIG !== 'undefined' && APP_CONFIG.PATHS?.BRUTE_FORCE_WORKER) {
             const workerInitialized = _bruteForceManager.init({
@@ -84,7 +88,9 @@ const mainAppInterface = (() => {
                     if (_uiHelpers && _viewRenderer && _bruteForceManager && _state && _uiComponents) {
                         _uiHelpers.updateBruteForceUI('result', resultData, _bruteForceManager.isWorkerAvailable(), resultData.kollektiv);
                         const modalBody = document.getElementById('brute-force-modal-body');
-                        if (modalBody) modalBody.innerHTML = _uiComponents.createBruteForceModalContent(resultData);
+                        if (modalBody && typeof _uiComponents.createBruteForceModalContent === 'function') {
+                             modalBody.innerHTML = _uiComponents.createBruteForceModalContent(resultData);
+                        }
                         if (_uiHelpers) _uiHelpers.initializeTooltips(modalBody);
                          if (typeof _state.getActiveTabId === 'function' && _state.getActiveTabId() === 'auswertung-tab-pane' && typeof _viewRenderer.refreshCurrentTab === 'function') _viewRenderer.refreshCurrentTab();
                         const hasBruteForceResults = _bruteForceManager.hasAnyResults ? _bruteForceManager.hasAnyResults() : Object.keys(_bruteForceManager.getAllResults() || {}).length > 0;
@@ -141,9 +147,11 @@ const mainAppInterface = (() => {
             console.error("T2CriteriaManager nicht verfügbar oder Daten fehlen. T2 Status kann nicht initial berechnet werden.");
              if (_processedData) {
                 _processedData.forEach(p => {
-                    p.t2 = null;
-                    p.anzahl_t2_plus_lk = 0;
-                    p.lymphknoten_t2_bewertet = (p.lymphknoten_t2 || []).map(lk => ({...lk, isPositive: false, checkResult: {}}));
+                    if(p) {
+                        p.t2 = null;
+                        p.anzahl_t2_plus_lk = 0;
+                        p.lymphknoten_t2_bewertet = (p.lymphknoten_t2 || []).map(lk => ({...lk, isPositive: false, checkResult: {}}));
+                    }
                 });
             }
         }
@@ -172,7 +180,10 @@ const mainAppInterface = (() => {
         _updateGlobalUIState();
 
         const initialTabId = _state.getActiveTabId() || (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.DEFAULT_SETTINGS.ACTIVE_TAB_ID : null) || 'daten-tab-pane';
-        _viewRenderer.showTab(initialTabId);
+        if (typeof _viewRenderer.showTab === 'function') {
+            _viewRenderer.showTab(initialTabId);
+        }
+
 
         const appVersionFooter = document.getElementById('app-version-footer');
         if (appVersionFooter && typeof APP_CONFIG !== 'undefined' && APP_CONFIG.APP_VERSION) {
@@ -189,7 +200,7 @@ const mainAppInterface = (() => {
     }
 
     function _attachGlobalEventListeners() {
-        if(!_generalEventHandlers || !_uiHelpers || !_state) return;
+        if(!_generalEventHandlers || !_uiHelpers || !_state || !_exportService) return;
 
         const kollektivButtons = document.querySelectorAll('#kollektiv-buttons-container button[data-kollektiv]');
         kollektivButtons.forEach(button => {
@@ -223,12 +234,70 @@ const mainAppInterface = (() => {
                 _generalEventHandlers.handleModalExportBruteForceClick();
             }
             const chartDownloadBtn = event.target.closest('.chart-download-btn');
-            if(chartDownloadBtn && _exportService) {
+            if(chartDownloadBtn) {
                 _generalEventHandlers.handleSingleChartDownload(chartDownloadBtn);
             }
             const tableDownloadPngBtn = event.target.closest('.table-download-png-btn');
-            if(tableDownloadPngBtn && _exportService) {
+            if(tableDownloadPngBtn) {
                 _generalEventHandlers.handleSingleTableDownload(tableDownloadPngBtn);
+            }
+
+            const exportButton = event.target.closest('button[id^="export-"]');
+            if (exportButton && exportButton.id !== 'export-bruteforce-modal-txt') {
+                 const exportActionId = exportButton.id;
+                 const currentKollektiv = _state.getCurrentKollektiv();
+                 const globalData = getGlobalData();
+                 const appliedCriteria = _t2CriteriaManager.getAppliedT2Criteria();
+                 const appliedLogic = _t2CriteriaManager.getAppliedT2Logic();
+                 const bfResults = _bruteForceManager.getAllResults();
+
+                switch (exportActionId) {
+                    case 'export-statistik-csv':
+                        _exportService.exportStatistikCSV(globalData, currentKollektiv, appliedCriteria, appliedLogic);
+                        break;
+                    case 'export-bruteforce-txt':
+                        const bfData = _bruteForceManager.getResultsForKollektiv(currentKollektiv);
+                        if (bfData) _exportService.exportBruteForceReport(bfData);
+                        else _uiHelpers.showToast("Keine Brute-Force Daten für Export.", "warning");
+                        break;
+                    case 'export-deskriptiv-md':
+                        const statsData = _statisticsService.calculateDescriptiveStats(_dataProcessor.filterDataByKollektiv(globalData, currentKollektiv));
+                        _exportService.exportTableMarkdown(statsData, 'deskriptiv', currentKollektiv);
+                        break;
+                    case 'export-daten-md':
+                        _exportService.exportTableMarkdown(_dataProcessor.filterDataByKollektiv(globalData, currentKollektiv), 'daten', currentKollektiv);
+                        break;
+                    case 'export-auswertung-md':
+                         _exportService.exportTableMarkdown(_dataProcessor.filterDataByKollektiv(globalData, currentKollektiv), 'auswertung', currentKollektiv, appliedCriteria, appliedLogic);
+                        break;
+                    case 'export-filtered-data-csv':
+                        _exportService.exportFilteredDataCSV(_dataProcessor.filterDataByKollektiv(globalData, currentKollektiv), currentKollektiv);
+                        break;
+                    case 'export-comprehensive-report-html':
+                        _exportService.exportComprehensiveReportHTML(globalData, bfResults[currentKollektiv], currentKollektiv, appliedCriteria, appliedLogic);
+                        break;
+                    case 'export-publication-md':
+                        _exportService.exportPublicationMarkdown(_state, _statisticsService, _dataProcessor, _bruteForceManager, mainAppInterface);
+                        break;
+                    case 'export-charts-png':
+                        _exportService.exportChartsZip('#app-container', 'PNG_ZIP', currentKollektiv, 'png');
+                        break;
+                    case 'export-charts-svg':
+                        _exportService.exportChartsZip('#app-container', 'SVG_ZIP', currentKollektiv, 'svg');
+                        break;
+                    case 'export-all-zip':
+                    case 'export-csv-zip':
+                    case 'export-md-zip':
+                    case 'export-png-zip': // Wird durch exportChartsZip gehandhabt
+                    case 'export-svg-zip': // Wird durch exportChartsZip gehandhabt
+                         const category = exportActionId.replace('export-', '').replace('-zip','');
+                        _exportService.exportCategoryZip(category, globalData, bfResults, currentKollektiv, appliedCriteria, appliedLogic);
+                        break;
+                    default:
+                        console.warn(`Unbekannte Export-Aktion: ${exportActionId}`);
+                        _uiHelpers.showToast("Unbekannte Export-Aktion.", "warning");
+                        break;
+                }
             }
         });
 
@@ -236,30 +305,6 @@ const mainAppInterface = (() => {
         if (_statistikEventHandlers) _statistikEventHandlers.attachEventListeners(mainAppInterface);
         if (_praesentationEventHandlers) _praesentationEventHandlers.attachEventListeners(mainAppInterface);
         if (_publikationEventHandlers) _publikationEventHandlers.attachEventListeners(mainAppInterface);
-
-        const exportTab = document.getElementById('export-tab-pane');
-        if (exportTab && _exportService) {
-            exportTab.addEventListener('click', (event) => {
-                const button = event.target.closest('button[id^="export-"]');
-                if (button) {
-                    if (typeof _exportService.handleExportAction === 'function') {
-                         _exportService.handleExportAction(
-                            button.id,
-                            _processedData,
-                            _state.getCurrentKollektiv(),
-                            _t2CriteriaManager.getAppliedT2Criteria(),
-                            _t2CriteriaManager.getAppliedT2Logic(),
-                            _bruteForceManager.getAllResults(),
-                            _state,
-                            mainAppInterface
-                        );
-                    } else {
-                        console.error("ExportService: handleExportAction nicht gefunden.");
-                        _uiHelpers.showToast("Exportfunktion nicht verfügbar.", "danger");
-                    }
-                }
-            });
-        }
     }
 
     function _handleGlobalKollektivChange(newKollektiv, source = "user") {
@@ -312,7 +357,7 @@ const mainAppInterface = (() => {
     }
 
     function _applyAndRefreshAll() {
-        if(!_t2CriteriaManager || !_state || !_processedData || !_viewRenderer || !_dataProcessor) return;
+        if(!_t2CriteriaManager || !_state || !_globalRawData || !_viewRenderer || !_dataProcessor || !_uiHelpers) return;
         _t2CriteriaManager.applyCriteria();
         _state.setUnsavedCriteriaChanges(false);
         _processedData = _t2CriteriaManager.evaluateDataset(cloneDeep(_globalRawData), _t2CriteriaManager.getAppliedT2Criteria(), _t2CriteriaManager.getAppliedT2Logic());
@@ -347,11 +392,19 @@ const mainAppInterface = (() => {
 
     return Object.freeze({
         init,
-        getGlobalData: () => _globalRawData ? cloneDeep(_globalRawData) : [],
+        getGlobalData: () => _globalRawData ? cloneDeep(_globalRawData) : [], // Gibt die Rohdaten zurück, da _processedData T2-abhängig ist
         getRawData: () => _globalRawData ? cloneDeep(_globalRawData) : [],
-        getProcessedData: () => _processedData ? cloneDeep(_processedData) : [],
-        renderView,
-        refreshCurrentTab,
+        getProcessedData: () => _processedData ? cloneDeep(_processedData) : [], // Gibt die aktuell verarbeiteten Daten zurück
+        renderView: (tabId) => { // Exponierte Methode
+            if (_viewRenderer && typeof _viewRenderer.showTab === 'function') {
+                _viewRenderer.showTab(tabId);
+            }
+        },
+        refreshCurrentTab: () => { // Exponierte Methode
+             if (_viewRenderer && typeof _viewRenderer.refreshCurrentTab === 'function') {
+                _viewRenderer.refreshCurrentTab();
+            }
+        },
         handleGlobalKollektivChange: _handleGlobalKollektivChange,
         processTabChange: _processTabChange,
         handleSortRequest: _handleSortRequest,
