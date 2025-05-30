@@ -1,6 +1,6 @@
 const APP_CONFIG = Object.freeze({
     APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
-    APP_VERSION: "2.3.0",
+    APP_VERSION: "2.4.0-optimized",
 
     DEFAULT_SETTINGS: Object.freeze({
         KOLLEKTIV: 'Gesamt',
@@ -27,20 +27,20 @@ const APP_CONFIG = Object.freeze({
     }),
 
     STORAGE_KEYS: Object.freeze({
-        APPLIED_CRITERIA: 'appliedT2Criteria_v4.2_detailed',
-        APPLIED_LOGIC: 'appliedT2Logic_v4.2_detailed',
-        CURRENT_KOLLEKTIV: 'currentKollektiv_v4.2_detailed',
-        PUBLIKATION_LANG: 'currentPublikationLang_v4.2_detailed',
-        PUBLIKATION_SECTION: 'currentPublikationSection_v4.2_detailed',
-        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v4.2_detailed',
-        STATS_LAYOUT: 'currentStatsLayout_v4.2_detailed',
-        STATS_KOLLEKTIV1: 'currentStatsKollektiv1_v4.2_detailed',
-        STATS_KOLLEKTIV2: 'currentStatsKollektiv2_v4.2_detailed',
-        PRESENTATION_VIEW: 'currentPresentationView_v4.2_detailed',
-        PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
-        CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
-        CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
-        FIRST_APP_START: 'appFirstStart_v2.3'
+        APPLIED_CRITERIA: 'appliedT2Criteria_v4.3_optimized',
+        APPLIED_LOGIC: 'appliedT2Logic_v4.3_optimized',
+        CURRENT_KOLLEKTIV: 'currentKollektiv_v4.3_optimized',
+        PUBLIKATION_LANG: 'currentPublikationLang_v4.3_optimized',
+        PUBLIKATION_SECTION: 'currentPublikationSection_v4.3_optimized',
+        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v4.3_optimized',
+        STATS_LAYOUT: 'currentStatsLayout_v4.3_optimized',
+        STATS_KOLLEKTIV1: 'currentStatsKollektiv1_v4.3_optimized',
+        STATS_KOLLEKTIV2: 'currentStatsKollektiv2_v4.3_optimized',
+        PRESENTATION_VIEW: 'currentPresentationView_v4.3_optimized',
+        PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.3_optimized',
+        CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.3_optimized',
+        CHART_COLOR_SCHEME: 'chartColorScheme_v4.3_optimized',
+        FIRST_APP_START: 'appFirstStart_v2.4_optimized'
     }),
 
     PATHS: Object.freeze({
@@ -64,7 +64,11 @@ const APP_CONFIG = Object.freeze({
         ]),
         DEFAULT_CI_METHOD_PROPORTION: 'Wilson Score',
         DEFAULT_CI_METHOD_EFFECTSIZE: 'Bootstrap Percentile',
-        FISHER_EXACT_THRESHOLD: 5
+        FISHER_EXACT_THRESHOLD: 5,
+        CI_WARNING_SAMPLE_SIZE_THRESHOLD: 20,
+        P_VALUE_PRECISION: 3,
+        METRIC_PERCENT_DECIMALS: 1,
+        METRIC_RATE_DECIMALS: 3
     }),
 
     T2_CRITERIA_SETTINGS: Object.freeze({
@@ -151,8 +155,8 @@ const APP_CONFIG = Object.freeze({
             PRAES_AS_VS_T2_CHART_SVG: 'PraesChartASvsT2_{StudyID}_SVG',
             TABLE_PNG_EXPORT: '{TableName}_PNG',
             CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
-            PUBLIKATION_METHODEN_MD: 'Publikation_{SectionName}_MD',
-            PUBLIKATION_ERGEBNISSE_MD: 'Publikation_{SectionName}_MD'
+            PUBLIKATION_SECTION_MD: 'Publikation_{SectionName}_MD',
+            PUBLICATION_FULL_MD: 'Publikation_Gesamt_MD'
         }),
         EXCEL_SHEET_NAME_DATEN: 'Datenliste',
         EXCEL_SHEET_NAME_AUSWERTUNG: 'Auswertung',
@@ -175,7 +179,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.3.0"}`,
+        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.4.0-optimized"}`,
         REPORT_LOGO_ALT_TEXT: 'Institutslogo'
     }),
 
@@ -184,6 +188,51 @@ const APP_CONFIG = Object.freeze({
         APPLIED_CRITERIA_DISPLAY_NAME: 'Eingestellte T2 Kriterien',
         AVOCADO_SIGN_ID: 'avocado_sign',
         AVOCADO_SIGN_DISPLAY_NAME: 'Avocado Sign'
+    }),
+
+    PUBLICATION_DEFAULTS: Object.freeze({
+        RADIOLOGY_JOURNAL_NAME: "Radiology",
+        DEFAULT_ETHICS_STATEMENT_DE: "Die Studie wurde in Übereinstimmung mit den Grundsätzen der Deklaration von Helsinki durchgeführt. Das Studienprotokoll wurde von der lokalen Ethikkommission (Ethikkommission an der TU Dresden, EK XXX/YYYY) genehmigt. Von allen Patienten wurde eine schriftliche Einverständniserklärung eingeholt.",
+        DEFAULT_ETHICS_STATEMENT_EN: "The study was conducted in accordance with the principles of the Declaration of Helsinki. The study protocol was approved by the local institutional review board (Ethics Committee at TU Dresden, No. XXX/YYYY). Written informed consent was obtained from all patients.",
+        SOFTWARE_CITATION_TEXT_DE: (version) => `Alle Analysen wurden mit dem webbasierten "Lymphknoten T2 - Avocado Sign Analyse Tool" (Version ${version}, entwickelt von den Autoren) durchgeführt.`,
+        SOFTWARE_CITATION_TEXT_EN: (version) => `All analyses were performed using the web-based "Lymph Node T2 - Avocado Sign Analysis Tool" (Version ${version}, developed by the authors).`,
+        REFERENCES: Object.freeze({
+            LURZ_SCHAEFER_2025: {
+                key: "LurzSchaefer2025",
+                full_citation_radiology: "Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Radiology 2025; EPub ahead of print. DOI: 10.1007/s00330-025-11462-y",
+                doi: "10.1007/s00330-025-11462-y",
+                year: 2025,
+                authors_short: "Lurz & Schäfer"
+            },
+            RUTEGARD_ET_AL_2025: {
+                key: "Rutegard2025",
+                full_citation_radiology: "Rutegård MK, Båtsman M, Blomqvist L, et al. Evaluation of MRI characterisation of histopathologically matched lymph nodes and other mesorectal nodal structures in rectal cancer. Eur Radiol 2025; EPub ahead of print. DOI: 10.1007/s00330-025-11361-2",
+                doi: "10.1007/s00330-025-11361-2",
+                year: 2025,
+                authors_short: "Rutegård et al."
+            },
+            KOH_ET_AL_2008: {
+                key: "Koh2008",
+                full_citation_radiology: "Koh DM, Chau I, Tait D, Wotherspoon A, Cunningham D, Brown G. Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. Int J Radiat Oncol Biol Phys 2008;71(2):456-461. DOI: 10.1016/j.ijrobp.2007.10.016",
+                doi: "10.1016/j.ijrobp.2007.10.016",
+                year: 2008,
+                authors_short: "Koh et al."
+            },
+            BARBARO_ET_AL_2024: {
+                key: "Barbaro2024",
+                full_citation_radiology: "Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: A single center experience. Radiother Oncol 2024;193:110124. DOI: 10.1016/j.radonc.2024.110124",
+                doi: "10.1016/j.radonc.2024.110124",
+                year: 2024,
+                authors_short: "Barbaro et al."
+            },
+            BEETS_TAN_ET_AL_2018: {
+                key: "BeetsTan2018ESGAR",
+                full_citation_radiology: "Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for clinical management of rectal cancer: updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. Eur Radiol 2018;28(4):1465-1475. DOI: 10.1007/s00330-017-5026-2",
+                doi: "10.1007/s00330-017-5026-2",
+                year: 2018,
+                authors_short: "Beets-Tan et al. (ESGAR)"
+            }
+        })
     })
 });
 
