@@ -53,17 +53,34 @@ const mainAppInterface = (() => {
         _praesentationEventHandlers = typeof praesentationEventHandlers !== 'undefined' ? praesentationEventHandlers : null;
         _publikationEventHandlers = typeof publikationEventHandlers !== 'undefined' ? publikationEventHandlers : null;
 
-        const modules = { _dataProcessor, _t2CriteriaManager, _studyT2CriteriaManager, _statisticsService, _bruteForceManager, _exportService, _viewRenderer, _state, _uiHelpers, _uiComponents, _chartRenderer, _tableRenderer, _paginationManager, _publicationTextGenerator, _publicationRenderer, _publikationTabLogic, _radiologyFormatter, _citationManager, _generalEventHandlers, _auswertungEventHandlers, _statistikEventHandlers, _praesentationEventHandlers, _publikationEventHandlers };
+        const modules = {
+            _appConfig: typeof APP_CONFIG, _publicationConfig: typeof PUBLICATION_CONFIG, _radiologyFormatConfig: typeof RADIOLOGY_FORMAT_CONFIG, _textConfig: typeof UI_TEXTS, _tooltipConfig: typeof TOOLTIP_CONTENT,
+            _utils: typeof utils, _radiologyFormatterMod: _radiologyFormatter, _citationManagerMod: _citationManager,
+            _patientData: typeof PATIENT_DATA,
+            _dataProcessor, _t2CriteriaManager, _studyT2CriteriaManager,
+            _statisticsService, _bruteForceManager, _exportService,
+            _uiHelpers, _uiComponents, _paginationManager,
+            _tableRenderer, _chartRenderer, _publicationTextGenerator, _publicationRenderer,
+            _dataTabLogic: typeof dataTabLogic, _auswertungTabLogic: typeof auswertungTabLogic, _statistikTabLogic: typeof statistikTabLogic, _praesentationTabLogic: typeof praesentationTabLogic, _publikationTabLogicMod: _publikationTabLogic,
+            _viewRenderer,
+            _generalEventHandlers, _auswertungEventHandlers, _statistikEventHandlers, _praesentationEventHandlers, _publikationEventHandlers,
+            _state
+        };
+
         let allModulesAvailable = true;
         for (const moduleName in modules) {
-            if (modules[moduleName] === null) {
-                console.error(`Modul ${moduleName.replace('_','')} konnte nicht initialisiert werden oder ist nicht verfügbar.`);
+            const moduleValue = modules[moduleName];
+            if (moduleValue === null || moduleValue === 'undefined') { // Check for actual 'undefined' string for configs, and null for assigned modules
+                console.error(`Modul oder Konfiguration ${moduleName.replace('_','').replace('Mod','')} konnte nicht initialisiert werden oder ist nicht verfügbar.`);
                 allModulesAvailable = false;
             }
         }
+
         if (!allModulesAvailable) {
             if(_uiHelpers && typeof _uiHelpers.showToast === 'function') {
-                _uiHelpers.showToast("Einige Kernmodule konnten nicht geladen werden. Die Anwendung ist möglicherweise nicht voll funktionsfähig.", "danger", 10000);
+                _uiHelpers.showToast("Einige Kernmodule oder Konfigurationen konnten nicht geladen werden. Die Anwendung ist möglicherweise nicht voll funktionsfähig.", "danger", 10000);
+            } else {
+                alert("Kritischer Fehler: Kernmodule oder Konfigurationen konnten nicht geladen werden. Die Anwendung kann nicht gestartet werden.");
             }
             return false;
         }
@@ -138,7 +155,7 @@ const mainAppInterface = (() => {
             _processedData = _dataProcessor.processPatientData(cloneDeep(_globalRawData));
         } else {
             console.error("Data Processor nicht verfügbar. Daten können nicht verarbeitet werden.");
-            _processedData = cloneDeep(_globalRawData);
+            _processedData = cloneDeep(_globalRawData); // Fallback to raw data, potentially unprocessed
         }
 
         if (_t2CriteriaManager && typeof _t2CriteriaManager.evaluateDataset === 'function' && _processedData) {
@@ -200,7 +217,10 @@ const mainAppInterface = (() => {
     }
 
     function _attachGlobalEventListeners() {
-        if(!_generalEventHandlers || !_uiHelpers || !_state || !_exportService || !_dataProcessor || !_t2CriteriaManager || !_bruteForceManager || !_statisticsService) return;
+        if(!_generalEventHandlers || !_uiHelpers || !_state || !_exportService || !_dataProcessor || !_t2CriteriaManager || !_bruteForceManager || !_statisticsService) {
+            console.error("Einige Kernmodule für globale EventListener fehlen.");
+            return;
+        }
 
         const kollektivButtons = document.querySelectorAll('#kollektiv-buttons-container button[data-kollektiv]');
         kollektivButtons.forEach(button => {
@@ -254,48 +274,58 @@ const mainAppInterface = (() => {
 
                 switch (exportActionId) {
                     case 'export-statistik-csv':
-                        _exportService.exportStatistikCSV(globalDataForExport, currentKollektiv, appliedCriteriaForExport, appliedLogicForExport);
+                        if(typeof _exportService.exportStatistikCSV === 'function') _exportService.exportStatistikCSV(globalDataForExport, currentKollektiv, appliedCriteriaForExport, appliedLogicForExport);
+                        else console.warn('Exportfunktion exportStatistikCSV nicht gefunden.');
                         break;
                     case 'export-bruteforce-txt':
                         const bfData = _bruteForceManager.getResultsForKollektiv(currentKollektiv);
-                        if (bfData) _exportService.exportBruteForceReport(bfData);
-                        else _uiHelpers.showToast("Keine Brute-Force Daten für Export.", "warning");
+                        if (bfData && typeof _exportService.exportBruteForceReport === 'function') _exportService.exportBruteForceReport(bfData);
+                        else if (!bfData) _uiHelpers.showToast("Keine Brute-Force Daten für Export.", "warning");
+                        else console.warn('Exportfunktion exportBruteForceReport nicht gefunden.');
                         break;
                     case 'export-deskriptiv-md':
                         const statsData = _statisticsService.calculateDescriptiveStats(filteredDataForExport);
-                        _exportService.exportTableMarkdown(statsData, 'deskriptiv', currentKollektiv);
+                        if(typeof _exportService.exportTableMarkdown === 'function') _exportService.exportTableMarkdown(statsData, 'deskriptiv', currentKollektiv);
+                        else console.warn('Exportfunktion exportTableMarkdown nicht gefunden.');
                         break;
                     case 'export-daten-md':
-                        _exportService.exportTableMarkdown(filteredDataForExport, 'daten', currentKollektiv);
+                        if(typeof _exportService.exportTableMarkdown === 'function') _exportService.exportTableMarkdown(filteredDataForExport, 'daten', currentKollektiv);
+                        else console.warn('Exportfunktion exportTableMarkdown nicht gefunden.');
                         break;
                     case 'export-auswertung-md':
-                         _exportService.exportTableMarkdown(filteredDataForExport, 'auswertung', currentKollektiv, appliedCriteriaForExport, appliedLogicForExport);
+                         if(typeof _exportService.exportTableMarkdown === 'function') _exportService.exportTableMarkdown(filteredDataForExport, 'auswertung', currentKollektiv, appliedCriteriaForExport, appliedLogicForExport);
+                         else console.warn('Exportfunktion exportTableMarkdown nicht gefunden.');
                         break;
                     case 'export-filtered-data-csv':
-                        _exportService.exportFilteredDataCSV(filteredDataForExport, currentKollektiv);
+                        if(typeof _exportService.exportFilteredDataCSV === 'function') _exportService.exportFilteredDataCSV(filteredDataForExport, currentKollektiv);
+                        else console.warn('Exportfunktion exportFilteredDataCSV nicht gefunden.');
                         break;
                     case 'export-comprehensive-report-html':
-                        _exportService.exportComprehensiveReportHTML(globalDataForExport, bfResultsForExport[currentKollektiv], currentKollektiv, appliedCriteriaForExport, appliedLogicForExport);
+                        if(typeof _exportService.exportComprehensiveReportHTML === 'function') _exportService.exportComprehensiveReportHTML(globalDataForExport, bfResultsForExport[currentKollektiv], currentKollektiv, appliedCriteriaForExport, appliedLogicForExport);
+                        else console.warn('Exportfunktion exportComprehensiveReportHTML nicht gefunden.');
                         break;
                     case 'export-publication-md':
                          if (typeof _exportService.exportPublicationMarkdown === 'function') {
                             _exportService.exportPublicationMarkdown(_state, _statisticsService, _dataProcessor, _bruteForceManager, mainAppInterface, _publicationTextGenerator, _publikationTabLogic);
                          } else {
-                              console.error("ExportService: exportPublicationMarkdown nicht gefunden.");
-                              _uiHelpers.showToast("Publikations-Markdown-Exportfunktion nicht verfügbar.", "danger");
+                              console.warn("ExportService: exportPublicationMarkdown nicht implementiert.");
+                              _uiHelpers.showToast("Publikations-Markdown-Export (noch) nicht verfügbar.", "info");
                          }
                         break;
                     case 'export-charts-png':
-                        _exportService.exportChartsZip('#app-container', 'PNG_ZIP', currentKollektiv, 'png');
+                        if(typeof _exportService.exportChartsZip === 'function') _exportService.exportChartsZip('#app-container', 'PNG_ZIP', currentKollektiv, 'png');
+                        else console.warn('Exportfunktion exportChartsZip nicht gefunden.');
                         break;
                     case 'export-charts-svg':
-                        _exportService.exportChartsZip('#app-container', 'SVG_ZIP', currentKollektiv, 'svg');
+                        if(typeof _exportService.exportChartsZip === 'function') _exportService.exportChartsZip('#app-container', 'SVG_ZIP', currentKollektiv, 'svg');
+                        else console.warn('Exportfunktion exportChartsZip nicht gefunden.');
                         break;
                     case 'export-all-zip':
                     case 'export-csv-zip':
                     case 'export-md-zip':
                          const category = exportActionId.replace('export-', '').replace('-zip','');
-                        _exportService.exportCategoryZip(category, globalDataForExport, bfResultsForExport, currentKollektiv, appliedCriteriaForExport, appliedLogicForExport);
+                        if(typeof _exportService.exportCategoryZip === 'function') _exportService.exportCategoryZip(category, globalDataForExport, bfResultsForExport, currentKollektiv, appliedCriteriaForExport, appliedLogicForExport);
+                        else console.warn('Exportfunktion exportCategoryZip nicht gefunden.');
                         break;
                     default:
                         if (!exportActionId.startsWith('export-png-zip') && !exportActionId.startsWith('export-svg-zip') && !exportActionId.startsWith('export-xlsx-zip')) {
@@ -401,12 +431,12 @@ const mainAppInterface = (() => {
         getGlobalData: () => _globalRawData ? cloneDeep(_globalRawData) : [],
         getRawData: () => _globalRawData ? cloneDeep(_globalRawData) : [],
         getProcessedData: () => _processedData ? cloneDeep(_processedData) : [],
-        renderView: (tabId) => {
+        renderView: (tabId) => { // Exponierte Methode für externe Aufrufe, falls nötig
             if (_viewRenderer && typeof _viewRenderer.showTab === 'function') {
                 _viewRenderer.showTab(tabId);
             }
         },
-        refreshCurrentTab: () => {
+        refreshCurrentTab: () => { // Exponierte Methode
              if (_viewRenderer && typeof _viewRenderer.refreshCurrentTab === 'function') {
                 _viewRenderer.refreshCurrentTab();
             }
