@@ -1,195 +1,95 @@
-self.onmessage = function(event) {
-    if (event.data.type === 'start') {
-        const { data, t2CriteriaSettings, metric, kollektivName, defaultT2Logic } = event.data.payload;
-        if (!data || !t2CriteriaSettings || !metric || !kollektivName) {
-            postMessage({ type: 'error', payload: { message: 'Fehlende Parameter für Brute-Force Start.', kollektiv: kollektivName, metric: metric } });
-            return;
-        }
+let isRunning = false;
+let currentData = [];
+let targetMetric = 'Accuracy';
+let kollektivName = '';
+let bestResult = null;
+let allResults = [];
+let combinationsTested = 0;
+let totalCombinations = 0;
+let startTime = 0;
+let t2SizeRange = { min: 0.1, max: 15.0, step: 0.1 };
+const reportIntervalFactor = 200;
 
-        const criteriaOptions = {
-            size: generateSizeThresholds(t2CriteriaSettings.SIZE_RANGE),
-            form: t2CriteriaSettings.FORM_VALUES,
-            kontur: t2CriteriaSettings.KONTUR_VALUES,
-            homogenitaet: t2CriteriaSettings.HOMOGENITAET_VALUES,
-            signal: t2CriteriaSettings.SIGNAL_VALUES
-        };
-        const logics = ['UND', 'ODER'];
-        const referenceKey = 'n';
-        const predictionKey = 't2_bf';
-
-        let bestResults = [];
-        const topN = 20;
-        let currentBestMetricValue = -Infinity;
-        let testedCombinations = 0;
-        const totalCombinations = calculateTotalCombinations(criteriaOptions, logics);
-
-        postMessage({ type: 'started', payload: { totalCombinations, kollektiv: kollektivName, metric: metric, nGesamt: data.length, nPlus: data.filter(p=>p.n === '+').length, nMinus: data.filter(p=>p.n === '-').length } });
-
-        const criteriaKeys = ['size', 'form', 'kontur', 'homogenitaet', 'signal'];
-        const activeStates = [true, false];
-        let lastProgressUpdate = Date.now();
-
-        function* generateCriteriaCombinations() {
-            for (const logic of logics) {
-                for (const sizeActive of activeStates) {
-                    const sizeThresholdsToTest = sizeActive ? criteriaOptions.size : [null];
-                    for (const sizeThreshold of sizeThresholdsToTest) {
-                        for (const formActive of activeStates) {
-                            const formValuesToTest = formActive ? criteriaOptions.form : [null];
-                            for (const formValue of formValuesToTest) {
-                                for (const konturActive of activeStates) {
-                                    const konturValuesToTest = konturActive ? criteriaOptions.kontur : [null];
-                                    for (const konturValue of konturValuesToTest) {
-                                        for (const homogenitaetActive of activeStates) {
-                                            const homogenitaetValuesToTest = homogenitaetActive ? criteriaOptions.homogenitaet : [null];
-                                            for (const homogenitaetValue of homogenitaetValuesToTest) {
-                                                for (const signalActive of activeStates) {
-                                                    const signalValuesToTest = signalActive ? criteriaOptions.signal : [null];
-                                                    for (const signalValue of signalValuesToTest) {
-                                                        const currentCriteria = {
-                                                            size: { active: sizeActive, threshold: sizeThreshold, condition: '>=' },
-                                                            form: { active: formActive, value: formValue },
-                                                            kontur: { active: konturActive, value: konturValue },
-                                                            homogenitaet: { active: homogenitaetActive, value: homogenitaetValue },
-                                                            signal: { active: signalActive, value: signalValue }
-                                                        };
-                                                        if (!isValidCombination(currentCriteria)) continue;
-                                                        yield { criteria: currentCriteria, logic: logic };
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-
-        try {
-            for (const combination of generateCriteriaCombinations()) {
-                testedCombinations++;
-                const evaluatedData = _applyCriteriaToDatasetForWorker(data, combination.criteria, combination.logic, predictionKey);
-                const performance = _calculateMetric(evaluatedData, predictionKey, referenceKey, metric);
-
-                if (performance && typeof performance.metricValue === 'number' && isFinite(performance.metricValue)) {
-                    if (bestResults.length < topN || performance.metricValue > bestResults[topN - 1].metricValue) {
-                        bestResults.push({ ...combination, ...performance });
-                        bestResults.sort((a, b) => b.metricValue - a.metricValue);
-                        if (bestResults.length > topN) {
-                            bestResults.length = topN;
-                        }
-                        currentBestMetricValue = bestResults[0].metricValue;
-                    }
-                }
-
-                if (Date.now() - lastProgressUpdate > 500 || testedCombinations % 500 === 0 || testedCombinations === totalCombinations) {
-                    postMessage({
-                        type: 'progress',
-                        payload: {
-                            tested: testedCombinations,
-                            total: totalCombinations,
-                            currentBest: bestResults[0] || { metricValue: -Infinity, criteria: null, logic: defaultT2Logic },
-                            kollektiv: kollektivName,
-                            metric: metric
-                        }
-                    });
-                    lastProgressUpdate = Date.now();
-                }
-            }
-
-            postMessage({
-                type: 'complete',
-                payload: {
-                    results: bestResults,
-                    bestResult: bestResults[0] || null,
-                    totalTested: testedCombinations,
-                    kollektiv: kollektivName,
-                    metric: metric,
-                    nGesamt: data.length,
-                    nPlus: data.filter(p=>p.n === '+').length,
-                    nMinus: data.filter(p=>p.n === '-').length,
-                    duration: Date.now() - (lastProgressUpdate - 500)
-                }
-            });
-
-        } catch (e) {
-            postMessage({ type: 'error', payload: { message: e.message || 'Unbekannter Fehler im Worker.', kollektiv: kollektivName, metric: metric } });
-        }
+function formatNumberWorker(num, digits = 1, placeholder = '--') {
+    const number = parseFloat(num);
+    if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
+        return placeholder;
     }
-};
-
-function isValidCombination(criteria) {
-    let activeCount = 0;
-    if(criteria.size.active) activeCount++;
-    if(criteria.form.active) activeCount++;
-    if(criteria.kontur.active) activeCount++;
-    if(criteria.homogenitaet.active) activeCount++;
-    if(criteria.signal.active) activeCount++;
-    return activeCount > 0;
+    return number.toFixed(digits);
 }
 
-function generateSizeThresholds(sizeRangeConfig) {
-    const thresholds = [];
-    const min = 2.0; const max = 15.0; const count = 15;
-    if (count <= 1) return [ (min + max) / 2 ];
-    const step = (max - min) / (count -1);
-    for (let i = 0; i < count; i++) {
-        thresholds.push(parseFloat((min + i * step).toFixed(1)));
-    }
-    const uniqueThresholds = [...new Set(thresholds)];
-    if (!uniqueThresholds.includes(5.0)) uniqueThresholds.push(5.0);
-    if (!uniqueThresholds.includes(8.0)) uniqueThresholds.push(8.0);
-    if (!uniqueThresholds.includes(10.0)) uniqueThresholds.push(10.0);
-    return uniqueThresholds.sort((a,b)=>a-b);
-}
+function formatCriteriaForDisplayWorker(criteria, logic = null) {
+    if (!criteria || typeof criteria !== 'object') return 'N/A';
+    const parts = [];
+    const activeKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active);
+    if (activeKeys.length === 0) return 'Keine aktiven Kriterien';
 
-function calculateTotalCombinations(criteriaOptions, logics) {
-    let total = 0;
-    const activeStates = [true, false];
-    const criteriaKeys = ['size', 'form', 'kontur', 'homogenitaet', 'signal'];
+    const effectiveLogic = logic || criteria.logic || 'ODER';
+    const separator = (effectiveLogic === 'UND') ? ' UND ' : ' ODER ';
 
-    for (const logic of logics) {
-        for (const sizeActive of activeStates) {
-            const sizeThresholdsToTest = sizeActive ? criteriaOptions.size.length : 1;
-            for (let s_idx = 0; s_idx < sizeThresholdsToTest; s_idx++) {
-                for (const formActive of activeStates) {
-                    const formValuesToTest = formActive ? criteriaOptions.form.length : 1;
-                    for (let f_idx = 0; f_idx < formValuesToTest; f_idx++) {
-                        for (const konturActive of activeStates) {
-                            const konturValuesToTest = konturActive ? criteriaOptions.kontur.length : 1;
-                            for (let k_idx = 0; k_idx < konturValuesToTest; k_idx++) {
-                                for (const homogenitaetActive of activeStates) {
-                                    const homogenitaetValuesToTest = homogenitaetActive ? criteriaOptions.homogenitaet.length : 1;
-                                    for (let h_idx = 0; h_idx < homogenitaetValuesToTest; h_idx++) {
-                                        for (const signalActive of activeStates) {
-                                            const signalValuesToTest = signalActive ? criteriaOptions.signal.length : 1;
-                                            for (let si_idx = 0; si_idx < signalValuesToTest; si_idx++) {
-                                                 const currentCriteria = {
-                                                    size: { active: sizeActive }, form: { active: formActive },
-                                                    kontur: { active: konturActive }, homogenitaet: { active: homogenitaetActive },
-                                                    signal: { active: signalActive }
-                                                };
-                                                if (isValidCombination(currentCriteria)) total++;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+    const formatValue = (key, criterion) => {
+        if (!criterion) return '?';
+        if (key === 'size') return `${criterion.condition || '>='}${formatNumberWorker(criterion.threshold, 1)}mm`;
+        return criterion.value || '?';
+    };
+
+    const priorityOrder = ['size', 'kontur', 'homogenitaet', 'form', 'signal'];
+    const sortedActiveKeys = [...activeKeys].sort((a, b) => {
+        const indexA = priorityOrder.indexOf(a);
+        const indexB = priorityOrder.indexOf(b);
+        if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
+    });
+
+    sortedActiveKeys.forEach(key => {
+        const criterion = criteria[key];
+        let prefix = '';
+        switch(key) {
+            case 'size': prefix = 'Größe '; break;
+            case 'form': prefix = 'Form='; break;
+            case 'kontur': prefix = 'Kontur='; break;
+            case 'homogenitaet': prefix = 'Homog.='; break;
+            case 'signal': prefix = 'Signal='; break;
+            default: prefix = key + '=';
         }
-    }
-    return total;
+        parts.push(`${prefix}${formatValue(key, criterion)}`);
+    });
+    return parts.join(separator);
 }
 
+function cloneDeepWorker(obj) {
+     if (obj === null || typeof obj !== 'object') return obj;
+     try {
+         if (typeof self !== 'undefined' && self.structuredClone) {
+             return self.structuredClone(obj);
+         } else {
+             return JSON.parse(JSON.stringify(obj));
+         }
+     } catch(e) {
+         console.error("BruteForceWorker: Fehler beim Klonen (structuredClone/JSON), Fallback...", e, obj);
+         if (Array.isArray(obj)) {
+             const arrCopy = [];
+             for(let i = 0; i < obj.length; i++){
+                 arrCopy[i] = cloneDeepWorker(obj[i]);
+             }
+             return arrCopy;
+         }
+         if (typeof obj === 'object') {
+             const objCopy = {};
+             for(const key in obj) {
+                 if(Object.prototype.hasOwnProperty.call(obj, key)) {
+                     objCopy[key] = cloneDeepWorker(obj[key]);
+                 }
+             }
+             return objCopy;
+         }
+         return obj;
+     }
+}
 
-function _checkSingleNodeForWorker(lymphNode, criteria) {
+function checkSingleLymphNodeWorker(lymphNode, criteria) {
     const checkResult = { size: null, form: null, kontur: null, homogenitaet: null, signal: null };
     if (!lymphNode || typeof lymphNode !== 'object' || !criteria || typeof criteria !== 'object') return checkResult;
 
@@ -197,104 +97,367 @@ function _checkSingleNodeForWorker(lymphNode, criteria) {
         const threshold = criteria.size.threshold;
         const nodeSize = lymphNode.groesse;
         const condition = criteria.size.condition || '>=';
-        if (typeof nodeSize === 'number' && !isNaN(nodeSize) && isFinite(nodeSize) && threshold !== null && typeof threshold === 'number' && !isNaN(threshold) && isFinite(threshold)) {
-            switch(condition) {
+        if (typeof nodeSize === 'number' && !isNaN(nodeSize) && typeof threshold === 'number' && !isNaN(threshold)) {
+             switch(condition) {
                 case '>=': checkResult.size = nodeSize >= threshold; break;
                 case '>': checkResult.size = nodeSize > threshold; break;
                 case '<=': checkResult.size = nodeSize <= threshold; break;
                 case '<': checkResult.size = nodeSize < threshold; break;
                 case '==': checkResult.size = nodeSize === threshold; break;
                 default: checkResult.size = false;
-            }
+             }
         } else { checkResult.size = false; }
     }
-    if (criteria.form?.active) checkResult.form = (typeof lymphNode.form === 'string' && lymphNode.form === criteria.form.value);
-    if (criteria.kontur?.active) checkResult.kontur = (typeof lymphNode.kontur === 'string' && lymphNode.kontur === criteria.kontur.value);
-    if (criteria.homogenitaet?.active) checkResult.homogenitaet = (typeof lymphNode.homogenitaet === 'string' && lymphNode.homogenitaet === criteria.homogenitaet.value);
-    if (criteria.signal?.active) checkResult.signal = (lymphNode.signal !== null && typeof lymphNode.signal === 'string' && lymphNode.signal === criteria.signal.value);
+    if (criteria.form?.active) checkResult.form = (lymphNode.form === criteria.form.value);
+    if (criteria.kontur?.active) checkResult.kontur = (lymphNode.kontur === criteria.kontur.value);
+    if (criteria.homogenitaet?.active) checkResult.homogenitaet = (lymphNode.homogenitaet === criteria.homogenitaet.value);
+    if (criteria.signal?.active) checkResult.signal = (lymphNode.signal !== null && lymphNode.signal === criteria.signal.value);
+
     return checkResult;
 }
 
-function _applyCriteriaToPatientForWorker(patient, criteria, logic, predictionKey) {
-    const patientCopy = { ...patient };
-    patientCopy[predictionKey] = null;
-    if (!patientCopy.lymphknoten_t2 || !Array.isArray(patientCopy.lymphknoten_t2)) {
-        const activeCriteriaKeys = Object.keys(criteria).filter(key => criteria[key]?.active === true);
-        patientCopy[predictionKey] = activeCriteriaKeys.length > 0 ? '-' : null;
-        return patientCopy;
-    }
+function applyT2CriteriaToPatientWorker(patient, criteria, logic) {
+     if (!patient || !criteria || (logic !== 'UND' && logic !== 'ODER')) return null;
+     const lymphNodes = patient.lymphknoten_t2;
+     if (!Array.isArray(lymphNodes)) return null;
 
-    let patientIsPositive = false;
-    const activeCriteriaKeys = Object.keys(criteria).filter(key => criteria[key]?.active === true);
+     const activeKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true);
 
-    if (patientCopy.lymphknoten_t2.length === 0) {
-        if (activeCriteriaKeys.length > 0) patientCopy[predictionKey] = '-';
-        return patientCopy;
-    }
+     if (activeKeys.length === 0) return null;
+     if (lymphNodes.length === 0) return '-';
 
-    for (const lk of patientCopy.lymphknoten_t2) {
-        if (!lk || typeof lk !== 'object') continue;
-        const checkResult = _checkSingleNodeForWorker(lk, criteria);
-        let lkIsPositive = false;
-        if (activeCriteriaKeys.length > 0) {
-            if (logic === 'UND') {
-                lkIsPositive = activeCriteriaKeys.every(key => checkResult[key] === true);
-            } else { /* ODOR */
-                lkIsPositive = activeCriteriaKeys.some(key => checkResult[key] === true);
-            }
-        }
-        if (lkIsPositive) {
-            patientIsPositive = true;
-            break;
-        }
-    }
-    if (activeCriteriaKeys.length > 0) {
-        patientCopy[predictionKey] = patientIsPositive ? '+' : '-';
-    }
-    return patientCopy;
+     for (let k = 0; k < lymphNodes.length; k++) {
+         const lk = lymphNodes[k];
+         if (!lk) continue;
+         const checkResult = checkSingleLymphNodeWorker(lk, criteria);
+         let lkIsPositive = false;
+         if (logic === 'UND') {
+             lkIsPositive = activeKeys.every(key => checkResult[key] === true);
+         } else {
+             lkIsPositive = activeKeys.some(key => checkResult[key] === true);
+         }
+         if (lkIsPositive) return '+';
+     }
+     return '-';
 }
 
-function _applyCriteriaToDatasetForWorker(dataset, criteria, logic, predictionKey) {
-    return dataset.map(patient => _applyCriteriaToPatientForWorker(patient, criteria, logic, predictionKey));
-}
-
-function _calculateMetric(data, predictionKey, referenceKey, metricName) {
+function calculateMetric(data, criteria, logic, metricName) {
     let rp = 0, fp = 0, fn = 0, rn = 0;
-    data.forEach(p => {
-        const predicted = p[predictionKey] === '+';
-        const actual = p[referenceKey] === '+';
-        const validPred = p[predictionKey] === '+' || p[predictionKey] === '-';
-        const validActual = p[referenceKey] === '+' || p[referenceKey] === '-';
+    if (!Array.isArray(data)) return NaN;
 
-        if (validPred && validActual) {
-            if (predicted && actual) rp++;
-            else if (predicted && !actual) fp++;
-            else if (!predicted && actual) fn++;
-            else if (!predicted && !actual) rn++;
+    data.forEach(p => {
+        if(!p || typeof p !== 'object') return;
+        const predictedT2 = applyT2CriteriaToPatientWorker(p, criteria, logic);
+        const actualN = p.n === '+';
+        const validN = p.n === '+' || p.n === '-';
+        const validT2 = predictedT2 === '+' || predictedT2 === '-';
+
+        if (validN && validT2) {
+            const predicted = predictedT2 === '+';
+            if (predicted && actualN) rp++;
+            else if (predicted && !actualN) fp++;
+            else if (!predicted && actualN) fn++;
+            else if (!predicted && !actualN) rn++;
         }
     });
 
     const total = rp + fp + fn + rn;
-    if (total === 0) return { metricValue: -Infinity, sens: NaN, spez: NaN, ppv: NaN, npv: NaN, acc: NaN, balAcc: NaN, f1: NaN };
+    if (total === 0) return NaN;
 
-    const sens = (rp + fn) > 0 ? rp / (rp + fn) : NaN;
-    const spez = (fp + rn) > 0 ? rn / (fp + rn) : NaN;
-    const ppv = (rp + fp) > 0 ? rp / (rp + fp) : NaN;
-    const npv = (fn + rn) > 0 ? rn / (fn + rn) : NaN;
-    const acc = total > 0 ? (rp + rn) / total : NaN;
-    const balAcc = (!isNaN(sens) && !isNaN(spez)) ? (sens + spez) / 2.0 : NaN;
-    const f1 = (!isNaN(ppv) && !isNaN(sens) && (ppv + sens) > 1e-9) ? 2.0 * (ppv * sens) / (ppv + sens) : ((ppv === 0 && sens === 0) ? 0 : NaN);
+    const sens = (rp + fn) > 0 ? rp / (rp + fn) : 0;
+    const spez = (fp + rn) > 0 ? rn / (fp + rn) : 0;
+    const ppv = (rp + fp) > 0 ? rp / (rp + fp) : 0;
+    const npv = (fn + rn) > 0 ? rn / (fn + rn) : 0;
+    let result;
 
-    let metricValue;
     switch (metricName) {
-        case 'Accuracy': metricValue = acc; break;
-        case 'Balanced Accuracy': metricValue = balAcc; break;
-        case 'F1-Score': metricValue = f1; break;
-        case 'PPV': metricValue = ppv; break;
-        case 'NPV': metricValue = npv; break;
-        case 'Sensitivity': metricValue = sens; break;
-        case 'Specificity': metricValue = spez; break;
-        default: metricValue = -Infinity;
+        case 'Accuracy':
+            result = (rp + rn) / total;
+            break;
+        case 'Balanced Accuracy':
+            result = (isNaN(sens) || isNaN(spez)) ? NaN : (sens + spez) / 2.0;
+            break;
+        case 'F1-Score':
+            result = (isNaN(ppv) || isNaN(sens) || (ppv + sens) <= 1e-9) ? ((ppv === 0 && sens === 0) ? 0 : NaN) : 2.0 * (ppv * sens) / (ppv + sens);
+            break;
+        case 'PPV':
+            result = ppv;
+            break;
+        case 'NPV':
+            result = npv;
+            break;
+        default:
+            result = (isNaN(sens) || isNaN(spez)) ? NaN : (sens + spez) / 2.0;
+            break;
     }
-    return { metricValue: (isNaN(metricValue) ? -Infinity : metricValue), sens, spez, ppv, npv, acc, balAcc, f1 };
+    return isNaN(result) ? -Infinity : result;
 }
+
+function generateCriteriaCombinations() {
+    const CRITERIA_KEYS = ['size', 'form', 'kontur', 'homogenitaet', 'signal'];
+    const VALUE_OPTIONS = {
+        size: [],
+        form: ['rund', 'oval'],
+        kontur: ['scharf', 'irregulär'],
+        homogenitaet: ['homogen', 'heterogen'],
+        signal: ['signalarm', 'intermediär', 'signalreich']
+    };
+    const LOGICS = ['UND', 'ODER'];
+
+    const { min, max, step } = t2SizeRange;
+    if (typeof min === 'number' && typeof max === 'number' && typeof step === 'number' && step > 0 && min <= max) {
+        for (let s = Math.round(min * 10); s <= Math.round(max * 10); s += Math.round(step * 10)) {
+             VALUE_OPTIONS.size.push(parseFloat((s / 10).toFixed(1)));
+        }
+        if (!VALUE_OPTIONS.size.includes(min)) VALUE_OPTIONS.size.unshift(min);
+        if (!VALUE_OPTIONS.size.includes(max) && max > VALUE_OPTIONS.size[VALUE_OPTIONS.size.length-1]) VALUE_OPTIONS.size.push(max);
+        VALUE_OPTIONS.size = [...new Set(VALUE_OPTIONS.size)].sort((a, b) => a - b);
+         if (VALUE_OPTIONS.size.length === 0) {
+             console.warn("BruteForceWorker: t2SizeRange führte zu leerer VALUE_OPTIONS.size, verwende Standardgrößen.");
+             VALUE_OPTIONS.size = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+         }
+    } else {
+        VALUE_OPTIONS.size = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+        console.warn("BruteForceWorker: t2SizeRange nicht korrekt definiert oder ungültig, verwende Standardgrößen.");
+    }
+
+
+    const combinations = [];
+    let calculatedTotal = 0;
+    const numCriteria = CRITERIA_KEYS.length;
+
+    for (let i = 1; i < (1 << numCriteria); i++) {
+        const baseTemplate = {};
+        const currentActive = [];
+        CRITERIA_KEYS.forEach((key, index) => {
+            const isActive = ((i >> index) & 1) === 1;
+            baseTemplate[key] = { active: isActive };
+            if (isActive) currentActive.push(key);
+        });
+
+        function generateValues(keyIndex, currentCombo) {
+            if (keyIndex === currentActive.length) {
+                LOGICS.forEach(logic => {
+                    const finalCombo = cloneDeepWorker(currentCombo);
+                    CRITERIA_KEYS.forEach(k => {
+                        if (!finalCombo[k]) finalCombo[k] = { active: false };
+                    });
+                    combinations.push({ logic: logic, criteria: finalCombo });
+                });
+                calculatedTotal += LOGICS.length;
+                return;
+            }
+
+            const currentKey = currentActive[keyIndex];
+            const options = VALUE_OPTIONS[currentKey];
+            if (!options || options.length === 0) {
+                generateValues(keyIndex + 1, currentCombo);
+                return;
+            }
+
+            options.forEach(value => {
+                const nextCombo = cloneDeepWorker(currentCombo);
+                if (currentKey === 'size') {
+                    nextCombo[currentKey].threshold = value;
+                    nextCombo[currentKey].condition = '>=';
+                } else {
+                    nextCombo[currentKey].value = value;
+                }
+                generateValues(keyIndex + 1, nextCombo);
+            });
+        }
+        generateValues(0, baseTemplate);
+    }
+    totalCombinations = calculatedTotal;
+    return combinations;
+}
+
+function runBruteForce() {
+    if (!isRunning) return;
+    if (!currentData || currentData.length === 0) {
+        self.postMessage({ type: 'error', payload: { message: "Keine Daten im Worker für Brute-Force." } });
+        isRunning = false;
+        return;
+    }
+    startTime = performance.now();
+    combinationsTested = 0;
+    allResults = [];
+    bestResult = { metricValue: -Infinity, criteria: null, logic: null };
+
+    const allCombinations = generateCriteriaCombinations();
+    if (totalCombinations === 0 || allCombinations.length === 0) {
+        self.postMessage({ type: 'error', payload: { message: "Keine Kriterienkombinationen generiert. Überprüfen Sie die t2SizeRange Konfiguration." } });
+        isRunning = false;
+        return;
+    }
+
+    self.postMessage({ type: 'started', payload: { totalCombinations: totalCombinations, kollektiv: kollektivName } });
+
+    const reportInterval = Math.max(50, Math.floor(totalCombinations / reportIntervalFactor));
+    let lastReportTime = performance.now();
+
+    for (let i = 0; i < allCombinations.length; i++) {
+        if (!isRunning) break;
+
+        const combo = allCombinations[i];
+        let metricValue = -Infinity;
+
+        try {
+            metricValue = calculateMetric(currentData, combo.criteria, combo.logic, targetMetric);
+        } catch (error) {
+            console.error("BruteForceWorker: Fehler in calculateMetric für Kombination:", combo, "Fehler:", error);
+            metricValue = -Infinity;
+        }
+
+        const result = { logic: combo.logic, criteria: combo.criteria, metricValue: metricValue };
+        allResults.push(result);
+
+        if (result.metricValue > bestResult.metricValue && isFinite(result.metricValue)) {
+            bestResult = result;
+        }
+        combinationsTested++;
+        const now = performance.now();
+
+        if (combinationsTested % reportInterval === 0 || combinationsTested === totalCombinations || (now - lastReportTime > 1000)) {
+            self.postMessage({
+                type: 'progress',
+                payload: {
+                    tested: combinationsTested,
+                    total: totalCombinations,
+                    currentBest: bestResult.criteria ? cloneDeepWorker(bestResult) : null,
+                    metric: targetMetric,
+                    kollektiv: kollektivName
+                }
+            });
+            lastReportTime = now;
+        }
+    }
+    const endTime = performance.now();
+
+    if(isRunning) {
+        const validResults = allResults.filter(r => r && isFinite(r.metricValue));
+        validResults.sort((a, b) => b.metricValue - a.metricValue);
+
+        const topResults = [];
+        const precision = 1e-8;
+        let rank = 0;
+        let countAtRank = 0;
+        let lastScore = Infinity;
+
+        for(let i = 0; i < validResults.length; i++) {
+            const currentScore = validResults[i].metricValue;
+            const isNewRank = Math.abs(currentScore - lastScore) > precision;
+
+            if(isNewRank) {
+                rank = i + 1;
+                countAtRank = 1;
+            } else {
+                countAtRank++;
+            }
+            lastScore = currentScore;
+
+            if (rank <= 10) { // Immer die Top 10 Ränge nehmen
+                topResults.push(validResults[i]);
+            } else { // Wenn der 11. Rang den gleichen Score hat wie der letzte der Top 10, auch nehmen
+                if(rank === 11 && Math.abs(currentScore - (topResults[topResults.length - 1]?.metricValue ?? -Infinity)) < precision) {
+                    topResults.push(validResults[i]);
+                } else {
+                    break; // Sobald ein neuer, niedrigerer Rang nach den Top 10 beginnt, abbrechen
+                }
+            }
+        }
+        const finalBest = bestResult.criteria ? cloneDeepWorker(bestResult) : (topResults[0] ? cloneDeepWorker(topResults[0]) : null);
+
+        let nGesamt = 0;
+        let nPlus = 0;
+        let nMinus = 0;
+        if (Array.isArray(currentData)) {
+            nGesamt = currentData.length;
+            currentData.forEach(p => {
+                if (p && p.n === '+') nPlus++;
+                else if (p && p.n === '-') nMinus++;
+            });
+        }
+
+
+        self.postMessage({
+            type: 'result',
+            payload: {
+                results: topResults.map(r => ({
+                    logic: r.logic,
+                    criteria: r.criteria,
+                    metricValue: r.metricValue
+                })),
+                bestResult: finalBest,
+                metric: targetMetric,
+                kollektiv: kollektivName,
+                duration: endTime - startTime,
+                totalTested: combinationsTested,
+                nGesamt: nGesamt,
+                nPlus: nPlus,
+                nMinus: nMinus
+            }
+        });
+    }
+    isRunning = false;
+    currentData = [];
+    allResults = [];
+}
+
+self.onmessage = function(event) {
+    if (!event || !event.data) {
+        console.error("Worker: Ungültige Nachricht empfangen.");
+        self.postMessage({ type: 'error', payload: { message: "Ungültige Nachricht vom Hauptthread empfangen." } });
+        return;
+    }
+    const { action, payload } = event.data;
+
+    if (action === 'start') {
+        if (isRunning) {
+            console.warn("BruteForceWorker: Worker läuft bereits. Startanfrage ignoriert.");
+            self.postMessage({ type: 'error', payload: { message: "Worker läuft bereits." } });
+            return;
+        }
+        try {
+            if (!payload || !Array.isArray(payload.data) || !payload.metric || !payload.kollektiv || !payload.t2SizeRange) {
+                throw new Error("Unvollständige Startdaten für Brute-Force. Benötigt: data, metric, kollektiv, t2SizeRange.");
+            }
+            if (typeof payload.t2SizeRange.min !== 'number' || typeof payload.t2SizeRange.max !== 'number' || typeof payload.t2SizeRange.step !== 'number' || payload.t2SizeRange.step <= 0) {
+                 throw new Error("Ungültige t2SizeRange Konfiguration: min, max, step müssen Zahlen sein und step > 0.");
+            }
+
+            currentData = payload.data;
+            targetMetric = payload.metric;
+            kollektivName = payload.kollektiv;
+            t2SizeRange = payload.t2SizeRange;
+
+            if (currentData.length === 0) {
+                throw new Error("Leeres Datenset für Brute-Force erhalten.");
+            }
+            isRunning = true;
+            runBruteForce();
+        }
+        catch (error) {
+            console.error("BruteForceWorker: Initialisierungsfehler:", error);
+            self.postMessage({ type: 'error', payload: { message: `Initialisierungsfehler im Worker: ${error.message}` } });
+            isRunning = false;
+        }
+    } else if (action === 'cancel') {
+        if (isRunning) {
+            isRunning = false;
+            self.postMessage({ type: 'cancelled', payload: { kollektiv: kollektivName } });
+            console.log("BruteForceWorker: Analyse abgebrochen.");
+        } else {
+            console.warn("BruteForceWorker: Keine laufende Analyse zum Abbrechen.");
+        }
+    } else {
+        console.warn(`BruteForceWorker: Unbekannte Aktion empfangen: ${action}`);
+        self.postMessage({ type: 'error', payload: { message: `Unbekannte Aktion vom Hauptthread: ${action}` } });
+    }
+};
+
+self.onerror = function(error) {
+    console.error("BruteForceWorker: Globaler Fehler im Worker:", error);
+    self.postMessage({ type: 'error', payload: { message: `Globaler Worker Fehler: ${error.message || 'Unbekannter Fehler im Worker'}` } });
+    isRunning = false;
+};
