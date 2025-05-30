@@ -1,252 +1,317 @@
 const viewRenderer = (() => {
-    let currentSortState = {
-        daten: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT),
-        auswertung: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT)
-    };
-    let dataTablePagination = null;
-    let auswertungTablePagination = null;
+    const initializedTabs = new Set();
 
-    function _updateAndRenderTable(tableId, data, rowCreationFn, sortStateKey, itemsPerPage = APP_CONFIG.UI_SETTINGS.DEFAULT_TABLE_ROWS_PER_PAGE) {
-        const tableBody = document.getElementById(`${tableId}-body`);
-        const paginationControls = document.getElementById(`${tableId}-pagination`);
-        const tableInfo = document.getElementById(`${tableId}-info`);
-        const tableHeaderId = `${tableId}-header`;
-
-        if (!tableBody || !paginationControls || !tableInfo || !document.getElementById(tableHeaderId)) {
-            console.error(`Tabellenelemente für ${tableId} nicht gefunden.`);
-            return null;
+    function _initializeTab(tabId, rendererFunction, ...args) {
+        const tabPane = document.getElementById(tabId);
+        if (tabPane && !initializedTabs.has(tabId)) {
+            rendererFunction(...args);
+            initializedTabs.add(tabId);
+        } else if (tabPane && initializedTabs.has(tabId) && rendererFunction) {
+            rendererFunction(...args); // Re-render if needed on subsequent calls
         }
+    }
 
-        const sortFunction = getSortFunction(currentSortState[sortStateKey].key, currentSortState[sortStateKey].direction, currentSortState[sortStateKey].subKey);
-        const sortedData = [...data].sort(sortFunction);
+    function renderDatenTab(data, sortState) {
+        const tableBody = document.getElementById('daten-table-body');
+        const paginationContainer = document.getElementById('daten-pagination-container');
+        const itemsPerPage = APP_CONFIG.UI_SETTINGS.DEFAULT_TABLE_ROWS_PER_PAGE;
+        const totalPages = Math.ceil(data.length / itemsPerPage);
+        const currentPage = state.getCurrentDatenTablePage();
 
-        const paginationInstance = new simpleDatatables.DataTable(document.createElement('table'), {
-            data: {
-                headings: [], // Dummy, da wir nur die Paginierungslogik nutzen
-                data: sortedData.map((_, index) => [index]) // Dummy-Daten für Paginierung
-            },
-            perPage: itemsPerPage,
-            searchable: false,
-            sortable: false,
-            header: false,
-            footer: false,
-            labels: {
-                placeholder: "Suchen...",
-                perPage: "{select} Einträge pro Seite",
-                noRows: "Keine Einträge gefunden",
-                info: "Zeige {start} bis {end} von {rows} Einträgen"
-            }
-        });
-        
-        paginationInstance.on('datatable.page', (page) => {
-            renderPage(page);
-        });
-        
-        paginationInstance.on('datatable.perpage', (perPage) => {
-             renderPage(1); // Reset to first page on perPage change
-        });
-
-        function renderPage(page) {
-            const currentPage = page || paginationInstance.currentPage || 1;
-            const startIndex = (currentPage - 1) * paginationInstance.options.perPage;
-            const endIndex = startIndex + paginationInstance.options.perPage;
-            const pageData = sortedData.slice(startIndex, endIndex);
-
+        if (tableBody) {
             tableBody.innerHTML = '';
-            pageData.forEach(item => {
-                tableBody.innerHTML += rowCreationFn(item);
+            const paginatedData = data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+            paginatedData.forEach(patient => {
+                if (typeof tableRenderer !== 'undefined') {
+                    tableBody.innerHTML += tableRenderer.createDatenTableRow(patient);
+                }
             });
-            ui_helpers.initializeTooltips(tableBody);
             ui_helpers.attachRowCollapseListeners(tableBody);
-             if (tableInfo) tableInfo.innerHTML = paginationInstance.labels.info.replace('{start}', sortedData.length > 0 ? startIndex + 1 : 0).replace('{end}', Math.min(endIndex, sortedData.length)).replace('{rows}', sortedData.length);
+            ui_helpers.updateSortIcons('daten-table-header', sortState);
+            ui_helpers.initializeTooltips(tableBody);
         }
-        
-        if (paginationControls) paginationControls.innerHTML = '';
-        if (sortedData.length > itemsPerPage) {
-             const paginationList = document.createElement('ul');
-             paginationList.className = 'pagination pagination-sm justify-content-end mb-0';
-             paginationControls.appendChild(paginationList);
-             paginationInstance.paginationRender(paginationList); // Render Bootstrap 5 compatible pagination
+        if (typeof paginationManager !== 'undefined' && paginationContainer) {
+             paginationContainer.innerHTML = paginationManager.createPaginationControls('daten', currentPage, totalPages);
+             paginationManager.attachPaginationEventListeners('daten', totalPages, (newPage) => {
+                state.setCurrentDatenTablePage(newPage);
+                renderDatenTab(data, sortState); // Re-render with new page
+             });
         }
-
-
-        renderPage(1);
-        ui_helpers.updateSortIcons(tableHeaderId, currentSortState[sortStateKey]);
-        return paginationInstance;
     }
 
-    function renderDatenTab() {
-        const currentKollektiv = state.getCurrentKollektiv();
-        const filteredData = dataProcessor.filterDataByKollektiv(mainAppInterface.getRawData(), currentKollektiv);
-        ui_helpers.updateElementHTML('daten-tab-content', `<div class="table-responsive"><table class="table table-sm table-hover table-striped data-table" id="daten-table"><thead><tr id="daten-table-header">${dataTabLogic.getDatenTableHeaderHTML()}</tr></thead><tbody id="daten-table-body"></tbody></table></div><div id="daten-table-pagination" class="mt-2"></div><div id="daten-table-info" class="small text-muted mt-1"></div>`);
-        dataTablePagination = _updateAndRenderTable('daten-table', filteredData, tableRenderer.createDatenTableRow, 'daten');
-        ui_helpers.initializeTooltips(document.getElementById('daten-table-header'));
-    }
+    function renderAuswertungTab(data, appliedCriteria, appliedLogic, currentKollektiv, bfResults, bfWorkerAvailable) {
+        const auswertungControlsContainer = document.getElementById('auswertung-t2-kriterien-controls-container');
+        const auswertungTableBody = document.getElementById('auswertung-table-body');
+        const t2MetricsOverviewContainer = document.getElementById('t2-metrics-overview-container');
+        const bruteForceContainer = document.getElementById('brute-force-container');
+        const paginationContainer = document.getElementById('auswertung-pagination-container');
+        const itemsPerPage = APP_CONFIG.UI_SETTINGS.DEFAULT_TABLE_ROWS_PER_PAGE;
+        const totalPages = Math.ceil(data.length / itemsPerPage);
+        const currentPage = state.getCurrentAuswertungTablePage();
 
-    function renderAuswertungTab() {
-        const currentKollektiv = state.getCurrentKollektiv();
-        const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
-        const appliedLogic = t2CriteriaManager.getAppliedLogic();
-        const isBruteForceWorkerAvailable = bruteForceManager.isWorkerAvailable();
-        const displayKollektivName = getKollektivDisplayName(currentKollektiv);
-
-        ui_helpers.updateElementHTML('auswertung-criteria-controls-container', uiComponents.createT2CriteriaControls(appliedCriteria, appliedLogic));
-        ui_helpers.updateElementHTML('auswertung-bruteforce-container', uiComponents.createBruteForceCard(displayKollektivName, isBruteForceWorkerAvailable));
+        if (auswertungControlsContainer && !initializedTabs.has('auswertung-tab-controls')) {
+            if (typeof ui_components !== 'undefined') {
+                auswertungControlsContainer.innerHTML = ui_components.createT2CriteriaControls(appliedCriteria, appliedLogic);
+            }
+            initializedTabs.add('auswertung-tab-controls');
+        }
         ui_helpers.updateT2CriteriaControlsUI(appliedCriteria, appliedLogic);
-        auswertungTabLogic.initializeAuswertungDataAndUI();
-        
-        const tableContainerHTML = `<div class="table-responsive mt-3"><table class="table table-sm table-hover table-striped data-table" id="auswertung-table"><thead><tr id="auswertung-table-header">${auswertungTabLogic.getAuswertungTableHeaderHTML()}</tr></thead><tbody id="auswertung-table-body"></tbody></table></div><div id="auswertung-table-pagination" class="mt-2"></div><div id="auswertung-table-info" class="small text-muted mt-1"></div>`;
-        ui_helpers.updateElementHTML('auswertung-table-container', tableContainerHTML);
+        ui_helpers.markCriteriaSavedIndicator(state.getUnsavedCriteriaChanges());
 
-        const evaluatedData = auswertungTabLogic.getProcessedDataForTable();
-        auswertungTablePagination = _updateAndRenderTable('auswertung-table', evaluatedData, (patient) => tableRenderer.createAuswertungTableRow(patient, appliedCriteria, appliedLogic), 'auswertung');
+        if (bruteForceContainer && !initializedTabs.has('auswertung-tab-bf')) {
+            if (typeof ui_components !== 'undefined') {
+                bruteForceContainer.innerHTML = ui_components.createBruteForceCard(currentKollektiv, bfWorkerAvailable);
+            }
+            initializedTabs.add('auswertung-tab-bf');
+        }
+        ui_helpers.updateBruteForceUI(bfResults?.status || 'idle', bfResults || {}, bfWorkerAvailable, currentKollektiv);
+
+
+        if (t2MetricsOverviewContainer && typeof ui_components !== 'undefined') {
+            const evaluatedData = typeof t2CriteriaManager !== 'undefined' ? t2CriteriaManager.evaluateDataset(cloneDeep(data), appliedCriteria, appliedLogic) : data;
+            const perfStats = typeof statisticsService !== 'undefined' ? statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n') : null;
+            t2MetricsOverviewContainer.innerHTML = ui_components.createT2MetricsOverview(perfStats, currentKollektiv);
+        }
+
+        if (auswertungTableBody && typeof tableRenderer !== 'undefined') {
+            auswertungTableBody.innerHTML = '';
+             const evaluatedDataForTable = typeof t2CriteriaManager !== 'undefined' ? t2CriteriaManager.evaluateDataset(cloneDeep(data), appliedCriteria, appliedLogic) : data;
+             const paginatedData = evaluatedDataForTable.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+            paginatedData.forEach(patient => {
+                auswertungTableBody.innerHTML += tableRenderer.createAuswertungTableRow(patient, appliedCriteria, appliedLogic);
+            });
+            ui_helpers.attachRowCollapseListeners(auswertungTableBody);
+            ui_helpers.updateSortIcons('auswertung-table-header', state.getCurrentAuswertungTableSort() || APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
+        }
+
+        if (typeof paginationManager !== 'undefined' && paginationContainer) {
+             paginationContainer.innerHTML = paginationManager.createPaginationControls('auswertung', currentPage, totalPages);
+             paginationManager.attachPaginationEventListeners('auswertung', totalPages, (newPage) => {
+                state.setCurrentAuswertungTablePage(newPage);
+                renderAuswertungTab(data, appliedCriteria, appliedLogic, currentKollektiv, bfResults, bfWorkerAvailable);
+             });
+        }
         ui_helpers.initializeTooltips(document.getElementById('auswertung-tab-pane'));
-        ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.hasUnappliedChanges());
     }
 
+    function renderStatistikTab(currentKollektiv, statistikLayout, statistikKollektiv1, statistikKollektiv2) {
+        const statistikControlsContainer = document.getElementById('statistik-controls-container');
+        const spinner = document.getElementById('statistik-spinner');
+        if (spinner) spinner.classList.remove('d-none');
 
-    function renderStatistikTab() {
-        const currentKollektiv = state.getCurrentKollektiv();
-        const currentLayout = state.getCurrentStatsLayout();
-        const kollektiv1 = state.getCurrentStatsKollektiv1();
-        const kollektiv2 = state.getCurrentStatsKollektiv2();
-        const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
-        const appliedLogic = t2CriteriaManager.getAppliedLogic();
-        const rawData = mainAppInterface.getRawData();
+        if (statistikControlsContainer && !initializedTabs.has('statistik-tab-controls')) {
+            const selectOptions = ['Gesamt', 'direkt OP', 'nRCT'].map(k => `<option value="${k}" ${k === currentKollektiv ? 'selected' : ''}>${getKollektivDisplayName(k)}</option>`).join('');
+            statistikControlsContainer.innerHTML = `
+                <div class="row align-items-center">
+                    <div class="col-md-auto mb-2 mb-md-0">
+                        <button class="btn btn-outline-primary btn-sm" id="statistik-toggle-vergleich" data-tippy-content="${TOOLTIP_CONTENT.statistikToggleVergleich.description}"><i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv</button>
+                    </div>
+                    <div class="col-md-auto mb-2 mb-md-0 d-none" id="statistik-kollektiv-select-1-container">
+                        <label for="statistik-kollektiv-select-1" class="form-label form-label-smvisually-hidden">Kollektiv 1</label>
+                        <select class="form-select form-select-sm" id="statistik-kollektiv-select-1" data-tippy-content="${TOOLTIP_CONTENT.statistikKollektiv1.description}">
+                           ${selectOptions.replace(`value="${currentKollektiv}" selected`, `value="${statistikKollektiv1}" selected`)}
+                        </select>
+                    </div>
+                    <div class="col-md-auto mb-2 mb-md-0 d-none" id="statistik-kollektiv-select-2-container">
+                        <label for="statistik-kollektiv-select-2" class="form-label form-label-sm visually-hidden">Kollektiv 2</label>
+                        <select class="form-select form-select-sm" id="statistik-kollektiv-select-2" data-tippy-content="${TOOLTIP_CONTENT.statistikKollektiv2.description}">
+                            ${selectOptions.replace(`value="${currentKollektiv}" selected`, `value="${statistikKollektiv2}" selected`)}
+                        </select>
+                    </div>
+                </div>`;
+            initializedTabs.add('statistik-tab-controls');
+        }
+        ui_helpers.updateStatistikSelectorsUI(statistikLayout, statistikKollektiv1, statistikKollektiv2);
 
-        ui_helpers.updateStatistikSelectorsUI(currentLayout, kollektiv1, kollektiv2);
-        statistikTabLogic.calculateAndDisplayStatistics(rawData, appliedCriteria, appliedLogic, currentLayout, kollektiv1, kollektiv2);
+        if (typeof statistikTabLogic !== 'undefined') {
+            statistikTabLogic.displayStatistics(
+                state.getFilteredData(),
+                statistikLayout,
+                statistikKollektiv1,
+                statistikKollektiv2,
+                t2CriteriaManager.getAppliedCriteria(),
+                t2CriteriaManager.getAppliedLogic()
+            );
+        }
+        if (spinner) spinner.classList.add('d-none');
         ui_helpers.initializeTooltips(document.getElementById('statistik-tab-pane'));
     }
 
-    function renderPraesentationTab() {
-        const currentView = state.getCurrentPresentationView();
-        const currentStudyId = state.getCurrentPresentationStudyId();
+    function renderPraesentationTab(currentView, currentStudyId, currentGlobalKollektiv) {
+        const praesControlsContainer = document.getElementById('praesentation-controls-container');
+        const spinner = document.getElementById('praesentation-spinner');
+        if(spinner) spinner.classList.remove('d-none');
+
+        if (praesControlsContainer && !initializedTabs.has('praesentation-tab-controls')) {
+            const studyOptions = studyT2CriteriaManager.getAvailableStudySets().map(set =>
+                 `<option value="${set.id}" ${set.id === currentStudyId ? 'selected' : ''}>${set.name}</option>`
+            ).join('');
+
+            praesControlsContainer.innerHTML = `
+                <div class="row align-items-center justify-content-center">
+                    <div class="col-md-auto mb-2 mb-md-0">
+                         <div class="btn-group btn-group-sm" role="group" aria-label="Präsentationsansicht wählen" data-tippy-content="${TOOLTIP_CONTENT.praesentation.viewSelect.description}">
+                            <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as" value="as-pur" ${currentView === 'as-pur' ? 'checked' : ''} autocomplete="off">
+                            <label class="btn btn-outline-primary" for="praes-ansicht-as">Avocado Sign (Performance)</label>
+                            <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as-vs-t2" value="as-vs-t2" ${currentView === 'as-vs-t2' ? 'checked' : ''} autocomplete="off">
+                            <label class="btn btn-outline-primary" for="praes-ansicht-as-vs-t2">AS vs. T2 (Vergleich)</label>
+                        </div>
+                    </div>
+                    <div class="col-md-auto mb-2 mb-md-0" id="praes-study-select-container" style="display: ${currentView === 'as-vs-t2' ? '' : 'none'};">
+                        <label for="praes-study-select" class="form-label form-label-sm visually-hidden">T2-Basis</label>
+                        <select class="form-select form-select-sm" id="praes-study-select" data-tippy-content="${TOOLTIP_CONTENT.praesentation.studySelect.description}">
+                            <option value="applied_criteria" ${'applied_criteria' === currentStudyId ? 'selected' : ''}>${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME}</option>
+                            ${studyOptions}
+                        </select>
+                    </div>
+                </div>`;
+            initializedTabs.add('praesentation-tab-controls');
+        }
         ui_helpers.updatePresentationViewSelectorUI(currentView);
-        
-        const studySelect = document.getElementById('praes-study-select');
-        if (studySelect) {
-            if(!studySelect.options.length) { // Populate if empty
-                const defaultOption = document.createElement('option');
-                defaultOption.value = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
-                defaultOption.textContent = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME;
-                studySelect.appendChild(defaultOption);
-                PUBLICATION_CONFIG.literatureCriteriaSets.forEach(setConf => {
-                    const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(setConf.id);
-                    if (studySet) {
-                        const option = document.createElement('option');
-                        option.value = setConf.id;
-                        option.textContent = studySet.name;
-                        studySelect.appendChild(option);
-                    }
-                });
-            }
-            studySelect.value = currentStudyId || APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
+
+        if (typeof praesentationTabLogic !== 'undefined') {
+            const globalData = mainAppInterface.getGlobalData();
+            const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
+            const appliedLogic = t2CriteriaManager.getAppliedLogic();
+            praesentationTabLogic.renderPresentation(globalData, currentView, currentStudyId, currentGlobalKollektiv, appliedCriteria, appliedLogic);
         }
 
-        const rawData = mainAppInterface.getRawData();
-        const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
-        const appliedLogic = t2CriteriaManager.getAppliedLogic();
-
-        praesentationTabLogic.updatePresentationContent(rawData, appliedCriteria, appliedLogic, currentView, currentStudyId || APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID);
+        if(spinner) spinner.classList.add('d-none');
         ui_helpers.initializeTooltips(document.getElementById('praesentation-tab-pane'));
     }
 
-    function renderPublikationTab() {
-        const tabContentArea = document.getElementById('publikation-tab-content-area');
-        if (!tabContentArea) return;
-        tabContentArea.innerHTML = uiComponents.createPublikationTabHeader();
+    function renderPublikationTab(currentSection, currentLang, currentGlobalKollektiv) {
+        const publikationTabPane = document.getElementById('publikation-tab-pane');
+        const spinner = document.getElementById('publikation-spinner');
+        if (spinner) spinner.classList.remove('d-none');
 
-        const rawData = mainAppInterface.getRawData();
-        const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
-        const appliedLogic = t2CriteriaManager.getAppliedLogic();
-        const bfResults = bruteForceManager.getAllResults();
+        if (publikationTabPane) {
+            if (!initializedTabs.has('publikation-tab-header')) {
+                 if (typeof ui_components !== 'undefined' && typeof ui_components.createPublikationTabHeader === 'function') {
+                    publikationTabPane.innerHTML = ui_components.createPublikationTabHeader();
+                 }
+                 initializedTabs.add('publikation-tab-header');
+            }
 
-        publikationTabLogic.initializeData(rawData, appliedCriteria, appliedLogic, bfResults);
+            const currentPublicationBFMetric = state.getCurrentPublikationBruteForceMetric();
 
-        const lang = state.getCurrentPublikationLang();
-        const sectionId = state.getCurrentPublikationSection() || PUBLICATION_CONFIG.defaultSubSection;
-        const globalKollektiv = state.getCurrentKollektiv();
-        
-        ui_helpers.updatePublikationUI(lang, sectionId, state.getCurrentPublikationBruteForceMetric());
-        publikationTabLogic.getRenderedSectionContent(sectionId, lang, globalKollektiv); // Rendert Text und Tabellen-HTML
-        publikationTabLogic.updateDynamicChartsForPublicationTab(sectionId, lang, globalKollektiv); // Rendert Charts in die Platzhalter
+            if (typeof publikationTabLogic !== 'undefined') {
+                const globalData = mainAppInterface.getGlobalData();
+                const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
+                const appliedLogic = t2CriteriaManager.getAppliedLogic();
+                const bfResults = bruteForceManager.getAllResults();
 
-        ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
-        publikationEventHandlers.attachPublikationTabEventHandlers();
-    }
+                publikationTabLogic.initializeData(globalData, appliedCriteria, appliedLogic, bfResults);
+                ui_helpers.updatePublikationUI(currentLang, currentSection, currentPublicationBFMetric);
 
-
-    function renderExportTab() {
-        const currentKollektiv = state.getCurrentKollektiv();
-        ui_helpers.updateElementHTML('export-tab-content', uiComponents.createExportOptions(currentKollektiv));
-        ui_helpers.updateExportButtonStates(state.getActiveTabId(), bruteForceManager.hasAnyResults(), mainAppInterface.getFilteredData().length > 0);
-        ui_helpers.initializeTooltips(document.getElementById('export-tab-pane'));
-        generalEventHandlers.attachExportButtonListeners(document.getElementById('export-tab-content'));
-    }
-    
-    function renderAdminTab() {
-        const content = `
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <div class="card">
-                        <div class="card-header">Anwendungszustand (State)</div>
-                        <div class="card-body">
-                            <pre id="admin-state-output" class="bg-light p-2 rounded small" style="max-height: 300px; overflow-y: auto;"></pre>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <div class="card">
-                        <div class="card-header">LocalStorage Management</div>
-                        <div class="card-body">
-                            <button class="btn btn-sm btn-danger mb-2" id="btn-clear-localstorage" data-tippy-content="Löscht ALLE im LocalStorage gespeicherten Daten dieser Anwendung (Kriterien, Zustand etc.). Die Seite wird danach neu geladen.">
-                                <i class="fas fa-trash-alt me-1"></i> LocalStorage löschen & Neu laden
-                            </button>
-                            <p class="small text-muted">Aktuell belegter Speicher durch diese Anwendung: <span id="localstorage-size">--</span> KB</p>
-                        </div>
-                    </div>
-                </div>
-                 <div class="col-md-6 mb-3">
-                    <div class="card">
-                        <div class="card-header">Brute-Force Worker Test</div>
-                        <div class="card-body">
-                            <button class="btn btn-sm btn-info mb-2" id="btn-test-bruteforce-worker" data-tippy-content="Startet einen einfachen Testlauf des Brute-Force Workers.">
-                                <i class="fas fa-microchip me-1"></i> Worker Testlauf
-                            </button>
-                             <div id="bruteforce-worker-test-output" class="small text-muted mt-2"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-        ui_helpers.updateElementHTML('admin-tab-content', content);
-        ui_helpers.initializeTooltips(document.getElementById('admin-tab-content'));
-        generalEventHandlers.attachAdminTabListeners();
-    }
-
-    function updateAllSortIcons() {
-        ui_helpers.updateSortIcons('daten-table-header', currentSortState.daten);
-        ui_helpers.updateSortIcons('auswertung-table-header', currentSortState.auswertung);
-    }
-    
-    function updateTableSortState(tableType, newKey, newSubKey = null) {
-        if (currentSortState[tableType].key === newKey && currentSortState[tableType].subKey === newSubKey) {
-            currentSortState[tableType].direction = currentSortState[tableType].direction === 'asc' ? 'desc' : 'asc';
-        } else {
-            currentSortState[tableType].key = newKey;
-            currentSortState[tableType].subKey = newSubKey;
-            currentSortState[tableType].direction = 'asc';
+                const sectionToRender = currentSection || PUBLICATION_CONFIG.defaultSubSection;
+                publikationTabLogic.getRenderedSectionContent(sectionToRender, currentLang, currentGlobalKollektiv);
+                // Charts will be rendered after content is in DOM
+                publikationTabLogic.updateDynamicChartsForPublicationTab(sectionToRender, currentLang, currentGlobalKollektiv);
+            }
         }
-        state.saveTableSortSettings(tableType, currentSortState[tableType]);
+
+        if (spinner) spinner.classList.add('d-none');
+        ui_helpers.initializeTooltips(publikationTabPane);
     }
 
-    function getCurrentSortStateFor(tableType) {
-        return currentSortState[tableType];
+    function renderExportTab(currentKollektiv) {
+        const exportContainer = document.getElementById('export-options-container');
+        if (exportContainer && !initializedTabs.has('export-tab-content')) {
+            if (typeof ui_components !== 'undefined') {
+                exportContainer.innerHTML = ui_components.createExportOptions(currentKollektiv);
+            }
+            initializedTabs.add('export-tab-content');
+        } else if (exportContainer && initializedTabs.has('export-tab-content')) {
+            // Update dynamic parts if needed, e.g., if currentKollektiv changes filename examples
+            // For now, re-rendering the whole options might be simpler if kollektiv affects more.
+            // Or more selectively update:
+            const exportDescEl = exportContainer.querySelector('.small.text-muted.mb-3');
+            if(exportDescEl) exportDescEl.innerHTML = TOOLTIP_CONTENT.exportTab.description.replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(currentKollektiv)}</strong>`);
+        }
+
+        if (typeof exportService !== 'undefined') {
+            const hasBruteForceResults = bruteForceManager.hasAnyResults();
+            const canExportDataDependent = mainAppInterface.getGlobalData()?.length > 0;
+            ui_helpers.updateExportButtonStates(state.getActiveTabId(), hasBruteForceResults, canExportDataDependent);
+        }
+        ui_helpers.initializeTooltips(document.getElementById('export-tab-pane'));
     }
-    
-    function initializeSortStates() {
-        currentSortState.daten = state.loadTableSortSettings('daten') || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT);
-        currentSortState.auswertung = state.loadTableSortSettings('auswertung') || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
+
+
+    function showTab(tabId) {
+        const tabPanes = document.querySelectorAll('.tab-pane');
+        const navLinks = document.querySelectorAll('.nav-tabs .nav-link, .nav-pills .nav-link');
+        let targetTabPane = null;
+        let targetNavLink = null;
+
+        tabPanes.forEach(pane => {
+            const paneIsTarget = pane.id === tabId;
+            pane.classList.toggle('show', paneIsTarget);
+            pane.classList.toggle('active', paneIsTarget);
+            if (paneIsTarget) targetTabPane = pane;
+        });
+        navLinks.forEach(link => {
+            const linkIsTarget = link.dataset.bsTarget === `#${tabId}`;
+            link.classList.toggle('active', linkIsTarget);
+            link.setAttribute('aria-selected', String(linkIsTarget));
+            if (linkIsTarget) targetNavLink = link;
+        });
+
+        if (targetNavLink && targetTabPane) {
+            state.setActiveTabId(tabId);
+            refreshCurrentTab(tabId, true);
+            if (typeof ui_helpers !== 'undefined') {
+                ui_helpers.updateExportButtonStates(tabId, bruteForceManager.hasAnyResults(), mainAppInterface.getGlobalData()?.length > 0);
+            }
+            setTimeout(() => { // ensure content is visible for Tippy
+               if (document.getElementById(tabId)) ui_helpers.initializeTooltips(document.getElementById(tabId));
+            }, 100);
+        } else {
+            console.warn(`Tab mit ID '${tabId}' oder zugehöriger Nav-Link nicht gefunden.`);
+        }
+    }
+
+
+    function refreshCurrentTab(activeTabId = state.getActiveTabId(), isTabSwitch = false) {
+        const currentKollektiv = state.getCurrentKollektiv();
+        if (typeof mainAppInterface === 'undefined' || !mainAppInterface.getGlobalData()) {
+            console.warn("mainAppInterface oder globale Daten nicht verfügbar in refreshCurrentTab.");
+            return;
+        }
+        const globalData = mainAppInterface.getGlobalData();
+        const filteredData = dataProcessor.filterDataByKollektiv(globalData, currentKollektiv);
+
+        switch (activeTabId) {
+            case 'daten-tab-pane':
+                const datenSortState = state.getCurrentDatenTableSort();
+                const sortedData = dataProcessor.sortData(filteredData, datenSortState.key, datenSortState.direction, datenSortState.subKey);
+                renderDatenTab(sortedData, datenSortState);
+                break;
+            case 'auswertung-tab-pane':
+                const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
+                const appliedLogic = t2CriteriaManager.getAppliedLogic();
+                const bfResults = bruteForceManager.getAllResultsForKollektiv(currentKollektiv) || bruteForceManager.getGlobalStatus();
+                const auswertungSortState = state.getCurrentAuswertungTableSort();
+                const sortedAuswertungData = dataProcessor.sortData(filteredData, auswertungSortState.key, auswertungSortState.direction, auswertungSortState.subKey);
+                renderAuswertungTab(sortedAuswertungData, appliedCriteria, appliedLogic, currentKollektiv, bfResults, bruteForceManager.isWorkerAvailable());
+                break;
+            case 'statistik-tab-pane':
+                renderStatistikTab(currentKollektiv, state.getCurrentStatistikLayout(), state.getCurrentStatistikKollektiv1(), state.getCurrentStatistikKollektiv2());
+                break;
+            case 'praesentation-tab-pane':
+                renderPraesentationTab(state.getCurrentPresentationView(), state.getCurrentPresentationStudyId(), currentKollektiv);
+                break;
+            case 'publikation-tab-pane':
+                renderPublikationTab(state.getCurrentPublikationSection(), state.getCurrentPublikationLang(), currentKollektiv);
+                break;
+            case 'export-tab-pane':
+                renderExportTab(currentKollektiv);
+                break;
+        }
+         if (!isTabSwitch) {
+             if (document.getElementById(activeTabId)) ui_helpers.initializeTooltips(document.getElementById(activeTabId));
+         }
     }
 
 
@@ -257,11 +322,8 @@ const viewRenderer = (() => {
         renderPraesentationTab,
         renderPublikationTab,
         renderExportTab,
-        renderAdminTab,
-        updateTableSortState,
-        getCurrentSortStateFor,
-        updateAllSortIcons,
-        initializeSortStates
+        showTab,
+        refreshCurrentTab
     });
 
 })();
