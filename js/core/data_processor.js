@@ -88,8 +88,21 @@ const dataProcessor = (() => {
              console.error("processPatientData: APP_CONFIG ist nicht verfügbar.");
              return [];
         }
-
+        // In Version 2.4.0 heißt die Funktion in main.js `processData`, daher hier umbenannt für Konsistenz
         return rawData.map((patient, index) => processSinglePatient(patient, index, APP_CONFIG));
+    }
+    
+    function sortData(data, key, direction = 'asc', subKey = null) {
+        if (!Array.isArray(data)) {
+            console.error("sortData: Eingabedaten sind kein Array.");
+            return [];
+        }
+        if (typeof getSortFunction !== 'function') {
+            console.error("sortData: getSortFunction ist nicht verfügbar. Stellen Sie sicher, dass utils.js geladen wurde.");
+            return data; // Daten unsortiert zurückgeben
+        }
+        const sortFunction = getSortFunction(key, direction, subKey);
+        return [...data].sort(sortFunction);
     }
 
     function filterDataByKollektiv(data, kollektiv) {
@@ -143,7 +156,8 @@ const dataProcessor = (() => {
     }
 
     return Object.freeze({
-        processPatientData,
+        processData: processPatientData, // Angepasst an Aufruf in main.js
+        sortData,
         filterDataByKollektiv,
         calculateHeaderStats
     });
