@@ -40,13 +40,11 @@ const mainAppInterface = (() => {
         _uiComponents = typeof ui_components !== 'undefined' ? ui_components : null;
         _chartRenderer = typeof chart_renderer !== 'undefined' ? chart_renderer : null;
         _tableRenderer = typeof tableRenderer !== 'undefined' ? tableRenderer : null;
-        // _paginationManager wurde entfernt
         _publicationTextGenerator = typeof publicationTextGenerator !== 'undefined' ? publicationTextGenerator : null;
         _publicationRenderer = typeof publicationRenderer !== 'undefined' ? publicationRenderer : null;
         _publikationTabLogic = typeof publikationTabLogic !== 'undefined' ? publikationTabLogic : null;
         _radiologyFormatter = typeof radiologyFormatter !== 'undefined' ? radiologyFormatter : null;
         _citationManager = typeof citationManager !== 'undefined' ? citationManager : null;
-
 
         _generalEventHandlers = typeof generalEventHandlers !== 'undefined' ? generalEventHandlers : null;
         _auswertungEventHandlers = typeof auswertungEventHandlers !== 'undefined' ? auswertungEventHandlers : null;
@@ -54,9 +52,12 @@ const mainAppInterface = (() => {
         _praesentationEventHandlers = typeof praesentationEventHandlers !== 'undefined' ? praesentationEventHandlers : null;
         _publikationEventHandlers = typeof publikationEventHandlers !== 'undefined' ? publikationEventHandlers : null;
 
-
         if (_bruteForceManager && typeof _bruteForceManager.init === 'function') {
-            _bruteForceManager.init(APP_CONFIG.PATHS.BRUTE_FORCE_WORKER, _t2CriteriaManager, _statisticsService, _dataProcessor);
+            if (_t2CriteriaManager && _statisticsService && _dataProcessor) {
+                _bruteForceManager.init(APP_CONFIG.PATHS.BRUTE_FORCE_WORKER, _t2CriteriaManager, _statisticsService, _dataProcessor);
+            } else {
+                console.error("BruteForceManager konnte nicht initialisiert werden: Abhängigkeiten (T2CriteriaManager, StatisticsService, DataProcessor) fehlen.");
+            }
         }
 
         const modules = { _dataProcessor, _t2CriteriaManager, _studyT2CriteriaManager, _statisticsService, _bruteForceManager, _exportService, _viewRenderer, _state, _uiHelpers, _uiComponents, _chartRenderer, _tableRenderer, _publicationTextGenerator, _publicationRenderer, _publikationTabLogic, _radiologyFormatter, _citationManager, _generalEventHandlers, _auswertungEventHandlers, _statistikEventHandlers, _praesentationEventHandlers, _publikationEventHandlers };
@@ -66,7 +67,7 @@ const mainAppInterface = (() => {
             }
         }
 
-        if (APP_CONFIG.PERFORMANCE_SETTINGS.ENABLE_GPU_ACCELERATION_CSS) {
+        if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.PERFORMANCE_SETTINGS && APP_CONFIG.PERFORMANCE_SETTINGS.ENABLE_GPU_ACCELERATION_CSS) {
             document.body.classList.add('gpu-accelerated-css');
         }
     }
@@ -86,13 +87,13 @@ const mainAppInterface = (() => {
             _processedData = _dataProcessor.processData(_globalRawData);
         } else {
             console.error("Data Processor nicht verfügbar. Daten können nicht verarbeitet werden.");
-            _processedData = _globalRawData;
+            _processedData = _globalRawData; 
         }
     }
 
     function _setupInitialView() {
         if (!_state || !_viewRenderer || !_uiHelpers || !_dataProcessor || !_t2CriteriaManager) {
-            console.error("UI Initialisierung fehlgeschlagen: State, ViewRenderer, UI Helpers, DataProcessor oder T2CriteriaManager nicht verfügbar.");
+            console.error("UI Initialisierung fehlgeschlagen: Notwendige Module nicht verfügbar (State, ViewRenderer, UI Helpers, DataProcessor, T2CriteriaManager).");
             return;
         }
         _state.init();
@@ -103,14 +104,14 @@ const mainAppInterface = (() => {
         const headerStats = _dataProcessor.calculateHeaderStats(filteredData, _t2CriteriaManager.getAppliedCriteria(), _t2CriteriaManager.getAppliedLogic());
         _uiHelpers.updateHeaderStatsUI(headerStats);
 
-        const initialTabId = _state.getActiveTabId() || APP_CONFIG.DEFAULT_SETTINGS.ACTIVE_TAB_ID || 'daten-tab-pane';
+        const initialTabId = _state.getActiveTabId() || APP_CONFIG?.DEFAULT_SETTINGS?.ACTIVE_TAB_ID || 'daten-tab-pane';
         _viewRenderer.showTab(initialTabId);
 
-        if (typeof _bruteForceManager !== 'undefined') {
-             _uiHelpers.updateExportButtonStates(initialTabId, _bruteForceManager.hasAnyResults(), _processedData.length > 0);
-        } else {
-            _uiHelpers.updateExportButtonStates(initialTabId, false, _processedData.length > 0);
+        let bfHasResults = false;
+        if (typeof _bruteForceManager !== 'undefined' && typeof _bruteForceManager.hasAnyResults === 'function') {
+            bfHasResults = _bruteForceManager.hasAnyResults();
         }
+        _uiHelpers.updateExportButtonStates(initialTabId, bfHasResults, (_processedData?.length || 0) > 0);
     }
 
     function _attachGlobalEventListeners() {
@@ -147,24 +148,33 @@ const mainAppInterface = (() => {
         document.addEventListener('DOMContentLoaded', () => {
             const appContainer = document.getElementById('app-container');
             const loadingIndicator = document.getElementById('loading-indicator');
-            if(appContainer) appContainer.classList.remove('d-none');
-            if(loadingIndicator) loadingIndicator.style.display = 'none';
-
-            _initializeModules();
-            _loadAndProcessData();
-            _setupInitialView();
-            _attachGlobalEventListeners();
-            _attachSpecificEventListeners();
-
-            if(_uiHelpers && typeof _uiHelpers.initializeTooltips === 'function'){
-                 setTimeout(() => _uiHelpers.initializeTooltips(document.body), 500);
-            }
             
-            const appVersionFooter = document.getElementById('app-version-footer');
-            if(appVersionFooter && typeof APP_CONFIG !== 'undefined' && APP_CONFIG.APP_VERSION) {
-                appVersionFooter.textContent = APP_CONFIG.APP_VERSION;
-            }
+            try {
+                _initializeModules();
+                _loadAndProcessData();
+                _setupInitialView();
+                _attachGlobalEventListeners();
+                _attachSpecificEventListeners();
 
+                if(_uiHelpers && typeof _uiHelpers.initializeTooltips === 'function'){
+                     setTimeout(() => _uiHelpers.initializeTooltips(document.body), 500);
+                }
+                
+                const appVersionFooter = document.getElementById('app-version-footer');
+                if(appVersionFooter && typeof APP_CONFIG !== 'undefined' && APP_CONFIG.APP_VERSION) {
+                    appVersionFooter.textContent = APP_CONFIG.APP_VERSION;
+                }
+                if(appContainer) appContainer.classList.remove('d-none'); // Show app only if all initializations likely succeeded
+                if(loadingIndicator) loadingIndicator.style.display = 'none';
+
+            } catch (error) {
+                 console.error("Schwerwiegender Fehler während der Initialisierung der Anwendung:", error);
+                 if (loadingIndicator) {
+                     loadingIndicator.innerHTML = `<p style="color: red; font-weight: bold;">Fehler beim Start der Anwendung. Bitte Konsole prüfen.</p><p style="font-size: 0.8em; color: #555;">Details: ${error.message}</p>`;
+                     loadingIndicator.style.display = 'flex'; // Ensure it's visible
+                 }
+                 if(appContainer) appContainer.classList.add('d-none'); // Hide app container on critical error
+            }
         });
     }
 
