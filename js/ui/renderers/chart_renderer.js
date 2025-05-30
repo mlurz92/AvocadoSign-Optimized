@@ -1,4 +1,4 @@
-const chartRenderer = (() => {
+const chart_renderer = (() => {
 
     function _getChartConfig(options = {}) {
         const profile = options.styleProfile || 'default';
@@ -24,7 +24,6 @@ const chartRenderer = (() => {
 
         return appChartSettings[keyOrIndex] || (typeof keyOrIndex === 'number' ? (defaultScheme[keyOrIndex % defaultScheme.length]) : '#4472C4');
     }
-
 
     function createSvgContainer(targetElementId, options = {}) {
         const chartConfig = _getChartConfig(options);
@@ -60,15 +59,13 @@ const chartRenderer = (() => {
         const legendFontSize = parseFloat(chartConfig.legendFontSizePt || defaultChartSettings.LEGEND_FONT_SIZE?.replace('px','').replace('pt','') || '10') || 10;
         const estimatedLegendHeight = options.legendBelow ? Math.max(25, legendItemCount * (legendFontSize * 1.2) + 15) : 0;
 
-
         if (options.useCompactMargins && options.legendBelow) {
-             const compactMargins = options.styleProfile === 'radiology' ?
+            const compactMargins = options.styleProfile === 'radiology' ?
                 (radiologyChartConfig.compactPieMargin || defaultChartSettings.COMPACT_PIE_MARGIN) :
                 defaultChartSettings.COMPACT_PIE_MARGIN;
             Object.assign(margin, compactMargins, options.margin || {});
             height = Math.max(height, (options.height || defaultHeight) + estimatedLegendHeight);
         }
-
 
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = height - margin.top - margin.bottom - estimatedLegendHeight;
@@ -158,7 +155,7 @@ const chartRenderer = (() => {
             .attr("width", d => Math.max(0, x(d.x1) - x(d.x0) - 1))
             .attr("height", 0).style("fill", barColor).style("opacity", 0.85)
             .attr("rx", 1).attr("ry", 1)
-            .on("mouseover", (event, d) => { tooltip.transition().duration(50).style("opacity", .95); tooltip.html(`Alter: ${formatNumber(d.x0, 0)}-${formatNumber(d.x1, 0)}<br>Anzahl: ${d.length}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px"); d3.select(event.currentTarget).style("opacity", 1).style("stroke", "#333").style("stroke-width", 0.5); })
+            .on("mouseover", (event, d) => { tooltip.transition().duration(50).style("opacity", .95); tooltip.html(`Alter: ${utils.formatNumber(d.x0, 0)}-${utils.formatNumber(d.x1, 0)}<br>Anzahl: ${d.length}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px"); d3.select(event.currentTarget).style("opacity", 1).style("stroke", "#333").style("stroke-width", 0.5); })
             .on("mouseout", (event, d) => { tooltip.transition().duration(200).style("opacity", 0); d3.select(event.currentTarget).style("opacity", 0.85).style("stroke", "none"); })
             .transition().duration(animationDuration).ease(d3.easeCubicOut)
             .attr("y", d => y(d.length)).attr("height", d => Math.max(0, innerHeight - y(d.length)));
@@ -200,17 +197,17 @@ const chartRenderer = (() => {
 
         arcs.append("path").style("fill", d => color(d.data.label))
             .style("stroke", chartConfig.plotBackgroundColor || "#ffffff").style("stroke-width", "1.5px").style("opacity", 0.9)
-            .on("mouseover", function(event, d) { tooltip.transition().duration(50).style("opacity", .95); tooltip.html(`<strong>${d.data.label}:</strong> ${formatNumber(d.data.value, 0)} (${formatPercent(d.data.value / totalValue)})`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px"); d3.select(this).transition().duration(100).style("opacity", 1).attr("transform", "scale(1.03)"); })
-            .on("mouseout", function(event, d) { tooltip.transition().duration(200).style("opacity", 0); d3.select(this).transition().duration(100).style("opacity", 0.9).attr("transform", "scale(1)"); })
+            .on("mouseover", function (event, d) { tooltip.transition().duration(50).style("opacity", .95); tooltip.html(`<strong>${d.data.label}:</strong> ${utils.formatNumber(d.data.value, 0)} (${utils.formatPercent(d.data.value / totalValue)})`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px"); d3.select(this).transition().duration(100).style("opacity", 1).attr("transform", "scale(1.03)"); })
+            .on("mouseout", function (event, d) { tooltip.transition().duration(200).style("opacity", 0); d3.select(this).transition().duration(100).style("opacity", 0.9).attr("transform", "scale(1)"); })
             .transition().duration(animationDuration).ease(d3.easeCubicOut)
-            .attrTween("d", d => { const i = d3.interpolate({startAngle: d.startAngle, endAngle: d.startAngle}, d); return t => arcGenerator(i(t)); });
+            .attrTween("d", d => { const i = d3.interpolate({ startAngle: d.startAngle, endAngle: d.startAngle }, d); return t => arcGenerator(i(t)); });
 
         arcs.filter(d => (d.endAngle - d.startAngle) / (2 * Math.PI) >= labelThreshold)
             .append("text").attr("transform", d => `translate(${labelArcGenerator.centroid(d)})`)
             .attr("dy", "0.35em").style("text-anchor", "middle").style("font-size", tickLabelFontSize)
             .style("fill", (options.styleProfile === 'radiology' && chartConfig.preferredColorScheme === 'radiology_grayscale') ? '#000000' : '#ffffff')
             .style("pointer-events", "none").style("opacity", 0)
-            .text(d => formatPercent(d.data.value / totalValue, 0))
+            .text(d => utils.formatPercent(d.data.value / totalValue, 0))
             .transition().duration(animationDuration).delay(animationDuration / 2).style("opacity", 1);
 
         if (options.legendBelow && legendSpaceY > 0 && validData.length > 0) {
@@ -225,10 +222,10 @@ const chartRenderer = (() => {
 
             let currentX = 0; let currentY = 0;
             const legendItems = legendGroup.selectAll("g.legend-item").data(validData).join("g").attr("class", "legend-item").attr("data-label", d => d.label);
-            legendItems.each(function(d, i) {
+            legendItems.each(function (d, i) {
                 const item = d3.select(this);
-                item.append("rect").attr("x", 0).attr("y", - (legendFontSizeNum / 2)).attr("width", 10).attr("height", 10).attr("fill", color(d.label));
-                item.append("text").attr("x", 14).attr("y", 0).attr("dy", "0.3em").text(`${d.label} (${formatNumber(d.data.value, 0)})`);
+                item.append("rect").attr("x", 0).attr("y", -(legendFontSizeNum / 2)).attr("width", 10).attr("height", 10).attr("fill", color(d.label));
+                item.append("text").attr("x", 14).attr("y", 0).attr("dy", "0.3em").text(`${d.label} (${utils.formatNumber(d.data.value, 0)})`);
                 const itemWidth = this.getBBox().width + 20;
                 if (i > 0 && currentX + itemWidth > legendMaxWidth) { currentX = 0; currentY += legendItemHeight; }
                 item.attr("transform", `translate(${currentX}, ${currentY})`);
@@ -284,14 +281,14 @@ const chartRenderer = (() => {
         const metricGroup = chartArea.selectAll(".metric-group").data(chartData).join("g")
             .attr("class", "metric-group").attr("transform", d => `translate(${x0(d.metric)},0)`);
 
-        metricGroup.selectAll("rect").data(d => subgroups.map(key => ({key: key, value: d[key], metric: d.metric})))
+        metricGroup.selectAll("rect").data(d => subgroups.map(key => ({ key: key, value: d[key], metric: d.metric })))
             .join("rect").attr("class", d => `bar bar-${d.key.toLowerCase()}`)
             .attr("x", d => x1(d.key)).attr("y", y(0))
             .attr("width", x1.bandwidth()).attr("height", 0)
             .attr("fill", d => color(d.key)).style("opacity", 0.9)
             .attr("rx", 1).attr("ry", 1)
-            .on("mouseover", function(event, d) { tooltip.transition().duration(50).style("opacity", .95); const displayName = subgroupDisplayNames[d.key] || d.key; const digits = (d.metric === 'AUC' || d.metric === 'F1') ? (chartConfig.METRIC_RATE_DECIMALS !== undefined ? chartConfig.METRIC_RATE_DECIMALS : 3) : (chartConfig.METRIC_PERCENT_DECIMALS !== undefined ? chartConfig.METRIC_PERCENT_DECIMALS : 1) ; const isPercent = !(d.metric === 'AUC' || d.metric === 'F1'); const formattedValue = isPercent ? formatPercent(d.value, digits) : formatNumber(d.value, digits); tooltip.html(`<strong>${d.metric} (${displayName}):</strong> ${formattedValue}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px"); d3.select(this).style("opacity", 1).style("stroke", "#333").style("stroke-width", 1); })
-            .on("mouseout", function(event, d) { tooltip.transition().duration(200).style("opacity", 0); d3.select(this).style("opacity", 0.9).style("stroke", "none"); })
+            .on("mouseover", function (event, d) { tooltip.transition().duration(50).style("opacity", .95); const displayName = subgroupDisplayNames[d.key] || d.key; const digits = (d.metric === 'AUC' || d.metric === 'F1') ? (chartConfig.METRIC_RATE_DECIMALS !== undefined ? chartConfig.METRIC_RATE_DECIMALS : 3) : (chartConfig.METRIC_PERCENT_DECIMALS !== undefined ? chartConfig.METRIC_PERCENT_DECIMALS : 1); const isPercent = !(d.metric === 'AUC' || d.metric === 'F1'); const formattedValue = isPercent ? utils.formatPercent(d.value, digits) : utils.formatNumber(d.value, digits); tooltip.html(`<strong>${d.metric} (${displayName}):</strong> ${formattedValue}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px"); d3.select(this).style("opacity", 1).style("stroke", "#333").style("stroke-width", 1); })
+            .on("mouseout", function (event, d) { tooltip.transition().duration(200).style("opacity", 0); d3.select(this).style("opacity", 0.9).style("stroke", "none"); })
             .transition().duration(animationDuration).ease(d3.easeCubicOut)
             .attr("y", d => y(d.value ?? 0)).attr("height", d => Math.max(0, innerHeight - y(d.value ?? 0)));
 
@@ -307,7 +304,7 @@ const chartRenderer = (() => {
         legendItems.append("rect").attr("x", 0).attr("y", -5).attr("width", 10).attr("height", 10).attr("fill", color);
         legendItems.append("text").attr("x", 14).attr("y", 0).attr("dy", "0.35em")
             .text(d => subgroupDisplayNames[d] || d)
-            .each(function() { const itemWidth = this.getBBox().width + 25; legendSpacings.push(itemWidth); totalLegendWidth += itemWidth; });
+            .each(function () { const itemWidth = this.getBBox().width + 25; legendSpacings.push(itemWidth); totalLegendWidth += itemWidth; });
 
         const legendStartX = margin.left + Math.max(0, (innerWidth - totalLegendWidth + 10) / 2);
         let currentX = legendStartX;
@@ -363,14 +360,14 @@ const chartRenderer = (() => {
         }
 
         chartArea.selectAll(".bar").data(chartData).join("rect").attr("class", "bar")
-           .attr("x", d => x(d.metric)).attr("y", y(0))
-           .attr("width", x.bandwidth()).attr("height", 0)
-           .attr("fill", barFillColor).style("opacity", 0.9)
-           .attr("rx", 1).attr("ry", 1)
-           .on("mouseover", function(event, d) { tooltip.transition().duration(50).style("opacity", .95); const digits = (d.metric === 'AUC' || d.metric === 'F1') ? (chartConfig.METRIC_RATE_DECIMALS !== undefined ? chartConfig.METRIC_RATE_DECIMALS : 3) : (chartConfig.METRIC_PERCENT_DECIMALS !== undefined ? chartConfig.METRIC_PERCENT_DECIMALS : 1); const isPercent = !(d.metric === 'AUC' || d.metric === 'F1'); const formattedValue = isPercent ? formatPercent(d.value, digits) : formatNumber(d.value, digits); const metricName = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.statMetrics && TOOLTIP_CONTENT.statMetrics[d.metric.toLowerCase()]?.name) || d.metric; tooltip.html(`<strong>${metricName}:</strong> ${formattedValue}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px"); d3.select(this).style("opacity", 1).style("stroke", "#333").style("stroke-width", 1); })
-           .on("mouseout", function(event, d) { tooltip.transition().duration(200).style("opacity", 0); d3.select(this).style("opacity", 0.9).style("stroke", "none"); })
-           .transition().duration(animationDuration).ease(d3.easeCubicOut)
-           .attr("y", d => y(d.value ?? 0)).attr("height", d => Math.max(0, innerHeight - y(d.value ?? 0)));
+            .attr("x", d => x(d.metric)).attr("y", y(0))
+            .attr("width", x.bandwidth()).attr("height", 0)
+            .attr("fill", barFillColor).style("opacity", 0.9)
+            .attr("rx", 1).attr("ry", 1)
+            .on("mouseover", function (event, d) { tooltip.transition().duration(50).style("opacity", .95); const digits = (d.metric === 'AUC' || d.metric === 'F1') ? (chartConfig.METRIC_RATE_DECIMALS !== undefined ? chartConfig.METRIC_RATE_DECIMALS : 3) : (chartConfig.METRIC_PERCENT_DECIMALS !== undefined ? chartConfig.METRIC_PERCENT_DECIMALS : 1); const isPercent = !(d.metric === 'AUC' || d.metric === 'F1'); const formattedValue = isPercent ? utils.formatPercent(d.value, digits) : utils.formatNumber(d.value, digits); const metricName = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.statMetrics && TOOLTIP_CONTENT.statMetrics[d.metric.toLowerCase()]?.name) || d.metric; tooltip.html(`<strong>${metricName}:</strong> ${formattedValue}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px"); d3.select(this).style("opacity", 1).style("stroke", "#333").style("stroke-width", 1); })
+            .on("mouseout", function (event, d) { tooltip.transition().duration(200).style("opacity", 0); d3.select(this).style("opacity", 0.9).style("stroke", "none"); })
+            .transition().duration(animationDuration).ease(d3.easeCubicOut)
+            .attr("y", d => y(d.value ?? 0)).attr("height", d => Math.max(0, innerHeight - y(d.value ?? 0)));
 
         svg.append("text").attr("x", width / 2).attr("y", margin.top / 2)
             .attr("text-anchor", "middle").style("font-size", titleFontSize)
@@ -387,11 +384,9 @@ const chartRenderer = (() => {
         const legendFontSizeConfig = chartConfig.legendFontSizePt ? `${chartConfig.legendFontSizePt}pt` : (chartConfig.LEGEND_FONT_SIZE || '10px');
         const animationDuration = chartConfig.ANIMATION_DURATION_MS || 750;
 
-
         const validRocData = Array.isArray(rocData) ? rocData.filter(d => d && typeof d.fpr === 'number' && typeof d.tpr === 'number' && isFinite(d.fpr) && isFinite(d.tpr)) : [];
         if (validRocData.length === 0 || validRocData[0]?.fpr !== 0 || validRocData[0]?.tpr !== 0) { validRocData.unshift({ fpr: 0, tpr: 0, threshold: Infinity }); }
         if (validRocData.length > 0 && (validRocData[validRocData.length - 1]?.fpr !== 1 || validRocData[validRocData.length - 1]?.tpr !== 1)) { validRocData.push({ fpr: 1, tpr: 1, threshold: -Infinity }); }
-
 
         if (validRocData.length < 2) { chartArea.append('text').attr('x', innerWidth / 2).attr('y', innerHeight / 2).attr('text-anchor', 'middle').attr('class', 'text-muted small').style("font-size", tickLabelFontSize).text('Nicht genügend Daten für ROC.'); return; }
 
@@ -430,7 +425,6 @@ const chartRenderer = (() => {
         if(refLineStyle === "solid") strokeDashArray = "none";
         else if(refLineStyle === "dotted") strokeDashArray = "1 3";
 
-
         chartArea.append("line").attr("class", "reference-line").attr("x1", 0).attr("y1", innerHeight).attr("x2", innerWidth).attr("y2", 0)
             .style("stroke-dasharray", strokeDashArray).style("stroke", chartConfig.axisLineColor || '#6c757d');
 
@@ -444,7 +438,7 @@ const chartRenderer = (() => {
         const totalLength = path.node()?.getTotalLength();
         if(totalLength && isFinite(totalLength)) {
             path.attr("stroke-dasharray", totalLength + " " + totalLength).attr("stroke-dashoffset", totalLength)
-              .transition().duration(animationDuration * 1.5).ease(d3.easeLinear).attr("stroke-dashoffset", 0);
+                .transition().duration(animationDuration * 1.5).ease(d3.easeLinear).attr("stroke-dashoffset", 0);
         }
 
         const showPoints = options.showPoints ?? chartConfig.rocCurve?.showOperatingPoint ?? false;
@@ -454,17 +448,17 @@ const chartRenderer = (() => {
                 .join("circle").attr("class", "roc-point")
                 .attr("cx", d => xScale(d.fpr)).attr("cy", d => yScale(d.tpr))
                 .attr("r", pointRadius / 1.5).attr("fill", lineColor).style("opacity", 0)
-                .on("mouseover", function(event, d) { tooltip.transition().duration(50).style("opacity", .95); const threshText = (d.threshold && isFinite(d.threshold)) ? `<br>Threshold: ${formatNumber(d.threshold, 2)}` : ''; tooltip.html(`FPR: ${formatNumber(d.fpr, 2)}<br>TPR: ${formatNumber(d.tpr, 2)}${threshText}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px"); d3.select(this).attr("r", pointRadius); })
-                .on("mouseout", function(event, d) { tooltip.transition().duration(200).style("opacity", 0); d3.select(this).attr("r", pointRadius / 1.5); })
+                .on("mouseover", function (event, d) { tooltip.transition().duration(50).style("opacity", .95); const threshText = (d.threshold && isFinite(d.threshold)) ? `<br>Threshold: ${utils.formatNumber(d.threshold, 2)}` : ''; tooltip.html(`FPR: ${utils.formatNumber(d.fpr, 2)}<br>TPR: ${utils.formatNumber(d.tpr, 2)}${threshText}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px"); d3.select(this).attr("r", pointRadius); })
+                .on("mouseout", function (event, d) { tooltip.transition().duration(200).style("opacity", 0); d3.select(this).attr("r", pointRadius / 1.5); })
                 .transition().delay(animationDuration * 1.5).duration(animationDuration / 2).style("opacity", 0.7);
         }
 
-         if (options.aucValue !== undefined && !isNaN(options.aucValue)) {
-            const aucText = `AUC: ${typeof radiologyFormatter !== 'undefined' && options.styleProfile === 'radiology' ? radiologyFormatter.formatStatistic(options.aucValue, options.aucCI?.lower, options.aucCI?.upper, {decimals:3, isPercent: false}) : formatCI(options.aucValue, options.aucCI?.lower, options.aucCI?.upper, 3, false, '--')}`;
+        if (options.aucValue !== undefined && !isNaN(options.aucValue)) {
+            const aucText = `AUC: ${typeof radiologyFormatter !== 'undefined' && options.styleProfile === 'radiology' ? radiologyFormatter.formatStatistic(options.aucValue, options.aucCI?.lower, options.aucCI?.upper, {decimals:3, isPercent: false}) : utils.formatCI(options.aucValue, options.aucCI?.lower, options.aucCI?.upper, 3, false, '--')}`;
             chartArea.append("text").attr("class", "auc-label").attr("x", innerWidth - 10).attr("y", innerHeight - 10)
                 .attr("text-anchor", "end").style("font-size", legendFontSizeConfig)
                 .style("font-weight", "bold").text(aucText);
-         }
+        }
     }
 
     function renderForestPlot(targetElementId, plotData, options = {}) {
@@ -473,7 +467,6 @@ const chartRenderer = (() => {
         const tooltip = createTooltip();
         const tickLabelFontSize = chartConfig.tickLabelFontSizePt ? `${chartConfig.tickLabelFontSizePt}pt` : (chartConfig.TICK_LABEL_FONT_SIZE || '10px');
         const axisLabelFontSize = chartConfig.axisLabelFontSizePt ? `${chartConfig.axisLabelFontSizePt}pt` : (chartConfig.AXIS_LABEL_FONT_SIZE || '11px');
-
 
         if (!Array.isArray(plotData) || plotData.length === 0) {
             chartArea.append('text').attr('x', innerWidth / 2).attr('y', innerHeight / 2)
@@ -491,13 +484,12 @@ const chartRenderer = (() => {
         })).filter(d => !isNaN(d.pointEstimate) && !isNaN(d.ciLower) && !isNaN(d.ciUpper));
 
         if (data.length === 0) {
-             chartArea.append('text').attr('x', innerWidth / 2).attr('y', innerHeight / 2)
+            chartArea.append('text').attr('x', innerWidth / 2).attr('y', innerHeight / 2)
                 .attr('text-anchor', 'middle').attr('class', 'text-muted small')
                 .style("font-size", tickLabelFontSize)
                 .text('Keine validen Datenpunkte für Forest Plot.');
             return;
         }
-
 
         const xScaleType = options.xScaleType || chartConfig.forestPlot?.xScaleType || 'linear';
         const allValues = data.reduce((acc, d) => acc.concat(d.pointEstimate, d.ciLower, d.ciUpper), []);
@@ -505,9 +497,8 @@ const chartRenderer = (() => {
         if (xDomain[0] === undefined || xDomain[1] === undefined || xDomain[0] === xDomain[1]) {
             const singleVal = xDomain[0] !== undefined ? xDomain[0] : 0.5;
             xDomain = xScaleType === 'log' ? [Math.max(0.01, singleVal / 2), singleVal * 2] : [singleVal - 0.25, singleVal + 0.25];
-            if(xDomain[0] >= xDomain[1]) xDomain = xScaleType === 'log' ? [0.1, 10] : [0,1];
+            if (xDomain[0] >= xDomain[1]) xDomain = xScaleType === 'log' ? [0.1, 10] : [0,1];
         }
-
 
         const x = (xScaleType === 'log')
             ? d3.scaleLog().domain([Math.max(1e-9, xDomain[0]), xDomain[1]]).range([0, innerWidth]).nice()
@@ -519,9 +510,8 @@ const chartRenderer = (() => {
             .padding(0.4);
 
         const tickFormatX = (options.styleProfile === 'radiology' && typeof radiologyFormatter !== 'undefined') ?
-                            (d => radiologyFormatter.formatNumber(d, xScaleType === 'log' ? 2 : 1)) :
-                            (xScaleType === 'log' ? d3.format(".2~r") : d3.format(".1~f"));
-
+            (d => radiologyFormatter.formatNumber(d, xScaleType === 'log' ? 2 : 1)) :
+            (xScaleType === 'log' ? d3.format(".2~r") : d3.format(".1~f"));
 
         chartArea.append("g").attr("class", "x-axis axis").attr("transform", `translate(0,${innerHeight})`)
             .call(d3.axisBottom(x).ticks(5).tickFormat(tickFormatX))
@@ -529,15 +519,14 @@ const chartRenderer = (() => {
 
         if (options.xAxisLabel) {
             svg.append("text").attr("class", "axis-label x-axis-label").attr("text-anchor", "middle")
-               .attr("x", margin.left + innerWidth / 2).attr("y", height - (margin.bottom / 4))
-               .style("font-size", axisLabelFontSize)
-               .text(options.xAxisLabel);
+                .attr("x", margin.left + innerWidth / 2).attr("y", height - (margin.bottom / 4))
+                .style("font-size", axisLabelFontSize)
+                .text(options.xAxisLabel);
         }
 
         chartArea.append("g").attr("class", "y-axis axis")
             .call(d3.axisLeft(y).tickSize(0).tickPadding(10))
             .selectAll("text").style("font-size", tickLabelFontSize);
-
 
         const zeroEffectLineVal = (xScaleType === 'log') ? 1 : 0;
         if (x.domain()[0] <= zeroEffectLineVal && x.domain()[1] >= zeroEffectLineVal) {
@@ -559,7 +548,7 @@ const chartRenderer = (() => {
             .data(data.filter(d => !d.isSummary))
             .join("g")
             .attr("class", "forest-item")
-            .datum(d => d) // Make sure data is bound for tooltips
+            .datum(d => d)
             .attr("transform", d => `translate(0, ${y(d.label) + y.bandwidth() / 2})`);
 
         studies.append("line")
@@ -573,13 +562,13 @@ const chartRenderer = (() => {
         const pointSize = chartConfig.forestPlot?.pointSizePt || 3;
 
         if (pointMarker === "circle") {
-             studies.append("circle")
+            studies.append("circle")
                 .attr("cx", d => x(d.pointEstimate))
                 .attr("cy", 0)
                 .attr("r", pointSize)
                 .style("fill", pointColor);
         } else {
-             studies.append("rect")
+            studies.append("rect")
                 .attr("x", d => x(d.pointEstimate) - pointSize)
                 .attr("y", -pointSize)
                 .attr("width", pointSize * 2)
@@ -587,12 +576,11 @@ const chartRenderer = (() => {
                 .style("fill", pointColor);
         }
 
-
         const summaryData = data.find(d => d.isSummary);
         if (summaryData) {
             const summaryGroup = chartArea.append("g")
                 .attr("class", "forest-summary-item")
-                .datum(summaryData) // Bind data for tooltip
+                .datum(summaryData)
                 .attr("transform", `translate(0, ${y(summaryData.label) + y.bandwidth() / 2})`);
 
             summaryGroup.append("line")
@@ -611,7 +599,7 @@ const chartRenderer = (() => {
                     .attr("transform", `translate(${x(summaryData.pointEstimate)}, 0)`)
                     .style("fill", summaryColor);
             } else {
-                 summaryGroup.append("rect")
+                summaryGroup.append("rect")
                     .attr("x", x(summaryData.pointEstimate) - summarySize)
                     .attr("y", -summarySize)
                     .attr("width", summarySize * 2)
@@ -621,11 +609,11 @@ const chartRenderer = (() => {
         }
 
         chartArea.selectAll(".forest-item circle, .forest-item rect, .forest-summary-item path, .forest-summary-item rect")
-            .on("mouseover", function(event, d) {
+            .on("mouseover", function (event, d) {
                 tooltip.transition().duration(50).style("opacity", .95);
-                const estFormat = (options.styleProfile === 'radiology' && typeof radiologyFormatter !== 'undefined') ? radiologyFormatter.formatNumber(d.pointEstimate, 2) : formatNumber(d.pointEstimate, 2);
-                const ciLowerFormatted = (options.styleProfile === 'radiology' && typeof radiologyFormatter !== 'undefined') ? radiologyFormatter.formatNumber(d.ciLower, 2) : formatNumber(d.ciLower, 2);
-                const ciUpperFormatted = (options.styleProfile === 'radiology' && typeof radiologyFormatter !== 'undefined') ? radiologyFormatter.formatNumber(d.ciUpper, 2) : formatNumber(d.ciUpper, 2);
+                const estFormat = (options.styleProfile === 'radiology' && typeof radiologyFormatter !== 'undefined') ? radiologyFormatter.formatNumber(d.pointEstimate, 2) : utils.formatNumber(d.pointEstimate, 2);
+                const ciLowerFormatted = (options.styleProfile === 'radiology' && typeof radiologyFormatter !== 'undefined') ? radiologyFormatter.formatNumber(d.ciLower, 2) : utils.formatNumber(d.ciLower, 2);
+                const ciUpperFormatted = (options.styleProfile === 'radiology' && typeof radiologyFormatter !== 'undefined') ? radiologyFormatter.formatNumber(d.ciUpper, 2) : utils.formatNumber(d.ciUpper, 2);
                 const ciText = `${ciLowerFormatted}–${ciUpperFormatted}`;
 
                 tooltip.html(`<strong>${d.label}</strong><br>Est: ${estFormat}<br>95% CI: ${ciText}`)
@@ -633,12 +621,11 @@ const chartRenderer = (() => {
                     .style("top", (event.pageY - 15) + "px");
                 d3.select(this).style("opacity", 0.7);
             })
-            .on("mouseout", function(event, d) {
+            .on("mouseout", function (event, d) {
                 tooltip.transition().duration(200).style("opacity", 0);
                 d3.select(this).style("opacity", 1);
             });
     }
-
 
     return Object.freeze({
         renderAgeDistributionChart,
