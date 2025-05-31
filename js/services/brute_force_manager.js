@@ -9,8 +9,8 @@ const bruteForceManager = (() => {
     let allResultsForCurrentRun = []; 
     let currentRunId = null;
 
-    let _allBruteForceResultsByKollektiv = {}; // Speichert die letzten Ergebnisse pro Kollektiv
-    let _currentState = 'idle'; // idle, pending_init, running, cancelled, error, result
+    let _allBruteForceResultsByKollektiv = {}; 
+    let _currentState = 'idle'; 
 
     let _onStartCallback = () => {};
     let _onStartedCallback = () => {};
@@ -24,7 +24,7 @@ const bruteForceManager = (() => {
     function initialize(callbacks) {
         if (_currentState !== 'idle' && _currentState !== 'error' && !_isInitializing) {
             console.warn("Brute-Force Manager ist bereits initialisiert oder beschäftigt.");
-            if (_currentState === 'pending_init') return Promise.resolve(worker !== null); // Bereits in Initialisierung
+            if (_currentState === 'pending_init') return Promise.resolve(worker !== null); 
             return Promise.resolve(worker !== null);
         }
         _isInitializing = true;
@@ -33,21 +33,24 @@ const bruteForceManager = (() => {
         return new Promise((resolve) => {
             if (typeof Worker !== 'undefined') {
                 try {
-                    if (worker) { // Falls ein alter Worker existiert (z.B. nach Fehler), terminieren
+                    if (worker) { 
                         worker.terminate();
                         worker = null;
+                    }
+                    if (typeof APP_CONFIG === 'undefined' || !APP_CONFIG.PATHS || !APP_CONFIG.PATHS.BRUTE_FORCE_WORKER) {
+                        throw new Error("APP_CONFIG.PATHS.BRUTE_FORCE_WORKER ist nicht definiert.");
                     }
                     worker = new Worker(APP_CONFIG.PATHS.BRUTE_FORCE_WORKER);
                     worker.onmessage = _handleWorkerMessage;
                     worker.onerror = _handleWorkerError;
 
                     if (callbacks) {
-                        _onStartCallback = callbacks.onStart || _onStartCallback;
-                        _onStartedCallback = callbacks.onStarted || _onStartedCallback;
-                        _onProgressCallback = callbacks.onProgress || _onProgressCallback;
-                        _onResultCallback = callbacks.onResult || _onResultCallback;
-                        _onErrorCallback = callbacks.onError || _onErrorCallback;
-                        _onCancelledCallback = callbacks.onCancelled || _onCancelledCallback;
+                        _onStartCallback = typeof callbacks.onStart === 'function' ? callbacks.onStart : () => {};
+                        _onStartedCallback = typeof callbacks.onStarted === 'function' ? callbacks.onStarted : () => {};
+                        _onProgressCallback = typeof callbacks.onProgress === 'function' ? callbacks.onProgress : () => {};
+                        _onResultCallback = typeof callbacks.onResult === 'function' ? callbacks.onResult : () => {};
+                        _onErrorCallback = typeof callbacks.onError === 'function' ? callbacks.onError : () => {};
+                        _onCancelledCallback = typeof callbacks.onCancelled === 'function' ? callbacks.onCancelled : () => {};
                     }
                     _currentState = 'idle';
                     _isInitializing = false;
@@ -83,7 +86,6 @@ const bruteForceManager = (() => {
             return;
         }
         
-        // Ignoriere Nachrichten von einem alten Lauf, falls ein neuer gestartet wurde
         if (e.data.runId && e.data.runId !== currentRunId && e.data.type !== 'ready') {
             console.log("Nachricht von veraltetem Worker-Lauf ignoriert:", e.data.runId, "Aktuell:", currentRunId);
             return;
@@ -92,11 +94,10 @@ const bruteForceManager = (() => {
         switch (e.data.type) {
             case 'ready':
                 console.log("Brute-Force Worker ist bereit.");
-                // Dieser Status wird intern gehandhabt, muss nicht unbedingt nach außen
                 break;
             case 'started':
                 totalCombinationsForRun = e.data.payload.totalCombinations;
-                _currentState = 'running'; // Intern als 'running' setzen, obwohl extern als 'started' signalisiert
+                _currentState = 'running'; 
                 _onStartedCallback({
                     totalCombinations: totalCombinationsForRun,
                     kollektiv: currentKollektivForRun,
@@ -120,7 +121,7 @@ const bruteForceManager = (() => {
                 _currentState = 'result';
                 const resultsPayload = e.data.payload;
                 allResultsForCurrentRun = resultsPayload.results;
-                currentBestResultForRun = resultsPayload.results[0] || null; // Das beste Ergebnis ist an Index 0
+                currentBestResultForRun = resultsPayload.results[0] || null; 
                 const duration = performance.now() - startTimeForRun;
 
                 const fullResultData = {
@@ -129,7 +130,7 @@ const bruteForceManager = (() => {
                     results: allResultsForCurrentRun,
                     bestResult: currentBestResultForRun,
                     duration: duration,
-                    totalTested: testedCombinationsForRun, // Tatsächlich getestet
+                    totalTested: testedCombinationsForRun, 
                     nGesamt: resultsPayload.nGesamt,
                     nPlus: resultsPayload.nPlus,
                     nMinus: resultsPayload.nMinus
@@ -137,8 +138,8 @@ const bruteForceManager = (() => {
                 _allBruteForceResultsByKollektiv[currentKollektivForRun] = fullResultData;
                 _onResultCallback(fullResultData);
                 break;
-            case 'cancelled': // Vom Worker bestätigt
-                if(_currentState === 'running') { // Nur wenn es wirklich lief
+            case 'cancelled': 
+                if(_currentState === 'running' || _currentState === 'start' || _currentState === 'pending_init') { 
                      _currentState = 'cancelled';
                      _onCancelledCallback({kollektiv: currentKollektivForRun, metric: currentMetricForRun});
                 }
@@ -157,9 +158,9 @@ const bruteForceManager = (() => {
             ui_helpers.showToast("Brute-Force Manager initialisiert noch. Bitte kurz warten.", "info");
             return;
         }
-        if (!worker && _currentState !== 'error') { // Versuche Re-Initialisierung wenn kein Worker da, aber auch kein permanenter Fehler
+        if (!worker && _currentState !== 'error') { 
             console.log("Worker nicht vorhanden, versuche Re-Initialisierung...");
-            const success = await initialize({}); // Re-Initialisiere mit Standard-Callbacks
+            const success = await initialize({}); 
             if (!success) {
                  ui_helpers.showToast("Brute-Force Worker konnte nicht initialisiert werden. Optimierung nicht möglich.", "danger");
                  return;
@@ -178,7 +179,7 @@ const bruteForceManager = (() => {
             return;
         }
 
-        _currentState = 'start'; // Externer Status, intern wird es zu 'running' wenn der Worker 'started' sendet
+        _currentState = 'start'; 
         currentKollektivForRun = kollektiv;
         currentMetricForRun = metric;
         startTimeForRun = performance.now();
@@ -186,25 +187,30 @@ const bruteForceManager = (() => {
         totalCombinationsForRun = 0;
         currentBestResultForRun = null;
         allResultsForCurrentRun = [];
-        currentRunId = generateUUID(); // Eindeutige ID für diesen Lauf
+        currentRunId = generateUUID(); 
 
         _onStartCallback({ kollektiv: currentKollektivForRun, metric: currentMetricForRun });
+
+        if (typeof APP_CONFIG === 'undefined' || !APP_CONFIG.T2_CRITERIA_SETTINGS) {
+             _handleWorkerError(new Error("APP_CONFIG.T2_CRITERIA_SETTINGS ist nicht definiert."));
+             return;
+        }
 
         worker.postMessage({
             type: 'start',
             payload: {
-                data: cloneDeep(data), // Stelle sicher, dass der Worker eine Kopie erhält
+                data: cloneDeep(data), 
                 metric: metric,
                 runId: currentRunId,
-                t2Settings: cloneDeep(APP_CONFIG.T2_CRITERIA_SETTINGS) // Worker braucht die möglichen Werte
+                t2Settings: cloneDeep(APP_CONFIG.T2_CRITERIA_SETTINGS) 
             }
         });
     }
 
     function cancelOptimization() {
-        if (_currentState === 'running' && worker) {
+        if ((_currentState === 'running' || _currentState === 'start') && worker) {
             worker.postMessage({ type: 'cancel', payload: {runId: currentRunId} });
-            _currentState = 'cancelled'; // Setze lokal sofort, Worker bestätigt es später
+            _currentState = 'cancelled'; 
             _onCancelledCallback({kollektiv: currentKollektivForRun, metric: currentMetricForRun});
             console.log("Brute-Force-Optimierung Abbruch angefordert.");
         } else {
@@ -247,7 +253,7 @@ const bruteForceManager = (() => {
         initialize,
         startOptimization,
         cancelOptimization,
-        getResultsForCurrentRun, // Umbenannt für Klarheit
+        getResultsForCurrentRun,
         getAllResults,
         getBestResultForKollektiv,
         getState,
