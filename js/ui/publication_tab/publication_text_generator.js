@@ -10,9 +10,9 @@ const publicationTextGenerator = (() => {
             if (isP) {
                 formattedNum = formatPercent(val, d, 'N/A');
             } else {
-                formattedNum = formatNumber(val, d, 'N/A', true); // useStandardFormat = true für Punkt
+                formattedNum = formatNumber(val, d, 'N/A', true);
             }
-            if (lang === 'de' && typeof formattedNum === 'string' && !isP) { // Nur für Nicht-Prozentzahlen Komma anpassen
+            if (lang === 'de' && typeof formattedNum === 'string' && !isP) {
                 formattedNum = formattedNum.replace('.', ',');
             }
             return formattedNum;
@@ -31,16 +31,11 @@ const publicationTextGenerator = (() => {
             let lowerValForDisplay = lowerStr;
             let upperValForDisplay = upperStr;
 
-            if(isPercent && lang === 'de'){
+            if(isPercent){
                 mainValForDisplay = String(mainValForDisplay).replace('%','');
                 lowerValForDisplay = String(lowerValForDisplay).replace('%','');
                 upperValForDisplay = String(upperValForDisplay).replace('%','');
                 return `${mainValForDisplay} (${ciText}: ${lowerValForDisplay}\u00A0–\u00A0${upperValForDisplay})%`;
-            } else if (isPercent && lang === 'en'){
-                mainValForDisplay = String(mainValForDisplay).replace('%','');
-                lowerValForDisplay = String(lowerValForDisplay).replace('%','');
-                upperValForDisplay = String(upperValForDisplay).replace('%','');
-                return `${mainValForDisplay}% (${ciText}: ${lowerValForDisplay}\u00A0–\u00A0${upperValForDisplay}%)`;
             } else {
                  return `${mainValForDisplay} (${ciText}: ${lowerValForDisplay}\u00A0–\u00A0${upperValForDisplay})`;
             }
@@ -49,25 +44,25 @@ const publicationTextGenerator = (() => {
     }
 
     function getKollektivText(kollektivId, n, lang = 'de') {
-        const name = getKollektivDisplayName(kollektivId);
-        const nText = `N\u00A0=\u00A0${n}`; // Non-breaking space
+        const name = getKollektivDisplayName(kollektivId) || kollektivId;
+        const nText = `N\u00A0=\u00A0${n}`;
         return `${name} (${nText})`;
     }
 
-    function _getSafeLink(elementId){ // Verweist auf IDs, die im publication_renderer.js gesetzt werden
+    function _getSafeLink(elementId){
         return `#${elementId}`;
     }
 
     function formatPValueForText(pValue, lang = 'de') {
-        return getPValueText(pValue, lang); // Nutzt die verbesserte Funktion aus utils.js
+        return getPValueText(pValue, lang);
     }
 
-    function getReference(refKey, commonData, format = 'short') { // format: 'short', 'full', 'citation'
-        const refObject = commonData.references[refKey];
+    function getReference(refKey, commonData, format = 'short') {
+        const refObject = commonData?.references?.[refKey];
         if (!refObject) return `[Referenz ${refKey} nicht gefunden]`;
-        if (format === 'full') return refObject.full;
-        if (format === 'citation') return refObject.short; // Für Textzitate, z.B. (Autor et al. Jahr)
-        return refObject.short;
+        if (format === 'full') return refObject.full || refObject.short || refKey;
+        if (format === 'citation') return refObject.short || refKey;
+        return refObject.short || refKey;
     }
 
 
@@ -77,7 +72,6 @@ const publicationTextGenerator = (() => {
         const refKoh = getReference('koh2008', commonData, 'citation');
         const refBarbaro = getReference('barbaro2024', commonData, 'citation');
         const refRutegard = getReference('rutegard2025', commonData, 'citation');
-
 
         if (lang === 'de') {
             return `
@@ -130,12 +124,12 @@ const publicationTextGenerator = (() => {
 
         if (lang === 'de') {
             return `
-                <p>Das Studienkollektiv umfasste ${anzahlGesamt} konsekutive Patienten mit histologisch gesichertem Rektumkarzinom, die zwischen ${studienzeitraum} am Klinikum St. Georg, Leipzig, Deutschland, behandelt und in die initiale Avocado-Sign-Studie eingeschlossen wurden. Von diesen erhielten ${anzahlNRCT} Patienten eine neoadjuvante Radiochemotherapie (nRCT-Gruppe), während ${anzahlDirektOP} Patienten primär operiert wurden (Direkt-OP-Gruppe). Das mediane Alter im Gesamtkollektiv betrug ${alterMedian} Jahre (Range: ${alterMin}–${alterMax} Jahre), und ${anteilMaennerProzent} (${anzahlMaenner}/${anzahlPatientenChar}) der Patienten waren männlich. Detaillierte Patientencharakteristika, stratifiziert nach Behandlungsgruppen, sind in <a href="${_getSafeLink(table1Id)}">${table1Title}</a> dargestellt.</p>
+                <p>Das Studienkollektiv umfasste ${anzahlGesamt} konsekutive Patienten mit histologisch gesichertem Rektumkarzinom, die zwischen ${studienzeitraum} am Klinikum St. Georg, Leipzig, Deutschland, behandelt und in die initiale Avocado-Sign-Studie eingeschlossen wurden. Von diesen erhielten ${anzahlNRCT} Patienten eine neoadjuvante Radiochemotherapie (nRCT-Gruppe), während ${anzahlDirektOP} Patienten primär operiert wurden (Direkt-OP-Gruppe). Das mediane Alter im Gesamtkollektiv betrug ${alterMedian} Jahre (Range: ${alterMin}\u00A0–\u00A0${alterMax} Jahre), und ${anteilMaennerProzent} (${anzahlMaenner}/${anzahlPatientenChar}) der Patienten waren männlich. Detaillierte Patientencharakteristika, stratifiziert nach Behandlungsgruppen, sind in <a href="${_getSafeLink(table1Id)}">${table1Title}</a> dargestellt.</p>
                 <p>Die Einschlusskriterien für die Primärstudie waren ein Alter von mindestens 18 Jahren und ein histologisch bestätigtes Rektumkarzinom. Ausschlusskriterien umfassten nicht resektable Tumoren und Kontraindikationen für eine MRT-Untersuchung. Für die vorliegende erweiterte Analyse wurden alle Patienten der Primärstudie berücksichtigt, für die vollständige Datensätze bezüglich der T1KM- und T2-Lymphknotenmerkmale vorlagen.</p>
             `;
         } else {
             return `
-                <p>The study cohort comprised ${anzahlGesamt} consecutive patients with histologically confirmed rectal cancer who were treated at Klinikum St. Georg, Leipzig, Germany, between ${studienzeitraum} and included in the initial Avocado Sign study. Of these, ${anzahlNRCT} patients received neoadjuvant chemoradiotherapy (nRCT group), while ${anzahlDirektOP} patients underwent upfront surgery (upfront surgery group). The median age in the overall cohort was ${alterMedian} years (range: ${alterMin}–${alterMax} years), and ${anteilMaennerProzent} (${anzahlMaenner}/${anzahlPatientenChar}) were male. Detailed patient characteristics, stratified by treatment group, are presented in <a href="${_getSafeLink(table1Id)}">${table1Title}</a>.</p>
+                <p>The study cohort comprised ${anzahlGesamt} consecutive patients with histologically confirmed rectal cancer who were treated at Klinikum St. Georg, Leipzig, Germany, between ${studienzeitraum} and included in the initial Avocado Sign study. Of these, ${anzahlNRCT} patients received neoadjuvant chemoradiotherapy (nRCT group), while ${anzahlDirektOP} patients underwent upfront surgery (upfront surgery group). The median age in the overall cohort was ${alterMedian} years (range: ${alterMin}\u00A0–\u00A0${alterMax} years), and ${anteilMaennerProzent} (${anzahlMaenner}/${anzahlPatientenChar}) were male. Detailed patient characteristics, stratified by treatment group, are presented in <a href="${_getSafeLink(table1Id)}">${table1Title}</a>.</p>
                 <p>Inclusion criteria for the primary study were an age of at least 18 years and histologically confirmed rectal cancer. Exclusion criteria included unresectable tumors and contraindications to MRI examination. For the present extended analysis, all patients from the primary study for whom complete datasets regarding T1-weighted contrast-enhanced and T2-weighted lymph node characteristics were available were included.</p>
             `;
         }
@@ -161,7 +155,7 @@ const publicationTextGenerator = (() => {
 
     function getMethodenASDefinitionText(lang, commonData) {
         const studyReferenceAS = getReference('lurzSchaefer2025', commonData, 'citation');
-        const radiologistExperienceArray = commonData.references?.lurzSchaefer2025RadiologistExperience?.full || ["X", "Y", "Z"];
+        const radiologistExperienceArray = commonData?.references?.lurzSchaefer2025RadiologistExperience?.full || ["X", "Y", "Z"];
         const radiologistExperience = lang === 'de' ? 
             `${radiologistExperienceArray[0]} bzw. ${radiologistExperienceArray[1]} Jahre` : 
             `${radiologistExperienceArray[0]} and ${radiologistExperienceArray[1]} years`;
@@ -180,24 +174,24 @@ const publicationTextGenerator = (() => {
     }
 
     function getMethodenT2DefinitionText(lang, commonData, allKollektivStats, options) {
-        const appliedCriteria = t2CriteriaManager.getAppliedCriteria(); // Annahme: t2CriteriaManager ist global verfügbar
-        const appliedLogic = t2CriteriaManager.getAppliedLogic();
+        const appliedCriteria = commonData?.appliedT2CriteriaGlobal || t2CriteriaManager.getAppliedCriteria();
+        const appliedLogic = commonData?.appliedT2LogicGlobal || t2CriteriaManager.getAppliedLogic();
         const formattedAppliedCriteria = studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic, false);
-        const bfZielMetric = options.bruteForceMetric || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+        const bfZielMetric = options?.bruteForceMetric || commonData?.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
         const table2Id = PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle.id;
         const table2Title = lang === 'de' ? PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle.titleDe : PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle.titleEn;
 
 
         const formatBFDefinition = (kollektivId, displayName) => {
             const bfDef = allKollektivStats?.[kollektivId]?.bruteforce_definition;
-            if (bfDef && bfDef.criteria && bfDef.metricName === bfZielMetric) { // Stelle sicher, dass die Metrik übereinstimmt
+            if (bfDef && bfDef.criteria && bfDef.metricName === bfZielMetric) {
                 let metricValueStr = formatNumber(bfDef.metricValue, APP_CONFIG.STATISTICAL_CONSTANTS.P_VALUE_PRECISION_CSV, 'N/A', true);
                  if (lang === 'de') metricValueStr = metricValueStr.replace('.',',');
                 const metricNameDisplay = bfDef.metricName;
                 const formattedCriteria = studyT2CriteriaManager.formatCriteriaForDisplay(bfDef.criteria, bfDef.logic, false);
                 return `<li><strong>${displayName}:</strong> ${formattedCriteria} (${lang === 'de' ? 'erreichte Zielmetrik' : 'achieved target metric'} ${metricNameDisplay}: ${metricValueStr})</li>`;
             }
-             const fallbackBfDef = allKollektivStats?.[kollektivId]?.bruteforce_definition; // Fallback auf die in allKollektivStats gespeicherte (ggf. andere Metrik)
+             const fallbackBfDef = allKollektivStats?.[kollektivId]?.bruteforce_definition;
             if (fallbackBfDef && fallbackBfDef.criteria){
                  let metricValueStr = formatNumber(fallbackBfDef.metricValue, APP_CONFIG.STATISTICAL_CONSTANTS.P_VALUE_PRECISION_CSV, 'N/A', true);
                  if (lang === 'de') metricValueStr = metricValueStr.replace('.',',');
@@ -287,7 +281,7 @@ const publicationTextGenerator = (() => {
     function getMethodenStatistischeAnalyseText(lang, commonData) {
         const alphaLevel = commonData.significanceLevel || 0.05;
         const alphaText = formatNumber(alphaLevel, 2, '0.05', true).replace('.', lang === 'de' ? ',' : '.');
-        const bootstrapN = commonData.bootstrapReplications || 1000;
+        const bootstrapN = commonData.bootstrapReplications || APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS || 1000;
         const appName = commonData.appName || "Analyse-Tool";
         const appVersion = commonData.appVersion || "";
         const ciMethodProportion = APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_PROPORTION || "Wilson Score";
@@ -297,12 +291,12 @@ const publicationTextGenerator = (() => {
         if (lang === 'de') {
             return `
                 <p>Die deskriptive Statistik umfasste die Berechnung von Medianen, Mittelwerten, Standardabweichungen (SD), Minima und Maxima für kontinuierliche Variablen sowie absolute Häufigkeiten und Prozentanteile für kategoriale Daten. Die diagnostische Güte des Avocado Signs sowie der verschiedenen T2-Kriteriensets (Literatur-basiert und Brute-Force-optimiert) wurde anhand von Sensitivität, Spezifität, positivem prädiktiven Wert (PPV), negativem prädiktiven Wert (NPV), Accuracy (ACC), Balanced Accuracy (BalAcc) und der Fläche unter der Receiver Operating Characteristic-Kurve (AUC) – bei binären Tests äquivalent zur BalAcc – evaluiert. Für diese Metriken wurden zweiseitige 95%-Konfidenzintervalle (KI) berechnet. Für Proportionen (Sensitivität, Spezifität, PPV, NPV, Accuracy) wurde die ${ciMethodProportion}-Methode verwendet. Für BalAcc (AUC) und den F1-Score wurde die ${ciMethodEffectSize}-Methode mit ${formatNumber(bootstrapN,0,undefined,true)} Replikationen angewendet.</p>
-                <p>Der statistische Vergleich der diagnostischen Leistung (Accuracy, AUC) zwischen dem Avocado Sign und den jeweiligen T2-Kriteriensets innerhalb derselben Patientengruppe (gepaarte Daten) erfolgte mittels des McNemar-Tests für gepaarte nominale Daten bzw. des DeLong-Tests für den Vergleich von AUC-Werten. Der Vergleich von Performance-Metriken zwischen unabhängigen Kollektiven (z.B. Direkt-OP vs. nRCT-Gruppe) erfolgte mittels Fisher's Exact Test für Raten (wie Accuracy) und mittels Z-Test für den Vergleich von AUC-Werten basierend auf deren Bootstrap-Standardfehlern. Odds Ratios (OR) und Risk Differences (RD) wurden zur Quantifizierung von Assoziationen berechnet, ebenfalls mit 95%-KI. Der Phi-Koeffizient (φ) wurde als Maß für die Stärke des Zusammenhangs zwischen binären Merkmalen herangezogen. Für den Vergleich von Verteilungen kontinuierlicher Variablen zwischen zwei unabhängigen Gruppen wurde der Mann-Whitney-U-Test verwendet. Ein p-Wert < ${alphaText} wurde als statistisch signifikant interpretiert. Alle statistischen Analysen wurden mit der oben genannten, speziell entwickelten Webanwendung (${appName} v${appVersion}) durchgeführt, die auf Standardbibliotheken für statistische Berechnungen und JavaScript basiert.</p>
+                <p>Der statistische Vergleich der diagnostischen Leistung (Accuracy, AUC) zwischen dem Avocado Sign und den jeweiligen T2-Kriteriensets innerhalb derselben Patientengruppe (gepaarte Daten) erfolgte mittels des McNemar-Tests für gepaarte nominale Daten bzw. des DeLong-Tests für den Vergleich von AUC-Werten. Der Vergleich von Performance-Metriken zwischen unabhängigen Kollektiven (z.B. Direkt-OP vs. nRCT-Gruppe) erfolgte mittels Fisher's Exact Test für Raten (wie Accuracy) und mittels Z-Test für den Vergleich von AUC-Werten basierend auf deren Bootstrap-Standardfehlern. Odds Ratios (OR) und Risk Differences (RD) wurden zur Quantifizierung von Assoziationen berechnet, ebenfalls mit 95%-KI (OR: Woolf Logit mit Haldane-Anscombe Korrektur, RD: Wald-Methode, Phi-Koeffizient: Bootstrap). Der Phi-Koeffizient (φ) wurde als Maß für die Stärke des Zusammenhangs zwischen binären Merkmalen herangezogen. Für den Vergleich von Verteilungen kontinuierlicher Variablen zwischen zwei unabhängigen Gruppen wurde der Mann-Whitney-U-Test verwendet. Ein p-Wert < ${alphaText} wurde als statistisch signifikant interpretiert. Alle statistischen Analysen wurden mit der oben genannten, speziell entwickelten Webanwendung (${appName} v${appVersion}) durchgeführt, die auf Standardbibliotheken für statistische Berechnungen und JavaScript basiert.</p>
             `;
         } else {
             return `
                 <p>Descriptive statistics included the calculation of medians, means, standard deviations (SD), minima, and maxima for continuous variables, as well as absolute frequencies and percentages for categorical data. The diagnostic performance of the Avocado Sign and the various T2 criteria sets (literature-based and brute-force optimized) was evaluated using sensitivity, specificity, positive predictive value (PPV), negative predictive value (NPV), accuracy (ACC), balanced accuracy (BalAcc), and the area under the Receiver Operating Characteristic curve (AUC)—equivalent to BalAcc for binary tests. Two-sided 95% confidence intervals (CI) were calculated for these metrics. The ${ciMethodProportion} method was used for proportions (sensitivity, specificity, PPV, NPV, accuracy). For BalAcc (AUC) and F1-score, the ${ciMethodEffectSize} method with ${formatNumber(bootstrapN,0,undefined,true)} replications was applied.</p>
-                <p>Statistical comparison of diagnostic performance (accuracy, AUC) between the Avocado Sign and the respective T2 criteria sets within the same patient group (paired data) was performed using McNemar's test for paired nominal data and DeLong's test for AUC comparison. Comparison of performance metrics between independent cohorts (e.g., upfront surgery vs. nRCT group) was conducted using Fisher's exact test for rates (such as accuracy) and a Z-test for AUC comparison based on their bootstrap standard errors. Odds Ratios (OR) and Risk Differences (RD) were calculated to quantify associations, also with 95% CIs. The Phi coefficient (φ) was used as a measure of the strength of association between binary features. For comparing distributions of continuous variables between two independent groups, the Mann-Whitney U test was used. A p-value < ${alphaText} was considered statistically significant. All statistical analyses were conducted using the aforementioned custom-developed web application (${appName} v${appVersion}), which is based on standard libraries for statistical computations and JavaScript.</p>
+                <p>Statistical comparison of diagnostic performance (accuracy, AUC) between the Avocado Sign and the respective T2 criteria sets within the same patient group (paired data) was performed using McNemar's test for paired nominal data and DeLong's test for AUC comparison. Comparison of performance metrics between independent cohorts (e.g., upfront surgery vs. nRCT group) was conducted using Fisher's exact test for rates (such as accuracy) and a Z-test for AUC comparison based on their bootstrap standard errors. Odds Ratios (OR) and Risk Differences (RD) were calculated to quantify associations, also with 95% CIs (OR: Woolf Logit with Haldane-Anscombe correction, RD: Wald method, Phi coefficient: Bootstrap). The Phi coefficient (φ) was used as a measure of the strength of association between binary features. For comparing distributions of continuous variables between two independent groups, the Mann-Whitney U test was used. A p-value < ${alphaText} was considered statistically significant. All statistical analyses were conducted using the aforementioned custom-developed web application (${appName} v${appVersion}), which is based on standard libraries for statistical computations and JavaScript.</p>
             `;
         }
     }
@@ -324,11 +318,29 @@ const publicationTextGenerator = (() => {
 
         if (lang === 'de') {
             return `
-                <p>Die Charakteristika der ${anzahlGesamt} in die Studie eingeschlossenen Patienten sind in <a href="${_getSafeLink(table1Id)}">${table1Title}</a> zusammengefasst und entsprechen den Daten der initialen Avocado-Sign-Studie (${studyReferenceAS}). Das Gesamtkollektiv bestand aus ${anzahlDirektOP} Patienten, die primär operiert wurden (Direkt-OP-Gruppe), und ${anzahlNRCT} Patienten, die eine neoadjuvante Radiochemotherapie erhielten (nRCT-Gruppe). Das mediane Alter im Gesamtkollektiv betrug ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', false)} Jahre (Range ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', false)}–${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', false)}), und ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} waren männlich. Ein histopathologisch gesicherter positiver Lymphknotenstatus (N+) fand sich bei ${pCharGesamt?.nStatus?.plus || 'N/A'} von ${anzahlGesamt} Patienten (${anteilNplusGesamt}) im Gesamtkollektiv. Die Verteilung von Alter und Geschlecht im Gesamtkollektiv ist in <a href="${_getSafeLink(fig1aId)}">${fig1aTitle}</a> und <a href="${_getSafeLink(fig1bId)}">${fig1bTitle}</a> dargestellt.</p>
+                <p>Die Charakteristika der ${anzahlGesamt} in die Studie eingeschlossenen Patienten sind in <a href="${_getSafeLink(table1Id)}">${table1Title}</a> zusammengefasst und entsprechen den Daten der initialen Avocado-Sign-Studie (${studyReferenceAS}). Das Gesamtkollektiv bestand aus ${anzahlDirektOP} Patienten, die primär operiert wurden (Direkt-OP-Gruppe), und ${anzahlNRCT} Patienten, die eine neoadjuvante Radiochemotherapie erhielten (nRCT-Gruppe). Das mediane Alter im Gesamtkollektiv betrug ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', false)} Jahre (Range ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', false)}\u00A0–\u00A0${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', false)}), und ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} waren männlich. Ein histopathologisch gesicherter positiver Lymphknotenstatus (N+) fand sich bei ${pCharGesamt?.nStatus?.plus || 'N/A'} von ${anzahlGesamt} Patienten (${anteilNplusGesamt}) im Gesamtkollektiv. Die Verteilung von Alter und Geschlecht im Gesamtkollektiv ist in <a href="${_getSafeLink(fig1aId)}">${fig1aTitle}</a> und <a href="${_getSafeLink(fig1bId)}">${fig1bTitle}</a> dargestellt.</p>
+                <div id="${table1Id}" class="publication-table-container"></div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div id="${fig1aId}" class="publication-chart-container"></div>
+                    </div>
+                    <div class="col-md-6">
+                         <div id="${fig1bId}" class="publication-chart-container"></div>
+                    </div>
+                </div>
             `;
         } else {
             return `
-                <p>The characteristics of the ${anzahlGesamt} patients included in the study are summarized in <a href="${_getSafeLink(table1Id)}">${table1Title}</a> and correspond to the data from the initial Avocado Sign study (${studyReferenceAS}). The overall cohort consisted of ${anzahlDirektOP} patients who underwent upfront surgery (upfront surgery group) and ${anzahlNRCT} patients who received neoadjuvant chemoradiotherapy (nRCT group). The median age in the overall cohort was ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', true)} years (range ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', true)}–${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', true)}), and ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} were male. A histopathologically confirmed positive lymph node status (N+) was found in ${pCharGesamt?.nStatus?.plus || 'N/A'} of ${anzahlGesamt} patients (${anteilNplusGesamt}) in the overall cohort. The age and gender distribution in the overall cohort is shown in <a href="${_getSafeLink(fig1aId)}">${fig1aTitle}</a> and <a href="${_getSafeLink(fig1bId)}">${fig1bTitle}</a>.</p>
+                <p>The characteristics of the ${anzahlGesamt} patients included in the study are summarized in <a href="${_getSafeLink(table1Id)}">${table1Title}</a> and correspond to the data from the initial Avocado Sign study (${studyReferenceAS}). The overall cohort consisted of ${anzahlDirektOP} patients who underwent upfront surgery (upfront surgery group) and ${anzahlNRCT} patients who received neoadjuvant chemoradiotherapy (nRCT group). The median age in the overall cohort was ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', true)} years (range ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', true)}\u00A0–\u00A0${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', true)}), and ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} were male. A histopathologically confirmed positive lymph node status (N+) was found in ${pCharGesamt?.nStatus?.plus || 'N/A'} of ${anzahlGesamt} patients (${anteilNplusGesamt}) in the overall cohort. The age and gender distribution in the overall cohort is shown in <a href="${_getSafeLink(fig1aId)}">${fig1aTitle}</a> and <a href="${_getSafeLink(fig1bId)}">${fig1bTitle}</a>.</p>
+                <div id="${table1Id}" class="publication-table-container"></div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div id="${fig1aId}" class="publication-chart-container"></div>
+                    </div>
+                    <div class="col-md-6">
+                         <div id="${fig1bId}" class="publication-chart-container"></div>
+                    </div>
+                </div>
             `;
         }
     }
@@ -349,11 +361,13 @@ const publicationTextGenerator = (() => {
             return `
                 <p>Die diagnostische Güte des Avocado Signs (AS) zur Vorhersage des pathologischen N-Status ist für das Gesamtkollektiv und die Subgruppen in <a href="${_getSafeLink(table3Id)}">${table3Title}</a> detailliert aufgeführt. Im Gesamtkollektiv (${getKollektivText('Gesamt', nGesamt, lang)}) erreichte das AS eine Sensitivität von ${fCI(asGesamt?.sens, 1, true, 'de')}, eine Spezifität von ${fCI(asGesamt?.spez, 1, true, 'de')}, einen positiven prädiktiven Wert (PPV) von ${fCI(asGesamt?.ppv, 1, true, 'de')}, einen negativen prädiktiven Wert (NPV) von ${fCI(asGesamt?.npv, 1, true, 'de')} und eine Accuracy von ${fCI(asGesamt?.acc, 1, true, 'de')}. Die AUC (Balanced Accuracy) betrug ${fCI(asGesamt?.auc, 3, false, 'de')}.</p>
                 <p>In der Subgruppe der primär operierten Patienten (Direkt-OP-Gruppe, ${getKollektivText('direkt OP', nDirektOP, lang)}) zeigte das AS eine Sensitivität von ${fCI(asDirektOP?.sens, 1, true, 'de')} und eine Spezifität von ${fCI(asDirektOP?.spez, 1, true, 'de')} (AUC: ${fCI(asDirektOP?.auc, 3, false, 'de')}). Bei Patienten nach nRCT (nRCT-Gruppe, ${getKollektivText('nRCT', nNRCT, lang)}) betrug die Sensitivität ${fCI(asNRCT?.sens, 1, true, 'de')} und die Spezifität ${fCI(asNRCT?.spez, 1, true, 'de')} (AUC: ${fCI(asNRCT?.auc, 3, false, 'de')}).</p>
+                <div id="${table3Id}" class="publication-table-container"></div>
             `;
         } else {
             return `
                 <p>The diagnostic performance of the Avocado Sign (AS) for predicting pathological N-status is detailed in <a href="${_getSafeLink(table3Id)}">${table3Title}</a> for the overall cohort and subgroups. In the overall cohort (${getKollektivText('Gesamt', nGesamt, lang)}), the AS achieved a sensitivity of ${fCI(asGesamt?.sens, 1, true, 'en')}, a specificity of ${fCI(asGesamt?.spez, 1, true, 'en')}, a positive predictive value (PPV) of ${fCI(asGesamt?.ppv, 1, true, 'en')}, a negative predictive value (NPV) of ${fCI(asGesamt?.npv, 1, true, 'en')}, and an accuracy of ${fCI(asGesamt?.acc, 1, true, 'en')}. The AUC (Balanced Accuracy) was ${fCI(asGesamt?.auc, 3, false, 'en')}.</p>
                 <p>In the subgroup of patients undergoing upfront surgery (Upfront surgery group, ${getKollektivText('direkt OP', nDirektOP, lang)}), the AS showed a sensitivity of ${fCI(asDirektOP?.sens, 1, true, 'en')} and a specificity of ${fCI(asDirektOP?.spez, 1, true, 'en')} (AUC: ${fCI(asDirektOP?.auc, 3, false, 'en')}). For patients after nRCT (nRCT group, ${getKollektivText('nRCT', nNRCT, lang)}), the sensitivity was ${fCI(asNRCT?.sens, 1, true, 'en')} and the specificity was ${fCI(asNRCT?.spez, 1, true, 'en')} (AUC: ${fCI(asNRCT?.auc, 3, false, 'en')}).</p>
+                <div id="${table3Id}" class="publication-table-container"></div>
             `;
         }
     }
@@ -391,12 +405,12 @@ const publicationTextGenerator = (() => {
                                         `For the criteria set according to ${setName}, no valid results could be calculated for the ${getKollektivText(targetKollektivForStudy, nKollektiv, lang)} cohort. `;
             }
         });
-        text += `</p>`;
+        text += `</p><div id="${table4Id}" class="publication-table-container"></div>`;
         return text;
     }
 
     function getErgebnisseOptimierteT2PerformanceText(lang, allKollektivStats, commonData, options) {
-        const bfZielMetric = options.bruteForceMetric || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+        const bfZielMetric = options?.bruteForceMetric || commonData?.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
         const table5Id = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.id;
         const table5TitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.titleDe.replace('{BF_METRIC}', bfZielMetric);
         const table5TitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.titleEn.replace('{BF_METRIC}', bfZielMetric);
@@ -426,23 +440,23 @@ const publicationTextGenerator = (() => {
                 text += `<li>Für das ${name} (${getKollektivText(k.id, nPat, lang)}) konnten keine validen, spezifisch für die Zielmetrik ${bfZielMetric} optimierten Kriterien ermittelt oder deren Performance berechnet werden.</li>`;
             }
         });
-        text += `</ul>`;
+        text += `</ul><div id="${table5Id}" class="publication-table-container"></div>`;
         return text;
     }
 
     function getErgebnisseVergleichPerformanceText(lang, allKollektivStats, commonData, options) {
         let text = '';
-        const bfZielMetric = options.bruteForceMetric || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+        const bfZielMetric = options?.bruteForceMetric || commonData?.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
         const table6Id = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.id;
         const table6TitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.titleDe.replace('{BF_METRIC}', bfZielMetric);
         const table6TitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.titleEn.replace('{BF_METRIC}', bfZielMetric);
 
         const fig2aId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartGesamt.id;
-        const fig2aTitle = (lang === 'de' ? PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartGesamt.titleDe : PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartGesamt.titleEn).replace('{Kollektiv}', getKollektivDisplayName('Gesamt'));
+        const fig2aTitle = (lang === 'de' ? PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartGesamt.titleDe : PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartGesamt.titleEn).replace('{Kollektiv}', getKollektivDisplayName('Gesamt')).replace('{BF_METRIC}', bfZielMetric);
         const fig2bId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartDirektOP.id;
-        const fig2bTitle = (lang === 'de' ? PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartDirektOP.titleDe : PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartDirektOP.titleEn).replace('{Kollektiv}', getKollektivDisplayName('direkt OP'));
+        const fig2bTitle = (lang === 'de' ? PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartDirektOP.titleDe : PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartDirektOP.titleEn).replace('{Kollektiv}', getKollektivDisplayName('direkt OP')).replace('{BF_METRIC}', bfZielMetric);
         const fig2cId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartNRCT.id;
-        const fig2cTitle = (lang === 'de' ? PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartNRCT.titleDe : PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartNRCT.titleEn).replace('{Kollektiv}', getKollektivDisplayName('nRCT'));
+        const fig2cTitle = (lang === 'de' ? PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartNRCT.titleDe : PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartNRCT.titleEn).replace('{Kollektiv}', getKollektivDisplayName('nRCT')).replace('{BF_METRIC}', bfZielMetric);
 
 
         if (lang === 'de') {
@@ -504,12 +518,19 @@ const publicationTextGenerator = (() => {
                 }
             }
         });
+
+        text += `<div id="${table6Id}" class="publication-table-container"></div>`;
+        text += `<div class="row">
+                    <div class="col-md-12 col-lg-4"><div id="${fig2aId}" class="publication-chart-container"></div></div>
+                    <div class="col-md-12 col-lg-4"><div id="${fig2bId}" class="publication-chart-container"></div></div>
+                    <div class="col-md-12 col-lg-4"><div id="${fig2cId}" class="publication-chart-container"></div></div>
+                 </div>`;
         return text;
     }
 
     function getDiskussionTexte(lang, commonData, allKollektivStats, options, sectionPart) {
         const refAS = getReference('lurzSchaefer2025', commonData, 'citation');
-        const bfZielMetric = options.bruteForceMetric || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+        const bfZielMetric = options?.bruteForceMetric || commonData?.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
         let text = "";
 
         switch (sectionPart) {
@@ -551,8 +572,8 @@ const publicationTextGenerator = (() => {
         let text = "";
         const referenceOrder = [
             'lurzSchaefer2025', 'koh2008', 'barbaro2024', 'rutegard2025', 'beetsTan2018ESGAR',
-            'brown2003', 'horvat2019', 'kaur2012','beetsTan2004', 'barbaro2010', // Weitere wichtige Referenzen
-            'ethicsVote' // Andere Infos, falls als Referenz geführt
+            'brown2003', 'horvat2019', 'kaur2012','beetsTan2004', 'barbaro2010', 'lahaye2009', // Korrigierter Key hier
+            'ethicsVote', 'lurzSchaefer2025StudyPeriod', 'lurzSchaefer2025MRISystem', 'lurzSchaefer2025ContrastAgent', 'lurzSchaefer2025T2SliceThickness', 'lurzSchaefer2025RadiologistExperience'
         ];
         const displayedRefs = new Set();
         let refCounter = 1;
@@ -560,22 +581,20 @@ const publicationTextGenerator = (() => {
         const addRef = (refKey) => {
             const refObj = refs[refKey];
             if (refObj && refObj.full && !displayedRefs.has(refObj.full)) {
-                text += `<li>${refObj.full}</li>`;
+                text += `<li>${ui_helpers.escapeMarkdown(refObj.full)}</li>`; // Escape HTML in Referenzen
                 displayedRefs.add(refObj.full);
-                refCounter++;
             }
         };
         
         referenceOrder.forEach(key => addRef(key));
         
-        // Add any other references from commonData.references not in the predefined order
         for (const key in refs) {
             if (refs.hasOwnProperty(key) && !referenceOrder.includes(key)) {
                  addRef(key);
             }
         }
 
-        if (refCounter > 1) {
+        if (displayedRefs.size > 0) {
              return `<ol class="small publication-references">${text}</ol>`;
         }
         return `<p>${lang === 'de' ? 'Keine Referenzen definiert.' : 'No references defined.'}</p>`;
@@ -583,24 +602,31 @@ const publicationTextGenerator = (() => {
 
 
     function getSectionText(sectionId, lang, allKollektivStats, commonData, options = {}) {
+        if (!allKollektivStats || !commonData) {
+            return `<p class="text-danger">${lang === 'de' ? 'Fehler: Notwendige Daten für die Textgenerierung fehlen.' : 'Error: Necessary data for text generation is missing.'}</p>`;
+        }
+        const currentOptions = {
+            bruteForceMetric: options?.bruteForceMetric || commonData?.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication
+        };
+
         switch (sectionId) {
             case 'einleitung_hintergrund': return getEinleitungHintergrundText(lang, commonData);
             case 'methoden_studienanlage': return getMethodenStudienanlageText(lang, commonData);
             case 'methoden_patientenkollektiv': return getMethodenPatientenkollektivText(lang, allKollektivStats, commonData);
             case 'methoden_mrt_protokoll': return getMethodenMRTProtokollText(lang, commonData);
             case 'methoden_as_definition': return getMethodenASDefinitionText(lang, commonData);
-            case 'methoden_t2_definition': return getMethodenT2DefinitionText(lang, commonData, allKollektivStats, options);
+            case 'methoden_t2_definition': return getMethodenT2DefinitionText(lang, commonData, allKollektivStats, currentOptions);
             case 'methoden_referenzstandard': return getMethodenReferenzstandardText(lang, commonData);
             case 'methoden_statistische_analyse': return getMethodenStatistischeAnalyseText(lang, commonData);
             case 'ergebnisse_patientencharakteristika': return getErgebnissePatientencharakteristikaText(lang, allKollektivStats, commonData);
             case 'ergebnisse_as_performance': return getErgebnisseASPerformanceText(lang, allKollektivStats, commonData);
             case 'ergebnisse_literatur_t2_performance': return getErgebnisseLiteraturT2PerformanceText(lang, allKollektivStats, commonData);
-            case 'ergebnisse_optimierte_t2_performance': return getErgebnisseOptimierteT2PerformanceText(lang, allKollektivStats, commonData, options);
-            case 'ergebnisse_vergleich_performance': return getErgebnisseVergleichPerformanceText(lang, allKollektivStats, commonData, options);
-            case 'diskussion_hauptergebnisse': return getDiskussionTexte(lang, commonData, allKollektivStats, options, 'hauptergebnisse');
-            case 'diskussion_vergleich_literatur': return getDiskussionTexte(lang, commonData, allKollektivStats, options, 'vergleich_literatur');
-            case 'diskussion_limitationen': return getDiskussionTexte(lang, commonData, allKollektivStats, options, 'limitationen');
-            case 'diskussion_schlussfolgerung': return getDiskussionTexte(lang, commonData, allKollektivStats, options, 'schlussfolgerung');
+            case 'ergebnisse_optimierte_t2_performance': return getErgebnisseOptimierteT2PerformanceText(lang, allKollektivStats, commonData, currentOptions);
+            case 'ergebnisse_vergleich_performance': return getErgebnisseVergleichPerformanceText(lang, allKollektivStats, commonData, currentOptions);
+            case 'diskussion_hauptergebnisse': return getDiskussionTexte(lang, commonData, allKollektivStats, currentOptions, 'hauptergebnisse');
+            case 'diskussion_vergleich_literatur': return getDiskussionTexte(lang, commonData, allKollektivStats, currentOptions, 'vergleich_literatur');
+            case 'diskussion_limitationen': return getDiskussionTexte(lang, commonData, allKollektivStats, currentOptions, 'limitationen');
+            case 'diskussion_schlussfolgerung': return getDiskussionTexte(lang, commonData, allKollektivStats, currentOptions, 'schlussfolgerung');
             case 'referenzen_liste': return getReferenzenText(lang, commonData);
             default: return `<p class="text-warning">Text für Sektion '${sectionId}' (Sprache: ${lang}) noch nicht implementiert.</p>`;
         }
@@ -616,42 +642,51 @@ const publicationTextGenerator = (() => {
             .replace(/<i>(.*?)<\/i>/g, '*$1*')
             .replace(/<ul>/g, '')
             .replace(/<\/ul>/g, '')
-            .replace(/<ol.*?>/g, '')
+            .replace(/<ol.*?>/g, '') // Erfasst auch <ol class="...">
             .replace(/<\/ol>/g, '')
             .replace(/<li>/g, '\n* ')
             .replace(/<\/li>/g, '')
             .replace(/<br\s*\/?>/g, '\n')
-            .replace(/<a href="#(.*?)">(.*?)<\/a>/g, (match, p1, p2) => {
+            .replace(/<a href="#(.*?)">(.*?)<\/a>/g, (match, p1Id, p2LinkText) => {
                 const elementConfig = PUBLICATION_CONFIG.publicationElements;
-                let refText = p2;
-                const findTitle = (obj, id) => {
-                    for (const key in obj) {
-                        if (typeof obj[key] === 'object') {
-                            if (obj[key].id === id) return lang === 'de' ? obj[key].titleDe : obj[key].titleEn;
-                            const found = findTitle(obj[key], id);
-                            if (found) return found;
+                let referencedElementName = p2LinkText;
+                const bfMetricForTitle = options?.bruteForceMetric || commonData?.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+
+                const findElementDetailsRecursive = (currentConfigLevel, targetId) => {
+                    for (const categoryKey in currentConfigLevel) {
+                        const categoryElements = currentConfigLevel[categoryKey];
+                        for (const elementKey in categoryElements) {
+                            const elementDetails = categoryElements[elementKey];
+                            if (elementDetails && typeof elementDetails === 'object' && elementDetails.id === targetId) {
+                                return elementDetails;
+                            }
                         }
                     }
                     return null;
                 };
-                const title = findTitle(elementConfig, p1);
-                if(title) refText = title.replace(/{BF_METRIC}/g, options.bruteForceMetric || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication);
+                const elementDetails = findElementDetailsRecursive(elementConfig, p1Id);
 
-                return `[${refText}]`; // Interner Link wird nur als Text dargestellt, nicht als MD-Link
+                if (elementDetails) {
+                    referencedElementName = (lang === 'de' ? elementDetails.titleDe : elementDetails.titleEn) || p2LinkText;
+                    referencedElementName = referencedElementName.replace(/{BF_METRIC}/g, bfMetricForTitle)
+                                                             .replace(/\[N_GESAMT\]/g, commonData?.nGesamt || 'N/A')
+                                                             .replace(/\[N_DIREKT_OP\]/g, commonData?.nDirektOP || 'N/A')
+                                                             .replace(/\[N_NRCT\]/g, commonData?.nNRCT || 'N/A');
+                }
+                return ui_helpers.escapeMarkdown(`[${referencedElementName}]`);
             })
-            .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/g, (match, p1) => {
-                const level = parseInt(match.match(/<h(\d)/)?.[1] || '1');
-                return `\n${'#'.repeat(level + 1)} ${p1}\n`; // H1 im HTML wird zu ## im MD etc.
+            .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/g, (match, p1Content) => {
+                const levelMatch = match.match(/<h(\d)/);
+                const level = levelMatch ? parseInt(levelMatch[1]) : 1;
+                return `\n${'#'.repeat(level + 1)} ${ui_helpers.escapeMarkdown(p1Content)}\n`;
             })
-            .replace(/\/g, (match, p1) => { // Umwandlung der in Text
-                const refShort = getReference(p1, commonData, 'citation');
-                return `(${refShort})`;
+             .replace(/<div id=".*?" class="publication-(table|chart)-container"><\/div>/g, '') // Entferne leere Container-Divs
+             .replace(/<hr class="my-3"\/>/g, '\n---\n') // Horizontale Linie
+             .replace(/\/g, (match, p1RefKey) => {
+                const refShort = getReference(p1RefKey, commonData, 'citation');
+                return `(${ui_helpers.escapeMarkdown(refShort)})`;
             })
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&amp;/g, '&')
-            .replace(/&nbsp;/g, ' ')
-            .replace(/\u00A0/g, ' ') // Non-breaking space
+            .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/\u00A0/g, ' ')
             .replace(/ {2,}/g, ' ')
             .replace(/\n\s*\n/g, '\n\n')
             .trim();
@@ -660,7 +695,6 @@ const publicationTextGenerator = (() => {
             let counter = 1;
             markdown = markdown.replace(/\n\* /g, () => `\n${counter++}. `);
         }
-
         return markdown;
     }
 
