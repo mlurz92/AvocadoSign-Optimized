@@ -7,7 +7,7 @@ const dataProcessor = (() => {
         }
         if (patient.geschlecht && !['m', 'w', 'd', null, undefined, ''].includes(String(patient.geschlecht).toLowerCase())) {
             console.warn(`Ungültiges Geschlecht '${patient.geschlecht}' für Patient ${patient.id_patient}. Wird zu 'unbekannt' normalisiert.`);
-            patient.geschlecht = null;
+            patient.geschlecht = null; 
         }
         if (patient.therapie && !['direkt OP', 'nRCT', null, undefined, ''].includes(patient.therapie)) {
             console.warn(`Ungültige Therapie '${patient.therapie}' für Patient ${patient.id_patient}. Wird zu 'unbekannt' normalisiert.`);
