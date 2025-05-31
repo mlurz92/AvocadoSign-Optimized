@@ -243,6 +243,7 @@ const publicationTextGenerator = (() => {
                     <li><strong>Im Analyse-Tool aktuell eingestellte T2-Kriterien:</strong> Diese Option dient primär explorativen Zwecken innerhalb der Anwendung. Für die hier dargestellten finalen Analysen sind die unter Punkt 1 und 2 genannten Kriteriensets maßgeblich. Zum Zeitpunkt der finalen Analyse waren die im Tool global angewendeten Kriterien: ${formattedAppliedCriteria}.</li>
                 </ol>
                 <p>Ein Lymphknoten wurde als T2-positiv für ein gegebenes Kriterienset gewertet, wenn er die spezifischen Bedingungen dieses Sets erfüllte. Ein Patient galt als T2-positiv, wenn mindestens ein Lymphknoten gemäß dem jeweiligen Kriterienset als positiv bewertet wurde.</p>
+                 <div id="${table2Id}" class="publication-table-container"></div>
             `;
         } else {
             return `
@@ -262,6 +263,7 @@ const publicationTextGenerator = (() => {
                     <li><strong>Currently set T2 criteria in the analysis tool:</strong> This option primarily serves exploratory purposes within the application. For the final analyses presented here, the criteria sets mentioned under points 1 and 2 are authoritative. At the time of final analysis, the globally applied criteria in the tool were: ${formattedAppliedCriteria}.</li>
                 </ol>
                 <p>A lymph node was considered T2-positive for a given criteria set if it met the specific conditions of that set. A patient was considered T2-positive if at least one lymph node was rated positive according to the respective criteria set.</p>
+                <div id="${table2Id}" class="publication-table-container"></div>
             `;
         }
     }
@@ -572,16 +574,17 @@ const publicationTextGenerator = (() => {
         let text = "";
         const referenceOrder = [
             'lurzSchaefer2025', 'koh2008', 'barbaro2024', 'rutegard2025', 'beetsTan2018ESGAR',
-            'brown2003', 'horvat2019', 'kaur2012','beetsTan2004', 'barbaro2010', 'lahaye2009', // Korrigierter Key hier
+            'brown2003', 'horvat2019', 'kaur2012','beetsTan2004', 'barbaro2010', 'lahaye2009',
             'ethicsVote', 'lurzSchaefer2025StudyPeriod', 'lurzSchaefer2025MRISystem', 'lurzSchaefer2025ContrastAgent', 'lurzSchaefer2025T2SliceThickness', 'lurzSchaefer2025RadiologistExperience'
         ];
         const displayedRefs = new Set();
-        let refCounter = 1;
-
+        
         const addRef = (refKey) => {
             const refObj = refs[refKey];
             if (refObj && refObj.full && !displayedRefs.has(refObj.full)) {
-                text += `<li>${ui_helpers.escapeMarkdown(refObj.full)}</li>`; // Escape HTML in Referenzen
+                // ui_helpers.escapeMarkdown ist hier nicht verfügbar, daher nur Basis-Escaping oder Annahme, dass refObj.full sicher ist
+                const safeFullRef = String(refObj.full).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                text += `<li>${safeFullRef}</li>`;
                 displayedRefs.add(refObj.full);
             }
         };
@@ -589,7 +592,7 @@ const publicationTextGenerator = (() => {
         referenceOrder.forEach(key => addRef(key));
         
         for (const key in refs) {
-            if (refs.hasOwnProperty(key) && !referenceOrder.includes(key)) {
+            if (Object.prototype.hasOwnProperty.call(refs, key) && !referenceOrder.includes(key)) {
                  addRef(key);
             }
         }
@@ -642,7 +645,7 @@ const publicationTextGenerator = (() => {
             .replace(/<i>(.*?)<\/i>/g, '*$1*')
             .replace(/<ul>/g, '')
             .replace(/<\/ul>/g, '')
-            .replace(/<ol.*?>/g, '') // Erfasst auch <ol class="...">
+            .replace(/<ol.*?>/g, '')
             .replace(/<\/ol>/g, '')
             .replace(/<li>/g, '\n* ')
             .replace(/<\/li>/g, '')
@@ -673,18 +676,21 @@ const publicationTextGenerator = (() => {
                                                              .replace(/\[N_DIREKT_OP\]/g, commonData?.nDirektOP || 'N/A')
                                                              .replace(/\[N_NRCT\]/g, commonData?.nNRCT || 'N/A');
                 }
-                return ui_helpers.escapeMarkdown(`[${referencedElementName}]`);
+                return typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(`[${referencedElementName}]`) : `[${referencedElementName}]`;
             })
             .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/g, (match, p1Content) => {
                 const levelMatch = match.match(/<h(\d)/);
                 const level = levelMatch ? parseInt(levelMatch[1]) : 1;
-                return `\n${'#'.repeat(level + 1)} ${ui_helpers.escapeMarkdown(p1Content)}\n`;
+                const escapedContent = typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(p1Content) : p1Content;
+                return `\n${'#'.repeat(level + 1)} ${escapedContent}\n`;
             })
-             .replace(/<div id=".*?" class="publication-(table|chart)-container"><\/div>/g, '') // Entferne leere Container-Divs
-             .replace(/<hr class="my-3"\/>/g, '\n---\n') // Horizontale Linie
+             .replace(/<div id=".*?" class="publication-(table|chart)-container"><\/div>/g, '')
+             .replace(/<div class="row">\s*<div class="col-md-6">\s*<div id=".*?" class="publication-chart-container"><\/div>\s*<\/div>\s*<div class="col-md-6">\s*<div id=".*?" class="publication-chart-container"><\/div>\s*<\/div>\s*<\/div>/g, '')
+             .replace(/<div class="row">\s*<div class="col-md-12 col-lg-4"><div id=".*?" class="publication-chart-container"><\/div><\/div>\s*<div class="col-md-12 col-lg-4"><div id=".*?" class="publication-chart-container"><\/div><\/div>\s*<div class="col-md-12 col-lg-4"><div id=".*?" class="publication-chart-container"><\/div><\/div>\s*<\/div>/g, '')
+             .replace(/<hr class="my-3"\/>/g, '\n---\n')
              .replace(/\/g, (match, p1RefKey) => {
                 const refShort = getReference(p1RefKey, commonData, 'citation');
-                return `(${ui_helpers.escapeMarkdown(refShort)})`;
+                return `(${typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(refShort) : refShort})`;
             })
             .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/\u00A0/g, ' ')
             .replace(/ {2,}/g, ' ')
