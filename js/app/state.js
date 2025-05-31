@@ -28,33 +28,48 @@ const state = (() => {
             return;
         }
 
-        const defaults = APP_CONFIG.DEFAULT_SETTINGS;
-        const storageKeys = APP_CONFIG.STORAGE_KEYS;
+        // Stelle sicher, dass Abhängigkeiten wie APP_CONFIG und utils-Funktionen (loadFromLocalStorage) hier verfügbar sind.
+        // Dies wird durch die Ladereihenfolge in index.html sichergestellt.
+        if (typeof APP_CONFIG === 'undefined' || typeof getDefaultT2Criteria === 'undefined' || typeof loadFromLocalStorage === 'undefined') {
+            console.error("State-Initialisierung fehlgeschlagen: Kritische Abhängigkeiten (APP_CONFIG, getDefaultT2Criteria, loadFromLocalStorage) nicht verfügbar.");
+            // Hier könnte eine robustere Fehlerbehandlung erfolgen, z.B. das Werfen eines Fehlers,
+            // um die weitere Ausführung der Anwendung zu stoppen, da der State essentiell ist.
+            // Fürs Erste belassen wir es bei der Konsolenausgabe und dem Versuch, mit Defaults weiterzumachen.
+        }
+
+        const defaults = APP_CONFIG?.DEFAULT_SETTINGS || {}; // Fallback für defaults
+        const storageKeys = APP_CONFIG?.STORAGE_KEYS || {}; // Fallback für storageKeys
 
         _activeTabId = loadFromLocalStorage(storageKeys.ACTIVE_TAB_ID) || initialSettings.activeTabId || defaults.ACTIVE_TAB_ID || 'daten-tab';
         _previousTabId = _activeTabId;
-        _currentKollektiv = loadFromLocalStorage(storageKeys.CURRENT_KOLLEKTIV) || initialSettings.currentKollektiv || defaults.KOLLEKTIV;
-        _appliedT2Criteria = loadFromLocalStorage(storageKeys.APPLIED_CRITERIA) || initialSettings.appliedT2Criteria || getDefaultT2Criteria();
-        _appliedT2Logic = loadFromLocalStorage(storageKeys.APPLIED_LOGIC) || initialSettings.appliedT2Logic || defaults.T2_LOGIC;
+        _currentKollektiv = loadFromLocalStorage(storageKeys.CURRENT_KOLLEKTIV) || initialSettings.currentKollektiv || defaults.KOLLEKTIV || 'Gesamt';
         
-        _datenSortState = loadFromLocalStorage(storageKeys.DATEN_TABLE_SORT) || cloneDeep(defaults.DATEN_TABLE_SORT);
-        _auswertungSortState = loadFromLocalStorage(storageKeys.AUSWERTUNG_TABLE_SORT) || cloneDeep(defaults.AUSWERTUNG_TABLE_SORT);
+        // getDefaultT2Criteria ist in app_config.js definiert und sollte hier verfügbar sein.
+        const defaultCriteria = typeof getDefaultT2Criteria === 'function' ? getDefaultT2Criteria() : {};
+        _appliedT2Criteria = loadFromLocalStorage(storageKeys.APPLIED_CRITERIA) || initialSettings.appliedT2Criteria || defaultCriteria;
+        _appliedT2Logic = loadFromLocalStorage(storageKeys.APPLIED_LOGIC) || initialSettings.appliedT2Logic || defaults.T2_LOGIC || 'UND';
+        
+        _datenSortState = loadFromLocalStorage(storageKeys.DATEN_TABLE_SORT) || cloneDeep(defaults.DATEN_TABLE_SORT) || { key: 'nr', direction: 'asc', subKey: null };
+        _auswertungSortState = loadFromLocalStorage(storageKeys.AUSWERTUNG_TABLE_SORT) || cloneDeep(defaults.AUSWERTUNG_TABLE_SORT) || { key: 'nr', direction: 'asc', subKey: null };
 
         _bruteForceState = initialSettings.bruteForceState || 'idle';
 
-        _currentStatsLayout = loadFromLocalStorage(storageKeys.STATS_LAYOUT) || initialSettings.statsLayout || defaults.STATS_LAYOUT;
-        _currentStatsKollektiv1 = loadFromLocalStorage(storageKeys.STATS_KOLLEKTIV1) || initialSettings.statsKollektiv1 || defaults.STATS_KOLLEKTIV1;
-        _currentStatsKollektiv2 = loadFromLocalStorage(storageKeys.STATS_KOLLEKTIV2) || initialSettings.statsKollektiv2 || defaults.STATS_KOLLEKTIV2;
+        _currentStatsLayout = loadFromLocalStorage(storageKeys.STATS_LAYOUT) || initialSettings.statsLayout || defaults.STATS_LAYOUT || 'einzel';
+        _currentStatsKollektiv1 = loadFromLocalStorage(storageKeys.STATS_KOLLEKTIV1) || initialSettings.statsKollektiv1 || defaults.STATS_KOLLEKTIV1 || 'Gesamt';
+        _currentStatsKollektiv2 = loadFromLocalStorage(storageKeys.STATS_KOLLEKTIV2) || initialSettings.statsKollektiv2 || defaults.STATS_KOLLEKTIV2 || 'nRCT';
         
-        _currentPresentationView = loadFromLocalStorage(storageKeys.PRESENTATION_VIEW) || initialSettings.presentationView || defaults.PRESENTATION_VIEW;
-        _currentPresentationStudyId = loadFromLocalStorage(storageKeys.PRESENTATION_STUDY_ID) || initialSettings.presentationStudyId || defaults.PRESENTATION_STUDY_ID;
+        _currentPresentationView = loadFromLocalStorage(storageKeys.PRESENTATION_VIEW) || initialSettings.presentationView || defaults.PRESENTATION_VIEW || 'as-pur';
+        _currentPresentationStudyId = loadFromLocalStorage(storageKeys.PRESENTATION_STUDY_ID); // Default ist null, keine explizite Fallback-String-Zuweisung hier
+        if (_currentPresentationStudyId === undefined && initialSettings.presentationStudyId !== undefined) _currentPresentationStudyId = initialSettings.presentationStudyId;
+        else if (_currentPresentationStudyId === undefined && defaults.PRESENTATION_STUDY_ID !== undefined) _currentPresentationStudyId = defaults.PRESENTATION_STUDY_ID;
 
-        _currentPublikationLang = loadFromLocalStorage(storageKeys.PUBLIKATION_LANG) || initialSettings.publikationLang || defaults.PUBLIKATION_LANG;
-        _currentPublikationSection = loadFromLocalStorage(storageKeys.PUBLIKATION_SECTION) || initialSettings.publikationSection || defaults.PUBLIKATION_SECTION;
-        _currentPublikationBruteForceMetric = loadFromLocalStorage(storageKeys.PUBLIKATION_BRUTE_FORCE_METRIC) || initialSettings.publikationBruteForceMetric || defaults.PUBLIKATION_BRUTE_FORCE_METRIC;
+
+        _currentPublikationLang = loadFromLocalStorage(storageKeys.PUBLIKATION_LANG) || initialSettings.publikationLang || defaults.PUBLIKATION_LANG || 'de';
+        _currentPublikationSection = loadFromLocalStorage(storageKeys.PUBLIKATION_SECTION) || initialSettings.publikationSection || defaults.PUBLIKATION_SECTION || 'methoden';
+        _currentPublikationBruteForceMetric = loadFromLocalStorage(storageKeys.PUBLIKATION_BRUTE_FORCE_METRIC) || initialSettings.publikationBruteForceMetric || defaults.PUBLIKATION_BRUTE_FORCE_METRIC || 'Balanced Accuracy';
         
-        _currentCriteriaComparisonSets = loadFromLocalStorage(storageKeys.CRITERIA_COMPARISON_SETS) || cloneDeep(defaults.CRITERIA_COMPARISON_SETS);
-        _currentChartColorScheme = loadFromLocalStorage(storageKeys.CHART_COLOR_SCHEME) || initialSettings.chartColorScheme || defaults.CHART_COLOR_SCHEME;
+        _currentCriteriaComparisonSets = loadFromLocalStorage(storageKeys.CRITERIA_COMPARISON_SETS) || cloneDeep(defaults.CRITERIA_COMPARISON_SETS) || [];
+        _currentChartColorScheme = loadFromLocalStorage(storageKeys.CHART_COLOR_SCHEME) || initialSettings.chartColorScheme || defaults.CHART_COLOR_SCHEME || 'default';
 
         _forceTabRefresh = false;
         _initialized = true;
@@ -144,8 +159,8 @@ const state = (() => {
     }
     function getCurrentPresentationView() { return _currentPresentationView; }
 
-    function setCurrentPresentationStudyId(studyId) { // studyId can be null or string
-        _currentPresentationStudyId = studyId;
+    function setCurrentPresentationStudyId(studyId) { 
+        _currentPresentationStudyId = studyId; // Erlaube null/undefined explizit
         saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID, _currentPresentationStudyId);
     }
     function getCurrentPresentationStudyId() { return _currentPresentationStudyId; }
@@ -183,7 +198,7 @@ const state = (() => {
     function getCurrentCriteriaComparisonSets() { return cloneDeep(_currentCriteriaComparisonSets); }
 
     function setCurrentChartColorScheme(scheme) {
-        if (scheme && typeof scheme === 'string') { // Basic validation
+        if (scheme && typeof scheme === 'string') {
             _currentChartColorScheme = scheme;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.CHART_COLOR_SCHEME, _currentChartColorScheme);
         }
