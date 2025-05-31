@@ -1,24 +1,24 @@
 const dataProcessor = (() => {
 
     function _validatePatientData(patient) {
-        if (!patient || typeof patient.id !== 'string' || patient.id.trim() === '') {
+        if (!patient || typeof patient.id_patient !== 'string' || patient.id_patient.trim() === '') {
             console.warn('Ungültige oder fehlende Patienten-ID:', patient);
             return false;
         }
         if (patient.geschlecht && !['m', 'w', 'd', null, undefined, ''].includes(String(patient.geschlecht).toLowerCase())) {
-            console.warn(`Ungültiges Geschlecht '${patient.geschlecht}' für Patient ${patient.id}. Wird zu 'unbekannt' normalisiert.`);
-            patient.geschlecht = null; // Wird später zu 'unbekannt' wenn null
+            console.warn(`Ungültiges Geschlecht '${patient.geschlecht}' für Patient ${patient.id_patient}. Wird zu 'unbekannt' normalisiert.`);
+            patient.geschlecht = null;
         }
         if (patient.therapie && !['direkt OP', 'nRCT', null, undefined, ''].includes(patient.therapie)) {
-            console.warn(`Ungültige Therapie '${patient.therapie}' für Patient ${patient.id}. Wird zu 'unbekannt' normalisiert.`);
+            console.warn(`Ungültige Therapie '${patient.therapie}' für Patient ${patient.id_patient}. Wird zu 'unbekannt' normalisiert.`);
             patient.therapie = null;
         }
         if (patient.n && !['+', '-', null, undefined, ''].includes(patient.n)) {
-            console.warn(`Ungültiger N-Status '${patient.n}' für Patient ${patient.id}. Wird zu 'unbekannt' normalisiert.`);
+            console.warn(`Ungültiger N-Status '${patient.n}' für Patient ${patient.id_patient}. Wird zu 'unbekannt' normalisiert.`);
             patient.n = null;
         }
         if (patient.as && !['+', '-', null, undefined, ''].includes(patient.as)) {
-            console.warn(`Ungültiger AS-Status '${patient.as}' für Patient ${patient.id}. Wird zu 'unbekannt' normalisiert.`);
+            console.warn(`Ungültiger AS-Status '${patient.as}' für Patient ${patient.id_patient}. Wird zu 'unbekannt' normalisiert.`);
             patient.as = null;
         }
         return true;
@@ -70,9 +70,9 @@ const dataProcessor = (() => {
 
     function processSinglePatient(patient) {
         if (!_validatePatientData(patient)) {
-            return null; // Überspringe ungültige Patientendaten
+            return null; 
         }
-        const p = cloneDeep(patient); // Arbeite mit einer Kopie
+        const p = cloneDeep(patient); 
 
         p.nr = parseInt(p.nr, 10) || null;
         p.alter = _calculateAge(p.geburtsdatum, p.untersuchungsdatum);
@@ -80,27 +80,24 @@ const dataProcessor = (() => {
         p.therapie = (p.therapie === 'direkt OP' || p.therapie === 'nRCT') ? p.therapie : 'unbekannt';
         p.n = (p.n === '+' || p.n === '-') ? p.n : 'unbekannt';
         p.as = (p.as === '+' || p.as === '-') ? p.as : 'unbekannt';
-        p.t2 = 'unbekannt'; // Initialwert, wird von t2CriteriaManager.evaluateDataset gesetzt
+        p.t2 = 'unbekannt'; 
 
         p.anzahl_patho_lk = parseInt(p.anzahl_patho_lk, 10);
         p.anzahl_patho_n_plus_lk = parseInt(p.anzahl_patho_n_plus_lk, 10);
         p.anzahl_as_lk = parseInt(p.anzahl_as_lk, 10);
         p.anzahl_as_plus_lk = parseInt(p.anzahl_as_plus_lk, 10);
         
-        // Initialwerte für T2 LK-Zahlen, diese werden durch T2-Kriterienbewertung aktualisiert
         p.anzahl_t2_lk = Array.isArray(p.lymphknoten_t2) ? p.lymphknoten_t2.length : 0;
-        p.anzahl_t2_plus_lk = 0; // Wird von t2CriteriaManager gesetzt
+        p.anzahl_t2_plus_lk = 0; 
 
         p.lymphknoten_t2 = _normalizeT2Features(p.lymphknoten_t2);
         
-        // Validierung numerischer LK-Zahlen
         const lkKeysToValidate = ['anzahl_patho_lk', 'anzahl_patho_n_plus_lk', 'anzahl_as_lk', 'anzahl_as_plus_lk', 'anzahl_t2_lk'];
         lkKeysToValidate.forEach(key => {
             if (isNaN(p[key]) || p[key] < 0) {
-                p[key] = null; // Oder 0, je nach gewünschtem Verhalten für ungültige Zahlen
+                p[key] = null; 
             }
         });
-
 
         return p;
     }
@@ -134,7 +131,7 @@ const dataProcessor = (() => {
         
         const formatStatus = (plus, minus) => {
              if (numPatients === 0 && (plus + minus === 0)) return '-- / --';
-             if (plus + minus === 0) return '0% / 0%'; // Keine validen Daten für diesen Status
+             if (plus + minus === 0) return '0% / 0%'; 
              return `${formatPercent(plus / (plus + minus), 0)} / ${formatPercent(minus / (plus + minus), 0)}`;
         };
 
@@ -149,7 +146,7 @@ const dataProcessor = (() => {
 
     return Object.freeze({
         processSinglePatient,
-        processRawData, // Korrekt exportiert
+        processRawData,
         filterDataByKollektiv,
         calculateHeaderStats
     });
