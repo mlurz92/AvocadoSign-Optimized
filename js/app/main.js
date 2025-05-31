@@ -1,426 +1,298 @@
-let processedData = [];
-let currentData = [];
-let localRawData = typeof patientDataRaw !== 'undefined' ? patientDataRaw : [];
-
-const mainAppInterface = {};
-
-const debouncedUpdateSizeInput_Main = debounce((value) => {
-    if (typeof auswertungEventHandlers !== 'undefined' && typeof auswertungEventHandlers.handleT2SizeInputChange === 'function') {
-        auswertungEventHandlers.handleT2SizeInputChange(value, mainAppInterface);
-    }
-}, APP_CONFIG.PERFORMANCE_SETTINGS.DEBOUNCE_DELAY_MS);
-
-const debouncedUpdateSizeRange_Main = debounce((value) => {
-    if (typeof auswertungEventHandlers !== 'undefined' && typeof auswertungEventHandlers.handleT2SizeRangeChange === 'function') {
-        auswertungEventHandlers.handleT2SizeRangeChange(value, mainAppInterface);
-    }
-}, APP_CONFIG.PERFORMANCE_SETTINGS.DEBOUNCE_DELAY_MS);
-
-
-function initializeApp() {
-    console.log(`Initialisiere ${APP_CONFIG.APP_NAME} v${APP_CONFIG.APP_VERSION}...`);
-    const requiredLibs = {
-        'bootstrap': typeof bootstrap !== 'undefined' && bootstrap.Toast && bootstrap.Tab && bootstrap.Modal && bootstrap.Collapse,
-        'd3': typeof d3 !== 'undefined',
-        'tippy': typeof tippy !== 'undefined',
-        'Papa': typeof Papa !== 'undefined',
-        'JSZip': typeof JSZip !== 'undefined'
+const mainAppInterface = (() => {
+    let _globalData = {
+        rawData: [],
+        processedData: [],
+        filteredData: [],
+        currentKollektiv: null
     };
-    const missingLibs = Object.keys(requiredLibs).filter(lib => !requiredLibs[lib]);
+    let _activeTabId = null;
+    let _isLoading = false;
+    let _isInitialized = false;
 
-    if (missingLibs.length > 0) {
-        console.error("Externe Bibliotheken fehlen oder sind unvollständig:", missingLibs.join(', '));
-        ui_helpers.updateElementHTML('app-container', `<div class="alert alert-danger m-5">Fehler: Bibliotheken (${missingLibs.join(', ')}) konnten nicht vollständig geladen werden. Die Anwendung kann nicht gestartet werden.</div>`);
-        return;
+    function _showLoadingOverlay(message = 'Lade Anwendung...') {
+        _isLoading = true;
+        const overlay = document.getElementById('loading-overlay');
+        const messageElement = document.getElementById('loading-message');
+        if (overlay) overlay.style.display = 'flex';
+        if (messageElement) messageElement.textContent = message;
     }
-     if (!document.getElementById('app-container')) {
-         console.error("App container ('app-container') nicht gefunden!");
-         document.body.innerHTML = `<div class="alert alert-danger m-5">Schwerwiegender Fehler: App-Container nicht im HTML gefunden. Anwendung kann nicht starten.</div>`;
-         return;
-     }
 
-    try {
-        if (typeof state === 'undefined' || typeof t2CriteriaManager === 'undefined' || typeof dataProcessor === 'undefined' ||
-            typeof viewRenderer === 'undefined' || typeof ui_helpers === 'undefined' || typeof exportService === 'undefined' ||
-            typeof dataTabLogic === 'undefined' || typeof auswertungTabLogic === 'undefined' ||
-            typeof statistikTabLogic === 'undefined' || typeof praesentationTabLogic === 'undefined' ||
-            typeof publikationTabLogic === 'undefined' || typeof publicationRenderer === 'undefined' ||
-            typeof publicationTextGenerator === 'undefined' || typeof studyT2CriteriaManager === 'undefined' ||
-            typeof bruteForceManager === 'undefined' || typeof generalEventHandlers === 'undefined' ||
-            typeof auswertungEventHandlers === 'undefined' || typeof statistikEventHandlers === 'undefined' ||
-            typeof praesentationEventHandlers === 'undefined' || typeof publikationEventHandlers === 'undefined'
-        ) {
-             throw new Error("Ein oder mehrere Kernmodule oder Event-Handler-Module sind nicht verfügbar. Überprüfen Sie die Skript-Ladereihenfolge und Dateipfade in index.html.");
+    function _hideLoadingOverlay() {
+        _isLoading = false;
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+
+    function _initializeData() {
+        _showLoadingOverlay('Lade Patientendaten...');
+        try {
+            if (typeof patientDataRaw !== 'undefined' && Array.isArray(patientDataRaw)) {
+                _globalData.rawData = cloneDeep(patientDataRaw);
+                _globalData.processedData = dataProcessor.processRawData(_globalData.rawData);
+                _globalData.currentKollektiv = state.getCurrentKollektiv();
+                _globalData.filteredData = dataProcessor.filterDataByKollektiv(_globalData.processedData, _globalData.currentKollektiv);
+            } else {
+                throw new Error("Globale Variable 'patientDataRaw' nicht gefunden oder ist kein Array.");
+            }
+        } catch (error) {
+            console.error("Fehler beim Initialisieren der Daten:", error);
+            ui_helpers.showToast("Fehler beim Laden der Patientendaten.", "danger");
+            _globalData.rawData = []; _globalData.processedData = []; _globalData.filteredData = [];
+        }
+    }
+
+    function _initializeGlobalState() {
+        state.initialize();
+        _activeTabId = state.getActiveTabId();
+        _globalData.currentKollektiv = state.getCurrentKollektiv();
+    }
+
+    function _initializeUI() {
+        const appNameElement = document.getElementById('app-title');
+        if (appNameElement) {
+            appNameElement.textContent = `${APP_CONFIG.APP_NAME} v${APP_CONFIG.APP_VERSION}`;
+            document.title = `${APP_CONFIG.APP_NAME} v${APP_CONFIG.APP_VERSION}`;
+        }
+        ui_helpers.updateKollektivButtonsUI(_globalData.currentKollektiv);
+        ui_helpers.updateHeaderStatsUI(dataProcessor.calculateHeaderStats(_globalData.filteredData, _globalData.currentKollektiv));
+        ui_helpers.updateExportButtonStates(_activeTabId, bruteForceManager.hasResults(_globalData.currentKollektiv), _globalData.filteredData.length > 0);
+
+        const firstAppStart = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START);
+        if (firstAppStart === null || firstAppStart !== APP_CONFIG.APP_VERSION) { // Zeige bei erster Nutzung oder neuer Version
+            ui_helpers.showKurzanleitung();
+            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, APP_CONFIG.APP_VERSION);
         }
 
-        mainAppInterface.handleGlobalKollektivChange = _handleGlobalKollektivChange;
-        mainAppInterface.processTabChange = processTabChange;
-        mainAppInterface.handleSortRequest = handleSortRequest;
-        mainAppInterface.applyAndRefreshAll = applyAndRefreshAll;
-        mainAppInterface.getProcessedData = () => processedData;
-        mainAppInterface.getRawData = () => localRawData;
-        mainAppInterface.updateGlobalUIState = updateUIState;
-        mainAppInterface.refreshCurrentTab = refreshCurrentTab;
-        mainAppInterface.startBruteForceAnalysis = handleStartBruteForce_Internal;
-
-
-        state.init();
-        t2CriteriaManager.initialize();
-
-        processedData = dataProcessor.processPatientData(localRawData);
-
-        if (processedData.length === 0) {
-            console.warn("Keine validen Patientendaten gefunden nach Prozessierung.");
-            ui_helpers.showToast("Warnung: Keine validen Patientendaten geladen.", "warning");
+        const initialTabElement = document.querySelector(`.nav-tabs .nav-link[href="#${_activeTabId}-pane"]`);
+        if (initialTabElement) {
+            try {
+                 const tab = new bootstrap.Tab(initialTabElement);
+                 tab.show();
+            } catch (e) {
+                 console.error("Fehler beim Initialisieren des Bootstrap Tabs:", e);
+                 initialTabElement.classList.add('active'); // Fallback
+                 document.getElementById(`${_activeTabId}-pane`)?.classList.add('show', 'active');
+            }
         }
+        _handleTabChange(_activeTabId, true); // Render initial tab
+    }
 
-        initializeBruteForceManager();
+    function _initializeEventHandlers() {
+        generalEventHandlers.initialize(mainAppInterface);
+        auswertungEventHandlers.initialize(mainAppInterface);
+        statistikEventHandlers.initialize(mainAppInterface);
+        praesentationEventHandlers.initialize(mainAppInterface);
+        publikationEventHandlers.initialize(mainAppInterface);
 
-        publikationTabLogic.initializeData(
-            localRawData,
-            t2CriteriaManager.getAppliedCriteria(),
-            t2CriteriaManager.getAppliedLogic(),
-            bruteForceManager.getAllResults()
-        );
-
-        filterAndPrepareData();
-        updateUIState();
-        setupEventListeners();
-
-        const initialTabId = state.getActiveTabId() || 'daten-tab';
-        const initialTabElement = document.getElementById(initialTabId);
-         if(initialTabElement && bootstrap.Tab) {
-            const tab = bootstrap.Tab.getOrCreateInstance(initialTabElement);
-            if(tab) tab.show();
-         } else {
-             state.setActiveTabId('daten-tab');
-             const fallbackTabElement = document.getElementById('daten-tab');
-             if(fallbackTabElement && bootstrap.Tab) bootstrap.Tab.getOrCreateInstance(fallbackTabElement).show();
-         }
-        processTabChange(state.getActiveTabId());
-
-        const mainTabNav = document.getElementById('mainTab');
-        if(mainTabNav) {
-            mainTabNav.querySelectorAll('.nav-link').forEach(navLink => {
-                const tabKey = navLink.id.replace('-tab', '');
-                const tooltipText = TOOLTIP_CONTENT.mainTabs[tabKey] || `Wechsel zum Tab '${navLink.textContent.trim()}'`;
-                navLink.setAttribute('data-tippy-content', tooltipText);
+        document.querySelectorAll('.nav-tabs .nav-link').forEach(tab => {
+            tab.addEventListener('show.bs.tab', event => {
+                _activeTabId = event.target.getAttribute('href').substring(1).replace('-pane', '');
+                state.setActiveTabId(_activeTabId);
+                _handleTabChange(_activeTabId);
             });
-        }
+        });
 
-        const kurzanleitungButton = document.getElementById('btn-kurzanleitung');
-        if (kurzanleitungButton && TOOLTIP_CONTENT.kurzanleitungButton?.description) {
-            kurzanleitungButton.setAttribute('data-tippy-content', TOOLTIP_CONTENT.kurzanleitungButton.description);
-        }
-        ui_helpers.showKurzanleitung();
+        document.querySelectorAll('button[data-kollektiv]').forEach(button => {
+            button.addEventListener('click', event => {
+                const newKollektiv = event.currentTarget.getAttribute('data-kollektiv');
+                _handleKollektivChange(newKollektiv, event.currentTarget.id);
+            });
+        });
 
-        ui_helpers.initializeTooltips(document.body);
-        ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
-
-        const kurzanleitungModalTitle = document.querySelector('#kurzanleitung-modal .modal-title');
-        const kurzanleitungModalBody = document.querySelector('#kurzanleitung-modal .modal-body');
-        if (kurzanleitungModalTitle && UI_TEXTS.kurzanleitung?.title) kurzanleitungModalTitle.innerHTML = UI_TEXTS.kurzanleitung.title;
-        if (kurzanleitungModalBody && UI_TEXTS.kurzanleitung?.content) kurzanleitungModalBody.innerHTML = UI_TEXTS.kurzanleitung.content;
-
-
-        ui_helpers.showToast('Anwendung initialisiert.', 'success', 2500);
-        console.log("App Initialisierung abgeschlossen.");
-
-    } catch (error) {
-         console.error("Fehler während der App-Initialisierung:", error);
-         ui_helpers.updateElementHTML('app-container', `<div class="alert alert-danger m-5">Initialisierungsfehler: ${error.message}. Stellen Sie sicher, dass alle Skripte korrekt geladen wurden und die Dateipfade in index.html aktuell sind.</div>`);
+         const kurzanleitungButton = document.getElementById('show-kurzanleitung-btn');
+         if (kurzanleitungButton) {
+             kurzanleitungButton.addEventListener('click', () => ui_helpers.showKurzanleitung());
+         }
     }
-}
-
- function filterAndPrepareData() {
-    try {
-        const currentKollektiv = state.getCurrentKollektiv();
-        const filteredByKollektiv = dataProcessor.filterDataByKollektiv(processedData, currentKollektiv);
-        const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
-        const appliedLogic = t2CriteriaManager.getAppliedLogic();
-        const evaluatedData = t2CriteriaManager.evaluateDataset(filteredByKollektiv, appliedCriteria, appliedLogic);
-
-        let sortState = null;
-        const activeTabId = state.getActiveTabId();
-        if (activeTabId === 'daten-tab') { sortState = state.getDatenTableSort(); }
-        else if (activeTabId === 'auswertung-tab') { sortState = state.getAuswertungTableSort(); }
-
-        if(sortState && sortState.key) {
-             evaluatedData.sort(getSortFunction(sortState.key, sortState.direction, sortState.subKey));
+    
+    function _handleTabChange(newTabId, isInitialLoad = false) {
+        if (_isLoading && !isInitialLoad) {
+            console.warn("Tab-Wechsel ignoriert, da die Anwendung bereits lädt.");
+            // Verhindere, dass der Tab tatsächlich gewechselt wird, wenn Bootstrap das erlaubt
+            const previousTabElement = document.querySelector(`.nav-tabs .nav-link[href="#${state.getPreviousTabId()}-pane"]`);
+            if (previousTabElement) {
+                 try { new bootstrap.Tab(previousTabElement).show(); } catch(e){}
+            }
+            return;
         }
-        currentData = evaluatedData;
-    } catch (error) {
-         console.error("Fehler bei filterAndPrepareData:", error);
-         currentData = [];
-         ui_helpers.showToast("Fehler bei der Datenaufbereitung.", "danger");
+        _showLoadingOverlay(`Lade Tab: ${newTabId.replace('-tab','').replace(/^\w/, c => c.toUpperCase())}...`);
+        _activeTabId = newTabId;
+        state.setActiveTabId(newTabId);
+
+        const stateSnapshot = {
+            rawData: _globalData.rawData,
+            currentKollektiv: state.getCurrentKollektiv(),
+            appliedT2Criteria: t2CriteriaManager.getAppliedCriteria(),
+            appliedT2Logic: t2CriteriaManager.getAppliedLogic(),
+            datenSortState: state.getCurrentDatenSortState(),
+            bruteForceState: bruteForceManager.getState(),
+            bruteForceResults: bruteForceManager.getAllResults(), // Pass all results for all kollektive
+            statsLayout: state.getCurrentStatsLayout(),
+            statsKollektiv1: state.getCurrentStatsKollektiv1(),
+            statsKollektiv2: state.getCurrentStatsKollektiv2(),
+            praesentationView: state.getCurrentPresentationView(),
+            praesentationStudyId: state.getCurrentPresentationStudyId(),
+            forceTabRefresh: state.getForceTabRefresh()
+        };
+        
+        viewRenderer.renderTabContent(newTabId, _globalData.processedData, stateSnapshot);
+        ui_helpers.updateExportButtonStates(newTabId, bruteForceManager.hasResults(state.getCurrentKollektiv()), _globalData.filteredData.length > 0);
     }
-}
 
-function updateUIState() {
-    try {
-        const currentKollektiv = state.getCurrentKollektiv();
-        const headerStats = dataProcessor.calculateHeaderStats(currentData, currentKollektiv);
-        ui_helpers.updateHeaderStatsUI(headerStats);
-        ui_helpers.updateKollektivButtonsUI(currentKollektiv);
-        ui_helpers.updateStatistikSelectorsUI(state.getCurrentStatsLayout(), state.getCurrentStatsKollektiv1(), state.getCurrentStatsKollektiv2());
-        ui_helpers.updatePresentationViewSelectorUI(state.getCurrentPresentationView());
+    function _handleKollektivChange(newKollektiv, targetButtonId = null) {
+        _showLoadingOverlay(`Filtere Kollektiv: ${getKollektivDisplayName(newKollektiv)}...`);
+        state.setCurrentKollektiv(newKollektiv);
+        _globalData.currentKollektiv = newKollektiv;
+        _globalData.filteredData = dataProcessor.filterDataByKollektiv(_globalData.processedData, newKollektiv);
 
-        const praesStudySelect = document.getElementById('praes-study-select');
-        if (praesStudySelect) {
-            praesStudySelect.value = state.getCurrentPresentationStudyId() || '';
-        }
+        ui_helpers.updateKollektivButtonsUI(newKollektiv);
+        if(targetButtonId) ui_helpers.highlightElement(targetButtonId); // Highlight the clicked button
 
-        if (state.getActiveTabId() === 'publikation-tab') {
-            ui_helpers.updatePublikationUI(state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), state.getCurrentPublikationBruteForceMetric());
-        }
-        const bfResults = bruteForceManager.getAllResults();
-        ui_helpers.updateExportButtonStates(state.getActiveTabId(), bfResults && Object.keys(bfResults).length > 0, currentData && currentData.length > 0);
-    } catch (error) {
-        console.error("Fehler beim Aktualisieren des globalen UI-Zustands:", error);
+        ui_helpers.updateHeaderStatsUI(dataProcessor.calculateHeaderStats(_globalData.filteredData, newKollektiv));
+        
+        // Mark data as stale for tabs that depend on kollektiv-specific statistics
+        if (typeof auswertungTabLogic !== 'undefined') auswertungTabLogic.setDataStale();
+        if (typeof statistikTabLogic !== 'undefined') statistikTabLogic.setDataStale();
+        if (typeof praesentationTabLogic !== 'undefined') praesentationTabLogic.setDataStale();
+        if (typeof publikationTabLogic !== 'undefined') publikationTabLogic.setDataStale(); // Publikationsdaten hängen stark vom Kollektiv ab
+        
+        refreshCurrentTab(true); // Force data refresh in the current tab
+        _hideLoadingOverlay();
     }
-}
 
-function setupEventListeners() {
-    document.body.addEventListener('click', handleBodyClickDelegation);
 
-    const mainTabEl = document.getElementById('mainTab');
-    if (mainTabEl) { mainTabEl.addEventListener('shown.bs.tab', (event) => generalEventHandlers.handleTabShownEvent(event, mainAppInterface)); }
-    else { console.error("Haupt-Tab-Navigationselement ('mainTab') nicht gefunden."); }
+    function _handleBruteForceStart(payload) {
+        state.setBruteForceState('start');
+        ui_helpers.updateBruteForceUI('start', payload, true, state.getCurrentKollektiv());
+    }
+    function _handleBruteForceStarted(payload) {
+        state.setBruteForceState('started');
+        ui_helpers.updateBruteForceUI('started', payload, true, state.getCurrentKollektiv());
+    }
+    function _handleBruteForceProgress(payload) {
+         if (state.getBruteForceState() !== 'progress' && state.getBruteForceState() !== 'started') { state.setBruteForceState('progress'); }
+        ui_helpers.updateBruteForceUI('progress', payload, true, state.getCurrentKollektiv());
+    }
+    function _handleBruteForceResult(payload) {
+        state.setBruteForceState('result');
+        ui_helpers.updateBruteForceUI('result', payload, true, state.getCurrentKollektiv());
+        ui_helpers.updateExportButtonStates(_activeTabId, true, _globalData.filteredData.length > 0);
+        if (_activeTabId === 'auswertung-tab' || _activeTabId === 'publikation-tab') {
+             // Publikation Tab needs all BF results, Auswertung Tab needs its specific one
+             publikationTabLogic.setDataStale();
+             if(_activeTabId === 'publikation-tab') refreshCurrentTab(true);
+             else if(_activeTabId === 'auswertung-tab' && payload.kollektiv === state.getCurrentKollektiv()) refreshCurrentTab(true);
+        }
+        ui_helpers.showToast(`Brute-Force Optimierung für Kollektiv '${getKollektivDisplayName(payload.kollektiv)}' abgeschlossen.`, 'success');
+    }
+    function _handleBruteForceError(payload) {
+        state.setBruteForceState('error');
+        ui_helpers.updateBruteForceUI('error', payload, true, state.getCurrentKollektiv());
+        ui_helpers.showToast(`Fehler bei Brute-Force: ${payload.message}`, 'danger');
+    }
+    function _handleBruteForceCancelled() {
+        state.setBruteForceState('cancelled');
+        ui_helpers.updateBruteForceUI('cancelled', {}, true, state.getCurrentKollektiv());
+        ui_helpers.showToast("Brute-Force Optimierung abgebrochen.", "info");
+    }
 
-    document.body.addEventListener('input', (event) => {
-        if (event.target.id === 'range-size' && event.target.closest('#auswertung-tab-pane')) {
-            debouncedUpdateSizeRange_Main(event.target.value);
+    function initializeApplication() {
+        if (_isInitialized) { console.warn("Anwendung bereits initialisiert."); return; }
+        _showLoadingOverlay();
+        document.addEventListener('DOMContentLoaded', () => {
+            _initializeGlobalState();
+            _initializeData(); // Muss nach State sein, da currentKollektiv aus State kommt
+            
+            t2CriteriaManager.initialize(state.getAppliedT2Criteria(), state.getAppliedT2Logic());
+            studyT2CriteriaManager.initialize();
+            bruteForceManager.initialize({
+                onStart: _handleBruteForceStart,
+                onStarted: _handleBruteForceStarted,
+                onProgress: _handleBruteForceProgress,
+                onResult: _handleBruteForceResult,
+                onError: _handleBruteForceError,
+                onCancelled: _handleBruteForceCancelled
+            });
+            
+            _initializeUI();
+            _initializeEventHandlers();
+            _isInitialized = true;
+            _hideLoadingOverlay();
+            
+            console.log(`${APP_CONFIG.APP_NAME} v${APP_CONFIG.APP_VERSION} initialisiert. Aktives Kollektiv: ${getKollektivDisplayName(_globalData.currentKollektiv)}, Aktiver Tab: ${_activeTabId}`);
+        });
+    }
+
+    function refreshCurrentTab(forceDataRefresh = false, newSortState = null) {
+        if (!_activeTabId || _isLoading) {
+            if(_isLoading) console.warn("RefreshCurrentTab ignoriert, da Anwendung bereits lädt.");
+            return;
+        }
+        _showLoadingOverlay(`Aktualisiere Tab: ${_activeTabId.replace('-tab','').replace(/^\w/, c => c.toUpperCase())}...`);
+        
+        if (forceDataRefresh) {
+            // Daten, die von Kriterien und Kollektiv abhängen, neu berechnen/filtern
+            _globalData.currentKollektiv = state.getCurrentKollektiv(); // Sicherstellen, dass wir den aktuellen Kollektivstand haben
+            _globalData.processedData = dataProcessor.processRawData(_globalData.rawData); // Neu verarbeiten, falls sich z.B. AS Kriterien ändern könnten (hier nicht, aber als Muster)
+            _globalData.filteredData = dataProcessor.filterDataByKollektiv(_globalData.processedData, _globalData.currentKollektiv);
+            
+            // T2-Auswertung der gefilterten Daten, falls sich Kriterien geändert haben könnten
+            // Dies wird normalerweise vom Auswertungstab-EventHandler ausgelöst.
+            // Hier stellen wir sicher, dass die `filteredData` für den ViewRenderer die aktuellen T2-Bewertungen haben.
+            const currentAppliedT2Criteria = t2CriteriaManager.getAppliedCriteria();
+            const currentAppliedT2Logic = t2CriteriaManager.getAppliedLogic();
+             _globalData.filteredData = t2CriteriaManager.evaluateDataset(cloneDeep(_globalData.filteredData), currentAppliedT2Criteria, currentAppliedT2Logic);
+
+
+            ui_helpers.updateHeaderStatsUI(dataProcessor.calculateHeaderStats(_globalData.filteredData, _globalData.currentKollektiv));
+            ui_helpers.updateExportButtonStates(_activeTabId, bruteForceManager.hasResults(_globalData.currentKollektiv), _globalData.filteredData.length > 0);
+             
+             // Markiere datenintensive Tabs als 'stale', damit ihre spezifische Logik die Daten neu holt
+             if (typeof auswertungTabLogic !== 'undefined') auswertungTabLogic.setDataStale();
+             if (typeof statistikTabLogic !== 'undefined') statistikTabLogic.setDataStale();
+             if (typeof praesentationTabLogic !== 'undefined') praesentationTabLogic.setDataStale();
+             if (typeof publikationTabLogic !== 'undefined') publikationTabLogic.setDataStale();
+        }
+
+        if (newSortState && _activeTabId === 'daten-tab') {
+            state.setCurrentDatenSortState(newSortState);
+        }
+
+        const stateSnapshot = {
+            rawData: _globalData.rawData,
+            currentKollektiv: state.getCurrentKollektiv(),
+            appliedT2Criteria: t2CriteriaManager.getAppliedCriteria(),
+            appliedT2Logic: t2CriteriaManager.getAppliedLogic(),
+            datenSortState: state.getCurrentDatenSortState(),
+            bruteForceState: bruteForceManager.getState(),
+            bruteForceResults: bruteForceManager.getAllResults(),
+            statsLayout: state.getCurrentStatsLayout(),
+            statsKollektiv1: state.getCurrentStatsKollektiv1(),
+            statsKollektiv2: state.getCurrentStatsKollektiv2(),
+            praesentationView: state.getCurrentPresentationView(),
+            praesentationStudyId: state.getCurrentPresentationStudyId(),
+            forceTabRefresh: forceDataRefresh || state.getForceTabRefresh()
+        };
+        viewRenderer.renderTabContent(_activeTabId, _globalData.filteredData, stateSnapshot);
+    }
+
+
+    return Object.freeze({
+        initializeApplication,
+        refreshCurrentTab,
+        showLoadingOverlay,
+        hideLoadingOverlay,
+        getGlobalData: () => _globalData,
+        getActiveTabId: () => _activeTabId,
+        notifyDataProcessingChange: () => { // Wird von t2CriteriaManager/auswertungEventHandlers aufgerufen
+            _globalData.processedData = dataProcessor.processRawData(_globalData.rawData);
+            _globalData.filteredData = dataProcessor.filterDataByKollektiv(_globalData.processedData, state.getCurrentKollektiv());
+            _globalData.filteredData = t2CriteriaManager.evaluateDataset(cloneDeep(_globalData.filteredData), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
+             ui_helpers.updateHeaderStatsUI(dataProcessor.calculateHeaderStats(_globalData.filteredData, state.getCurrentKollektiv()));
+             ui_helpers.markCriteriaSavedIndicator(false);
         }
     });
 
-    document.body.addEventListener('change', (event) => {
-        const target = event.target;
-        if (target.closest('#auswertung-tab-pane')) {
-             if (target.id === 'input-size') { debouncedUpdateSizeInput_Main(target.value); }
-             else if (target.matches('.criteria-checkbox')) { auswertungEventHandlers.handleT2CheckboxChange(target); }
-             else if (target.id === 't2-logic-switch') { auswertungEventHandlers.handleT2LogicChange(target); }
-             else if (target.id === 'brute-force-metric') { auswertungEventHandlers.handleBruteForceMetricChange(target); }
-        } else if (target.closest('#statistik-tab-pane')) {
-            if(target.id === 'statistik-kollektiv-select-1' || target.id === 'statistik-kollektiv-select-2') {
-                statistikEventHandlers.handleStatistikKollektivChange(target, mainAppInterface);
-            }
-        } else if (target.closest('#praesentation-tab-pane')) {
-            if (target.matches('input[name="praesentationAnsicht"]')) {
-                praesentationEventHandlers.handlePresentationViewChange(target.value, mainAppInterface);
-            } else if (target.id === 'praes-study-select') {
-                praesentationEventHandlers.handlePresentationStudySelectChange(target.value, mainAppInterface);
-            }
-        } else if (target.closest('#publikation-tab-pane')) {
-             if (target.id === 'publikation-sprache-switch') {
-                publikationEventHandlers.handlePublikationSpracheChange(target, mainAppInterface);
-            } else if (target.id === 'publikation-bf-metric-select') {
-                publikationEventHandlers.handlePublikationBfMetricChange(target, mainAppInterface);
-            }
-        }
-    });
-}
+})();
 
-function handleBodyClickDelegation(event) {
-    const target = event.target;
-    const closestButton = target.closest('button');
-    const closestHeader = target.closest('th[data-sort-key]');
-    const closestSubHeader = target.closest('.sortable-sub-header');
-
-    const clickableRowParent = target.closest('tr.clickable-row[data-bs-target]');
-     if (clickableRowParent && (target.closest('a, button, input, select, .btn-close, [data-bs-toggle="modal"], .table-download-png-btn, .chart-download-btn'))) {
-        event.stopPropagation(); 
-    } else if (clickableRowParent) {
-
-    }
-
-
-    if (closestButton?.dataset.kollektiv) { generalEventHandlers.handleKollektivChange(closestButton.dataset.kollektiv, mainAppInterface); return; }
-    if (closestHeader) { generalEventHandlers.handleSortClick(closestHeader, closestSubHeader, mainAppInterface); return; }
-    if (target.closest('.chart-download-btn[data-chart-id][data-format]')) { generalEventHandlers.handleSingleChartDownload(target.closest('.chart-download-btn')); return; }
-    if (target.closest('.table-download-png-btn[data-table-id]')) { generalEventHandlers.handleSingleTableDownload(target.closest('.table-download-png-btn')); return; }
-    if (target.closest('#daten-toggle-details')) { generalEventHandlers.handleToggleAllDetailsClick('daten-toggle-details', 'daten-table-body'); return; }
-    if (target.closest('#auswertung-toggle-details')) { generalEventHandlers.handleToggleAllDetailsClick('auswertung-toggle-details', 'auswertung-table-body'); return; }
-    if (target.closest('#export-bruteforce-modal-txt') && !target.closest('#export-bruteforce-modal-txt').disabled) { generalEventHandlers.handleModalExportBruteForceClick(); return; }
-    if (target.closest('#btn-kurzanleitung')) { generalEventHandlers.handleKurzanleitungClick(); return; }
-
-
-    if (target.closest('#auswertung-tab-pane')) {
-        if (target.closest('.t2-criteria-button') && !target.closest('.t2-criteria-button').disabled) { auswertungEventHandlers.handleT2CriteriaButtonClick(target.closest('.t2-criteria-button')); return; }
-        if (target.closest('#btn-reset-criteria')) { auswertungEventHandlers.handleResetCriteria(); return; }
-        if (target.closest('#btn-apply-criteria')) { auswertungEventHandlers.handleApplyCriteria(mainAppInterface); return; }
-        if (target.closest('#btn-start-brute-force') && !target.closest('#btn-start-brute-force').disabled) { auswertungEventHandlers.handleStartBruteForce(mainAppInterface); return; }
-        if (target.closest('#btn-cancel-brute-force')) { auswertungEventHandlers.handleCancelBruteForce(); return; }
-        if (target.closest('#btn-apply-best-bf-criteria') && !target.closest('#btn-apply-best-bf-criteria').disabled) { auswertungEventHandlers.handleApplyBestBfCriteria(mainAppInterface); return; }
-    }
-    if (target.closest('#statistik-tab-pane')) {
-        if (target.closest('#statistik-toggle-vergleich')) { statistikEventHandlers.handleStatsLayoutToggle(target.closest('#statistik-toggle-vergleich'), mainAppInterface); return;}
-    }
-    if (target.closest('#export-tab-pane button[id^="export-"]') && !target.closest('#export-tab-pane button[id^="export-"]').disabled && !target.closest('#export-tab-pane button[id^="export-"]').id.startsWith('export-bruteforce-modal')) {
-        exportService.exportCategoryZip(target.closest('#export-tab-pane button[id^="export-"]').id.replace('export-', ''), localRawData, bruteForceManager.getAllResults(), state.getCurrentKollektiv(), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
-        return;
-    }
-    if (target.closest('#praesentation-tab-pane button[id^="download-"]') && !target.closest('#praesentation-tab-pane button[id^="download-"]').disabled && !target.closest('#praesentation-tab-pane button[id^="download-"]').classList.contains('table-download-png-btn') && !target.closest('#praesentation-tab-pane button[id^="download-"]').classList.contains('chart-download-btn')) {
-        praesentationEventHandlers.handlePresentationDownloadClick(target.closest('#praesentation-tab-pane button[id^="download-"]'), mainAppInterface);
-        return;
-    }
-     if (target.closest('#publikation-sections-nav .publikation-section-link')) {
-        event.preventDefault();
-        publikationEventHandlers.handlePublikationSectionChange(target.closest('#publikation-sections-nav .publikation-section-link').dataset.sectionId, mainAppInterface);
-        return;
-    }
-}
-
-function processTabChange(tabId) {
-    if (state.setActiveTabId(tabId)) {
-        filterAndPrepareData();
-        updateUIState();
-        _renderCurrentTab(tabId);
-    }
-}
-
-function _renderCurrentTab(tabId) {
-    if (typeof viewRenderer === 'undefined') {
-        console.error(`viewRenderer ist nicht verfügbar in _renderCurrentTab (Tab: ${tabId}).`);
-        ui_helpers.showToast(`Fehler: UI Renderer nicht bereit für Tab '${tabId}'.`, 'danger');
-        const paneId = tabId.replace('-tab', '-tab-pane');
-        ui_helpers.updateElementHTML(paneId, `<div class="alert alert-danger m-3">Interner Fehler: UI Renderer konnte nicht geladen werden.</div>`);
-        return;
-    }
-    const currentKollektiv = state.getCurrentKollektiv();
-    const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
-    const appliedLogic = t2CriteriaManager.getAppliedLogic();
-
-    if (['daten-tab', 'auswertung-tab', 'statistik-tab', 'praesentation-tab'].includes(tabId)) {
-        filterAndPrepareData();
-    }
-
-    switch (tabId) {
-        case 'daten-tab': viewRenderer.renderDatenTab(currentData, state.getDatenTableSort()); break;
-        case 'auswertung-tab': viewRenderer.renderAuswertungTab(currentData, t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic(), state.getAuswertungTableSort(), currentKollektiv, bruteForceManager.isWorkerAvailable()); break;
-        case 'statistik-tab': viewRenderer.renderStatistikTab(processedData, appliedCriteria, appliedLogic, state.getCurrentStatsLayout(), state.getCurrentStatsKollektiv1(), state.getCurrentStatsKollektiv2(), currentKollektiv); break;
-        case 'praesentation-tab': viewRenderer.renderPresentationTab(state.getCurrentPresentationView(), state.getCurrentPresentationStudyId(), currentKollektiv, processedData, appliedCriteria, appliedLogic); break;
-        case 'publikation-tab':
-            publikationTabLogic.initializeData(
-                localRawData, 
-                appliedCriteria,
-                appliedLogic,
-                bruteForceManager.getAllResults()
-            );
-            viewRenderer.renderPublikationTab(state.getCurrentPublikationLang(), state.getCurrentPublikationSection(), currentKollektiv, localRawData, bruteForceManager.getAllResults());
-            break;
-        case 'export-tab': viewRenderer.renderExportTab(currentKollektiv); break;
-        default: console.warn(`Unbekannter Tab für Rendering: ${tabId}`); const paneId = tabId.replace('-tab', '-tab-pane'); ui_helpers.updateElementHTML(paneId, `<div class="alert alert-warning m-3">Inhalt für Tab '${tabId}' nicht implementiert.</div>`);
-    }
-}
-
-function _handleGlobalKollektivChange(newKollektiv, source = "user") {
-    if (state.setCurrentKollektiv(newKollektiv)) {
-        filterAndPrepareData();
-        updateUIState();
-        _renderCurrentTab(state.getActiveTabId());
-        if (source === "user") {
-            ui_helpers.showToast(`Kollektiv '${getKollektivDisplayName(newKollektiv)}' ausgewählt.`, 'info');
-        } else if (source === "auto_praesentation") {
-            ui_helpers.showToast(`Globales Kollektiv automatisch auf '${getKollektivDisplayName(newKollektiv)}' gesetzt (passend zur Studienauswahl im Präsentation-Tab).`, 'info', 4000);
-            const headerButton = document.querySelector(`header button[data-kollektiv="${newKollektiv}"]`);
-            if(headerButton) {
-                ui_helpers.highlightElement(headerButton.id);
-            }
-        }
-        return true;
-    }
-    return false;
-}
-
-function handleSortRequest(tableContext, key, subKey = null) {
-    let sortStateUpdated = false;
-    if (tableContext === 'daten') {
-        sortStateUpdated = state.updateDatenTableSortDirection(key, subKey);
-    } else if (tableContext === 'auswertung') {
-        sortStateUpdated = state.updateAuswertungTableSortDirection(key, subKey);
-    }
-
-    if (sortStateUpdated) {
-        filterAndPrepareData();
-        const sortState = (tableContext === 'daten') ? state.getDatenTableSort() : state.getAuswertungTableSort();
-        if (tableContext === 'daten' && state.getActiveTabId() === 'daten-tab') {
-            viewRenderer.renderDatenTab(currentData, sortState);
-        } else if (tableContext === 'auswertung' && state.getActiveTabId() === 'auswertung-tab') {
-            viewRenderer.renderAuswertungTab(currentData, t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic(), sortState, state.getCurrentKollektiv(), bruteForceManager.isWorkerAvailable());
-        }
-    }
-}
-
-function applyAndRefreshAll() {
-    t2CriteriaManager.applyCriteria();
-    filterAndPrepareData();
-    ui_helpers.markCriteriaSavedIndicator(false);
-    updateUIState();
-    _renderCurrentTab(state.getActiveTabId());
-}
-
-function refreshCurrentTab(){
-    _renderCurrentTab(state.getActiveTabId());
-}
-
-function handleStartBruteForce_Internal() {
-}
-
-function initializeBruteForceManager() {
-    const bfCallbacks = {
-        onStarted: handleBruteForceStarted,
-        onProgress: handleBruteForceProgress,
-        onResult: handleBruteForceResult,
-        onCancelled: handleBruteForceCancelled,
-        onError: handleBruteForceError
-    };
-    bruteForceManager.init(bfCallbacks);
-}
-
-function handleBruteForceStarted(payload) {
-    const currentKollektiv = payload?.kollektiv || state.getCurrentKollektiv();
-    const metric = document.getElementById('brute-force-metric')?.value || APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC;
-    ui_helpers.updateBruteForceUI('started', { ...payload, metric: metric, kollektiv: currentKollektiv }, true, currentKollektiv);
-}
-
-function handleBruteForceProgress(payload) {
-    const currentKollektiv = payload?.kollektiv || state.getCurrentKollektiv();
-    const metric = payload?.metric || document.getElementById('brute-force-metric')?.value || APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC;
-    ui_helpers.updateBruteForceUI('progress', {...payload, metric: metric, kollektiv: currentKollektiv}, true, currentKollektiv);
-}
-
-function handleBruteForceResult(payload) {
-    const resultKollektiv = payload?.kollektiv || state.getCurrentKollektiv();
-    ui_helpers.updateBruteForceUI('result', {...payload, kollektiv: resultKollektiv}, true, resultKollektiv);
-    if (payload?.results?.length > 0) {
-        const modalBody = document.querySelector('#brute-force-modal .modal-body');
-        if (modalBody) {
-            modalBody.innerHTML = uiComponents.createBruteForceModalContent(payload);
-            ui_helpers.initializeTooltips(modalBody);
-        }
-        ui_helpers.showToast('Optimierung abgeschlossen.', 'success');
-        if (state.getActiveTabId() === 'publikation-tab') {
-            publikationTabLogic.initializeData(localRawData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getAllResults());
-            _renderCurrentTab('publikation-tab');
-        }
-    } else {
-        ui_helpers.showToast('Optimierung ohne valide Ergebnisse.', 'warning');
-    }
-    updateUIState();
-}
-
-function handleBruteForceCancelled(payload) {
-    const currentKollektiv = payload?.kollektiv || state.getCurrentKollektiv();
-    ui_helpers.updateBruteForceUI('cancelled', {}, bruteForceManager.isWorkerAvailable(), currentKollektiv);
-    ui_helpers.showToast('Optimierung abgebrochen.', 'warning');
-    updateUIState();
-}
-
-function handleBruteForceError(payload) {
-    const currentKollektiv = payload?.kollektiv || state.getCurrentKollektiv();
-    ui_helpers.showToast(`Optimierungsfehler: ${payload?.message || 'Unbekannt'}`, 'danger');
-    ui_helpers.updateBruteForceUI('error', payload, bruteForceManager.isWorkerAvailable(), currentKollektiv);
-    updateUIState();
-}
-
-document.addEventListener('DOMContentLoaded', initializeApp);
+mainAppInterface.initializeApplication();
