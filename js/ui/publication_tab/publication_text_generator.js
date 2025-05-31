@@ -678,7 +678,6 @@ const publicationTextGenerator = (() => {
         tempDiv.innerHTML = preProcessedHtml;
         tempDiv.querySelectorAll('.publication-table-container, .publication-chart-container, div.row > div[class*="col-md-"], div.row').forEach(el => {
              if(el.innerHTML.trim() === '' || el.querySelectorAll(':scope > div.publication-table-container, :scope > div.publication-chart-container, :scope > div.row > div[class*="col-md-"]').length === el.children.length) {
-                 // Nur leere strukturelle divs entfernen
                  if(el.matches('.publication-table-container, .publication-chart-container') || 
                     (el.matches('div.row') && el.innerHTML.trim() === '') || 
                     (el.matches('div[class*="col-md-"]') && el.innerHTML.trim() === '')) {
@@ -690,35 +689,35 @@ const publicationTextGenerator = (() => {
         let markdown = tempDiv.innerHTML;
 
         markdown = markdown
-            .replace(/<p>/g, '\n')
-            .replace(/<\/p>/g, '\n')
-            .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
-            .replace(/<em>(.*?)<\/em>/g, '*$1*')
-            .replace(/<i>(.*?)<\/i>/g, '*$1*')
-            .replace(/<ul>/g, '')
-            .replace(/<\/ul>/g, '')
-            .replace(/<ol.*?>/g, '')
-            .replace(/<\/ol>/g, '')
-            .replace(/<li>/g, '\n* ')
-            .replace(/<\/li>/g, '')
-            .replace(/<br\s*\/?>/g, '\n')
-            .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/g, (match, p1Content) => {
+            .replace(new RegExp("<p>", "g"), '\n')
+            .replace(new RegExp("<\\/p>", "g"), '\n')
+            .replace(new RegExp("<strong>(.*?)<\\/strong>", "g"), '**$1**')
+            .replace(new RegExp("<em>(.*?)<\\/em>", "g"), '*$1*')
+            .replace(new RegExp("<i>(.*?)<\\/i>", "g"), '*$1*')
+            .replace(new RegExp("<ul>", "g"), '')
+            .replace(new RegExp("<\\/ul>", "g"), '')
+            .replace(new RegExp("<ol.*?>", "g"), '')
+            .replace(new RegExp("<\\/ol>", "g"), '')
+            .replace(new RegExp("<li>", "g"), '\n* ')
+            .replace(new RegExp("<\\/li>", "g"), '')
+            .replace(new RegExp("<br\\s*\\/?>", "g"), '\n')
+            .replace(new RegExp("<h[1-6][^>]*>(.*?)<\\/h[1-6]>", "g"), (match, p1Content) => {
                 const levelMatch = match.match(/<h(\d)/);
                 const level = levelMatch ? parseInt(levelMatch[1]) : 1;
                 const escapedContent = typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(p1Content) : p1Content.replace(/([*_[\]()#+.!])/g, '\\$1');
                 return `\n${'#'.repeat(level + 1)} ${escapedContent}\n`;
             })
-            .replace(/<hr\s+class="my-3"\s*\/?>/g, '\n---\n')
-            .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/\u00A0/g, ' ')
-            .replace(/LINK_PLACEHOLDER_START(.*?)LINK_PLACEHOLDER_END/g, '[$1]')
-            .replace(/\(CITE_PLACEHOLDER_(.*?)_(.*?)\)/g, '($2)')
-            .replace(/ {2,}/g, ' ')
-            .replace(/\n\s*\n/g, '\n\n')
+            .replace(new RegExp("<hr\\s+class=\"my-3\"\\s*\\/?>", "g"), '\n---\n')
+            .replace(new RegExp("&lt;", "g"), '<').replace(new RegExp("&gt;", "g"), '>').replace(new RegExp("&amp;", "g"), '&').replace(new RegExp("&nbsp;", "g"), ' ').replace(new RegExp("\\u00A0", "g"), ' ')
+            .replace(new RegExp("LINK_PLACEHOLDER_START(.*?)LINK_PLACEHOLDER_END", "g"), '[$1]')
+            .replace(new RegExp("\\(CITE_PLACEHOLDER_(.*?)_(.*?)\\)", "g"), '($2)')
+            .replace(new RegExp(" {2,}", "g"), ' ')
+            .replace(new RegExp("\\n\\s*\\n", "g"), '\n\n')
             .trim();
 
         if (sectionId === 'referenzen_liste' && markdown.includes('\n* ')) {
             let counter = 1;
-            markdown = markdown.replace(/\n\* /g, () => `\n${counter++}. `);
+            markdown = markdown.replace(new RegExp("\\n\\* ", "g"), () => `\n${counter++}. `);
         }
         return markdown;
     }
