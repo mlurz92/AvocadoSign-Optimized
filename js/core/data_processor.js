@@ -1,151 +1,156 @@
 const dataProcessor = (() => {
 
-    function calculateAge(birthdate, examDate) {
-        if (!birthdate || !examDate) {
-            return null;
+    function _validatePatientData(patient) {
+        if (!patient || typeof patient.id !== 'string' || patient.id.trim() === '') {
+            console.warn('Ungültige oder fehlende Patienten-ID:', patient);
+            return false;
         }
-        let birth;
-        let exam;
+        if (patient.geschlecht && !['m', 'w', 'd', null, undefined, ''].includes(String(patient.geschlecht).toLowerCase())) {
+            console.warn(`Ungültiges Geschlecht '${patient.geschlecht}' für Patient ${patient.id}. Wird zu 'unbekannt' normalisiert.`);
+            patient.geschlecht = null; // Wird später zu 'unbekannt' wenn null
+        }
+        if (patient.therapie && !['direkt OP', 'nRCT', null, undefined, ''].includes(patient.therapie)) {
+            console.warn(`Ungültige Therapie '${patient.therapie}' für Patient ${patient.id}. Wird zu 'unbekannt' normalisiert.`);
+            patient.therapie = null;
+        }
+        if (patient.n && !['+', '-', null, undefined, ''].includes(patient.n)) {
+            console.warn(`Ungültiger N-Status '${patient.n}' für Patient ${patient.id}. Wird zu 'unbekannt' normalisiert.`);
+            patient.n = null;
+        }
+        if (patient.as && !['+', '-', null, undefined, ''].includes(patient.as)) {
+            console.warn(`Ungültiger AS-Status '${patient.as}' für Patient ${patient.id}. Wird zu 'unbekannt' normalisiert.`);
+            patient.as = null;
+        }
+        return true;
+    }
+
+    function _calculateAge(geburtsdatumStr, untersuchungsdatumStr) {
+        if (!geburtsdatumStr || !untersuchungsdatumStr) return null;
         try {
-            birth = new Date(birthdate);
-            exam = new Date(examDate);
-            if (isNaN(birth.getTime()) || isNaN(exam.getTime()) || birth > exam) {
-                return null;
+            const geburt = new Date(geburtsdatumStr);
+            const untersuchung = new Date(untersuchungsdatumStr);
+            if (isNaN(geburt.getTime()) || isNaN(untersuchung.getTime())) return null;
+
+            let alter = untersuchung.getFullYear() - geburt.getFullYear();
+            const monatDiff = untersuchung.getMonth() - geburt.getMonth();
+            if (monatDiff < 0 || (monatDiff === 0 && untersuchung.getDate() < geburt.getDate())) {
+                alter--;
             }
+            return alter >= 0 ? alter : null;
         } catch (e) {
+            console.warn("Fehler bei Altersberechnung:", e);
             return null;
         }
-        let age = exam.getFullYear() - birth.getFullYear();
-        const monthDiff = exam.getMonth() - birth.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && exam.getDate() < birth.getDate())) {
-            age--;
-        }
-        return age >= 0 ? age : null;
     }
 
-    function processSinglePatient(patient, index, config) {
-        const processedPatient = {};
-        const patientNr = typeof patient.nr === 'number' ? patient.nr : index + 1;
-
-        processedPatient.nr = patientNr;
-        processedPatient.name = typeof patient.name === 'string' ? patient.name.trim() : 'Unbekannt';
-        processedPatient.vorname = typeof patient.vorname === 'string' ? patient.vorname.trim() : '';
-        processedPatient.geburtsdatum = patient.geburtsdatum || null;
-        processedPatient.untersuchungsdatum = patient.untersuchungsdatum || null;
-        processedPatient.geschlecht = (patient.geschlecht === 'm' || patient.geschlecht === 'f') ? patient.geschlecht : 'unbekannt';
-        processedPatient.therapie = (patient.therapie === 'direkt OP' || patient.therapie === 'nRCT') ? patient.therapie : 'unbekannt';
-        processedPatient.n = (patient.n === '+' || patient.n === '-') ? patient.n : null;
-        processedPatient.as = (patient.as === '+' || patient.as === '-') ? patient.as : null;
-
-        const validateCount = (value) => (typeof value === 'number' && value >= 0 && Number.isInteger(value)) ? value : 0;
-        processedPatient.anzahl_patho_lk = validateCount(patient.anzahl_patho_lk);
-        processedPatient.anzahl_patho_n_plus_lk = validateCount(patient.anzahl_patho_n_plus_lk);
-        processedPatient.anzahl_as_lk = validateCount(patient.anzahl_as_lk);
-        processedPatient.anzahl_as_plus_lk = validateCount(patient.anzahl_as_plus_lk);
-
-        processedPatient.bemerkung = typeof patient.bemerkung === 'string' ? patient.bemerkung.trim() : '';
-        processedPatient.alter = calculateAge(processedPatient.geburtsdatum, processedPatient.untersuchungsdatum);
-
-        const rawLymphknotenT2 = patient.lymphknoten_t2;
-        processedPatient.lymphknoten_t2 = [];
-        processedPatient.anzahl_t2_lk = 0;
-
-        if (Array.isArray(rawLymphknotenT2)) {
-            processedPatient.lymphknoten_t2 = rawLymphknotenT2.map(lk => {
-                if (typeof lk !== 'object' || lk === null) return null;
-                const processedLk = {};
-                processedLk.groesse = (typeof lk.groesse === 'number' && !isNaN(lk.groesse) && lk.groesse >= 0) ? lk.groesse : null;
-
-                const validateEnum = (value, allowedValues) => {
-                     return (typeof value === 'string' && value !== null && allowedValues.includes(value.trim().toLowerCase()))
-                         ? value.trim().toLowerCase()
-                         : null;
-                };
-
-                processedLk.form = validateEnum(lk.form, config.T2_CRITERIA_SETTINGS.FORM_VALUES);
-                processedLk.kontur = validateEnum(lk.kontur, config.T2_CRITERIA_SETTINGS.KONTUR_VALUES);
-                processedLk.homogenitaet = validateEnum(lk.homogenitaet, config.T2_CRITERIA_SETTINGS.HOMOGENITAET_VALUES);
-                processedLk.signal = validateEnum(lk.signal, config.T2_CRITERIA_SETTINGS.SIGNAL_VALUES);
-
-                return processedLk;
-            }).filter(lk => lk !== null);
-            processedPatient.anzahl_t2_lk = processedPatient.lymphknoten_t2.length;
-        }
-
-        processedPatient.t2 = null;
-        processedPatient.anzahl_t2_plus_lk = 0;
-        processedPatient.lymphknoten_t2_bewertet = [];
-
-        return processedPatient;
-    }
-
-    function processPatientData(rawData) {
-        if (!Array.isArray(rawData)) {
-            console.error("processPatientData: Ungültige Eingabedaten, Array erwartet.");
+    function _normalizeT2Features(lymphknoten_t2_array) {
+        if (!Array.isArray(lymphknoten_t2_array)) {
             return [];
         }
-        if (typeof APP_CONFIG === 'undefined') {
-             console.error("processPatientData: APP_CONFIG ist nicht verfügbar.");
-             return [];
-        }
+        return lymphknoten_t2_array.map(lk => {
+            const normalizedLK = { ...lk };
+            const size = parseFloat(lk.groesse);
+            normalizedLK.groesse = (!isNaN(size) && isFinite(size) && size > 0) ? size : null;
 
-        return rawData.map((patient, index) => processSinglePatient(patient, index, APP_CONFIG));
+            const validForms = APP_CONFIG.T2_CRITERIA_SETTINGS.FORM_VALUES;
+            normalizedLK.form = (lk.form && validForms.includes(String(lk.form).toLowerCase())) ? String(lk.form).toLowerCase() : null;
+
+            const validKonturen = APP_CONFIG.T2_CRITERIA_SETTINGS.KONTUR_VALUES;
+            normalizedLK.kontur = (lk.kontur && validKonturen.includes(String(lk.kontur).toLowerCase())) ? String(lk.kontur).toLowerCase() : null;
+
+            const validHomogenitaeten = APP_CONFIG.T2_CRITERIA_SETTINGS.HOMOGENITAET_VALUES;
+            normalizedLK.homogenitaet = (lk.homogenitaet && validHomogenitaeten.includes(String(lk.homogenitaet).toLowerCase())) ? String(lk.homogenitaet).toLowerCase() : null;
+            
+            const validSignale = APP_CONFIG.T2_CRITERIA_SETTINGS.SIGNAL_VALUES;
+            normalizedLK.signal = (lk.signal && validSignale.includes(String(lk.signal).toLowerCase())) ? String(lk.signal).toLowerCase() : null;
+
+            return normalizedLK;
+        });
     }
 
-    function filterDataByKollektiv(data, kollektiv) {
-        if (!Array.isArray(data)) {
-            console.error("filterDataByKollektiv: Ungültige Eingabedaten, Array erwartet.");
-            return [];
+    function processSinglePatient(patient) {
+        if (!_validatePatientData(patient)) {
+            return null; // Überspringe ungültige Patientendaten
         }
-        const filteredData = (kollektiv && kollektiv !== 'Gesamt')
-            ? data.filter(p => p && p.therapie === kollektiv)
-            : data;
+        const p = cloneDeep(patient); // Arbeite mit einer Kopie
 
-        return cloneDeep(filteredData);
+        p.nr = parseInt(p.nr, 10) || null;
+        p.alter = _calculateAge(p.geburtsdatum, p.untersuchungsdatum);
+        p.geschlecht = (p.geschlecht === 'm' || p.geschlecht === 'w') ? p.geschlecht : 'unbekannt';
+        p.therapie = (p.therapie === 'direkt OP' || p.therapie === 'nRCT') ? p.therapie : 'unbekannt';
+        p.n = (p.n === '+' || p.n === '-') ? p.n : 'unbekannt';
+        p.as = (p.as === '+' || p.as === '-') ? p.as : 'unbekannt';
+        p.t2 = 'unbekannt'; // Initialwert, wird von t2CriteriaManager.evaluateDataset gesetzt
+
+        p.anzahl_patho_lk = parseInt(p.anzahl_patho_lk, 10);
+        p.anzahl_patho_n_plus_lk = parseInt(p.anzahl_patho_n_plus_lk, 10);
+        p.anzahl_as_lk = parseInt(p.anzahl_as_lk, 10);
+        p.anzahl_as_plus_lk = parseInt(p.anzahl_as_plus_lk, 10);
+        
+        // Initialwerte für T2 LK-Zahlen, diese werden durch T2-Kriterienbewertung aktualisiert
+        p.anzahl_t2_lk = Array.isArray(p.lymphknoten_t2) ? p.lymphknoten_t2.length : 0;
+        p.anzahl_t2_plus_lk = 0; // Wird von t2CriteriaManager gesetzt
+
+        p.lymphknoten_t2 = _normalizeT2Features(p.lymphknoten_t2);
+        
+        // Validierung numerischer LK-Zahlen
+        const lkKeysToValidate = ['anzahl_patho_lk', 'anzahl_patho_n_plus_lk', 'anzahl_as_lk', 'anzahl_as_plus_lk', 'anzahl_t2_lk'];
+        lkKeysToValidate.forEach(key => {
+            if (isNaN(p[key]) || p[key] < 0) {
+                p[key] = null; // Oder 0, je nach gewünschtem Verhalten für ungültige Zahlen
+            }
+        });
+
+
+        return p;
     }
 
-    function calculateHeaderStats(data, currentKollektiv) {
-         const n = data?.length ?? 0;
-         const kollektivName = getKollektivDisplayName(currentKollektiv);
-         const placeholder = '--';
+    function processRawData(rawData) {
+        if (!Array.isArray(rawData)) return [];
+        return rawData.map(p => processSinglePatient(p)).filter(p => p !== null);
+    }
 
-         if (!Array.isArray(data) || n === 0) {
-             return { kollektiv: kollektivName, anzahlPatienten: 0, statusN: placeholder, statusAS: placeholder, statusT2: placeholder, nPos: 0, nNeg: 0, asPos: 0, asNeg: 0, t2Pos: 0, t2Neg: 0 };
-         }
+    function filterDataByKollektiv(processedData, kollektiv) {
+        if (!Array.isArray(processedData)) return [];
+        if (!kollektiv || kollektiv === 'Gesamt') {
+            return processedData;
+        }
+        return processedData.filter(p => p.therapie === kollektiv);
+    }
 
-         let nPos = 0, nNeg = 0, asPos = 0, asNeg = 0, t2Pos = 0, t2Neg = 0;
-         data.forEach(p => {
-             if (p) {
-                if (p.n === '+') nPos++; else if (p.n === '-') nNeg++;
-                if (p.as === '+') asPos++; else if (p.as === '-') asNeg++;
-                if (p.t2 === '+') t2Pos++; else if (p.t2 === '-') t2Neg++;
-             }
-         });
+    function calculateHeaderStats(filteredData, kollektiv) {
+        if (!Array.isArray(filteredData)) return { kollektiv: getKollektivDisplayName(kollektiv) || '--', anzahlPatienten: 0, statusN: 'N/A', statusAS: 'N/A', statusT2: 'N/A' };
+        
+        const numPatients = filteredData.length;
+        let nPlus = 0, nMinus = 0;
+        let asPlus = 0, asMinus = 0;
+        let t2Plus = 0, t2Minus = 0;
 
-         const formatStatus = (pos, neg) => {
-             const totalKnown = pos + neg;
-             return totalKnown > 0 ? `${formatPercent(pos / totalKnown, 1)} (+)` : placeholder;
-         };
+        filteredData.forEach(p => {
+            if (p.n === '+') nPlus++; else if (p.n === '-') nMinus++;
+            if (p.as === '+') asPlus++; else if (p.as === '-') asMinus++;
+            if (p.t2 === '+') t2Plus++; else if (p.t2 === '-') t2Minus++;
+        });
+        
+        const formatStatus = (plus, minus) => {
+             if (numPatients === 0 && (plus + minus === 0)) return '-- / --';
+             if (plus + minus === 0) return '0% / 0%'; // Keine validen Daten für diesen Status
+             return `${formatPercent(plus / (plus + minus), 0)} / ${formatPercent(minus / (plus + minus), 0)}`;
+        };
 
-         return {
-            kollektiv: kollektivName,
-            anzahlPatienten: n,
-            statusN: formatStatus(nPos, nNeg),
-            statusAS: formatStatus(asPos, asNeg),
-            statusT2: formatStatus(t2Pos, t2Neg),
-            nPos: nPos,
-            nNeg: nNeg,
-            asPos: asPos,
-            asNeg: asNeg,
-            t2Pos: t2Pos,
-            t2Neg: t2Neg
-         };
+        return {
+            kollektiv: getKollektivDisplayName(kollektiv) || '--',
+            anzahlPatienten: numPatients,
+            statusN: formatStatus(nPlus, nMinus),
+            statusAS: formatStatus(asPlus, asMinus),
+            statusT2: formatStatus(t2Plus, t2Minus)
+        };
     }
 
     return Object.freeze({
-        processPatientData,
+        processSinglePatient,
+        processRawData, // Korrekt exportiert
         filterDataByKollektiv,
         calculateHeaderStats
     });
-
 })();
