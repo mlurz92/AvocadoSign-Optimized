@@ -636,13 +636,13 @@ const publicationTextGenerator = (() => {
 
     function getSectionTextAsMarkdown(sectionId, lang, allKollektivStats, commonData, options = {}) {
         const htmlContent = getSectionText(sectionId, lang, allKollektivStats, commonData, options);
-        const tempDiv = document.createElement('div'); // Temporäres Element zur einfacheren Text-Extraktion
+        const tempDiv = document.createElement('div');
         tempDiv.innerHTML = htmlContent;
         
-        // Referenzen mit Platzhaltern versehen, bevor HTML-Tags entfernt werden
         let preProcessedHtml = htmlContent.replace(/\/g, (match, p1RefKey) => {
             const refShort = getReference(p1RefKey, commonData, 'citation');
-            return `(CITE_PLACEHOLDER_${p1RefKey}_${(typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(refShort) : refShort)})`;
+            const escapedRef = typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(refShort) : refShort.replace(/([*_[\]()#+.!])/g, '\\$1');
+            return `(CITE_PLACEHOLDER_${p1RefKey}_${escapedRef})`;
         });
         
         preProcessedHtml = preProcessedHtml.replace(/<a href="#(.*?)">(.*?)<\/a>/g, (match, p1Id, p2LinkText) => {
@@ -671,15 +671,23 @@ const publicationTextGenerator = (() => {
                                                              .replace(/\[N_DIREKT_OP\]/g, String(commonData?.nDirektOP || 'N/A'))
                                                              .replace(/\[N_NRCT\]/g, String(commonData?.nNRCT || 'N/A'));
                 }
-                return `LINK_PLACEHOLDER_START${(typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(referencedElementName) : referencedElementName)}LINK_PLACEHOLDER_END`;
+                const escapedElementName = typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(referencedElementName) : referencedElementName.replace(/([*_[\]()#+.!])/g, '\\$1');
+                return `LINK_PLACEHOLDER_START${escapedElementName}LINK_PLACEHOLDER_END`;
             });
 
-
         tempDiv.innerHTML = preProcessedHtml;
-        // Entferne jetzt die DIV-Container für Tabellen und Charts, da diese nicht ins Markdown sollen
-        tempDiv.querySelectorAll('.publication-table-container, .publication-chart-container').forEach(el => el.remove());
+        tempDiv.querySelectorAll('.publication-table-container, .publication-chart-container, div.row > div[class*="col-md-"], div.row').forEach(el => {
+             if(el.innerHTML.trim() === '' || el.querySelectorAll(':scope > div.publication-table-container, :scope > div.publication-chart-container, :scope > div.row > div[class*="col-md-"]').length === el.children.length) {
+                 // Nur leere strukturelle divs entfernen
+                 if(el.matches('.publication-table-container, .publication-chart-container') || 
+                    (el.matches('div.row') && el.innerHTML.trim() === '') || 
+                    (el.matches('div[class*="col-md-"]') && el.innerHTML.trim() === '')) {
+                     el.remove();
+                 }
+             }
+        });
         
-        let markdown = tempDiv.innerHTML; // Inhalt ohne die Container
+        let markdown = tempDiv.innerHTML;
 
         markdown = markdown
             .replace(/<p>/g, '\n')
@@ -697,13 +705,13 @@ const publicationTextGenerator = (() => {
             .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/g, (match, p1Content) => {
                 const levelMatch = match.match(/<h(\d)/);
                 const level = levelMatch ? parseInt(levelMatch[1]) : 1;
-                const escapedContent = typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(p1Content) : p1Content;
+                const escapedContent = typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(p1Content) : p1Content.replace(/([*_[\]()#+.!])/g, '\\$1');
                 return `\n${'#'.repeat(level + 1)} ${escapedContent}\n`;
             })
-            .replace(/<hr\s+class="my-3"\s*\/?>/g, '\n---\n') // Korrigierter und robusterer Regex für <hr>
+            .replace(/<hr\s+class="my-3"\s*\/?>/g, '\n---\n')
             .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/\u00A0/g, ' ')
-            .replace(/LINK_PLACEHOLDER_START(.*?)LINK_PLACEHOLDER_END/g, '[$1]') // Platzhalter für Links wiederherstellen
-            .replace(/\(CITE_PLACEHOLDER_(.*?)_(.*?)\)/g, '($2)') // Platzhalter für Zitate wiederherstellen
+            .replace(/LINK_PLACEHOLDER_START(.*?)LINK_PLACEHOLDER_END/g, '[$1]')
+            .replace(/\(CITE_PLACEHOLDER_(.*?)_(.*?)\)/g, '($2)')
             .replace(/ {2,}/g, ' ')
             .replace(/\n\s*\n/g, '\n\n')
             .trim();
