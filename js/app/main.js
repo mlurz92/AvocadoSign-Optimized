@@ -29,7 +29,7 @@ const mainAppInterface = (() => {
             if (typeof patientDataRaw !== 'undefined' && Array.isArray(patientDataRaw)) {
                 _globalData.rawData = cloneDeep(patientDataRaw);
                 _globalData.processedData = dataProcessor.processRawData(_globalData.rawData);
-                _globalData.currentKollektiv = state.getCurrentKollektiv();
+                _globalData.currentKollektiv = state.getCurrentKollektiv(); // State sollte hier initialisiert sein
                 _globalData.filteredData = dataProcessor.filterDataByKollektiv(_globalData.processedData, _globalData.currentKollektiv);
             } else {
                 throw new Error("Globale Variable 'patientDataRaw' nicht gefunden oder ist kein Array.");
@@ -42,9 +42,22 @@ const mainAppInterface = (() => {
     }
 
     function _initializeGlobalState() {
-        state.initialize();
-        _activeTabId = state.getActiveTabId();
-        _globalData.currentKollektiv = state.getCurrentKollektiv();
+        // Der Aufruf state.initialize() ist hier kritisch. 
+        // state.js muss korrekt geladen sein und initialize als Methode exportieren.
+        try {
+            if (typeof state !== 'undefined' && typeof state.initialize === 'function') {
+                state.initialize();
+                _activeTabId = state.getActiveTabId(); // Nach Initialisierung des States abrufen
+                _globalData.currentKollektiv = state.getCurrentKollektiv();
+            } else {
+                throw new Error("State Modul oder state.initialize ist nicht verfügbar.");
+            }
+        } catch (error) {
+            console.error("Schwerwiegender Fehler bei der State-Initialisierung:", error);
+            _activeTabId = APP_CONFIG.DEFAULT_SETTINGS.ACTIVE_TAB_ID || 'daten-tab'; // Fallback
+            _globalData.currentKollektiv = APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV; // Fallback
+            ui_helpers.showToast("Kritischer Fehler: Anwendung konnte nicht korrekt initialisiert werden (State-Modul).", "danger");
+        }
     }
 
     function _initializeUI() {
@@ -90,9 +103,9 @@ const mainAppInterface = (() => {
         document.querySelectorAll('.nav-tabs .nav-link').forEach(tab => {
             tab.addEventListener('show.bs.tab', event => {
                 const newTabId = event.target.getAttribute('href').substring(1).replace('-pane', '');
-                if (_activeTabId !== newTabId) { // Nur ausführen, wenn der Tab tatsächlich wechselt
+                if (_activeTabId !== newTabId) { 
                     _activeTabId = newTabId;
-                    state.setActiveTabId(_activeTabId);
+                    state.setActiveTabId(_activeTabId); // Zustand aktualisieren
                     _handleTabChange(_activeTabId);
                 }
             });
@@ -126,7 +139,6 @@ const mainAppInterface = (() => {
         }
         _showLoadingOverlay(`Lade Tab: ${newTabId.replace('-tab','').replace(/^\w/, c => c.toUpperCase())}...`);
         _activeTabId = newTabId;
-        // state.setActiveTabId(newTabId); // Wird bereits im 'show.bs.tab' event handler gesetzt für manuelle Klicks
 
         const stateSnapshot = {
             rawData: _globalData.rawData,
@@ -165,7 +177,7 @@ const mainAppInterface = (() => {
         if (typeof publikationTabLogic !== 'undefined') publikationTabLogic.setDataStale();
         
         refreshCurrentTab(true);
-        _hideLoadingOverlay();
+        // _hideLoadingOverlay(); // Wird im finally-Block von renderTabContent (aufgerufen durch refreshCurrentTab) erledigt
     }
 
 
@@ -205,40 +217,53 @@ const mainAppInterface = (() => {
 
     function initializeApplication() {
         if (_isInitialized) { console.warn("Anwendung bereits initialisiert."); return; }
-        _showLoadingOverlay('Initialisiere Anwendung...'); // Korrekter interner Aufruf
+        _showLoadingOverlay('Initialisiere Anwendung...');
         document.addEventListener('DOMContentLoaded', () => {
-            _initializeGlobalState();
-            _initializeData();
-            
-            t2CriteriaManager.initialize(state.getAppliedT2Criteria(), state.getAppliedT2Logic());
-            studyT2CriteriaManager.initialize();
-            bruteForceManager.initialize({
-                onStart: _handleBruteForceStart,
-                onStarted: _handleBruteForceStarted,
-                onProgress: _handleBruteForceProgress,
-                onResult: _handleBruteForceResult,
-                onError: _handleBruteForceError,
-                onCancelled: _handleBruteForceCancelled
-            });
-            
-            _initializeUI();
-            _initializeEventHandlers();
-            _isInitialized = true;
-            _hideLoadingOverlay(); // Korrekter interner Aufruf
-            
-            console.log(`${APP_CONFIG.APP_NAME} v${APP_CONFIG.APP_VERSION} initialisiert. Aktives Kollektiv: ${getKollektivDisplayName(_globalData.currentKollektiv)}, Aktiver Tab: ${_activeTabId}`);
+            try {
+                _initializeGlobalState(); // Hier wird state.initialize() aufgerufen
+                _initializeData();      // Nutzt den initialisierten State
+                
+                t2CriteriaManager.initialize(state.getAppliedT2Criteria(), state.getAppliedT2Logic());
+                studyT2CriteriaManager.initialize();
+                bruteForceManager.initialize({
+                    onStart: _handleBruteForceStart,
+                    onStarted: _handleBruteForceStarted,
+                    onProgress: _handleBruteForceProgress,
+                    onResult: _handleBruteForceResult,
+                    onError: _handleBruteForceError,
+                    onCancelled: _handleBruteForceCancelled
+                });
+                
+                _initializeUI(); // Nutzt initialisierte Daten und State für erste UI-Updates und Tab-Rendering
+                _initializeEventHandlers();
+                _isInitialized = true;
+                 console.log(`${APP_CONFIG.APP_NAME} v${APP_CONFIG.APP_VERSION} initialisiert. Aktives Kollektiv: ${getKollektivDisplayName(_globalData.currentKollektiv)}, Aktiver Tab: ${_activeTabId}`);
+
+            } catch (error) {
+                console.error("Schwerwiegender Fehler während der Anwendungsinitialisierung:", error);
+                const overlay = document.getElementById('loading-overlay');
+                const messageElement = document.getElementById('loading-message');
+                if (messageElement) messageElement.innerHTML = `<span class="text-danger">Kritischer Fehler bei der Initialisierung!</span><br><small>${error.message}</small><br><small>Bitte versuchen Sie, die Seite neu zu laden oder prüfen Sie die Browser-Konsole.</small>`;
+                if (overlay) overlay.style.display = 'flex'; // Sicherstellen, dass Overlay sichtbar ist, um Fehler anzuzeigen
+                 // Nicht _hideLoadingOverlay() aufrufen, damit Fehlermeldung sichtbar bleibt
+            } finally {
+                // _hideLoadingOverlay() wird nun im _handleTabChange (via viewRenderer) oder hier nicht mehr global aufgerufen,
+                // außer bei Erfolg, da der viewRenderer es übernimmt.
+                // Bei einem Fehler oben bleibt das Overlay mit der Fehlermeldung stehen.
+                if(_isInitialized) _hideLoadingOverlay(); // Nur bei erfolgreicher Initialisierung ausblenden
+            }
         });
     }
 
     function refreshCurrentTab(forceDataRefresh = false, newSortState = null) {
-        if (!_activeTabId || _isLoading) {
-            if(_isLoading) console.warn("RefreshCurrentTab ignoriert, da Anwendung bereits lädt.");
-            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.hideLoadingOverlay === 'function' && !_isLoading) {
-                 _hideLoadingOverlay(); // Verstecke Overlay, falls es festhängt und nicht geladen wird.
-            }
-            return;
+        if (!_activeTabId || (_isLoading && !forceDataRefresh)) { // Erlaube refresh, wenn forceDataRefresh true ist, auch wenn isLoading
+            if(_isLoading) console.warn("RefreshCurrentTab ignoriert oder verzögert, da Anwendung bereits lädt.");
+             // Wenn isLoading, aber kein forceDataRefresh, dann nicht unterbrechen.
+             // Wenn nicht isLoading, aber kein _activeTabId, dann abbrechen.
+            if (!_activeTabId) return;
+            if (_isLoading && !forceDataRefresh) return;
         }
-        _showLoadingOverlay(`Aktualisiere Tab: ${_activeTabId.replace('-tab','').replace(/^\w/, c => c.toUpperCase())}...`); // Korrekter interner Aufruf
+        _showLoadingOverlay(`Aktualisiere Tab: ${_activeTabId.replace('-tab','').replace(/^\w/, c => c.toUpperCase())}...`);
         
         if (forceDataRefresh) {
             _globalData.currentKollektiv = state.getCurrentKollektiv();
@@ -277,15 +302,15 @@ const mainAppInterface = (() => {
             praesentationStudyId: state.getCurrentPresentationStudyId(),
             forceTabRefresh: forceDataRefresh || state.getForceTabRefresh()
         };
-        viewRenderer.renderTabContent(_activeTabId, _globalData.filteredData, stateSnapshot); // _hideLoadingOverlay wird in renderTabContent's finally-Block aufgerufen
+        viewRenderer.renderTabContent(_activeTabId, _globalData.filteredData, stateSnapshot);
     }
 
 
     return Object.freeze({
         initializeApplication,
         refreshCurrentTab,
-        showLoadingOverlay: _showLoadingOverlay, // Exportiere die internen Funktionen für den Fall, dass sie von außerhalb benötigt werden (sollte nicht der Fall sein)
-        hideLoadingOverlay: _hideLoadingOverlay, // oder besser: stelle sicher, dass alle Aufrufe über das Interface laufen. Hier korrigiert auf die internen.
+        showLoadingOverlay: _showLoadingOverlay, 
+        hideLoadingOverlay: _hideLoadingOverlay, 
         getGlobalData: () => _globalData,
         getActiveTabId: () => _activeTabId,
         notifyDataProcessingChange: () => {
