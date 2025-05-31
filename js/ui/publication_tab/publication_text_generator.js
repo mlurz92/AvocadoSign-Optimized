@@ -454,11 +454,11 @@ const publicationTextGenerator = (() => {
         const table6TitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.titleEn.replace('{BF_METRIC}', bfZielMetric);
 
         const fig2aId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartGesamt.id;
-        const fig2aTitle = (lang === 'de' ? PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartGesamt.titleDe : PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartGesamt.titleEn).replace('{Kollektiv}', getKollektivDisplayName('Gesamt')).replace('{BF_METRIC}', bfZielMetric);
+        const fig2aTitle = (lang === 'de' ? PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartGesamt.titleDe : PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartGesamt.titleEn).replace('{Kollektiv}', getKollektivDisplayName('Gesamt')).replace('{BF_METRIC}', bfZielMetric).replace(/\[N_GESAMT\]/g, String(commonData.nGesamt || 'N/A'));
         const fig2bId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartDirektOP.id;
-        const fig2bTitle = (lang === 'de' ? PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartDirektOP.titleDe : PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartDirektOP.titleEn).replace('{Kollektiv}', getKollektivDisplayName('direkt OP')).replace('{BF_METRIC}', bfZielMetric);
+        const fig2bTitle = (lang === 'de' ? PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartDirektOP.titleDe : PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartDirektOP.titleEn).replace('{Kollektiv}', getKollektivDisplayName('direkt OP')).replace('{BF_METRIC}', bfZielMetric).replace(/\[N_DIREKT_OP\]/g, String(commonData.nDirektOP || 'N/A'));
         const fig2cId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartNRCT.id;
-        const fig2cTitle = (lang === 'de' ? PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartNRCT.titleDe : PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartNRCT.titleEn).replace('{Kollektiv}', getKollektivDisplayName('nRCT')).replace('{BF_METRIC}', bfZielMetric);
+        const fig2cTitle = (lang === 'de' ? PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartNRCT.titleDe : PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartNRCT.titleEn).replace('{Kollektiv}', getKollektivDisplayName('nRCT')).replace('{BF_METRIC}', bfZielMetric).replace(/\[N_NRCT\]/g, String(commonData.nNRCT || 'N/A'));
 
 
         if (lang === 'de') {
@@ -582,7 +582,6 @@ const publicationTextGenerator = (() => {
         const addRef = (refKey) => {
             const refObj = refs[refKey];
             if (refObj && refObj.full && !displayedRefs.has(refObj.full)) {
-                // ui_helpers.escapeMarkdown ist hier nicht verfügbar, daher nur Basis-Escaping oder Annahme, dass refObj.full sicher ist
                 const safeFullRef = String(refObj.full).replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 text += `<li>${safeFullRef}</li>`;
                 displayedRefs.add(refObj.full);
@@ -637,20 +636,16 @@ const publicationTextGenerator = (() => {
 
     function getSectionTextAsMarkdown(sectionId, lang, allKollektivStats, commonData, options = {}) {
         const htmlContent = getSectionText(sectionId, lang, allKollektivStats, commonData, options);
-        let markdown = htmlContent
-            .replace(/<p>/g, '\n')
-            .replace(/<\/p>/g, '\n')
-            .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
-            .replace(/<em>(.*?)<\/em>/g, '*$1*')
-            .replace(/<i>(.*?)<\/i>/g, '*$1*')
-            .replace(/<ul>/g, '')
-            .replace(/<\/ul>/g, '')
-            .replace(/<ol.*?>/g, '')
-            .replace(/<\/ol>/g, '')
-            .replace(/<li>/g, '\n* ')
-            .replace(/<\/li>/g, '')
-            .replace(/<br\s*\/?>/g, '\n')
-            .replace(/<a href="#(.*?)">(.*?)<\/a>/g, (match, p1Id, p2LinkText) => {
+        const tempDiv = document.createElement('div'); // Temporäres Element zur einfacheren Text-Extraktion
+        tempDiv.innerHTML = htmlContent;
+        
+        // Referenzen mit Platzhaltern versehen, bevor HTML-Tags entfernt werden
+        let preProcessedHtml = htmlContent.replace(/\/g, (match, p1RefKey) => {
+            const refShort = getReference(p1RefKey, commonData, 'citation');
+            return `(CITE_PLACEHOLDER_${p1RefKey}_${(typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(refShort) : refShort)})`;
+        });
+        
+        preProcessedHtml = preProcessedHtml.replace(/<a href="#(.*?)">(.*?)<\/a>/g, (match, p1Id, p2LinkText) => {
                 const elementConfig = PUBLICATION_CONFIG.publicationElements;
                 let referencedElementName = p2LinkText;
                 const bfMetricForTitle = options?.bruteForceMetric || commonData?.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
@@ -672,27 +667,43 @@ const publicationTextGenerator = (() => {
                 if (elementDetails) {
                     referencedElementName = (lang === 'de' ? elementDetails.titleDe : elementDetails.titleEn) || p2LinkText;
                     referencedElementName = referencedElementName.replace(/{BF_METRIC}/g, bfMetricForTitle)
-                                                             .replace(/\[N_GESAMT\]/g, commonData?.nGesamt || 'N/A')
-                                                             .replace(/\[N_DIREKT_OP\]/g, commonData?.nDirektOP || 'N/A')
-                                                             .replace(/\[N_NRCT\]/g, commonData?.nNRCT || 'N/A');
+                                                             .replace(/\[N_GESAMT\]/g, String(commonData?.nGesamt || 'N/A'))
+                                                             .replace(/\[N_DIREKT_OP\]/g, String(commonData?.nDirektOP || 'N/A'))
+                                                             .replace(/\[N_NRCT\]/g, String(commonData?.nNRCT || 'N/A'));
                 }
-                return typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(`[${referencedElementName}]`) : `[${referencedElementName}]`;
-            })
+                return `LINK_PLACEHOLDER_START${(typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(referencedElementName) : referencedElementName)}LINK_PLACEHOLDER_END`;
+            });
+
+
+        tempDiv.innerHTML = preProcessedHtml;
+        // Entferne jetzt die DIV-Container für Tabellen und Charts, da diese nicht ins Markdown sollen
+        tempDiv.querySelectorAll('.publication-table-container, .publication-chart-container').forEach(el => el.remove());
+        
+        let markdown = tempDiv.innerHTML; // Inhalt ohne die Container
+
+        markdown = markdown
+            .replace(/<p>/g, '\n')
+            .replace(/<\/p>/g, '\n')
+            .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
+            .replace(/<em>(.*?)<\/em>/g, '*$1*')
+            .replace(/<i>(.*?)<\/i>/g, '*$1*')
+            .replace(/<ul>/g, '')
+            .replace(/<\/ul>/g, '')
+            .replace(/<ol.*?>/g, '')
+            .replace(/<\/ol>/g, '')
+            .replace(/<li>/g, '\n* ')
+            .replace(/<\/li>/g, '')
+            .replace(/<br\s*\/?>/g, '\n')
             .replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/g, (match, p1Content) => {
                 const levelMatch = match.match(/<h(\d)/);
                 const level = levelMatch ? parseInt(levelMatch[1]) : 1;
                 const escapedContent = typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(p1Content) : p1Content;
                 return `\n${'#'.repeat(level + 1)} ${escapedContent}\n`;
             })
-             .replace(/<div id=".*?" class="publication-(table|chart)-container"><\/div>/g, '')
-             .replace(/<div class="row">\s*<div class="col-md-6">\s*<div id=".*?" class="publication-chart-container"><\/div>\s*<\/div>\s*<div class="col-md-6">\s*<div id=".*?" class="publication-chart-container"><\/div>\s*<\/div>\s*<\/div>/g, '')
-             .replace(/<div class="row">\s*<div class="col-md-12 col-lg-4"><div id=".*?" class="publication-chart-container"><\/div><\/div>\s*<div class="col-md-12 col-lg-4"><div id=".*?" class="publication-chart-container"><\/div><\/div>\s*<div class="col-md-12 col-lg-4"><div id=".*?" class="publication-chart-container"><\/div><\/div>\s*<\/div>/g, '')
-             .replace(/<hr class="my-3"\/>/g, '\n---\n')
-             .replace(/\/g, (match, p1RefKey) => {
-                const refShort = getReference(p1RefKey, commonData, 'citation');
-                return `(${typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(refShort) : refShort})`;
-            })
+            .replace(/<hr\s+class="my-3"\s*\/?>/g, '\n---\n') // Korrigierter und robusterer Regex für <hr>
             .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/\u00A0/g, ' ')
+            .replace(/LINK_PLACEHOLDER_START(.*?)LINK_PLACEHOLDER_END/g, '[$1]') // Platzhalter für Links wiederherstellen
+            .replace(/\(CITE_PLACEHOLDER_(.*?)_(.*?)\)/g, '($2)') // Platzhalter für Zitate wiederherstellen
             .replace(/ {2,}/g, ' ')
             .replace(/\n\s*\n/g, '\n\n')
             .trim();
