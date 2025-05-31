@@ -639,13 +639,13 @@ const publicationTextGenerator = (() => {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = htmlContent;
         
-        let preProcessedHtml = htmlContent.replace(/\/g, (match, p1RefKey) => {
+        let preProcessedHtml = htmlContent.replace(new RegExp("\\", "g"), (match, p1RefKey) => {
             const refShort = getReference(p1RefKey, commonData, 'citation');
             const escapedRef = typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(refShort) : refShort.replace(/([*_[\]()#+.!])/g, '\\$1');
             return `(CITE_PLACEHOLDER_${p1RefKey}_${escapedRef})`;
         });
         
-        preProcessedHtml = preProcessedHtml.replace(/<a href="#(.*?)">(.*?)<\/a>/g, (match, p1Id, p2LinkText) => {
+        preProcessedHtml = preProcessedHtml.replace(new RegExp("<a href=\"#(.*?)\">(.*?)<\\/a>", "g"), (match, p1Id, p2LinkText) => {
                 const elementConfig = PUBLICATION_CONFIG.publicationElements;
                 let referencedElementName = p2LinkText;
                 const bfMetricForTitle = options?.bruteForceMetric || commonData?.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
@@ -666,10 +666,10 @@ const publicationTextGenerator = (() => {
 
                 if (elementDetails) {
                     referencedElementName = (lang === 'de' ? elementDetails.titleDe : elementDetails.titleEn) || p2LinkText;
-                    referencedElementName = referencedElementName.replace(/{BF_METRIC}/g, bfMetricForTitle)
-                                                             .replace(/\[N_GESAMT\]/g, String(commonData?.nGesamt || 'N/A'))
-                                                             .replace(/\[N_DIREKT_OP\]/g, String(commonData?.nDirektOP || 'N/A'))
-                                                             .replace(/\[N_NRCT\]/g, String(commonData?.nNRCT || 'N/A'));
+                    referencedElementName = referencedElementName.replace(new RegExp("{BF_METRIC}", "g"), bfMetricForTitle)
+                                                             .replace(new RegExp("\\[N_GESAMT\\]", "g"), String(commonData?.nGesamt || 'N/A'))
+                                                             .replace(new RegExp("\\[N_DIREKT_OP\\]", "g"), String(commonData?.nDirektOP || 'N/A'))
+                                                             .replace(new RegExp("\\[N_NRCT\\]", "g"), String(commonData?.nNRCT || 'N/A'));
                 }
                 const escapedElementName = typeof ui_helpers !== 'undefined' && ui_helpers.escapeMarkdown ? ui_helpers.escapeMarkdown(referencedElementName) : referencedElementName.replace(/([*_[\]()#+.!])/g, '\\$1');
                 return `LINK_PLACEHOLDER_START${escapedElementName}LINK_PLACEHOLDER_END`;
