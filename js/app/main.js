@@ -58,7 +58,7 @@ const mainAppInterface = (() => {
         ui_helpers.updateExportButtonStates(_activeTabId, bruteForceManager.hasResults(_globalData.currentKollektiv), _globalData.filteredData.length > 0);
 
         const firstAppStart = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START);
-        if (firstAppStart === null || firstAppStart !== APP_CONFIG.APP_VERSION) { // Zeige bei erster Nutzung oder neuer Version
+        if (firstAppStart === null || firstAppStart !== APP_CONFIG.APP_VERSION) {
             ui_helpers.showKurzanleitung();
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, APP_CONFIG.APP_VERSION);
         }
@@ -70,11 +70,12 @@ const mainAppInterface = (() => {
                  tab.show();
             } catch (e) {
                  console.error("Fehler beim Initialisieren des Bootstrap Tabs:", e);
-                 initialTabElement.classList.add('active'); // Fallback
-                 document.getElementById(`${_activeTabId}-pane`)?.classList.add('show', 'active');
+                 initialTabElement.classList.add('active');
+                 const initialTabPane = document.getElementById(`${_activeTabId}-pane`);
+                 if(initialTabPane) initialTabPane.classList.add('show', 'active');
             }
         }
-        _handleTabChange(_activeTabId, true); // Render initial tab
+        _handleTabChange(_activeTabId, true);
     }
 
     function _initializeEventHandlers() {
@@ -83,12 +84,17 @@ const mainAppInterface = (() => {
         statistikEventHandlers.initialize(mainAppInterface);
         praesentationEventHandlers.initialize(mainAppInterface);
         publikationEventHandlers.initialize(mainAppInterface);
+        dataEventHandlers.initialize(mainAppInterface);
+
 
         document.querySelectorAll('.nav-tabs .nav-link').forEach(tab => {
             tab.addEventListener('show.bs.tab', event => {
-                _activeTabId = event.target.getAttribute('href').substring(1).replace('-pane', '');
-                state.setActiveTabId(_activeTabId);
-                _handleTabChange(_activeTabId);
+                const newTabId = event.target.getAttribute('href').substring(1).replace('-pane', '');
+                if (_activeTabId !== newTabId) { // Nur ausführen, wenn der Tab tatsächlich wechselt
+                    _activeTabId = newTabId;
+                    state.setActiveTabId(_activeTabId);
+                    _handleTabChange(_activeTabId);
+                }
             });
         });
 
@@ -108,16 +114,19 @@ const mainAppInterface = (() => {
     function _handleTabChange(newTabId, isInitialLoad = false) {
         if (_isLoading && !isInitialLoad) {
             console.warn("Tab-Wechsel ignoriert, da die Anwendung bereits lädt.");
-            // Verhindere, dass der Tab tatsächlich gewechselt wird, wenn Bootstrap das erlaubt
-            const previousTabElement = document.querySelector(`.nav-tabs .nav-link[href="#${state.getPreviousTabId()}-pane"]`);
+            const previousTabId = state.getPreviousTabId() || APP_CONFIG.DEFAULT_SETTINGS.ACTIVE_TAB_ID || 'daten-tab';
+            const previousTabElement = document.querySelector(`.nav-tabs .nav-link[href="#${previousTabId}-pane"]`);
             if (previousTabElement) {
-                 try { new bootstrap.Tab(previousTabElement).show(); } catch(e){}
+                 try {
+                    const tabInstance = bootstrap.Tab.getInstance(previousTabElement) || new bootstrap.Tab(previousTabElement);
+                    tabInstance.show();
+                 } catch(e){ console.error("Fehler beim Zurücksetzen des Tabs:", e);}
             }
             return;
         }
         _showLoadingOverlay(`Lade Tab: ${newTabId.replace('-tab','').replace(/^\w/, c => c.toUpperCase())}...`);
         _activeTabId = newTabId;
-        state.setActiveTabId(newTabId);
+        // state.setActiveTabId(newTabId); // Wird bereits im 'show.bs.tab' event handler gesetzt für manuelle Klicks
 
         const stateSnapshot = {
             rawData: _globalData.rawData,
@@ -126,7 +135,7 @@ const mainAppInterface = (() => {
             appliedT2Logic: t2CriteriaManager.getAppliedLogic(),
             datenSortState: state.getCurrentDatenSortState(),
             bruteForceState: bruteForceManager.getState(),
-            bruteForceResults: bruteForceManager.getAllResults(), // Pass all results for all kollektive
+            bruteForceResults: bruteForceManager.getAllResults(),
             statsLayout: state.getCurrentStatsLayout(),
             statsKollektiv1: state.getCurrentStatsKollektiv1(),
             statsKollektiv2: state.getCurrentStatsKollektiv2(),
@@ -146,17 +155,16 @@ const mainAppInterface = (() => {
         _globalData.filteredData = dataProcessor.filterDataByKollektiv(_globalData.processedData, newKollektiv);
 
         ui_helpers.updateKollektivButtonsUI(newKollektiv);
-        if(targetButtonId) ui_helpers.highlightElement(targetButtonId); // Highlight the clicked button
+        if(targetButtonId) ui_helpers.highlightElement(targetButtonId);
 
         ui_helpers.updateHeaderStatsUI(dataProcessor.calculateHeaderStats(_globalData.filteredData, newKollektiv));
         
-        // Mark data as stale for tabs that depend on kollektiv-specific statistics
         if (typeof auswertungTabLogic !== 'undefined') auswertungTabLogic.setDataStale();
         if (typeof statistikTabLogic !== 'undefined') statistikTabLogic.setDataStale();
         if (typeof praesentationTabLogic !== 'undefined') praesentationTabLogic.setDataStale();
-        if (typeof publikationTabLogic !== 'undefined') publikationTabLogic.setDataStale(); // Publikationsdaten hängen stark vom Kollektiv ab
+        if (typeof publikationTabLogic !== 'undefined') publikationTabLogic.setDataStale();
         
-        refreshCurrentTab(true); // Force data refresh in the current tab
+        refreshCurrentTab(true);
         _hideLoadingOverlay();
     }
 
@@ -178,8 +186,7 @@ const mainAppInterface = (() => {
         ui_helpers.updateBruteForceUI('result', payload, true, state.getCurrentKollektiv());
         ui_helpers.updateExportButtonStates(_activeTabId, true, _globalData.filteredData.length > 0);
         if (_activeTabId === 'auswertung-tab' || _activeTabId === 'publikation-tab') {
-             // Publikation Tab needs all BF results, Auswertung Tab needs its specific one
-             publikationTabLogic.setDataStale();
+             if (typeof publikationTabLogic !== 'undefined') publikationTabLogic.setDataStale();
              if(_activeTabId === 'publikation-tab') refreshCurrentTab(true);
              else if(_activeTabId === 'auswertung-tab' && payload.kollektiv === state.getCurrentKollektiv()) refreshCurrentTab(true);
         }
@@ -198,10 +205,10 @@ const mainAppInterface = (() => {
 
     function initializeApplication() {
         if (_isInitialized) { console.warn("Anwendung bereits initialisiert."); return; }
-        _showLoadingOverlay();
+        _showLoadingOverlay('Initialisiere Anwendung...'); // Korrekter interner Aufruf
         document.addEventListener('DOMContentLoaded', () => {
             _initializeGlobalState();
-            _initializeData(); // Muss nach State sein, da currentKollektiv aus State kommt
+            _initializeData();
             
             t2CriteriaManager.initialize(state.getAppliedT2Criteria(), state.getAppliedT2Logic());
             studyT2CriteriaManager.initialize();
@@ -217,7 +224,7 @@ const mainAppInterface = (() => {
             _initializeUI();
             _initializeEventHandlers();
             _isInitialized = true;
-            _hideLoadingOverlay();
+            _hideLoadingOverlay(); // Korrekter interner Aufruf
             
             console.log(`${APP_CONFIG.APP_NAME} v${APP_CONFIG.APP_VERSION} initialisiert. Aktives Kollektiv: ${getKollektivDisplayName(_globalData.currentKollektiv)}, Aktiver Tab: ${_activeTabId}`);
         });
@@ -226,28 +233,25 @@ const mainAppInterface = (() => {
     function refreshCurrentTab(forceDataRefresh = false, newSortState = null) {
         if (!_activeTabId || _isLoading) {
             if(_isLoading) console.warn("RefreshCurrentTab ignoriert, da Anwendung bereits lädt.");
+            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.hideLoadingOverlay === 'function' && !_isLoading) {
+                 _hideLoadingOverlay(); // Verstecke Overlay, falls es festhängt und nicht geladen wird.
+            }
             return;
         }
-        _showLoadingOverlay(`Aktualisiere Tab: ${_activeTabId.replace('-tab','').replace(/^\w/, c => c.toUpperCase())}...`);
+        _showLoadingOverlay(`Aktualisiere Tab: ${_activeTabId.replace('-tab','').replace(/^\w/, c => c.toUpperCase())}...`); // Korrekter interner Aufruf
         
         if (forceDataRefresh) {
-            // Daten, die von Kriterien und Kollektiv abhängen, neu berechnen/filtern
-            _globalData.currentKollektiv = state.getCurrentKollektiv(); // Sicherstellen, dass wir den aktuellen Kollektivstand haben
-            _globalData.processedData = dataProcessor.processRawData(_globalData.rawData); // Neu verarbeiten, falls sich z.B. AS Kriterien ändern könnten (hier nicht, aber als Muster)
+            _globalData.currentKollektiv = state.getCurrentKollektiv();
+            _globalData.processedData = dataProcessor.processRawData(_globalData.rawData);
             _globalData.filteredData = dataProcessor.filterDataByKollektiv(_globalData.processedData, _globalData.currentKollektiv);
             
-            // T2-Auswertung der gefilterten Daten, falls sich Kriterien geändert haben könnten
-            // Dies wird normalerweise vom Auswertungstab-EventHandler ausgelöst.
-            // Hier stellen wir sicher, dass die `filteredData` für den ViewRenderer die aktuellen T2-Bewertungen haben.
             const currentAppliedT2Criteria = t2CriteriaManager.getAppliedCriteria();
             const currentAppliedT2Logic = t2CriteriaManager.getAppliedLogic();
              _globalData.filteredData = t2CriteriaManager.evaluateDataset(cloneDeep(_globalData.filteredData), currentAppliedT2Criteria, currentAppliedT2Logic);
 
-
             ui_helpers.updateHeaderStatsUI(dataProcessor.calculateHeaderStats(_globalData.filteredData, _globalData.currentKollektiv));
             ui_helpers.updateExportButtonStates(_activeTabId, bruteForceManager.hasResults(_globalData.currentKollektiv), _globalData.filteredData.length > 0);
              
-             // Markiere datenintensive Tabs als 'stale', damit ihre spezifische Logik die Daten neu holt
              if (typeof auswertungTabLogic !== 'undefined') auswertungTabLogic.setDataStale();
              if (typeof statistikTabLogic !== 'undefined') statistikTabLogic.setDataStale();
              if (typeof praesentationTabLogic !== 'undefined') praesentationTabLogic.setDataStale();
@@ -273,18 +277,18 @@ const mainAppInterface = (() => {
             praesentationStudyId: state.getCurrentPresentationStudyId(),
             forceTabRefresh: forceDataRefresh || state.getForceTabRefresh()
         };
-        viewRenderer.renderTabContent(_activeTabId, _globalData.filteredData, stateSnapshot);
+        viewRenderer.renderTabContent(_activeTabId, _globalData.filteredData, stateSnapshot); // _hideLoadingOverlay wird in renderTabContent's finally-Block aufgerufen
     }
 
 
     return Object.freeze({
         initializeApplication,
         refreshCurrentTab,
-        showLoadingOverlay,
-        hideLoadingOverlay,
+        showLoadingOverlay: _showLoadingOverlay, // Exportiere die internen Funktionen für den Fall, dass sie von außerhalb benötigt werden (sollte nicht der Fall sein)
+        hideLoadingOverlay: _hideLoadingOverlay, // oder besser: stelle sicher, dass alle Aufrufe über das Interface laufen. Hier korrigiert auf die internen.
         getGlobalData: () => _globalData,
         getActiveTabId: () => _activeTabId,
-        notifyDataProcessingChange: () => { // Wird von t2CriteriaManager/auswertungEventHandlers aufgerufen
+        notifyDataProcessingChange: () => {
             _globalData.processedData = dataProcessor.processRawData(_globalData.rawData);
             _globalData.filteredData = dataProcessor.filterDataByKollektiv(_globalData.processedData, state.getCurrentKollektiv());
             _globalData.filteredData = t2CriteriaManager.evaluateDataset(cloneDeep(_globalData.filteredData), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
