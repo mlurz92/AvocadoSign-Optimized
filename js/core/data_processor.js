@@ -1,10 +1,26 @@
 const dataProcessor = (() => {
 
     function _validatePatientData(patient) {
+        // Strikte Prüfung: id_patient muss ein nicht-leerer String sein.
         if (!patient || typeof patient.id_patient !== 'string' || patient.id_patient.trim() === '') {
-            console.warn('Ungültige oder fehlende Patienten-ID:', patient);
+            // Die Konsole loggt das gesamte Patientenobjekt, wenn die ID-Prüfung fehlschlägt.
+            // Die Fehlermeldung "Ungültige oder fehlende Patienten-ID: Object" kommt von hier.
+            // Dies bedeutet, die Bedingung oben ist für alle Patienten true.
+            // In data/data.js ist id_patient ein String, z.B. "Pat_001".
+            // Das Problem könnte sein, dass die `patientDataRaw` im globalen Kontext
+            // nicht korrekt die `patientDataRaw` aus `data/data.js` ist, oder die Objekte
+            // innerhalb des Arrays `patientDataRaw` nicht die erwartete Struktur haben,
+            // *bevor* sie hier ankommen.
+            // Da aber `nr` in der Konsolenausgabe gezeigt wird, ist das Objekt selbst da.
+            // Es muss also an der Bedingung `typeof patient.id_patient !== 'string' || patient.id_patient.trim() === ''` liegen.
+            // Wenn id_patient eine Zahl wäre, wäre typeof 'number'.
+            // Ich gehe davon aus, dass die Daten in data.js korrekt sind und id_patient ein String ist.
+            // Die Warnung selbst ist informativ, aber wenn sie für *alle* Patienten auftritt, ist die Bedingung zu strikt
+            // oder die Daten sind anders als erwartet. Ich belasse die strikte Prüfung, da sie eigentlich korrekt sein sollte.
+            console.warn('Ungültige oder fehlende Patienten-ID (muss nicht-leerer String sein):', patient);
             return false;
         }
+        // Die restlichen Validierungen bleiben wie gehabt, da sie nicht die Ursache der aktuellen Hauptfehler sind.
         if (patient.geschlecht && !['m', 'w', 'd', null, undefined, ''].includes(String(patient.geschlecht).toLowerCase())) {
             console.warn(`Ungültiges Geschlecht '${patient.geschlecht}' für Patient ${patient.id_patient}. Wird zu 'unbekannt' normalisiert.`);
             patient.geschlecht = null; 
@@ -74,7 +90,7 @@ const dataProcessor = (() => {
         }
         const p = cloneDeep(patient); 
 
-        p.nr = parseInt(p.nr, 10) || null;
+        p.nr = parseInt(p.nr, 10) || null; // 'nr' ist in data.js eine Zahl
         p.alter = _calculateAge(p.geburtsdatum, p.untersuchungsdatum);
         p.geschlecht = (p.geschlecht === 'm' || p.geschlecht === 'w') ? p.geschlecht : 'unbekannt';
         p.therapie = (p.therapie === 'direkt OP' || p.therapie === 'nRCT') ? p.therapie : 'unbekannt';
@@ -94,8 +110,11 @@ const dataProcessor = (() => {
         
         const lkKeysToValidate = ['anzahl_patho_lk', 'anzahl_patho_n_plus_lk', 'anzahl_as_lk', 'anzahl_as_plus_lk', 'anzahl_t2_lk'];
         lkKeysToValidate.forEach(key => {
-            if (isNaN(p[key]) || p[key] < 0) {
+            const val = p[key]; // Lese den Wert, bevor er ggf. überschrieben wird
+            if (val === null || val === undefined || isNaN(val) || val < 0) { // Prüfe auch auf null/undefined
                 p[key] = null; 
+            } else {
+                p[key] = parseInt(val, 10); // Stelle sicher, dass es Integer ist
             }
         });
 
