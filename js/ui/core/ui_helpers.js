@@ -3,7 +3,7 @@ const ui_helpers = (() => {
     let globalTippyInstances = [];
     let collapseEventListenersAttached = new Set();
     let kurzanleitungModalInstance = null;
-    let initialTabRenderFixed = false; // Flag, um sicherzustellen, dass der Fix nur einmal angewendet wird
+    let initialTabRenderFixed = false;
 
     function escapeMarkdown(text) {
         if (typeof text !== 'string' || text === null) return text === null ? '' : String(text);
@@ -32,7 +32,6 @@ const ui_helpers = (() => {
           toastElement.setAttribute('data-bs-delay', String(duration));
           toastElement.setAttribute('data-bs-autohide', 'true');
 
-
           toastElement.innerHTML = `<div class="d-flex"><div class="toast-body"><i class="fas ${iconClass} fa-fw me-2"></i> ${escapeMarkdown(message)}</div><button type="button" class="btn-close me-2 m-auto ${textClass === 'text-white' ? 'btn-close-white' : ''}" data-bs-dismiss="toast" aria-label="Schließen"></button></div>`;
           toastContainer.appendChild(toastElement);
 
@@ -50,7 +49,10 @@ const ui_helpers = (() => {
         const elementSet = new Set(elementsInScope);
 
         globalTippyInstances = globalTippyInstances.filter(instance => {
-            if (!instance || !instance.reference || !document.body.contains(instance.reference)) { try { instance?.destroy(); } catch(e){} return false; }
+            if (!instance || !instance.reference || !document.body.contains(instance.reference)) {
+                try { instance?.destroy(); } catch(e){}
+                return false;
+            }
             if (elementSet.has(instance.reference) && instance.state.isEnabled) {
                  try { instance.destroy(); } catch (e) {}
                  return false;
@@ -95,7 +97,7 @@ const ui_helpers = (() => {
         const element = document.getElementById(elementId);
         if (element) {
             element.classList.remove(highlightClass);
-            void element.offsetWidth; 
+            void element.offsetWidth;
             element.classList.add(highlightClass);
             setTimeout(() => {
                 if (element) element.classList.remove(highlightClass);
@@ -268,7 +270,7 @@ const ui_helpers = (() => {
                 break;
             case 'ruler-horizontal':
                 svgContent = `<path d="M${sw/2} ${c} H${s-sw/2} M${c} ${sw/2} V${s-sw/2} M${s*0.2} ${c-s*0.15} L${s*0.2} ${c+s*0.15} M${s*0.4} ${c-s*0.1} L${s*0.4} ${c+s*0.1} M${s*0.6} ${c-s*0.1} L${s*0.6} ${c+s*0.1} M${s*0.8} ${c-s*0.15} L${s*0.8} ${c+s*0.15}" stroke="${iconColor}" stroke-width="${sw/2}" stroke-linecap="round"/>`;
-                type = 'size';
+                type = 'size'; // Korrekter Typ für Klassen
                 break;
             default:
                 svgContent = unknownIconSVG;
@@ -282,7 +284,7 @@ const ui_helpers = (() => {
         const logicLabel = document.getElementById('t2-logic-label');
         if (logicSwitch && logicLabel) {
             logicSwitch.checked = currentLogic === 'ODER';
-            logicLabel.textContent = currentLogic;
+            logicLabel.textContent = UI_TEXTS.t2LogicDisplayNames[currentLogic] || currentLogic;
         }
         if (!currentCriteria) return;
 
@@ -361,7 +363,7 @@ const ui_helpers = (() => {
             toggleBtn.classList.toggle('active', isVergleich);
             toggleBtn.setAttribute('aria-pressed', String(isVergleich));
             updateElementHTML(toggleBtn.id, isVergleich ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv');
-            if(toggleBtn._tippy) toggleBtn._tippy.setContent(TOOLTIP_CONTENT.statistikToggleVergleich?.description || 'Layout umschalten');
+            if(toggleBtn._tippy) toggleBtn._tippy.setContent(TOOLTIP_CONTENT.statistikLayout?.description || 'Layout umschalten');
             else initializeTooltips(toggleBtn.parentElement || toggleBtn);
         }
         if (container1) container1.classList.toggle('d-none', !isVergleich);
@@ -387,7 +389,7 @@ const ui_helpers = (() => {
         }
     }
 
-    function updateBruteForceUI(state, data = {}, workerAvailable = true, currentKollektiv = null) {
+    function updateBruteForceUI(stateValue, data = {}, workerAvailable = true, currentKollektiv = null) {
         const elements = {
             startBtn: document.getElementById('btn-start-brute-force'),
             cancelBtn: document.getElementById('btn-cancel-brute-force'),
@@ -418,11 +420,11 @@ const ui_helpers = (() => {
 
         const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
         const getKollektivNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
-        const isRunning = state === 'start' || state === 'started' || state === 'progress';
-        const hasResults = state === 'result' && data.results && data.results.length > 0 && data.bestResult && data.bestResult.criteria;
+        const isRunning = stateValue === 'start' || stateValue === 'started' || stateValue === 'progress';
+        const hasResults = stateValue === 'result' && data.results && data.results.length > 0 && data.bestResult && data.bestResult.criteria;
 
         if (elements.progressContainer) toggleElementClass(elements.progressContainer.id, 'd-none', !isRunning);
-        if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', state !== 'result' || !hasResults);
+        if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', stateValue !== 'result' || !hasResults);
         if (elements.cancelBtn) toggleElementClass(elements.cancelBtn.id, 'd-none', !isRunning);
         if (elements.startBtn) setElementDisabled(elements.startBtn.id, !workerAvailable || isRunning);
         if (elements.modalExportBtn) setElementDisabled(elements.modalExportBtn.id, !hasResults);
@@ -435,27 +437,20 @@ const ui_helpers = (() => {
         if (elements.bfInfoKollektiv) {
             updateElementText(elements.bfInfoKollektiv.id, getKollektivNameFunc(kollektivToDisplayForInfo));
         }
-
-        const addOrUpdateTooltip = (el, content) => {
-            if (el) {
-                const currentTippy = el._tippy;
-                if (content) {
-                    el.setAttribute('data-tippy-content', content);
-                    if (currentTippy && currentTippy.state.isEnabled) {
-                        currentTippy.setContent(content);
-                    } else if (!currentTippy) {
-                        initializeTooltips(el.parentElement || el);
-                    }
-                } else if (currentTippy && currentTippy.state.isEnabled) {
-                    currentTippy.hide();
-                    currentTippy.disable();
-                }
-            }
-        };
         
         const bfInfoElement = elements.bfInfoKollektiv?.closest('#brute-force-info');
+        const addOrUpdateTooltip = (el, contentKey, replacements = {}) => {
+            if(el) {
+                let content = TOOLTIP_CONTENT[contentKey]?.description || '';
+                Object.keys(replacements).forEach(placeholder => {
+                    content = content.replace(`[${placeholder}]`, `<strong>${replacements[placeholder]}</strong>`);
+                });
+                el.setAttribute('data-tippy-content', content);
+                if(el._tippy) { el._tippy.setContent(content); } else { initializeTooltips(el.parentElement || el); }
+            }
+        };
 
-        switch (state) {
+        switch (stateValue) {
             case 'idle': case 'cancelled': case 'error':
                 if (elements.progressBar) { elements.progressBar.style.width = '0%'; elements.progressBar.setAttribute('aria-valuenow', '0'); }
                 if (elements.progressPercent) updateElementText(elements.progressPercent.id, '0%');
@@ -464,11 +459,11 @@ const ui_helpers = (() => {
                 if (elements.bestMetric) updateElementText(elements.bestMetric.id, '--');
                 if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, 'Beste Kriterien: --');
                 let statusMsg = '';
-                if (state === 'idle') statusMsg = workerAvailable ? 'Bereit.' : 'Worker nicht verfügbar.';
-                else if (state === 'cancelled') statusMsg = 'Abgebrochen.';
-                else if (state === 'error') statusMsg = `Fehler: ${data?.message || 'Unbekannt.'}`;
+                if (stateValue === 'idle') statusMsg = workerAvailable ? 'Bereit.' : 'Worker nicht verfügbar.';
+                else if (stateValue === 'cancelled') statusMsg = 'Abgebrochen.';
+                else if (stateValue === 'error') statusMsg = `Fehler: ${data?.message || 'Unbekannt.'}`;
                 if (elements.statusText) updateElementText(elements.statusText.id, statusMsg);
-                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Aktueller Status: ${statusMsg}`);
+                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, 'bruteForceInfo', { KOLLEKTIV_NAME: getKollektivNameFunc(kollektivToDisplayForInfo), STATUS_TEXT: statusMsg });
                 break;
             case 'start':
                 if (elements.progressBar) { elements.progressBar.style.width = '0%'; elements.progressBar.setAttribute('aria-valuenow', '0'); }
@@ -479,14 +474,14 @@ const ui_helpers = (() => {
                 if (elements.bestMetric) updateElementText(elements.bestMetric.id, '--');
                 if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, 'Beste Kriterien: --');
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Initialisiere...');
-                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: Initialisiere...`);
+                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, 'bruteForceInfo', { KOLLEKTIV_NAME: getKollektivNameFunc(kollektivToDisplayForInfo), STATUS_TEXT: 'Initialisiere...' });
                 break;
             case 'started':
                 const totalComb = formatNumber(data?.totalCombinations || 0, 0, 'N/A');
                 if (elements.totalCount) updateElementText(elements.totalCount.id, totalComb);
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Teste...');
-                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: Teste ${totalComb} Kombinationen...`);
-                if (elements.progressContainer) addOrUpdateTooltip(elements.progressContainer, (TOOLTIP_CONTENT.bruteForceProgress?.description || '').replace('[TOTAL]', totalComb));
+                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, 'bruteForceInfo', { KOLLEKTIV_NAME: getKollektivNameFunc(kollektivToDisplayForInfo), STATUS_TEXT: `Teste ${totalComb} Kombinationen...` });
+                if (elements.progressContainer) addOrUpdateTooltip(elements.progressContainer, 'bruteForceProgress', { TOTAL: totalComb });
                 break;
             case 'progress':
                 const percent = (data?.total && data.total > 0) ? Math.round((data.tested / data.total) * 100) : 0;
@@ -498,7 +493,7 @@ const ui_helpers = (() => {
                 if (elements.testedCount) updateElementText(elements.testedCount.id, testedNum);
                 if (elements.totalCount) updateElementText(elements.totalCount.id, totalNumProg);
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Läuft...');
-                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: ${percentStr} (${testedNum}/${totalNumProg})`);
+                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, 'bruteForceInfo', { KOLLEKTIV_NAME: getKollektivNameFunc(kollektivToDisplayForInfo), STATUS_TEXT: `${percentStr} (${testedNum}/${totalNumProg})` });
                 if (data?.currentBest && data.currentBest.criteria && isFinite(data.currentBest.metricValue)) {
                     const bestValStr = formatNumber(data.currentBest.metricValue, 4);
                     const bestCritStr = formatCriteriaFunc(data.currentBest.criteria, data.currentBest.logic);
@@ -531,12 +526,12 @@ const ui_helpers = (() => {
                     if (elements.resultKollektivNplus) updateElementText(elements.resultKollektivNplus.id, formatNumber(data.nPlus,0,'--'));
                     if (elements.resultKollektivNminus) updateElementText(elements.resultKollektivNminus.id, formatNumber(data.nMinus,0,'--'));
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig.');
-                     if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${resultKollektivName}</strong>`) + ` Status: Fertig.`);
-                     if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, (TOOLTIP_CONTENT.bruteForceResult.description || '').replace('[N_GESAMT]', formatNumber(data.nGesamt,0,'?')).replace('[N_PLUS]', formatNumber(data.nPlus,0,'?')).replace('[N_MINUS]', formatNumber(data.nMinus,0,'?')) );
+                     if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, 'bruteForceInfo', { KOLLEKTIV_NAME: resultKollektivName, STATUS_TEXT: 'Fertig.'});
+                     if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, 'bruteForceResult', { N_GESAMT: formatNumber(data.nGesamt,0,'?'), N_PLUS: formatNumber(data.nPlus,0,'?'), N_MINUS: formatNumber(data.nMinus,0,'?') });
                 } else {
                     if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true);
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig (kein valides Ergebnis).');
-                     if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${resultKollektivName}</strong>`) + ` Status: Fertig (kein Ergebnis).`);
+                     if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, 'bruteForceInfo', { KOLLEKTIV_NAME: resultKollektivName, STATUS_TEXT: 'Fertig (kein Ergebnis).'});
                 }
                 break;
         }
@@ -554,6 +549,8 @@ const ui_helpers = (() => {
         trySetDisabled('export-auswertung-md', dataDisabled);
         trySetDisabled('export-filtered-data-csv', dataDisabled);
         trySetDisabled('export-comprehensive-report-html', dataDisabled && bfDisabled);
+        trySetDisabled('export-publication-gesamt-md', dataDisabled);
+
         trySetDisabled('export-charts-png', dataDisabled);
         trySetDisabled('export-charts-svg', dataDisabled);
 
@@ -563,6 +560,7 @@ const ui_helpers = (() => {
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
 
+        // Deaktiviert, da keine XLSX-Generierung implementiert ist.
         trySetDisabled('export-statistik-xlsx', true);
         trySetDisabled('export-daten-xlsx', true);
         trySetDisabled('export-auswertung-xlsx', true);
@@ -616,11 +614,11 @@ const ui_helpers = (() => {
 
     function getMetricInterpretationHTML(key, metricData, methode = '', kollektivName = '') {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
-        const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: null };
+        const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: null, n_trials: null, matrix_components: null };
         const na = '--';
-        const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
+        const digits = (key === 'f1' || key === 'auc') ? APP_CONFIG.STATISTICAL_CONSTANTS.P_VALUE_PRECISION_TEXT : 1; // Mehr Präzision für F1/AUC
         const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na, true);
+        const valueStr = formatNumber(data?.value, digits, na, true); // useStandardFormat = true für konsistenten Punkt
         const lowerStr = formatNumber(data?.ci?.lower, digits, na, true);
         const upperStr = formatNumber(data?.ci?.upper, digits, na, true);
         const ciMethodStr = data?.method || 'N/A';
@@ -629,14 +627,15 @@ const ui_helpers = (() => {
 
         let ciWarning = '';
         const ciWarningThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 10;
-        if (data?.n_trials !== undefined && data?.n_trials < ciWarningThreshold && (key === 'sens' || key === 'spez' || key === 'ppv' || key === 'npv' || key === 'acc')) {
-            ciWarning = `<hr><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahl (Nenner=${data.n_trials}).</i>`;
+        if (data?.n_trials !== undefined && data?.n_trials !== null && data.n_trials < ciWarningThreshold && (key === 'sens' || key === 'spez' || key === 'ppv' || key === 'npv' || key === 'acc')) {
+            ciWarning = `<hr class='my-1'><small class='text-muted'><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahl im Nenner (N=${data.n_trials}).</i></small>`;
         } else if (data?.matrix_components && (key === 'balAcc' || key === 'f1' || key === 'auc')) {
             const mc = data.matrix_components;
-            if (mc.total < ciWarningThreshold * 2 || mc.rp < ciWarningThreshold/2 || mc.fp < ciWarningThreshold/2 || mc.fn < ciWarningThreshold/2 || mc.rn < ciWarningThreshold/2 ) {
-                 ciWarning = `<hr><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahlen in der Konfusionsmatrix (Gesamt=${mc.total}).</i>`;
+            if (mc && (mc.total < ciWarningThreshold * 2 || (mc.rp + mc.fn < ciWarningThreshold && key !== 'f1') || (mc.fp + mc.rn < ciWarningThreshold && key !== 'f1'))) {
+                 ciWarning = `<hr class='my-1'><small class='text-muted'><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahlen in der Konfusionsmatrix (Gesamt=${mc.total}).</i></small>`;
             }
         }
+
 
         let interpretation = interpretationTemplate
             .replace(/\[METHODE\]/g, `<strong>${methode}</strong>`)
@@ -652,7 +651,7 @@ const ui_helpers = (() => {
              interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
         }
         interpretation = interpretation.replace(/, p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
-        interpretation = interpretation.replace(/<hr.*?>.*$/, ''); 
+        interpretation = interpretation.replace(/<hr.*?>.*$/, '');
         interpretation += ciWarning;
         return interpretation;
     }
@@ -667,16 +666,20 @@ const ui_helpers = (() => {
          if (!testData) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
         const pValue = testData?.pValue;
-        const pStr = (pValue !== null && !isNaN(pValue)) ? (pValue < 0.001 ? '&lt;0.001' : formatNumber(pValue, 3, na)) : na;
+        const pStr = getPValueText(pValue, state.getCurrentPublikationLang()); // Nutzt die globale Sprache für die Formatierung
         const sigSymbol = getStatisticalSignificanceSymbol(pValue);
         const sigText = getStatisticalSignificanceText(pValue);
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
+        const alphaLevelText = formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, 2).replace('.', ',');
+
+
          return interpretationTemplate
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
             .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivNameToUse}</strong>`)
             .replace(/\[T2_SHORT_NAME\]/g, `<strong>${t2ShortName}</strong>`)
+            .replace(/\[ALPHA_LEVEL\]/g, alphaLevelText)
             .replace(/<hr.*?>.*$/, '');
     }
 
@@ -684,28 +687,27 @@ const ui_helpers = (() => {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
         if (!assocObj) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
-        let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '', pVal = NaN, ciWarning = '';
+        let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '', ciWarning = '';
         const assozPValue = assocObj?.pValue;
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
         const ciWarningThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 10;
+        const currentLang = state.getCurrentPublikationLang();
 
         if(assocObj.matrix && (key === 'or' || key === 'rd' || key === 'phi')) {
             const m = assocObj.matrix;
             const totalInMatrix = m.rp + m.fp + m.fn + m.rn;
-            if (totalInMatrix < ciWarningThreshold * 2 || m.rp < ciWarningThreshold/2 || m.fp < ciWarningThreshold/2 || m.fn < ciWarningThreshold/2 || m.rn < ciWarningThreshold/2) {
-                ciWarning = `<hr><i>Hinweis: Konfidenzintervall oder Maß ggf. unsicher aufgrund kleiner Fallzahlen in der zugrundeliegenden 2x2 Tabelle (Gesamt=${totalInMatrix}).</i>`;
+            if (totalInMatrix < ciWarningThreshold * 2 || Math.min(m.rp, m.fp, m.fn, m.rn) < APP_CONFIG.STATISTICAL_CONSTANTS.FISHER_EXACT_THRESHOLD) {
+                ciWarning = `<hr class='my-1'><small class='text-muted'><i>Hinweis: Konfidenzintervall oder Maß ggf. unsicher aufgrund kleiner Fallzahlen in der zugrundeliegenden 2x2 Tabelle (Gesamt=${totalInMatrix}).</i></small>`;
             }
         }
-
 
         if (key === 'or') {
             valueStr = formatNumber(assocObj.or?.value, 2, na, true);
             lowerStr = formatNumber(assocObj.or?.ci?.lower, 2, na, true);
             upperStr = formatNumber(assocObj.or?.ci?.upper, 2, na, true);
             ciMethodStr = assocObj.or?.method || na;
-            pStr = (assozPValue !== null && !isNaN(assozPValue)) ? (assozPValue < 0.001 ? '&lt;0.001' : formatNumber(assozPValue, 3, na, true)) : na;
+            pStr = getPValueText(assozPValue, currentLang);
             sigSymbol = getStatisticalSignificanceSymbol(assozPValue);
-            sigText = getStatisticalSignificanceText(assozPValue);
         } else if (key === 'rd') {
             valueStr = formatNumber(assocObj.rd?.value !== null && !isNaN(assocObj.rd?.value) ? assocObj.rd.value * 100 : NaN, 1, na, true);
             lowerStr = formatNumber(assocObj.rd?.ci?.lower !== null && !isNaN(assocObj.rd?.ci?.lower) ? assocObj.rd.ci.lower * 100 : NaN, 1, na, true);
@@ -713,12 +715,14 @@ const ui_helpers = (() => {
             ciMethodStr = assocObj.rd?.method || na;
         } else if (key === 'phi') {
             valueStr = formatNumber(assocObj.phi?.value, 2, na, true);
+            lowerStr = formatNumber(assocObj.phi?.ci?.lower, 2, na, true);
+            upperStr = formatNumber(assocObj.phi?.ci?.upper, 2, na, true);
+            ciMethodStr = assocObj.phi?.ci ? (APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE || 'Bootstrap') : 'N/A';
             bewertungStr = getPhiBewertung(assocObj.phi?.value);
-        } else if (key === 'fisher' || key === 'mannwhitney' || key === 'pvalue' || key === 'size_mwu' || key === 'defaultP') {
-             pVal = assocObj?.pValue;
-             pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na, true)) : na;
-             sigSymbol = getStatisticalSignificanceSymbol(pVal);
-             sigText = getStatisticalSignificanceText(pVal);
+        } else if (['fisher', 'mannwhitney', 'pvalue', 'size_mwu', 'defaultP'].includes(key)) {
+             pStr = getPValueText(assozPValue, currentLang);
+             sigSymbol = getStatisticalSignificanceSymbol(assozPValue);
+             sigText = getStatisticalSignificanceText(assozPValue);
              const templateToUse = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || TOOLTIP_CONTENT.statMetrics.defaultP.interpretation;
              return templateToUse
                  .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
@@ -737,14 +741,14 @@ const ui_helpers = (() => {
             .replace(/\[UPPER\]/g, `<strong>${upperStr}${key === 'rd' && upperStr !== na ? '%' : ''}</strong>`)
             .replace(/\[METHOD_CI\]/g, `<em>${ciMethodStr}</em>`)
             .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivNameToUse}</strong>`)
-            .replace(/\[FAKTOR_TEXT\]/g, assocObj?.or?.value > 1 ? UI_TEXTS.statMetrics.orFaktorTexte.ERHOEHT : (assocObj?.or?.value < 1 ? UI_TEXTS.statMetrics.orFaktorTexte.VERRINGERT : UI_TEXTS.statMetrics.orFaktorTexte.UNVERAENDERT))
-            .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.HOEHER : (assocObj?.rd?.value < 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.NIEDRIGER : UI_TEXTS.statMetrics.rdRichtungTexte.GLEICH))
-            .replace(/\[STAERKE\]/g, `<strong>${bewertungStr}</strong>`)
+            .replace(/\[FAKTOR_TEXT\]/g, UI_TEXTS.statMetrics.orFaktorTexte[assocObj?.or?.value > 1 ? 'ERHOEHT' : (assocObj?.or?.value < 1 && assocObj?.or?.value > 0 ? 'VERRINGERT' : 'UNVERAENDERT')])
+            .replace(/\[HOEHER_NIEDRIGER\]/g, UI_TEXTS.statMetrics.rdRichtungTexte[assocObj?.rd?.value > 0 ? 'HOEHER' : (assocObj?.rd?.value < 0 ? 'NIEDRIGER' : 'GLEICH')])
+            .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`)
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/<hr.*?>.*$/, '');
 
-         if (key === 'or' || key === 'rd') {
+         if (key === 'or' || key === 'rd' || (key === 'phi' && assocObj.phi?.ci)) {
             if (lowerStr === na || upperStr === na || ciMethodStr === na || !assocObj?.[key]?.ci) {
                 interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
                 interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
@@ -761,41 +765,36 @@ const ui_helpers = (() => {
         const modalElement = document.getElementById('kurzanleitung-modal');
         
         if (!modalElement) {
-            const modalHTML = `
-                <div class="modal fade" id="kurzanleitung-modal" tabindex="-1" aria-labelledby="kurzanleitungModalLabel" aria-hidden="true">
-                  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-                    <div class="modal-content modal-glass">
-                      <div class="modal-header">
-                        <h5 class="modal-title" id="kurzanleitungModalLabel">${UI_TEXTS.kurzanleitung.title}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
-                      </div>
-                      <div class="modal-body">
-                        ${UI_TEXTS.kurzanleitung.content}
-                      </div>
-                      <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Schließen</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>`;
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
-            const newModalElement = document.getElementById('kurzanleitung-modal');
-            kurzanleitungModalInstance = new bootstrap.Modal(newModalElement);
-        } else if (!kurzanleitungModalInstance) {
-             kurzanleitungModalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+            console.error("Kurzanleitung Modal Element nicht gefunden.");
+            return;
+        }
+        
+        const kurzanleitungContent = (UI_TEXTS.kurzanleitung.content || "")
+            .replace(/\$\{APP_CONFIG\.APP_VERSION\}/g, APP_CONFIG.APP_VERSION)
+            .replace(/\$\{APP_CONFIG\.STATISTICAL_CONSTANTS\.SIGNIFICANCE_LEVEL\}/g, formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, 2).replace('.',','));
+
+        const modalTitleEl = modalElement.querySelector('.modal-title');
+        const modalBodyEl = modalElement.querySelector('.modal-body');
+
+        if(modalTitleEl) modalTitleEl.innerHTML = UI_TEXTS.kurzanleitung.title;
+        if(modalBodyEl) modalBodyEl.innerHTML = kurzanleitungContent;
+
+
+        if (!kurzanleitungModalInstance) {
+             kurzanleitungModalInstance = new bootstrap.Modal(modalElement);
         }
 
         if (kurzanleitungModalInstance && modalElement && !modalElement.classList.contains('show')) {
-            if (!initialTabRenderFixed) {
+            if (!initialTabRenderFixed && typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
                 modalElement.addEventListener('hidden.bs.modal', () => {
-                    if (!initialTabRenderFixed && typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
-                        const defaultInitialTabId = 'publikation-tab'; 
-                        if (state.getActiveTabId() === defaultInitialTabId) {
-                            console.log("Kurzanleitung Modal geschlossen, aktiver Tab ist Publikation. Erzwinge Refresh.");
+                    if (!initialTabRenderFixed) {
+                        const activeTab = typeof state !== 'undefined' ? state.getActiveTabId() : null;
+                        const defaultInitialTab = APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION ? 'publikation-tab' : 'daten-tab';
+                        if (activeTab === defaultInitialTab) {
                             mainAppInterface.refreshCurrentTab();
                         }
                     }
-                    initialTabRenderFixed = true; 
+                    initialTabRenderFixed = true;
                 }, { once: true });
             }
             kurzanleitungModalInstance.show();
