@@ -1,40 +1,35 @@
 const dataProcessor = (() => {
 
     function _validatePatientData(patient) {
-        // Strikte Prüfung: id_patient muss ein nicht-leerer String sein.
-        if (!patient || typeof patient.id_patient !== 'string' || patient.id_patient.trim() === '') {
-            // Die Konsole loggt das gesamte Patientenobjekt, wenn die ID-Prüfung fehlschlägt.
-            // Die Fehlermeldung "Ungültige oder fehlende Patienten-ID: Object" kommt von hier.
-            // Dies bedeutet, die Bedingung oben ist für alle Patienten true.
-            // In data/data.js ist id_patient ein String, z.B. "Pat_001".
-            // Das Problem könnte sein, dass die `patientDataRaw` im globalen Kontext
-            // nicht korrekt die `patientDataRaw` aus `data/data.js` ist, oder die Objekte
-            // innerhalb des Arrays `patientDataRaw` nicht die erwartete Struktur haben,
-            // *bevor* sie hier ankommen.
-            // Da aber `nr` in der Konsolenausgabe gezeigt wird, ist das Objekt selbst da.
-            // Es muss also an der Bedingung `typeof patient.id_patient !== 'string' || patient.id_patient.trim() === ''` liegen.
-            // Wenn id_patient eine Zahl wäre, wäre typeof 'number'.
-            // Ich gehe davon aus, dass die Daten in data.js korrekt sind und id_patient ein String ist.
-            // Die Warnung selbst ist informativ, aber wenn sie für *alle* Patienten auftritt, ist die Bedingung zu strikt
-            // oder die Daten sind anders als erwartet. Ich belasse die strikte Prüfung, da sie eigentlich korrekt sein sollte.
-            console.warn('Ungültige oder fehlende Patienten-ID (muss nicht-leerer String sein):', patient);
+        if (!patient) {
+            console.warn('Ungültiges Patientenobjekt empfangen:', patient);
             return false;
         }
-        // Die restlichen Validierungen bleiben wie gehabt, da sie nicht die Ursache der aktuellen Hauptfehler sind.
+
+        // Primäre Prüfung: id_patient muss ein nicht-leerer String sein, wie in der Anwendungsbeschreibung gefordert.
+        // Fallback: Wenn id_patient nicht vorhanden/valide ist, prüfe ob nr eine valide Zahl ist.
+        const hasValidIdPatient = typeof patient.id_patient === 'string' && patient.id_patient.trim() !== '';
+        const hasValidNr = typeof patient.nr === 'number' && !isNaN(patient.nr) && isFinite(patient.nr);
+
+        if (!hasValidIdPatient && !hasValidNr) {
+            console.warn('Ungültige oder fehlende Patienten-ID (id_patient als String oder nr als Zahl erwartet):', patient);
+            return false;
+        }
+
         if (patient.geschlecht && !['m', 'w', 'd', null, undefined, ''].includes(String(patient.geschlecht).toLowerCase())) {
-            console.warn(`Ungültiges Geschlecht '${patient.geschlecht}' für Patient ${patient.id_patient}. Wird zu 'unbekannt' normalisiert.`);
-            patient.geschlecht = null; 
+            console.warn(`Ungültiges Geschlecht '${patient.geschlecht}' für Patient ${patient.id_patient || patient.nr}. Wird zu 'unbekannt' normalisiert.`);
+            patient.geschlecht = null;
         }
         if (patient.therapie && !['direkt OP', 'nRCT', null, undefined, ''].includes(patient.therapie)) {
-            console.warn(`Ungültige Therapie '${patient.therapie}' für Patient ${patient.id_patient}. Wird zu 'unbekannt' normalisiert.`);
+            console.warn(`Ungültige Therapie '${patient.therapie}' für Patient ${patient.id_patient || patient.nr}. Wird zu 'unbekannt' normalisiert.`);
             patient.therapie = null;
         }
         if (patient.n && !['+', '-', null, undefined, ''].includes(patient.n)) {
-            console.warn(`Ungültiger N-Status '${patient.n}' für Patient ${patient.id_patient}. Wird zu 'unbekannt' normalisiert.`);
+            console.warn(`Ungültiger N-Status '${patient.n}' für Patient ${patient.id_patient || patient.nr}. Wird zu 'unbekannt' normalisiert.`);
             patient.n = null;
         }
         if (patient.as && !['+', '-', null, undefined, ''].includes(patient.as)) {
-            console.warn(`Ungültiger AS-Status '${patient.as}' für Patient ${patient.id_patient}. Wird zu 'unbekannt' normalisiert.`);
+            console.warn(`Ungültiger AS-Status '${patient.as}' für Patient ${patient.id_patient || patient.nr}. Wird zu 'unbekannt' normalisiert.`);
             patient.as = null;
         }
         return true;
@@ -76,7 +71,7 @@ const dataProcessor = (() => {
 
             const validHomogenitaeten = APP_CONFIG.T2_CRITERIA_SETTINGS.HOMOGENITAET_VALUES;
             normalizedLK.homogenitaet = (lk.homogenitaet && validHomogenitaeten.includes(String(lk.homogenitaet).toLowerCase())) ? String(lk.homogenitaet).toLowerCase() : null;
-            
+
             const validSignale = APP_CONFIG.T2_CRITERIA_SETTINGS.SIGNAL_VALUES;
             normalizedLK.signal = (lk.signal && validSignale.includes(String(lk.signal).toLowerCase())) ? String(lk.signal).toLowerCase() : null;
 
@@ -86,37 +81,45 @@ const dataProcessor = (() => {
 
     function processSinglePatient(patient) {
         if (!_validatePatientData(patient)) {
-            return null; 
+            return null;
         }
-        const p = cloneDeep(patient); 
+        const p = cloneDeep(patient);
 
-        p.nr = parseInt(p.nr, 10) || null; // 'nr' ist in data.js eine Zahl
+        p.nr = parseInt(p.nr, 10);
+        if (isNaN(p.nr) || !isFinite(p.nr)) p.nr = null;
+
+
         p.alter = _calculateAge(p.geburtsdatum, p.untersuchungsdatum);
         p.geschlecht = (p.geschlecht === 'm' || p.geschlecht === 'w') ? p.geschlecht : 'unbekannt';
         p.therapie = (p.therapie === 'direkt OP' || p.therapie === 'nRCT') ? p.therapie : 'unbekannt';
         p.n = (p.n === '+' || p.n === '-') ? p.n : 'unbekannt';
         p.as = (p.as === '+' || p.as === '-') ? p.as : 'unbekannt';
-        p.t2 = 'unbekannt'; 
+        p.t2 = 'unbekannt';
 
         p.anzahl_patho_lk = parseInt(p.anzahl_patho_lk, 10);
         p.anzahl_patho_n_plus_lk = parseInt(p.anzahl_patho_n_plus_lk, 10);
         p.anzahl_as_lk = parseInt(p.anzahl_as_lk, 10);
         p.anzahl_as_plus_lk = parseInt(p.anzahl_as_plus_lk, 10);
-        
+
         p.anzahl_t2_lk = Array.isArray(p.lymphknoten_t2) ? p.lymphknoten_t2.length : 0;
-        p.anzahl_t2_plus_lk = 0; 
+        p.anzahl_t2_plus_lk = 0;
 
         p.lymphknoten_t2 = _normalizeT2Features(p.lymphknoten_t2);
-        
+
         const lkKeysToValidate = ['anzahl_patho_lk', 'anzahl_patho_n_plus_lk', 'anzahl_as_lk', 'anzahl_as_plus_lk', 'anzahl_t2_lk'];
         lkKeysToValidate.forEach(key => {
-            const val = p[key]; // Lese den Wert, bevor er ggf. überschrieben wird
-            if (val === null || val === undefined || isNaN(val) || val < 0) { // Prüfe auch auf null/undefined
-                p[key] = null; 
+            const val = p[key];
+            if (val === null || val === undefined || isNaN(val) || val < 0) {
+                p[key] = null;
             } else {
-                p[key] = parseInt(val, 10); // Stelle sicher, dass es Integer ist
+                p[key] = parseInt(val, 10);
             }
         });
+        
+        if(!p.id_patient && p.nr !== null) {
+            p.id_patient = `Pat_${String(p.nr).padStart(3, '0')}`;
+        }
+
 
         return p;
     }
@@ -136,7 +139,7 @@ const dataProcessor = (() => {
 
     function calculateHeaderStats(filteredData, kollektiv) {
         if (!Array.isArray(filteredData)) return { kollektiv: getKollektivDisplayName(kollektiv) || '--', anzahlPatienten: 0, statusN: 'N/A', statusAS: 'N/A', statusT2: 'N/A' };
-        
+
         const numPatients = filteredData.length;
         let nPlus = 0, nMinus = 0;
         let asPlus = 0, asMinus = 0;
@@ -147,10 +150,10 @@ const dataProcessor = (() => {
             if (p.as === '+') asPlus++; else if (p.as === '-') asMinus++;
             if (p.t2 === '+') t2Plus++; else if (p.t2 === '-') t2Minus++;
         });
-        
+
         const formatStatus = (plus, minus) => {
              if (numPatients === 0 && (plus + minus === 0)) return '-- / --';
-             if (plus + minus === 0) return '0% / 0%'; 
+             if (plus + minus === 0) return '0% / 0%';
              return `${formatPercent(plus / (plus + minus), 0)} / ${formatPercent(minus / (plus + minus), 0)}`;
         };
 
