@@ -13,8 +13,10 @@ const viewRenderer = (() => {
         ];
 
         tabLogics.forEach(item => {
-            if (item.module && typeof item.module.initialize === 'function' && (!item.module.isInitialized || !item.module.isInitialized())) {
-                item.module.initialize(_mainAppInterface);
+            if (item.module && typeof item.module.initialize === 'function') {
+                if (typeof item.module.isInitialized !== 'function' || !item.module.isInitialized()) {
+                    item.module.initialize(_mainAppInterface);
+                }
             } else if (!item.module) {
                 console.warn(`ViewRenderer: Modul ${item.name} ist nicht definiert.`);
             }
@@ -40,16 +42,20 @@ const viewRenderer = (() => {
         const tabPane = document.getElementById(`${tabId}-pane`);
         const loadingSpinner = `<div class="d-flex justify-content-center align-items-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade Inhalte...</span></div></div>`;
         if (tabPane) {
+            let contentAreaId;
             if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.TAB_CONTENT_AREAS && APP_CONFIG.TAB_CONTENT_AREAS[tabId]) {
-                const contentAreaId = APP_CONFIG.TAB_CONTENT_AREAS[tabId];
-                const contentArea = tabPane.querySelector(`#${contentAreaId}`);
-                if (contentArea) {
-                    contentArea.innerHTML = loadingSpinner;
-                } else {
-                    console.warn(`_clearTabContent: Inhaltsbereich #${contentAreaId} für Tab ${tabId} nicht im Pane gefunden. Leere Pane.`);
-                    tabPane.innerHTML = loadingSpinner;
-                }
+                 contentAreaId = APP_CONFIG.TAB_CONTENT_AREAS[tabId];
             } else {
+                console.warn(`_clearTabContent: APP_CONFIG.TAB_CONTENT_AREAS nicht definiert oder Tab-ID '${tabId}' fehlt. Versuche, Pane direkt zu leeren.`);
+                tabPane.innerHTML = loadingSpinner; // Fallback, wenn Konfiguration fehlt
+                return;
+            }
+            
+            const contentArea = tabPane.querySelector(`#${contentAreaId}`);
+            if (contentArea) {
+                contentArea.innerHTML = loadingSpinner;
+            } else {
+                console.warn(`_clearTabContent: Inhaltsbereich #${contentAreaId} für Tab ${tabId} nicht im Pane gefunden. Leere das gesamte Pane.`);
                 tabPane.innerHTML = loadingSpinner;
             }
         } else {
@@ -64,19 +70,20 @@ const viewRenderer = (() => {
         const fullErrorMessage = `<div class="alert alert-danger m-3" role="alert"><strong>Fehler beim Rendern des Tabs '${tabId}'!</strong><br>${errorMessage}${errorStack}</div>`;
 
         if (tabPane) {
+            let contentAreaId;
             if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.TAB_CONTENT_AREAS && APP_CONFIG.TAB_CONTENT_AREAS[tabId]) {
-                const contentAreaId = APP_CONFIG.TAB_CONTENT_AREAS[tabId];
-                const contentArea = tabPane.querySelector(`#${contentAreaId}`);
-                if (contentArea) {
-                    contentArea.innerHTML = fullErrorMessage;
-                } else {
-                    console.warn(`_showRenderError: Inhaltsbereich #${contentAreaId} für Tab ${tabId} nicht im Pane gefunden. Zeige Fehler im Pane.`);
-                    tabPane.innerHTML = fullErrorMessage;
-                }
+                 contentAreaId = APP_CONFIG.TAB_CONTENT_AREAS[tabId];
             } else {
-                 if (typeof APP_CONFIG === 'undefined' || typeof APP_CONFIG.TAB_CONTENT_AREAS === 'undefined') {
-                    console.warn(`_showRenderError: APP_CONFIG.TAB_CONTENT_AREAS ist nicht definiert. Zeige Fehler direkt im Pane für ${tabId}.`);
-                }
+                 console.warn(`_showRenderError: APP_CONFIG.TAB_CONTENT_AREAS nicht definiert oder Tab-ID '${tabId}' fehlt. Zeige Fehler direkt im Pane.`);
+                 tabPane.innerHTML = fullErrorMessage; // Fallback
+                 return;
+            }
+
+            const contentArea = tabPane.querySelector(`#${contentAreaId}`);
+            if (contentArea) {
+                contentArea.innerHTML = fullErrorMessage;
+            } else {
+                console.warn(`_showRenderError: Inhaltsbereich #${contentAreaId} für Tab ${tabId} nicht im Pane gefunden. Zeige Fehler im gesamten Pane.`);
                 tabPane.innerHTML = fullErrorMessage;
             }
         } else {
@@ -197,12 +204,12 @@ const viewRenderer = (() => {
     function renderTabContent(tabId, data, stateSnapshot) {
         if (!_isInitialized) {
             if (_mainAppInterface) {
-                _initializeTabModules(); // Sicherstellen, dass Module initialisiert sind
+                _initializeTabModules();
             } else {
-                 console.error("ViewRenderer nicht initialisiert. MainAppInterface fehlt beim Aufruf von renderTabContent.");
+                console.error("ViewRenderer nicht initialisiert. MainAppInterface fehlt beim Aufruf von renderTabContent.");
                 _showRenderError(tabId, new Error("ViewRenderer ist nicht initialisiert."));
                 if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.hideLoadingOverlay === 'function') {
-                    mainAppInterface.hideLoadingOverlay(); // Versuche, den Ladebildschirm zu schließen
+                    mainAppInterface.hideLoadingOverlay();
                 } else if (_mainAppInterface && typeof _mainAppInterface.hideLoadingOverlay === 'function') {
                     _mainAppInterface.hideLoadingOverlay();
                 }
@@ -250,8 +257,8 @@ const viewRenderer = (() => {
                         _showRenderError(tabId, unknownTabError);
                 }
 
-                if (stateSnapshot.forceTabRefresh && typeof state !== 'undefined' && typeof state.setForceTabRefresh === 'function') {
-                    state.setForceTabRefresh(false);
+                if (stateSnapshot.forceTabRefresh && typeof state !== 'undefined' && typeof state.clearForceTabRefresh === 'function') {
+                    state.clearForceTabRefresh();
                 }
 
             } catch (error) {
@@ -261,7 +268,6 @@ const viewRenderer = (() => {
                 if (_mainAppInterface && typeof _mainAppInterface.hideLoadingOverlay === 'function') {
                     _mainAppInterface.hideLoadingOverlay();
                 } else {
-                    // Fallback, falls _mainAppInterface immer noch nicht gesetzt ist
                     const loadingOverlay = document.getElementById('loading-overlay');
                     if (loadingOverlay) loadingOverlay.style.display = 'none';
                 }
