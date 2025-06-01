@@ -30,7 +30,7 @@ const auswertungTabLogic = (() => {
 
     function getCurrentASPerformance() {
         if (_isDataStale || !_currentASPerformance) {
-            if (_currentData && _currentKollektiv) {
+            if (_currentData && _currentKollektiv && dataProcessor && statisticsService) {
                 const filteredData = dataProcessor.filterDataByKollektiv(cloneDeep(_currentData), _currentKollektiv);
                 _currentASPerformance = statisticsService.calculateDiagnosticPerformance(filteredData, 'as', 'n');
             } else {
@@ -42,7 +42,7 @@ const auswertungTabLogic = (() => {
 
     function getCurrentT2Performance() {
         if (_isDataStale || !_currentT2Performance) {
-            if (_currentData && _currentKollektiv && _appliedT2Criteria && _appliedT2Logic) {
+            if (_currentData && _currentKollektiv && _appliedT2Criteria && _appliedT2Logic && dataProcessor && t2CriteriaManager && statisticsService) {
                 const filteredData = dataProcessor.filterDataByKollektiv(cloneDeep(_currentData), _currentKollektiv);
                 const evaluatedData = t2CriteriaManager.evaluateDataset(filteredData, _appliedT2Criteria, _appliedT2Logic);
                 _currentT2Performance = statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n');
@@ -55,51 +55,71 @@ const auswertungTabLogic = (() => {
 
     function _renderAuswertungDashboard(containerId) {
         const container = document.getElementById(containerId);
-        if (!container) return;
+        if (!container) {
+            console.error(`AuswertungTabLogic: Dashboard-Container '${containerId}' nicht gefunden.`);
+            return;
+        }
         container.innerHTML = '';
 
         const statsAS = getCurrentASPerformance();
         const statsT2 = getCurrentT2Performance();
 
-        if (!statsAS && !statsT2) {
-             container.innerHTML = `<div class="col-12"><p class="text-muted text-center p-3">Keine Dashboard-Daten für Kollektiv '${getKollektivDisplayName(_currentKollektiv)}' verfügbar. Bitte Kriterien anwenden.</p></div>`;
+        if (!statsAS && !statsT2 && (!_currentData || _currentData.length === 0)) {
+             container.innerHTML = `<div class="col-12"><p class="text-muted text-center p-3">Keine Daten für Kollektiv '${getKollektivDisplayName(_currentKollektiv)}' verfügbar, um Dashboard anzuzeigen.</p></div>`;
+             return;
+        }
+        if (!statsAS && !statsT2 && (!t2CriteriaManager || !t2CriteriaManager.getAppliedCriteria() || Object.keys(t2CriteriaManager.getAppliedCriteria()).length === 0) ){
+             container.innerHTML = `<div class="col-12"><p class="text-muted text-center p-3">Bitte T2-Kriterien definieren und anwenden, um das Dashboard anzuzeigen.</p></div>`;
              return;
         }
 
+
         const na = 'N/A';
         const createMetricContent = (metricObj, key, isRate = true, digits = 1) => {
-            const value = metricObj?.[key]?.value;
-            const ci = metricObj?.[key]?.ci;
+            if (!metricObj || !metricObj[key]) return `<span class="display-6 fw-light" data-tippy-content="Wert nicht verfügbar">${na}</span>`;
+            const value = metricObj[key]?.value;
+            const ci = metricObj[key]?.ci;
             const formattedValue = formatCI(value, ci?.lower, ci?.upper, (key === 'f1' || key === 'auc') ? 3: digits, isRate, na);
-            const interpretation = ui_helpers.getMetricInterpretationHTML(key, metricObj?.[key], '', _currentKollektiv);
+            const interpretation = ui_helpers.getMetricInterpretationHTML(key, metricObj[key], '', _currentKollektiv);
             return `<span class="display-6 fw-light" data-tippy-content="${interpretation}">${formattedValue}</span>`;
         };
+        
+        let t2MetricsOverviewHTML = '';
+        if (typeof uiComponents !== 'undefined' && typeof uiComponents.createT2MetricsOverview === 'function') {
+            t2MetricsOverviewHTML = uiComponents.createT2MetricsOverview(statsT2, _currentKollektiv);
+        } else {
+            t2MetricsOverviewHTML = '<p class="text-danger">Fehler: T2 Metrik Übersichtskomponente nicht verfügbar.</p>';
+        }
 
-        const t2MetricsOverviewHTML = uiComponents.createT2MetricsOverview(statsT2, _currentKollektiv);
+
         const dashboardRow = document.createElement('div');
         dashboardRow.className = 'row g-3';
 
-        dashboardRow.innerHTML += uiComponents.createDashboardCard('Avocado Sign (AS)', '', 'chart-dash-as-status', 'bg-light-as');
-        dashboardRow.innerHTML += uiComponents.createDashboardCard(`T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, '', 'chart-dash-t2-status', 'bg-light-t2');
+        if (typeof uiComponents !== 'undefined' && typeof uiComponents.createDashboardCard === 'function') {
+            dashboardRow.innerHTML += uiComponents.createDashboardCard('Avocado Sign (AS)', '', 'chart-dash-as-status', 'bg-light-as');
+            dashboardRow.innerHTML += uiComponents.createDashboardCard(`T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, '', 'chart-dash-t2-status', 'bg-light-t2');
 
-        if(statsAS) {
-             dashboardRow.innerHTML += uiComponents.createDashboardCard(
-                UI_TEXTS.statMetrics.sens.name + ' (AS)',
-                createMetricContent(statsAS, 'sens'),
-                null, 'metric-card'
-            );
-            dashboardRow.innerHTML += uiComponents.createDashboardCard(
-                UI_TEXTS.statMetrics.spez.name + ' (AS)',
-                createMetricContent(statsAS, 'spez'),
-                null, 'metric-card'
-            );
-             dashboardRow.innerHTML += uiComponents.createDashboardCard(
-                'AUC (AS)',
-                createMetricContent(statsAS, 'auc', false, 3),
-                null, 'metric-card'
-            );
+            if(statsAS) {
+                 dashboardRow.innerHTML += uiComponents.createDashboardCard(
+                    UI_TEXTS.statMetrics.sens.name + ' (AS)',
+                    createMetricContent(statsAS, 'sens'),
+                    null, 'metric-card'
+                );
+                dashboardRow.innerHTML += uiComponents.createDashboardCard(
+                    UI_TEXTS.statMetrics.spez.name + ' (AS)',
+                    createMetricContent(statsAS, 'spez'),
+                    null, 'metric-card'
+                );
+                 dashboardRow.innerHTML += uiComponents.createDashboardCard(
+                    'AUC (AS)',
+                    createMetricContent(statsAS, 'auc', false, 3),
+                    null, 'metric-card'
+                );
+            } else {
+                 dashboardRow.innerHTML += `<div class="col-12 text-center text-muted small p-2">AS Metriken nicht verfügbar.</div>`;
+            }
         } else {
-             dashboardRow.innerHTML += `<div class="col-12 text-center text-muted small p-2">AS Metriken nicht verfügbar.</div>`;
+             dashboardRow.innerHTML = '<p class="text-danger">Fehler: Dashboard Karten Komponente nicht verfügbar.</p>';
         }
 
         container.innerHTML = `
@@ -112,7 +132,7 @@ const auswertungTabLogic = (() => {
                 </div>
             </div>`;
 
-        if (statsAS?.matrix) {
+        if (statsAS?.matrix && chart_renderer) {
              const totalAS = statsAS.matrix.rp + statsAS.matrix.fp + statsAS.matrix.fn + statsAS.matrix.rn;
              const asPieData = [
                 { label: UI_TEXTS.legendLabels.asPositive, value: statsAS.matrix.rp + statsAS.matrix.fp, color: APP_CONFIG.CHART_SETTINGS.AS_COLOR },
@@ -128,7 +148,7 @@ const auswertungTabLogic = (() => {
             if(chartEl) chartEl.closest('.dashboard-card-col')?.classList.add('d-none');
         }
 
-        if (statsT2?.matrix) {
+        if (statsT2?.matrix && chart_renderer) {
             const totalT2 = statsT2.matrix.rp + statsT2.matrix.fp + statsT2.matrix.fn + statsT2.matrix.rn;
             const t2PieData = [
                 { label: UI_TEXTS.legendLabels.t2Positive, value: statsT2.matrix.rp + statsT2.matrix.fp, color: APP_CONFIG.CHART_SETTINGS.T2_COLOR },
@@ -144,7 +164,6 @@ const auswertungTabLogic = (() => {
              if(chartEl) chartEl.closest('.dashboard-card-col')?.classList.add('d-none');
         }
     }
-
 
     function _createTableHeaderHTML(tableId, currentSortState, columns) {
         let headerHTML = `<thead class="small sticky-top bg-light" id="${tableId}-header"><tr>`;
@@ -167,10 +186,9 @@ const auswertungTabLogic = (() => {
                     if(!thStyle.endsWith('"')) thStyle += '"';
                 }
             }
-            if (!isMainKeyActiveSort && col.key !== 'details') { // Default sort icon if not active
+            if (!isMainKeyActiveSort && col.key !== 'details') {
                 sortIconHTML = '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>';
             }
-
 
             const baseTooltipContent = col.tooltip || col.label;
             const subHeadersHTML = col.subKeys ? col.subKeys.map(sk => {
@@ -191,7 +209,6 @@ const auswertungTabLogic = (() => {
             } else if (col.key !== 'details') {
                  thContent += sortIconHTML;
             }
-
 
             headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} data-tippy-content="${mainTooltip}" ${thStyle}>${thContent}</th>`;
         });
@@ -239,33 +256,86 @@ const auswertungTabLogic = (() => {
         _currentKollektiv = currentKollektiv;
         _appliedT2Criteria = cloneDeep(appliedT2Criteria);
         _appliedT2Logic = appliedT2Logic;
-        _sortState = currentSortState || state.getCurrentAuswertungSortState();
+        _sortState = currentSortState || (typeof state !== 'undefined' && state.getCurrentAuswertungSortState ? state.getCurrentAuswertungSortState() : { key: 'nr', direction: 'asc', subKey: null });
         _bruteForceState = bruteForceState;
         _bruteForceData = bruteForceDataForKollektiv;
         _workerAvailable = workerAvailable;
 
-        setDataStale(); // Force recalculation of performance metrics
+        setDataStale();
 
-        const tableHTML = createAuswertungTableHTML(_currentData, _sortState, _appliedT2Criteria, _appliedT2Logic);
-        const tableContainer = document.getElementById('auswertung-table-container');
-        if (tableContainer) {
-            tableContainer.innerHTML = tableHTML;
-            const tableBodyElement = document.getElementById('auswertung-table-body');
-            if(tableBodyElement) ui_helpers.attachRowCollapseListeners(tableBodyElement);
+        const contentArea = document.getElementById('auswertung-content-area');
+        if (!contentArea) {
+            console.error("AuswertungTabLogic: Haupt-Content-Bereich 'auswertung-content-area' nicht gefunden.");
+            return;
+        }
+        
+        let t2ControlsHTML = '';
+        if (typeof uiComponents !== 'undefined' && typeof uiComponents.createT2CriteriaControls === 'function' && _appliedT2Criteria && _appliedT2Logic) {
+            t2ControlsHTML = uiComponents.createT2CriteriaControls(_appliedT2Criteria, _appliedT2Logic);
+        } else {
+            t2ControlsHTML = '<p class="text-danger">Fehler: T2 Kriterien Steuerungskomponente nicht verfügbar.</p>';
         }
 
-        ui_helpers.updateT2CriteriaControlsUI(_appliedT2Criteria, _appliedT2Logic);
-        ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
-        ui_helpers.updateBruteForceUI(_bruteForceState, _bruteForceData || {}, _workerAvailable, _currentKollektiv);
-        ui_helpers.updateSortIcons('auswertung-table-header', _sortState);
-        ui_helpers.updateElementText('auswertung-tab-kollektiv-name', getKollektivDisplayName(_currentKollektiv));
+        let bruteForceCardHTML = '';
+        if (typeof uiComponents !== 'undefined' && typeof uiComponents.createBruteForceCard === 'function') {
+            bruteForceCardHTML = uiComponents.createBruteForceCard(_currentKollektiv, _workerAvailable);
+        } else {
+            bruteForceCardHTML = '<p class="text-danger">Fehler: Brute-Force Karten Komponente nicht verfügbar.</p>';
+        }
 
+        const tableHTML = createAuswertungTableHTML(_currentData, _sortState, _appliedT2Criteria, _appliedT2Logic);
+
+        contentArea.innerHTML = `
+            <div class="row">
+                <div class="col-lg-7">
+                    <div id="auswertung-dashboard-container" class="mb-3"></div>
+                    <div id="t2-criteria-controls-placeholder" class="mb-3">
+                        ${t2ControlsHTML}
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div id="brute-force-card-placeholder" class="mb-3">
+                        ${bruteForceCardHTML}
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                         <h5 class="mb-0">Patienten-Auswertungstabelle (<span id="auswertung-tab-kollektiv-name">${getKollektivDisplayName(_currentKollektiv)}</span>)</h5>
+                         <button class="btn btn-sm btn-outline-secondary" id="auswertung-toggle-details" data-action="expand" data-tippy-content="Alle Details ein-/ausblenden">
+                             Alle Details Einblenden <i class="fas fa-chevron-down ms-1"></i>
+                         </button>
+                    </div>
+                    <div id="auswertung-table-container" class="table-responsive">
+                        ${tableHTML}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        _renderAuswertungDashboard('auswertung-dashboard-container');
+
+        const tableBodyElement = document.getElementById('auswertung-table-body');
+        if(tableBodyElement && typeof ui_helpers !== 'undefined' && typeof ui_helpers.attachRowCollapseListeners === 'function') {
+            ui_helpers.attachRowCollapseListeners(tableBodyElement);
+        }
+
+        if (typeof ui_helpers !== 'undefined') {
+            ui_helpers.updateT2CriteriaControlsUI(_appliedT2Criteria, _appliedT2Logic);
+            ui_helpers.markCriteriaSavedIndicator(typeof t2CriteriaManager !== 'undefined' ? t2CriteriaManager.isUnsaved() : false);
+            ui_helpers.updateBruteForceUI(_bruteForceState, _bruteForceData || {}, _workerAvailable, _currentKollektiv);
+            const auswertungTableHeader = document.getElementById('auswertung-table-header');
+            if (auswertungTableHeader) {
+                ui_helpers.updateSortIcons('auswertung-table-header', _sortState);
+            }
+        }
+        
         const bruteForceMetricSelect = document.getElementById('brute-force-metric');
         if (bruteForceMetricSelect) {
             bruteForceMetricSelect.value = _bruteForceData?.metric || APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC;
         }
 
-        _renderAuswertungDashboard('auswertung-dashboard-container');
         _isInitialized = true;
         _isDataStale = false;
     }
