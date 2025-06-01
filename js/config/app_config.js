@@ -107,7 +107,7 @@ const APP_CONFIG = Object.freeze({
         NEW_SECONDARY_COLOR_YELLOW_GREEN: '#E0DC2C',
         TERTIARY_COLOR_GREEN: '#2ca02c',
         AS_COLOR: '#4472C4',
-        T2_COLOR: '#E0DC2C',
+        T2_COLOR: '#E0DC2C', // War vorher ein anderer Gelbton, angepasst für Konsistenz mit NEW_SECONDARY
         ERROR_BAR_COLOR: '#555555',
         ERROR_BAR_WIDTH: 1.5,
         ERROR_BAR_CAP_SIZE: 4,
