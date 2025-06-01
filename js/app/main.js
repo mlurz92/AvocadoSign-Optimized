@@ -86,7 +86,14 @@ const mainAppInterface = (() => {
                  if(initialTabPane) initialTabPane.classList.add('show', 'active');
             }
         }
-        _handleTabChange(_activeTabId, true);
+        // _handleTabChange wird nun erst nach vollständiger Initialisierung von ViewRenderer aufgerufen
+        // durch das 'shown.bs.tab' Event oder explizit am Ende von initializeApplication, falls nötig.
+        // Für den initialen Load rufen wir es hier noch auf, nachdem ViewRenderer initialisiert wurde.
+        if (viewRenderer && typeof viewRenderer.renderTabContent === 'function') {
+             _handleTabChange(_activeTabId, true);
+        } else {
+            console.error("ViewRenderer nicht bereit für initialen Tab-Load in _initializeUI.");
+        }
     }
 
     function _initializeEventHandlers() {
@@ -110,13 +117,12 @@ const mainAppInterface = (() => {
             console.warn("publikationEventHandlers.initialize ist nicht definiert. Überspringe Initialisierung.");
         }
 
-
         document.querySelectorAll('.nav-tabs .nav-link').forEach(tabButton => {
-            tabButton.addEventListener('show.bs.tab', event => {
+            tabButton.addEventListener('shown.bs.tab', event => { // Geändert zu shown.bs.tab
                 const buttonId = event.currentTarget.id;
                 if (buttonId) {
-                    const newTabId = buttonId; // Die ID des Buttons ist direkt die Tab-ID (z.B. "daten-tab")
-                    if (_activeTabId !== newTabId) {
+                    const newTabId = buttonId;
+                    if (_activeTabId !== newTabId || state.getForceTabRefresh()) { // Auch bei forceRefresh handeln
                         _activeTabId = newTabId;
                         state.setActiveTabId(_activeTabId);
                         _handleTabChange(_activeTabId);
@@ -141,7 +147,7 @@ const mainAppInterface = (() => {
     }
 
     function _handleTabChange(newTabId, isInitialLoad = false) {
-        if (_isLoading && !isInitialLoad) {
+        if (_isLoading && !isInitialLoad && !state.getForceTabRefresh()) {
             console.warn("Tab-Wechsel ignoriert, da die Anwendung bereits lädt.");
             const previousTabId = state.getPreviousTabId() || APP_CONFIG.DEFAULT_SETTINGS.ACTIVE_TAB_ID || 'daten-tab';
             const previousTabElement = document.querySelector(`.nav-tabs .nav-link[data-bs-target="#${previousTabId}-pane"]`);
@@ -163,8 +169,8 @@ const mainAppInterface = (() => {
             appliedT2Logic: t2CriteriaManager.getAppliedLogic(),
             datenSortState: state.getCurrentDatenSortState(),
             auswertungSortState: state.getCurrentAuswertungSortState(),
-            bruteForceState: bruteForceManager.getState(),
-            bruteForceResults: bruteForceManager.getAllResults(),
+            bruteForceResults: bruteForceManager.getAllResults(), // Hier das Gesamtobjekt übergeben
+            bruteForceState: bruteForceManager.getState(), // aktuellen globalen Brute-Force Status
             statsLayout: state.getCurrentStatsLayout(),
             statsKollektiv1: state.getCurrentStatsKollektiv1(),
             statsKollektiv2: state.getCurrentStatsKollektiv2(),
@@ -173,7 +179,7 @@ const mainAppInterface = (() => {
             publikationLang: state.getCurrentPublikationLang(),
             publikationSection: state.getCurrentPublikationSection(),
             publikationBruteForceMetric: state.getCurrentPublikationBruteForceMetric(),
-            forceTabRefresh: state.getForceTabRefresh()
+            forceTabRefresh: state.getForceTabRefresh() // Flag weitergeben
         };
 
         viewRenderer.renderTabContent(newTabId, _globalData.filteredData, stateSnapshot);
@@ -197,12 +203,8 @@ const mainAppInterface = (() => {
 
         ui_helpers.updateHeaderStatsUI(dataProcessor.calculateHeaderStats(_globalData.filteredData, newKollektiv));
 
-        if (typeof auswertungTabLogic !== 'undefined' && typeof auswertungTabLogic.setDataStale === 'function') auswertungTabLogic.setDataStale();
-        if (typeof statistikTabLogic !== 'undefined' && typeof statistikTabLogic.setDataStale === 'function') statistikTabLogic.setDataStale();
-        if (typeof praesentationTabLogic !== 'undefined' && typeof praesentationTabLogic.setDataStale === 'function') praesentationTabLogic.setDataStale();
-        if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.setDataStale === 'function') publikationTabLogic.setDataStale();
-
-        refreshCurrentTab(true);
+        state.setForceTabRefresh(true); // Erzwinge Refresh des aktuellen Tabs
+        refreshCurrentTab(true); // Ruft _handleTabChange indirekt mit forceTabRefresh = true auf
     }
 
 
@@ -222,10 +224,9 @@ const mainAppInterface = (() => {
         state.setBruteForceState('result');
         ui_helpers.updateBruteForceUI('result', payload, bruteForceManager.isWorkerAvailable(), state.getCurrentKollektiv());
         ui_helpers.updateExportButtonStates(_activeTabId, true, _globalData.filteredData.length > 0);
-        if (_activeTabId === 'auswertung-tab' || _activeTabId === 'publikation-tab') {
-             if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.setDataStale === 'function') publikationTabLogic.setDataStale();
-             if(_activeTabId === 'publikation-tab') refreshCurrentTab(true);
-             else if(_activeTabId === 'auswertung-tab' && payload.kollektiv === state.getCurrentKollektiv()) refreshCurrentTab(true);
+        if (_activeTabId === 'auswertung-tab' || _activeTabId === 'publikation-tab' || _activeTabId === 'export-tab') {
+            state.setForceTabRefresh(true); // Erzwinge Refresh, um neue BF-Daten zu zeigen
+            refreshCurrentTab(true);
         }
         ui_helpers.showToast(`Brute-Force Optimierung für Kollektiv '${getKollektivDisplayName(payload.kollektiv)}' abgeschlossen.`, 'success');
     }
@@ -245,11 +246,20 @@ const mainAppInterface = (() => {
         _showLoadingOverlay('Initialisiere Anwendung...');
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                _initializeGlobalState();
-                _initializeData();
+                _initializeGlobalState(); // State zuerst, um Defaults zu haben
+                _initializeData(); // Dann Daten laden
 
+                // Module initialisieren, die vom State oder den Rohdaten abhängen
                 t2CriteriaManager.initialize();
                 studyT2CriteriaManager.initialize();
+
+                // ViewRenderer initialisieren, bevor die UI-Logik den ersten Tab rendert
+                if (typeof viewRenderer !== 'undefined' && typeof viewRenderer.initialize === 'function') {
+                    viewRenderer.initialize(mainAppInterface);
+                } else {
+                     console.error("ViewRenderer konnte nicht initialisiert werden.");
+                }
+
 
                 await bruteForceManager.initialize({
                     onStart: _handleBruteForceStart,
@@ -260,8 +270,9 @@ const mainAppInterface = (() => {
                     onCancelled: _handleBruteForceCancelled
                 });
 
-                _initializeUI();
-                _initializeEventHandlers();
+                _initializeEventHandlers(); // Event Handler nach den Modulen, aber vor _initializeUI, das Events auslösen kann
+                _initializeUI(); // UI initialisieren und ersten Tab rendern
+
                 _isInitialized = true;
                  console.log(`${APP_CONFIG.APP_NAME} v${APP_CONFIG.APP_VERSION} initialisiert. Aktives Kollektiv: ${getKollektivDisplayName(_globalData.currentKollektiv)}, Aktiver Tab: ${_activeTabId}`);
 
@@ -272,57 +283,27 @@ const mainAppInterface = (() => {
                 if (messageElement) messageElement.innerHTML = `<span class="text-danger">Kritischer Fehler bei der Initialisierung!</span><br><small>${error.message}</small><br><small>Bitte versuchen Sie, die Seite neu zu laden oder prüfen Sie die Browser-Konsole.</small>`;
                 if (overlay) overlay.style.display = 'flex';
             } finally {
-                if(_isInitialized) _hideLoadingOverlay();
+                // _hideLoadingOverlay wird nun durch renderTabContent gesteuert
+                 if(!_isLoading && _isInitialized) _hideLoadingOverlay(); // Nur wenn kein Tab-Laden aktiv ist
             }
         });
     }
 
     function refreshCurrentTab(forceDataRefresh = false) {
-        if (!_activeTabId || (_isLoading && !forceDataRefresh)) {
-            if(_isLoading) console.warn("RefreshCurrentTab ignoriert oder verzögert, da Anwendung bereits lädt.");
+        // Wenn forceDataRefresh explizit true ist, setze das State-Flag, damit _handleTabChange es sieht
+        if (forceDataRefresh && typeof state !== 'undefined' && typeof state.setForceTabRefresh === 'function') {
+            state.setForceTabRefresh(true);
+        }
+
+        if (!_activeTabId || (_isLoading && !state.getForceTabRefresh())) {
+            if(_isLoading) console.warn("RefreshCurrentTab ignoriert oder verzögert, da Anwendung bereits lädt und kein Force-Refresh aktiv ist.");
             if (!_activeTabId) return;
-            if (_isLoading && !forceDataRefresh) return;
+            if (_isLoading && !state.getForceTabRefresh()) return;
         }
-        _showLoadingOverlay(`Aktualisiere Tab: ${_activeTabId.replace('-tab','').replace(/^\w/, c => c.toUpperCase())}...`);
-
-        if (forceDataRefresh) {
-            _globalData.currentKollektiv = state.getCurrentKollektiv();
-            _globalData.processedData = dataProcessor.processRawData(_globalData.rawData);
-            _globalData.filteredData = dataProcessor.filterDataByKollektiv(_globalData.processedData, _globalData.currentKollektiv);
-
-            const currentAppliedT2Criteria = t2CriteriaManager.getAppliedCriteria();
-            const currentAppliedT2Logic = t2CriteriaManager.getAppliedLogic();
-            _globalData.filteredData = t2CriteriaManager.evaluateDataset(cloneDeep(_globalData.filteredData), currentAppliedT2Criteria, currentAppliedT2Logic);
-
-            ui_helpers.updateHeaderStatsUI(dataProcessor.calculateHeaderStats(_globalData.filteredData, _globalData.currentKollektiv));
-            ui_helpers.updateExportButtonStates(_activeTabId, bruteForceManager.hasResults(_globalData.currentKollektiv), _globalData.filteredData.length > 0);
-
-            if (typeof auswertungTabLogic !== 'undefined' && typeof auswertungTabLogic.setDataStale === 'function') auswertungTabLogic.setDataStale();
-            if (typeof statistikTabLogic !== 'undefined' && typeof statistikTabLogic.setDataStale === 'function') statistikTabLogic.setDataStale();
-            if (typeof praesentationTabLogic !== 'undefined' && typeof praesentationTabLogic.setDataStale === 'function') praesentationTabLogic.setDataStale();
-            if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.setDataStale === 'function') publikationTabLogic.setDataStale();
-        }
-
-        const stateSnapshot = {
-            rawData: _globalData.rawData,
-            currentKollektiv: state.getCurrentKollektiv(),
-            appliedT2Criteria: t2CriteriaManager.getAppliedCriteria(),
-            appliedT2Logic: t2CriteriaManager.getAppliedLogic(),
-            datenSortState: state.getCurrentDatenSortState(),
-            auswertungSortState: state.getCurrentAuswertungSortState(),
-            bruteForceState: bruteForceManager.getState(),
-            bruteForceResults: bruteForceManager.getAllResults(),
-            statsLayout: state.getCurrentStatsLayout(),
-            statsKollektiv1: state.getCurrentStatsKollektiv1(),
-            statsKollektiv2: state.getCurrentStatsKollektiv2(),
-            praesentationView: state.getCurrentPresentationView(),
-            praesentationStudyId: state.getCurrentPresentationStudyId(),
-            publikationLang: state.getCurrentPublikationLang(),
-            publikationSection: state.getCurrentPublikationSection(),
-            publikationBruteForceMetric: state.getCurrentPublikationBruteForceMetric(),
-            forceTabRefresh: forceDataRefresh || state.getForceTabRefresh()
-        };
-        viewRenderer.renderTabContent(_activeTabId, _globalData.filteredData, stateSnapshot);
+        // _handleTabChange wird nun aufgerufen, auch wenn _activeTabId === newTabId (was hier der Fall ist),
+        // wenn state.getForceTabRefresh() true ist (siehe Logik im 'shown.bs.tab' Handler und _handleTabChange).
+        // Ein direkter Aufruf von _handleTabChange hier ist richtig.
+        _handleTabChange(_activeTabId);
     }
 
     function notifyDataProcessingChange() {
@@ -330,8 +311,28 @@ const mainAppInterface = (() => {
         _globalData.filteredData = dataProcessor.filterDataByKollektiv(_globalData.processedData, state.getCurrentKollektiv());
         _globalData.filteredData = t2CriteriaManager.evaluateDataset(cloneDeep(_globalData.filteredData), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
         ui_helpers.updateHeaderStatsUI(dataProcessor.calculateHeaderStats(_globalData.filteredData, state.getCurrentKollektiv()));
-        ui_helpers.markCriteriaSavedIndicator(false);
+        ui_helpers.markCriteriaSavedIndicator(false); // Indikator zurücksetzen
+        
+        // Datenstati für alle relevanten Tab-Logiken auf "stale" setzen
+        if(typeof auswertungTabLogic !== 'undefined' && typeof auswertungTabLogic.setDataStale === 'function') auswertungTabLogic.setDataStale();
+        if(typeof statistikTabLogic !== 'undefined' && typeof statistikTabLogic.setDataStale === 'function') statistikTabLogic.setDataStale();
+        if(typeof praesentationTabLogic !== 'undefined' && typeof praesentationTabLogic.setDataStale === 'function') praesentationTabLogic.setDataStale();
+        if(typeof publicationTabLogic !== 'undefined' && typeof publicationTabLogic.setDataStale === 'function') publicationTabLogic.setDataStale();
+        if(typeof exportTabLogic !== 'undefined' && typeof exportTabLogic.setDataStale === 'function') exportTabLogic.setDataStale();
+
+        state.setForceTabRefresh(true); // Erzwingt Neuladen des aktuellen Tabs, um Änderungen zu reflektieren
+        refreshCurrentTab(true); // Explizit true, um state.setForceTabRefresh zu setzen und _handleTabChange zu triggern
     }
+    
+    function updateGlobalUIState() {
+        // Diese Funktion könnte verwendet werden, um UI-Elemente zu aktualisieren, die nicht direkt Teil eines Tabs sind,
+        // aber vom globalen State abhängen, z.B. Header-Infos, globale Buttons.
+        // Momentan wird das meiste davon in _handleKollektivChange oder beim Tab-Wechsel gehandhabt.
+        // Fürs Erste lassen wir sie leer oder fügen spezifische Aufrufe hinzu, falls nötig.
+        ui_helpers.updateKollektivButtonsUI(state.getCurrentKollektiv());
+        // ui_helpers.updateStatistikSelectorsUI(...); // Beispiel, falls dies global relevant wäre
+    }
+
 
     return Object.freeze({
         initializeApplication,
@@ -340,7 +341,8 @@ const mainAppInterface = (() => {
         hideLoadingOverlay: _hideLoadingOverlay,
         getGlobalData: () => cloneDeep(_globalData),
         getActiveTabId: () => _activeTabId,
-        notifyDataProcessingChange
+        notifyDataProcessingChange,
+        updateGlobalUIState // Exportiert, falls von Event Handlern benötigt
     });
 
 })();
