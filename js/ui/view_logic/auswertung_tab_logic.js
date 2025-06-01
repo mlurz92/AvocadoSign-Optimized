@@ -30,7 +30,9 @@ const auswertungTabLogic = (() => {
 
     function getCurrentASPerformance() {
         if (_isDataStale || !_currentASPerformance) {
-            if (_currentData && _currentKollektiv && typeof dataProcessor !== 'undefined' && typeof statisticsService !== 'undefined') {
+            if (_currentData && Array.isArray(_currentData) && _currentKollektiv && 
+                typeof dataProcessor !== 'undefined' && typeof dataProcessor.filterDataByKollektiv === 'function' &&
+                typeof statisticsService !== 'undefined' && typeof statisticsService.calculateDiagnosticPerformance === 'function') {
                 const filteredData = dataProcessor.filterDataByKollektiv(cloneDeep(_currentData), _currentKollektiv);
                 _currentASPerformance = statisticsService.calculateDiagnosticPerformance(filteredData, 'as', 'n');
             } else {
@@ -42,8 +44,10 @@ const auswertungTabLogic = (() => {
 
     function getCurrentT2Performance() {
         if (_isDataStale || !_currentT2Performance) {
-            if (_currentData && _currentKollektiv && _appliedT2Criteria && _appliedT2Logic && 
-                typeof dataProcessor !== 'undefined' && typeof t2CriteriaManager !== 'undefined' && typeof statisticsService !== 'undefined') {
+            if (_currentData && Array.isArray(_currentData) && _currentKollektiv && _appliedT2Criteria && _appliedT2Logic && 
+                typeof dataProcessor !== 'undefined' && typeof dataProcessor.filterDataByKollektiv === 'function' &&
+                typeof t2CriteriaManager !== 'undefined' && typeof t2CriteriaManager.evaluateDataset === 'function' &&
+                typeof statisticsService !== 'undefined' && typeof statisticsService.calculateDiagnosticPerformance === 'function') {
                 const filteredData = dataProcessor.filterDataByKollektiv(cloneDeep(_currentData), _currentKollektiv);
                 const evaluatedData = t2CriteriaManager.evaluateDataset(filteredData, _appliedT2Criteria, _appliedT2Logic);
                 _currentT2Performance = statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n');
@@ -64,19 +68,24 @@ const auswertungTabLogic = (() => {
 
         const statsAS = getCurrentASPerformance();
         const statsT2 = getCurrentT2Performance();
-
+        
         const currentAppliedCriteria = (typeof t2CriteriaManager !== 'undefined' && t2CriteriaManager.getAppliedCriteria) ? t2CriteriaManager.getAppliedCriteria() : null;
-        const activeCriteriaCount = currentAppliedCriteria ? Object.values(currentAppliedCriteria).filter(c => c && c.active).length : 0;
+        const activeCriteriaCount = currentAppliedCriteria ? Object.values(currentAppliedCriteria).filter(c => c && typeof c === 'object' && c.active).length : 0;
 
 
         if (!statsAS && !statsT2 && (!_currentData || _currentData.length === 0)) {
              container.innerHTML = `<div class="col-12"><p class="text-muted text-center p-3">Keine Daten für Kollektiv '${getKollektivDisplayName(_currentKollektiv)}' verfügbar, um Dashboard anzuzeigen.</p></div>`;
              return;
         }
-        if (!statsAS && !statsT2 && activeCriteriaCount === 0){
-             container.innerHTML = `<div class="col-12"><p class="text-muted text-center p-3">Bitte T2-Kriterien definieren und anwenden, um das Dashboard anzuzeigen.</p></div>`;
-             return;
+        if (!statsAS && !statsT2 && activeCriteriaCount === 0){ // Zeige Meldung, wenn keine Kriterien aktiv sind, auch wenn Daten da wären
+             container.innerHTML = `<div class="col-12"><p class="text-muted text-center p-3">Bitte T2-Kriterien definieren und anwenden, um das Dashboard und die T2-Metriken anzuzeigen.</p></div>`;
+             // Wir könnten hier trotzdem die AS-Karten anzeigen, wenn statsAS vorhanden ist.
+             // Für Konsistenz wird das Dashboard aber erst komplett gezeigt, wenn T2-Kriterien angewendet sind und statsT2 potenziell berechnet werden kann.
+             // Alternative: Nur T2-Teil ausblenden, AS-Teil zeigen.
+             // Fürs Erste: Das gesamte Dashboard wird nur angezeigt, wenn T2-Kriterien potenziell Ergebnisse liefern.
+             if (!statsAS) return; // Wenn auch AS nicht da, dann komplett raus.
         }
+
 
         const na = 'N/A';
         const createMetricContent = (metricObj, key, isRate = true, digits = 1) => {
@@ -124,7 +133,7 @@ const auswertungTabLogic = (() => {
                     null, 'metric-card'
                 );
             } else {
-                 dashboardRow.innerHTML += `<div class="col-12 text-center text-muted small p-2">AS Metriken nicht verfügbar.</div>`;
+                 dashboardRow.innerHTML += `<div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 dashboard-card-col"><div class="card h-100 dashboard-card"><div class="card-header">AS Metriken</div><div class="card-body"><p class="text-muted small">Nicht verfügbar.</p></div></div></div>`;
             }
         } else {
              dashboardRow.innerHTML = '<p class="text-danger">Fehler: Dashboard Karten Komponente nicht verfügbar.</p>';
@@ -140,36 +149,46 @@ const auswertungTabLogic = (() => {
                 </div>
             </div>`;
 
-        if (statsAS?.matrix && typeof chart_renderer !== 'undefined' && typeof chart_renderer.renderPieChart === 'function') {
+        if (statsAS?.matrix && typeof chart_renderer !== 'undefined' && typeof chart_renderer.renderPieChart === 'function' && typeof UI_TEXTS?.legendLabels !== 'undefined' && typeof APP_CONFIG?.CHART_SETTINGS !== 'undefined') {
              const totalAS = statsAS.matrix.rp + statsAS.matrix.fp + statsAS.matrix.fn + statsAS.matrix.rn;
              const asPieData = [
-                { label: UI_TEXTS?.legendLabels?.asPositive || 'AS+', value: statsAS.matrix.rp + statsAS.matrix.fp, color: APP_CONFIG.CHART_SETTINGS.AS_COLOR },
-                { label: UI_TEXTS?.legendLabels?.asNegative || 'AS-', value: statsAS.matrix.fn + statsAS.matrix.rn, color: d3.color(APP_CONFIG.CHART_SETTINGS.AS_COLOR).brighter(1.5).formatHex() }
+                { label: UI_TEXTS.legendLabels.asPositive || 'AS+', value: statsAS.matrix.rp + statsAS.matrix.fp, color: APP_CONFIG.CHART_SETTINGS.AS_COLOR },
+                { label: UI_TEXTS.legendLabels.asNegative || 'AS-', value: statsAS.matrix.fn + statsAS.matrix.rn, color: d3.color(APP_CONFIG.CHART_SETTINGS.AS_COLOR).brighter(1.5).formatHex() }
              ].filter(d => d.value > 0 && totalAS > 0);
-            if (asPieData.length > 0) chart_renderer.renderPieChart('chart-dash-as-status', asPieData, { compact: true, donut: true, title: '' });
-            else {
-                const chartEl = document.getElementById('chart-dash-as-status');
-                if(chartEl) chartEl.closest('.dashboard-card-col')?.classList.add('d-none');
+            const asChartEl = document.getElementById('chart-dash-as-status');
+            if (asChartEl && asPieData.length > 0) {
+                chart_renderer.renderPieChart('chart-dash-as-status', asPieData, { compact: true, donut: true, title: '' });
+            } else if (asChartEl) {
+                asChartEl.innerHTML = '<p class="text-muted small p-1">Keine AS Daten für Chart.</p>';
+                asChartEl.closest('.dashboard-card-col')?.classList.add('d-none');
             }
         } else {
             const chartEl = document.getElementById('chart-dash-as-status');
-            if(chartEl) chartEl.closest('.dashboard-card-col')?.classList.add('d-none');
+            if(chartEl) {
+                chartEl.innerHTML = '<p class="text-muted small p-1">AS Chart nicht renderbar.</p>';
+                chartEl.closest('.dashboard-card-col')?.classList.add('d-none');
+            }
         }
 
-        if (statsT2?.matrix && typeof chart_renderer !== 'undefined' && typeof chart_renderer.renderPieChart === 'function') {
+        if (statsT2?.matrix && typeof chart_renderer !== 'undefined' && typeof chart_renderer.renderPieChart === 'function' && typeof UI_TEXTS?.legendLabels !== 'undefined' && typeof APP_CONFIG?.CHART_SETTINGS !== 'undefined') {
             const totalT2 = statsT2.matrix.rp + statsT2.matrix.fp + statsT2.matrix.fn + statsT2.matrix.rn;
             const t2PieData = [
-                { label: UI_TEXTS?.legendLabels?.t2Positive || 'T2+', value: statsT2.matrix.rp + statsT2.matrix.fp, color: APP_CONFIG.CHART_SETTINGS.T2_COLOR },
-                { label: UI_TEXTS?.legendLabels?.t2Negative || 'T2-', value: statsT2.matrix.fn + statsT2.matrix.rn, color: d3.color(APP_CONFIG.CHART_SETTINGS.T2_COLOR).brighter(1.5).formatHex() }
+                { label: UI_TEXTS.legendLabels.t2Positive || 'T2+', value: statsT2.matrix.rp + statsT2.matrix.fp, color: APP_CONFIG.CHART_SETTINGS.T2_COLOR },
+                { label: UI_TEXTS.legendLabels.t2Negative || 'T2-', value: statsT2.matrix.fn + statsT2.matrix.rn, color: d3.color(APP_CONFIG.CHART_SETTINGS.T2_COLOR).brighter(1.5).formatHex() }
             ].filter(d => d.value > 0 && totalT2 > 0);
-             if (t2PieData.length > 0) chart_renderer.renderPieChart('chart-dash-t2-status', t2PieData, { compact: true, donut: true, title: '' });
-             else {
-                const chartEl = document.getElementById('chart-dash-t2-status');
-                if(chartEl) chartEl.closest('.dashboard-card-col')?.classList.add('d-none');
+            const t2ChartEl = document.getElementById('chart-dash-t2-status');
+             if (t2ChartEl && t2PieData.length > 0) {
+                chart_renderer.renderPieChart('chart-dash-t2-status', t2PieData, { compact: true, donut: true, title: '' });
+             } else if (t2ChartEl) {
+                t2ChartEl.innerHTML = '<p class="text-muted small p-1">Keine T2 Daten für Chart.</p>';
+                t2ChartEl.closest('.dashboard-card-col')?.classList.add('d-none');
              }
         } else {
              const chartEl = document.getElementById('chart-dash-t2-status');
-             if(chartEl) chartEl.closest('.dashboard-card-col')?.classList.add('d-none');
+             if(chartEl) {
+                chartEl.innerHTML = '<p class="text-muted small p-1">T2 Chart nicht renderbar.</p>';
+                chartEl.closest('.dashboard-card-col')?.classList.add('d-none');
+             }
         }
     }
 
@@ -206,16 +225,16 @@ const auswertungTabLogic = (() => {
                 sortIconHTML = '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>';
             }
 
-            const baseTooltipContent = col.tooltip || col.label;
+            const baseTooltip = (TOOLTIP_CONTENT?.auswertungTable?.[col.key] || col.tooltip || col.label);
             const subHeadersHTML = col.subKeys ? col.subKeys.map(sk => {
                  const isActiveSubSort = activeSubKey === sk.key;
                  const style = isActiveSubSort ? 'font-weight: bold; text-decoration: underline; color: var(--primary-color);' : '';
                  const subLabel = sk.label || sk.key.toUpperCase();
-                 const subTooltip = `Sortieren nach Status ${subLabel}. ${baseTooltipContent}`;
+                 const subTooltip = `Sortieren nach Status ${subLabel}. ${baseTooltip}`;
                  return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="${subTooltip}">${subLabel}</span>`;
              }).join(' / ') : '';
 
-            const mainTooltip = col.subKeys ? `${baseTooltipContent}` : (col.key === 'details' ? (TOOLTIP_CONTENT?.auswertungTable?.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
+            const mainTooltip = col.subKeys ? `${baseTooltip}` : (col.key === 'details' ? (TOOLTIP_CONTENT?.auswertungTable?.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltip}`);
             const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys || col.key === 'details' ? '' : 'style="cursor: pointer;"'}`;
 
             let thContent = col.label;
@@ -260,7 +279,9 @@ const auswertungTabLogic = (() => {
         } else {
             const sortedData = [...data].sort(getSortFunction(currentSortState.key, currentSortState.direction, currentSortState.subKey));
             sortedData.forEach(patient => {
-                tableHTML += tableRenderer.createAuswertungTableRow(patient, currentAppliedCriteria, currentAppliedLogic);
+                if (typeof tableRenderer !== 'undefined' && typeof tableRenderer.createAuswertungTableRow === 'function') {
+                    tableHTML += tableRenderer.createAuswertungTableRow(patient, currentAppliedCriteria, currentAppliedLogic);
+                }
             });
         }
         tableHTML += `</tbody></table>`;
@@ -306,7 +327,7 @@ const auswertungTabLogic = (() => {
         contentArea.innerHTML = `
             <div class="row">
                 <div class="col-lg-7">
-                    <div id="auswertung-dashboard-container" class="mb-3"></div>
+                    <div id="auswertung-dashboard-container" class="mb-3 row"></div>
                     <div id="t2-criteria-controls-placeholder" class="mb-3">
                         ${t2ControlsHTML}
                     </div>
@@ -340,9 +361,15 @@ const auswertungTabLogic = (() => {
         }
 
         if (typeof ui_helpers !== 'undefined') {
-            ui_helpers.updateT2CriteriaControlsUI(_appliedT2Criteria, _appliedT2Logic);
-            ui_helpers.markCriteriaSavedIndicator(typeof t2CriteriaManager !== 'undefined' ? t2CriteriaManager.isUnsaved() : false);
-            ui_helpers.updateBruteForceUI(_bruteForceState, _bruteForceData || {}, _workerAvailable, _currentKollektiv);
+            if (typeof ui_helpers.updateT2CriteriaControlsUI === 'function') {
+                ui_helpers.updateT2CriteriaControlsUI(_appliedT2Criteria, _appliedT2Logic);
+            }
+            if (typeof ui_helpers.markCriteriaSavedIndicator === 'function') {
+                ui_helpers.markCriteriaSavedIndicator(typeof t2CriteriaManager !== 'undefined' ? t2CriteriaManager.isUnsaved() : false);
+            }
+            if (typeof ui_helpers.updateBruteForceUI === 'function' && typeof bruteForceManager !== 'undefined') {
+                 ui_helpers.updateBruteForceUI(_bruteForceState, _bruteForceData || {}, bruteForceManager.isWorkerAvailable(), _currentKollektiv);
+            }
             const auswertungTableHeader = document.getElementById('auswertung-table-header');
             if (auswertungTableHeader && typeof ui_helpers.updateSortIcons === 'function') {
                 ui_helpers.updateSortIcons('auswertung-table-header', _sortState);
@@ -356,6 +383,9 @@ const auswertungTabLogic = (() => {
 
         _isInitialized = true;
         _isDataStale = false;
+         if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.initializeTooltips === 'function') {
+            ui_helpers.initializeTooltips(contentArea);
+        }
     }
 
     return Object.freeze({
