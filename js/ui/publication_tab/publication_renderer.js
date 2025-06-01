@@ -1,7 +1,7 @@
 const publicationRenderer = (() => {
 
     function renderSidebarNavigation(tocItems, currentSectionId, lang) {
-        if (!tocItems || tocItems.length === 0) {
+        if (!tocItems || !Array.isArray(tocItems) || tocItems.length === 0) {
             return '<p class="text-muted p-2 small">Kein Inhaltsverzeichnis verfügbar.</p>';
         }
 
@@ -9,17 +9,22 @@ const publicationRenderer = (() => {
         let currentMainSectionId = null;
 
         tocItems.forEach(item => {
+            if (!item || typeof item.id !== 'string' || typeof item.label !== 'string' || typeof item.mainSectionId !== 'string' || typeof item.mainSectionLabel !== 'string') {
+                return; 
+            }
+
             if (item.mainSectionId !== currentMainSectionId) {
                 if (currentMainSectionId !== null) {
-                    html += '</div>'; // Schließe vorherige Sub-Navigationsgruppe
+                    html += '</div>'; 
                 }
                 currentMainSectionId = item.mainSectionId;
-                const mainSectionTooltip = TOOLTIP_CONTENT.publikationTabTooltips[item.mainSectionId]?.description || item.mainSectionLabel;
+                const mainSectionTooltip = (TOOLTIP_CONTENT?.publikationTabTooltips?.[item.mainSectionId]?.description) || item.mainSectionLabel;
                 html += `<h6 class="mt-3 mb-1 px-2 text-muted text-uppercase small" data-tippy-content="${mainSectionTooltip}">${item.mainSectionLabel}</h6>`;
-                html += '<div class="nav nav-pills flex-column">'; // Starte neue Sub-Navigationsgruppe
+                html += '<div class="nav nav-pills flex-column">'; 
             }
+            
             const isActive = item.id === currentSectionId;
-            const subSectionTooltip = TOOLTIP_CONTENT.publikationTabTooltips[item.id]?.description || item.label;
+            const subSectionTooltip = (TOOLTIP_CONTENT?.publikationTabTooltips?.[item.id]?.description) || item.label;
             html += `
                 <a class="nav-link py-1 px-3 publikation-section-link ${isActive ? 'active' : ''}" href="#" data-section-id="${item.id}" data-tippy-content="${subSectionTooltip}" aria-current="${isActive ? 'page' : 'false'}">
                     ${item.label}
@@ -27,7 +32,7 @@ const publicationRenderer = (() => {
         });
 
         if (currentMainSectionId !== null) {
-            html += '</div>'; // Schließe die letzte Sub-Navigationsgruppe
+            html += '</div>'; 
         }
         html += '</nav>';
         return html;
@@ -37,56 +42,74 @@ const publicationRenderer = (() => {
         if (typeof publicationTextGenerator === 'undefined' || typeof publicationTextGenerator.getSectionText !== 'function') {
             return `<p class="text-danger">Fehler: publicationTextGenerator nicht verfügbar.</p>`;
         }
+        if (typeof APP_CONFIG === 'undefined' || typeof PUBLICATION_CONFIG === 'undefined' || typeof state === 'undefined') {
+            return `<p class="text-danger">Fehler: Globale Konfigurationen nicht verfügbar.</p>`;
+        }
 
         const commonData = {
-            references: APP_CONFIG.REFERENCES_FOR_PUBLICATION,
-            appVersion: APP_CONFIG.APP_VERSION,
-            appName: APP_CONFIG.APP_NAME,
-            significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
-            bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
-            appliedT2CriteriaGlobal: commonDataOverrides.appliedT2Criteria,
-            appliedT2LogicGlobal: commonDataOverrides.appliedT2Logic,
+            references: APP_CONFIG.REFERENCES_FOR_PUBLICATION || {},
+            appVersion: APP_CONFIG.APP_VERSION || 'N/A',
+            appName: APP_CONFIG.APP_NAME || 'Analyse Tool',
+            significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS?.SIGNIFICANCE_LEVEL || 0.05,
+            bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS?.BOOTSTRAP_CI_REPLICATIONS || 1000,
+            appliedT2CriteriaGlobal: commonDataOverrides?.appliedT2Criteria || {},
+            appliedT2LogicGlobal: commonDataOverrides?.appliedT2Logic || 'UND',
             nGesamt: publicationStats?.Gesamt?.deskriptiv?.anzahlPatienten,
             nDirektOP: publicationStats?.['direkt OP']?.deskriptiv?.anzahlPatienten,
             nNRCT: publicationStats?.nRCT?.deskriptiv?.anzahlPatienten,
             bruteForceMetricForPublication: options?.bruteForceMetric || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication,
-            ...commonDataOverrides 
+            ...(commonDataOverrides || {})
         };
         
         return publicationTextGenerator.getSectionText(sectionId, lang, publicationStats, commonData, options);
     }
 
-    function attachPublicationTabEventListeners(contentAreaElement) {
+    function attachPublicationTabEventListeners(contentAreaElement, allStatsForCopy, langForCopy, currentPubSectionForCopy, currentBfMetricForCopy) {
         if (!contentAreaElement) return;
 
         contentAreaElement.addEventListener('click', function(event) {
-            const target = event.target;
-            if (target.matches('.copy-section-markdown-btn')) {
-                const sectionId = target.dataset.sectionId;
-                const lang = target.dataset.lang;
-                if (sectionId && lang && typeof publicationTabLogic !== 'undefined' && typeof publicationTabLogic.getFullPublicationStats === 'function' && typeof publicationTextGenerator !== 'undefined' && typeof state !== 'undefined') {
-                    const allStats = publicationTabLogic.getFullPublicationStats();
-                    const bfMetric = state.getCurrentPublikationBruteForceMetric();
-                     const commonData = {
-                        references: APP_CONFIG.REFERENCES_FOR_PUBLICATION,
-                        appVersion: APP_CONFIG.APP_VERSION,
-                        appName: APP_CONFIG.APP_NAME,
-                        significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
-                        bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
+            const target = event.target.closest('.copy-section-markdown-btn');
+            if (target) {
+                const sectionId = target.dataset.sectionId || currentPubSectionForCopy;
+                const lang = target.dataset.lang || langForCopy;
+
+                if (sectionId && lang && allStatsForCopy &&
+                    typeof publicationTextGenerator !== 'undefined' && 
+                    typeof state !== 'undefined' && 
+                    typeof APP_CONFIG !== 'undefined' &&
+                    typeof PUBLICATION_CONFIG !== 'undefined') {
+
+                    const commonData = {
+                        references: APP_CONFIG.REFERENCES_FOR_PUBLICATION || {},
+                        appVersion: APP_CONFIG.APP_VERSION || 'N/A',
+                        appName: APP_CONFIG.APP_NAME || 'Analyse Tool',
+                        significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS?.SIGNIFICANCE_LEVEL || 0.05,
+                        bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS?.BOOTSTRAP_CI_REPLICATIONS || 1000,
                         appliedT2CriteriaGlobal: state.getAppliedT2Criteria(),
                         appliedT2LogicGlobal: state.getAppliedT2Logic(),
-                        nGesamt: allStats?.Gesamt?.deskriptiv?.anzahlPatienten,
-                        nDirektOP: allStats?.['direkt OP']?.deskriptiv?.anzahlPatienten,
-                        nNRCT: allStats?.nRCT?.deskriptiv?.anzahlPatienten,
-                        bruteForceMetricForPublication: bfMetric
+                        nGesamt: allStatsForCopy?.Gesamt?.deskriptiv?.anzahlPatienten,
+                        nDirektOP: allStatsForCopy?.['direkt OP']?.deskriptiv?.anzahlPatienten,
+                        nNRCT: allStatsForCopy?.nRCT?.deskriptiv?.anzahlPatienten,
+                        bruteForceMetricForPublication: currentBfMetricForCopy
                     };
-                    const markdownText = publicationTextGenerator.getSectionTextAsMarkdown(sectionId, lang, allStats, commonData, {bruteForceMetric: bfMetric});
-                    navigator.clipboard.writeText(markdownText).then(() => {
-                        ui_helpers.showToast(`Markdown für Sektion '${sectionId}' in Zwischenablage kopiert.`, 'success');
-                    }).catch(err => {
-                        console.error('Fehler beim Kopieren in die Zwischenablage:', err);
-                        ui_helpers.showToast('Fehler beim Kopieren in die Zwischenablage.', 'danger');
-                    });
+                    const options = { bruteForceMetric: currentBfMetricForCopy };
+
+                    const markdownText = publicationTextGenerator.getSectionTextAsMarkdown(sectionId, lang, allStatsForCopy, commonData, options);
+                    
+                    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                        navigator.clipboard.writeText(markdownText).then(() => {
+                            if (typeof ui_helpers !== 'undefined') ui_helpers.showToast(`Markdown für Sektion '${sectionId}' in Zwischenablage kopiert.`, 'success');
+                        }).catch(err => {
+                            console.error('Fehler beim Kopieren in die Zwischenablage:', err);
+                            if (typeof ui_helpers !== 'undefined') ui_helpers.showToast('Fehler beim Kopieren in die Zwischenablage.', 'danger');
+                        });
+                    } else {
+                        console.warn('Clipboard API nicht verfügbar.');
+                        if (typeof ui_helpers !== 'undefined') ui_helpers.showToast('Kopieren in Zwischenablage nicht vom Browser unterstützt.', 'warning');
+                    }
+                } else {
+                    console.warn("Kopieren fehlgeschlagen: Fehlende Daten oder Module.", {sectionId, lang, allStatsForCopy});
+                     if (typeof ui_helpers !== 'undefined') ui_helpers.showToast('Fehler beim Vorbereiten des Kopiervorgangs.', 'warning');
                 }
             }
         });
@@ -128,8 +151,12 @@ const publicationRenderer = (() => {
                 lowerValForDisplay = String(lowerValForDisplay).replace('%','');
                 upperValForDisplay = String(upperValForDisplay).replace('%','');
             }
-            let ciString = `${mainValForDisplay} (${(lang === 'de' ? '95%-KI' : '95% CI')}: ${lowerValForDisplay}\u00A0–\u00A0${upperValForDisplay})${suffix}`;
-            if(showMethod && metric.method) ciString += ` [${metric.method.replace('Woolf Logit (Haldane-Anscombe correction)', 'Woolf Logit').replace('Bootstrap Percentile','Bootstrap')}]`;
+            const ciLabel = lang === 'de' ? '95%-KI' : '95% CI';
+            let ciString = `${mainValForDisplay} (${ciLabel}: ${lowerValForDisplay}\u00A0–\u00A0${upperValForDisplay})${suffix}`;
+            if(showMethod && metric.method) {
+                const cleanedMethod = metric.method.replace('Woolf Logit (Haldane-Anscombe correction)', 'Woolf Logit').replace('Bootstrap Percentile','Bootstrap');
+                ciString += ` [${cleanedMethod}]`;
+            }
             return ciString;
         }
         return valStr;
@@ -137,14 +164,14 @@ const publicationRenderer = (() => {
 
     function _createDownloadButtons(elementId, baseName, formats = ['png', 'csv', 'md']) {
         let buttonsHTML = '<div class="publication-element-downloads btn-group btn-group-sm mt-1 float-end" role="group" aria-label="Download options">';
-        if (formats.includes('png') && APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT) {
-            buttonsHTML += `<button class="btn btn-outline-secondary table-download-png-btn" data-table-id="${elementId}" data-table-name="${baseName}" data-tippy-content="Tabelle als PNG herunterladen"><i class="fas fa-image"></i> PNG</button>`;
+        if (formats.includes('png') && APP_CONFIG?.EXPORT_SETTINGS?.ENABLE_TABLE_PNG_EXPORT) {
+            buttonsHTML += `<button class="btn btn-outline-secondary table-download-png-btn" data-table-id="${elementId}" data-table-name="${String(baseName).replace(/[^a-zA-Z0-9_-]/g, '_')}" data-tippy-content="Tabelle als PNG herunterladen"><i class="fas fa-image"></i> PNG</button>`;
         }
         if (formats.includes('csv')) {
-            buttonsHTML += `<button class="btn btn-outline-secondary table-download-csv-btn" data-table-id="${elementId}" data-table-name="${baseName}" data-tippy-content="Tabelle als CSV herunterladen"><i class="fas fa-file-csv"></i> CSV</button>`;
+            buttonsHTML += `<button class="btn btn-outline-secondary table-download-csv-btn" data-table-id="${elementId}" data-table-name="${String(baseName).replace(/[^a-zA-Z0-9_-]/g, '_')}" data-tippy-content="Tabelle als CSV herunterladen"><i class="fas fa-file-csv"></i> CSV</button>`;
         }
         if (formats.includes('md')) {
-             buttonsHTML += `<button class="btn btn-outline-secondary table-download-md-btn" data-table-id="${elementId}" data-table-name="${baseName}" data-tippy-content="Tabelle als Markdown herunterladen"><i class="fab fa-markdown"></i> MD</button>`;
+             buttonsHTML += `<button class="btn btn-outline-secondary table-download-md-btn" data-table-id="${elementId}" data-table-name="${String(baseName).replace(/[^a-zA-Z0-9_-]/g, '_')}" data-tippy-content="Tabelle als Markdown herunterladen"><i class="fab fa-markdown"></i> MD</button>`;
         }
         buttonsHTML += '</div>';
         return formats.length > 0 ? buttonsHTML : '';
@@ -162,9 +189,9 @@ const publicationRenderer = (() => {
 
         const headers = [
             lang === 'de' ? 'Merkmal' : 'Characteristic',
-            `${getKollektivDisplayName('Gesamt')} (N=${pGesamt.anzahlPatienten})`,
-            `${getKollektivDisplayName('direkt OP')} (N=${pDirektOP.anzahlPatienten})`,
-            `${getKollektivDisplayName('nRCT')} (N=${pNRCT.anzahlPatienten})`
+            `${getKollektivDisplayName('Gesamt')} (N=${pGesamt.anzahlPatienten || na})`,
+            `${getKollektivDisplayName('direkt OP')} (N=${pDirektOP.anzahlPatienten || na})`,
+            `${getKollektivDisplayName('nRCT')} (N=${pNRCT.anzahlPatienten || na})`
         ];
 
         const formatCellData = (data, key, subKey = null, isPercentOfTotal = false, digits = 1, isCountOnly = false) => {
@@ -173,10 +200,10 @@ const publicationRenderer = (() => {
             if (subKey) { value = data[key]?.[subKey]; totalForPercent = data.anzahlPatienten; }
             else { value = data[key]; totalForPercent = data.anzahlPatienten; }
 
-            if (isCountOnly && (value !== null && value !== undefined && !isNaN(value))) return formatNumber(value, 0);
+            if (isCountOnly && (value !== null && value !== undefined && !isNaN(value))) return formatNumber(value, 0, na);
 
             if (isPercentOfTotal && totalForPercent > 0 && value !== null && value !== undefined && !isNaN(value)) {
-                return `${formatNumber(value, 0)} (${formatPercent(value / totalForPercent, digits === 0 ? 0 : 1)})`;
+                return `${formatNumber(value, 0, na)} (${formatPercent(value / totalForPercent, digits === 0 ? 0 : 1)})`;
             }
             if (value !== null && value !== undefined && !isNaN(value)) {
                  if (key === 'alter' && subKey === 'medianRange') return `${formatNumber(data.alter?.median, digits, na, lang==='en')} (${formatNumber(data.alter?.min, 0, na, lang==='en')}\u00A0–\u00A0${formatNumber(data.alter?.max, 0, na, lang==='en')})`;
@@ -230,10 +257,10 @@ const publicationRenderer = (() => {
                                 <tbody class="small">`;
         sets.forEach(set => {
             if (!PUBLICATION_CONFIG.literatureCriteriaSets.find(confSet => confSet.id === set.id)) return;
-            const refKey = set.reference ? Object.keys(commonData.references || {}).find(key => commonData.references[key].short === set.reference) : null;
-            const referenceText = refKey ? publicationTextGenerator.getReference(refKey, commonData, 'citation') : (set.reference || 'N/A');
+            const refShort = set.reference; // Der 'reference' Key in study_criteria_manager enthält bereits das short Zitat
+            const referenceText = refShort || 'N/A';
             const name = set.name || 'N/A';
-            const criteriaDesc = set.studyInfo?.keyCriteriaSummary || (typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay(set.criteria, set.logic, true) : 'N/A');
+            const criteriaDesc = set.studyInfo?.keyCriteriaSummary || (typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay(set.criteria, set.logic || set.criteria?.logic, true) : 'N/A');
             const targetGroup = set.studyInfo?.investigationType ? `${getKollektivDisplayName(set.applicableKollektiv)} (${set.studyInfo.investigationType})` : getKollektivDisplayName(set.applicableKollektiv);
 
             tableHTML += `<tr>
@@ -268,12 +295,12 @@ const publicationRenderer = (() => {
                                 <tbody class="small">`;
         metrics.forEach(key => {
             const metric = statsData[key];
-            if (metric && UI_TEXTS.statMetrics[key]) {
+            if (metric && UI_TEXTS?.statMetrics?.[key]) {
                 const isRate = !(key === 'auc' || key === 'f1');
                 const digits = UI_TEXTS.statMetrics[key].digits !== undefined ? UI_TEXTS.statMetrics[key].digits : ((key === 'auc' || key === 'f1') ? 3 : 1);
                 tableHTML += `<tr>
                                 <td>${metricDisplayNames[key]}</td>
-                                <td>${fCI_pub(metric, digits, isRate, lang)}</td>`;
+                                <td>${fCI_pub(metric, digits, isRate, lang, showFullCIInfo && key !== 'sens' && key !== 'spez' && key !== 'ppv' && key !== 'npv' && key !== 'acc')}</td>`;
                 if (showFullCIInfo) tableHTML += `<td>${metric?.method || 'N/A'}</td>`;
                 tableHTML += `</tr>`;
             }
@@ -331,7 +358,7 @@ const publicationRenderer = (() => {
                 } else { 
                     const bfDef = allKollektivStats?.[kId]?.bruteforce_definition;
                     if(bfDef && bfDef.metricName !== bfZielMetric){
-                         t2SetName += ` (optimiert für ${bfDef.metricName})`;
+                         t2SetName += ` (optimiert für ${bfDef.metricName})`; // Zeige an, wenn für andere Metrik optimiert
                     }
                     vergleichData = allKollektivStats?.[kId]?.vergleichASvsT2_bruteforce;
                     t2Stats = allKollektivStats?.[kId]?.gueteT2_bruteforce;
