@@ -74,7 +74,7 @@ const mainAppInterface = (() => {
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, APP_CONFIG.APP_VERSION);
         }
 
-        const initialTabElement = document.querySelector(`.nav-tabs .nav-link[href="#${_activeTabId}-pane"]`);
+        const initialTabElement = document.querySelector(`.nav-tabs .nav-link[data-bs-target="#${_activeTabId}-pane"]`);
         if (initialTabElement) {
             try {
                  const tab = new bootstrap.Tab(initialTabElement);
@@ -111,18 +111,18 @@ const mainAppInterface = (() => {
         }
 
 
-        document.querySelectorAll('.nav-tabs .nav-link').forEach(tab => {
-            tab.addEventListener('show.bs.tab', event => {
-                const hrefAttribute = event.currentTarget.getAttribute('href');
-                if (hrefAttribute) {
-                    const newTabId = hrefAttribute.substring(1).replace('-pane', '');
+        document.querySelectorAll('.nav-tabs .nav-link').forEach(tabButton => {
+            tabButton.addEventListener('show.bs.tab', event => {
+                const buttonId = event.currentTarget.id;
+                if (buttonId) {
+                    const newTabId = buttonId; // Die ID des Buttons ist direkt die Tab-ID (z.B. "daten-tab")
                     if (_activeTabId !== newTabId) {
                         _activeTabId = newTabId;
                         state.setActiveTabId(_activeTabId);
                         _handleTabChange(_activeTabId);
                     }
                 } else {
-                     console.error("Fehlendes href Attribut am Tab-Element:", event.currentTarget);
+                     console.error("Fehlende ID am Tab-Button-Element:", event.currentTarget);
                 }
             });
         });
@@ -144,7 +144,7 @@ const mainAppInterface = (() => {
         if (_isLoading && !isInitialLoad) {
             console.warn("Tab-Wechsel ignoriert, da die Anwendung bereits lädt.");
             const previousTabId = state.getPreviousTabId() || APP_CONFIG.DEFAULT_SETTINGS.ACTIVE_TAB_ID || 'daten-tab';
-            const previousTabElement = document.querySelector(`.nav-tabs .nav-link[href="#${previousTabId}-pane"]`);
+            const previousTabElement = document.querySelector(`.nav-tabs .nav-link[data-bs-target="#${previousTabId}-pane"]`);
             if (previousTabElement) {
                  try {
                     const tabInstance = bootstrap.Tab.getInstance(previousTabElement) || new bootstrap.Tab(previousTabElement);
