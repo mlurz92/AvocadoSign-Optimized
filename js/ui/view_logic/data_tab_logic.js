@@ -9,7 +9,9 @@ const dataTabLogic = (() => {
         columns.forEach(col => {
             let sortIconHTML = '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>';
             let thStyle = col.class ? `class="${col.class}"` : '';
-            if (col.width) thStyle += ` style="width: ${col.width};"`;
+            if (col.width) {
+                thStyle += ` style="width: ${col.width};"`;
+            }
 
             let isMainKeyActiveSort = false;
             let activeSubKey = null;
@@ -22,19 +24,29 @@ const dataTabLogic = (() => {
                 } else if (!col.subHeaders && (sortState.subKey === null || sortState.subKey === undefined)) {
                     isMainKeyActiveSort = true;
                     sortIconHTML = `<i class="fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1"></i>`;
-                    thStyle += (thStyle.includes('style="') ? ' ' : ' style="') + 'color: var(--primary-color);"';
-                    if(!thStyle.endsWith('"')) thStyle += '"';
+                    let currentStyle = thStyle.includes('style="') ? thStyle.substring(thStyle.indexOf('style="') + 7, thStyle.lastIndexOf('"')) : '';
+                    if (currentStyle && !currentStyle.endsWith(';')) {
+                        currentStyle += '; ';
+                    }
+                    currentStyle += 'color: var(--primary-color);';
+                    if (thStyle.includes('style="')) {
+                        thStyle = thStyle.replace(/style=".*?"/, `style="${currentStyle}"`);
+                    } else {
+                        thStyle += ` style="${currentStyle}"`;
+                    }
                 }
             }
+            
+            const baseTooltipKeyValue = col.tooltipKey || `datenTable.${col.key}`;
+            const baseTooltipContent = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.datenTable && TOOLTIP_CONTENT.datenTable[col.key] ? TOOLTIP_CONTENT.datenTable[col.key] : col.label) || col.label;
 
-            const baseTooltipContent = (TOOLTIP_CONTENT[col.tooltipKey]?.description) || col.label;
 
             const subHeadersHTML = col.subHeaders ? col.subHeaders.map(sh => {
                  const isActiveSubSort = activeSubKey === sh.subKey;
                  const subStyle = isActiveSubSort ? 'font-weight: bold; text-decoration: underline; color: var(--primary-color);' : '';
                  const subLabel = sh.label || sh.subKey.toUpperCase();
                  const subTooltip = `Sortieren nach Status ${subLabel}. ${baseTooltipContent}`;
-                 return `<span class="sortable-sub-header" data-sub-key="${sh.subKey}" style="cursor: pointer; <span class="math-inline">\{subStyle\}" data\-tippy\-content\="</span>{subTooltip}">${subLabel}</span>`;
+                 return `<span class="sortable-sub-header" data-sub-key="${sh.subKey}" style="cursor: pointer; ${subStyle}" data-tippy-content="${subTooltip}">${subLabel}</span>`;
              }).join(' / ') : '';
 
             const mainTooltip = col.subHeaders ? `${baseTooltipContent}` : (col.key === 'details' ? (TOOLTIP_CONTENT.datenTable.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
@@ -45,10 +57,11 @@ const dataTabLogic = (() => {
                 thContent += ` (${subHeadersHTML})`;
             }
             thContent += (col.sortable && !col.subHeaders && !isMainKeyActiveSort) ? ' <i class="fas fa-sort text-muted opacity-50 ms-1"></i>' : (isMainKeyActiveSort ? sortIconHTML : '');
-            if(col.key === 'details' && !col.sortable) thContent = col.label;
+            if(col.key === 'details' && !col.sortable) {
+                thContent = col.label;
+            }
 
-
-            headerHTML += `<th scope="col" ${thStyle} <span class="math-inline">\{sortAttributes\} data\-tippy\-content\="</span>{mainTooltip}">${thContent}</th>`;
+            headerHTML += `<th scope="col" ${thStyle} ${sortAttributes} data-tippy-content="${mainTooltip}">${thContent}</th>`;
         });
         headerHTML += `</tr></thead>`;
         return headerHTML;
@@ -87,4 +100,62 @@ const dataTabLogic = (() => {
                     { label: 'T2', subKey: 't2' }
                 ]
             },
-            { key: 'bemerkung', label: 'Bemerkung', sortable: false, class: 'col-bemerkung small', tooltipKey: 'datenTable.
+            { key: 'bemerkung', label: 'Bemerkung', sortable: false, class: 'col-bemerkung small', tooltipKey: 'datenTable.bemerkung' },
+            { key: 'details', label: '', sortable: false, class: 'text-center col-details', width: '30px', tooltipKey: 'datenTable.expandRow' }
+        ];
+
+        let tableHTML = `<table class="table table-sm table-hover data-table ${APP_CONFIG.UI_SETTINGS.STICKY_FIRST_COL_DATEN ? 'sticky-first-col' : ''}" id="${tableId}">`;
+        tableHTML += `<caption class="small text-muted">Patientenliste für Kollektiv: ${getKollektivDisplayName(_kollektivName)} (N=${sortedData.length})</caption>`;
+        tableHTML += _createDatenTableHeaderHTML(tableId, _currentSortState, columns);
+        tableHTML += `<tbody id="${tableBodyId}">`;
+        tableHTML += sortedData.map(patient => tableRenderer.createDatenTableRow(patient)).join('');
+        tableHTML += `</tbody></table>`;
+
+        tableContainer.innerHTML = tableHTML;
+
+        const tableBodyElement = document.getElementById(tableBodyId);
+        if(tableBodyElement && typeof ui_helpers !== 'undefined' && typeof ui_helpers.attachRowCollapseListeners === 'function'){
+            ui_helpers.attachRowCollapseListeners(tableBodyElement);
+        }
+    }
+
+    function initializeTab(data, sortStateParam) {
+        _currentData = Array.isArray(data) ? data : [];
+        
+        if (sortStateParam) {
+            _currentSortState = sortStateParam;
+        } else if (typeof state !== 'undefined' && typeof state.getCurrentDatenSortState === 'function') {
+            _currentSortState = state.getCurrentDatenSortState();
+        } else {
+            _currentSortState = { key: 'nr', direction: 'asc', subKey: null };
+        }
+
+        if (typeof state !== 'undefined' && typeof state.getCurrentKollektiv === 'function') {
+            _kollektivName = state.getCurrentKollektiv();
+        } else {
+            _kollektivName = 'Unbekannt';
+        }
+        
+        _isInitialized = true;
+        _renderDatenTable();
+        
+        if (typeof ui_helpers !== 'undefined') {
+            const tableHeaderElement = document.getElementById('daten-table-header');
+            if(tableHeaderElement && typeof ui_helpers.updateSortIcons === 'function') {
+                 ui_helpers.updateSortIcons('daten-table-header', _currentSortState);
+            }
+            if(typeof ui_helpers.updateElementText === 'function') {
+                 ui_helpers.updateElementText('daten-tab-kollektiv-name', getKollektivDisplayName(_kollektivName));
+            }
+        }
+    }
+
+    function isInitialized() {
+        return _isInitialized;
+    }
+
+    return Object.freeze({
+        initializeTab,
+        isInitialized
+    });
+})();
