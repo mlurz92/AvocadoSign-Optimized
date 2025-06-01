@@ -3,58 +3,106 @@ const viewRenderer = (() => {
     let _isInitialized = false;
 
     function _initializeTabModules() {
-        if (typeof dataTabLogic !== 'undefined' && typeof dataTabLogic.initialize === 'function' && !dataTabLogic.isInitialized()) {
-            dataTabLogic.initialize(_mainAppInterface);
-        }
-        if (typeof auswertungTabLogic !== 'undefined' && typeof auswertungTabLogic.initialize === 'function' && !auswertungTabLogic.isInitialized()) {
-            auswertungTabLogic.initialize(_mainAppInterface);
-        }
-        if (typeof statistikTabLogic !== 'undefined' && typeof statistikTabLogic.initialize === 'function' && !statistikTabLogic.isInitialized()) {
-            statistikTabLogic.initialize(_mainAppInterface);
-        }
-        if (typeof praesentationTabLogic !== 'undefined' && typeof praesentationTabLogic.initialize === 'function' && !praesentationTabLogic.isInitialized()) {
-            praesentationTabLogic.initialize(_mainAppInterface);
-        }
-        if (typeof publicationTabLogic !== 'undefined' && typeof publicationTabLogic.initialize === 'function' && !publicationTabLogic.isInitialized()) {
-            publicationTabLogic.initialize(_mainAppInterface);
-        }
-        if (typeof exportTabLogic !== 'undefined' && typeof exportTabLogic.initialize === 'function' && !exportTabLogic.isInitialized()) {
-            exportTabLogic.initialize(_mainAppInterface);
-        }
+        const tabLogics = [
+            { name: 'dataTabLogic', module: typeof dataTabLogic !== 'undefined' ? dataTabLogic : null },
+            { name: 'auswertungTabLogic', module: typeof auswertungTabLogic !== 'undefined' ? auswertungTabLogic : null },
+            { name: 'statistikTabLogic', module: typeof statistikTabLogic !== 'undefined' ? statistikTabLogic : null },
+            { name: 'praesentationTabLogic', module: typeof praesentationTabLogic !== 'undefined' ? praesentationTabLogic : null },
+            { name: 'publicationTabLogic', module: typeof publicationTabLogic !== 'undefined' ? publicationTabLogic : null },
+            { name: 'exportTabLogic', module: typeof exportTabLogic !== 'undefined' ? exportTabLogic : null }
+        ];
+
+        tabLogics.forEach(item => {
+            if (item.module && typeof item.module.initialize === 'function' && (!item.module.isInitialized || !item.module.isInitialized())) {
+                item.module.initialize(_mainAppInterface);
+            } else if (!item.module) {
+                console.warn(`ViewRenderer: Modul ${item.name} ist nicht definiert.`);
+            }
+        });
     }
 
     function initializeViewRenderer(appInterface) {
-        if (_isInitialized) return;
+        if (_isInitialized) {
+            console.warn("ViewRenderer bereits initialisiert.");
+            return;
+        }
+        if (!appInterface) {
+            console.error("ViewRenderer Initialisierung fehlgeschlagen: Kein mainAppInterface bereitgestellt.");
+            return;
+        }
         _mainAppInterface = appInterface;
         _initializeTabModules();
         _isInitialized = true;
+        console.log("ViewRenderer initialisiert.");
     }
 
     function _clearTabContent(tabId) {
         const tabPane = document.getElementById(`${tabId}-pane`);
+        const loadingSpinner = `<div class="d-flex justify-content-center align-items-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade Inhalte...</span></div></div>`;
         if (tabPane) {
-            const contentAreaId = APP_CONFIG.TAB_CONTENT_AREAS[tabId];
-            const contentArea = contentAreaId ? tabPane.querySelector(`#${contentAreaId}`) : tabPane;
-            if (contentArea) {
-                contentArea.innerHTML = `<div class="d-flex justify-content-center align-items-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade Inhalte...</span></div></div>`;
+            if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.TAB_CONTENT_AREAS && APP_CONFIG.TAB_CONTENT_AREAS[tabId]) {
+                const contentAreaId = APP_CONFIG.TAB_CONTENT_AREAS[tabId];
+                const contentArea = tabPane.querySelector(`#${contentAreaId}`);
+                if (contentArea) {
+                    contentArea.innerHTML = loadingSpinner;
+                } else {
+                    console.warn(`_clearTabContent: Inhaltsbereich #${contentAreaId} für Tab ${tabId} nicht im Pane gefunden. Leere Pane.`);
+                    tabPane.innerHTML = loadingSpinner;
+                }
             } else {
-                 tabPane.innerHTML = `<div class="d-flex justify-content-center align-items-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade Inhalte...</span></div></div>`;
+                tabPane.innerHTML = loadingSpinner;
             }
+        } else {
+            console.warn(`_clearTabContent: Tab-Pane für ${tabId} nicht gefunden.`);
         }
     }
+
+    function _showRenderError(tabId, specificError) {
+        const tabPane = document.getElementById(`${tabId}-pane`);
+        const errorMessage = specificError ? specificError.message : 'Unbekannter Fehler.';
+        const errorStack = specificError ? `<pre class="small mt-2">${specificError.stack || 'Kein Stacktrace verfügbar.'}</pre>` : '';
+        const fullErrorMessage = `<div class="alert alert-danger m-3" role="alert"><strong>Fehler beim Rendern des Tabs '${tabId}'!</strong><br>${errorMessage}${errorStack}</div>`;
+
+        if (tabPane) {
+            if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.TAB_CONTENT_AREAS && APP_CONFIG.TAB_CONTENT_AREAS[tabId]) {
+                const contentAreaId = APP_CONFIG.TAB_CONTENT_AREAS[tabId];
+                const contentArea = tabPane.querySelector(`#${contentAreaId}`);
+                if (contentArea) {
+                    contentArea.innerHTML = fullErrorMessage;
+                } else {
+                    console.warn(`_showRenderError: Inhaltsbereich #${contentAreaId} für Tab ${tabId} nicht im Pane gefunden. Zeige Fehler im Pane.`);
+                    tabPane.innerHTML = fullErrorMessage;
+                }
+            } else {
+                 if (typeof APP_CONFIG === 'undefined' || typeof APP_CONFIG.TAB_CONTENT_AREAS === 'undefined') {
+                    console.warn(`_showRenderError: APP_CONFIG.TAB_CONTENT_AREAS ist nicht definiert. Zeige Fehler direkt im Pane für ${tabId}.`);
+                }
+                tabPane.innerHTML = fullErrorMessage;
+            }
+        } else {
+             console.error(`Schwerwiegender Renderfehler: Tab-Pane für ${tabId} nicht gefunden, um Fehler anzuzeigen.`);
+        }
+    }
+
 
     function _renderDatenTab(data, stateSnapshot) {
         if (typeof dataTabLogic !== 'undefined' && typeof dataTabLogic.initializeTab === 'function') {
             dataTabLogic.initializeTab(data, stateSnapshot.datenSortState);
         } else {
-            console.error("dataTabLogic oder dataTabLogic.initializeTab ist nicht definiert.");
-            _showRenderError('daten-tab');
+            const error = new Error("dataTabLogic oder dataTabLogic.initializeTab ist nicht definiert.");
+            console.error(error.message);
+            _showRenderError('daten-tab', error);
         }
     }
 
     function _renderAuswertungTab(data, stateSnapshot) {
         if (typeof auswertungTabLogic !== 'undefined' && typeof auswertungTabLogic.initializeTab === 'function') {
-            const currentKollektivBruteForceData = stateSnapshot.bruteForceResults ? stateSnapshot.bruteForceResults[stateSnapshot.currentKollektiv] : null;
+            const currentKollektivBruteForceData = (stateSnapshot.bruteForceResults && stateSnapshot.bruteForceResults[stateSnapshot.currentKollektiv])
+                                                 ? stateSnapshot.bruteForceResults[stateSnapshot.currentKollektiv]
+                                                 : null;
+            const workerAvailable = typeof bruteForceManager !== 'undefined' && typeof bruteForceManager.isWorkerAvailable === 'function'
+                                    ? bruteForceManager.isWorkerAvailable()
+                                    : false;
             auswertungTabLogic.initializeTab(
                 data,
                 stateSnapshot.currentKollektiv,
@@ -63,18 +111,19 @@ const viewRenderer = (() => {
                 stateSnapshot.auswertungSortState,
                 stateSnapshot.bruteForceState,
                 currentKollektivBruteForceData,
-                typeof bruteForceManager !== 'undefined' ? bruteForceManager.isWorkerAvailable() : false
+                workerAvailable
             );
         } else {
-            console.error("auswertungTabLogic oder auswertungTabLogic.initializeTab ist nicht definiert.");
-            _showRenderError('auswertung-tab');
+            const error = new Error("auswertungTabLogic oder auswertungTabLogic.initializeTab ist nicht definiert.");
+            console.error(error.message);
+            _showRenderError('auswertung-tab', error);
         }
     }
 
-    function _renderStatistikTab(data, stateSnapshot) {
+    function _renderStatistikTab(rawData, stateSnapshot) {
         if (typeof statistikTabLogic !== 'undefined' && typeof statistikTabLogic.initializeTab === 'function') {
             statistikTabLogic.initializeTab(
-                data, // Hier werden die globalen Rohdaten übergeben, die Tab-Logik filtert dann
+                rawData,
                 stateSnapshot.currentKollektiv,
                 stateSnapshot.appliedT2Criteria,
                 stateSnapshot.appliedT2Logic,
@@ -83,15 +132,16 @@ const viewRenderer = (() => {
                 stateSnapshot.statsKollektiv2
             );
         } else {
-            console.error("statistikTabLogic oder statistikTabLogic.initializeTab ist nicht definiert.");
-            _showRenderError('statistik-tab');
+            const error = new Error("statistikTabLogic oder statistikTabLogic.initializeTab ist nicht definiert.");
+            console.error(error.message);
+            _showRenderError('statistik-tab', error);
         }
     }
 
-    function _renderPraesentationTab(data, stateSnapshot) {
+    function _renderPraesentationTab(rawData, stateSnapshot) {
          if (typeof praesentationTabLogic !== 'undefined' && typeof praesentationTabLogic.initializeTab === 'function') {
             praesentationTabLogic.initializeTab(
-                data, // Hier werden die globalen Rohdaten übergeben
+                rawData,
                 stateSnapshot.currentKollektiv,
                 stateSnapshot.appliedT2Criteria,
                 stateSnapshot.appliedT2Logic,
@@ -99,15 +149,16 @@ const viewRenderer = (() => {
                 stateSnapshot.praesentationStudyId
             );
         } else {
-            console.error("praesentationTabLogic oder praesentationTabLogic.initializeTab ist nicht definiert.");
-            _showRenderError('praesentation-tab');
+            const error = new Error("praesentationTabLogic oder praesentationTabLogic.initializeTab ist nicht definiert.");
+            console.error(error.message);
+            _showRenderError('praesentation-tab', error);
         }
     }
 
-    function _renderPublikationTab(data, stateSnapshot) {
+    function _renderPublikationTab(rawData, stateSnapshot) {
         if (typeof publicationTabLogic !== 'undefined' && typeof publicationTabLogic.initializeTab === 'function') {
              publicationTabLogic.initializeTab(
-                data, // Globale Rohdaten
+                rawData,
                 stateSnapshot.currentKollektiv,
                 stateSnapshot.appliedT2Criteria,
                 stateSnapshot.appliedT2Logic,
@@ -117,62 +168,62 @@ const viewRenderer = (() => {
                 stateSnapshot.publikationBruteForceMetric
             );
         } else {
-            console.error("publicationTabLogic oder publicationTabLogic.initializeTab ist nicht definiert.");
-            _showRenderError('publikation-tab');
+            const error = new Error("publicationTabLogic oder publicationTabLogic.initializeTab ist nicht definiert.");
+            console.error(error.message);
+            _showRenderError('publikation-tab', error);
         }
     }
 
-    function _renderExportTab(data, stateSnapshot) {
+    function _renderExportTab(rawData, stateSnapshot) {
         if (typeof exportTabLogic !== 'undefined' && typeof exportTabLogic.initializeTab === 'function') {
+             const allStudySets = typeof studyT2CriteriaManager !== 'undefined' && typeof studyT2CriteriaManager.getAllStudyCriteriaSets === 'function'
+                                ? studyT2CriteriaManager.getAllStudyCriteriaSets(true)
+                                : [];
              exportTabLogic.initializeTab(
-                data, // Globale Rohdaten
+                rawData,
                 stateSnapshot.currentKollektiv,
                 stateSnapshot.appliedT2Criteria,
                 stateSnapshot.appliedT2Logic,
                 stateSnapshot.bruteForceResults,
-                studyT2CriteriaManager.getAllStudyCriteriaSets(true)
+                allStudySets
             );
         } else {
-            console.error("exportTabLogic oder exportTabLogic.initializeTab ist nicht definiert.");
-            _showRenderError('export-tab');
+            const error = new Error("exportTabLogic oder exportTabLogic.initializeTab ist nicht definiert.");
+            console.error(error.message);
+            _showRenderError('export-tab', error);
         }
     }
-    
-    function _showRenderError(tabId) {
-        const tabPane = document.getElementById(`${tabId}-pane`);
-        if(tabPane) {
-            const contentAreaId = APP_CONFIG.TAB_CONTENT_AREAS[tabId];
-            const contentArea = contentAreaId ? tabPane.querySelector(`#${contentAreaId}`) : tabPane;
-            if(contentArea) {
-                 contentArea.innerHTML = `<div class="alert alert-danger m-3" role="alert">Fehler beim Rendern des Tabs '${tabId}'. Die benötigte Logik konnte nicht geladen werden. Bitte überprüfen Sie die Browser-Konsole.</div>`;
-            } else {
-                 tabPane.innerHTML = `<div class="alert alert-danger m-3" role="alert">Fehler beim Rendern des Tabs '${tabId}'. Die benötigte Logik konnte nicht geladen werden. Bitte überprüfen Sie die Browser-Konsole.</div>`;
-            }
-        }
-    }
-
 
     function renderTabContent(tabId, data, stateSnapshot) {
-        if (!_isInitialized && _mainAppInterface) {
-             _initializeTabModules(); // Stellen sicher, dass Module initialisiert sind, falls viewRenderer vor mainAppInterface initialisiert wurde
-        } else if (!_mainAppInterface) {
-            console.error("ViewRenderer nicht initialisiert. MainAppInterface fehlt.");
-            _showRenderError(tabId);
-            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.hideLoadingOverlay === 'function') mainAppInterface.hideLoadingOverlay();
-            return;
+        if (!_isInitialized) {
+            if (_mainAppInterface) {
+                _initializeTabModules(); // Sicherstellen, dass Module initialisiert sind
+            } else {
+                 console.error("ViewRenderer nicht initialisiert. MainAppInterface fehlt beim Aufruf von renderTabContent.");
+                _showRenderError(tabId, new Error("ViewRenderer ist nicht initialisiert."));
+                if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.hideLoadingOverlay === 'function') {
+                    mainAppInterface.hideLoadingOverlay(); // Versuche, den Ladebildschirm zu schließen
+                } else if (_mainAppInterface && typeof _mainAppInterface.hideLoadingOverlay === 'function') {
+                    _mainAppInterface.hideLoadingOverlay();
+                }
+                return;
+            }
         }
 
         _clearTabContent(tabId);
+        const renderDelay = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.UI_SETTINGS && typeof APP_CONFIG.UI_SETTINGS.RENDER_DELAY_MS === 'number')
+                            ? APP_CONFIG.UI_SETTINGS.RENDER_DELAY_MS
+                            : 50;
 
-        // Verzögere das eigentliche Rendern leicht, um dem Browser Zeit zu geben, den Lade-Spinner anzuzeigen
-        // und um sicherzustellen, dass alle DOM-Manipulationen aus dem clear abgeschlossen sind.
         setTimeout(() => {
             try {
-                // UI-Hilfsfunktionen aufrufen, um die globalen Bedienelemente des Tabs zu aktualisieren
-                ui_helpers.updateKollektivSelectorsForTab(tabId, stateSnapshot.currentKollektiv, stateSnapshot.statsLayout, stateSnapshot.statsKollektiv1, stateSnapshot.statsKollektiv2);
-                ui_helpers.updateSortIconsForTab(tabId, stateSnapshot.datenSortState, stateSnapshot.auswertungSortState);
-                ui_helpers.updateTabSpecificControls(tabId, stateSnapshot);
-
+                if (typeof ui_helpers !== 'undefined') {
+                    ui_helpers.updateKollektivSelectorsForTab(tabId, stateSnapshot.currentKollektiv, stateSnapshot.statsLayout, stateSnapshot.statsKollektiv1, stateSnapshot.statsKollektiv2);
+                    ui_helpers.updateSortIconsForTab(tabId, stateSnapshot.datenSortState, stateSnapshot.auswertungSortState);
+                    ui_helpers.updateTabSpecificControls(tabId, stateSnapshot);
+                } else {
+                    console.warn("ui_helpers nicht verfügbar für UI Updates vor dem Tab-Rendern.");
+                }
 
                 switch (tabId) {
                     case 'daten-tab':
@@ -182,35 +233,40 @@ const viewRenderer = (() => {
                         _renderAuswertungTab(data, stateSnapshot);
                         break;
                     case 'statistik-tab':
-                        _renderStatistikTab(stateSnapshot.rawData, stateSnapshot); // Statistik benötigt Zugriff auf alle Rohdaten für Kollektivfilterung
+                        _renderStatistikTab(stateSnapshot.rawData, stateSnapshot);
                         break;
                     case 'praesentation-tab':
-                        _renderPraesentationTab(stateSnapshot.rawData, stateSnapshot); // Präsentation benötigt Zugriff auf alle Rohdaten
+                        _renderPraesentationTab(stateSnapshot.rawData, stateSnapshot);
                         break;
                     case 'publikation-tab':
-                         _renderPublikationTab(stateSnapshot.rawData, stateSnapshot); // Publikation benötigt Zugriff auf alle Rohdaten
+                         _renderPublikationTab(stateSnapshot.rawData, stateSnapshot);
                         break;
                     case 'export-tab':
-                         _renderExportTab(stateSnapshot.rawData, stateSnapshot); // Export benötigt Zugriff auf alle Rohdaten
+                         _renderExportTab(stateSnapshot.rawData, stateSnapshot);
                         break;
                     default:
-                        console.warn(`Unbekannte Tab-ID: ${tabId}`);
-                        const tabPane = document.getElementById(`${tabId}-pane`);
-                        if (tabPane) tabPane.innerHTML = `<p class="text-warning p-3">Unbekannter Tab-Typ: '${tabId}'. Inhalt kann nicht gerendert werden.</p>`;
+                        const unknownTabError = new Error(`Unbekannter Tab-Typ: '${tabId}'. Inhalt kann nicht gerendert werden.`);
+                        console.warn(unknownTabError.message);
+                        _showRenderError(tabId, unknownTabError);
                 }
-                 if (stateSnapshot.forceTabRefresh && typeof state !== 'undefined' && typeof state.setForceTabRefresh === 'function') {
-                    state.setForceTabRefresh(false); // Reset des Flags nach dem Rendern
+
+                if (stateSnapshot.forceTabRefresh && typeof state !== 'undefined' && typeof state.setForceTabRefresh === 'function') {
+                    state.setForceTabRefresh(false);
                 }
 
             } catch (error) {
-                console.error(`Fehler beim Rendern von Tab ${tabId}:`, error);
-                 _showRenderError(tabId);
+                console.error(`Fehler beim Rendern von Tab ${tabId} (innerhalb setTimeout):`, error);
+                _showRenderError(tabId, error);
             } finally {
                 if (_mainAppInterface && typeof _mainAppInterface.hideLoadingOverlay === 'function') {
                     _mainAppInterface.hideLoadingOverlay();
+                } else {
+                    // Fallback, falls _mainAppInterface immer noch nicht gesetzt ist
+                    const loadingOverlay = document.getElementById('loading-overlay');
+                    if (loadingOverlay) loadingOverlay.style.display = 'none';
                 }
             }
-        }, APP_CONFIG.UI_SETTINGS.RENDER_DELAY_MS || 50);
+        }, renderDelay);
     }
 
     return Object.freeze({
