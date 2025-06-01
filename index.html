@@ -109,12 +109,31 @@
         </ul>
 
         <div class="tab-content pt-3" id="main-tab-content">
-            <div class="tab-pane fade show active" id="daten-tab-pane" role="tabpanel" aria-labelledby="daten-tab" tabindex="0"></div>
-            <div class="tab-pane fade" id="auswertung-tab-pane" role="tabpanel" aria-labelledby="auswertung-tab" tabindex="0"></div>
-            <div class="tab-pane fade" id="statistik-tab-pane" role="tabpanel" aria-labelledby="statistik-tab" tabindex="0"></div>
-            <div class="tab-pane fade" id="praesentation-tab-pane" role="tabpanel" aria-labelledby="praesentation-tab" tabindex="0"></div>
-            <div class="tab-pane fade" id="publikation-tab-pane" role="tabpanel" aria-labelledby="publikation-tab" tabindex="0"></div>
-            <div class="tab-pane fade" id="export-tab-pane" role="tabpanel" aria-labelledby="export-tab" tabindex="0"></div>
+            <div class="tab-pane fade show active" id="daten-tab-pane" role="tabpanel" aria-labelledby="daten-tab" tabindex="0">
+                 <div id="daten-content-area"></div>
+            </div>
+            <div class="tab-pane fade" id="auswertung-tab-pane" role="tabpanel" aria-labelledby="auswertung-tab" tabindex="0">
+                 <div id="auswertung-content-area"></div>
+            </div>
+            <div class="tab-pane fade" id="statistik-tab-pane" role="tabpanel" aria-labelledby="statistik-tab" tabindex="0">
+                 <div id="statistik-content-area" class="row g-3"></div>
+            </div>
+            <div class="tab-pane fade" id="praesentation-tab-pane" role="tabpanel" aria-labelledby="praesentation-tab" tabindex="0">
+                <div id="praesentation-controls-container" class="mb-3"></div>
+                <div id="praesentation-content-area"></div>
+            </div>
+            <div class="tab-pane fade" id="publikation-tab-pane" role="tabpanel" aria-labelledby="publikation-tab" tabindex="0">
+                <div class="row">
+                    <div class="col-md-3" id="publikation-sidebar-nav-container"></div>
+                    <div class="col-md-9" id="publikation-main-content-container">
+                        <div id="publikation-controls-container" class="d-flex justify-content-end align-items-center mb-2"></div>
+                        <div id="publikation-content-area" class="bg-white p-3 border rounded" style="min-height: 400px; max-height: calc(100vh - var(--sticky-header-offset) - 8rem); overflow-y: auto;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="export-tab-pane" role="tabpanel" aria-labelledby="export-tab" tabindex="0">
+                 <div id="export-content-area"></div>
+            </div>
         </div>
     </div>
 
@@ -196,6 +215,7 @@
     <script src="js/ui/view_logic/statistik_tab_logic.js"></script>
     <script src="js/ui/view_logic/praesentation_tab_logic.js"></script>
     <script src="js/ui/publication_tab/publication_tab_logic.js"></script>
+    <script src="js/ui/view_logic/export_tab_logic.js"></script>
 
     <script src="js/ui/view_renderer.js"></script>
 
