@@ -224,7 +224,7 @@ const APP_CONFIG = Object.freeze({
     }),
 
     TAB_CONTENT_AREAS: Object.freeze({
-        'daten-tab': 'daten-content-area',
+        'daten-tab': 'daten-table-container',
         'auswertung-tab': 'auswertung-content-area',
         'statistik-tab': 'statistik-content-area',
         'praesentation-tab': 'praesentation-content-area',
