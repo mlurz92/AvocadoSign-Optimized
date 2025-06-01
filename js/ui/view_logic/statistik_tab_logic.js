@@ -1,289 +1,290 @@
 const statistikTabLogic = (() => {
+    let _mainAppInterface = null;
+    let _globalRawData = [];
+    let _currentKollektivGlobal = ''; // Das global im Header ausgewählte Kollektiv
+    let _appliedT2Criteria = null;
+    let _appliedT2Logic = '';
+    let _statsLayout = 'einzel';
+    let _statsKollektiv1 = 'Gesamt'; // Kollektiv für linke Spalte im Vergleichsmodus
+    let _statsKollektiv2 = 'nRCT';   // Kollektiv für rechte Spalte im Vergleichsmodus
+    let _isInitialized = false;
+    let _isDataStale = true;
 
-    function createDeskriptiveStatistikContentHTML(stats, indexSuffix = '0', kollektivName = '') {
-        if (!stats || !stats.deskriptiv || !stats.deskriptiv.anzahlPatienten) return '<p class="text-muted small p-3">Keine deskriptiven Daten verfügbar.</p>';
-        const total = stats.deskriptiv.anzahlPatienten;
-        const na = '--';
-        const fv = (val, dig = 1, useStd = false) => formatNumber(val, dig, na, useStd);
-        const fP = (val, dig = 1) => formatPercent(val, dig, na);
-        const fLK = (lkData) => `${fv(lkData?.median,1)} (${fv(lkData?.min,0)}-${fv(lkData?.max,0)}) [${fv(lkData?.mean,1)} ± ${fv(lkData?.sd,1)}]`;
-        const d = stats.deskriptiv;
-        const ageChartId = `chart-stat-age-${indexSuffix}`;
-        const genderChartId = `chart-stat-gender-${indexSuffix}`;
-        const displayKollektivName = getKollektivDisplayName(kollektivName);
+    // Zwischengespeicherte Statistikobjekte
+    let _statsDataKollektivGlobal = null;
+    let _statsDataKollektiv1 = null;
+    let _statsDataKollektiv2 = null;
+    let _statsVergleichKollektive = null;
+    let _criteriaComparisonResults = null;
 
-        let tableHTML = `
-            <div class="row g-3 p-2">
-                <div class="col-md-6">
-                    <div class="table-responsive mb-3">
-                        <table class="table table-sm table-striped small mb-0 caption-top" id="table-deskriptiv-demographie-${indexSuffix}">
-                            <caption>Demographie & Status (N=${total})</caption>
-                            <thead class="visually-hidden"><tr><th>Metrik</th><th>Wert</th></tr></thead>
-                            <tbody>
-                                <tr data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.alterMedian?.description || 'Alter (Median, Min-Max, [Mittelwert ± SD])')}"><td>Alter Median (Min-Max) [Mean ± SD]</td><td>${fv(d.alter?.median, 1)} (${fv(d.alter?.min, 0)} - ${fv(d.alter?.max, 0)}) [${fv(d.alter?.mean, 1)} ± ${fv(d.alter?.sd, 1)}]</td></tr>
-                                <tr data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.geschlecht?.description || 'Geschlechterverteilung')}"><td>Geschlecht (m / w) (n / %)</td><td>${d.geschlecht?.m ?? 0} / ${d.geschlecht?.f ?? 0} (${fP(d.anzahlPatienten > 0 ? (d.geschlecht?.m ?? 0) / d.anzahlPatienten : NaN, 1)} / ${fP(d.anzahlPatienten > 0 ? (d.geschlecht?.f ?? 0) / d.anzahlPatienten : NaN, 1)})</td></tr>
-                                <tr data-tippy-content="${(TOOLTIP_CONTENT.datenTable.therapie || 'Therapieverteilung')}"><td>Therapie (direkt OP / nRCT) (n / %)</td><td>${d.therapie?.['direkt OP'] ?? 0} / ${d.therapie?.nRCT ?? 0} (${fP(d.anzahlPatienten > 0 ? (d.therapie?.['direkt OP'] ?? 0) / d.anzahlPatienten : NaN, 1)} / ${fP(d.anzahlPatienten > 0 ? (d.therapie?.nRCT ?? 0) / d.anzahlPatienten : NaN, 1)})</td></tr>
-                                <tr data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.nStatus?.description || 'N-Status Verteilung (Pathologie)')}"><td>N Status (+ / -) (n / %)</td><td>${d.nStatus?.plus ?? 0} / ${d.nStatus?.minus ?? 0} (${fP(d.anzahlPatienten > 0 ? (d.nStatus?.plus ?? 0) / d.anzahlPatienten : NaN, 1)} / ${fP(d.anzahlPatienten > 0 ? (d.nStatus?.minus ?? 0) / d.anzahlPatienten : NaN, 1)})</td></tr>
-                                <tr data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.asStatus?.description || 'Avocado Sign Status Verteilung')}"><td>AS Status (+ / -) (n / %)</td><td>${d.asStatus?.plus ?? 0} / ${d.asStatus?.minus ?? 0} (${fP(d.anzahlPatienten > 0 ? (d.asStatus?.plus ?? 0) / d.anzahlPatienten : NaN, 1)} / ${fP(d.anzahlPatienten > 0 ? (d.asStatus?.minus ?? 0) / d.anzahlPatienten : NaN, 1)})</td></tr>
-                                <tr data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.t2Status?.description || 'T2-Status Verteilung (angewandte Kriterien)')}"><td>T2 Status (+ / -) (n / %)</td><td>${d.t2Status?.plus ?? 0} / ${d.t2Status?.minus ?? 0} (${fP(d.anzahlPatienten > 0 ? (d.t2Status?.plus ?? 0) / d.anzahlPatienten : NaN, 1)} / ${fP(d.anzahlPatienten > 0 ? (d.t2Status?.minus ?? 0) / d.anzahlPatienten : NaN, 1)})</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                     <div class="table-responsive">
-                        <table class="table table-sm table-striped small mb-0 caption-top" id="table-deskriptiv-lk-${indexSuffix}">
-                             <caption>Lymphknotenanzahlen (Median (Min-Max) [Mean ± SD])</caption>
-                             <thead class="visually-hidden"><tr><th>Metrik</th><th>Wert</th></tr></thead>
-                             <tbody>
-                                <tr data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.lkAnzahlPatho?.description || 'Gesamtzahl histopathologisch untersuchter Lymphknoten pro Patient.')}"><td>LK N gesamt</td><td>${fLK(d.lkAnzahlen?.n?.total)}</td></tr>
-                                <tr data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.lkAnzahlPathoPlus?.description || 'Anzahl pathologisch positiver (N+) Lymphknoten pro Patient, nur bei Patienten mit N+ Status (n=' + (d.nStatus?.plus ?? 0) + ').')}"><td>LK N+ <sup>*</sup></td><td>${fLK(d.lkAnzahlen?.n?.plus)}</td></tr>
-                                <tr data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.lkAnzahlAS?.description || 'Gesamtzahl im T1KM-MRT sichtbarer und bewerteter Lymphknoten pro Patient.')}"><td>LK AS gesamt</td><td>${fLK(d.lkAnzahlen?.as?.total)}</td></tr>
-                                <tr data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.lkAnzahlASPlus?.description || 'Anzahl Avocado Sign positiver (AS+) Lymphknoten pro Patient, nur bei Patienten mit AS+ Status (n=' + (d.asStatus?.plus ?? 0) + ').')}"><td>LK AS+ <sup>**</sup></td><td>${fLK(d.lkAnzahlen?.as?.plus)}</td></tr>
-                                <tr data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.lkAnzahlT2?.description || 'Gesamtzahl im T2-MRT sichtbarer und für die Kriterienbewertung herangezogener Lymphknoten pro Patient.')}"><td>LK T2 gesamt</td><td>${fLK(d.lkAnzahlen?.t2?.total)}</td></tr>
-                                <tr data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.lkAnzahlT2Plus?.description || 'Anzahl T2-positiver Lymphknoten (gemäß aktueller Kriterien) pro Patient, nur bei Patienten mit T2+ Status (n=' + (d.t2Status?.plus ?? 0) + ').')}"><td>LK T2+ <sup>***</sup></td><td>${fLK(d.lkAnzahlen?.t2?.plus)}</td></tr>
-                             </tbody>
-                        </table>
-                     </div>
-                    <p class="small text-muted mt-1 mb-0"><sup>*</sup> Nur bei N+ Patienten (n=${d.nStatus?.plus ?? 0}); <sup>**</sup> Nur bei AS+ Patienten (n=${d.asStatus?.plus ?? 0}); <sup>***</sup> Nur bei T2+ Patienten (n=${d.t2Status?.plus ?? 0}).</p>
-                </div>
-                <div class="col-md-6 d-flex flex-column">
-                    <div class="mb-2 flex-grow-1" id="${ageChartId}" style="min-height: 150px;" data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.chartAge?.description || 'Altersverteilung der Patienten.').replace('[KOLLEKTIV]', `<strong>${displayKollektivName}</strong>`)}">
-                       <p class="text-muted small text-center p-3">Lade Altersverteilung...</p>
-                    </div>
-                    <div class="flex-grow-1" id="${genderChartId}" style="min-height: 150px;" data-tippy-content="${(TOOLTIP_CONTENT.deskriptiveStatistik.chartGender?.description || 'Geschlechterverteilung der Patienten.').replace('[KOLLEKTIV]', `<strong>${displayKollektivName}</strong>`)}">
-                       <p class="text-muted small text-center p-3">Lade Geschlechterverteilung...</p>
-                    </div>
-                </div>
-            </div>`;
-        return tableHTML;
+
+    function initialize(mainAppInterface) {
+        _mainAppInterface = mainAppInterface;
     }
 
-    function createGueteContentHTML(stats, methode, kollektivName) {
-        if (!stats || !stats.matrix) return '<p class="text-muted small p-3">Keine Gütedaten verfügbar.</p>';
-        const matrix = stats.matrix; const na = '--';
-        const displayKollektivName = getKollektivDisplayName(kollektivName);
-        const fCI_perf = (m, key) => {
-            const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
-            const isPercent = !(key === 'f1' || key === 'auc');
-            return formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, digits, isPercent, na);
-        };
-        let matrixHTML = `<h6 class="px-2 pt-2">Konfusionsmatrix (${methode} vs. N)</h6><table class="table table-sm table-bordered text-center small mx-2 mb-3" style="width: auto;" id="table-guete-matrix-${methode}-${kollektivName.replace(/\s+/g, '_')}"><thead class="small"><tr><th></th><th>N+ (Patho)</th><th>N- (Patho)</th></tr></thead><tbody><tr><td class="fw-bold">${methode}+</td><td data-tippy-content="Richtig Positiv (RP): ${methode}+ und N+. Anzahl Patienten, die von Methode ${methode} korrekt als positiv vorhergesagt wurden.">${formatNumber(matrix.rp,0,na)}</td><td data-tippy-content="Falsch Positiv (FP): ${methode}+ aber N-. Anzahl Patienten, die von Methode ${methode} fälschlicherweise als positiv vorhergesagt wurden (Typ-I-Fehler).">${formatNumber(matrix.fp,0,na)}</td></tr><tr><td class="fw-bold">${methode}-</td><td data-tippy-content="Falsch Negativ (FN): ${methode}- aber N+. Anzahl Patienten, die von Methode ${methode} fälschlicherweise als negativ vorhergesagt wurden (Typ-II-Fehler).">${formatNumber(matrix.fn,0,na)}</td><td data-tippy-content="Richtig Negativ (RN): ${methode}- und N-. Anzahl Patienten, die von Methode ${methode} korrekt als negativ vorhergesagt wurden.">${formatNumber(matrix.rn,0,na)}</td></tr></tbody></table>`;
-        let metricsHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped small mb-0 caption-top" id="table-guete-metrics-${methode}-${kollektivName.replace(/\s+/g, '_')}"><caption>Diagnostische Gütekriterien für Methode ${methode} im Kollektiv ${displayKollektivName}</caption><thead><tr><th>Metrik</th><th>Wert (95% CI)</th><th>CI Methode</th></tr></thead><tbody>
-            <tr><td data-tippy-content="${ui_helpers.getMetricDescriptionHTML('sens', methode)}">Sensitivität</td><td data-tippy-content="${ui_helpers.getMetricInterpretationHTML('sens', stats.sens, methode, displayKollektivName)}">${fCI_perf(stats.sens, 'sens')}</td><td>${stats.sens?.method || na}</td></tr>
-            <tr><td data-tippy-content="${ui_helpers.getMetricDescriptionHTML('spez', methode)}">Spezifität</td><td data-tippy-content="${ui_helpers.getMetricInterpretationHTML('spez', stats.spez, methode, displayKollektivName)}">${fCI_perf(stats.spez, 'spez')}</td><td>${stats.spez?.method || na}</td></tr>
-            <tr><td data-tippy-content="${ui_helpers.getMetricDescriptionHTML('ppv', methode)}">PPV</td><td data-tippy-content="${ui_helpers.getMetricInterpretationHTML('ppv', stats.ppv, methode, displayKollektivName)}">${fCI_perf(stats.ppv, 'ppv')}</td><td>${stats.ppv?.method || na}</td></tr>
-            <tr><td data-tippy-content="${ui_helpers.getMetricDescriptionHTML('npv', methode)}">NPV</td><td data-tippy-content="${ui_helpers.getMetricInterpretationHTML('npv', stats.npv, methode, displayKollektivName)}">${fCI_perf(stats.npv, 'npv')}</td><td>${stats.npv?.method || na}</td></tr>
-            <tr><td data-tippy-content="${ui_helpers.getMetricDescriptionHTML('acc', methode)}">Accuracy</td><td data-tippy-content="${ui_helpers.getMetricInterpretationHTML('acc', stats.acc, methode, displayKollektivName)}">${fCI_perf(stats.acc, 'acc')}</td><td>${stats.acc?.method || na}</td></tr>
-            <tr><td data-tippy-content="${ui_helpers.getMetricDescriptionHTML('balAcc', methode)}">Balanced Accuracy</td><td data-tippy-content="${ui_helpers.getMetricInterpretationHTML('balAcc', stats.balAcc, methode, displayKollektivName)}">${fCI_perf(stats.balAcc, 'balAcc')}</td><td>${stats.balAcc?.method || na}</td></tr>
-            <tr><td data-tippy-content="${ui_helpers.getMetricDescriptionHTML('f1', methode)}">F1-Score</td><td data-tippy-content="${ui_helpers.getMetricInterpretationHTML('f1', stats.f1, methode, displayKollektivName)}">${fCI_perf(stats.f1, 'f1')}</td><td>${stats.f1?.method || na}</td></tr>
-            <tr><td data-tippy-content="${ui_helpers.getMetricDescriptionHTML('auc', methode)}">AUC (Bal. Acc.)</td><td data-tippy-content="${ui_helpers.getMetricInterpretationHTML('auc', stats.auc, methode, displayKollektivName)}">${fCI_perf(stats.auc, 'auc')}</td><td>${stats.auc?.method || na}</td></tr>
-        </tbody></table></div>`;
-        return matrixHTML + metricsHTML;
+    function setDataStale() {
+        _isDataStale = true;
+        _statsDataKollektivGlobal = null;
+        _statsDataKollektiv1 = null;
+        _statsDataKollektiv2 = null;
+        _statsVergleichKollektive = null;
+        _criteriaComparisonResults = null;
     }
 
-    function createVergleichContentHTML(stats, kollektivName, t2ShortName = 'T2') {
-        if (!stats) return '<p class="text-muted small p-3">Keine Vergleichsdaten verfügbar.</p>';
-        const na = '--'; const fP = (pVal) => (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na, true)) : na;
-        const displayKollektivName = getKollektivDisplayName(kollektivName);
-        let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped small mb-0" id="table-vergleich-as-vs-t2-${kollektivName.replace(/\s+/g, '_')}"><caption>Statistische Vergleiche zwischen Avocado Sign (AS) und T2-Kriterien (${t2ShortName}) im Kollektiv ${displayKollektivName}</caption><thead><tr><th>Test</th><th>Statistik</th><th>p-Wert</th><th>Methode</th></tr></thead><tbody>
-            <tr><td data-tippy-content="${ui_helpers.getTestDescriptionHTML('mcnemar', t2ShortName)}">McNemar (Accuracy)</td><td>${formatNumber(stats.mcnemar?.statistic, 3, na, true)} (df=${stats.mcnemar?.df || na})</td><td data-tippy-content="${ui_helpers.getTestInterpretationHTML('mcnemar', stats.mcnemar, displayKollektivName, t2ShortName)}">${fP(stats.mcnemar?.pValue)} ${getStatisticalSignificanceSymbol(stats.mcnemar?.pValue)}</td><td>${stats.mcnemar?.method || na}</td></tr>
-            <tr><td data-tippy-content="${ui_helpers.getTestDescriptionHTML('delong', t2ShortName)}">DeLong (AUC)</td><td>Z=${formatNumber(stats.delong?.Z, 3, na, true)}</td><td data-tippy-content="${ui_helpers.getTestInterpretationHTML('delong', stats.delong, displayKollektivName, t2ShortName)}">${fP(stats.delong?.pValue)} ${getStatisticalSignificanceSymbol(stats.delong?.pValue)}</td><td>${stats.delong?.method || na}</td></tr>
-        </tbody></table></div>`;
-        return tableHTML;
+    function isInitialized() {
+        return _isInitialized;
     }
 
-    function createAssoziationContentHTML(stats, kollektivName, criteria) {
-        if (!stats || Object.keys(stats).length === 0) return '<p class="text-muted small p-3">Keine Assoziationsdaten verfügbar.</p>';
-        const na = '--'; const fP = (pVal) => (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na, true)) : na;
-        const displayKollektivName = getKollektivDisplayName(kollektivName);
-        let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped small mb-0 caption-top" id="table-assoziation-${kollektivName.replace(/\s+/g, '_')}"><caption>Assoziation zwischen Merkmalen und N-Status (+/-) für Kollektiv ${displayKollektivName}</caption><thead><tr><th>Merkmal</th><th>OR (95% CI)</th><th>RD (%) (95% CI)</th><th>Phi (φ)</th><th>p-Wert</th><th>Test</th></tr></thead><tbody>`;
+    function _getProcessedAndEvaluatedData(kollektivId) {
+        if (!_globalRawData || _globalRawData.length === 0) return [];
+        const filteredRaw = dataProcessor.filterDataByKollektiv(cloneDeep(_globalRawData), kollektivId);
+        return t2CriteriaManager.evaluateDataset(filteredRaw, _appliedT2Criteria, _appliedT2Logic);
+    }
 
-        const getPValueInterpretationAssoc = (key, assocObj) => {
-             const testName = assocObj?.testName || '';
-             let pTooltipKey = 'defaultP';
-             if (testName) {
-                if (testName.toLowerCase().includes("fisher")) pTooltipKey = 'fisher';
-                else if (testName.toLowerCase().includes("mann-whitney")) pTooltipKey = 'mannwhitney';
-             } else if (key === 'size_mwu') {
-                pTooltipKey = 'mannwhitney';
-             }
-             const merkmalName = assocObj?.featureName || key;
-             return ui_helpers.getAssociationInterpretationHTML(pTooltipKey, assocObj, merkmalName, displayKollektivName);
+    function _calculateStatsForKollektiv(kollektivId) {
+        const evaluatedData = _getProcessedAndEvaluatedData(kollektivId);
+        if (evaluatedData.length === 0) return null;
+
+        return {
+            deskriptiv: statisticsService.calculateDescriptiveStats(evaluatedData),
+            gueteAS: statisticsService.calculateDiagnosticPerformance(evaluatedData, 'as', 'n'),
+            gueteT2_angewandt: statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n'),
+            vergleichASvsT2_angewandt: statisticsService.compareDiagnosticMethods(evaluatedData, 'as', 't2', 'n'),
+            assoziation_angewandt: statisticsService.calculateAssociations(evaluatedData, _appliedT2Criteria)
         };
-        const getTestDescriptionAssoc = (assocObj, key) => {
-             const testName = assocObj?.testName || '';
-             let pTooltipKey = 'defaultP';
-             if (testName) {
-                if (testName.toLowerCase().includes("fisher")) pTooltipKey = 'fisher';
-                else if (testName.toLowerCase().includes("mann-whitney")) pTooltipKey = 'mannwhitney';
-             } else if (key === 'size_mwu') {
-                pTooltipKey = 'mannwhitney';
-             }
-             const merkmalName = assocObj?.featureName || key;
-             const descriptionTemplate = TOOLTIP_CONTENT.statMetrics[pTooltipKey]?.description || TOOLTIP_CONTENT.statMetrics.defaultP.description || 'Testbeschreibung nicht verfügbar.';
-             return descriptionTemplate.replace(/\[MERKMAL\]/g, `<strong>'${merkmalName}'</strong>`).replace(/\[VARIABLE\]/g, `<strong>'${merkmalName}'</strong>`);
-        };
+    }
+    
+    function _calculateCriteriaComparison(globalKollektivId) {
+        const evaluatedGlobalData = _getProcessedAndEvaluatedData(globalKollektivId);
+        if (evaluatedGlobalData.length === 0) return [];
+        
+        const results = [];
+        const studySets = studyT2CriteriaManager.getAllStudyCriteriaSets(false); // Ohne 'angewandt'
 
-        const getMerkmalDescriptionHTMLAssoc = (key, assocObj) => {
-             const baseName = TOOLTIP_CONTENT.statMetrics[key]?.name || assocObj?.featureName || key;
-             const tooltipDescription = TOOLTIP_CONTENT.statMetrics[key]?.description || `Dieses Merkmal ('${baseName}') wird auf Assoziation mit dem N-Status getestet.`;
-             return tooltipDescription.replace(/\[MERKMAL\]/g, `<strong>'${baseName}'</strong>`).replace(/\[METHODE\]/g, `<strong>'${baseName}'</strong>`);
-        };
-
-
-        const addRow = (key, assocObj, isActive = true) => {
-            if (!assocObj) return '';
-            const merkmalName = assocObj.featureName || key;
-            const orStr = formatCI(assocObj.or?.value, assocObj.or?.ci?.lower, assocObj.or?.ci?.upper, 2, false, na);
-            const rdValPerc = formatNumber(assocObj.rd?.value !== null && !isNaN(assocObj.rd?.value) ? assocObj.rd.value * 100 : NaN, 1, na, false);
-            const rdCILowerPerc = formatNumber(assocObj.rd?.ci?.lower !== null && !isNaN(assocObj.rd?.ci?.lower) ? assocObj.rd.ci.lower * 100 : NaN, 1, na, false);
-            const rdCIUpperPerc = formatNumber(assocObj.rd?.ci?.upper !== null && !isNaN(assocObj.rd?.ci?.upper) ? assocObj.rd.ci.upper * 100 : NaN, 1, na, false);
-            const rdStr = rdValPerc !== na ? `${rdValPerc}% (${rdCILowerPerc}% - ${rdCIUpperPerc}%)` : na;
-            const phiStr = formatNumber(assocObj.phi?.value, 2, na, true);
-            const pStr = fP(assocObj.pValue);
-            const sigSymbol = getStatisticalSignificanceSymbol(assocObj.pValue);
-            const testName = assocObj.testName || na;
-            const aktivText = isActive ? '' : ' <small class="text-muted">(inaktiv in T2-Def.)</small>';
-
-            return `<tr>
-                <td data-tippy-content="${getMerkmalDescriptionHTMLAssoc(key, assocObj)}">${merkmalName}${aktivText}</td>
-                <td data-tippy-content="${ui_helpers.getAssociationInterpretationHTML('or', assocObj, merkmalName, displayKollektivName)}">${orStr}</td>
-                <td data-tippy-content="${ui_helpers.getAssociationInterpretationHTML('rd', assocObj, merkmalName, displayKollektivName)}">${rdStr}</td>
-                <td data-tippy-content="${ui_helpers.getAssociationInterpretationHTML('phi', assocObj, merkmalName, displayKollektivName)}">${phiStr}</td>
-                <td data-tippy-content="${getPValueInterpretationAssoc(key, assocObj)}">${pStr} ${sigSymbol}</td>
-                <td data-tippy-content="${getTestDescriptionAssoc(assocObj, key)}">${testName}</td>
-            </tr>`;
-        };
-
-        if (stats.as) tableHTML += addRow('as', stats.as);
-        if (stats.size_mwu && stats.size_mwu.testName && !stats.size_mwu.testName.includes("Invalid") && !stats.size_mwu.testName.includes("Nicht genug")) {
-            const mwuObj = stats.size_mwu;
-            const pStr = fP(mwuObj.pValue);
-            const sigSymbol = getStatisticalSignificanceSymbol(mwuObj.pValue);
-            const pTooltip = getPValueInterpretationAssoc('size_mwu', mwuObj);
-            const descTooltip = TOOLTIP_CONTENT.statMetrics.size_mwu.description || "Vergleich der medianen Lymphknotengröße zwischen N+ und N- Patienten mittels Mann-Whitney-U-Test.";
-            const testDescTooltip = getTestDescriptionAssoc(mwuObj, 'size_mwu');
-            tableHTML += `<tr>
-                <td data-tippy-content="${descTooltip}">${mwuObj.featureName || 'LK Größe (Median Vgl.)'}</td>
-                <td>${na}</td><td>${na}</td><td>${na}</td>
-                <td data-tippy-content="${pTooltip}">${pStr} ${sigSymbol}</td>
-                <td data-tippy-content="${testDescTooltip}">${mwuObj.testName || na}</td>
-            </tr>`;
+        // 1. Avocado Sign
+        const asPerfGlobal = statisticsService.calculateDiagnosticPerformance(evaluatedGlobalData, 'as', 'n');
+        if (asPerfGlobal) {
+            results.push({
+                id: APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID,
+                name: APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME,
+                sens: asPerfGlobal.sens?.value,
+                spez: asPerfGlobal.spez?.value,
+                ppv: asPerfGlobal.ppv?.value,
+                npv: asPerfGlobal.npv?.value,
+                acc: asPerfGlobal.acc?.value,
+                auc: asPerfGlobal.auc?.value,
+                globalN: evaluatedGlobalData.length,
+                specificKollektivName: globalKollektivId,
+                specificKollektivN: evaluatedGlobalData.length
+            });
         }
-        const featureOrder = ['size', 'form', 'kontur', 'homogenitaet', 'signal'];
-        featureOrder.forEach(key => {
-            if (stats[key]) {
-                const isActive = criteria[key]?.active === true;
-                tableHTML += addRow(key, stats[key], isActive);
+
+        // 2. Angewandte T2 Kriterien
+        const t2AppliedPerfGlobal = statisticsService.calculateDiagnosticPerformance(evaluatedGlobalData, 't2', 'n');
+        if (t2AppliedPerfGlobal) {
+             results.push({
+                id: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID,
+                name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME,
+                sens: t2AppliedPerfGlobal.sens?.value,
+                spez: t2AppliedPerfGlobal.spez?.value,
+                ppv: t2AppliedPerfGlobal.ppv?.value,
+                npv: t2AppliedPerfGlobal.npv?.value,
+                acc: t2AppliedPerfGlobal.acc?.value,
+                auc: t2AppliedPerfGlobal.auc?.value,
+                globalN: evaluatedGlobalData.length,
+                specificKollektivName: globalKollektivId,
+                specificKollektivN: evaluatedGlobalData.length
+            });
+        }
+        
+        // 3. Literatur Kriterien
+        studySets.forEach(set => {
+            const targetKollektiv = set.applicableKollektiv || globalKollektivId;
+            const dataForSet = (targetKollektiv === globalKollektivId) ? 
+                                cloneDeep(evaluatedGlobalData) : // Wenn gleiches Kollektiv, wiederverwenden
+                                _getProcessedAndEvaluatedData(targetKollektiv); // Ansonsten neu evaluieren
+
+            if(dataForSet.length > 0) {
+                // Wichtig: Für Literatur-Sets müssen die T2-Werte spezifisch mit den *Studienkriterien* neu berechnet werden.
+                const studyEvaluatedData = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(dataForSet, set);
+                const perf = statisticsService.calculateDiagnosticPerformance(studyEvaluatedData, 't2', 'n');
+                if(perf) {
+                    results.push({
+                        id: set.id,
+                        name: set.name,
+                        sens: perf.sens?.value,
+                        spez: perf.spez?.value,
+                        ppv: perf.ppv?.value,
+                        npv: perf.npv?.value,
+                        acc: perf.acc?.value,
+                        auc: perf.auc?.value,
+                        globalN: evaluatedGlobalData.length,
+                        specificKollektivName: targetKollektiv,
+                        specificKollektivN: dataForSet.length
+                    });
+                }
             }
         });
-        tableHTML += `</tbody></table></div>`;
-        return tableHTML;
+        results.sort((a,b) => (b.auc ?? -1) - (a.auc ?? -1));
+        return results;
     }
 
-    function createVergleichKollektiveContentHTML(stats, kollektiv1Name, kollektiv2Name) {
-        if (!stats || !stats.accuracyComparison || !stats.aucComparison) return '<p class="text-muted small p-3">Keine Kollektiv-Vergleichsdaten verfügbar.</p>';
-        const na = '--'; const fP = (pVal) => (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na, true)) : na;
-        const kollektiv1Display = getKollektivDisplayName(kollektiv1Name); const kollektiv2Display = getKollektivDisplayName(kollektiv2Name);
-        const accAS = stats.accuracyComparison?.as; const accT2 = stats.accuracyComparison?.t2;
-        const aucAS = stats.aucComparison?.as; const aucT2 = stats.aucComparison?.t2;
 
-        const getPValueInterpretationComp = (pValue, testKey, methode) => {
-             const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[testKey]?.interpretation || 'Keine Interpretation verfügbar.';
-             const pStr = (pValue !== null && !isNaN(pValue)) ? (pValue < 0.001 ? '&lt;0.001' : formatNumber(pValue, 3, na, true)) : na;
-             const sigText = getStatisticalSignificanceText(pValue);
-             return interpretationTemplate
-                 .replace(/\[METHODE\]/g, `<strong>${methode}</strong>`)
-                 .replace(/\[KOLLEKTIV1\]/g, `<strong>${kollektiv1Display}</strong>`)
-                 .replace(/\[KOLLEKTIV2\]/g, `<strong>${kollektiv2Display}</strong>`)
-                 .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
-                 .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`);
-        };
+    function _renderEinzelansicht(containerId) {
+        const contentArea = document.getElementById(containerId);
+        if (!contentArea) return;
+        contentArea.innerHTML = ''; // Clear previous content
 
-        let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped small mb-0" id="table-vergleich-kollektive-${kollektiv1Name.replace(/\s+/g, '_')}-vs-${kollektiv2Name.replace(/\s+/g, '_')}"><caption>Vergleich der diagnostischen Leistung zwischen den Kollektiven ${kollektiv1Display} und ${kollektiv2Display}</caption><thead><tr><th>Vergleich</th><th>Methode</th><th>p-Wert</th><th>Test</th></tr></thead><tbody>`;
-        tableHTML += `<tr><td>Accuracy</td><td>AS</td><td data-tippy-content="${getPValueInterpretationComp(accAS?.pValue, 'accComp', 'AS')}">${fP(accAS?.pValue)} ${getStatisticalSignificanceSymbol(accAS?.pValue)}</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.accComp?.description || 'Vergleich Accuracy der Methode [METHODE] zwischen zwei Kollektiven.').replace('[METHODE]','AS')}">${accAS?.testName || na}</td></tr>`;
-        tableHTML += `<tr><td>Accuracy</td><td>T2</td><td data-tippy-content="${getPValueInterpretationComp(accT2?.pValue, 'accComp', 'T2')}">${fP(accT2?.pValue)} ${getStatisticalSignificanceSymbol(accT2?.pValue)}</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.accComp?.description || 'Vergleich Accuracy der Methode [METHODE] zwischen zwei Kollektiven.').replace('[METHODE]','T2')}">${accT2?.testName || na}</td></tr>`;
-        tableHTML += `<tr><td>AUC</td><td>AS</td><td data-tippy-content="${getPValueInterpretationComp(aucAS?.pValue, 'aucComp', 'AS')}">${fP(aucAS?.pValue)} ${getStatisticalSignificanceSymbol(aucAS?.pValue)} (Diff: ${formatNumber(aucAS?.diffAUC, 3, na, true)}, Z=${formatNumber(aucAS?.Z, 2, na, true)})</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.aucComp?.description || 'Vergleich AUC der Methode [METHODE] zwischen zwei Kollektiven.').replace('[METHODE]','AS')}">${aucAS?.method || na}</td></tr>`;
-        tableHTML += `<tr><td>AUC</td><td>T2</td><td data-tippy-content="${getPValueInterpretationComp(aucT2?.pValue, 'aucComp', 'T2')}">${fP(aucT2?.pValue)} ${getStatisticalSignificanceSymbol(aucT2?.pValue)} (Diff: ${formatNumber(aucT2?.diffAUC, 3, na, true)}, Z=${formatNumber(aucT2?.Z, 2, na, true)})</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.aucComp?.description || 'Vergleich AUC der Methode [METHODE] zwischen zwei Kollektiven.').replace('[METHODE]','T2')}">${aucT2?.method || na}</td></tr>`;
-        tableHTML += `</tbody></table></div>`;
-        return tableHTML;
+        if (_isDataStale || !_statsDataKollektivGlobal) {
+            _statsDataKollektivGlobal = _calculateStatsForKollektiv(_currentKollektivGlobal);
+        }
+        if (_isDataStale || !_criteriaComparisonResults) {
+            _criteriaComparisonResults = _calculateCriteriaComparison(_currentKollektivGlobal);
+        }
+
+
+        if (!_statsDataKollektivGlobal) {
+            contentArea.innerHTML = `<p class="text-center text-muted p-3">Keine Daten für Kollektiv '${getKollektivDisplayName(_currentKollektivGlobal)}' vorhanden.</p>`;
+            return;
+        }
+        
+        const deskriptivHTML = createDeskriptiveStatistikContentHTML(_statsDataKollektivGlobal, '0', _currentKollektivGlobal);
+        const gueteASHTML = createGueteContentHTML(_statsDataKollektivGlobal.gueteAS, 'AS', _currentKollektivGlobal);
+        const gueteT2HTML = createGueteContentHTML(_statsDataKollektivGlobal.gueteT2_angewandt, `T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, _currentKollektivGlobal);
+        const vergleichHTML = createVergleichContentHTML(_statsDataKollektivGlobal.vergleichASvsT2_angewandt, _currentKollektivGlobal, APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME);
+        const assoziationHTML = createAssoziationContentHTML(_statsDataKollektivGlobal.assoziation_angewandt, _currentKollektivGlobal, _appliedT2Criteria);
+        const criteriaComparisonHTML = createCriteriaComparisonTableHTML(_criteriaComparisonResults, _currentKollektivGlobal);
+
+        const col1 = document.createElement('div'); col1.className = 'col-lg-6 d-flex flex-column';
+        const col2 = document.createElement('div'); col2.className = 'col-lg-6 d-flex flex-column';
+        
+        col1.innerHTML += uiComponents.createStatistikCard('stat-deskriptiv', `Deskriptive Statistik (${getKollektivDisplayName(_currentKollektivGlobal)})`, deskriptivHTML, false, 'deskriptiveStatistik', [], 'table-deskriptiv-demographie-0');
+        col1.innerHTML += uiComponents.createStatistikCard('stat-guete-as', `Diagnostische Güte AS (${getKollektivDisplayName(_currentKollektivGlobal)})`, gueteASHTML, false, 'diagnostischeGueteAS', [], `table-guete-matrix-AS-${_currentKollektivGlobal.replace(/\s+/g, '_')}`);
+        col1.innerHTML += uiComponents.createStatistikCard('stat-assoziation', `Assoziationsanalyse (${getKollektivDisplayName(_currentKollektivGlobal)})`, assoziationHTML, false, 'assoziationEinzelkriterien', [], `table-assoziation-${_currentKollektivGlobal.replace(/\s+/g, '_')}`);
+        
+        col2.innerHTML += uiComponents.createStatistikCard('stat-guete-t2', `Diagnostische Güte T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME}, ${getKollektivDisplayName(_currentKollektivGlobal)})`, gueteT2HTML, false, 'diagnostischeGueteT2', [], `table-guete-matrix-T2-${_currentKollektivGlobal.replace(/\s+/g, '_')}`);
+        col2.innerHTML += uiComponents.createStatistikCard('stat-vergleich-as-t2', `Vergleich AS vs. T2 (${getKollektivDisplayName(_currentKollektivGlobal)})`, vergleichHTML, false, 'statistischerVergleichASvsT2', [], `table-vergleich-as-vs-t2-${_currentKollektivGlobal.replace(/\s+/g, '_')}`);
+        col2.innerHTML += uiComponents.createStatistikCard('stat-kriterien-vergleich', `Performance Vergleich (Global: ${getKollektivDisplayName(_currentKollektivGlobal)})`, criteriaComparisonHTML, false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
+
+
+        contentArea.appendChild(col1);
+        contentArea.appendChild(col2);
+
+        if (_statsDataKollektivGlobal.deskriptiv?.alterData) {
+            chart_renderer.renderAgeDistributionChart('chart-stat-age-0', _statsDataKollektivGlobal.deskriptiv.alterData, _currentKollektivGlobal, {title: ''});
+        }
+        if (_statsDataKollektivGlobal.deskriptiv?.geschlecht) {
+            const genderData = [
+                { label: UI_TEXTS.legendLabels.male, value: _statsDataKollektivGlobal.deskriptiv.geschlecht.m, color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE },
+                { label: UI_TEXTS.legendLabels.female, value: _statsDataKollektivGlobal.deskriptiv.geschlecht.f, color: APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN }
+            ].filter(d => d.value > 0);
+            if(genderData.length > 0) chart_renderer.renderPieChart('chart-stat-gender-0', genderData, { title: '', compact: true, donut: true, showLegend: false });
+        }
     }
 
-    function createCriteriaComparisonTableHTML(results, globalKollektivName) {
-         if (!Array.isArray(results) || results.length === 0) return '<p class="text-muted small p-3">Keine Daten für Kriterienvergleich verfügbar.</p>';
-         const tc = TOOLTIP_CONTENT || {}; const cc = tc.criteriaComparisonTable || {};
-         const headers = [
-             { key: 'set', label: cc.tableHeaderSet || "Methode / Kriteriensatz", tooltip: cc.tableHeaderSet || "Die diagnostische Methode oder der spezifische Kriteriensatz, der evaluiert wird. 'Angewandte T2 Kriterien' sind die aktuell im Auswertungstab definierten. Literatur-Kriterien werden ggf. auf ihrem spezifischen Zielkollektiv evaluiert (in Klammern angegeben)." },
-             { key: 'sens', label: cc.tableHeaderSens || "Sens.", tooltip: (cc.tableHeaderSens || "Sensitivität") + ": " + ui_helpers.getMetricDescriptionHTML('sens', 'der Methode') },
-             { key: 'spez', label: cc.tableHeaderSpez || "Spez.", tooltip: (cc.tableHeaderSpez || "Spezifität") + ": " + ui_helpers.getMetricDescriptionHTML('spez', 'der Methode') },
-             { key: 'ppv', label: cc.tableHeaderPPV || "PPV", tooltip: (cc.tableHeaderPPV || "PPV") + ": " + ui_helpers.getMetricDescriptionHTML('ppv', 'der Methode') },
-             { key: 'npv', label: cc.tableHeaderNPV || "NPV", tooltip: (cc.tableHeaderNPV || "NPV") + ": " + ui_helpers.getMetricDescriptionHTML('npv', 'der Methode') },
-             { key: 'acc', label: cc.tableHeaderAcc || "Acc.", tooltip: (cc.tableHeaderAcc || "Accuracy") + ": " + ui_helpers.getMetricDescriptionHTML('acc', 'der Methode') },
-             { key: 'auc', label: cc.tableHeaderAUC || "AUC/BalAcc", tooltip: (cc.tableHeaderAUC || "AUC/Bal. Accuracy") + ": " + ui_helpers.getMetricDescriptionHTML('auc', 'der Methode') }
-         ];
-         const tableId = "table-kriterien-vergleich";
-         const displayGlobalKollektivName = getKollektivDisplayName(globalKollektivName);
-         let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped table-hover small caption-top" id="${tableId}"><caption>Vergleich verschiedener Kriteriensätze (vs. N) für das globale Kollektiv: ${displayGlobalKollektivName}</caption><thead class="small"><tr>`;
-         headers.forEach(h => {
-            const tooltipAttr = h.tooltip ? `data-tippy-content="${h.tooltip}"` : '';
-            tableHTML += `<th ${tooltipAttr}>${h.label}</th>`;
-         });
-         tableHTML += `</tr></thead><tbody>`;
+    function _renderVergleichsansicht(containerId) {
+        const contentArea = document.getElementById(containerId);
+        if (!contentArea) return;
+        contentArea.innerHTML = '';
 
-         results.forEach(result => {
-             const isApplied = result.id === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
-             const isAS = result.id === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID;
-             const isLiteratur = !isApplied && !isAS;
-
-             let rowClass = '';
-             if (isApplied) rowClass = 'table-primary';
-             else if (isAS) rowClass = 'table-info';
-
-             let nameDisplay = result.name || 'Unbekannt';
-             let kollektivForInterpretation = result.specificKollektivName || globalKollektivName;
-             let patientCountForInterpretation = result.specificKollektivN !== undefined ? result.specificKollektivN : result.globalN;
-             const displayKollektivForInterpretation = getKollektivDisplayName(kollektivForInterpretation);
-
-             if (isApplied) nameDisplay = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME;
-             else if (isAS) nameDisplay = APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME;
-
-             let nameSuffix = '';
-             if (isLiteratur && result.specificKollektivName && result.specificKollektivName !== globalKollektivName) {
-                 nameSuffix = ` <small class="text-muted fst-italic">(eval. auf ${displayKollektivForInterpretation}, N=${patientCountForInterpretation || '?'})</small>`;
-             } else if ((isApplied || isAS) && patientCountForInterpretation !== undefined) {
-                 nameSuffix = ` <small class="text-muted fst-italic">(N=${patientCountForInterpretation || '?'})</small>`;
-             }
-             const metricForTooltipAS = { value: result.sens, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} };
-             const metricForTooltipSpez = { value: result.spez, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} };
-             const metricForTooltipPPV = { value: result.ppv, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} };
-             const metricForTooltipNPV = { value: result.npv, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} };
-             const metricForTooltipAcc = { value: result.acc, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} };
-             const metricForTooltipAUC = { value: result.auc, matrix_components: {total: patientCountForInterpretation} };
+        if (_isDataStale || !_statsDataKollektiv1) _statsDataKollektiv1 = _calculateStatsForKollektiv(_statsKollektiv1);
+        if (_isDataStale || !_statsDataKollektiv2) _statsDataKollektiv2 = _calculateStatsForKollektiv(_statsKollektiv2);
+        if (_isDataStale || !_statsVergleichKollektive) {
+            const data1 = _getProcessedAndEvaluatedData(_statsKollektiv1);
+            const data2 = _getProcessedAndEvaluatedData(_statsKollektiv2);
+            _statsVergleichKollektive = statisticsService.compareCohorts(data1, data2, _appliedT2Criteria, _appliedT2Logic);
+        }
+        if (_isDataStale || !_criteriaComparisonResults) {
+             _criteriaComparisonResults = _calculateCriteriaComparison(_currentKollektivGlobal); // Vergleichstabelle bleibt global
+        }
 
 
-             const tooltipSens = ui_helpers.getMetricInterpretationHTML('sens', metricForTooltipAS, nameDisplay, displayKollektivForInterpretation);
-             const tooltipSpez = ui_helpers.getMetricInterpretationHTML('spez', metricForTooltipSpez, nameDisplay, displayKollektivForInterpretation);
-             const tooltipPPV = ui_helpers.getMetricInterpretationHTML('ppv', metricForTooltipPPV, nameDisplay, displayKollektivForInterpretation);
-             const tooltipNPV = ui_helpers.getMetricInterpretationHTML('npv', metricForTooltipNPV, nameDisplay, displayKollektivForInterpretation);
-             const tooltipAcc = ui_helpers.getMetricInterpretationHTML('acc', metricForTooltipAcc, nameDisplay, displayKollektivForInterpretation);
-             const tooltipAUC = ui_helpers.getMetricInterpretationHTML('auc', metricForTooltipAUC, nameDisplay, displayKollektivForInterpretation);
+        const col1 = document.createElement('div'); col1.className = 'col-lg-6 d-flex flex-column';
+        const col2 = document.createElement('div'); col2.className = 'col-lg-6 d-flex flex-column';
 
-             tableHTML += `<tr class="${rowClass}">
-                             <td class="fw-bold">${nameDisplay}${nameSuffix}</td>
-                             <td data-tippy-content="${tooltipSens}">${formatPercent(result.sens, 1)}</td>
-                             <td data-tippy-content="${tooltipSpez}">${formatPercent(result.spez, 1)}</td>
-                             <td data-tippy-content="${tooltipPPV}">${formatPercent(result.ppv, 1)}</td>
-                             <td data-tippy-content="${tooltipNPV}">${formatPercent(result.npv, 1)}</td>
-                             <td data-tippy-content="${tooltipAcc}">${formatPercent(result.acc, 1)}</td>
-                             <td data-tippy-content="${tooltipAUC}">${formatNumber(result.auc, 3, '--', true)}</td>
-                           </tr>`;
-         });
-         tableHTML += `</tbody></table></div>`;
-         tableHTML += `<p class="small text-muted px-2 mt-1">Hinweis: Werte für Literatur-Kriteriensätze werden idealerweise auf deren spezifischem Zielkollektiv (falls von globalem Kollektiv abweichend, in Klammern angegeben) berechnet, um eine faire Vergleichbarkeit mit den Originalpublikationen zu gewährleisten. Avocado Sign und 'Angewandte T2 Kriterien' beziehen sich immer auf das für diese Zeile angegebene N (Patientenzahl des spezifischen Kollektivs).</p>`
-         return tableHTML;
+        if (_statsDataKollektiv1) {
+            const deskHTML1 = createDeskriptiveStatistikContentHTML(_statsDataKollektiv1, '1', _statsKollektiv1);
+            const gueteASHTML1 = createGueteContentHTML(_statsDataKollektiv1.gueteAS, 'AS', _statsKollektiv1);
+            const gueteT2HTML1 = createGueteContentHTML(_statsDataKollektiv1.gueteT2_angewandt, `T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, _statsKollektiv1);
+            col1.innerHTML += uiComponents.createStatistikCard('stat-deskriptiv-k1', `Deskriptiv (${getKollektivDisplayName(_statsKollektiv1)})`, deskHTML1, false, 'deskriptiveStatistik', [], 'table-deskriptiv-demographie-1');
+            col1.innerHTML += uiComponents.createStatistikCard('stat-guete-as-k1', `Güte AS (${getKollektivDisplayName(_statsKollektiv1)})`, gueteASHTML1, false, 'diagnostischeGueteAS', [], `table-guete-matrix-AS-${_statsKollektiv1.replace(/\s+/g, '_')}`);
+            col1.innerHTML += uiComponents.createStatistikCard('stat-guete-t2-k1', `Güte T2 (${getKollektivDisplayName(_statsKollektiv1)})`, gueteT2HTML1, false, 'diagnostischeGueteT2', [], `table-guete-matrix-T2-${_statsKollektiv1.replace(/\s+/g, '_')}`);
+        } else {
+            col1.innerHTML = `<p class="text-center text-muted p-3">Keine Daten für Kollektiv '${getKollektivDisplayName(_statsKollektiv1)}'.</p>`;
+        }
+
+        if (_statsDataKollektiv2) {
+            const deskHTML2 = createDeskriptiveStatistikContentHTML(_statsDataKollektiv2, '2', _statsKollektiv2);
+            const gueteASHTML2 = createGueteContentHTML(_statsDataKollektiv2.gueteAS, 'AS', _statsKollektiv2);
+            const gueteT2HTML2 = createGueteContentHTML(_statsDataKollektiv2.gueteT2_angewandt, `T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, _statsKollektiv2);
+            col2.innerHTML += uiComponents.createStatistikCard('stat-deskriptiv-k2', `Deskriptiv (${getKollektivDisplayName(_statsKollektiv2)})`, deskHTML2, false, 'deskriptiveStatistik', [], 'table-deskriptiv-demographie-2');
+            col2.innerHTML += uiComponents.createStatistikCard('stat-guete-as-k2', `Güte AS (${getKollektivDisplayName(_statsKollektiv2)})`, gueteASHTML2, false, 'diagnostischeGueteAS', [], `table-guete-matrix-AS-${_statsKollektiv2.replace(/\s+/g, '_')}`);
+            col2.innerHTML += uiComponents.createStatistikCard('stat-guete-t2-k2', `Güte T2 (${getKollektivDisplayName(_statsKollektiv2)})`, gueteT2HTML2, false, 'diagnostischeGueteT2', [], `table-guete-matrix-T2-${_statsKollektiv2.replace(/\s+/g, '_')}`);
+        } else {
+            col2.innerHTML = `<p class="text-center text-muted p-3">Keine Daten für Kollektiv '${getKollektivDisplayName(_statsKollektiv2)}'.</p>`;
+        }
+        
+        const vergleichHTML = createVergleichKollektiveContentHTML(_statsVergleichKollektive, _statsKollektiv1, _statsKollektiv2);
+        const vergleichCard = uiComponents.createStatistikCard('stat-vergleich-kollektive', `Vergleich Kollektiv ${getKollektivDisplayName(_statsKollektiv1)} vs. ${getKollektivDisplayName(_statsKollektiv2)}`, vergleichHTML, false, 'vergleichKollektive', [], `table-vergleich-kollektive-${_statsKollektiv1.replace(/\s+/g, '_')}-vs-${_statsKollektiv2.replace(/\s+/g, '_')}`);
+        
+        const criteriaComparisonHTML = createCriteriaComparisonTableHTML(_criteriaComparisonResults, _currentKollektivGlobal);
+        const criteriaCard = uiComponents.createStatistikCard('stat-kriterien-vergleich-vergl', `Performance Vergleich (Global: ${getKollektivDisplayName(_currentKollektivGlobal)})`, criteriaComparisonHTML, false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
+
+
+        contentArea.appendChild(col1);
+        contentArea.appendChild(col2);
+        const row2 = document.createElement('div'); row2.className = 'row g-3 mt-0'; // mt-0 to avoid double margin if appended directly
+        row2.innerHTML = vergleichCard;
+        contentArea.appendChild(row2);
+
+        const row3 = document.createElement('div'); row3.className = 'row g-3 mt-0';
+        row3.innerHTML = criteriaCard;
+        contentArea.appendChild(row3);
+
+
+        if (_statsDataKollektiv1?.deskriptiv?.alterData) chart_renderer.renderAgeDistributionChart('chart-stat-age-1', _statsDataKollektiv1.deskriptiv.alterData, _statsKollektiv1, {title:''});
+        if (_statsDataKollektiv1?.deskriptiv?.geschlecht) {
+            const genderData1 = [ { label: UI_TEXTS.legendLabels.male, value: _statsDataKollektiv1.deskriptiv.geschlecht.m, color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE }, { label: UI_TEXTS.legendLabels.female, value: _statsDataKollektiv1.deskriptiv.geschlecht.f, color: APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN }].filter(d=>d.value > 0);
+            if(genderData1.length > 0) chart_renderer.renderPieChart('chart-stat-gender-1', genderData1, {title: '', compact:true, donut:true, showLegend: false});
+        }
+        if (_statsDataKollektiv2?.deskriptiv?.alterData) chart_renderer.renderAgeDistributionChart('chart-stat-age-2', _statsDataKollektiv2.deskriptiv.alterData, _statsKollektiv2, {title:''});
+        if (_statsDataKollektiv2?.deskriptiv?.geschlecht) {
+            const genderData2 = [ { label: UI_TEXTS.legendLabels.male, value: _statsDataKollektiv2.deskriptiv.geschlecht.m, color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE }, { label: UI_TEXTS.legendLabels.female, value: _statsDataKollektiv2.deskriptiv.geschlecht.f, color: APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN }].filter(d=>d.value > 0);
+            if(genderData2.length > 0) chart_renderer.renderPieChart('chart-stat-gender-2', genderData2, {title: '', compact:true, donut:true, showLegend: false});
+        }
+    }
+
+
+    function initializeTab(data, currentKollektiv, appliedT2Criteria, appliedT2Logic, statsLayout, statsKollektiv1, statsKollektiv2) {
+        _globalRawData = cloneDeep(data); // Speichere die globalen Rohdaten
+        _currentKollektivGlobal = currentKollektiv;
+        _appliedT2Criteria = cloneDeep(appliedT2Criteria);
+        _appliedT2Logic = appliedT2Logic;
+        _statsLayout = statsLayout;
+        _statsKollektiv1 = statsKollektiv1;
+        _statsKollektiv2 = statsKollektiv2;
+        
+        setDataStale(); // Markiere alle gecachten Daten als veraltet
+
+        ui_helpers.updateStatistikSelectorsUI(_statsLayout, _statsKollektiv1, _statsKollektiv2);
+
+        if (_statsLayout === 'einzel') {
+            _renderEinzelansicht('statistik-content-area');
+        } else {
+            _renderVergleichsansicht('statistik-content-area');
+        }
+        
+        _isInitialized = true;
+        _isDataStale = false; // Daten wurden gerade neu aufbereitet
+        ui_helpers.initializeTooltips(document.getElementById('statistik-content-area'));
     }
 
     return Object.freeze({
-        createDeskriptiveStatistikContentHTML,
+        initialize,
+        initializeTab,
+        isInitialized,
+        setDataStale,
+        createDeskriptiveStatistikContentHTML, // Beibehalten, falls von anderer Stelle genutzt
         createGueteContentHTML,
         createVergleichContentHTML,
         createAssoziationContentHTML,
