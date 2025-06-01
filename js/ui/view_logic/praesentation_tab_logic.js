@@ -1,4 +1,115 @@
 const praesentationTabLogic = (() => {
+    let _mainAppInterface = null;
+    let _globalRawData = [];
+    let _currentKollektivGlobal = '';
+    let _appliedT2CriteriaGlobal = null;
+    let _appliedT2LogicGlobal = '';
+    let _currentView = 'as-pur';
+    let _currentStudyId = null;
+    let _isInitialized = false;
+    let _isDataStale = true;
+
+    let _presentationDataCache = null;
+
+    function initialize(mainAppInterface) {
+        _mainAppInterface = mainAppInterface;
+    }
+
+    function setDataStale() {
+        _isDataStale = true;
+        _presentationDataCache = null;
+    }
+
+    function isInitialized() {
+        return _isInitialized;
+    }
+
+    function _preparePresentationData() {
+        if (!_isDataStale && _presentationDataCache) {
+            return _presentationDataCache;
+        }
+
+        const presentationData = {};
+        const processedDataFull = dataProcessor.processRawData(cloneDeep(_globalRawData));
+
+        presentationData.kollektiv = _currentKollektivGlobal;
+        const globalKollektivDaten = dataProcessor.filterDataByKollektiv(processedDataFull, _currentKollektivGlobal);
+        presentationData.patientCount = globalKollektivDaten?.length ?? 0;
+
+        if (_currentView === 'as-pur') {
+            presentationData.statsGesamt = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'Gesamt'), 'as', 'n');
+            presentationData.statsDirektOP = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'direkt OP'), 'as', 'n');
+            presentationData.statsNRCT = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'nRCT'), 'as', 'n');
+            presentationData.statsCurrentKollektiv = statisticsService.calculateDiagnosticPerformance(globalKollektivDaten, 'as', 'n');
+        } else if (_currentView === 'as-vs-t2') {
+            let comparisonCohortData = globalKollektivDaten;
+            let comparisonKollektivName = _currentKollektivGlobal;
+
+            const studySetForKollektiv = _currentStudyId ? studyT2CriteriaManager.getStudyCriteriaSetById(_currentStudyId) : null;
+
+            if (studySetForKollektiv?.applicableKollektiv && studySetForKollektiv.applicableKollektiv !== _currentKollektivGlobal && studySetForKollektiv.id !== APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) {
+                comparisonKollektivName = studySetForKollektiv.applicableKollektiv;
+                comparisonCohortData = dataProcessor.filterDataByKollektiv(processedDataFull, comparisonKollektivName);
+            }
+            presentationData.kollektivForComparison = comparisonKollektivName;
+            presentationData.patientCountForComparison = comparisonCohortData?.length ?? 0;
+
+            if (comparisonCohortData && comparisonCohortData.length > 0) {
+                presentationData.statsAS = statisticsService.calculateDiagnosticPerformance(comparisonCohortData, 'as', 'n');
+                let studySetToApply = null;
+                let evaluatedDataT2 = null;
+                const isAppliedCurrently = _currentStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
+
+                if (isAppliedCurrently) {
+                    studySetToApply = {
+                        criteria: _appliedT2CriteriaGlobal,
+                        logic: _appliedT2LogicGlobal,
+                        id: _currentStudyId,
+                        name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME,
+                        displayShortName: "Angewandt",
+                        studyInfo: {
+                            reference: "Benutzerdefiniert (aktuell im Auswertungstab eingestellt)",
+                            patientCohort: `Vergleichskollektiv: ${getKollektivDisplayName(comparisonKollektivName)} (N=${presentationData.patientCountForComparison})`,
+                            investigationType: "N/A", focus: "Benutzereinstellung",
+                            keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(_appliedT2CriteriaGlobal, _appliedT2LogicGlobal) || "Keine"
+                        }
+                    };
+                    evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(comparisonCohortData), studySetToApply.criteria, studySetToApply.logic);
+                } else if (_currentStudyId && studySetForKollektiv) {
+                    studySetToApply = studySetForKollektiv;
+                    evaluatedDataT2 = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(comparisonCohortData), studySetToApply);
+                }
+
+                if (studySetToApply && evaluatedDataT2 && evaluatedDataT2.length > 0) {
+                    presentationData.statsT2 = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n');
+                    let asDataForDirectComparison = cloneDeep(comparisonCohortData);
+                    evaluatedDataT2.forEach((p, i) => { if (asDataForDirectComparison[i]) p.as = asDataForDirectComparison[i].as; });
+                    presentationData.vergleich = statisticsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n');
+                    presentationData.comparisonCriteriaSet = studySetToApply;
+                    presentationData.t2CriteriaLabelShort = studySetToApply.displayShortName || studySetToApply.shortName || 'T2';
+                    presentationData.t2CriteriaLabelFull = `${isAppliedCurrently ? 'Aktuell angewandt' : (studySetToApply.name || 'Studie')}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySetToApply.criteria, studySetToApply.logic || studySetToApply.criteria.logic)}`;
+                } else if (studySetToApply) {
+                    presentationData.statsT2 = null;
+                    presentationData.vergleich = null;
+                    presentationData.comparisonCriteriaSet = studySetToApply;
+                    presentationData.t2CriteriaLabelShort = studySetToApply.displayShortName || studySetToApply.shortName || 'T2';
+                    presentationData.t2CriteriaLabelFull = `${studySetToApply.name}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySetToApply.criteria, studySetToApply.logic || studySetToApply.criteria.logic)}`;
+                }
+            } else {
+                presentationData.statsAS = null;
+                presentationData.statsT2 = null;
+                presentationData.vergleich = null;
+                if (_currentStudyId && studySetForKollektiv) {
+                    presentationData.comparisonCriteriaSet = studySetForKollektiv;
+                } else if (_currentStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) {
+                     presentationData.comparisonCriteriaSet = { name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: "Angewandt", criteria: _appliedT2CriteriaGlobal, logic: _appliedT2LogicGlobal, studyInfo:{} };
+                }
+            }
+        }
+        _presentationDataCache = presentationData;
+        _isDataStale = false;
+        return presentationData;
+    }
 
     function _createPresentationView_ASPUR_HTML(presentationData) {
         const { statsGesamt, statsDirektOP, statsNRCT, kollektiv, statsCurrentKollektiv, patientCount } = presentationData || {};
@@ -16,8 +127,11 @@ const praesentationTabLogic = (() => {
             const tt = TOOLTIP_CONTENT.praesentation.asPurPerfTable || {};
 
             if (!stats || typeof stats.matrix !== 'object') {
-                const nPatientsForThisKollektiv = (kollektivKey === 'Gesamt' ? presentationData.statsGesamt?.matrix : (kollektivKey === 'direkt OP' ? presentationData.statsDirektOP?.matrix : presentationData.statsNRCT?.matrix));
-                const countN = nPatientsForThisKollektiv ? (nPatientsForThisKollektiv.rp + nPatientsForThisKollektiv.fp + nPatientsForThisKollektiv.fn + nPatientsForThisKollektiv.rn) : '?';
+                let countN = '?';
+                if (kollektivKey === 'Gesamt' && presentationData.statsGesamt?.matrix) countN = (presentationData.statsGesamt.matrix.rp + presentationData.statsGesamt.matrix.fp + presentationData.statsGesamt.matrix.fn + presentationData.statsGesamt.matrix.rn);
+                else if (kollektivKey === 'direkt OP' && presentationData.statsDirektOP?.matrix) countN = (presentationData.statsDirektOP.matrix.rp + presentationData.statsDirektOP.matrix.fp + presentationData.statsDirektOP.matrix.fn + presentationData.statsDirektOP.matrix.rn);
+                else if (kollektivKey === 'nRCT' && presentationData.statsNRCT?.matrix) countN = (presentationData.statsNRCT.matrix.rp + presentationData.statsNRCT.matrix.fp + presentationData.statsNRCT.matrix.fn + presentationData.statsNRCT.matrix.rn);
+
                 return `<tr><td class="fw-bold" data-tippy-content="${tt.kollektiv || 'Kollektiv'}">${kollektivDisplayName} (N=${countN})</td><td colspan="6" class="text-muted text-center">Daten fehlen</td></tr>`;
             }
             const count = stats.matrix ? (stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn) : 0;
@@ -54,7 +168,7 @@ const praesentationTabLogic = (() => {
                         <div class="table-responsive">
                             <table class="table table-striped table-hover table-sm small mb-0" id="${tableId}">
                                 <thead class="small">
-                                    <tr>${tooltipKeys.map((key, index) => `<th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable?.[key] || ui_helpers.getMetricDescriptionHTML(key, 'AS') || ''}">${index === 0 ? 'Kollektiv' : (key.charAt(0).toUpperCase() + key.slice(1) + '. (95% CI)')}</th>`).join('')}</tr>
+                                    <tr>${tooltipKeys.map((key, index) => `<th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable?.[key] || ui_helpers.getMetricDescriptionHTML(key, 'AS') || ''}">${index === 0 ? 'Kollektiv' : (UI_TEXTS.statMetrics[key]?.name || key.charAt(0).toUpperCase() + key.slice(1)) + '. (95% CI)'}</th>`).join('')}</tr>
                                 </thead>
                                 <tbody>${kollektives.map(k => createPerfTableRow(statsMap[k], k)).join('')}</tbody>
                             </table>
@@ -88,41 +202,36 @@ const praesentationTabLogic = (() => {
         return `<div class="row g-3"><div class="col-12"><h3 class="text-center mb-3">Diagnostische Güte - Avocado Sign</h3></div>${tableHTML}${chartHTML}</div>`;
     }
 
-    function _createPresentationView_ASvsT2_HTML(presentationData, selectedStudyId = null, currentGlobalKollektivForContext = 'Gesamt') {
+    function _createPresentationView_ASvsT2_HTML(presentationData, selectedStudyId, currentGlobalKollektivForContext) {
         const { statsAS, statsT2, vergleich, comparisonCriteriaSet, kollektivForComparison, patientCountForComparison, t2CriteriaLabelShort, t2CriteriaLabelFull } = presentationData || {};
         const displayKollektivForComparison = getKollektivDisplayName(kollektivForComparison);
         const isApplied = selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
         const appliedName = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME || "Eingestellte Kriterien";
-        const t2ShortNameEffective = t2CriteriaLabelShort || (comparisonCriteriaSet?.displayShortName || 'T2');
+        const t2ShortNameEffective = t2CriteriaLabelShort || (comparisonCriteriaSet?.displayShortName || comparisonCriteriaSet?.shortName || 'T2');
 
         let comparisonBasisName = "N/A";
         let comparisonInfoHTML = '<p class="text-muted small">Bitte wählen Sie eine Vergleichsbasis für die T2-Kriterien.</p>';
 
         if (selectedStudyId && comparisonCriteriaSet) {
             const studyInfo = comparisonCriteriaSet.studyInfo;
-            comparisonBasisName = comparisonCriteriaSet.displayShortName || comparisonCriteriaSet.name || (isApplied ? appliedName : selectedStudyId);
+            comparisonBasisName = comparisonCriteriaSet.displayShortName || comparisonCriteriaSet.shortName || comparisonCriteriaSet.name || (isApplied ? appliedName : selectedStudyId);
             let criteriaHTML = '<span class="text-muted">Keine Kriteriendetails verfügbar.</span>';
 
-            if (comparisonCriteriaSet.id === 'rutegard_et_al_esgar' && studyInfo?.keyCriteriaSummary) {
-                 criteriaHTML = studyInfo.keyCriteriaSummary;
-            } else if (comparisonCriteriaSet.criteria) {
-                 criteriaHTML = studyT2CriteriaManager.formatCriteriaForDisplay(comparisonCriteriaSet.criteria, comparisonCriteriaSet.logic, false);
-                 if (criteriaHTML === 'Keine aktiven Kriterien' && comparisonCriteriaSet.logic) criteriaHTML += ` (Logik: ${UI_TEXTS.t2LogicDisplayNames[comparisonCriteriaSet.logic] || comparisonCriteriaSet.logic})`;
-                 else if (criteriaHTML !== 'Keine aktiven Kriterien' && comparisonCriteriaSet.logic && comparisonCriteriaSet.logic !== 'KOMBINIERT') criteriaHTML = `<strong>Logik:</strong> ${UI_TEXTS.t2LogicDisplayNames[comparisonCriteriaSet.logic] || comparisonCriteriaSet.logic}<br><strong>Regel(n):</strong> ${criteriaHTML}`;
+            if (comparisonCriteriaSet.criteria) {
+                 criteriaHTML = studyT2CriteriaManager.formatCriteriaForDisplay(comparisonCriteriaSet.criteria, comparisonCriteriaSet.logic || comparisonCriteriaSet.criteria.logic, false);
+                 if (criteriaHTML === 'Keine aktiven Kriterien' && (comparisonCriteriaSet.logic || comparisonCriteriaSet.criteria.logic)) criteriaHTML += ` (Logik: ${UI_TEXTS.t2LogicDisplayNames[comparisonCriteriaSet.logic || comparisonCriteriaSet.criteria.logic] || (comparisonCriteriaSet.logic || comparisonCriteriaSet.criteria.logic)})`;
+                 else if (criteriaHTML !== 'Keine aktiven Kriterien' && (comparisonCriteriaSet.logic || comparisonCriteriaSet.criteria.logic) && (comparisonCriteriaSet.logic || comparisonCriteriaSet.criteria.logic) !== 'KOMBINIERT') criteriaHTML = `<strong>Logik:</strong> ${UI_TEXTS.t2LogicDisplayNames[comparisonCriteriaSet.logic || comparisonCriteriaSet.criteria.logic] || (comparisonCriteriaSet.logic || comparisonCriteriaSet.criteria.logic)}<br><strong>Regel(n):</strong> ${criteriaHTML}`;
             }
 
             comparisonInfoHTML = `<dl class="row small mb-0">
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.reference || 'Quelle/Publikation der Kriterien.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.reference ? 'Referenz:' : 'Referenz:'}</dt><dd class="col-sm-8">${studyInfo?.reference || (isApplied ? 'Benutzerdefiniert (aktuell im Auswertungstab eingestellt)' : 'N/A')}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.patientCohort || 'Ursprüngliche Studienkohorte bzw. aktuelles Vergleichskollektiv.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.patientCohort ? 'Orig.-Kohorte / Vergleichsbasis:' : 'Orig.-Kohorte / Vergleichsbasis:'}</dt><dd class="col-sm-8">${studyInfo?.patientCohort || `Aktuell: ${displayKollektivForComparison} (N=${patientCountForComparison || '?'})`}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.investigationType || 'Art der Untersuchung in der Originalstudie (z.B. Primärstaging).')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.investigationType ? 'Untersuchungstyp:' : 'Untersuchungstyp:'}</dt><dd class="col-sm-8">${studyInfo?.investigationType || 'N/A'}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.focus || 'Hauptfokus der Originalstudie bzgl. dieser Kriterien.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.focus ? 'Studienfokus:' : 'Studienfokus:'}</dt><dd class="col-sm-8">${studyInfo?.focus || 'N/A'}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.keyCriteriaSummary || 'Zusammenfassung der angewendeten T2-Kriterien und deren Logik.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.keyCriteriaSummary ? 'Kriterien:' : 'Kriterien:'}</dt><dd class="col-sm-8">${criteriaHTML}</dd>
+                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.reference || 'Quelle/Publikation der Kriterien.')}">${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.reference ? 'Referenz:' : 'Referenz:')}</dt><dd class="col-sm-8">${studyInfo?.reference || (isApplied ? 'Benutzerdefiniert (aktuell im Auswertungstab eingestellt)' : 'N/A')}</dd>
+                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.patientCohort || 'Ursprüngliche Studienkohorte bzw. aktuelles Vergleichskollektiv.')}">${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.patientCohort ? 'Orig.-Kohorte / Vergleichsbasis:' : 'Orig.-Kohorte / Vergleichsbasis:')}</dt><dd class="col-sm-8">${studyInfo?.patientCohort || `Aktuell: ${displayKollektivForComparison} (N=${patientCountForComparison || '?'})`}</dd>
+                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.investigationType || 'Art der Untersuchung in der Originalstudie (z.B. Primärstaging).')}">${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.investigationType ? 'Untersuchungstyp:' : 'Untersuchungstyp:')}</dt><dd class="col-sm-8">${studyInfo?.investigationType || 'N/A'}</dd>
+                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.focus || 'Hauptfokus der Originalstudie bzgl. dieser Kriterien.')}">${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.focus ? 'Studienfokus:' : 'Studienfokus:')}</dt><dd class="col-sm-8">${studyInfo?.focus || 'N/A'}</dd>
+                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.keyCriteriaSummary || 'Zusammenfassung der angewendeten T2-Kriterien und deren Logik.')}">${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.keyCriteriaSummary ? 'Kriterien:' : 'Kriterien:')}</dt><dd class="col-sm-8">${criteriaHTML}</dd>
                                 </dl>`;
         }
 
-        const studySets = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.getAllStudyCriteriaSets() : [];
-        const appliedOptionHTML = `<option value="${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID}" ${isApplied ? 'selected' : ''}>-- ${appliedName} --</option>`;
-        const studyOptionsHTML = studySets.map(set => `<option value="${set.id}" ${selectedStudyId === set.id ? 'selected' : ''}>${set.name || set.id}</option>`).join('');
 
         let resultsHTML = '';
         const canDisplayResults = !!(selectedStudyId && presentationData && statsAS && statsT2 && vergleich && comparisonCriteriaSet && patientCountForComparison > 0);
@@ -131,15 +240,15 @@ const praesentationTabLogic = (() => {
         const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download';
 
         if (canDisplayResults) {
-            const fPVal = (r,d=3) => { const p = r?.pValue; return (p !== null && !isNaN(p)) ? (p < 0.001 ? '&lt;0.001' : formatNumber(p, d, na)) : na; };
+            const fPVal = (r,d=3) => { const p = r?.pValue; return (p !== null && !isNaN(p)) ? (p < 0.001 ? '&lt;0.001' : formatNumber(p, d, na, true)) : na; };
             const perfCSV = TOOLTIP_CONTENT.praesentation.downloadPerformanceCSV?.description || "Vergleichs-Performance-Tabelle als CSV";
             const compTableMD = TOOLTIP_CONTENT.praesentation.downloadCompTableMD?.description || "Vergleichs-Metriken als Markdown";
             const testsMD = TOOLTIP_CONTENT.praesentation.downloadCompTestsMD?.description || "Statistische Vergleichstests als Markdown";
 
-            const chartPNG = TOOLTIP_CONTENT.praesentation.downloadCompChartPNG?.description || `Chart (AS vs. ${t2ShortNameEffective}) als PNG`;
-            const chartSVG = TOOLTIP_CONTENT.praesentation.downloadCompChartSVG?.description || `Chart (AS vs. ${t2ShortNameEffective}) als SVG`;
+            const chartPNG = (TOOLTIP_CONTENT.praesentation.downloadCompChartPNG?.description || `Chart (AS vs. ${t2ShortNameEffective}) als PNG`).replace(/\[T2_SHORT_NAME\]/g, t2ShortNameEffective);
+            const chartSVG = (TOOLTIP_CONTENT.praesentation.downloadCompChartSVG?.description || `Chart (AS vs. ${t2ShortNameEffective}) als SVG`).replace(/\[T2_SHORT_NAME\]/g, t2ShortNameEffective);
             const tablePNG = TOOLTIP_CONTENT.praesentation.downloadTablePNG?.description || "Tabelle als PNG";
-            const compTablePNG = TOOLTIP_CONTENT.praesentation.downloadCompTablePNG?.description || `Vergleichs-Metrik-Tabelle (AS vs. ${t2ShortNameEffective}) als PNG`;
+            const compTablePNG = (TOOLTIP_CONTENT.praesentation.downloadCompTablePNG?.description || `Vergleichs-Metrik-Tabelle (AS vs. ${t2ShortNameEffective}) als PNG`).replace(/\[T2_SHORT_NAME\]/g, t2ShortNameEffective);
 
             const compTitle = `Stat. Vergleich (AS vs. ${t2ShortNameEffective})`;
             const perfTitle = `Vergleich Metriken (AS vs. ${t2ShortNameEffective})`;
@@ -148,7 +257,7 @@ const praesentationTabLogic = (() => {
             const testTableId = "praes-as-vs-t2-test-table";
             const infoCardId = "praes-t2-basis-info-card";
             const chartContainerId = "praes-comp-chart-container";
-            const chartBaseName = `AS_vs_${(comparisonCriteriaSet?.displayShortName || selectedStudyId || 'T2').replace(/\s+/g, '_')}_Koll_${displayKollektivForComparison.replace(/\s+/g, '_')}`;
+            const chartBaseName = `AS_vs_${(comparisonCriteriaSet?.displayShortName || comparisonCriteriaSet?.shortName || selectedStudyId || 'T2').replace(/\s+/g, '_')}_Koll_${displayKollektivForComparison.replace(/\s+/g, '_')}`;
 
             let comparisonTableHTML = `<div class="table-responsive"><table class="table table-sm table-striped small mb-0" id="${perfTableId}"><thead class="small"><tr><th data-tippy-content="${(TOOLTIP_CONTENT.praesentation.asVsT2PerfTable?.metric || 'Diagnostische Metrik.')}">Metrik</th><th data-tippy-content="${(TOOLTIP_CONTENT.praesentation.asVsT2PerfTable?.asValue || 'Wert für Avocado Sign (AS).')}">AS (Wert, 95% CI)</th><th data-tippy-content="${(TOOLTIP_CONTENT.praesentation.asVsT2PerfTable?.t2Value || 'Wert für die ausgewählte T2-Basis.').replace('[T2_SHORT_NAME]', `<strong>${t2ShortNameEffective}</strong>`)}">${t2ShortNameEffective} (Wert, 95% CI)</th></tr></thead><tbody>`;
             const metrics = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'f1', 'auc'];
@@ -171,8 +280,8 @@ const praesentationTabLogic = (() => {
             const mcNemarInterp = ui_helpers.getTestInterpretationHTML('mcnemar', vergleich?.mcnemar, displayKollektivForComparison, t2ShortNameEffective);
             const delongDesc = ui_helpers.getTestDescriptionHTML('delong', t2ShortNameEffective);
             const delongInterp = ui_helpers.getTestInterpretationHTML('delong', vergleich?.delong, displayKollektivForComparison, t2ShortNameEffective);
-            testsTableHTML += `<tr><td data-tippy-content="${mcNemarDesc}">McNemar (Acc)</td><td>${formatNumber(vergleich?.mcnemar?.statistic, 3, '--')} (df=${vergleich?.mcnemar?.df || '--'})</td><td data-tippy-content="${mcNemarInterp}"> ${fPVal(vergleich?.mcnemar)} ${getStatisticalSignificanceSymbol(vergleich?.mcnemar?.pValue)}</td><td class="text-muted">${vergleich?.mcnemar?.method || '--'}</td></tr>`;
-            testsTableHTML += `<tr><td data-tippy-content="${delongDesc}">DeLong (AUC)</td><td>Z=${formatNumber(vergleich?.delong?.Z, 3, '--')}</td><td data-tippy-content="${delongInterp}"> ${fPVal(vergleich?.delong)} ${getStatisticalSignificanceSymbol(vergleich?.delong?.pValue)}</td><td class="text-muted">${vergleich?.delong?.method || '--'}</td></tr>`;
+            testsTableHTML += `<tr><td data-tippy-content="${mcNemarDesc}">McNemar (Acc)</td><td>${formatNumber(vergleich?.mcnemar?.statistic, 3, '--', true)} (df=${vergleich?.mcnemar?.df || '--'})</td><td data-tippy-content="${mcNemarInterp}"> ${fPVal(vergleich?.mcnemar)} ${getStatisticalSignificanceSymbol(vergleich?.mcnemar?.pValue)}</td><td class="text-muted">${vergleich?.mcnemar?.method || '--'}</td></tr>`;
+            testsTableHTML += `<tr><td data-tippy-content="${delongDesc}">DeLong (AUC)</td><td>Z=${formatNumber(vergleich?.delong?.Z, 3, '--', true)}</td><td data-tippy-content="${delongInterp}"> ${fPVal(vergleich?.delong)} ${getStatisticalSignificanceSymbol(vergleich?.delong?.pValue)}</td><td class="text-muted">${vergleich?.delong?.method || '--'}</td></tr>`;
             testsTableHTML += `</tbody></table>`;
             const testTableDownloadBtns = [ {id: `dl-${testTableId}-png`, icon: 'fa-image', tooltip: tablePNG, format: 'png', tableId: testTableId, tableName: `Praes_ASvsT2_Tests_${(comparisonCriteriaSet?.id || selectedStudyId || 'T2').replace(/\s+/g, '_')}`} ];
             const testsCardHTML = uiComponents.createStatistikCard(testTableId+'_card', compTitle, testsTableHTML, false, null, testTableDownloadBtns, testTableId);
@@ -215,48 +324,67 @@ const praesentationTabLogic = (() => {
                          </div>
                     </div>
                 </div>`;
-        } else if (selectedStudyId && presentationData && patientCountForComparison === 0) {
+        } else if (selectedStudyId && presentationData && (patientCountForComparison === undefined || patientCountForComparison === 0) ) {
             resultsHTML = `<div class="alert alert-warning">Keine Patientendaten für Kollektiv (<strong>${displayKollektivForComparison}</strong>) für diesen Vergleich vorhanden.</div>`;
         } else if (selectedStudyId && !comparisonCriteriaSet) {
             resultsHTML = `<div class="alert alert-danger">Fehler: Vergleichs-Kriterien (ID: ${selectedStudyId}) nicht gefunden.</div>`;
         } else {
             resultsHTML = `<div class="alert alert-info">Bitte wählen Sie oben eine Vergleichsbasis für das Kollektiv '<strong>${displayKollektivForComparison}</strong>'.</div>`;
         }
-        const displayGlobalKollektivForContext = getKollektivDisplayName(currentGlobalKollektivForContext);
-        const kollektivHinweis = (kollektivForComparison !== currentGlobalKollektivForContext)
-            ? `(Globales Kollektiv: <strong>${displayGlobalKollektivForContext}</strong>. T2-Vergleichsbasis evaluiert auf <strong>${displayKollektivForComparison}</strong>, N=${patientCountForComparison || '?'}).`
-            : `(N=${patientCountForComparison || '?'})`;
-
-
-        return `<div class="row mb-4"><div class="col-12"><h4 class="text-center mb-1">Vergleich: Avocado Sign vs. T2-Kriterien</h4><p class="text-center text-muted small mb-3">Aktuelles Vergleichskollektiv: <strong>${displayKollektivForComparison}</strong> ${kollektivHinweis}</p><div class="row justify-content-center"><div class="col-md-9 col-lg-7" id="praes-study-select-container"><div class="input-group input-group-sm"><label class="input-group-text" for="praes-study-select">T2-Vergleichsbasis:</label><select class="form-select" id="praes-study-select" data-tippy-content="${TOOLTIP_CONTENT.praesentation.studySelect.description}"><option value="" ${!selectedStudyId ? 'selected' : ''} disabled>-- Bitte wählen --</option>${appliedOptionHTML}<option value="" disabled>--- Publizierte Kriterien ---</option>${studyOptionsHTML}</select></div><div id="praes-study-description" class="mt-2 small text-muted">${comparisonBasisName === 'N/A' ? 'Keine Basis gewählt' : `Aktuelle T2 Basis: <strong>${comparisonBasisName}</strong>`}</div></div></div></div></div><div id="praesentation-as-vs-t2-results">${resultsHTML}</div>`;
+        return resultsHTML;
     }
 
-    function createPresentationTabContent(view, presentationData, selectedStudyId = null, currentGlobalKollektiv = 'Gesamt') {
-        let viewSelectorHTML = `
-            <div class="row mb-4">
-                <div class="col-12 d-flex justify-content-center">
-                    <div class="btn-group btn-group-sm" role="group" aria-label="Präsentationsansicht Auswahl" data-tippy-content="${TOOLTIP_CONTENT.praesentation.viewSelect.description}">
-                        <input type="radio" class="btn-check" name="praesentationAnsicht" id="ansicht-as-pur" autocomplete="off" value="as-pur" ${view === 'as-pur' ? 'checked' : ''}>
-                        <label class="btn btn-outline-primary praes-view-btn" for="ansicht-as-pur"><i class="fas fa-star me-1"></i> Avocado Sign (Performance)</label>
-                        <input type="radio" class="btn-check" name="praesentationAnsicht" id="ansicht-as-vs-t2" value="as-vs-t2" autocomplete="off" ${view === 'as-vs-t2' ? 'checked' : ''}>
-                        <label class="btn btn-outline-primary praes-view-btn" for="ansicht-as-vs-t2"><i class="fas fa-exchange-alt me-1"></i> AS vs. T2 (Vergleich)</label>
-                    </div>
-                </div>
-            </div>`;
+    function initializeTab(data, currentKollektiv, appliedT2Criteria, appliedT2Logic, currentView, currentStudyId) {
+        _globalRawData = data;
+        _currentKollektivGlobal = currentKollektiv;
+        _appliedT2CriteriaGlobal = appliedT2Criteria;
+        _appliedT2LogicGlobal = appliedT2Logic;
+        _currentView = currentView;
+        _currentStudyId = currentStudyId;
+        setDataStale();
 
-        let contentHTML = '';
-        if (view === 'as-pur') {
-            contentHTML = _createPresentationView_ASPUR_HTML(presentationData);
-        } else if (view === 'as-vs-t2') {
-            contentHTML = _createPresentationView_ASvsT2_HTML(presentationData, selectedStudyId, currentGlobalKollektiv);
-        } else {
-            contentHTML = '<div class="alert alert-warning">Unbekannte Ansicht ausgewählt.</div>';
+        const presentationData = _preparePresentationData();
+        const contentArea = document.getElementById('praesentation-content-area');
+        
+        if (contentArea) {
+            if (_currentView === 'as-pur') {
+                contentArea.innerHTML = _createPresentationView_ASPUR_HTML(presentationData);
+                if(presentationData.statsCurrentKollektiv && presentationData.statsCurrentKollektiv.matrix && presentationData.patientCount > 0) {
+                     chart_renderer.renderASPerformanceChart('praes-as-pur-perf-chart', presentationData.statsCurrentKollektiv, getKollektivDisplayName(_currentKollektivGlobal), { includeCI: true, yDomain: [0,1]});
+                }
+            } else if (_currentView === 'as-vs-t2') {
+                contentArea.innerHTML = _createPresentationView_ASvsT2_HTML(presentationData, _currentStudyId, _currentKollektivGlobal);
+                if (presentationData.statsAS && presentationData.statsT2 && presentationData.patientCountForComparison > 0) {
+                    const chartData = ['sens', 'spez', 'ppv', 'npv', 'acc', 'auc'].map(key => ({
+                        group: UI_TEXTS.statMetrics[key]?.name || key.toUpperCase(),
+                        AS: presentationData.statsAS[key],
+                        T2: presentationData.statsT2[key]
+                    }));
+                    const series = [
+                        { name: 'AS', key: 'AS', color: APP_CONFIG.CHART_SETTINGS.AS_COLOR, showCI: true },
+                        { name: presentationData.t2CriteriaLabelShort || 'T2', key: 'T2', color: APP_CONFIG.CHART_SETTINGS.T2_COLOR, showCI: true }
+                    ];
+                    const chartTitle = `AS vs. ${presentationData.t2CriteriaLabelShort || 'T2'} (${getKollektivDisplayName(presentationData.kollektivForComparison)})`;
+                    chart_renderer.renderComparisonBarChart('praes-comp-chart-container', chartData, series, { title: chartTitle, yAxisLabel: 'Wert', barType: 'grouped', groupKey: 'group', showLegend: true, includeCI: true, yDomain: [0,1] });
+                }
+            } else {
+                contentArea.innerHTML = '<div class="alert alert-warning">Unbekannte Ansicht ausgewählt.</div>';
+            }
         }
-        return viewSelectorHTML + `<div id="praesentation-content-area">${contentHTML}</div>`;
+        ui_helpers.updatePresentationViewSelectorUI(_currentView); // Ensure controls are updated
+        const studySelect = document.getElementById('praes-study-select');
+        if(studySelect) studySelect.value = _currentStudyId || '';
+
+        _isInitialized = true;
+        ui_helpers.initializeTooltips(contentArea);
     }
+
 
     return Object.freeze({
-        createPresentationTabContent
+        initialize,
+        initializeTab,
+        isInitialized,
+        setDataStale
     });
 
 })();
