@@ -6,8 +6,8 @@ const publicationTabLogic = (() => {
     let _appliedT2LogicGlobal = '';
     let _bruteForceResults = null;
     let _publikationLang = 'de';
-    let _publikationSection = 'abstract';
-    let _publikationBruteForceMetric = 'auc';
+    let _publikationSection = 'methoden';
+    let _publikationBruteForceMetric = 'Balanced Accuracy';
     let _isInitialized = false;
     let _isDataStale = true;
     let _publicationStats = null;
@@ -25,17 +25,39 @@ const publicationTabLogic = (() => {
         return _isInitialized;
     }
 
+    function _getCommonDataForTextGenerator() {
+        if (!_publicationStats || typeof state === 'undefined' || typeof APP_CONFIG === 'undefined' || typeof PUBLICATION_CONFIG === 'undefined') {
+            return {};
+        }
+        return {
+            references: APP_CONFIG.REFERENCES_FOR_PUBLICATION,
+            appVersion: APP_CONFIG.APP_VERSION,
+            appName: APP_CONFIG.APP_NAME,
+            significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
+            bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
+            appliedT2CriteriaGlobal: _appliedT2CriteriaGlobal,
+            appliedT2LogicGlobal: _appliedT2LogicGlobal,
+            nGesamt: _publicationStats?.Gesamt?.deskriptiv?.anzahlPatienten,
+            nDirektOP: _publicationStats?.['direkt OP']?.deskriptiv?.anzahlPatienten,
+            nNRCT: _publicationStats?.nRCT?.deskriptiv?.anzahlPatienten,
+            bruteForceMetricForPublication: _publikationBruteForceMetric
+        };
+    }
+
     function _initializeData() {
-        if (!_isDataStale && _publicationStats) {
+        if (!_isDataStale && _publicationStats && !_publicationStats.error) {
             return _publicationStats;
         }
         _isDataStale = true; 
         _publicationStats = null;
 
         try {
+            if (typeof dataProcessor === 'undefined' || typeof statisticsService === 'undefined') {
+                throw new Error("Abhängigkeiten (dataProcessor, statisticsService) für _initializeData nicht verfügbar.");
+            }
             const processedDataFull = dataProcessor.processRawData(cloneDeep(_globalRawData));
             if (!processedDataFull || processedDataFull.length === 0) {
-                throw new Error("Keine verarbeiteten Patientendaten verfügbar.");
+                throw new Error("Keine verarbeiteten Patientendaten verfügbar für Publikationsstatistiken.");
             }
             
             const allStats = statisticsService.calculateAllStatsForPublication(
@@ -43,7 +65,7 @@ const publicationTabLogic = (() => {
                 _appliedT2CriteriaGlobal,
                 _appliedT2LogicGlobal,
                 _bruteForceResults,
-                _publikationBruteForceMetric
+                _publikationBruteForceMetric 
             );
 
             if (!allStats) {
@@ -54,7 +76,7 @@ const publicationTabLogic = (() => {
 
         } catch (error) {
             console.error("Fehler bei der Berechnung der Statistikdaten für den Publikationstab:", error);
-            _publicationStats = { error: error.message, details: {} };
+            _publicationStats = { error: error.message, details: {} }; 
             _isDataStale = false; 
         }
         return _publicationStats;
@@ -78,31 +100,172 @@ const publicationTabLogic = (() => {
             return;
         }
         
+        if (typeof publicationTextGenerator === 'undefined' || typeof publicationRenderer === 'undefined') {
+            mainContentArea.innerHTML = '<p class="text-danger p-3">Fehler: Notwendige Publikationsmodule (Generator oder Renderer) nicht geladen.</p>';
+            return;
+        }
+
         const tocItems = publicationTextGenerator.getTableOfContents(_publikationLang, _publicationStats);
         sidebarArea.innerHTML = publicationRenderer.renderSidebarNavigation(tocItems, _publikationSection, _publikationLang);
         
-        const sectionContent = publicationRenderer.renderContent(
+        const commonDataForRenderer = _getCommonDataForTextGenerator();
+        const optionsForRenderer = { bruteForceMetric: _publikationBruteForceMetric };
+
+        const sectionBaseHTML = publicationRenderer.renderContent(
             _publikationLang,
             _publikationSection,
             _publicationStats,
-            _currentKollektivGlobal,
-            _appliedT2CriteriaGlobal,
-            _appliedT2LogicGlobal,
-            _publikationBruteForceMetric
+            commonDataForRenderer, // Enthält bereits appliedT2Criteria etc.
+            optionsForRenderer
         );
-        mainContentArea.innerHTML = sectionContent;
+        mainContentArea.innerHTML = sectionBaseHTML;
         
-        ui_helpers.updatePublicationControlsUI(_publikationLang, _publikationSection, _publikationBruteForceMetric, _bruteForceResults);
-        ui_helpers.initializeTooltips(tabContentPane);
+        // Dynamische Elemente nach dem Einfügen des Basis-HTML rendern
+        const pubElementsConfig = PUBLICATION_CONFIG.publicationElements;
 
-        const activeNavItem = sidebarArea.querySelector(`.nav-link[data-section-id="${_publikationSection}"]`);
-        if (activeNavItem) {
-            activeNavItem.classList.add('active');
-            // Scroll into view if needed, e.g. for deep links or after language change.
-            // However, the scroll should ideally happen on section change by event handler.
+        if (_publikationSection === 'methoden_t2_definition' && pubElementsConfig.methoden?.literaturT2KriterienTabelle) {
+            const el = document.getElementById(pubElementsConfig.methoden.literaturT2KriterienTabelle.id);
+            if (el && typeof publicationRenderer.renderLiteraturT2KriterienTabelle === 'function') {
+                const title = _publikationLang === 'de' ? pubElementsConfig.methoden.literaturT2KriterienTabelle.titleDe : pubElementsConfig.methoden.literaturT2KriterienTabelle.titleEn;
+                el.innerHTML = publicationRenderer.renderLiteraturT2KriterienTabelle(_publikationLang, commonDataForRenderer, pubElementsConfig.methoden.literaturT2KriterienTabelle.id, title);
+            }
+        } else if (_publikationSection === 'ergebnisse_patientencharakteristika' && pubElementsConfig.ergebnisse) {
+            const tableConf = pubElementsConfig.ergebnisse.patientenCharakteristikaTabelle;
+            const elTable = document.getElementById(tableConf.id);
+            if (elTable && typeof publicationRenderer.renderPatientenCharakteristikaTabelle === 'function') {
+                const titleTable = _publikationLang === 'de' ? tableConf.titleDe : tableConf.titleEn;
+                elTable.innerHTML = publicationRenderer.renderPatientenCharakteristikaTabelle(_publicationStats, _publikationLang, commonDataForRenderer, tableConf.id, titleTable);
+            }
+            const chartDataGesamt = _publicationStats?.Gesamt?.deskriptiv;
+            if (chartDataGesamt && typeof chart_renderer !== 'undefined') {
+                const ageChartConf = pubElementsConfig.ergebnisse.alterVerteilungChart;
+                const elChartAge = document.getElementById(ageChartConf.id);
+                if(elChartAge && chart_renderer.renderAgeDistributionChart && chartDataGesamt.alterData) {
+                    const titleAge = _publikationLang === 'de' ? ageChartConf.titleDe : ageChartConf.titleEn;
+                    chart_renderer.renderAgeDistributionChart(elChartAge.id, chartDataGesamt.alterData, getKollektivDisplayName('Gesamt'), {title: titleAge});
+                }
+                const genderChartConf = pubElementsConfig.ergebnisse.geschlechtVerteilungChart;
+                const elChartGender = document.getElementById(genderChartConf.id);
+                if(elChartGender && chart_renderer.renderPieChart && chartDataGesamt.geschlecht) {
+                    const titleGender = _publikationLang === 'de' ? genderChartConf.titleDe : genderChartConf.titleEn;
+                    const genderDataForChart = [
+                        { label: UI_TEXTS.legendLabels.male, value: chartDataGesamt.geschlecht.m, color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE},
+                        { label: UI_TEXTS.legendLabels.female, value: chartDataGesamt.geschlecht.f, color: APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN },
+                        { label: UI_TEXTS.legendLabels.unknownGender, value: chartDataGesamt.geschlecht.unbekannt || 0, color: '#cccccc' }
+                    ].filter(d => d.value > 0);
+                    if (genderDataForChart.length > 0) chart_renderer.renderPieChart(elChartGender.id, genderDataForChart, {title: titleGender, showLegend: true, legendPosition: 'bottom'});
+                }
+            }
+        } else if (_publikationSection === 'ergebnisse_as_performance' && pubElementsConfig.ergebnisse?.diagnostischeGueteASTabelle) {
+            const tableConf = pubElementsConfig.ergebnisse.diagnostischeGueteASTabelle;
+            const el = document.getElementById(tableConf.id);
+            if (el && typeof publicationRenderer.renderDiagnostischeGueteTabelle === 'function') {
+                const titleBase = _publikationLang === 'de' ? tableConf.titleDe : tableConf.titleEn;
+                let tableHTML = '';
+                ['Gesamt', 'direkt OP', 'nRCT'].forEach(kollektivId => {
+                    if (_publicationStats?.[kollektivId]?.gueteAS) {
+                        const kollektivDisplayName = getKollektivDisplayName(kollektivId);
+                        const nPat = _publicationStats[kollektivId].deskriptiv?.anzahlPatienten || 'N/A';
+                        const subTitle = `${titleBase} - ${kollektivDisplayName} (N=${nPat})`;
+                        tableHTML += publicationRenderer.renderDiagnostischeGueteTabelle(_publicationStats[kollektivId].gueteAS, 'Avocado Sign', kollektivDisplayName, _publikationLang, `${tableConf.id}-${kollektivId.replace(/\s+/g, '')}`, subTitle);
+                        tableHTML += '<hr class="my-3"/>';
+                    }
+                });
+                el.innerHTML = tableHTML || `<p class="text-muted">${_publikationLang==='de'?'Keine Daten für diese Tabelle.':'No data for this table.'}</p>`;
+            }
+        } else if (_publikationSection === 'ergebnisse_literatur_t2_performance' && pubElementsConfig.ergebnisse?.diagnostischeGueteLiteraturT2Tabelle) {
+             const tableConf = pubElementsConfig.ergebnisse.diagnostischeGueteLiteraturT2Tabelle;
+             const el = document.getElementById(tableConf.id);
+             if(el && typeof publicationRenderer.renderDiagnostischeGueteTabelle === 'function') {
+                 let tableHTML = '';
+                 PUBLICATION_CONFIG.literatureCriteriaSets.forEach(studyConf => {
+                     const studySet = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.getStudyCriteriaSetById(studyConf.id) : null;
+                     if(studySet) {
+                         const targetKollektiv = studySet.applicableKollektiv || 'Gesamt';
+                         const stats = _publicationStats?.[targetKollektiv]?.gueteT2_literatur?.[studyConf.id];
+                         if (stats) {
+                              const kollektivDisplayName = getKollektivDisplayName(targetKollektiv);
+                              const nPat = _publicationStats[targetKollektiv]?.deskriptiv?.anzahlPatienten || 'N/A';
+                              const subTitle = `${_publikationLang === 'de' ? tableConf.titleDe : tableConf.titleEn} - ${studySet.name} (${kollektivDisplayName}, N=${nPat})`;
+                              tableHTML += publicationRenderer.renderDiagnostischeGueteTabelle(stats, studySet.name, kollektivDisplayName, _publikationLang, `${tableConf.id}-${studyConf.id}`, subTitle);
+                              tableHTML += '<hr class="my-3"/>';
+                         }
+                     }
+                 });
+                 el.innerHTML = tableHTML || `<p class="text-muted">${_publikationLang==='de'?'Keine Daten für diese Tabelle.':'No data for this table.'}</p>`;
+             }
+        } else if (_publikationSection === 'ergebnisse_optimierte_t2_performance' && pubElementsConfig.ergebnisse?.diagnostischeGueteOptimierteT2Tabelle) {
+            const tableConf = pubElementsConfig.ergebnisse.diagnostischeGueteOptimierteT2Tabelle;
+            const el = document.getElementById(tableConf.id);
+            if(el && typeof publicationRenderer.renderDiagnostischeGueteTabelle === 'function') {
+                let tableHTML = '';
+                const titleBase = (_publikationLang === 'de' ? tableConf.titleDe : tableConf.titleEn).replace('{BF_METRIC}', _publikationBruteForceMetric);
+                ['Gesamt', 'direkt OP', 'nRCT'].forEach(kId => {
+                     const bfStats = _publicationStats?.[kId]?.gueteT2_bruteforce;
+                     const bfDef = _publicationStats?.[kId]?.bruteforce_definition;
+                     if(bfStats && bfDef && bfDef.metricName === _publikationBruteForceMetric) {
+                        const kollektivDisplayName = getKollektivDisplayName(kId);
+                        const nPat = _publicationStats[kId]?.deskriptiv?.anzahlPatienten || 'N/A';
+                        const subTitle = `${titleBase} - ${kollektivDisplayName} (N=${nPat})`;
+                        const methodenName = _publikationLang==='de' ? `Optimierte T2 (für ${bfDef.metricName})` : `Optimized T2 (for ${bfDef.metricName})`;
+                        tableHTML += publicationRenderer.renderDiagnostischeGueteTabelle(bfStats, methodenName, kollektivDisplayName, _publikationLang, `${tableConf.id}-${kId.replace(/\s+/g, '')}`, subTitle);
+                        tableHTML += '<hr class="my-3"/>';
+                     }
+                });
+                el.innerHTML = tableHTML || `<p class="text-muted">${_publikationLang==='de'?'Keine Daten für diese Tabelle (ggf. andere BF-Metrik ausgewählt als für die Optimierung verwendet wurde).':'No data for this table (possibly different BF metric selected than used for optimization).'}</p>`;
+            }
+        } else if (_publikationSection === 'ergebnisse_vergleich_performance' && pubElementsConfig.ergebnisse) {
+            const tableConf = pubElementsConfig.ergebnisse.statistischerVergleichAST2Tabelle;
+            const elTable = document.getElementById(tableConf.id);
+            if (elTable && typeof publicationRenderer.renderStatistischerVergleichTabelle === 'function') {
+                const titleTable = (_publikationLang === 'de' ? tableConf.titleDe : tableConf.titleEn).replace('{BF_METRIC}', _publikationBruteForceMetric);
+                elTable.innerHTML = publicationRenderer.renderStatistischerVergleichTabelle(_publicationStats, commonDataForRenderer, _publikationLang, tableConf.id, titleTable, optionsForRenderer);
+            }
+            const chartKollektiveConfigs = [
+                { id: 'Gesamt', elId: pubElementsConfig.ergebnisse.vergleichPerformanceChartGesamt.id, titleConf: pubElementsConfig.ergebnisse.vergleichPerformanceChartGesamt },
+                { id: 'direkt OP', elId: pubElementsConfig.ergebnisse.vergleichPerformanceChartDirektOP.id, titleConf: pubElementsConfig.ergebnisse.vergleichPerformanceChartDirektOP },
+                { id: 'nRCT', elId: pubElementsConfig.ergebnisse.vergleichPerformanceChartNRCT.id, titleConf: pubElementsConfig.ergebnisse.vergleichPerformanceChartNRCT }
+            ];
+            if (typeof chart_renderer !== 'undefined') {
+                chartKollektiveConfigs.forEach(item => {
+                    const elChart = document.getElementById(item.elId);
+                    const statsAS = _publicationStats?.[item.id]?.gueteAS;
+                    const statsBF = _publicationStats?.[item.id]?.gueteT2_bruteforce;
+                    const bfDef = _publicationStats?.[item.id]?.bruteforce_definition;
+                    const nPat = _publicationStats?.[item.id]?.deskriptiv?.anzahlPatienten || 'N/A';
+
+                    if (elChart && statsAS && statsBF && bfDef && bfDef.metricName === _publikationBruteForceMetric) {
+                        const chartTitle = (_publikationLang==='de' ? item.titleConf.titleDe : item.titleConf.titleEn)
+                                            .replace('{BF_METRIC}', _publikationBruteForceMetric)
+                                            .replace('{Kollektiv}', getKollektivDisplayName(item.id))
+                                            .replace(/\[N_GESAMT\]/g, String(nPat)).replace(/\[N_DIREKT_OP\]/g, String(nPat)).replace(/\[N_NRCT\]/g, String(nPat));
+                        const chartData = [
+                            { group: 'Sens.', AS: statsAS.sens, T2_Opt: statsBF.sens },
+                            { group: 'Spez.', AS: statsAS.spez, T2_Opt: statsBF.spez },
+                            { group: 'PPV', AS: statsAS.ppv, T2_Opt: statsBF.ppv },
+                            { group: 'NPV', AS: statsAS.npv, T2_Opt: statsBF.npv },
+                            { group: 'Acc.', AS: statsAS.acc, T2_Opt: statsBF.acc },
+                            { group: 'AUC', AS: statsAS.auc, T2_Opt: statsBF.auc }
+                        ];
+                        const series = [
+                            { name: 'AS', key: 'AS', color: APP_CONFIG.CHART_SETTINGS.AS_COLOR, showCI: true },
+                            { name: `T2 Opt. (${bfDef.metricName})`, key: 'T2_Opt', color: APP_CONFIG.CHART_SETTINGS.T2_COLOR, showCI: true }
+                        ];
+                         chart_renderer.renderComparisonBarChart(item.elId, chartData, series, { title: chartTitle, yAxisLabel: 'Wert', barType: 'grouped', groupKey: 'group', showLegend: true, includeCI: true, yDomain: [0,1] });
+                    } else if(elChart) {
+                         elChart.innerHTML = `<p class="text-center text-muted small mt-3">${_publikationLang === 'de' ? 'Vergleichsdiagramm nicht verfügbar (fehlende Daten oder abweichende BF-Metrik).' : 'Comparison chart not available (missing data or differing BF metric).'}</p>`;
+                    }
+                });
+            }
         }
-         // Attach specific event listeners for copy buttons or interactive elements rendered by publicationRenderer
-        publicationRenderer.attachPublicationTabEventListeners(mainContentArea);
+        
+        if (typeof ui_helpers !== 'undefined') {
+            ui_helpers.updatePublicationControlsUI(_publikationLang, _publikationSection, _publikationBruteForceMetric, _bruteForceResults);
+            ui_helpers.initializeTooltips(tabContentPane);
+        }
+        if (typeof publicationRenderer.attachPublicationTabEventListeners === 'function') {
+            publicationRenderer.attachPublicationTabEventListeners(mainContentArea);
+        }
     }
 
 
@@ -116,32 +279,15 @@ const publicationTabLogic = (() => {
         _publikationSection = publikationSection;
         _publikationBruteForceMetric = publikationBruteForceMetric;
         
-        setDataStale(); // Markiere Daten als veraltet, um Neuberechnung zu erzwingen
-        _initializeData(); // Daten aufbereiten
-        _renderPublicationTabContent(); // UI rendern
+        setDataStale(); 
+        _initializeData(); 
+        _renderPublicationTabContent(); 
 
         _isInitialized = true;
     }
 
-    function getPubDataForToc() {
-        if (_isDataStale || !_publicationStats) {
-            _initializeData();
-        }
-        return _publicationStats; // Enthält nun auch Metadaten, die für ToC nützlich sein könnten
-    }
-    
-    function getPubDataForCurrentSection() {
-         if (_isDataStale || !_publicationStats) {
-            _initializeData();
-        }
-        // Hier könnten spezifische Daten für die aktuelle Sektion extrahiert/transformiert werden,
-        // falls publicationRenderer.renderContent nicht das gesamte _publicationStats Objekt benötigt.
-        // Vorerst geben wir das Gesamtobjekt zurück.
-        return _publicationStats;
-    }
-
     function getFullPublicationStats() {
-        if (_isDataStale || !_publicationStats) {
+        if (_isDataStale || !_publicationStats || _publicationStats.error) {
             _initializeData();
         }
         return cloneDeep(_publicationStats);
@@ -153,8 +299,6 @@ const publicationTabLogic = (() => {
         initializeTab,
         isInitialized,
         setDataStale,
-        getPubDataForToc,
-        getPubDataForCurrentSection,
-        getFullPublicationStats
+        getFullPublicationStats 
     });
 })();
