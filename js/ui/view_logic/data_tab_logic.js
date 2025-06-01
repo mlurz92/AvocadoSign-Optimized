@@ -8,7 +8,8 @@ const dataTabLogic = (() => {
         if (!patient) return '';
         const na = '--';
         const hasT2Details = patient.lymphknoten_t2 && patient.lymphknoten_t2.length > 0;
-        const collapseId = `collapse-pat-${patient.nr || patient.id_patient}`;
+        const collapseId = `collapse-pat-${String(patient.nr || patient.id_patient || generateUUID()).replace(/[^a-zA-Z0-9_-]/g, '')}`;
+
 
         let t2DetailsHTML = '';
         if (hasT2Details) {
@@ -31,7 +32,7 @@ const dataTabLogic = (() => {
                 t2DetailsHTML += `
                     <tr class="small">
                         <td>${index + 1}</td>
-                        <td>${lk.groesse !== null ? formatNumber(lk.groesse, 1) : na}</td>
+                        <td>${lk.groesse !== null && lk.groesse !== undefined ? formatNumber(lk.groesse, 1) : na}</td>
                         <td>${ui_helpers.getT2IconSVG('form', lk.form)} ${lk.form || na}</td>
                         <td>${ui_helpers.getT2IconSVG('kontur', lk.kontur)} ${lk.kontur || na}</td>
                         <td>${ui_helpers.getT2IconSVG('homogenitaet', lk.homogenitaet)} ${lk.homogenitaet || na}</td>
@@ -52,7 +53,7 @@ const dataTabLogic = (() => {
                 <td>${patient.name || na}</td>
                 <td>${patient.vorname || na}</td>
                 <td class="text-center">${patient.geschlecht || na}</td>
-                <td class="text-center">${patient.alter !== null ? formatNumber(patient.alter, 0) : na}</td>
+                <td class="text-center">${patient.alter !== null && patient.alter !== undefined ? formatNumber(patient.alter, 0) : na}</td>
                 <td>${getKollektivDisplayName(patient.therapie) || na}</td>
                 <td class="text-center" style="font-weight: ${patient.n === '+' ? 'bold' : 'normal'}; color: ${patient.n === '+' ? 'var(--danger-color)' : (patient.n === '-' ? 'var(--success-color)' : 'inherit')}">${patient.n || na}</td>
                 <td class="text-center" style="font-weight: ${patient.as === '+' ? 'bold' : 'normal'}; color: ${patient.as === '+' ? 'var(--danger-color)' : (patient.as === '-' ? 'var(--success-color)' : 'inherit')}">${patient.as || na}</td>
@@ -104,8 +105,8 @@ const dataTabLogic = (() => {
 
         const tableOptions = {
             stickyHeader: true,
-            stickyFirstColumn: false, // In dieser Tabelle nicht benötigt
-            tableId: 'daten-table',
+            stickyFirstColumn: false,
+            tableId: 'daten-table', // Wird für Sortierlogik in generalEventHandlers benötigt
             headerContainerId: tableHeaderContainerId,
             bodyContainerId: tableBodyContainerId,
             additionalTableClasses: 'table-sm table-hover',
@@ -113,13 +114,15 @@ const dataTabLogic = (() => {
         };
 
         tableContainer.innerHTML = tableRenderer.createTableHTML(columns, rowsHTML, tableOptions);
-        ui_helpers.attachRowCollapseListeners(document.getElementById(tableBodyContainerId));
+        if(document.getElementById(tableBodyContainerId)){ // Nur Listener anhängen, wenn Body existiert
+            ui_helpers.attachRowCollapseListeners(document.getElementById(tableBodyContainerId));
+        }
     }
 
 
     function initializeTab(data, sortState) {
         _currentData = Array.isArray(data) ? data : [];
-        _currentSortState = sortState || state.getCurrentDatenSortState();
+        _currentSortState = sortState || state.getCurrentDatenSortState(); // state ist global
         _kollektivName = state.getCurrentKollektiv();
         _isInitialized = true;
 
