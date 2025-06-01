@@ -161,6 +161,49 @@ const ui_helpers = (() => {
         initializeTooltips(tableHeader);
     }
 
+    function updateSortIconsForTab(tabId, datenSortState, auswertungSortState) {
+        if (tabId === 'daten-tab' && datenSortState) {
+            updateSortIcons('daten-table-header', datenSortState);
+        } else if (tabId === 'auswertung-tab' && auswertungSortState) {
+            updateSortIcons('auswertung-table-header', auswertungSortState);
+        }
+    }
+
+    function updateTabSpecificControls(tabId, stateSnapshot) {
+        if (tabId === 'statistik-tab') {
+            updateStatistikSelectorsUI(stateSnapshot.statsLayout, stateSnapshot.statsKollektiv1, stateSnapshot.statsKollektiv2);
+        } else if (tabId === 'auswertung-tab') {
+            updateT2CriteriaControlsUI(stateSnapshot.appliedT2Criteria, stateSnapshot.appliedT2Logic);
+            markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
+            updateBruteForceUI(stateSnapshot.bruteForceState, stateSnapshot.bruteForceResults ? stateSnapshot.bruteForceResults[stateSnapshot.currentKollektiv] : {}, bruteForceManager.isWorkerAvailable(), stateSnapshot.currentKollektiv);
+        } else if (tabId === 'praesentation-tab') {
+            updatePresentationViewSelectorUI(stateSnapshot.praesentationView);
+            const studySelect = document.getElementById('praes-study-select');
+            if (studySelect) studySelect.value = stateSnapshot.praesentationStudyId || '';
+        } else if (tabId === 'publikation-tab') {
+            updatePublikationUI(stateSnapshot.publikationLang, stateSnapshot.publikationSection, stateSnapshot.publikationBruteForceMetric);
+        }
+
+        const kollektivNameElementId = `${tabId.replace('-tab', '')}-tab-kollektiv-name`;
+        const kollektivNameElement = document.getElementById(kollektivNameElementId);
+        if (kollektivNameElement) {
+            updateElementText(kollektivNameElementId, getKollektivDisplayName(stateSnapshot.currentKollektiv));
+        }
+    }
+
+    function updateKollektivSelectorsForTab(tabId, currentGlobalKollektiv, statsLayout, statsKollektiv1, statsKollektiv2) {
+        if (tabId === 'statistik-tab') {
+            updateStatistikSelectorsUI(statsLayout, statsKollektiv1, statsKollektiv2);
+        } else {
+            const kollektivNameElementId = `${tabId.replace('-tab', '')}-tab-kollektiv-name`;
+            const kollektivNameElement = document.getElementById(kollektivNameElementId);
+            if (kollektivNameElement) {
+                updateElementText(kollektivNameElementId, getKollektivDisplayName(currentGlobalKollektiv));
+            }
+        }
+    }
+
+
     function toggleAllDetails(tableBodyId, buttonId) {
         const button = document.getElementById(buttonId);
         const tableBody = document.getElementById(tableBodyId);
@@ -270,7 +313,7 @@ const ui_helpers = (() => {
                 break;
             case 'ruler-horizontal':
                 svgContent = `<path d="M${sw/2} ${c} H${s-sw/2} M${c} ${sw/2} V${s-sw/2} M${s*0.2} ${c-s*0.15} L${s*0.2} ${c+s*0.15} M${s*0.4} ${c-s*0.1} L${s*0.4} ${c+s*0.1} M${s*0.6} ${c-s*0.1} L${s*0.6} ${c+s*0.1} M${s*0.8} ${c-s*0.15} L${s*0.8} ${c+s*0.15}" stroke="${iconColor}" stroke-width="${sw/2}" stroke-linecap="round"/>`;
-                type = 'size'; // Korrekter Typ für Klassen
+                type = 'size';
                 break;
             default:
                 svgContent = unknownIconSVG;
@@ -560,7 +603,6 @@ const ui_helpers = (() => {
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
 
-        // Deaktiviert, da keine XLSX-Generierung implementiert ist.
         trySetDisabled('export-statistik-xlsx', true);
         trySetDisabled('export-daten-xlsx', true);
         trySetDisabled('export-auswertung-xlsx', true);
@@ -616,9 +658,9 @@ const ui_helpers = (() => {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
         const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: null, n_trials: null, matrix_components: null };
         const na = '--';
-        const digits = (key === 'f1' || key === 'auc') ? APP_CONFIG.STATISTICAL_CONSTANTS.P_VALUE_PRECISION_TEXT : 1; // Mehr Präzision für F1/AUC
+        const digits = (key === 'f1' || key === 'auc') ? APP_CONFIG.STATISTICAL_CONSTANTS.P_VALUE_PRECISION_TEXT : 1;
         const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na, true); // useStandardFormat = true für konsistenten Punkt
+        const valueStr = formatNumber(data?.value, digits, na, true);
         const lowerStr = formatNumber(data?.ci?.lower, digits, na, true);
         const upperStr = formatNumber(data?.ci?.upper, digits, na, true);
         const ciMethodStr = data?.method || 'N/A';
@@ -635,7 +677,6 @@ const ui_helpers = (() => {
                  ciWarning = `<hr class='my-1'><small class='text-muted'><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahlen in der Konfusionsmatrix (Gesamt=${mc.total}).</i></small>`;
             }
         }
-
 
         let interpretation = interpretationTemplate
             .replace(/\[METHODE\]/g, `<strong>${methode}</strong>`)
@@ -661,26 +702,43 @@ const ui_helpers = (() => {
         return desc.replace(/\[T2_SHORT_NAME\]/g, `<strong>${t2ShortName}</strong>`);
     }
 
-    function getTestInterpretationHTML(key, testData, kollektivName = '', t2ShortName = 'T2') {
-        const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
-         if (!testData) return 'Keine Daten für Interpretation verfügbar.';
+    function getTestInterpretationHTML(key, testData, kollektivName = '', t2ShortName = 'T2', methodeName = '', metricName = '') {
+        let interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
+        if (key === 'cohortComparison') { // Spezialfall für Kohortenvergleich
+            interpretationTemplate = `Der Unterschied in der Metrik '[METRIC_NAME]' für die Methode '[METHODE_NAME]' zwischen den Kohorten [KOLLEKTIV1] ([VAL1]) und [KOLLEKTIV2] ([VAL2]) ist <strong>[SIGNIFIKANZ_TEXT]</strong> (p=[P_WERT] [SIGNIFIKANZ]).`;
+        }
+
+        if (!testData) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
         const pValue = testData?.pValue;
-        const pStr = getPValueText(pValue, state.getCurrentPublikationLang()); // Nutzt die globale Sprache für die Formatierung
+        const pStr = getPValueText(pValue, state.getCurrentPublikationLang());
         const sigSymbol = getStatisticalSignificanceSymbol(pValue);
         const sigText = getStatisticalSignificanceText(pValue);
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
         const alphaLevelText = formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, 2).replace('.', ',');
 
-
-         return interpretationTemplate
+        let interpretation = interpretationTemplate
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
             .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivNameToUse}</strong>`)
+            .replace(/\[KOLLEKTIV1\]/g, `<strong>${kollektivNameToUse}</strong>`) // Für CohortComparison (Kollektiv 1 ist der erste übergebene Name)
+            .replace(/\[KOLLEKTIV2\]/g, `<strong>${t2ShortName}</strong>`)       // Für CohortComparison (Kollektiv 2 ist der zweite übergebene Name)
             .replace(/\[T2_SHORT_NAME\]/g, `<strong>${t2ShortName}</strong>`)
             .replace(/\[ALPHA_LEVEL\]/g, alphaLevelText)
-            .replace(/<hr.*?>.*$/, '');
+            .replace(/\[METHODE_NAME\]/g, `<strong>${methodeName}</strong>`)
+            .replace(/\[METRIC_NAME\]/g, `<strong>${metricName}</strong>`);
+        
+        if (key === 'cohortComparison') {
+             const digits = (metricName.toLowerCase() === 'auc' || metricName.toLowerCase() === 'f1-score') ? 3 : 1;
+             const isPercent = !(metricName.toLowerCase() === 'auc' || metricName.toLowerCase() === 'f1-score');
+             const val1Str = formatCI(testData.val1, testData.ci1_lower, testData.ci1_upper, digits, isPercent, na);
+             const val2Str = formatCI(testData.val2, testData.ci2_lower, testData.ci2_upper, digits, isPercent, na);
+             interpretation = interpretation.replace(/\[VAL1\]/g, `<strong>${val1Str}</strong>`);
+             interpretation = interpretation.replace(/\[VAL2\]/g, `<strong>${val2Str}</strong>`);
+        }
+        interpretation = interpretation.replace(/<hr.*?>.*$/, ''); // Entferne alles nach einem <hr>, falls vorhanden
+        return interpretation;
     }
 
     function getAssociationInterpretationHTML(key, assocObj, merkmalName, kollektivName) {
@@ -688,7 +746,7 @@ const ui_helpers = (() => {
         if (!assocObj) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
         let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '', ciWarning = '';
-        const assozPValue = assocObj?.pValue;
+        const assozPValue = assocObj?.pValueOR || assocObj?.pValue; // pValueOR für OR, pValue für Fisher
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
         const ciWarningThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 10;
         const currentLang = state.getCurrentPublikationLang();
@@ -701,18 +759,18 @@ const ui_helpers = (() => {
             }
         }
 
-        if (key === 'or') {
-            valueStr = formatNumber(assocObj.or?.value, 2, na, true);
-            lowerStr = formatNumber(assocObj.or?.ci?.lower, 2, na, true);
-            upperStr = formatNumber(assocObj.or?.ci?.upper, 2, na, true);
-            ciMethodStr = assocObj.or?.method || na;
+        if (key === 'or' || key === 'oddsRatio') {
+            valueStr = formatNumber(assocObj.oddsRatio, 2, na, true);
+            lowerStr = formatNumber(assocObj.orCIlower, 2, na, true);
+            upperStr = formatNumber(assocObj.orCIupper, 2, na, true);
+            ciMethodStr = assocObj.orMethod || 'Woolf Logit (Haldane-Anscombe correction)';
             pStr = getPValueText(assozPValue, currentLang);
             sigSymbol = getStatisticalSignificanceSymbol(assozPValue);
         } else if (key === 'rd') {
             valueStr = formatNumber(assocObj.rd?.value !== null && !isNaN(assocObj.rd?.value) ? assocObj.rd.value * 100 : NaN, 1, na, true);
             lowerStr = formatNumber(assocObj.rd?.ci?.lower !== null && !isNaN(assocObj.rd?.ci?.lower) ? assocObj.rd.ci.lower * 100 : NaN, 1, na, true);
             upperStr = formatNumber(assocObj.rd?.ci?.upper !== null && !isNaN(assocObj.rd?.ci?.upper) ? assocObj.rd.ci.upper * 100 : NaN, 1, na, true);
-            ciMethodStr = assocObj.rd?.method || na;
+            ciMethodStr = assocObj.rd?.method || 'Wald';
         } else if (key === 'phi') {
             valueStr = formatNumber(assocObj.phi?.value, 2, na, true);
             lowerStr = formatNumber(assocObj.phi?.ci?.lower, 2, na, true);
@@ -741,20 +799,20 @@ const ui_helpers = (() => {
             .replace(/\[UPPER\]/g, `<strong>${upperStr}${key === 'rd' && upperStr !== na ? '%' : ''}</strong>`)
             .replace(/\[METHOD_CI\]/g, `<em>${ciMethodStr}</em>`)
             .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivNameToUse}</strong>`)
-            .replace(/\[FAKTOR_TEXT\]/g, UI_TEXTS.statMetrics.orFaktorTexte[assocObj?.or?.value > 1 ? 'ERHOEHT' : (assocObj?.or?.value < 1 && assocObj?.or?.value > 0 ? 'VERRINGERT' : 'UNVERAENDERT')])
+            .replace(/\[FAKTOR_TEXT\]/g, UI_TEXTS.statMetrics.orFaktorTexte[assocObj?.oddsRatio > 1 ? 'ERHOEHT' : (assocObj?.oddsRatio < 1 && assocObj?.oddsRatio > 0 ? 'VERRINGERT' : 'UNVERAENDERT')])
             .replace(/\[HOEHER_NIEDRIGER\]/g, UI_TEXTS.statMetrics.rdRichtungTexte[assocObj?.rd?.value > 0 ? 'HOEHER' : (assocObj?.rd?.value < 0 ? 'NIEDRIGER' : 'GLEICH')])
             .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`)
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/<hr.*?>.*$/, '');
 
-         if (key === 'or' || key === 'rd' || (key === 'phi' && assocObj.phi?.ci)) {
-            if (lowerStr === na || upperStr === na || ciMethodStr === na || !assocObj?.[key]?.ci) {
+         if (key === 'oddsRatio' || key === 'or' || key === 'rd' || (key === 'phi' && assocObj.phi?.ci)) {
+            if (lowerStr === na || upperStr === na || ciMethodStr === na || (key === 'oddsRatio' && !assocObj?.ci) || (key === 'or' && !assocObj?.ci) || (key === 'rd' && !assocObj.rd?.ci) ) {
                 interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
                 interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
             }
          }
-         if (key === 'or' && pStr === na) {
+         if ((key === 'oddsRatio' || key === 'or') && pStr === na) {
              interpretation = interpretation.replace(/, p=.*?, \[SIGNIFIKANZ\]/g, '');
          }
         interpretation += ciWarning;
@@ -763,7 +821,6 @@ const ui_helpers = (() => {
 
     function showKurzanleitung() {
         const modalElement = document.getElementById('kurzanleitung-modal');
-        
         if (!modalElement) {
             console.error("Kurzanleitung Modal Element nicht gefunden.");
             return;
@@ -779,7 +836,6 @@ const ui_helpers = (() => {
         if(modalTitleEl) modalTitleEl.innerHTML = UI_TEXTS.kurzanleitung.title;
         if(modalBodyEl) modalBodyEl.innerHTML = kurzanleitungContent;
 
-
         if (!kurzanleitungModalInstance) {
              kurzanleitungModalInstance = new bootstrap.Modal(modalElement);
         }
@@ -789,7 +845,7 @@ const ui_helpers = (() => {
                 modalElement.addEventListener('hidden.bs.modal', () => {
                     if (!initialTabRenderFixed) {
                         const activeTab = typeof state !== 'undefined' ? state.getActiveTabId() : null;
-                        const defaultInitialTab = APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION ? 'publikation-tab' : 'daten-tab';
+                        const defaultInitialTab = APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION ? 'publikation-tab' : (APP_CONFIG.DEFAULT_SETTINGS.ACTIVE_TAB_ID || 'daten-tab');
                         if (activeTab === defaultInitialTab) {
                             mainAppInterface.refreshCurrentTab();
                         }
@@ -814,6 +870,9 @@ const ui_helpers = (() => {
         updateHeaderStatsUI,
         updateKollektivButtonsUI,
         updateSortIcons,
+        updateSortIconsForTab,
+        updateTabSpecificControls,
+        updateKollektivSelectorsForTab,
         toggleAllDetails,
         attachRowCollapseListeners,
         handleCollapseEvent,
