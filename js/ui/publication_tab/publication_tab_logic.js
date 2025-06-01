@@ -35,7 +35,7 @@ const publicationTabLogic = (() => {
             appName: APP_CONFIG.APP_NAME,
             significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
             bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
-            appliedT2CriteriaGlobal: _appliedT2CriteriaGlobal,
+            appliedT2CriteriaGlobal: cloneDeep(_appliedT2CriteriaGlobal),
             appliedT2LogicGlobal: _appliedT2LogicGlobal,
             nGesamt: _publicationStats?.Gesamt?.deskriptiv?.anzahlPatienten,
             nDirektOP: _publicationStats?.['direkt OP']?.deskriptiv?.anzahlPatienten,
@@ -56,7 +56,7 @@ const publicationTabLogic = (() => {
                 throw new Error("Abhängigkeiten (dataProcessor, statisticsService) für _initializeData nicht verfügbar.");
             }
             const processedDataFull = dataProcessor.processRawData(cloneDeep(_globalRawData));
-            if (!processedDataFull || processedDataFull.length === 0) {
+            if (!processedDataFull || !Array.isArray(processedDataFull) || processedDataFull.length === 0) {
                 throw new Error("Keine verarbeiteten Patientendaten verfügbar für Publikationsstatistiken.");
             }
             
@@ -115,12 +115,11 @@ const publicationTabLogic = (() => {
             _publikationLang,
             _publikationSection,
             _publicationStats,
-            commonDataForRenderer, // Enthält bereits appliedT2Criteria etc.
+            commonDataForRenderer,
             optionsForRenderer
         );
         mainContentArea.innerHTML = sectionBaseHTML;
         
-        // Dynamische Elemente nach dem Einfügen des Basis-HTML rendern
         const pubElementsConfig = PUBLICATION_CONFIG.publicationElements;
 
         if (_publikationSection === 'methoden_t2_definition' && pubElementsConfig.methoden?.literaturT2KriterienTabelle) {
@@ -140,21 +139,23 @@ const publicationTabLogic = (() => {
             if (chartDataGesamt && typeof chart_renderer !== 'undefined') {
                 const ageChartConf = pubElementsConfig.ergebnisse.alterVerteilungChart;
                 const elChartAge = document.getElementById(ageChartConf.id);
-                if(elChartAge && chart_renderer.renderAgeDistributionChart && chartDataGesamt.alterData) {
+                if(elChartAge && chart_renderer.renderAgeDistributionChart && chartDataGesamt.alterData && Array.isArray(chartDataGesamt.alterData) && chartDataGesamt.alterData.length > 0) {
                     const titleAge = _publikationLang === 'de' ? ageChartConf.titleDe : ageChartConf.titleEn;
                     chart_renderer.renderAgeDistributionChart(elChartAge.id, chartDataGesamt.alterData, getKollektivDisplayName('Gesamt'), {title: titleAge});
-                }
+                } else if (elChartAge) { elChartAge.innerHTML = `<p class="text-muted small p-2">${_publikationLang === 'de' ? 'Keine Daten für Altersverteilung.' : 'No data for age distribution.'}</p>`;}
+                
                 const genderChartConf = pubElementsConfig.ergebnisse.geschlechtVerteilungChart;
                 const elChartGender = document.getElementById(genderChartConf.id);
                 if(elChartGender && chart_renderer.renderPieChart && chartDataGesamt.geschlecht) {
                     const titleGender = _publikationLang === 'de' ? genderChartConf.titleDe : genderChartConf.titleEn;
                     const genderDataForChart = [
-                        { label: UI_TEXTS.legendLabels.male, value: chartDataGesamt.geschlecht.m, color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE},
-                        { label: UI_TEXTS.legendLabels.female, value: chartDataGesamt.geschlecht.f, color: APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN },
-                        { label: UI_TEXTS.legendLabels.unknownGender, value: chartDataGesamt.geschlecht.unbekannt || 0, color: '#cccccc' }
+                        { label: UI_TEXTS.legendLabels.male, value: chartDataGesamt.geschlecht.m || 0, color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE},
+                        { label: UI_TEXTS.legendLabels.female, value: chartDataGesamt.geschlecht.f || 0, color: APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN },
+                        { label: UI_TEXTS.legendLabels.unknownGender || 'Unbekannt', value: chartDataGesamt.geschlecht.unbekannt || 0, color: '#cccccc' }
                     ].filter(d => d.value > 0);
                     if (genderDataForChart.length > 0) chart_renderer.renderPieChart(elChartGender.id, genderDataForChart, {title: titleGender, showLegend: true, legendPosition: 'bottom'});
-                }
+                    else if(elChartGender) { elChartGender.innerHTML = `<p class="text-muted small p-2">${_publikationLang === 'de' ? 'Keine Daten für Geschlechtsverteilung.' : 'No data for gender distribution.'}</p>`;}
+                } else if (elChartGender) { elChartGender.innerHTML = `<p class="text-muted small p-2">${_publikationLang === 'de' ? 'Keine Daten für Geschlechtsverteilung.' : 'No data for gender distribution.'}</p>`;}
             }
         } else if (_publikationSection === 'ergebnisse_as_performance' && pubElementsConfig.ergebnisse?.diagnostischeGueteASTabelle) {
             const tableConf = pubElementsConfig.ergebnisse.diagnostischeGueteASTabelle;
@@ -176,10 +177,10 @@ const publicationTabLogic = (() => {
         } else if (_publikationSection === 'ergebnisse_literatur_t2_performance' && pubElementsConfig.ergebnisse?.diagnostischeGueteLiteraturT2Tabelle) {
              const tableConf = pubElementsConfig.ergebnisse.diagnostischeGueteLiteraturT2Tabelle;
              const el = document.getElementById(tableConf.id);
-             if(el && typeof publicationRenderer.renderDiagnostischeGueteTabelle === 'function') {
+             if(el && typeof publicationRenderer.renderDiagnostischeGueteTabelle === 'function' && typeof studyT2CriteriaManager !== 'undefined') {
                  let tableHTML = '';
                  PUBLICATION_CONFIG.literatureCriteriaSets.forEach(studyConf => {
-                     const studySet = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.getStudyCriteriaSetById(studyConf.id) : null;
+                     const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studyConf.id);
                      if(studySet) {
                          const targetKollektiv = studySet.applicableKollektiv || 'Gesamt';
                          const stats = _publicationStats?.[targetKollektiv]?.gueteT2_literatur?.[studyConf.id];
@@ -240,12 +241,12 @@ const publicationTabLogic = (() => {
                                             .replace('{Kollektiv}', getKollektivDisplayName(item.id))
                                             .replace(/\[N_GESAMT\]/g, String(nPat)).replace(/\[N_DIREKT_OP\]/g, String(nPat)).replace(/\[N_NRCT\]/g, String(nPat));
                         const chartData = [
-                            { group: 'Sens.', AS: statsAS.sens, T2_Opt: statsBF.sens },
-                            { group: 'Spez.', AS: statsAS.spez, T2_Opt: statsBF.spez },
-                            { group: 'PPV', AS: statsAS.ppv, T2_Opt: statsBF.ppv },
-                            { group: 'NPV', AS: statsAS.npv, T2_Opt: statsBF.npv },
-                            { group: 'Acc.', AS: statsAS.acc, T2_Opt: statsBF.acc },
-                            { group: 'AUC', AS: statsAS.auc, T2_Opt: statsBF.auc }
+                            { group: UI_TEXTS.statMetrics.sens.name || 'Sens.', AS: statsAS.sens, T2_Opt: statsBF.sens },
+                            { group: UI_TEXTS.statMetrics.spez.name || 'Spez.', AS: statsAS.spez, T2_Opt: statsBF.spez },
+                            { group: UI_TEXTS.statMetrics.ppv.name || 'PPV', AS: statsAS.ppv, T2_Opt: statsBF.ppv },
+                            { group: UI_TEXTS.statMetrics.npv.name || 'NPV', AS: statsAS.npv, T2_Opt: statsBF.npv },
+                            { group: UI_TEXTS.statMetrics.acc.name || 'Acc.', AS: statsAS.acc, T2_Opt: statsBF.acc },
+                            { group: UI_TEXTS.statMetrics.auc.name || 'AUC', AS: statsAS.auc, T2_Opt: statsBF.auc }
                         ];
                         const series = [
                             { name: 'AS', key: 'AS', color: APP_CONFIG.CHART_SETTINGS.AS_COLOR, showCI: true },
@@ -264,7 +265,7 @@ const publicationTabLogic = (() => {
             ui_helpers.initializeTooltips(tabContentPane);
         }
         if (typeof publicationRenderer.attachPublicationTabEventListeners === 'function') {
-            publicationRenderer.attachPublicationTabEventListeners(mainContentArea);
+            publicationRenderer.attachPublicationTabEventListeners(mainContentArea, _publicationStats, _publikationLang, _publikationSection, _publikationBruteForceMetric);
         }
     }
 
