@@ -11,7 +11,11 @@ const t2CriteriaManager = (() => {
         const defaultCriteriaObject = getDefaultT2Criteria();
 
         appliedT2Criteria = deepMerge(cloneDeep(defaultCriteriaObject), savedCriteria || {});
-        appliedT2Logic = (savedLogic === 'UND' || savedLogic === 'ODER') ? savedLogic : defaultCriteriaObject.logic;
+        appliedT2Logic = (savedLogic === 'UND' || savedLogic === 'ODER' || savedLogic === 'KOMBINIERT') ? savedLogic : defaultCriteriaObject.logic;
+        if (typeof appliedT2Criteria.logic === 'undefined' && (appliedT2Logic === 'UND' || appliedT2Logic === 'ODER' || appliedT2Logic === 'KOMBINIERT')) {
+            appliedT2Criteria.logic = appliedT2Logic;
+        }
+
 
         currentT2Criteria = cloneDeep(appliedT2Criteria);
         currentT2Logic = appliedT2Logic;
@@ -60,9 +64,10 @@ const t2CriteriaManager = (() => {
          const allowedValuesKey = key.toUpperCase() + '_VALUES';
          if (APP_CONFIG.T2_CRITERIA_SETTINGS.hasOwnProperty(allowedValuesKey)) {
             isValidValue = APP_CONFIG.T2_CRITERIA_SETTINGS[allowedValuesKey].includes(value);
-         } else {
+         } else if (key !== 'size'){ // Size hat keine 'VALUES', sondern 'RANGE'
              isValidValue = false;
          }
+
 
          if (isValidValue && currentT2Criteria[key].value !== value) {
              currentT2Criteria[key].value = value;
@@ -105,7 +110,7 @@ const t2CriteriaManager = (() => {
      }
 
     function updateCurrentT2Logic(logic) {
-        if ((logic === 'UND' || logic === 'ODER') && currentT2Logic !== logic) {
+        if ((logic === 'UND' || logic === 'ODER' || logic === 'KOMBINIERT') && currentT2Logic !== logic) {
             currentT2Logic = logic;
             isCriteriaUnsaved = true;
             return true;
@@ -116,8 +121,8 @@ const t2CriteriaManager = (() => {
     function resetCurrentT2Criteria() {
         const defaultCriteria = getDefaultT2Criteria();
         currentT2Criteria = cloneDeep(defaultCriteria);
-        currentT2Logic = defaultCriteria.logic;
-        isCriteriaUnsaved = true;
+        currentT2Logic = defaultCriteria.logic; // Auch die Logik zurücksetzen
+        isCriteriaUnsaved = true; // Als ungespeichert markieren, da zurückgesetzt
     }
 
     function applyCurrentT2Criteria() {
@@ -136,12 +141,15 @@ const t2CriteriaManager = (() => {
             form: null,
             kontur: null,
             homogenitaet: null,
-            signal: null
+            signal: null,
+            suspiciousFeaturesCount: 0
         };
 
         if (!lymphNode || typeof lymphNode !== 'object' || !criteria || typeof criteria !== 'object') {
             return checkResult;
         }
+
+        let suspiciousCount = 0;
 
         if (criteria.size?.active) {
             const threshold = criteria.size.threshold;
@@ -159,38 +167,43 @@ const t2CriteriaManager = (() => {
             } else {
                  checkResult.size = false;
             }
+            // Für ESGAR-Logik (KOMBINIERT): 'size' selbst zählt nicht als 'suspicious feature'
         }
 
         if (criteria.form?.active) {
             const requiredForm = criteria.form.value;
             const nodeForm = lymphNode.form;
             checkResult.form = (typeof nodeForm === 'string' && nodeForm === requiredForm);
+            if (checkResult.form && criteria.form.isSuspicious) suspiciousCount++;
         }
 
         if (criteria.kontur?.active) {
             const requiredKontur = criteria.kontur.value;
             const nodeKontur = lymphNode.kontur;
             checkResult.kontur = (typeof nodeKontur === 'string' && nodeKontur === requiredKontur);
+            if (checkResult.kontur && criteria.kontur.isSuspicious) suspiciousCount++;
         }
 
         if (criteria.homogenitaet?.active) {
             const requiredHomogenitaet = criteria.homogenitaet.value;
             const nodeHomogenitaet = lymphNode.homogenitaet;
             checkResult.homogenitaet = (typeof nodeHomogenitaet === 'string' && nodeHomogenitaet === requiredHomogenitaet);
+            if (checkResult.homogenitaet && criteria.homogenitaet.isSuspicious) suspiciousCount++;
         }
 
         if (criteria.signal?.active) {
             const requiredSignal = criteria.signal.value;
             const nodeSignal = lymphNode.signal;
             checkResult.signal = (nodeSignal !== null && typeof nodeSignal === 'string' && nodeSignal === requiredSignal);
+             if (checkResult.signal && criteria.signal.isSuspicious) suspiciousCount++;
         }
-
+        checkResult.suspiciousFeaturesCount = suspiciousCount;
         return checkResult;
     }
 
     function applyT2CriteriaToPatient(patient, criteria, logic) {
         const defaultReturn = { t2Status: null, positiveLKCount: 0, bewerteteLK: [] };
-        if (!patient || !criteria || (logic !== 'UND' && logic !== 'ODER')) {
+        if (!patient || !criteria || (logic !== 'UND' && logic !== 'ODER' && logic !== 'KOMBINIERT')) {
             return defaultReturn;
         }
 
@@ -203,12 +216,18 @@ const t2CriteriaManager = (() => {
         let patientIsPositive = false;
         let positiveLKCount = 0;
         const bewerteteLK = [];
-        const activeCriteriaKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true);
+        const activeCriteriaKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true && key !== 'size_9mm' && key !== 'size_5_8mm' && key !== 'size_less_5mm'); // ESGAR size keys sind special
 
-        if (lymphNodes.length === 0 && activeCriteriaKeys.length > 0) {
+        if (lymphNodes.length === 0 && logic !== 'KOMBINIERT' && activeCriteriaKeys.length > 0) {
             return { t2Status: '-', positiveLKCount: 0, bewerteteLK: [] };
         }
-        if (lymphNodes.length === 0 && activeCriteriaKeys.length === 0) {
+         if (lymphNodes.length === 0 && logic === 'KOMBINIERT' && (criteria.size_9mm?.active || criteria.size_5_8mm?.active || criteria.size_less_5mm?.active)) {
+            return { t2Status: '-', positiveLKCount: 0, bewerteteLK: [] };
+        }
+        if (lymphNodes.length === 0 && activeCriteriaKeys.length === 0 && logic !== 'KOMBINIERT' ) {
+            return { t2Status: null, positiveLKCount: 0, bewerteteLK: [] };
+        }
+        if (lymphNodes.length === 0 && logic === 'KOMBINIERT' && !criteria.size_9mm?.active && !criteria.size_5_8mm?.active && !criteria.size_less_5mm?.active) {
             return { t2Status: null, positiveLKCount: 0, bewerteteLK: [] };
         }
 
@@ -221,10 +240,31 @@ const t2CriteriaManager = (() => {
             const checkResult = checkSingleLymphNode(lk, criteria);
             let lkIsPositive = false;
 
-            if (activeCriteriaKeys.length > 0) {
+            if (logic === 'KOMBINIERT') { // Spezielle ESGAR Logik
+                const nodeSize = lk.groesse;
+                if (typeof nodeSize === 'number' && !isNaN(nodeSize)) {
+                    if (nodeSize >= (criteria.size_9mm?.threshold || 9.0)) {
+                        lkIsPositive = true;
+                    } else if (nodeSize >= (criteria.size_5_8mm?.threshold_lower || 5.0) && nodeSize <= (criteria.size_5_8mm?.threshold_upper || 8.9)) {
+                        if (checkResult.suspiciousFeaturesCount >= (criteria.suspicious_features_count_for_5_8mm || 2)) {
+                            lkIsPositive = true;
+                        }
+                    } else if (nodeSize < (criteria.size_less_5mm?.threshold || 5.0)) {
+                        if (checkResult.suspiciousFeaturesCount >= (criteria.suspicious_features_count_for_less_5mm || 3)) {
+                            lkIsPositive = true;
+                        }
+                    }
+                }
+                // Muzinöse LK werden in Rutegard et al. 2025 (ESGAR Validierung) als "immer suspekt" behandelt.
+                // Dies ist hier nicht direkt als Kriterium in den `criteria` abgebildet, die `checkSingleLymphNode` erwartet.
+                // Für eine exakte ESGAR-Abbildung müsste dies hier oder in `checkSingleLymphNode` berücksichtigt werden,
+                // z.B. durch ein Flag `lk.istMuzinoes` und eine Prüfung darauf. Aktuell fehlt diese Information.
+                // Die bereitgestellte ESGAR-Definition in study_criteria_manager.js hat `signal: active: false`.
+
+            } else if (activeCriteriaKeys.length > 0) { // Standard UND/ODER Logik
                 if (logic === 'UND') {
                     lkIsPositive = activeCriteriaKeys.every(key => checkResult[key] === true);
-                } else {
+                } else { // ODER
                     lkIsPositive = activeCriteriaKeys.some(key => checkResult[key] === true);
                 }
             }
@@ -247,7 +287,9 @@ const t2CriteriaManager = (() => {
         });
 
         let finalT2Status = null;
-        if (activeCriteriaKeys.length > 0) {
+        if (logic === 'KOMBINIERT' && (criteria.size_9mm?.active || criteria.size_5_8mm?.active || criteria.size_less_5mm?.active)) {
+             finalT2Status = patientIsPositive ? '+' : '-';
+        } else if (activeCriteriaKeys.length > 0) {
             finalT2Status = patientIsPositive ? '+' : '-';
         }
 
@@ -264,13 +306,13 @@ const t2CriteriaManager = (() => {
             console.error("evaluateDataset: Ungültige Eingabedaten, Array erwartet.");
             return [];
         }
-        if (!criteria || (logic !== 'UND' && logic !== 'ODER')) {
-             console.error("evaluateDataset: Ungültige Kriterien oder Logik.");
+        if (!criteria || (logic !== 'UND' && logic !== 'ODER' && logic !== 'KOMBINIERT')) {
+             console.warn(`evaluateDataset: Ungültige Kriterien oder Logik. Kriterien: ${JSON.stringify(criteria)}, Logik: ${logic}`);
              return dataset.map(p => {
                  const pCopy = cloneDeep(p);
                  pCopy.t2 = null;
                  pCopy.anzahl_t2_plus_lk = 0;
-                 pCopy.lymphknoten_t2_bewertet = (pCopy.lymphknoten_t2 || []).map(lk => ({...lk, isPositive: false, checkResult: {}}));
+                 pCopy.lymphknoten_t2_bewertet = (pCopy.lymphknoten_t2 || []).map(lk => ({...cloneDeep(lk), isPositive: false, checkResult: {}}));
                  return pCopy;
              });
         }
@@ -300,8 +342,8 @@ const t2CriteriaManager = (() => {
         updateLogic: updateCurrentT2Logic,
         resetCriteria: resetCurrentT2Criteria,
         applyCriteria: applyCurrentT2Criteria,
-        checkSingleNode: checkSingleLymphNode,
-        evaluatePatient: applyT2CriteriaToPatient,
+        checkSingleNode: checkSingleLymphNode, // Beibehalten für externe Nutzung, falls benötigt
+        evaluatePatient: applyT2CriteriaToPatient, // Umbenannt von checkSinglePatientT2Status, da es den ganzen Patienten evaluiert
         evaluateDataset: evaluateDataset
     });
 })();
