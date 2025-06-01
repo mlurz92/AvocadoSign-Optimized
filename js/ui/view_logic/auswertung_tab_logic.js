@@ -1,6 +1,205 @@
 const auswertungTabLogic = (() => {
+    let _mainAppInterface = null;
+    let _currentData = [];
+    let _currentKollektiv = '';
+    let _appliedT2Criteria = null;
+    let _appliedT2Logic = '';
+    let _sortState = null;
+    let _bruteForceState = 'idle';
+    let _bruteForceData = null;
+    let _workerAvailable = false;
+    let _isInitialized = false;
+    let _isDataStale = true;
 
-    function createAuswertungTableHTML(data, sortState, appliedCriteria, appliedLogic) {
+    let _currentASPerformance = null;
+    let _currentT2Performance = null;
+
+    function initialize(mainAppInterface) {
+        _mainAppInterface = mainAppInterface;
+    }
+
+    function setDataStale() {
+        _isDataStale = true;
+        _currentASPerformance = null;
+        _currentT2Performance = null;
+    }
+
+    function isInitialized() {
+        return _isInitialized;
+    }
+
+    function getCurrentASPerformance() {
+        if (_isDataStale || !_currentASPerformance) {
+            if (_currentData && _currentKollektiv) {
+                const filteredData = dataProcessor.filterDataByKollektiv(cloneDeep(_currentData), _currentKollektiv);
+                _currentASPerformance = statisticsService.calculateDiagnosticPerformance(filteredData, 'as', 'n');
+            } else {
+                _currentASPerformance = null;
+            }
+        }
+        return _currentASPerformance;
+    }
+
+    function getCurrentT2Performance() {
+        if (_isDataStale || !_currentT2Performance) {
+            if (_currentData && _currentKollektiv && _appliedT2Criteria && _appliedT2Logic) {
+                const filteredData = dataProcessor.filterDataByKollektiv(cloneDeep(_currentData), _currentKollektiv);
+                const evaluatedData = t2CriteriaManager.evaluateDataset(filteredData, _appliedT2Criteria, _appliedT2Logic);
+                _currentT2Performance = statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n');
+            } else {
+                _currentT2Performance = null;
+            }
+        }
+        return _currentT2Performance;
+    }
+
+    function _renderAuswertungDashboard(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+
+        const statsAS = getCurrentASPerformance();
+        const statsT2 = getCurrentT2Performance();
+
+        if (!statsAS && !statsT2) {
+             container.innerHTML = `<div class="col-12"><p class="text-muted text-center p-3">Keine Dashboard-Daten für Kollektiv '${getKollektivDisplayName(_currentKollektiv)}' verfügbar. Bitte Kriterien anwenden.</p></div>`;
+             return;
+        }
+
+        const na = 'N/A';
+        const createMetricContent = (metricObj, key, isRate = true, digits = 1) => {
+            const value = metricObj?.[key]?.value;
+            const ci = metricObj?.[key]?.ci;
+            const formattedValue = formatCI(value, ci?.lower, ci?.upper, (key === 'f1' || key === 'auc') ? 3: digits, isRate, na);
+            const interpretation = ui_helpers.getMetricInterpretationHTML(key, metricObj?.[key], '', _currentKollektiv);
+            return `<span class="display-6 fw-light" data-tippy-content="${interpretation}">${formattedValue}</span>`;
+        };
+
+        const t2MetricsOverviewHTML = uiComponents.createT2MetricsOverview(statsT2, _currentKollektiv);
+        const dashboardRow = document.createElement('div');
+        dashboardRow.className = 'row g-3';
+
+        dashboardRow.innerHTML += uiComponents.createDashboardCard('Avocado Sign (AS)', '', 'chart-dash-as-status', 'bg-light-as');
+        dashboardRow.innerHTML += uiComponents.createDashboardCard(`T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, '', 'chart-dash-t2-status', 'bg-light-t2');
+
+        if(statsAS) {
+             dashboardRow.innerHTML += uiComponents.createDashboardCard(
+                UI_TEXTS.statMetrics.sens.name + ' (AS)',
+                createMetricContent(statsAS, 'sens'),
+                null, 'metric-card'
+            );
+            dashboardRow.innerHTML += uiComponents.createDashboardCard(
+                UI_TEXTS.statMetrics.spez.name + ' (AS)',
+                createMetricContent(statsAS, 'spez'),
+                null, 'metric-card'
+            );
+             dashboardRow.innerHTML += uiComponents.createDashboardCard(
+                'AUC (AS)',
+                createMetricContent(statsAS, 'auc', false, 3),
+                null, 'metric-card'
+            );
+        } else {
+             dashboardRow.innerHTML += `<div class="col-12 text-center text-muted small p-2">AS Metriken nicht verfügbar.</div>`;
+        }
+
+        container.innerHTML = `
+            <div class="col-12 mb-3">
+                ${t2MetricsOverviewHTML}
+            </div>
+            <div class="col-12">
+                <div class="row g-3">
+                    ${dashboardRow.innerHTML}
+                </div>
+            </div>`;
+
+        if (statsAS?.matrix) {
+             const totalAS = statsAS.matrix.rp + statsAS.matrix.fp + statsAS.matrix.fn + statsAS.matrix.rn;
+             const asPieData = [
+                { label: UI_TEXTS.legendLabels.asPositive, value: statsAS.matrix.rp + statsAS.matrix.fp, color: APP_CONFIG.CHART_SETTINGS.AS_COLOR },
+                { label: UI_TEXTS.legendLabels.asNegative, value: statsAS.matrix.fn + statsAS.matrix.rn, color: d3.color(APP_CONFIG.CHART_SETTINGS.AS_COLOR).brighter(1.5).formatHex() }
+             ].filter(d => d.value > 0 && totalAS > 0);
+            if (asPieData.length > 0) chart_renderer.renderPieChart('chart-dash-as-status', asPieData, { compact: true, donut: true, title: '' });
+            else {
+                const chartEl = document.getElementById('chart-dash-as-status');
+                if(chartEl) chartEl.closest('.dashboard-card-col')?.classList.add('d-none');
+            }
+        } else {
+            const chartEl = document.getElementById('chart-dash-as-status');
+            if(chartEl) chartEl.closest('.dashboard-card-col')?.classList.add('d-none');
+        }
+
+        if (statsT2?.matrix) {
+            const totalT2 = statsT2.matrix.rp + statsT2.matrix.fp + statsT2.matrix.fn + statsT2.matrix.rn;
+            const t2PieData = [
+                { label: UI_TEXTS.legendLabels.t2Positive, value: statsT2.matrix.rp + statsT2.matrix.fp, color: APP_CONFIG.CHART_SETTINGS.T2_COLOR },
+                { label: UI_TEXTS.legendLabels.t2Negative, value: statsT2.matrix.fn + statsT2.matrix.rn, color: d3.color(APP_CONFIG.CHART_SETTINGS.T2_COLOR).brighter(1.5).formatHex() }
+            ].filter(d => d.value > 0 && totalT2 > 0);
+             if (t2PieData.length > 0) chart_renderer.renderPieChart('chart-dash-t2-status', t2PieData, { compact: true, donut: true, title: '' });
+             else {
+                const chartEl = document.getElementById('chart-dash-t2-status');
+                if(chartEl) chartEl.closest('.dashboard-card-col')?.classList.add('d-none');
+             }
+        } else {
+             const chartEl = document.getElementById('chart-dash-t2-status');
+             if(chartEl) chartEl.closest('.dashboard-card-col')?.classList.add('d-none');
+        }
+    }
+
+
+    function _createTableHeaderHTML(tableId, currentSortState, columns) {
+        let headerHTML = `<thead class="small sticky-top bg-light" id="${tableId}-header"><tr>`;
+        columns.forEach(col => {
+            let sortIconHTML = '';
+            let thClass = col.textAlign ? `text-${col.textAlign}` : '';
+            let thStyle = col.width ? `style="width: ${col.width};"` : '';
+            let isMainKeyActiveSort = false;
+            let activeSubKey = null;
+
+            if (currentSortState && currentSortState.key === col.key) {
+                if (col.subKeys && col.subKeys.some(sk => sk.key === currentSortState.subKey)) {
+                    isMainKeyActiveSort = true;
+                    activeSubKey = currentSortState.subKey;
+                    sortIconHTML = `<i class="fas ${currentSortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1"></i>`;
+                } else if (!col.subKeys && (currentSortState.subKey === null || currentSortState.subKey === undefined)) {
+                    isMainKeyActiveSort = true;
+                    sortIconHTML = `<i class="fas ${currentSortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1"></i>`;
+                    thStyle += (thStyle ? ' ' : 'style="') + 'color: var(--primary-color);"';
+                    if(!thStyle.endsWith('"')) thStyle += '"';
+                }
+            }
+            if (!isMainKeyActiveSort && col.key !== 'details') { // Default sort icon if not active
+                sortIconHTML = '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>';
+            }
+
+
+            const baseTooltipContent = col.tooltip || col.label;
+            const subHeadersHTML = col.subKeys ? col.subKeys.map(sk => {
+                 const isActiveSubSort = activeSubKey === sk.key;
+                 const style = isActiveSubSort ? 'font-weight: bold; text-decoration: underline; color: var(--primary-color);' : '';
+                 const subLabel = sk.label || sk.key.toUpperCase();
+                 const subTooltip = `Sortieren nach Status ${subLabel}. ${baseTooltipContent}`;
+                 return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="${subTooltip}">${subLabel}</span>`;
+             }).join(' / ') : '';
+
+            const mainTooltip = col.subKeys ? `${baseTooltipContent}` : (col.key === 'details' ? (TOOLTIP_CONTENT.auswertungTable.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
+            const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys || col.key === 'details' ? '' : 'style="cursor: pointer;"'}`;
+
+            let thContent = col.label;
+            if (col.subKeys) {
+                thContent = `${col.label} (${subHeadersHTML})`;
+                thContent += (isMainKeyActiveSort && activeSubKey) ? sortIconHTML : ' <i class="fas fa-sort text-muted opacity-50 ms-1"></i>';
+            } else if (col.key !== 'details') {
+                 thContent += sortIconHTML;
+            }
+
+
+            headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} data-tippy-content="${mainTooltip}" ${thStyle}>${thContent}</th>`;
+        });
+        headerHTML += `</tr></thead>`;
+        return headerHTML;
+    }
+
+    function createAuswertungTableHTML(data, currentSortState, currentAppliedCriteria, currentAppliedLogic) {
         if (!Array.isArray(data)) {
             console.error("createAuswertungTableHTML: Ungültige Daten für Auswertungstabelle, Array erwartet.");
             return '<p class="text-danger">Fehler: Ungültige Auswertungsdaten für Tabelle.</p>';
@@ -15,97 +214,69 @@ const auswertungTabLogic = (() => {
             { key: 'anzahl_patho_lk', label: 'N+/N ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.n_counts || 'Pathologisch N+ LK / Gesamt N LK.', textAlign: 'center' },
             { key: 'anzahl_as_lk', label: 'AS+/AS ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.as_counts || 'Avocado Sign (AS)+ LK / Gesamt AS LK.', textAlign: 'center' },
             { key: 'anzahl_t2_lk', label: 'T2+/T2 ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.t2_counts || 'T2+ LK (aktuelle Kriterien) / Gesamt T2 LK.', textAlign: 'center' },
-            { key: 'details', label: '', width: '30px'}
+            { key: 'details', label: '', width: '30px', tooltip: TOOLTIP_CONTENT.auswertungTable.expandRow || 'Details ein-/ausblenden' }
         ];
 
         let tableHTML = `<table class="table table-sm table-hover table-striped data-table" id="${tableId}">`;
-        tableHTML += _createTableHeaderHTML(tableId, sortState, columns);
+        tableHTML += `<caption class="small text-muted">Patientenübersicht für Kollektiv: ${getKollektivDisplayName(_currentKollektiv)} (N=${data.length})</caption>`;
+        tableHTML += _createTableHeaderHTML(tableId, currentSortState, columns);
         tableHTML += `<tbody id="${tableId}-body">`;
 
         if (data.length === 0) {
             tableHTML += `<tr><td colspan="${columns.length}" class="text-center text-muted">Keine Patienten im ausgewählten Kollektiv gefunden.</td></tr>`;
         } else {
-            data.forEach(patient => {
-                tableHTML += tableRenderer.createAuswertungTableRow(patient, appliedCriteria, appliedLogic);
+            const sortedData = [...data].sort(getSortFunction(currentSortState.key, currentSortState.direction, currentSortState.subKey));
+            sortedData.forEach(patient => {
+                tableHTML += tableRenderer.createAuswertungTableRow(patient, currentAppliedCriteria, currentAppliedLogic);
             });
         }
         tableHTML += `</tbody></table>`;
         return tableHTML;
     }
 
-    function _createTableHeaderHTML(tableId, sortState, columns) {
-        let headerHTML = `<thead class="small sticky-top bg-light" id="${tableId}-header"><tr>`;
-        columns.forEach(col => {
-            let sortIconHTML = '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>';
-            let mainHeaderClass = '';
-            let thStyle = col.width ? `style="width: ${col.width};"` : '';
-             if (col.textAlign) mainHeaderClass += ` text-${col.textAlign}`;
+    function initializeTab(data, currentKollektiv, appliedT2Criteria, appliedT2Logic, currentSortState, bruteForceState, bruteForceDataForKollektiv, workerAvailable) {
+        _currentData = Array.isArray(data) ? data : [];
+        _currentKollektiv = currentKollektiv;
+        _appliedT2Criteria = cloneDeep(appliedT2Criteria);
+        _appliedT2Logic = appliedT2Logic;
+        _sortState = currentSortState || state.getCurrentAuswertungSortState();
+        _bruteForceState = bruteForceState;
+        _bruteForceData = bruteForceDataForKollektiv;
+        _workerAvailable = workerAvailable;
 
-            let isMainKeyActiveSort = false;
-            let activeSubKey = null;
+        setDataStale(); // Force recalculation of performance metrics
 
-            if (sortState && sortState.key === col.key) {
-                if (col.subKeys && col.subKeys.some(sk => sk.key === sortState.subKey)) {
-                    isMainKeyActiveSort = true;
-                    activeSubKey = sortState.subKey;
-                    sortIconHTML = `<i class="fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1"></i>`;
-                } else if (!col.subKeys && (sortState.subKey === null || sortState.subKey === undefined)) {
-                    isMainKeyActiveSort = true;
-                    sortIconHTML = `<i class="fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1"></i>`;
-                    thStyle += (thStyle ? ' ' : 'style="') + 'color: var(--primary-color);"';
-                    if(!thStyle.endsWith('"')) thStyle += '"';
-                }
-            }
-            
-            const baseTooltipContent = col.tooltip || col.label;
+        const tableHTML = createAuswertungTableHTML(_currentData, _sortState, _appliedT2Criteria, _appliedT2Logic);
+        const tableContainer = document.getElementById('auswertung-table-container');
+        if (tableContainer) {
+            tableContainer.innerHTML = tableHTML;
+            const tableBodyElement = document.getElementById('auswertung-table-body');
+            if(tableBodyElement) ui_helpers.attachRowCollapseListeners(tableBodyElement);
+        }
 
-            const subHeaders = col.subKeys ? col.subKeys.map(sk => {
-                 const isActiveSubSort = activeSubKey === sk.key;
-                 const style = isActiveSubSort ? 'font-weight: bold; text-decoration: underline; color: var(--primary-color);' : '';
-                 const subLabel = sk.label || sk.key.toUpperCase();
-                 const subTooltip = `Sortieren nach Status ${subLabel}. ${baseTooltipContent}`;
-                 return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="${subTooltip}">${subLabel}</span>`;
-             }).join(' / ') : '';
+        ui_helpers.updateT2CriteriaControlsUI(_appliedT2Criteria, _appliedT2Logic);
+        ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
+        ui_helpers.updateBruteForceUI(_bruteForceState, _bruteForceData || {}, _workerAvailable, _currentKollektiv);
+        ui_helpers.updateSortIcons('auswertung-table-header', _sortState);
+        ui_helpers.updateElementText('auswertung-tab-kollektiv-name', getKollektivDisplayName(_currentKollektiv));
 
-            const mainTooltip = col.subKeys ? `${baseTooltipContent} Klicken Sie auf N, AS oder T2 für Sub-Sortierung.` : (col.key === 'details' ? (TOOLTIP_CONTENT.auswertungTable.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
-            const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys || col.key === 'details' ? '' : 'style="cursor: pointer;"'}`;
-            const thClass = mainHeaderClass;
+        const bruteForceMetricSelect = document.getElementById('brute-force-metric');
+        if (bruteForceMetricSelect) {
+            bruteForceMetricSelect.value = _bruteForceData?.metric || APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC;
+        }
 
-            if (col.subKeys) {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} data-tippy-content="${mainTooltip}" ${thStyle}>${col.label} ${subHeaders ? `(${subHeaders})` : ''} ${isMainKeyActiveSort && !activeSubKey ? sortIconHTML : '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>'}</th>`;
-             } else {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} data-tippy-content="${mainTooltip}" ${thStyle}>${col.label} ${col.key === 'details' ? '' : sortIconHTML}</th>`;
-             }
-        });
-        headerHTML += `</tr></thead>`;
-        return headerHTML;
-    }
-
-    function createAuswertungTableCardHTML(data, sortState, appliedCriteria, appliedLogic) {
-        const tableHTML = createAuswertungTableHTML(data, sortState, appliedCriteria, appliedLogic);
-        const toggleButtonTooltip = TOOLTIP_CONTENT.auswertungTable.expandAll || 'Alle Detailansichten (Bewertung einzelner T2-LKs) für Patienten in dieser Tabelle ein- oder ausblenden.';
-        return `
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>Patientenübersicht & Auswertungsergebnisse (basierend auf angewandten T2-Kriterien)</span>
-                        <button id="auswertung-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="expand" data-tippy-content="${toggleButtonTooltip}">
-                           Alle Details <i class="fas fa-chevron-down ms-1"></i>
-                       </button>
-                    </div>
-                    <div class="card-body p-0">
-                        <div id="auswertung-table-container" class="table-responsive">
-                           ${tableHTML}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+        _renderAuswertungDashboard('auswertung-dashboard-container');
+        _isInitialized = true;
+        _isDataStale = false;
     }
 
     return Object.freeze({
-        createAuswertungTableHTML,
-        createAuswertungTableCardHTML
+        initialize,
+        initializeTab,
+        isInitialized,
+        setDataStale,
+        getCurrentASPerformance,
+        getCurrentT2Performance
     });
 
 })();
