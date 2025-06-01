@@ -65,11 +65,15 @@ const auswertungTabLogic = (() => {
         const statsAS = getCurrentASPerformance();
         const statsT2 = getCurrentT2Performance();
 
+        const currentAppliedCriteria = (typeof t2CriteriaManager !== 'undefined' && t2CriteriaManager.getAppliedCriteria) ? t2CriteriaManager.getAppliedCriteria() : null;
+        const activeCriteriaCount = currentAppliedCriteria ? Object.values(currentAppliedCriteria).filter(c => c && c.active).length : 0;
+
+
         if (!statsAS && !statsT2 && (!_currentData || _currentData.length === 0)) {
              container.innerHTML = `<div class="col-12"><p class="text-muted text-center p-3">Keine Daten für Kollektiv '${getKollektivDisplayName(_currentKollektiv)}' verfügbar, um Dashboard anzuzeigen.</p></div>`;
              return;
         }
-        if (!statsAS && !statsT2 && (typeof t2CriteriaManager === 'undefined' || !t2CriteriaManager.getAppliedCriteria() || Object.keys(t2CriteriaManager.getAppliedCriteria()).length === 0) ){
+        if (!statsAS && !statsT2 && activeCriteriaCount === 0){
              container.innerHTML = `<div class="col-12"><p class="text-muted text-center p-3">Bitte T2-Kriterien definieren und anwenden, um das Dashboard anzuzeigen.</p></div>`;
              return;
         }
@@ -139,8 +143,8 @@ const auswertungTabLogic = (() => {
         if (statsAS?.matrix && typeof chart_renderer !== 'undefined' && typeof chart_renderer.renderPieChart === 'function') {
              const totalAS = statsAS.matrix.rp + statsAS.matrix.fp + statsAS.matrix.fn + statsAS.matrix.rn;
              const asPieData = [
-                { label: UI_TEXTS.legendLabels.asPositive, value: statsAS.matrix.rp + statsAS.matrix.fp, color: APP_CONFIG.CHART_SETTINGS.AS_COLOR },
-                { label: UI_TEXTS.legendLabels.asNegative, value: statsAS.matrix.fn + statsAS.matrix.rn, color: d3.color(APP_CONFIG.CHART_SETTINGS.AS_COLOR).brighter(1.5).formatHex() }
+                { label: UI_TEXTS?.legendLabels?.asPositive || 'AS+', value: statsAS.matrix.rp + statsAS.matrix.fp, color: APP_CONFIG.CHART_SETTINGS.AS_COLOR },
+                { label: UI_TEXTS?.legendLabels?.asNegative || 'AS-', value: statsAS.matrix.fn + statsAS.matrix.rn, color: d3.color(APP_CONFIG.CHART_SETTINGS.AS_COLOR).brighter(1.5).formatHex() }
              ].filter(d => d.value > 0 && totalAS > 0);
             if (asPieData.length > 0) chart_renderer.renderPieChart('chart-dash-as-status', asPieData, { compact: true, donut: true, title: '' });
             else {
@@ -155,8 +159,8 @@ const auswertungTabLogic = (() => {
         if (statsT2?.matrix && typeof chart_renderer !== 'undefined' && typeof chart_renderer.renderPieChart === 'function') {
             const totalT2 = statsT2.matrix.rp + statsT2.matrix.fp + statsT2.matrix.fn + statsT2.matrix.rn;
             const t2PieData = [
-                { label: UI_TEXTS.legendLabels.t2Positive, value: statsT2.matrix.rp + statsT2.matrix.fp, color: APP_CONFIG.CHART_SETTINGS.T2_COLOR },
-                { label: UI_TEXTS.legendLabels.t2Negative, value: statsT2.matrix.fn + statsT2.matrix.rn, color: d3.color(APP_CONFIG.CHART_SETTINGS.T2_COLOR).brighter(1.5).formatHex() }
+                { label: UI_TEXTS?.legendLabels?.t2Positive || 'T2+', value: statsT2.matrix.rp + statsT2.matrix.fp, color: APP_CONFIG.CHART_SETTINGS.T2_COLOR },
+                { label: UI_TEXTS?.legendLabels?.t2Negative || 'T2-', value: statsT2.matrix.fn + statsT2.matrix.rn, color: d3.color(APP_CONFIG.CHART_SETTINGS.T2_COLOR).brighter(1.5).formatHex() }
             ].filter(d => d.value > 0 && totalT2 > 0);
              if (t2PieData.length > 0) chart_renderer.renderPieChart('chart-dash-t2-status', t2PieData, { compact: true, donut: true, title: '' });
              else {
@@ -211,7 +215,7 @@ const auswertungTabLogic = (() => {
                  return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="${subTooltip}">${subLabel}</span>`;
              }).join(' / ') : '';
 
-            const mainTooltip = col.subKeys ? `${baseTooltipContent}` : (col.key === 'details' ? (TOOLTIP_CONTENT.auswertungTable.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
+            const mainTooltip = col.subKeys ? `${baseTooltipContent}` : (col.key === 'details' ? (TOOLTIP_CONTENT?.auswertungTable?.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
             const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys || col.key === 'details' ? '' : 'style="cursor: pointer;"'}`;
 
             let thContent = col.label;
@@ -236,14 +240,14 @@ const auswertungTabLogic = (() => {
 
         const tableId = 'auswertung-table';
         const columns = [
-            { key: 'nr', label: 'Nr', tooltip: TOOLTIP_CONTENT.auswertungTable.nr || 'Fortlaufende Nummer des Patienten.' },
-            { key: 'name', label: 'Name', tooltip: TOOLTIP_CONTENT.auswertungTable.name || 'Nachname des Patienten (anonymisiert/kodiert).' },
-            { key: 'therapie', label: 'Therapie', tooltip: TOOLTIP_CONTENT.auswertungTable.therapie || 'Angewandte Therapie vor der Operation.' },
-            { key: 'status', label: 'N/AS/T2', tooltip: TOOLTIP_CONTENT.auswertungTable.n_as_t2 || 'Status: Pathologie (N), Avocado Sign (AS), T2 (aktuelle Kriterien). Klicken Sie auf N, AS oder T2 im Spaltenkopf zur Sub-Sortierung.', subKeys: [{key: 'n', label: 'N'}, {key: 'as', label: 'AS'}, {key: 't2', label: 'T2'}]},
-            { key: 'anzahl_patho_lk', label: 'N+/N ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.n_counts || 'Pathologisch N+ LK / Gesamt N LK.', textAlign: 'center' },
-            { key: 'anzahl_as_lk', label: 'AS+/AS ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.as_counts || 'Avocado Sign (AS)+ LK / Gesamt AS LK.', textAlign: 'center' },
-            { key: 'anzahl_t2_lk', label: 'T2+/T2 ges.', tooltip: TOOLTIP_CONTENT.auswertungTable.t2_counts || 'T2+ LK (aktuelle Kriterien) / Gesamt T2 LK.', textAlign: 'center' },
-            { key: 'details', label: '', width: '30px', tooltip: TOOLTIP_CONTENT.auswertungTable.expandRow || 'Details ein-/ausblenden' }
+            { key: 'nr', label: 'Nr', tooltip: TOOLTIP_CONTENT?.auswertungTable?.nr || 'Fortlaufende Nummer des Patienten.' },
+            { key: 'name', label: 'Name', tooltip: TOOLTIP_CONTENT?.auswertungTable?.name || 'Nachname des Patienten (anonymisiert/kodiert).' },
+            { key: 'therapie', label: 'Therapie', tooltip: TOOLTIP_CONTENT?.auswertungTable?.therapie || 'Angewandte Therapie vor der Operation.' },
+            { key: 'status', label: 'N/AS/T2', tooltip: TOOLTIP_CONTENT?.auswertungTable?.n_as_t2 || 'Status: Pathologie (N), Avocado Sign (AS), T2 (aktuelle Kriterien). Klicken Sie auf N, AS oder T2 im Spaltenkopf zur Sub-Sortierung.', subKeys: [{key: 'n', label: 'N'}, {key: 'as', label: 'AS'}, {key: 't2', label: 'T2'}]},
+            { key: 'anzahl_patho_lk', label: 'N+/N ges.', tooltip: TOOLTIP_CONTENT?.auswertungTable?.n_counts || 'Pathologisch N+ LK / Gesamt N LK.', textAlign: 'center' },
+            { key: 'anzahl_as_lk', label: 'AS+/AS ges.', tooltip: TOOLTIP_CONTENT?.auswertungTable?.as_counts || 'Avocado Sign (AS)+ LK / Gesamt AS LK.', textAlign: 'center' },
+            { key: 'anzahl_t2_lk', label: 'T2+/T2 ges.', tooltip: TOOLTIP_CONTENT?.auswertungTable?.t2_counts || 'T2+ LK (aktuelle Kriterien) / Gesamt T2 LK.', textAlign: 'center' },
+            { key: 'details', label: '', width: '30px', tooltip: TOOLTIP_CONTENT?.auswertungTable?.expandRow || 'Details ein-/ausblenden' }
         ];
 
         let tableHTML = `<table class="table table-sm table-hover table-striped data-table" id="${tableId}">`;
@@ -296,6 +300,8 @@ const auswertungTabLogic = (() => {
         }
 
         const tableHTML = createAuswertungTableHTML(_currentData, _sortState, _appliedT2Criteria, _appliedT2Logic);
+        const auswertungTabKollektivName = getKollektivDisplayName(_currentKollektiv);
+        const auswertungToggleDetailsTooltip = TOOLTIP_CONTENT?.auswertungTable?.expandAll || 'Alle Details ein-/ausblenden';
 
         contentArea.innerHTML = `
             <div class="row">
@@ -314,8 +320,8 @@ const auswertungTabLogic = (() => {
             <div class="row mt-3">
                 <div class="col-12">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                         <h5 class="mb-0">Patienten-Auswertungstabelle (<span id="auswertung-tab-kollektiv-name">${getKollektivDisplayName(_currentKollektiv)}</span>)</h5>
-                         <button class="btn btn-sm btn-outline-secondary" id="auswertung-toggle-details" data-action="expand" data-tippy-content="${TOOLTIP_CONTENT.auswertungTable.expandAll || 'Alle Details ein-/ausblenden'}">
+                         <h5 class="mb-0">Patienten-Auswertungstabelle (<span id="auswertung-tab-kollektiv-name">${auswertungTabKollektivName}</span>)</h5>
+                         <button class="btn btn-sm btn-outline-secondary" id="auswertung-toggle-details" data-action="expand" data-tippy-content="${auswertungToggleDetailsTooltip}">
                              Alle Details Einblenden <i class="fas fa-chevron-down ms-1"></i>
                          </button>
                     </div>
@@ -338,14 +344,14 @@ const auswertungTabLogic = (() => {
             ui_helpers.markCriteriaSavedIndicator(typeof t2CriteriaManager !== 'undefined' ? t2CriteriaManager.isUnsaved() : false);
             ui_helpers.updateBruteForceUI(_bruteForceState, _bruteForceData || {}, _workerAvailable, _currentKollektiv);
             const auswertungTableHeader = document.getElementById('auswertung-table-header');
-            if (auswertungTableHeader) {
+            if (auswertungTableHeader && typeof ui_helpers.updateSortIcons === 'function') {
                 ui_helpers.updateSortIcons('auswertung-table-header', _sortState);
             }
         }
         
         const bruteForceMetricSelect = document.getElementById('brute-force-metric');
         if (bruteForceMetricSelect) {
-            bruteForceMetricSelect.value = _bruteForceData?.metric || APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC;
+            bruteForceMetricSelect.value = _bruteForceData?.metric || (APP_CONFIG?.DEFAULT_SETTINGS?.BRUTE_FORCE_METRIC || 'Balanced Accuracy');
         }
 
         _isInitialized = true;
