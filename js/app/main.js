@@ -96,22 +96,33 @@ const mainAppInterface = (() => {
 
         if (typeof statistikEventHandlers.initialize === 'function') {
             statistikEventHandlers.initialize(mainAppInterface);
+        } else {
+            console.warn("statistikEventHandlers.initialize ist nicht definiert. Überspringe Initialisierung.");
         }
         if (typeof praesentationEventHandlers.initialize === 'function') {
             praesentationEventHandlers.initialize(mainAppInterface);
+        } else {
+            console.warn("praesentationEventHandlers.initialize ist nicht definiert. Überspringe Initialisierung.");
         }
         if (typeof publikationEventHandlers.initialize === 'function') {
             publikationEventHandlers.initialize(mainAppInterface);
+        } else {
+            console.warn("publikationEventHandlers.initialize ist nicht definiert. Überspringe Initialisierung.");
         }
 
 
         document.querySelectorAll('.nav-tabs .nav-link').forEach(tab => {
             tab.addEventListener('show.bs.tab', event => {
-                const newTabId = event.target.getAttribute('href').substring(1).replace('-pane', '');
-                if (_activeTabId !== newTabId) {
-                    _activeTabId = newTabId;
-                    state.setActiveTabId(_activeTabId);
-                    _handleTabChange(_activeTabId);
+                const hrefAttribute = event.currentTarget.getAttribute('href');
+                if (hrefAttribute) {
+                    const newTabId = hrefAttribute.substring(1).replace('-pane', '');
+                    if (_activeTabId !== newTabId) {
+                        _activeTabId = newTabId;
+                        state.setActiveTabId(_activeTabId);
+                        _handleTabChange(_activeTabId);
+                    }
+                } else {
+                     console.error("Fehlendes href Attribut am Tab-Element:", event.currentTarget);
                 }
             });
         });
@@ -174,8 +185,8 @@ const mainAppInterface = (() => {
         state.setCurrentKollektiv(newKollektiv);
         _globalData.currentKollektiv = newKollektiv;
         _globalData.processedData = dataProcessor.processRawData(_globalData.rawData);
-        _globalData.filteredData = dataProcessor.filterDataByKollektiv(_globalData.processedData, newKollektiv);
-        
+        _globalData.filteredData = dataProcessor.filterDataByKollektiv(_globalData.processedData, _globalData.currentKollektiv);
+
         const currentAppliedT2Criteria = t2CriteriaManager.getAppliedCriteria();
         const currentAppliedT2Logic = t2CriteriaManager.getAppliedLogic();
         _globalData.filteredData = t2CriteriaManager.evaluateDataset(cloneDeep(_globalData.filteredData), currentAppliedT2Criteria, currentAppliedT2Logic);
@@ -276,7 +287,7 @@ const mainAppInterface = (() => {
 
         if (forceDataRefresh) {
             _globalData.currentKollektiv = state.getCurrentKollektiv();
-            _globalData.processedData = dataProcessor.processRawData(_globalData.rawData); // Prozessiere Rohdaten neu
+            _globalData.processedData = dataProcessor.processRawData(_globalData.rawData);
             _globalData.filteredData = dataProcessor.filterDataByKollektiv(_globalData.processedData, _globalData.currentKollektiv);
 
             const currentAppliedT2Criteria = t2CriteriaManager.getAppliedCriteria();
