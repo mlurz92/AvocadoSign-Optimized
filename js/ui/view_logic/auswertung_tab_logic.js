@@ -30,7 +30,7 @@ const auswertungTabLogic = (() => {
 
     function getCurrentASPerformance() {
         if (_isDataStale || !_currentASPerformance) {
-            if (_currentData && _currentKollektiv && dataProcessor && statisticsService) {
+            if (_currentData && _currentKollektiv && typeof dataProcessor !== 'undefined' && typeof statisticsService !== 'undefined') {
                 const filteredData = dataProcessor.filterDataByKollektiv(cloneDeep(_currentData), _currentKollektiv);
                 _currentASPerformance = statisticsService.calculateDiagnosticPerformance(filteredData, 'as', 'n');
             } else {
@@ -42,7 +42,8 @@ const auswertungTabLogic = (() => {
 
     function getCurrentT2Performance() {
         if (_isDataStale || !_currentT2Performance) {
-            if (_currentData && _currentKollektiv && _appliedT2Criteria && _appliedT2Logic && dataProcessor && t2CriteriaManager && statisticsService) {
+            if (_currentData && _currentKollektiv && _appliedT2Criteria && _appliedT2Logic && 
+                typeof dataProcessor !== 'undefined' && typeof t2CriteriaManager !== 'undefined' && typeof statisticsService !== 'undefined') {
                 const filteredData = dataProcessor.filterDataByKollektiv(cloneDeep(_currentData), _currentKollektiv);
                 const evaluatedData = t2CriteriaManager.evaluateDataset(filteredData, _appliedT2Criteria, _appliedT2Logic);
                 _currentT2Performance = statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n');
@@ -68,11 +69,10 @@ const auswertungTabLogic = (() => {
              container.innerHTML = `<div class="col-12"><p class="text-muted text-center p-3">Keine Daten für Kollektiv '${getKollektivDisplayName(_currentKollektiv)}' verfügbar, um Dashboard anzuzeigen.</p></div>`;
              return;
         }
-        if (!statsAS && !statsT2 && (!t2CriteriaManager || !t2CriteriaManager.getAppliedCriteria() || Object.keys(t2CriteriaManager.getAppliedCriteria()).length === 0) ){
+        if (!statsAS && !statsT2 && (typeof t2CriteriaManager === 'undefined' || !t2CriteriaManager.getAppliedCriteria() || Object.keys(t2CriteriaManager.getAppliedCriteria()).length === 0) ){
              container.innerHTML = `<div class="col-12"><p class="text-muted text-center p-3">Bitte T2-Kriterien definieren und anwenden, um das Dashboard anzuzeigen.</p></div>`;
              return;
         }
-
 
         const na = 'N/A';
         const createMetricContent = (metricObj, key, isRate = true, digits = 1) => {
@@ -80,7 +80,7 @@ const auswertungTabLogic = (() => {
             const value = metricObj[key]?.value;
             const ci = metricObj[key]?.ci;
             const formattedValue = formatCI(value, ci?.lower, ci?.upper, (key === 'f1' || key === 'auc') ? 3: digits, isRate, na);
-            const interpretation = ui_helpers.getMetricInterpretationHTML(key, metricObj[key], '', _currentKollektiv);
+            const interpretation = (typeof ui_helpers !== 'undefined' && typeof ui_helpers.getMetricInterpretationHTML === 'function') ? ui_helpers.getMetricInterpretationHTML(key, metricObj[key], '', _currentKollektiv) : "Keine Interpretation verfügbar";
             return `<span class="display-6 fw-light" data-tippy-content="${interpretation}">${formattedValue}</span>`;
         };
         
@@ -91,27 +91,31 @@ const auswertungTabLogic = (() => {
             t2MetricsOverviewHTML = '<p class="text-danger">Fehler: T2 Metrik Übersichtskomponente nicht verfügbar.</p>';
         }
 
-
         const dashboardRow = document.createElement('div');
         dashboardRow.className = 'row g-3';
 
+        const sensName = (UI_TEXTS?.statMetrics?.sens?.name) || 'Sensitivität';
+        const spezName = (UI_TEXTS?.statMetrics?.spez?.name) || 'Spezifität';
+        const aucName = (UI_TEXTS?.statMetrics?.auc?.name) || 'AUC';
+        const t2DisplayNameString = (APP_CONFIG?.SPECIAL_IDS?.APPLIED_CRITERIA_DISPLAY_NAME) || 'Angew. Kriterien';
+
         if (typeof uiComponents !== 'undefined' && typeof uiComponents.createDashboardCard === 'function') {
             dashboardRow.innerHTML += uiComponents.createDashboardCard('Avocado Sign (AS)', '', 'chart-dash-as-status', 'bg-light-as');
-            dashboardRow.innerHTML += uiComponents.createDashboardCard(`T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, '', 'chart-dash-t2-status', 'bg-light-t2');
+            dashboardRow.innerHTML += uiComponents.createDashboardCard(`T2 (${t2DisplayNameString})`, '', 'chart-dash-t2-status', 'bg-light-t2');
 
             if(statsAS) {
                  dashboardRow.innerHTML += uiComponents.createDashboardCard(
-                    UI_TEXTS.statMetrics.sens.name + ' (AS)',
+                    sensName + ' (AS)',
                     createMetricContent(statsAS, 'sens'),
                     null, 'metric-card'
                 );
                 dashboardRow.innerHTML += uiComponents.createDashboardCard(
-                    UI_TEXTS.statMetrics.spez.name + ' (AS)',
+                    spezName + ' (AS)',
                     createMetricContent(statsAS, 'spez'),
                     null, 'metric-card'
                 );
                  dashboardRow.innerHTML += uiComponents.createDashboardCard(
-                    'AUC (AS)',
+                    aucName + ' (AS)',
                     createMetricContent(statsAS, 'auc', false, 3),
                     null, 'metric-card'
                 );
@@ -132,7 +136,7 @@ const auswertungTabLogic = (() => {
                 </div>
             </div>`;
 
-        if (statsAS?.matrix && chart_renderer) {
+        if (statsAS?.matrix && typeof chart_renderer !== 'undefined' && typeof chart_renderer.renderPieChart === 'function') {
              const totalAS = statsAS.matrix.rp + statsAS.matrix.fp + statsAS.matrix.fn + statsAS.matrix.rn;
              const asPieData = [
                 { label: UI_TEXTS.legendLabels.asPositive, value: statsAS.matrix.rp + statsAS.matrix.fp, color: APP_CONFIG.CHART_SETTINGS.AS_COLOR },
@@ -148,7 +152,7 @@ const auswertungTabLogic = (() => {
             if(chartEl) chartEl.closest('.dashboard-card-col')?.classList.add('d-none');
         }
 
-        if (statsT2?.matrix && chart_renderer) {
+        if (statsT2?.matrix && typeof chart_renderer !== 'undefined' && typeof chart_renderer.renderPieChart === 'function') {
             const totalT2 = statsT2.matrix.rp + statsT2.matrix.fp + statsT2.matrix.fn + statsT2.matrix.rn;
             const t2PieData = [
                 { label: UI_TEXTS.legendLabels.t2Positive, value: statsT2.matrix.rp + statsT2.matrix.fp, color: APP_CONFIG.CHART_SETTINGS.T2_COLOR },
@@ -182,8 +186,16 @@ const auswertungTabLogic = (() => {
                 } else if (!col.subKeys && (currentSortState.subKey === null || currentSortState.subKey === undefined)) {
                     isMainKeyActiveSort = true;
                     sortIconHTML = `<i class="fas ${currentSortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1"></i>`;
-                    thStyle += (thStyle ? ' ' : 'style="') + 'color: var(--primary-color);"';
-                    if(!thStyle.endsWith('"')) thStyle += '"';
+                    let currentStyle = thStyle.includes('style="') ? thStyle.substring(thStyle.indexOf('style="') + 7, thStyle.lastIndexOf('"')) : '';
+                    if (currentStyle && !currentStyle.endsWith(';')) {
+                        currentStyle += '; ';
+                    }
+                    currentStyle += 'color: var(--primary-color);';
+                    if (thStyle.includes('style="')) {
+                        thStyle = thStyle.replace(/style=".*?"/, `style="${currentStyle}"`);
+                    } else {
+                        thStyle += ` style="${currentStyle}"`;
+                    }
                 }
             }
             if (!isMainKeyActiveSort && col.key !== 'details') {
@@ -303,7 +315,7 @@ const auswertungTabLogic = (() => {
                 <div class="col-12">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                          <h5 class="mb-0">Patienten-Auswertungstabelle (<span id="auswertung-tab-kollektiv-name">${getKollektivDisplayName(_currentKollektiv)}</span>)</h5>
-                         <button class="btn btn-sm btn-outline-secondary" id="auswertung-toggle-details" data-action="expand" data-tippy-content="Alle Details ein-/ausblenden">
+                         <button class="btn btn-sm btn-outline-secondary" id="auswertung-toggle-details" data-action="expand" data-tippy-content="${TOOLTIP_CONTENT.auswertungTable.expandAll || 'Alle Details ein-/ausblenden'}">
                              Alle Details Einblenden <i class="fas fa-chevron-down ms-1"></i>
                          </button>
                     </div>
