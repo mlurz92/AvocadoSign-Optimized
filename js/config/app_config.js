@@ -3,7 +3,7 @@ const APP_CONFIG = Object.freeze({
     APP_VERSION: "2.3.1",
 
     DEFAULT_SETTINGS: Object.freeze({
-        ACTIVE_TAB_ID: 'daten-tab', // NEU hinzugefügt
+        ACTIVE_TAB_ID: 'daten-tab',
         KOLLEKTIV: 'Gesamt',
         T2_LOGIC: 'UND',
         DATEN_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
@@ -12,7 +12,7 @@ const APP_CONFIG = Object.freeze({
         STATS_KOLLEKTIV1: 'Gesamt',
         STATS_KOLLEKTIV2: 'nRCT',
         PRESENTATION_VIEW: 'as-pur',
-        PRESENTATION_STUDY_ID: null, // Kann null sein, wenn 'applied_criteria' gemeint ist
+        PRESENTATION_STUDY_ID: null,
         PUBLIKATION_LANG: 'de',
         PUBLIKATION_SECTION: 'methoden',
         PUBLIKATION_BRUTE_FORCE_METRIC: 'Balanced Accuracy',
@@ -28,7 +28,7 @@ const APP_CONFIG = Object.freeze({
     }),
 
     STORAGE_KEYS: Object.freeze({
-        ACTIVE_TAB_ID: 'activeTabId_v4.2_detailed', // NEU hinzugefügt
+        ACTIVE_TAB_ID: 'activeTabId_v4.2_detailed',
         APPLIED_CRITERIA: 'appliedT2Criteria_v4.2_detailed',
         APPLIED_LOGIC: 'appliedT2Logic_v4.2_detailed',
         CURRENT_KOLLEKTIV: 'currentKollektiv_v4.2_detailed',
@@ -42,8 +42,8 @@ const APP_CONFIG = Object.freeze({
         PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
         CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
         CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
-        DATEN_TABLE_SORT: 'datenTableSort_v4.2_detailed', // NEU hinzugefügt (basierend auf state.js Nutzung)
-        AUSWERTUNG_TABLE_SORT: 'auswertungTableSort_v4.2_detailed', // NEU hinzugefügt
+        DATEN_TABLE_SORT: 'datenTableSort_v4.2_detailed',
+        AUSWERTUNG_TABLE_SORT: 'auswertungTableSort_v4.2_detailed',
         FIRST_APP_START: 'appFirstStart_v2.3.1'
     }),
 
@@ -94,7 +94,8 @@ const APP_CONFIG = Object.freeze({
         TRANSITION_DURATION_MS: 350,
         MODAL_BACKDROP_OPACITY: 0.6,
         SPINNER_DELAY_MS: 300,
-        STICKY_HEADER_OFFSET: '111px'
+        STICKY_HEADER_OFFSET: '111px',
+        RENDER_DELAY_MS: 50
     }),
 
     CHART_SETTINGS: Object.freeze({
@@ -125,9 +126,9 @@ const APP_CONFIG = Object.freeze({
         RSNA_CHART_AXIS_LABEL_FONT_SIZE: '10pt',
         RSNA_CHART_TICK_LABEL_FONT_SIZE: '9pt',
         RSNA_CHART_LEGEND_FONT_SIZE: '9pt',
-        CHART_PNG_TARGET_WIDTH: 1000, // NEU für Export Service
-        CHART_AXIS_COLOR: '#333', // NEU für Export Service
-        CHART_LABEL_COLOR: '#000' // NEU für Export Service
+        CHART_PNG_TARGET_WIDTH: 1000,
+        CHART_AXIS_COLOR: '#333',
+        CHART_LABEL_COLOR: '#000'
     }),
 
     EXPORT_SETTINGS: Object.freeze({
@@ -217,9 +218,18 @@ const APP_CONFIG = Object.freeze({
         brown2003: {short: "Brown et al. (2003)", full: "Brown G, Richards CJ, Bourne MW, et al. Morphologic predictors of lymph node status in rectal cancer with use of high-spatial-resolution MR imaging with histopathologic comparison. Radiology. 2003;227(2):371-377.", file: "docs/Other/Brown_2003.pdf"},
         horvat2019: {short: "Horvat et al. (2019)", full: "Horvat N, Tavares Rocha CC, Clemente Oliveira B, Petkovska I, Gollub MJ. MRI of Rectal Cancer: Tumor Staging, Imaging Techniques, and Management. RadioGraphics. 2019;39(2):367-387.", file: "docs/Other/Horvart_2019.pdf"},
         kaur2012: {short: "Kaur et al. (2012)", full: "Kaur H, Choi H, You YN, et al. MR Imaging for Preoperative Evaluation of Primary Rectal Cancer: Practical Considerations. RadioGraphics. 2012;32(2):389-409.", file: "docs/Other/Kaur_2012.pdf"},
-        beetsTan2004: {short: "Vliegen et al. (2005)", full: "Vliegen RFA, Beets GL, von Meyenfeldt MF, et al. Rectal Cancer: MR Imaging in Local Staging-Is Gadolinium-based Contrast Material Helpful?. Radiology. 2005;234(1):179-188.", file: "docs/Other/Beets-Tan 2004.pdf"}, // Name korrigiert basierend auf PDF Inhalt
-        barbaro2010: {short: "Barbaro et al. (2010)", full: "Barbaro B, Vitale R, Leccisotti L, et al. Restaging Locally Advanced Rectal Cancer with MR Imaging after Chemoradiation Therapy. RadioGraphics. 2010;30(3):699-716.", file: "docs/Other/Barbaro_2010.pdf"},
+        beetsTan2004: {short: "Vliegen et al. (2005)", full: "Vliegen RFA, Beets GL, von Meyenfeldt MF, et al. Rectal Cancer: MR Imaging in Local Staging-Is Gadolinium-based Contrast Material Helpful?. Radiology. 2005;234(1):179-188.", file: "docs/Other/Beets-Tan 2004.pdf"},
+        barbaro2010: {short: "Barbaro et al. (2010)", full: "Barbaro B, Vitale R, Leccisotti L, et al. Restaging Locally Advanced Rectal Cancer with MR Imaging after Chemoradiation Therapy. RadioGraphics. 2010;30(3):699-721.", file: "docs/Other/Barbaro_2010.pdf"},
         lahaye2009: {short: "Lahaye et al. (2009)", full: "Lahaye MJ, Beets GL, Engelen SME, et al. Locally Advanced Rectal Cancer: MR Imaging for Restaging after Neoadjuvant Radiation Therapy with Concomitant Chemotherapy Part II. What Are the Criteria to Predict Involved Lymph Nodes?. Radiology. 2009;252(1):81-91.", file: "docs/Other/Beets-Tan_2009.pdf"}
+    }),
+
+    TAB_CONTENT_AREAS: Object.freeze({
+        'daten-tab': 'daten-content-area',
+        'auswertung-tab': 'auswertung-content-area',
+        'statistik-tab': 'statistik-content-area',
+        'praesentation-tab': 'praesentation-content-area',
+        'publikation-tab': 'publikation-content-area',
+        'export-tab': 'export-content-area'
     })
 });
 
