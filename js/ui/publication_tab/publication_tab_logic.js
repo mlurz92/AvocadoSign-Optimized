@@ -1,184 +1,160 @@
-const publikationTabLogic = (() => {
-    let _currentStatsDataForAllKollektive = null;
-    let _currentCommonDataForPub = null;
+const publicationTabLogic = (() => {
+    let _mainAppInterface = null;
+    let _globalRawData = [];
+    let _currentKollektivGlobal = '';
+    let _appliedT2CriteriaGlobal = null;
+    let _appliedT2LogicGlobal = '';
+    let _bruteForceResults = null;
+    let _publikationLang = 'de';
+    let _publikationSection = 'abstract';
+    let _publikationBruteForceMetric = 'auc';
+    let _isInitialized = false;
     let _isDataStale = true;
-    let _initialized = false;
-    let _currentVisibleSectionId = null;
+    let _publicationStats = null;
 
-    function initializeTab(rawData, appliedT2Criteria, appliedT2Logic, bruteForceResults) {
-        if (!_initialized) {
-            ui_helpers.updatePublikationUI(
-                state.getCurrentPublikationLang(),
-                state.getCurrentPublikationSection(),
-                state.getCurrentPublikationBruteForceMetric()
-            );
-             _currentVisibleSectionId = state.getCurrentPublikationSection();
-            _initialized = true;
-        }
-        _initializeData(rawData, appliedT2Criteria, appliedT2Logic, bruteForceResults);
-        _updateView();
-    }
-
-    function refreshTab(rawData, appliedT2Criteria, appliedT2Logic, bruteForceResults, forceDataRefresh = false) {
-        if (!_initialized) {
-            initializeTab(rawData, appliedT2Criteria, appliedT2Logic, bruteForceResults);
-            return;
-        }
-
-        if (forceDataRefresh) {
-            _isDataStale = true;
-        }
-        
-        if (_isDataStale) {
-             _initializeData(rawData, appliedT2Criteria, appliedT2Logic, bruteForceResults);
-        }
-        
-        const newSectionId = state.getCurrentPublikationSection();
-        if (newSectionId !== _currentVisibleSectionId || _isDataStale) {
-             _currentVisibleSectionId = newSectionId;
-             _updateView();
-        } else {
-            // Nur UI-Steuerelemente aktualisieren, falls sich nur Sprache oder BF-Metrik geändert hat, ohne Datenneuberechnung
-             ui_helpers.updatePublikationUI(
-                state.getCurrentPublikationLang(),
-                newSectionId,
-                state.getCurrentPublikationBruteForceMetric()
-            );
-        }
-        _isDataStale = false; 
+    function initialize(mainAppInterface) {
+        _mainAppInterface = mainAppInterface;
     }
 
     function setDataStale() {
         _isDataStale = true;
+        _publicationStats = null;
     }
 
-    function _initializeData(rawData, appliedT2Criteria, appliedT2Logic, bruteForceResults) {
-        if (!rawData || !Array.isArray(rawData) || rawData.length === 0 || !appliedT2Criteria || !appliedT2Logic) {
-            console.warn("Publikationstab: Unvollständige Basisdaten für Statistikberechnung.");
-            _currentStatsDataForAllKollektive = null;
-            _currentCommonDataForPub = null;
-            _isDataStale = false;
-            return;
+    function isInitialized() {
+        return _isInitialized;
+    }
+
+    function _initializeData() {
+        if (!_isDataStale && _publicationStats) {
+            return _publicationStats;
         }
-        
+        _isDataStale = true; 
+        _publicationStats = null;
+
         try {
-            _currentStatsDataForAllKollektive = statisticsService.calculateAllStatsForPublication(
-                rawData,
-                appliedT2Criteria,
-                appliedT2Logic,
-                bruteForceResults
+            const processedDataFull = dataProcessor.processRawData(cloneDeep(_globalRawData));
+            if (!processedDataFull || processedDataFull.length === 0) {
+                throw new Error("Keine verarbeiteten Patientendaten verfügbar.");
+            }
+            
+            const allStats = statisticsService.calculateAllStatsForPublication(
+                processedDataFull,
+                _appliedT2CriteriaGlobal,
+                _appliedT2LogicGlobal,
+                _bruteForceResults,
+                _publikationBruteForceMetric
             );
+
+            if (!allStats) {
+                throw new Error("Fehler bei der Berechnung der umfassenden Statistiken für die Publikation.");
+            }
+            _publicationStats = allStats;
+            _isDataStale = false;
+
         } catch (error) {
             console.error("Fehler bei der Berechnung der Statistikdaten für den Publikationstab:", error);
-            _currentStatsDataForAllKollektive = null;
-            ui_helpers.showToast("Fehler bei der Statistikberechnung für Publikation. Details siehe Konsole.", "danger");
+            _publicationStats = { error: error.message, details: {} };
+            _isDataStale = false; 
         }
-
-        try {
-            let gesamtN = 0, direktOpN = 0, nRCTN = 0;
-            if(_currentStatsDataForAllKollektive) {
-                gesamtN = _currentStatsDataForAllKollektive.Gesamt?.deskriptiv?.anzahlPatienten || 0;
-                direktOpN = _currentStatsDataForAllKollektive['direkt OP']?.deskriptiv?.anzahlPatienten || 0;
-                nRCTN = _currentStatsDataForAllKollektive.nRCT?.deskriptiv?.anzahlPatienten || 0;
-            }
-
-            _currentCommonDataForPub = Object.freeze({
-                appName: APP_CONFIG.APP_NAME,
-                appVersion: APP_CONFIG.APP_VERSION,
-                nGesamt: gesamtN,
-                nDirektOP: direktOpN,
-                nNRCT: nRCTN,
-                significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
-                references: cloneDeep(APP_CONFIG.REFERENCES_FOR_PUBLICATION) || {},
-                bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
-                appliedT2CriteriaGlobal: cloneDeep(appliedT2Criteria),
-                appliedT2LogicGlobal: appliedT2Logic,
-                toolInstance: typeof mainAppInterface !== 'undefined' ? mainAppInterface : null
-            });
-        } catch (error) {
-             console.error("Fehler beim Erstellen der CommonData für den Publikationstab:", error);
-            _currentCommonDataForPub = null;
-        }
-        _isDataStale = false;
+        return _publicationStats;
     }
 
-    function _updateView() {
-        const lang = state.getCurrentPublikationLang();
-        const sectionId = state.getCurrentPublikationSection();
-        const bruteForceMetricForPublication = state.getCurrentPublikationBruteForceMetric();
 
-        if (!_currentStatsDataForAllKollektive || !_currentCommonDataForPub) {
-            const contentArea = document.getElementById('publikation-content-area');
-            if (contentArea) {
-                contentArea.innerHTML = `<div class="alert alert-warning p-5 text-center" role="alert">
-                                            <h4 class="alert-heading">${lang === 'de' ? 'Datenfehler' : 'Data Error'}</h4>
-                                            <p>${lang === 'de' ? 'Die für diesen Tab benötigten statistischen Daten oder Konfigurationen konnten nicht geladen werden.' : 'The statistical data or configurations required for this tab could not be loaded.'}</p>
-                                            <hr>
-                                            <p class="mb-0 small">${lang === 'de' ? 'Bitte stellen Sie sicher, dass alle vorherigen Schritte (Datenverarbeitung, Kriteriendefinition) korrekt ausgeführt wurden und versuchen Sie, die Anwendung neu zu laden oder die Daten im Auswertungstab neu anzuwenden.' : 'Please ensure all previous steps (data processing, criteria definition) have been performed correctly and try reloading the application or reapplying the criteria in the Evaluation tab.'}</p>
-                                         </div>`;
-            }
-            ui_helpers.updatePublikationUI(lang, sectionId, bruteForceMetricForPublication); // Update controls anyway
+    function _renderPublicationTabContent() {
+        const tabContentPane = document.getElementById('publikation-tab-pane');
+        const mainContentArea = document.getElementById('publikation-content-area');
+        const sidebarArea = document.getElementById('publikation-sidebar-nav-container');
+
+        if (!tabContentPane || !mainContentArea || !sidebarArea) {
+            console.error("Ein oder mehrere Hauptcontainer für den Publikationstab nicht gefunden.");
+            if(tabContentPane) tabContentPane.innerHTML = '<p class="text-danger p-3">Fehler: Haupt-Layout-Elemente für Publikationstab fehlen.</p>';
+            return;
+        }
+
+        if (!_publicationStats || _publicationStats.error) {
+            mainContentArea.innerHTML = `<div class="alert alert-danger m-3">Fehler beim Laden der Publikationsdaten: ${_publicationStats?.error || 'Unbekannter Fehler'}. Bitte überprüfen Sie die Browser-Konsole für Details.</div>`;
+            sidebarArea.innerHTML = '<p class="text-muted p-2 small">Daten nicht verfügbar.</p>';
             return;
         }
         
-        const options = {
-            bruteForceMetric: bruteForceMetricForPublication
-        };
-
-        ui_helpers.updatePublikationUI(lang, sectionId, bruteForceMetricForPublication);
+        const tocItems = publicationTextGenerator.getTableOfContents(_publikationLang, _publicationStats);
+        sidebarArea.innerHTML = publicationRenderer.renderSidebarNavigation(tocItems, _publikationSection, _publikationLang);
         
-        // Verzögere das Rendern leicht, um sicherzustellen, dass das UI-Update (z.B. aktiver Nav-Link) zuerst verarbeitet wird
-        // und um dem Browser Zeit für eventuelle Layout-Anpassungen durch den Sticky Header zu geben.
-        setTimeout(() => {
-            publicationRenderer.renderPublicationSection(
-                sectionId,
-                lang,
-                _currentStatsDataForAllKollektive,
-                _currentCommonDataForPub,
-                options
-            );
-        }, 50); 
-    }
-    
-    function getGeneratedMarkdownForSection(sectionId, lang) {
-        if (!_initialized || _isDataStale || !_currentStatsDataForAllKollektive || !_currentCommonDataForPub) {
-            console.warn("Versuch, Markdown zu generieren, bevor Daten initialisiert oder während sie veraltet sind.");
-            return lang === 'de' ? "# Fehler: Daten nicht aktuell oder nicht initialisiert." : "# Error: Data not current or not initialized.";
-        }
-        const bruteForceMetricForPublication = state.getCurrentPublikationBruteForceMetric();
-        const options = { bruteForceMetric: bruteForceMetricForPublication };
-        return publicationTextGenerator.getSectionTextAsMarkdown(sectionId, lang, _currentStatsDataForAllKollektive, _currentCommonDataForPub, options);
-    }
-    
-    function getFullPublicationMarkdown(lang) {
-        if (!_initialized || _isDataStale || !_currentStatsDataForAllKollektive || !_currentCommonDataForPub) {
-            console.warn("Versuch, vollständiges Markdown zu generieren, bevor Daten initialisiert oder während sie veraltet sind.");
-             return lang === 'de' ? "# Fehler: Daten nicht aktuell oder nicht initialisiert." : "# Error: Data not current or not initialized.";
-        }
-        const bruteForceMetricForPublication = state.getCurrentPublikationBruteForceMetric();
-        const options = { bruteForceMetric: bruteForceMetricForPublication };
-        let fullMarkdown = `# ${lang === 'de' ? 'Manuskriptentwurf' : 'Manuscript Draft'}: ${APP_CONFIG.APP_NAME} - ${getCurrentDateString('DD.MM.YYYY')}\n\n`;
-        fullMarkdown += `**${lang === 'de' ? 'Sprache' : 'Language'}:** ${lang === 'de' ? 'Deutsch' : 'English'}\n`;
-        fullMarkdown += `**${lang === 'de' ? 'Optimierungsmetrik für T2 (Brute-Force) im Fokus' : 'Optimization Metric for T2 (Brute-Force) in Focus'}:** ${bruteForceMetricForPublication}\n\n`;
+        const sectionContent = publicationRenderer.renderContent(
+            _publikationLang,
+            _publikationSection,
+            _publicationStats,
+            _currentKollektivGlobal,
+            _appliedT2CriteriaGlobal,
+            _appliedT2LogicGlobal,
+            _publikationBruteForceMetric
+        );
+        mainContentArea.innerHTML = sectionContent;
+        
+        ui_helpers.updatePublicationControlsUI(_publikationLang, _publikationSection, _publikationBruteForceMetric, _bruteForceResults);
+        ui_helpers.initializeTooltips(tabContentPane);
 
-        PUBLICATION_CONFIG.sections.forEach(mainSection => {
-            fullMarkdown += `## ${UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}\n\n`;
-            mainSection.subSections.forEach(subSection => {
-                fullMarkdown += `### ${subSection.label}\n\n`; // Hier könnte man die Subsektions-Label auch sprachabhängig machen, falls nötig
-                const sectionText = publicationTextGenerator.getSectionTextAsMarkdown(subSection.id, lang, _currentStatsDataForAllKollektive, _currentCommonDataForPub, options);
-                fullMarkdown += `${sectionText}\n\n`;
-            });
-        });
-        return fullMarkdown;
+        const activeNavItem = sidebarArea.querySelector(`.nav-link[data-section-id="${_publikationSection}"]`);
+        if (activeNavItem) {
+            activeNavItem.classList.add('active');
+            // Scroll into view if needed, e.g. for deep links or after language change.
+            // However, the scroll should ideally happen on section change by event handler.
+        }
+         // Attach specific event listeners for copy buttons or interactive elements rendered by publicationRenderer
+        publicationRenderer.attachPublicationTabEventListeners(mainContentArea);
+    }
+
+
+    function initializeTab(data, currentKollektiv, appliedT2Criteria, appliedT2Logic, bruteForceResults, publikationLang, publikationSection, publikationBruteForceMetric) {
+        _globalRawData = data;
+        _currentKollektivGlobal = currentKollektiv;
+        _appliedT2CriteriaGlobal = appliedT2Criteria;
+        _appliedT2LogicGlobal = appliedT2Logic;
+        _bruteForceResults = bruteForceResults;
+        _publikationLang = publikationLang;
+        _publikationSection = publikationSection;
+        _publikationBruteForceMetric = publikationBruteForceMetric;
+        
+        setDataStale(); // Markiere Daten als veraltet, um Neuberechnung zu erzwingen
+        _initializeData(); // Daten aufbereiten
+        _renderPublicationTabContent(); // UI rendern
+
+        _isInitialized = true;
+    }
+
+    function getPubDataForToc() {
+        if (_isDataStale || !_publicationStats) {
+            _initializeData();
+        }
+        return _publicationStats; // Enthält nun auch Metadaten, die für ToC nützlich sein könnten
+    }
+    
+    function getPubDataForCurrentSection() {
+         if (_isDataStale || !_publicationStats) {
+            _initializeData();
+        }
+        // Hier könnten spezifische Daten für die aktuelle Sektion extrahiert/transformiert werden,
+        // falls publicationRenderer.renderContent nicht das gesamte _publicationStats Objekt benötigt.
+        // Vorerst geben wir das Gesamtobjekt zurück.
+        return _publicationStats;
+    }
+
+    function getFullPublicationStats() {
+        if (_isDataStale || !_publicationStats) {
+            _initializeData();
+        }
+        return cloneDeep(_publicationStats);
     }
 
 
     return Object.freeze({
+        initialize,
         initializeTab,
-        refreshTab,
+        isInitialized,
         setDataStale,
-        getGeneratedMarkdownForSection,
-        getFullPublicationMarkdown
+        getPubDataForToc,
+        getPubDataForCurrentSection,
+        getFullPublicationStats
     });
-
 })();
