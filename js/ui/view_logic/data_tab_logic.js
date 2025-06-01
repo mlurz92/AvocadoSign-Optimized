@@ -34,7 +34,7 @@ const dataTabLogic = (() => {
                  const subStyle = isActiveSubSort ? 'font-weight: bold; text-decoration: underline; color: var(--primary-color);' : '';
                  const subLabel = sh.label || sh.subKey.toUpperCase();
                  const subTooltip = `Sortieren nach Status ${subLabel}. ${baseTooltipContent}`;
-                 return `<span class="sortable-sub-header" data-sub-key="${sh.subKey}" style="cursor: pointer; ${subStyle}" data-tippy-content="${subTooltip}">${subLabel}</span>`;
+                 return `<span class="sortable-sub-header" data-sub-key="${sh.subKey}" style="cursor: pointer; <span class="math-inline">\{subStyle\}" data\-tippy\-content\="</span>{subTooltip}">${subLabel}</span>`;
              }).join(' / ') : '';
 
             const mainTooltip = col.subHeaders ? `${baseTooltipContent}` : (col.key === 'details' ? (TOOLTIP_CONTENT.datenTable.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
@@ -48,7 +48,7 @@ const dataTabLogic = (() => {
             if(col.key === 'details' && !col.sortable) thContent = col.label;
 
 
-            headerHTML += `<th scope="col" ${thStyle} ${sortAttributes} data-tippy-content="${mainTooltip}">${thContent}</th>`;
+            headerHTML += `<th scope="col" ${thStyle} <span class="math-inline">\{sortAttributes\} data\-tippy\-content\="</span>{mainTooltip}">${thContent}</th>`;
         });
         headerHTML += `</tr></thead>`;
         return headerHTML;
@@ -60,7 +60,7 @@ const dataTabLogic = (() => {
         const tableBodyId = `${tableId}-body`;
 
         if (!tableContainer) {
-            console.error("Container 'daten-table-container' für Datentabelle nicht gefunden.");
+            console.error("DataTabLogic: Container 'daten-table-container' für Datentabelle nicht gefunden.");
             return;
         }
 
@@ -87,43 +87,4 @@ const dataTabLogic = (() => {
                     { label: 'T2', subKey: 't2' }
                 ]
             },
-            { key: 'bemerkung', label: 'Bemerkung', sortable: false, class: 'col-bemerkung small', tooltipKey: 'datenTable.bemerkung' },
-            { key: 'details', label: '', sortable: false, class: 'text-center col-details', width: '30px', tooltipKey: 'datenTable.expandRow' }
-        ];
-
-        let tableHTML = `<table class="table table-sm table-hover data-table ${APP_CONFIG.UI_SETTINGS.STICKY_FIRST_COL_DATEN ? 'sticky-first-col' : ''}" id="${tableId}">`;
-        tableHTML += `<caption class="small text-muted">Patientenliste für Kollektiv: ${getKollektivDisplayName(_kollektivName)} (N=${sortedData.length})</caption>`;
-        tableHTML += _createDatenTableHeaderHTML(tableId, _currentSortState, columns);
-        tableHTML += `<tbody id="${tableBodyId}">`;
-        tableHTML += sortedData.map(patient => tableRenderer.createDatenTableRow(patient)).join('');
-        tableHTML += `</tbody></table>`;
-
-        tableContainer.innerHTML = tableHTML;
-
-        const tableBodyElement = document.getElementById(tableBodyId);
-        if(tableBodyElement){
-            ui_helpers.attachRowCollapseListeners(tableBodyElement);
-        }
-    }
-
-
-    function initializeTab(data, sortState) {
-        _currentData = Array.isArray(data) ? data : [];
-        _currentSortState = sortState || state.getCurrentDatenSortState();
-        _kollektivName = state.getCurrentKollektiv();
-        _isInitialized = true;
-
-        _renderDatenTable();
-        ui_helpers.updateSortIcons(`${'daten-table'}-header`, _currentSortState);
-        ui_helpers.updateElementText('daten-tab-kollektiv-name', getKollektivDisplayName(_kollektivName));
-    }
-
-    function isInitialized() {
-        return _isInitialized;
-    }
-
-    return Object.freeze({
-        initializeTab,
-        isInitialized
-    });
-})();
+            { key: 'bemerkung', label: 'Bemerkung', sortable: false, class: 'col-bemerkung small', tooltipKey: 'datenTable.
