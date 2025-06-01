@@ -27,18 +27,21 @@ const statistikTabLogic = (() => {
 
         const createRow = (label, value, unit = '', tooltipKey = '') => {
             const tooltip = tooltipKeys[tooltipKey] || label;
-            return `<tr><td data-tippy-content="${tooltip}">${label}</td><td>${(value !== null && value !== undefined && value !== na) ? value + unit : na}</td></tr>`;
+            return `<tr><td data-tippy-content="${tooltip}">${label}</td><td>${(value !== null && value !== undefined && value !== na) ? String(value) + unit : na}</td></tr>`;
         };
         
         let tableHTML = `<table class="table table-sm table-borderless table-responsive-sm small mb-2" id="table-deskriptiv-demographie-${suffix}"><tbody>`;
         tableHTML += createRow('Patienten gesamt', (d && d.anzahlPatienten !== undefined) ? d.anzahlPatienten : na, '', 'anzahlPatienten');
         
-        const alterMedianText = (d && d.alter && d.alter.median !== null && d.alter.median !== undefined && !isNaN(d.alter.median))
+        const alterMedianText = (d && d.alter && d.alter.median !== null && d.alter.median !== undefined && !isNaN(d.alter.median) &&
+                                d.alter.q1 !== null && d.alter.q1 !== undefined && !isNaN(d.alter.q1) &&
+                                d.alter.q3 !== null && d.alter.q3 !== undefined && !isNaN(d.alter.q3))
             ? `${formatNumber(d.alter.median,0,na)} (${formatNumber(d.alter.q1,0,na)}–${formatNumber(d.alter.q3,0,na)})`
             : na;
         tableHTML += createRow('Alter Median (IQR)', alterMedianText, ' Jahre', 'alterMedian');
 
-        const alterMeanText = (d && d.alter && d.alter.mean !== null && d.alter.mean !== undefined && !isNaN(d.alter.mean) && d.alter.sd !== null && d.alter.sd !== undefined && !isNaN(d.alter.sd))
+        const alterMeanText = (d && d.alter && d.alter.mean !== null && d.alter.mean !== undefined && !isNaN(d.alter.mean) && 
+                               d.alter.sd !== null && d.alter.sd !== undefined && !isNaN(d.alter.sd))
             ? `${formatNumber(d.alter.mean,1,na)} (±${formatNumber(d.alter.sd,1,na)})`
             : na;
         tableHTML += createRow('Alter Mittel (SD)', alterMeanText, ' Jahre', 'alterMean');
@@ -48,7 +51,7 @@ const statistikTabLogic = (() => {
         tableHTML += createRow('Avocado Sign (+/-)', `${d?.asStatus?.['+'] || 0} / ${d?.asStatus?.['-'] || 0}`, '', 'asStatus');
         
         const appliedCriteriaDisplayName = (APP_CONFIG && APP_CONFIG.SPECIAL_IDS && APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME) ? APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME : "Angewandt";
-        const t2StatusKey = 't2StatusAngewandt';
+        const t2StatusKey = 't2StatusAngewandt'; 
         const t2StatusObject = d?.[t2StatusKey] || d?.t2Status;
         tableHTML += createRow(`T2-Status (${appliedCriteriaDisplayName}) (+/-)`, `${t2StatusObject?.['+'] || 0} / ${t2StatusObject?.['-'] || 0}`, '', 't2StatusAngewandt');
         
@@ -78,13 +81,15 @@ const statistikTabLogic = (() => {
         const matrixTableId = `table-guete-matrix-${methodenName}-${String(kollektivName).replace(/\s+/g, '_')}`;
 
         let tableHTML = `<table class="table table-sm table-borderless table-responsive-sm small mb-0"><tbody>`;
-        Object.keys(UI_TEXTS.statMetrics).forEach(key => {
-            if (statsData[key] && key !== 'phi' && UI_TEXTS.statMetrics[key] && UI_TEXTS.statMetrics[key].name) {
-                const metricConfig = UI_TEXTS.statMetrics[key];
-                const tooltip = tooltipKeys[key] || metricConfig.description?.replace('[METHOD]', methodenName).replace('[CRITERIA_SET]', '') || metricConfig.name;
-                tableHTML += `<tr><td data-tippy-content="${tooltip}">${metricConfig.name}</td><td data-tippy-content="${getInterpretationTT(key, statsData[key])}">${fCI(statsData[key], key, metricConfig.digits)}</td></tr>`;
-            }
-        });
+        if (UI_TEXTS && UI_TEXTS.statMetrics) {
+            Object.keys(UI_TEXTS.statMetrics).forEach(key => {
+                if (statsData[key] && key !== 'phi' && UI_TEXTS.statMetrics[key] && UI_TEXTS.statMetrics[key].name) {
+                    const metricConfig = UI_TEXTS.statMetrics[key];
+                    const tooltip = tooltipKeys[key] || metricConfig.description?.replace('[METHOD]', methodenName).replace('[CRITERIA_SET]', '') || metricConfig.name;
+                    tableHTML += `<tr><td data-tippy-content="${tooltip}">${metricConfig.name}</td><td data-tippy-content="${getInterpretationTT(key, statsData[key])}">${fCI(statsData[key], key, metricConfig.digits)}</td></tr>`;
+                }
+            });
+        }
         tableHTML += `</tbody></table>`;
 
         if (statsData.matrix && typeof uiComponents !== 'undefined' && uiComponents.createConfusionMatrixHTML) {
@@ -141,7 +146,7 @@ const statistikTabLogic = (() => {
                 const criteriaDisplayName = UI_TEXTS.t2CriteriaShort[key] || key;
                 const praevalenzNplus = (val.Nplus_Merkmal !== undefined && val.Nplus_Gesamt !== undefined && val.Nplus_Gesamt > 0) ? formatPercent(val.Nplus_Merkmal / val.Nplus_Gesamt, 0) : na;
                 const orFormatted = (val.or && val.or.value !== undefined && val.or.ci && val.or.ci.lower !== undefined) ? `${formatNumber(val.or.value,2,na,true)} (${formatNumber(val.or.ci.lower,2,na,true)}–${formatNumber(val.or.ci.upper,2,na,true)})` : na;
-                const pValueForOR = val.pValueOR !== undefined ? val.pValueOR : (val.pValue !== undefined ? val.pValue : null); // Fallback
+                const pValueForOR = val.pValueOR !== undefined ? val.pValueOR : (val.pValue !== undefined ? val.pValue : null);
                 const pValueFormatted = (pValueForOR !== null && pValueForOR !== undefined) ? (pValueForOR < 0.001 ? '&lt;0.001' : formatNumber(pValueForOR, 3, na, true)) : na;
                 const significanceSymbol = getStatisticalSignificanceSymbol(pValueForOR);
                 const interpretation = (typeof ui_helpers !== 'undefined' && ui_helpers.getAssociationInterpretationHTML) ? ui_helpers.getAssociationInterpretationHTML('or', val, criteriaDisplayName, kollektivName) : '';
@@ -182,15 +187,17 @@ const statistikTabLogic = (() => {
         methods.forEach(method => {
             const methodNameDisplay = method === 'AS' ? 'Avocado Sign' : `T2 (${appliedCriteriaDisplayName})`;
             metrics.forEach(metricKey => {
-                const metricNameDisplay = UI_TEXTS.statMetrics[metricKey]?.name || metricKey.toUpperCase();
-                const data = vergleichsDaten[method]?.[metricKey];
-                if (data) {
-                    const val1 = formatCI(data.val1, data.ci1_lower, data.ci1_upper, (metricKey === 'auc' ? 3:1), !(metricKey === 'auc'), na);
-                    const val2 = formatCI(data.val2, data.ci2_lower, data.ci2_upper, (metricKey === 'auc' ? 3:1), !(metricKey === 'auc'), na);
-                    const pVal = (data.pValue !== null && data.pValue !== undefined) ? (data.pValue < 0.001 ? '&lt;0.001' : formatNumber(data.pValue, 3, na, true)) : na;
-                    const sigSymbol = getStatisticalSignificanceSymbol(data.pValue);
-                    const interpretation = (typeof ui_helpers !== 'undefined' && ui_helpers.getTestInterpretationHTML) ? ui_helpers.getTestInterpretationHTML('cohortComparison', data, k1, k2, methodNameDisplay, metricNameDisplay) : '';
-                    tableHTML += `<tr><td>${metricNameDisplay}</td><td>${methodNameDisplay}</td><td data-tippy-content="${(typeof ui_helpers !== 'undefined' && ui_helpers.getMetricInterpretationHTML) ? ui_helpers.getMetricInterpretationHTML(metricKey, {value: data.val1, ci: {lower: data.ci1_lower, upper: data.ci1_upper}}, methodNameDisplay, k1) : ''}">${val1}</td><td data-tippy-content="${(typeof ui_helpers !== 'undefined' && ui_helpers.getMetricInterpretationHTML) ? ui_helpers.getMetricInterpretationHTML(metricKey, {value: data.val2, ci: {lower: data.ci2_lower, upper: data.ci2_upper}}, methodNameDisplay, k2) : ''}">${val2}</td><td data-tippy-content="${interpretation}">${pVal} ${sigSymbol}</td></tr>`;
+                if (UI_TEXTS && UI_TEXTS.statMetrics && UI_TEXTS.statMetrics[metricKey]) {
+                    const metricNameDisplay = UI_TEXTS.statMetrics[metricKey]?.name || metricKey.toUpperCase();
+                    const data = vergleichsDaten[method]?.[metricKey];
+                    if (data) {
+                        const val1 = formatCI(data.val1, data.ci1_lower, data.ci1_upper, (metricKey === 'auc' ? 3:1), !(metricKey === 'auc'), na);
+                        const val2 = formatCI(data.val2, data.ci2_lower, data.ci2_upper, (metricKey === 'auc' ? 3:1), !(metricKey === 'auc'), na);
+                        const pVal = (data.pValue !== null && data.pValue !== undefined) ? (data.pValue < 0.001 ? '&lt;0.001' : formatNumber(data.pValue, 3, na, true)) : na;
+                        const sigSymbol = getStatisticalSignificanceSymbol(data.pValue);
+                        const interpretation = (typeof ui_helpers !== 'undefined' && ui_helpers.getTestInterpretationHTML) ? ui_helpers.getTestInterpretationHTML('cohortComparison', data, k1, k2, methodNameDisplay, metricNameDisplay) : '';
+                        tableHTML += `<tr><td>${metricNameDisplay}</td><td>${methodNameDisplay}</td><td data-tippy-content="${(typeof ui_helpers !== 'undefined' && ui_helpers.getMetricInterpretationHTML) ? ui_helpers.getMetricInterpretationHTML(metricKey, {value: data.val1, ci: {lower: data.ci1_lower, upper: data.ci1_upper}}, methodNameDisplay, k1) : ''}">${val1}</td><td data-tippy-content="${(typeof ui_helpers !== 'undefined' && ui_helpers.getMetricInterpretationHTML) ? ui_helpers.getMetricInterpretationHTML(metricKey, {value: data.val2, ci: {lower: data.ci2_lower, upper: data.ci2_upper}}, methodNameDisplay, k2) : ''}">${val2}</td><td data-tippy-content="${interpretation}">${pVal} ${sigSymbol}</td></tr>`;
+                    }
                 }
             });
         });
@@ -210,12 +217,12 @@ const statistikTabLogic = (() => {
         let tableHTML = `<table class="table table-sm table-striped table-hover small mb-0" id="${tableId}">
                             <thead><tr>
                                 <th data-tippy-content="${tooltipKeys.kriteriumName || 'Name des Kriteriensets oder Methode'}">Kriterium/Methode</th>
-                                <th class="text-center" data-tippy-content="${tooltipKeys.sens || 'Sensitivität (95% CI)'}">Sens.</th>
-                                <th class="text-center" data-tippy-content="${tooltipKeys.spez || 'Spezifität (95% CI)'}">Spez.</th>
-                                <th class="text-center" data-tippy-content="${tooltipKeys.ppv || 'Positiver Prädiktiver Wert (95% CI)'}">PPV</th>
-                                <th class="text-center" data-tippy-content="${tooltipKeys.npv || 'Negativer Prädiktiver Wert (95% CI)'}">NPV</th>
-                                <th class="text-center" data-tippy-content="${tooltipKeys.acc || 'Accuracy (95% CI)'}">Acc.</th>
-                                <th class="text-center" data-tippy-content="${tooltipKeys.auc || 'Area Under Curve (95% CI)'}">AUC</th>
+                                <th class="text-center" data-tippy-content="${tooltipKeys.sens || 'Sensitivität'}">Sens.</th>
+                                <th class="text-center" data-tippy-content="${tooltipKeys.spez || 'Spezifität'}">Spez.</th>
+                                <th class="text-center" data-tippy-content="${tooltipKeys.ppv || 'Positiver Prädiktiver Wert'}">PPV</th>
+                                <th class="text-center" data-tippy-content="${tooltipKeys.npv || 'Negativer Prädiktiver Wert'}">NPV</th>
+                                <th class="text-center" data-tippy-content="${tooltipKeys.acc || 'Accuracy'}">Acc.</th>
+                                <th class="text-center" data-tippy-content="${tooltipKeys.auc || 'Area Under Curve'}">AUC</th>
                                 <th class="text-center" data-tippy-content="${tooltipKeys.kollektiv || 'Evaluiertes Kollektiv (N)'}">Eval. Kollektiv (N)</th>
                             </tr></thead><tbody>`;
         
@@ -245,7 +252,6 @@ const statistikTabLogic = (() => {
         tableHTML += `</tbody></table>`;
         return tableHTML;
     }
-
 
     function initialize(mainAppInterface) {
         _mainAppInterface = mainAppInterface;
@@ -285,12 +291,12 @@ const statistikTabLogic = (() => {
     }
 
     function _calculateCriteriaComparison(globalKollektivId) {
-        if (typeof statisticsService === 'undefined' || typeof studyT2CriteriaManager === 'undefined' || typeof dataProcessor === 'undefined') return [];
+        if (typeof statisticsService === 'undefined' || typeof studyT2CriteriaManager === 'undefined' || typeof dataProcessor === 'undefined' || typeof APP_CONFIG === 'undefined') return [];
         const evaluatedGlobalData = _getProcessedAndEvaluatedData(globalKollektivId);
         if (!evaluatedGlobalData || evaluatedGlobalData.length === 0) return [];
         
         const results = [];
-        const studySets = studyT2CriteriaManager.getAllStudyCriteriaSets(false); // false, um nicht 'angewandt' doppelt zu haben
+        const studySets = studyT2CriteriaManager.getAllStudyCriteriaSets(false); 
 
         const asPerfGlobal = statisticsService.calculateDiagnosticPerformance(evaluatedGlobalData, 'as', 'n');
         if (asPerfGlobal) {
@@ -326,7 +332,7 @@ const statistikTabLogic = (() => {
                 }
             }
         });
-        results.sort((a,b) => (b.auc ?? -Infinity) - (a.auc ?? -Infinity)); // Seltener Fall, dass auc null/undefined ist
+        results.sort((a,b) => (b.auc ?? -Infinity) - (a.auc ?? -Infinity)); 
         return results;
     }
 
@@ -338,13 +344,13 @@ const statistikTabLogic = (() => {
         let localStatsData = _statsDataKollektivGlobal;
         if (_isDataStale || !localStatsData) {
              localStatsData = _calculateStatsForKollektiv(_currentKollektivGlobal);
-             _statsDataKollektivGlobal = localStatsData;
+             _statsDataKollektivGlobal = localStatsData; // Update cache
         }
         
         let localCriteriaComparisonResults = _criteriaComparisonResults;
         if (_isDataStale || !localCriteriaComparisonResults) {
             localCriteriaComparisonResults = _calculateCriteriaComparison(_currentKollektivGlobal);
-            _criteriaComparisonResults = localCriteriaComparisonResults;
+            _criteriaComparisonResults = localCriteriaComparisonResults; // Update cache
         }
 
         if (!localStatsData || typeof localStatsData !== 'object') {
@@ -352,7 +358,10 @@ const statistikTabLogic = (() => {
             return;
         }
         
-        const deskriptivHTML = _createDeskriptiveStatistikContentHTML(localStatsData, '0', _currentKollektivGlobal);
+        const deskriptivHTML = (localStatsData.deskriptiv && typeof localStatsData.deskriptiv === 'object') 
+                             ? _createDeskriptiveStatistikContentHTML(localStatsData, '0', _currentKollektivGlobal)
+                             : `<p class="text-muted">Deskriptive Statistik nicht verfügbar für Kollektiv '${getKollektivDisplayName(_currentKollektivGlobal)}'.</p>`;
+        
         const gueteASHTML = _createGueteContentHTML(localStatsData.gueteAS, 'AS', _currentKollektivGlobal);
         const gueteT2HTML = _createGueteContentHTML(localStatsData.gueteT2_angewandt, `T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, _currentKollektivGlobal);
         const vergleichHTML = _createVergleichContentHTML(localStatsData.vergleichASvsT2_angewandt, _currentKollektivGlobal, APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME);
@@ -375,17 +384,16 @@ const statistikTabLogic = (() => {
              col2.innerHTML = "<p class='text-danger'>Fehler: Statistik Karten Komponente nicht geladen.</p>";
         }
 
-
         contentArea.appendChild(col1);
         contentArea.appendChild(col2);
 
         if (localStatsData.deskriptiv?.alterData && localStatsData.deskriptiv.alterData.length > 0 && typeof chart_renderer !== 'undefined' && chart_renderer.renderAgeDistributionChart) {
             chart_renderer.renderAgeDistributionChart('chart-stat-age-0', localStatsData.deskriptiv.alterData, _currentKollektivGlobal, {title: ''});
         }
-        if (localStatsData.deskriptiv?.geschlecht && typeof chart_renderer !== 'undefined' && chart_renderer.renderPieChart) {
+        if (localStatsData.deskriptiv?.geschlecht && typeof chart_renderer !== 'undefined' && chart_renderer.renderPieChart && UI_TEXTS && UI_TEXTS.legendLabels && APP_CONFIG && APP_CONFIG.CHART_SETTINGS) {
             const genderData = [
-                { label: UI_TEXTS.legendLabels.male, value: localStatsData.deskriptiv.geschlecht.m, color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE },
-                { label: UI_TEXTS.legendLabels.female, value: localStatsData.deskriptiv.geschlecht.f, color: APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN }
+                { label: UI_TEXTS.legendLabels.male, value: localStatsData.deskriptiv.geschlecht.m || 0, color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE },
+                { label: UI_TEXTS.legendLabels.female, value: localStatsData.deskriptiv.geschlecht.f || 0, color: APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN }
             ].filter(d => d.value > 0);
             if(genderData.length > 0) chart_renderer.renderPieChart('chart-stat-gender-0', genderData, { title: '', compact: true, donut: true, showLegend: false });
         }
@@ -401,7 +409,6 @@ const statistikTabLogic = (() => {
         let localStatsVergleich = _statsVergleichKollektive;
         let localCriteriaCompResults = _criteriaComparisonResults;
 
-
         if (_isDataStale || !localStatsK1) { localStatsK1 = _calculateStatsForKollektiv(_statsKollektiv1); _statsDataKollektiv1 = localStatsK1; }
         if (_isDataStale || !localStatsK2) { localStatsK2 = _calculateStatsForKollektiv(_statsKollektiv2); _statsDataKollektiv2 = localStatsK2; }
         
@@ -414,7 +421,7 @@ const statistikTabLogic = (() => {
             _statsVergleichKollektive = localStatsVergleich;
         }
         if (_isDataStale || !localCriteriaCompResults) {
-            localCriteriaCompResults = _calculateCriteriaComparison(_currentKollektivGlobal); // Basis bleibt das globale Kollektiv für den Kriterienvergleich
+            localCriteriaCompResults = _calculateCriteriaComparison(_currentKollektivGlobal);
             _criteriaComparisonResults = localCriteriaCompResults;
         }
 
@@ -422,7 +429,7 @@ const statistikTabLogic = (() => {
         const col2 = document.createElement('div'); col2.className = 'col-lg-6 d-flex flex-column';
 
         if (localStatsK1 && typeof localStatsK1 === 'object' && typeof uiComponents !== 'undefined') {
-            const deskHTML1 = _createDeskriptiveStatistikContentHTML(localStatsK1, '1', _statsKollektiv1);
+            const deskHTML1 = (localStatsK1.deskriptiv && typeof localStatsK1.deskriptiv === 'object') ? _createDeskriptiveStatistikContentHTML(localStatsK1, '1', _statsKollektiv1) : `<p class="text-muted">Deskriptive Daten für ${getKollektivDisplayName(_statsKollektiv1)} nicht verfügbar.</p>`;
             const gueteASHTML1 = _createGueteContentHTML(localStatsK1.gueteAS, 'AS', _statsKollektiv1);
             const gueteT2HTML1 = _createGueteContentHTML(localStatsK1.gueteT2_angewandt, `T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, _statsKollektiv1);
             col1.innerHTML += uiComponents.createStatistikCard('stat-deskriptiv-k1', `Deskriptiv (${getKollektivDisplayName(_statsKollektiv1)})`, deskHTML1, false, 'deskriptiveStatistik', [], 'table-deskriptiv-demographie-1');
@@ -433,7 +440,7 @@ const statistikTabLogic = (() => {
         }
 
         if (localStatsK2 && typeof localStatsK2 === 'object' && typeof uiComponents !== 'undefined') {
-            const deskHTML2 = _createDeskriptiveStatistikContentHTML(localStatsK2, '2', _statsKollektiv2);
+            const deskHTML2 = (localStatsK2.deskriptiv && typeof localStatsK2.deskriptiv === 'object') ? _createDeskriptiveStatistikContentHTML(localStatsK2, '2', _statsKollektiv2) : `<p class="text-muted">Deskriptive Daten für ${getKollektivDisplayName(_statsKollektiv2)} nicht verfügbar.</p>`;
             const gueteASHTML2 = _createGueteContentHTML(localStatsK2.gueteAS, 'AS', _statsKollektiv2);
             const gueteT2HTML2 = _createGueteContentHTML(localStatsK2.gueteT2_angewandt, `T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, _statsKollektiv2);
             col2.innerHTML += uiComponents.createStatistikCard('stat-deskriptiv-k2', `Deskriptiv (${getKollektivDisplayName(_statsKollektiv2)})`, deskHTML2, false, 'deskriptiveStatistik', [], 'table-deskriptiv-demographie-2');
@@ -460,13 +467,13 @@ const statistikTabLogic = (() => {
         contentArea.appendChild(row3);
 
         if (localStatsK1?.deskriptiv?.alterData && localStatsK1.deskriptiv.alterData.length > 0 && typeof chart_renderer !== 'undefined') chart_renderer.renderAgeDistributionChart('chart-stat-age-1', localStatsK1.deskriptiv.alterData, _statsKollektiv1, {title:''});
-        if (localStatsK1?.deskriptiv?.geschlecht && typeof chart_renderer !== 'undefined') {
-            const genderData1 = [ { label: UI_TEXTS.legendLabels.male, value: localStatsK1.deskriptiv.geschlecht.m, color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE }, { label: UI_TEXTS.legendLabels.female, value: localStatsK1.deskriptiv.geschlecht.f, color: APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN }].filter(d=>d.value > 0);
+        if (localStatsK1?.deskriptiv?.geschlecht && typeof chart_renderer !== 'undefined' && UI_TEXTS && UI_TEXTS.legendLabels && APP_CONFIG && APP_CONFIG.CHART_SETTINGS) {
+            const genderData1 = [ { label: UI_TEXTS.legendLabels.male, value: localStatsK1.deskriptiv.geschlecht.m || 0, color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE }, { label: UI_TEXTS.legendLabels.female, value: localStatsK1.deskriptiv.geschlecht.f || 0, color: APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN }].filter(d=>d.value > 0);
             if(genderData1.length > 0) chart_renderer.renderPieChart('chart-stat-gender-1', genderData1, {title: '', compact:true, donut:true, showLegend: false});
         }
         if (localStatsK2?.deskriptiv?.alterData && localStatsK2.deskriptiv.alterData.length > 0 && typeof chart_renderer !== 'undefined') chart_renderer.renderAgeDistributionChart('chart-stat-age-2', localStatsK2.deskriptiv.alterData, _statsKollektiv2, {title:''});
-        if (localStatsK2?.deskriptiv?.geschlecht && typeof chart_renderer !== 'undefined') {
-            const genderData2 = [ { label: UI_TEXTS.legendLabels.male, value: localStatsK2.deskriptiv.geschlecht.m, color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE }, { label: UI_TEXTS.legendLabels.female, value: localStatsK2.deskriptiv.geschlecht.f, color: APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN }].filter(d=>d.value > 0);
+        if (localStatsK2?.deskriptiv?.geschlecht && typeof chart_renderer !== 'undefined' && UI_TEXTS && UI_TEXTS.legendLabels && APP_CONFIG && APP_CONFIG.CHART_SETTINGS) {
+            const genderData2 = [ { label: UI_TEXTS.legendLabels.male, value: localStatsK2.deskriptiv.geschlecht.m || 0, color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE }, { label: UI_TEXTS.legendLabels.female, value: localStatsK2.deskriptiv.geschlecht.f || 0, color: APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN }].filter(d=>d.value > 0);
             if(genderData2.length > 0) chart_renderer.renderPieChart('chart-stat-gender-2', genderData2, {title: '', compact:true, donut:true, showLegend: false});
         }
     }
@@ -493,7 +500,7 @@ const statistikTabLogic = (() => {
         }
         
         _isInitialized = true;
-        _isDataStale = false;
+        _isDataStale = false; // Setze stale auf false, nachdem die Daten neu berechnet und gerendert wurden
         if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.initializeTooltips === 'function') {
              ui_helpers.initializeTooltips(document.getElementById('statistik-content-area'));
         }
