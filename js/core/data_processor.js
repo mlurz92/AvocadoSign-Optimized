@@ -6,8 +6,6 @@ const dataProcessor = (() => {
             return false;
         }
 
-        // Primäre Prüfung: id_patient muss ein nicht-leerer String sein, wie in der Anwendungsbeschreibung gefordert.
-        // Fallback: Wenn id_patient nicht vorhanden/valide ist, prüfe ob nr eine valide Zahl ist.
         const hasValidIdPatient = typeof patient.id_patient === 'string' && patient.id_patient.trim() !== '';
         const hasValidNr = typeof patient.nr === 'number' && !isNaN(patient.nr) && isFinite(patient.nr);
 
@@ -16,9 +14,10 @@ const dataProcessor = (() => {
             return false;
         }
 
-        if (patient.geschlecht && !['m', 'w', 'd', null, undefined, ''].includes(String(patient.geschlecht).toLowerCase())) {
-            console.warn(`Ungültiges Geschlecht '${patient.geschlecht}' für Patient ${patient.id_patient || patient.nr}. Wird zu 'unbekannt' normalisiert.`);
-            patient.geschlecht = null;
+        // Akzeptiere 'm', 'w', 'f', 'd' und normalisiere später in processSinglePatient
+        if (patient.geschlecht && !['m', 'w', 'f', 'd', null, undefined, ''].includes(String(patient.geschlecht).toLowerCase())) {
+            console.warn(`Ungültiges Geschlecht '${patient.geschlecht}' für Patient ${patient.id_patient || patient.nr}. Wird zu 'unbekannt' normalisiert durch processSinglePatient.`);
+            // Die eigentliche Normalisierung/Korrektur erfolgt in processSinglePatient
         }
         if (patient.therapie && !['direkt OP', 'nRCT', null, undefined, ''].includes(patient.therapie)) {
             console.warn(`Ungültige Therapie '${patient.therapie}' für Patient ${patient.id_patient || patient.nr}. Wird zu 'unbekannt' normalisiert.`);
@@ -88,9 +87,17 @@ const dataProcessor = (() => {
         p.nr = parseInt(p.nr, 10);
         if (isNaN(p.nr) || !isFinite(p.nr)) p.nr = null;
 
-
         p.alter = _calculateAge(p.geburtsdatum, p.untersuchungsdatum);
-        p.geschlecht = (p.geschlecht === 'm' || p.geschlecht === 'w') ? p.geschlecht : 'unbekannt';
+
+        const geschlechtLower = String(p.geschlecht || '').toLowerCase();
+        if (geschlechtLower === 'm') {
+            p.geschlecht = 'm';
+        } else if (geschlechtLower === 'w' || geschlechtLower === 'f') { // Akzeptiere 'f' und normalisiere es intern zu 'w', falls das der App-Standard ist, oder behalte 'f'
+            p.geschlecht = 'f'; // Behalte 'f' bei, da data.js 'f' verwendet. Alternativ: 'w'
+        } else {
+            p.geschlecht = 'unbekannt';
+        }
+
         p.therapie = (p.therapie === 'direkt OP' || p.therapie === 'nRCT') ? p.therapie : 'unbekannt';
         p.n = (p.n === '+' || p.n === '-') ? p.n : 'unbekannt';
         p.as = (p.as === '+' || p.as === '-') ? p.as : 'unbekannt';
@@ -115,11 +122,10 @@ const dataProcessor = (() => {
                 p[key] = parseInt(val, 10);
             }
         });
-        
+
         if(!p.id_patient && p.nr !== null) {
             p.id_patient = `Pat_${String(p.nr).padStart(3, '0')}`;
         }
-
 
         return p;
     }
