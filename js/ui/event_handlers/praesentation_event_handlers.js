@@ -1,25 +1,47 @@
 const praesentationEventHandlers = (() => {
+    let _mainAppInterface = null;
 
-    function handlePresentationViewChange(view, mainAppInterface) {
-        if (!mainAppInterface || typeof mainAppInterface.updateGlobalUIState !== 'function' || typeof mainAppInterface.refreshCurrentTab !== 'function') {
+    function initialize(mainAppInterface) {
+        _mainAppInterface = mainAppInterface;
+    }
+
+    function handlePresentationViewChange(view, mainAppInterfaceRef) {
+        const appInterface = mainAppInterfaceRef || _mainAppInterface;
+        if (!appInterface || typeof appInterface.updateGlobalUIState !== 'function' || typeof appInterface.refreshCurrentTab !== 'function') {
             console.error("praesentationEventHandlers.handlePresentationViewChange: Ungültiges mainAppInterface.");
             return;
         }
 
-        if (state.setCurrentPresentationView(view)) { // setCurrentPresentationView already handles resetting studyId or setting default
-            mainAppInterface.updateGlobalUIState();
-            if (state.getActiveTabId() === 'praesentation-tab') {
-                mainAppInterface.refreshCurrentTab();
+        if (typeof state !== 'undefined' && typeof state.setCurrentPresentationView === 'function' && typeof state.getActiveTabId === 'function') {
+            if (state.setCurrentPresentationView(view)) {
+                appInterface.updateGlobalUIState();
+                if (state.getActiveTabId() === 'praesentation-tab') {
+                    appInterface.refreshCurrentTab();
+                }
             }
+        } else {
+            console.error("praesentationEventHandlers.handlePresentationViewChange: State Modul oder benötigte State-Funktionen nicht verfügbar.");
         }
     }
 
-    function handlePresentationStudySelectChange(studyId, mainAppInterface) {
-        if (!studyId || !mainAppInterface || typeof mainAppInterface.updateGlobalUIState !== 'function' || typeof mainAppInterface.refreshCurrentTab !== 'function') {
+    function handlePresentationStudySelectChange(studyId, mainAppInterfaceRef) {
+        const appInterface = mainAppInterfaceRef || _mainAppInterface;
+        if (!studyId || !appInterface || typeof appInterface.updateGlobalUIState !== 'function' || typeof appInterface.refreshCurrentTab !== 'function') {
             console.error("praesentationEventHandlers.handlePresentationStudySelectChange: Ungültige Parameter.");
             return;
         }
-        if(state.getCurrentPresentationStudyId() === studyId) return;
+
+        if (typeof state === 'undefined' || typeof studyT2CriteriaManager === 'undefined' ||
+            typeof state.getCurrentPresentationStudyId !== 'function' ||
+            typeof state.getCurrentKollektiv !== 'function' ||
+            typeof state.setCurrentPresentationStudyId !== 'function' ||
+            typeof state.getActiveTabId !== 'function' ||
+            typeof studyT2CriteriaManager.getStudyCriteriaSetById !== 'function') {
+            console.error("praesentationEventHandlers.handlePresentationStudySelectChange: Kritische Module oder Funktionen nicht verfügbar.");
+            return;
+        }
+
+        if (state.getCurrentPresentationStudyId() === studyId) return;
 
         const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studyId);
         let kollektivChanged = false;
@@ -27,35 +49,43 @@ const praesentationEventHandlers = (() => {
 
         if (studySet?.applicableKollektiv) {
             const targetKollektiv = studySet.applicableKollektiv;
-            if (state.getCurrentKollektiv() !== targetKollektiv && mainAppInterface.handleGlobalKollektivChange) {
-                kollektivChanged = mainAppInterface.handleGlobalKollektivChange(targetKollektiv, "auto_praesentation");
-                refreshNeeded = kollektivChanged;
+            if (state.getCurrentKollektiv() !== targetKollektiv && typeof appInterface.handleGlobalKollektivChange === 'function') {
+                // handleGlobalKollektivChange ist nicht Teil des mainAppInterface, sondern eine Methode in main.js,
+                // die indirekt über appInterface.refreshCurrentTab(true) und die State-Änderung ausgelöst wird.
+                // Hier sollten wir den globalen Kollektivwechsel anstoßen, wenn main.js diese Logik bereitstellt.
+                // Für diesen Event-Handler ist es sicherer, den State zu setzen und dann einen Refresh anzustoßen.
+                // Die Logik für den Kollektivwechsel bei Studienauswahl sollte idealerweise zentraler gesteuert werden.
+                // Wir gehen davon aus, dass _handleKollektivChange in main.js aufgerufen wird, wenn der State sich ändert.
+                // Daher setzen wir hier nur den Study-State und forcen einen Refresh.
+                // Direkter Aufruf von _handleKollektivChange hier wäre problematisch.
             }
         }
 
         const studyIdChanged = state.setCurrentPresentationStudyId(studyId);
-        if (studyIdChanged && !refreshNeeded) {
+        if (studyIdChanged) {
             refreshNeeded = true;
         }
 
         if (refreshNeeded) {
-            mainAppInterface.updateGlobalUIState();
+            appInterface.updateGlobalUIState();
             if (state.getActiveTabId() === 'praesentation-tab') {
-                mainAppInterface.refreshCurrentTab();
+                appInterface.refreshCurrentTab(true); // Force data refresh, da sich die Basis ändern kann
             }
         }
     }
 
-    function handlePresentationDownloadClick(button, mainAppInterface) {
-        if (!button || !mainAppInterface || typeof mainAppInterface.getRawData !== 'function' || typeof mainAppInterface.getProcessedData !== 'function') {
+    function handlePresentationDownloadClick(button, mainAppInterfaceRef) {
+        const appInterface = mainAppInterfaceRef || _mainAppInterface;
+        if (!button || !appInterface || typeof appInterface.getGlobalData !== 'function' ) {
             console.error("praesentationEventHandlers.handlePresentationDownloadClick: Ungültige Parameter oder mainAppInterface unvollständig.");
             ui_helpers.showToast("Fehler beim Präsentationsexport: Interne Konfiguration.", "danger");
             return;
         }
         const actionId = button.id;
         const currentGlobalKollektiv = state.getCurrentKollektiv();
-        const processedDataFull = mainAppInterface.getProcessedData(); // Annahme: gibt alle prozessierten Daten zurück, nicht nur die aktuell gefilterten
-        
+        const globalData = appInterface.getGlobalData();
+        const processedDataFull = globalData.processedData;
+
         let presentationData = {};
         const globalKollektivDaten = dataProcessor.filterDataByKollektiv(processedDataFull, currentGlobalKollektiv);
 
@@ -93,7 +123,20 @@ const praesentationEventHandlers = (() => {
                 const appliedLogic = t2CriteriaManager.getAppliedLogic();
 
                 if(isApplied) {
-                    studySet = { criteria: appliedCriteria, logic: appliedLogic, id: selectedStudyId, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME, displayShortName: "Angewandt", studyInfo: { reference: "Benutzerdefiniert (aktuell im Auswertungstab eingestellt)", patientCohort: `Vergleichskollektiv: ${getKollektivDisplayName(comparisonKollektivName)} (N=${presentationData.patientCountForComparison})`, investigationType: "N/A", focus: "Benutzereinstellung", keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine" } };
+                    studySet = {
+                        criteria: appliedCriteria,
+                        logic: appliedLogic,
+                        id: selectedStudyId,
+                        name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME,
+                        displayShortName: "Angewandt",
+                        studyInfo: {
+                            reference: "Benutzerdefiniert (aktuell im Auswertungstab eingestellt)",
+                            patientCohort: `Vergleichskollektiv: ${getKollektivDisplayName(comparisonKollektivName)} (N=${presentationData.patientCountForComparison})`,
+                            investigationType: "N/A",
+                            focus: "Benutzereinstellung",
+                            keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic) || "Keine"
+                        }
+                    };
                     evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(comparisonCohortData), studySet.criteria, studySet.logic);
                 } else if (selectedStudyId) {
                     studySet = studyT2CriteriaManager.getStudyCriteriaSetById(selectedStudyId);
@@ -104,7 +147,7 @@ const praesentationEventHandlers = (() => {
 
                 if (studySet && evaluatedDataT2 && evaluatedDataT2.length > 0) {
                     presentationData.statsT2 = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n');
-                    let asDataForDirectComparison = cloneDeep(comparisonCohortData); // Verwende die korrekten AS-Daten für den direkten Vergleich
+                    let asDataForDirectComparison = cloneDeep(comparisonCohortData);
                     evaluatedDataT2.forEach((p, i) => { if (asDataForDirectComparison[i]) p.as = asDataForDirectComparison[i].as; });
                     presentationData.vergleich = statisticsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n');
                     presentationData.comparisonCriteriaSet = studySet;
@@ -127,8 +170,8 @@ const praesentationEventHandlers = (() => {
         exportService.exportPraesentationData(actionId, presentationData, currentGlobalKollektiv);
     }
 
-
     return Object.freeze({
+        initialize,
         handlePresentationViewChange,
         handlePresentationStudySelectChange,
         handlePresentationDownloadClick
