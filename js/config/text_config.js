@@ -26,6 +26,13 @@ const UI_TEXTS = {
         'ODER': 'ODER',
         'KOMBINIERT': 'KOMBINIERT (ESGAR-Logik)'
     },
+    t2CriteriaShort: {
+        size: 'Größe',
+        form: 'Form',
+        kontur: 'Kontur',
+        homogenitaet: 'Homog.',
+        signal: 'Signal'
+    },
     publikationTab: {
         spracheSwitchLabel: {
             de: 'Deutsch',
@@ -108,7 +115,7 @@ const UI_TEXTS = {
                 <li><strong>Daten:</strong> Zeigt Patientendaten. Reihen sind für T2-LK-Details aufklappbar.</li>
                 <li><strong>Auswertung:</strong>
                     <ul>
-                        <li>Definieren Sie hier <strong>T2-Malignitätskriterien</strong> (Größe, Form etc.) und die <strong>Logik</strong> (UND/ODER).</li>
+                        <li>Definieren Sie hier <strong>T2-Malignitätskriterien</strong> (Größe, Form etc.) und die <strong>Logik</strong> (UND/ODER/KOMBINIERT).</li>
                         <li>Klicken Sie <strong>"Anwenden & Speichern"</strong>, um Ihre T2-Definitionen auf den Datensatz anzuwenden und die Ergebnisse in allen Tabs zu aktualisieren. Ungespeicherte Änderungen werden markiert.</li>
                         <li>Starten Sie die <strong>Brute-Force-Optimierung</strong>, um datengetrieben die besten T2-Kriterien für eine Zielmetrik zu finden.</li>
                     </ul>
@@ -126,6 +133,24 @@ const UI_TEXTS = {
         `
     },
     statMetrics: {
+        sens: { name: "Sensitivität", digits: 1 },
+        spez: { name: "Spezifität", digits: 1 },
+        ppv: { name: "PPV", digits: 1 },
+        npv: { name: "NPV", digits: 1 },
+        acc: { name: "Accuracy", digits: 1 },
+        balAcc: { name: "Balanced Accuracy", digits: 3 },
+        f1: { name: "F1-Score", digits: 3 },
+        auc: { name: "AUC", digits: 3 },
+        phi: { name: "Phi-Koeffizient", digits: 3 },
+        or: { name: "Odds Ratio", digits: 2 },
+        rd: { name: "Risk Difference", digits: 1 }, // Wird als Prozent mit einer Nachkommastelle angezeigt
+        mcnemar: { name: "McNemar-Test" },
+        delong: { name: "DeLong-Test" },
+        fisher: { name: "Fisher's Exact Test" },
+        mannwhitney: { name: "Mann-Whitney-U-Test"},
+        pvalue: { name: "p-Wert" },
+        defaultP: { name: "p-Wert"},
+        size_mwu: { name: "LK Größe (MWU)"},
         signifikanzTexte: {
             SIGNIFIKANT: "statistisch signifikant",
             NICHT_SIGNIFIKANT: "statistisch nicht signifikant"
@@ -168,7 +193,7 @@ const TOOLTIP_CONTENT = {
         auswertung: "Zentraler Tab zur Definition von T2-Kriterien, Anzeige eines deskriptiven Dashboards, Durchführung der Brute-Force-Optimierung und detaillierte Auswertungsergebnisse pro Patient basierend auf den angewendeten Kriterien.",
         statistik: "Bietet detaillierte statistische Analysen (Gütekriterien, Vergleiche, Assoziationen) für das global gewählte Kollektiv oder einen Vergleich zweier spezifisch wählbarer Kollektive. Alle Konfidenzintervalle (CI) sind 95%-CIs.",
         praesentation: "Stellt Analyseergebnisse in einem aufbereiteten, präsentationsfreundlichen Format dar, fokussiert auf den Vergleich des Avocado Signs mit T2-basierten Ansätzen (angewandt oder Literatur).",
-        publikation: "Generiert Textvorschläge und Materialien für Publikationen zum Vergleich von Avocado Sign mit verschiedenen T2-Kriteriensets. Berücksichtigt Formatierungsaspekte für das Journal 'Radiology'.",
+        publikation: "Generiert Textvorschläge und Materialien für wissenschaftliche Publikationen zum Vergleich von Avocado Sign mit verschiedenen T2-Kriteriensets. Berücksichtigt Formatierungsaspekte für das Journal 'Radiology'.",
         export: "Bietet umfangreiche Optionen zum Herunterladen von Rohdaten, Analyseergebnissen, Tabellen und Diagrammen in verschiedenen Dateiformaten.",
         moreTabsDropdown: "Weitere Tabs anzeigen."
     },
@@ -176,10 +201,10 @@ const TOOLTIP_CONTENT = {
         nr: "Fortlaufende Nummer des Patienten.",
         name: "Nachname des Patienten (anonymisiert/kodiert).",
         vorname: "Vorname des Patienten (anonymisiert/kodiert).",
-        geschlecht: "Geschlecht des Patienten (m: männlich, w: weiblich, unbekannt).",
+        geschlecht: "Geschlecht des Patienten (m: männlich, f: weiblich, unbekannt).",
         alter: "Alter des Patienten zum Zeitpunkt der MRT-Untersuchung in Jahren.",
         therapie: "Angewandte Therapie vor der Operation (nRCT: neoadjuvante Radiochemotherapie, direkt OP: keine Vorbehandlung). Beeinflusst die Kollektivauswahl.",
-        n_as_t2: "Direkter Statusvergleich: N (Pathologie-Referenz), AS (Avocado Sign), T2 (aktuelle Kriterien). Klicken Sie auf N, AS oder T2 im Spaltenkopf zur Sub-Sortierung.",
+        status: "Direkter Statusvergleich: N (Pathologie-Referenz), AS (Avocado Sign), T2 (aktuelle Kriterien). Klicken Sie auf N, AS oder T2 im Spaltenkopf zur Sub-Sortierung.",
         bemerkung: "Zusätzliche klinische oder radiologische Bemerkungen zum Patientenfall, falls vorhanden.",
         expandAll: "Öffnet oder schließt die Detailansicht zu den T2-gewichteten Lymphknotenmerkmalen für alle Patienten in der aktuellen Tabellenansicht. Zeigt Größe, Form, Kontur, Homogenität und Signal für jeden LK.",
         expandRow: "Klicken Sie hier oder auf den Pfeil-Button, um Details zu den morphologischen Eigenschaften der T2-gewichteten Lymphknoten dieses Patienten anzuzeigen/auszublenden. Nur verfügbar, wenn T2-LK-Daten vorhanden sind."
@@ -188,14 +213,14 @@ const TOOLTIP_CONTENT = {
         nr: "Fortlaufende Nummer des Patienten.",
         name: "Nachname des Patienten (anonymisiert/kodiert).",
         therapie: "Angewandte Therapie vor der Operation.",
-        n_as_t2: "Direkter Statusvergleich: N (Pathologie-Referenz), AS (Avocado Sign), T2 (aktuelle Kriterien). Klicken Sie auf N, AS oder T2 im Spaltenkopf zur Sub-Sortierung.",
+        status: "Direkter Statusvergleich: N (Pathologie-Referenz), AS (Avocado Sign), T2 (aktuelle Kriterien). Klicken Sie auf N, AS oder T2 im Spaltenkopf zur Sub-Sortierung.",
         n_counts: "Anzahl pathologisch positiver (N+) Lymphknoten / Gesamtzahl histopathologisch untersuchter Lymphknoten für diesen Patienten.",
         as_counts: "Anzahl als positiv bewerteter Avocado Sign (AS+) Lymphknoten / Gesamtzahl im T1KM-MRT sichtbarer Lymphknoten für diesen Patienten.",
         t2_counts: "Anzahl als positiv bewerteter T2-Lymphknoten (gemäß aktuell angewendeter Kriterien) / Gesamtzahl im T2-MRT sichtbarer Lymphknoten für diesen Patienten.",
         expandAll: "Öffnet oder schließt die Detailansicht der bewerteten T2-gewichteten Lymphknoten und der erfüllten Kriterien für alle Patienten in der aktuellen Tabellenansicht.",
         expandRow: "Klicken Sie hier oder auf den Pfeil-Button, um die detaillierte Bewertung der einzelnen T2-gewichteten Lymphknoten dieses Patienten gemäß der aktuell angewendeten Kriterien anzuzeigen/auszublenden. Erfüllte Positiv-Kriterien werden hervorgehoben."
     },
-    t2Logic: { description: `Logische Verknüpfung der aktiven T2-Kriterien: <strong>UND</strong> (Ein Lymphknoten ist nur positiv, wenn ALLE aktivierten Kriterien erfüllt sind). <strong>ODER</strong> (Ein Lymphknoten ist positiv, wenn MINDESTENS EIN aktiviertes Kriterium erfüllt ist). Die Wahl beeinflusst die Berechnung des T2-Status.` },
+    t2Logic: { description: `Logische Verknüpfung der aktiven T2-Kriterien: <strong>UND</strong> (Ein Lymphknoten ist nur positiv, wenn ALLE aktivierten Kriterien erfüllt sind). <strong>ODER</strong> (Ein Lymphknoten ist positiv, wenn MINDESTENS EIN aktiviertes Kriterium erfüllt ist). <strong>KOMBINIERT</strong> (ESGAR-Logik für Primärstaging [Rutegård et al. 2025]: LK ≥9mm; oder 5-8.9mm UND ≥2 verdächtige Merkmale; oder <5mm UND 3 verdächtige Merkmale. Verdächtige Merkmale: Form 'rund', Kontur 'irregulär', Homogenität 'heterogen'. Muzinöse LK gelten immer als suspekt - dies wird hier nicht explizit modelliert, da das Merkmal 'Signal' in der ESGAR-Definition für Primärstaging keine Rolle spielt und 'muzinoes' kein Standard-T2-Merkmal ist). Die Wahl beeinflusst die Berechnung des T2-Status.` },
     t2Size: { description: `Größenkriterium (Kurzachse): Lymphknoten mit einem Durchmesser <strong>größer oder gleich (≥)</strong> dem eingestellten Schwellenwert gelten als suspekt. Einstellbarer Bereich: ${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min} - ${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max} mm (Schritt: ${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step} mm). Aktivieren/Deaktivieren mit Checkbox.` },
     t2Form: { description: "Formkriterium: Wählen Sie, welche Form ('rund' oder 'oval') als suspekt gilt. Aktivieren/Deaktivieren mit Checkbox." },
     t2Kontur: { description: "Konturkriterium: Wählen Sie, welche Kontur ('scharf' berandet oder 'irregulär') als suspekt gilt. Aktivieren/Deaktivieren mit Checkbox." },
@@ -228,7 +253,7 @@ const TOOLTIP_CONTENT = {
     bruteForceDetailsButton: { description: "Öffnet ein Fenster mit den Top 10 Ergebnissen (und weiteren bei gleichem Score) sowie zusätzlichen Performance-Metriken (Sens, Spez, PPV, NPV) für jede dieser Top-Kombinationen. Ermöglicht auch den Export des detaillierten Berichts." },
     bruteForceModal: {
         title: "Brute-Force Optimierungsergebnisse",
-        exportButton: "Exportiert den detaillierten Brute-Force-Bericht als TXT.",
+        exportButton: "Exportiert den detaillierten Brute-Force-Bericht (Top-Ergebnisse, Konfiguration) als Textdatei (.txt).",
         rank: "Rang des Ergebnisses.",
         zielmetrik: "Erreichter Wert der Zielmetrik ([ZIELMETRIK_NAME]). Höher ist besser.",
         sens: "Sensitivität dieser Kriterienkombination.",
@@ -238,43 +263,64 @@ const TOOLTIP_CONTENT = {
         logik: "Verwendete logische Verknüpfung (UND/ODER).",
         kriterien: "Kombination der T2-Malignitätskriterien."
     },
+    statistikTab: {
+        deskriptiv: {
+            anzahlPatienten: "Gesamtzahl der Patienten im aktuellen Kollektiv.",
+            alterMedian: "Medianes Alter der Patienten in Jahren, mit Interquartilsabstand (IQR: Q1-Q3).",
+            alterMean: "Mittleres Alter der Patienten in Jahren, mit Standardabweichung (SD).",
+            geschlecht: "Anzahl männlicher / weiblicher Patienten im Kollektiv.",
+            nStatus: "Anzahl Patienten mit positivem N-Status / negativem N-Status (Pathologie).",
+            asStatus: "Anzahl Patienten mit positivem Avocado Sign / negativem Avocado Sign.",
+            t2StatusAngewandt: "Anzahl Patienten mit positivem T2-Status / negativem T2-Status (basierend auf aktuell angewendeten Kriterien).",
+            alterChart: "Histogramm der Altersverteilung im aktuell ausgewählten Kollektiv.",
+            geschlechtChart: "Tortendiagramm der Geschlechterverteilung im aktuell ausgewählten Kollektiv."
+        },
+        diagnostischeGuete: {
+            sens: "Sensitivität: Anteil der N+ Fälle, die von [METHODE] korrekt als positiv erkannt wurden.",
+            spez: "Spezifität: Anteil der N- Fälle, die von [METHODE] korrekt als negativ erkannt wurden.",
+            ppv: "Positiver Prädiktiver Wert (PPV): Wahrscheinlichkeit, dass ein [METHODE]+ Fall tatsächlich N+ ist.",
+            npv: "Negativer Prädiktiver Wert (NPV): Wahrscheinlichkeit, dass ein [METHODE]- Fall tatsächlich N- ist.",
+            acc: "Accuracy: Gesamtanteil der von [METHODE] korrekt klassifizierten Fälle.",
+            balAcc: "Balanced Accuracy: Mittelwert aus Sensitivität und Spezifität für [METHODE].",
+            f1: "F1-Score: Harmonisches Mittel aus PPV und Sensitivität für [METHODE].",
+            auc: "AUC: Fläche unter der ROC-Kurve für [METHODE]; äquivalent zur Balanced Accuracy bei binären Tests.",
+            konfusionsmatrix: "Konfusionsmatrix: Ergebnis der Klassifikation von [METHODE] vs. N-Status (RP: Richtig Positiv, FP: Falsch Positiv, FN: Falsch Negativ, RN: Richtig Negativ)."
+        },
+        vergleichASvsT2: {
+            mcnemarTest: "McNemar-Test: Vergleicht die Accuracy von AS vs. [T2_SHORT_NAME] auf gepaarten Daten.",
+            delongTest: "DeLong-Test: Vergleicht die AUC von AS vs. [T2_SHORT_NAME] auf gepaarten Daten.",
+            mcnemarStatistik: "Chi-Quadrat-Wert des McNemar-Tests mit Freiheitsgraden (df).",
+            delongStatistik: "Z-Wert des DeLong-Tests."
+        },
+        assoziationsanalyse: {
+            kriterium: "Einzelnes T2-Kriterium (aus den aktuell angewendeten) oder AS-Status.",
+            praevalenz: "Prävalenz des Merkmals bei Patienten mit pathologisch positivem N-Status (N+).",
+            oddsRatio: "Odds Ratio (OR) mit 95% Konfidenzintervall (CI): Maß für den Zusammenhang zwischen dem Merkmal und dem N-Status.",
+            pValue: "p-Wert für die Assoziation (z.B. aus Fisher's Exact Test für OR)."
+        },
+        vergleichKollektive: {
+            metrik: "Diagnostische Gütemetrik.",
+            methode: "Diagnostische Methode (AS oder aktuell angewandte T2-Kriterien).",
+            kollektiv1Value: "Wert der Metrik (inkl. 95% CI) für Kollektiv [KOLLEKTIV_1].",
+            kollektiv2Value: "Wert der Metrik (inkl. 95% CI) für Kollektiv [KOLLEKTIV_2].",
+            pValue: "p-Wert für den Unterschied der Metrik zwischen den beiden Kollektiven (ungepaarter Test)."
+        },
+        kriterienVergleichsTabelle: {
+            kriteriumName: "Name des Kriteriensets oder der Methode.",
+            sens: "Sensitivität (Wert ohne CI).",
+            spez: "Spezifität (Wert ohne CI).",
+            ppv: "Positiver Prädiktiver Wert (PPV) (Wert ohne CI).",
+            npv: "Negativer Prädiktiver Wert (NPV) (Wert ohne CI).",
+            acc: "Accuracy (Wert ohne CI).",
+            auc: "Area Under Curve (AUC) / Balanced Accuracy (Wert ohne CI).",
+            kollektiv: "Evaluiertes Kollektiv (mit Patientenzahl N). Dies kann vom global gewählten Kollektiv abweichen, wenn ein Literatur-Set ein spezifisches Zielkollektiv hat."
+        }
+    },
     statistikLayout: { description: "Wählen Sie die Anzeigeart: <strong>Einzelansicht</strong> für das global gewählte Kollektiv oder <strong>Vergleich Aktiv</strong> zur Auswahl und Gegenüberstellung zweier spezifischer Kollektive." },
     statistikKollektiv1: { description: "Wählen Sie das erste Kollektiv für die statistische Auswertung oder den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv')." },
     statistikKollektiv2: { description: "Wählen Sie das zweite Kollektiv für den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv')." },
     statistikToggleVergleich: { description: "Schaltet zwischen der detaillierten Einzelansicht für das global gewählte Kollektiv und der Vergleichsansicht zweier spezifisch wählbarer Kollektive um." },
-    deskriptiveStatistik: {
-        cardTitle: "Demographie, klinische Daten und Lymphknoten-Basiszahlen des Kollektivs <strong>[KOLLEKTIV]</strong>.",
-        alterMedian: { description: "Median des Alters mit Bereich (Min-Max) und [Mittelwert ± Standardabweichung].", name: "Alter", unit: "Jahre" },
-        geschlecht: { description: "Absolute und prozentuale Geschlechterverteilung.", name: "Geschlecht" },
-        nStatus: { description: "Verteilung des pathologischen N-Status (+/-).", name: "N-Status (Patho)"},
-        asStatus: { description: "Verteilung des Avocado Sign Status (+/-).", name: "AS-Status" },
-        t2Status: { description: "Verteilung des T2-Status (+/-) basierend auf den aktuell angewendeten Kriterien.", name: "T2-Status (angewandt)" },
-        lkAnzahlPatho: { description: "Anzahl histopathologisch untersuchter Lymphknoten pro Patient.", name: "LK N gesamt" },
-        lkAnzahlPathoPlus: { description: "Anzahl pathologisch positiver (N+) Lymphknoten bei N+ Patienten.", name: "LK N+" },
-        lkAnzahlAS: { description: "Gesamtzahl im T1KM-MRT sichtbarer Lymphknoten.", name: "LK AS gesamt" },
-        lkAnzahlASPlus: { description: "Anzahl Avocado Sign positiver (AS+) Lymphknoten bei AS+ Patienten.", name: "LK AS+" },
-        lkAnzahlT2: { description: "Gesamtzahl im T2-MRT sichtbarer Lymphknoten.", name: "LK T2 gesamt" },
-        lkAnzahlT2Plus: { description: "Anzahl T2-positiver Lymphknoten (gemäß aktueller Kriterien) bei T2+ Patienten.", name: "LK T2+" },
-        chartAge: { description: "Histogramm der Altersverteilung im Kollektiv <strong>[KOLLEKTIV]</strong>." },
-        chartGender: { description: "Tortendiagramm der Geschlechterverteilung im Kollektiv <strong>[KOLLEKTIV]</strong>." },
-        age: { name: "Alter", description: "Alter des Patienten in Jahren." },
-        gender: { name: "Geschlecht", description: "Geschlecht des Patienten." }
-    },
-    diagnostischeGueteAS: { cardTitle: "Diagnostische Güte des Avocado Signs (AS) vs. Histopathologie (N) für Kollektiv <strong>[KOLLEKTIV]</strong>. Alle Konfidenzintervalle (CI) sind 95%-CIs." },
-    diagnostischeGueteT2: { cardTitle: "Diagnostische Güte der aktuell angewendeten T2-Kriterien vs. Histopathologie (N) für Kollektiv <strong>[KOLLEKTIV]</strong>. Alle CIs sind 95%-CIs." },
-    statistischerVergleichASvsT2: { cardTitle: "Statistischer Vergleich der diagnostischen Leistung von AS vs. aktuell angewandten T2-Kriterien (gepaarte Tests) im Kollektiv <strong>[KOLLEKTIV]</strong>." },
-    assoziationEinzelkriterien: { cardTitle: "Assoziation zwischen AS-Status bzw. einzelnen T2-Merkmalen und dem N-Status (+/-) im Kollektiv <strong>[KOLLEKTIV]</strong>. OR: Odds Ratio, RD: Risk Difference, φ: Phi-Koeffizient. Alle CIs sind 95%-CIs." },
-    vergleichKollektive: { cardTitle: "Statistischer Vergleich der Accuracy und AUC (für AS und T2) zwischen <strong>[KOLLEKTIV1]</strong> und <strong>[KOLLEKTIV2]</strong> (ungepaarte Tests)." },
-    criteriaComparisonTable: {
-        cardTitle: "Tabellarischer Leistungsvergleich: Avocado Sign, angewandte T2-Kriterien und Literatur-Sets für das global gewählte Kollektiv <strong>[GLOBAL_KOLLEKTIV_NAME]</strong>. Literatur-Sets werden auf ihrem spezifischen Zielkollektiv evaluiert, falls abweichend (in Klammern angegeben und mit N-Zahl des spezifischen Kollektivs). Alle Werte ohne CIs.",
-        tableHeaderSet: "Methode / Kriteriensatz",
-        tableHeaderSens: "Sensitivität: Anteil der korrekt als positiv erkannten N+ Fälle.",
-        tableHeaderSpez: "Spezifität: Anteil der korrekt als negativ erkannten N- Fälle.",
-        tableHeaderPPV: "Positiver Prädiktiver Wert: Wahrscheinlichkeit für N+, wenn Testergebnis positiv.",
-        tableHeaderNPV: "Negativer Prädiktiver Wert: Wahrscheinlichkeit für N-, wenn Testergebnis negativ.",
-        tableHeaderAcc: "Accuracy: Gesamtanteil korrekt klassifizierter Fälle.",
-        tableHeaderAUC: "AUC / Balanced Accuracy: Maß für die Gesamt-Trennschärfe (0.5=Zufall, 1=perfekt)."
-    },
+    deskriptiveStatistik: TOOLTIP_CONTENT.statistikTab.deskriptiv, // Alias für einfache Referenzierung
     praesentation: {
         viewSelect: { description: "Wählen Sie die Ansicht: <strong>Avocado Sign (Performance)</strong> für eine Übersicht der AS-Performance oder <strong>AS vs. T2 (Vergleich)</strong> für einen direkten Vergleich von AS mit einer auswählbaren T2-Kriterienbasis." },
         studySelect: { description: "Wählen Sie eine T2-Kriterienbasis für den Vergleich mit dem Avocado Sign. Optionen: aktuell in der App eingestellte Kriterien oder vordefinierte Sets aus relevanten publizierten Studien. Die Auswahl aktualisiert die untenstehenden Vergleiche. Das Vergleichskollektiv für die T2-Performance wird automatisch an das Zielkollektiv der Studie angepasst (falls abweichend vom global gewählten Kollektiv)." },
@@ -292,10 +338,10 @@ const TOOLTIP_CONTENT = {
         downloadPerformanceMD: { description: "Lädt die Tabelle der diagnostischen Güte (je nach Ansicht: AS oder AS vs. T2-Basis) als Markdown-Datei (.md) herunter." },
         downloadCompTableMD: { description: "Lädt die Tabelle mit den verglichenen Metrikwerten (AS vs. T2-Basis) als Markdown-Datei (.md) herunter."},
         downloadCompTestsMD: { description: "Lädt die Tabelle der statistischen Vergleichstests (McNemar, DeLong für AS vs. T2-Basis) als Markdown-Datei (.md) herunter." },
-        downloadCompChartPNG: { description: "Lädt das Vergleichs-Balkendiagramm (AS vs. T2-Basis) als PNG-Datei herunter." },
-        downloadCompChartSVG: { description: "Lädt das Vergleichs-Balkendiagramm (AS vs. T2-Basis) als Vektor-SVG-Datei herunter." },
+        downloadCompChartPNG: { description: "Lädt das Vergleichs-Balkendiagramm (AS vs. [T2_SHORT_NAME]) als PNG-Datei herunter." },
+        downloadCompChartSVG: { description: "Lädt das Vergleichs-Balkendiagramm (AS vs. [T2_SHORT_NAME]) als Vektor-SVG-Datei herunter." },
         downloadTablePNG: { description: "Lädt die angezeigte Tabelle als PNG-Bilddatei herunter." },
-        downloadCompTablePNG: { description: "Lädt die Vergleichs-Metrik-Tabelle (AS vs. T2) als PNG-Datei herunter." },
+        downloadCompTablePNG: { description: "Lädt die Vergleichs-Metrik-Tabelle (AS vs. [T2_SHORT_NAME]) als PNG-Datei herunter." },
         asPurPerfTable: {
             kollektiv: "Patientenkollektiv (N = Anzahl Patienten).",
             sens: "Sensitivität des Avocado Signs (vs. N) in diesem Kollektiv.",
@@ -336,7 +382,7 @@ const TOOLTIP_CONTENT = {
         tableSinglePNG: { description: "Ausgewählte Tabelle '{TableName}' als PNG-Bilddatei.", type: 'TABLE_PNG_EXPORT', ext: "png"},
         allZIP: { description: "Alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT, alle MDs, Rohdaten-CSV, HTML-Report) in einem ZIP-Archiv.", type: 'ALL_ZIP', ext: "zip"},
         csvZIP: { description: "Alle verfügbaren CSV-Dateien (Statistik, Rohdaten) in einem ZIP-Archiv.", type: 'CSV_ZIP', ext: "zip"},
-        mdZIP: { description: "Alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikationstexte) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "zip"},
+        mdZIP: { description: "Alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikationstexte) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "md"},
         pngZIP: { description: "Identisch zum 'Diagramme & Tabellen (PNG)' Einzel-Export.", type: 'PNG_ZIP', ext: "zip"},
         svgZIP: { description: "Identisch zum 'Diagramme (SVG)' Einzel-Export.", type: 'SVG_ZIP', ext: "zip"},
     },
@@ -377,7 +423,6 @@ const TOOLTIP_CONTENT = {
         delong: { name: "DeLong-Test", description: "Vergleicht zwei AUC-Werte von ROC-Kurven, die auf denselben (gepaarten) Daten basieren, unter Berücksichtigung der Kovarianz.<br><i>Nullhypothese (H0): AUC(AS) = AUC([T2_SHORT_NAME]). Ein kleiner p-Wert spricht gegen H0.</i>", interpretation: "Der DeLong-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies deutet darauf hin, dass sich die AUC-Werte (bzw. Balanced Accuracies) von AS und [T2_SHORT_NAME] im Kollektiv [KOLLEKTIV] [SIGNIFIKANZ_TEXT] unterscheiden."},
         phi: { name: "Phi-Koeffizient (φ)", description: "Maß für die Stärke und Richtung des Zusammenhangs zwischen zwei binären Variablen (z.B. Vorhandensein von Merkmal '[MERKMAL]' und N-Status). Wertebereich von -1 bis +1. 0 bedeutet kein Zusammenhang.", interpretation: "Der Phi-Koeffizient von <strong>[WERT]</strong> (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) deutet auf einen <strong>[BEWERTUNG]</strong> Zusammenhang zwischen dem Merkmal '[MERKMAL]' und dem N-Status im Kollektiv [KOLLEKTIV] hin."},
         rd: { name: "Risk Difference (RD)", description: "Absolute Differenz in der Wahrscheinlichkeit (Risiko) für N+ zwischen Patienten mit und ohne das Merkmal '[MERKMAL]'. RD = P(N+|Merkmal+) - P(N+|Merkmal-). Ein RD von 0 bedeutet kein Unterschied.", interpretation: "Das Risiko für einen N+ Status war bei Patienten mit dem Merkmal '[MERKMAL]' um <strong>[WERT]%</strong> absolut [HOEHER_NIEDRIGER] als bei Patienten ohne dieses Merkmal (95%-KI nach [METHOD_CI]: [LOWER]% – [UPPER]%) im Kollektiv [KOLLEKTIV]."},
-        or: { name: "Odds Ratio (OR)", description: "Quotient der Odds für N+ bei Vorhandensein vs. Abwesenheit des Merkmals '[MERKMAL]'. OR = Odds(N+|Merkmal+) / Odds(N+|Merkmal-).<br>OR > 1: Erhöhte Odds für N+ bei Vorhandensein des Merkmals.<br>OR < 1: Verringerte Odds.<br>OR = 1: Keine Assoziation.", interpretation: "Die Chance (Odds) für einen N+ Status war bei Patienten mit dem Merkmal '[MERKMAL]' um den Faktor <strong>[WERT]</strong> [FAKTOR_TEXT] im Vergleich zu Patienten ohne dieses Merkmal (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER], p=[P_WERT], [SIGNIFIKANZ]) im Kollektiv [KOLLEKTIV]."},
         fisher: { name: "Fisher's Exact Test", description: "Exakter Test zur Prüfung auf einen signifikanten Zusammenhang zwischen zwei kategorialen Variablen (z.B. Merkmal '[MERKMAL]' vs. N-Status). Geeignet auch für kleine Stichproben/geringe erwartete Häufigkeiten.<br><i>Nullhypothese (H0): Kein Zusammenhang.</i>", interpretation: "Der exakte Test nach Fisher ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>, was auf einen [SIGNIFIKANZ_TEXT] Zusammenhang zwischen dem Merkmal '[MERKMAL]' und dem N-Status im Kollektiv [KOLLEKTIV] hindeutet."},
         mannwhitney: { name: "Mann-Whitney-U-Test", description: "Nichtparametrischer Test zum Vergleich der zentralen Tendenz (Median) einer kontinuierlichen Variablen (z.B. '[VARIABLE]') zwischen zwei unabhängigen Gruppen (z.B. N+ vs. N-).<br><i>Nullhypothese (H0): Kein Unterschied in den Medianen/Verteilungen.</i>", interpretation: "Der Mann-Whitney-U-Test ergab einen p-Wert von <strong>[P_WERT] ([SIGNIFIKANZ])</strong>. Dies zeigt einen [SIGNIFIKANZ_TEXT] Unterschied in der Verteilung der Variable '[VARIABLE]' zwischen N+ und N- Patienten im Kollektiv [KOLLEKTIV]."},
         ci95: { name: "95% Konfidenzintervall (CI)", description: "Der Wertebereich, der den wahren (unbekannten) Populationsparameter der Metrik mit 95%iger Wahrscheinlichkeit überdeckt.<br><i>Methode: [METHOD_CI]</i>", interpretation: "Basierend auf den Daten liegt der wahre Wert der Metrik mit 95%iger Sicherheit zwischen [LOWER] und [UPPER]."},
