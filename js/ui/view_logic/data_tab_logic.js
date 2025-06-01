@@ -4,82 +4,71 @@ const dataTabLogic = (() => {
     let _kollektivName = '';
     let _isInitialized = false;
 
-    function _getPatientRowHTML(patient) {
-        if (!patient) return '';
-        const na = '--';
-        const hasT2Details = patient.lymphknoten_t2 && patient.lymphknoten_t2.length > 0;
-        const collapseId = `collapse-pat-${String(patient.nr || patient.id_patient || generateUUID()).replace(/[^a-zA-Z0-9_-]/g, '')}`;
+    function _createDatenTableHeaderHTML(tableId, sortState, columns) {
+        let headerHTML = `<thead class="small sticky-top bg-light" id="${tableId}-header"><tr>`;
+        columns.forEach(col => {
+            let sortIconHTML = '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>';
+            let thStyle = col.class ? `class="${col.class}"` : '';
+            if (col.width) thStyle += ` style="width: ${col.width};"`;
+
+            let isMainKeyActiveSort = false;
+            let activeSubKey = null;
+
+            if (sortState && sortState.key === col.key) {
+                if (col.subHeaders && col.subHeaders.some(sh => sh.subKey === sortState.subKey)) {
+                    isMainKeyActiveSort = true;
+                    activeSubKey = sortState.subKey;
+                    sortIconHTML = `<i class="fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1"></i>`;
+                } else if (!col.subHeaders && (sortState.subKey === null || sortState.subKey === undefined)) {
+                    isMainKeyActiveSort = true;
+                    sortIconHTML = `<i class="fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1"></i>`;
+                    thStyle += (thStyle.includes('style="') ? ' ' : ' style="') + 'color: var(--primary-color);"';
+                    if(!thStyle.endsWith('"')) thStyle += '"';
+                }
+            }
+
+            const baseTooltipContent = (TOOLTIP_CONTENT[col.tooltipKey]?.description) || col.label;
+
+            const subHeadersHTML = col.subHeaders ? col.subHeaders.map(sh => {
+                 const isActiveSubSort = activeSubKey === sh.subKey;
+                 const subStyle = isActiveSubSort ? 'font-weight: bold; text-decoration: underline; color: var(--primary-color);' : '';
+                 const subLabel = sh.label || sh.subKey.toUpperCase();
+                 const subTooltip = `Sortieren nach Status ${subLabel}. ${baseTooltipContent}`;
+                 return `<span class="sortable-sub-header" data-sub-key="${sh.subKey}" style="cursor: pointer; ${subStyle}" data-tippy-content="${subTooltip}">${subLabel}</span>`;
+             }).join(' / ') : '';
+
+            const mainTooltip = col.subHeaders ? `${baseTooltipContent}` : (col.key === 'details' ? (TOOLTIP_CONTENT.datenTable.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
+            const sortAttributes = col.sortable ? `data-sort-key="${col.key}" ${col.subHeaders || col.key === 'details' ? '' : 'style="cursor: pointer;"'}` : '';
+            
+            let thContent = col.label;
+            if (col.subHeaders) {
+                thContent += ` (${subHeadersHTML})`;
+            }
+            thContent += (col.sortable && !col.subHeaders && !isMainKeyActiveSort) ? ' <i class="fas fa-sort text-muted opacity-50 ms-1"></i>' : (isMainKeyActiveSort ? sortIconHTML : '');
+            if(col.key === 'details' && !col.sortable) thContent = col.label;
 
 
-        let t2DetailsHTML = '';
-        if (hasT2Details) {
-            t2DetailsHTML = `
-                <div class="sub-table-container collapse" id="${collapseId}">
-                    <table class="table table-sm sub-table table-bordered caption-top">
-                        <caption class="small text-muted ps-2">T2-Lymphknotenmerkmale (Patient ${patient.nr || patient.id_patient})</caption>
-                        <thead class="small">
-                            <tr>
-                                <th>LK Nr.</th>
-                                <th>Größe (mm)</th>
-                                <th>Form</th>
-                                <th>Kontur</th>
-                                <th>Homogenität</th>
-                                <th>Signal</th>
-                            </tr>
-                        </thead>
-                        <tbody>`;
-            patient.lymphknoten_t2.forEach((lk, index) => {
-                t2DetailsHTML += `
-                    <tr class="small">
-                        <td>${index + 1}</td>
-                        <td>${lk.groesse !== null && lk.groesse !== undefined ? formatNumber(lk.groesse, 1) : na}</td>
-                        <td>${ui_helpers.getT2IconSVG('form', lk.form)} ${lk.form || na}</td>
-                        <td>${ui_helpers.getT2IconSVG('kontur', lk.kontur)} ${lk.kontur || na}</td>
-                        <td>${ui_helpers.getT2IconSVG('homogenitaet', lk.homogenitaet)} ${lk.homogenitaet || na}</td>
-                        <td>${ui_helpers.getT2IconSVG('signal', lk.signal)} ${lk.signal || na}</td>
-                    </tr>`;
-            });
-            t2DetailsHTML += `</tbody></table></div>`;
-        } else {
-             t2DetailsHTML = `<div class="sub-table-container collapse" id="${collapseId}"><p class="text-muted small p-2 m-0">Keine T2-Lymphknotendetails für diesen Patienten vorhanden.</p></div>`;
-        }
-
-        return `
-            <tr data-bs-toggle="${hasT2Details ? 'collapse' : ''}" data-bs-target="${hasT2Details ? `#${collapseId}` : ''}" aria-expanded="false" aria-controls="${collapseId}" class="${hasT2Details ? 'clickable-row' : ''}">
-                <td class="text-center">
-                    ${patient.nr ?? na}
-                    ${hasT2Details ? '<i class="fas fa-chevron-down row-toggle-icon ms-1"></i>' : ''}
-                </td>
-                <td>${patient.name || na}</td>
-                <td>${patient.vorname || na}</td>
-                <td class="text-center">${patient.geschlecht || na}</td>
-                <td class="text-center">${patient.alter !== null && patient.alter !== undefined ? formatNumber(patient.alter, 0) : na}</td>
-                <td>${getKollektivDisplayName(patient.therapie) || na}</td>
-                <td class="text-center" style="font-weight: ${patient.n === '+' ? 'bold' : 'normal'}; color: ${patient.n === '+' ? 'var(--danger-color)' : (patient.n === '-' ? 'var(--success-color)' : 'inherit')}">${patient.n || na}</td>
-                <td class="text-center" style="font-weight: ${patient.as === '+' ? 'bold' : 'normal'}; color: ${patient.as === '+' ? 'var(--danger-color)' : (patient.as === '-' ? 'var(--success-color)' : 'inherit')}">${patient.as || na}</td>
-                <td class="text-center" style="font-weight: ${patient.t2 === '+' ? 'bold' : 'normal'}; color: ${patient.t2 === '+' ? 'var(--danger-color)' : (patient.t2 === '-' ? 'var(--success-color)' : 'inherit')}">${patient.t2 || na}</td>
-                <td class="small">${patient.bemerkung || ''}</td>
-            </tr>
-            ${hasT2Details ? `<tr class="sub-row"><td colspan="10">${t2DetailsHTML}</td></tr>` : `<tr class="sub-row d-none"><td colspan="10">${t2DetailsHTML}</td></tr>`}
-        `;
+            headerHTML += `<th scope="col" ${thStyle} ${sortAttributes} data-tippy-content="${mainTooltip}">${thContent}</th>`;
+        });
+        headerHTML += `</tr></thead>`;
+        return headerHTML;
     }
-
 
     function _renderDatenTable() {
         const tableContainer = document.getElementById('daten-table-container');
-        const tableHeaderContainerId = 'daten-table-header'; 
-        const tableBodyContainerId = 'daten-table-body';
+        const tableId = 'daten-table';
+        const tableBodyId = `${tableId}-body`;
 
         if (!tableContainer) {
             console.error("Container 'daten-table-container' für Datentabelle nicht gefunden.");
             return;
         }
 
-        if (!_currentData || !Array.isArray(_currentData)) {
-             tableContainer.innerHTML = '<p class="p-3 text-muted">Keine Daten zum Anzeigen vorhanden.</p>';
+        if (!_currentData || !Array.isArray(_currentData) || _currentData.length === 0) {
+             tableContainer.innerHTML = `<p class="p-3 text-muted">Keine Daten für Kollektiv '${getKollektivDisplayName(_kollektivName)}' zum Anzeigen vorhanden.</p>`;
              return;
         }
-        
+
         const sortedData = [..._currentData].sort(getSortFunction(_currentSortState.key, _currentSortState.direction, _currentSortState.subKey));
 
         const columns = [
@@ -89,8 +78,8 @@ const dataTabLogic = (() => {
             { key: 'geschlecht', label: 'Geschl.', sortable: true, class: 'text-center col-geschlecht', tooltipKey: 'datenTable.geschlecht' },
             { key: 'alter', label: 'Alter', sortable: true, class: 'text-center col-alter', tooltipKey: 'datenTable.alter' },
             { key: 'therapie', label: 'Therapie', sortable: true, class: 'col-therapie', tooltipKey: 'datenTable.therapie' },
-            { 
-                key: 'status', label: 'N/AS/T2', sortable: true, class: 'text-center col-status', 
+            {
+                key: 'status', label: 'N/AS/T2', sortable: true, class: 'text-center col-status',
                 tooltipKey: 'datenTable.n_as_t2',
                 subHeaders: [
                     { label: 'N', subKey: 'n' },
@@ -98,43 +87,40 @@ const dataTabLogic = (() => {
                     { label: 'T2', subKey: 't2' }
                 ]
             },
-            { key: 'bemerkung', label: 'Bemerkung', sortable: false, class: 'col-bemerkung small', tooltipKey: 'datenTable.bemerkung' }
+            { key: 'bemerkung', label: 'Bemerkung', sortable: false, class: 'col-bemerkung small', tooltipKey: 'datenTable.bemerkung' },
+            { key: 'details', label: '', sortable: false, class: 'text-center col-details', width: '30px', tooltipKey: 'datenTable.expandRow' }
         ];
-        
-        const rowsHTML = sortedData.map(patient => _getPatientRowHTML(patient)).join('');
 
-        const tableOptions = {
-            stickyHeader: true,
-            stickyFirstColumn: false,
-            tableId: 'daten-table', // Wird für Sortierlogik in generalEventHandlers benötigt
-            headerContainerId: tableHeaderContainerId,
-            bodyContainerId: tableBodyContainerId,
-            additionalTableClasses: 'table-sm table-hover',
-            captionText: `Patientenliste für Kollektiv: ${getKollektivDisplayName(_kollektivName)} (N=${sortedData.length})`
-        };
+        let tableHTML = `<table class="table table-sm table-hover data-table ${APP_CONFIG.UI_SETTINGS.STICKY_FIRST_COL_DATEN ? 'sticky-first-col' : ''}" id="${tableId}">`;
+        tableHTML += `<caption class="small text-muted">Patientenliste für Kollektiv: ${getKollektivDisplayName(_kollektivName)} (N=${sortedData.length})</caption>`;
+        tableHTML += _createDatenTableHeaderHTML(tableId, _currentSortState, columns);
+        tableHTML += `<tbody id="${tableBodyId}">`;
+        tableHTML += sortedData.map(patient => tableRenderer.createDatenTableRow(patient)).join('');
+        tableHTML += `</tbody></table>`;
 
-        tableContainer.innerHTML = tableRenderer.createTableHTML(columns, rowsHTML, tableOptions);
-        if(document.getElementById(tableBodyContainerId)){ // Nur Listener anhängen, wenn Body existiert
-            ui_helpers.attachRowCollapseListeners(document.getElementById(tableBodyContainerId));
+        tableContainer.innerHTML = tableHTML;
+
+        const tableBodyElement = document.getElementById(tableBodyId);
+        if(tableBodyElement){
+            ui_helpers.attachRowCollapseListeners(tableBodyElement);
         }
     }
 
 
     function initializeTab(data, sortState) {
         _currentData = Array.isArray(data) ? data : [];
-        _currentSortState = sortState || state.getCurrentDatenSortState(); // state ist global
+        _currentSortState = sortState || state.getCurrentDatenSortState();
         _kollektivName = state.getCurrentKollektiv();
         _isInitialized = true;
 
         _renderDatenTable();
-        ui_helpers.updateSortIcons('daten-table-header', _currentSortState);
+        ui_helpers.updateSortIcons(`${'daten-table'}-header`, _currentSortState);
         ui_helpers.updateElementText('daten-tab-kollektiv-name', getKollektivDisplayName(_kollektivName));
     }
-    
+
     function isInitialized() {
         return _isInitialized;
     }
-
 
     return Object.freeze({
         initializeTab,
