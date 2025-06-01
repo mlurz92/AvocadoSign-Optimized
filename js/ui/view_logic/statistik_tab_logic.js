@@ -17,7 +17,9 @@ const statistikTabLogic = (() => {
     let _criteriaComparisonResults = null;
 
     function _createDeskriptiveStatistikContentHTML(statsData, suffix, kollektivName) {
-        if (!statsData || !statsData.deskriptiv) return '<p class="text-muted">Deskriptive Daten nicht verfügbar.</p>';
+        if (!statsData || typeof statsData !== 'object' || !statsData.deskriptiv || typeof statsData.deskriptiv !== 'object') {
+             return `<p class="text-muted">Deskriptive Statistik Daten für Kollektiv '${getKollektivDisplayName(kollektivName)}' nicht verfügbar oder ungültig.</p>`;
+        }
         const d = statsData.deskriptiv;
         const na = '--';
         const tooltipKeys = TOOLTIP_CONTENT.statistikTab.deskriptiv || {};
@@ -29,12 +31,25 @@ const statistikTabLogic = (() => {
         
         let tableHTML = `<table class="table table-sm table-borderless table-responsive-sm small mb-2" id="table-deskriptiv-demographie-${suffix}"><tbody>`;
         tableHTML += createRow('Patienten gesamt', d.anzahlPatienten, '', 'anzahlPatienten');
-        tableHTML += createRow('Alter Median (IQR)', d.alterMedian !== null ? `${formatNumber(d.alterMedian,0,na)} (${formatNumber(d.alterQ1,0,na)}–${formatNumber(d.alterQ3,0,na)})` : na, ' Jahre', 'alterMedian');
-        tableHTML += createRow('Alter Mittel (SD)', d.alterMean !== null ? `${formatNumber(d.alterMean,1,na)} (±${formatNumber(d.alterStdDev,1,na)})` : na, ' Jahre', 'alterMean');
+        
+        const alterMedianText = (d.alter && d.alter.median !== null && d.alter.median !== undefined && !isNaN(d.alter.median))
+            ? `${formatNumber(d.alter.median,0,na)} (${formatNumber(d.alter.q1,0,na)}–${formatNumber(d.alter.q3,0,na)})`
+            : na;
+        tableHTML += createRow('Alter Median (IQR)', alterMedianText, ' Jahre', 'alterMedian');
+
+        const alterMeanText = (d.alter && d.alter.mean !== null && d.alter.mean !== undefined && !isNaN(d.alter.mean) && d.alter.sd !== null && d.alter.sd !== undefined && !isNaN(d.alter.sd))
+            ? `${formatNumber(d.alter.mean,1,na)} (±${formatNumber(d.alter.sd,1,na)})`
+            : na;
+        tableHTML += createRow('Alter Mittel (SD)', alterMeanText, ' Jahre', 'alterMean');
+
         tableHTML += createRow('Geschlecht (m/f)', `${d.geschlecht?.m || 0} / ${d.geschlecht?.f || 0}`, '', 'geschlecht');
         tableHTML += createRow('Pathologischer N-Status (+/-)', `${d.nStatus?.['+'] || 0} / ${d.nStatus?.['-'] || 0}`, '', 'nStatus');
         tableHTML += createRow('Avocado Sign (+/-)', `${d.asStatus?.['+'] || 0} / ${d.asStatus?.['-'] || 0}`, '', 'asStatus');
-        tableHTML += createRow(`T2-Status (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME}) (+/-)`, `${d.t2StatusAngewandt?.['+'] || 0} / ${d.t2StatusAngewandt?.['-'] || 0}`, '', 't2StatusAngewandt');
+        
+        const t2StatusKey = 't2StatusAngewandt'; // Bezieht sich auf die angewandten Kriterien, die bereits im 'd' Objekt sind.
+        const t2StatusObject = d[t2StatusKey] || d.t2Status; // Fallback falls der Key anders ist
+        tableHTML += createRow(`T2-Status (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME}) (+/-)`, `${t2StatusObject?.['+'] || 0} / ${t2StatusObject?.['-'] || 0}`, '', 't2StatusAngewandt');
+        
         tableHTML += `</tbody></table>`;
 
         let chartHTML = `<div class="row mt-2">
@@ -62,7 +77,7 @@ const statistikTabLogic = (() => {
 
         let tableHTML = `<table class="table table-sm table-borderless table-responsive-sm small mb-0"><tbody>`;
         Object.keys(UI_TEXTS.statMetrics).forEach(key => {
-            if (statsData[key] && key !== 'phi') { // Phi-Koeffizient hier nicht standardmäßig anzeigen
+            if (statsData[key] && key !== 'phi') {
                 const metricConfig = UI_TEXTS.statMetrics[key];
                 const tooltip = tooltipKeys[key] || metricConfig.description.replace('[METHOD]', methodenName).replace('[CRITERIA_SET]', '');
                 tableHTML += `<tr><td data-tippy-content="${tooltip}">${metricConfig.name}</td><td data-tippy-content="${getInterpretationTT(key, statsData[key])}">${fCI(statsData[key], key, metricConfig.digits)}</td></tr>`;
@@ -81,7 +96,7 @@ const statistikTabLogic = (() => {
         if (!vergleichsDaten) return `<p class="text-muted">Vergleichsdaten AS vs. T2 nicht verfügbar.</p>`;
         const na = '--';
         const fPVal = (r, d=3) => { const p = r?.pValue; return (p !== null && !isNaN(p)) ? (p < 0.001 ? '&lt;0.001' : formatNumber(p, d, na, true)) : na; };
-        const t2DisplayNameClean = t2SetName.replace(/\s*\(.*?\)\s*/g, ''); // Remove (xyz)
+        const t2DisplayNameClean = t2SetName.replace(/\s*\(.*?\)\s*/g, '');
         const tooltipKeys = TOOLTIP_CONTENT.statistikTab.vergleichASvsT2 || {};
         const tableId = `table-vergleich-as-vs-t2-${kollektivName.replace(/\s+/g, '_')}`;
 
@@ -118,13 +133,14 @@ const statistikTabLogic = (() => {
                             </tr></thead><tbody>`;
         
         Object.entries(assoziationsDaten).forEach(([key, val]) => {
-            if (val && appliedT2Criteria[key] && appliedT2Criteria[key].active) { // Nur aktive Kriterien anzeigen
+            if (val && appliedT2Criteria && appliedT2Criteria[key] && appliedT2Criteria[key].active) {
                 const criteriaDisplayName = UI_TEXTS.t2CriteriaShort[key] || key;
                 const praevalenzNplus = (val.Nplus_Merkmal && val.Nplus_Gesamt) ? formatPercent(val.Nplus_Merkmal / val.Nplus_Gesamt, 0) : na;
-                const orFormatted = (val.oddsRatio && val.orCIlower && val.orCIupper) ? `${formatNumber(val.oddsRatio,2,na,true)} (${formatNumber(val.orCIlower,2,na,true)}–${formatNumber(val.orCIupper,2,na,true)})` : na;
+                const orFormatted = (val.or && val.or.value !== undefined && val.or.ci && val.or.ci.lower !== undefined) ? `${formatNumber(val.or.value,2,na,true)} (${formatNumber(val.or.ci.lower,2,na,true)}–${formatNumber(val.or.ci.upper,2,na,true)})` : na;
                 const pValueFormatted = (val.pValueOR !== null && val.pValueOR !== undefined) ? (val.pValueOR < 0.001 ? '&lt;0.001' : formatNumber(val.pValueOR, 3, na, true)) : na;
                 const significanceSymbol = getStatisticalSignificanceSymbol(val.pValueOR);
-                const interpretation = ui_helpers.getTestInterpretationHTML('oddsRatio', { oddsRatio: val.oddsRatio, pValue: val.pValueOR, ciLower: val.orCIlower, ciUpper: val.orCIupper}, kollektivName, criteriaDisplayName);
+                const interpretation = ui_helpers.getAssociationInterpretationHTML('or', val, criteriaDisplayName, kollektivName);
+
 
                 tableHTML += `<tr>
                                 <td>${criteriaDisplayName}</td>
@@ -196,7 +212,7 @@ const statistikTabLogic = (() => {
                             </tr></thead><tbody>`;
         
         comparisonResults.forEach(res => {
-            const fVal = (val, d=1, isRate=true) => (val !== null && val !== undefined) ? formatNumber(val, d, na, !isRate) + (isRate ? '%' : '') : na; // CI hier nicht, da zu breit
+            const fVal = (val, d=1, isRate=true) => (val !== null && val !== undefined && !isNaN(val)) ? formatNumber(val, d, na, !isRate) + (isRate ? '%' : '') : na;
             const kollektivText = `${getKollektivDisplayName(res.specificKollektivName)} (N=${res.specificKollektivN || '?'})`;
             const tooltipText = studyT2CriteriaManager.getStudyCriteriaSetById(res.id)?.studyInfo?.keyCriteriaSummary || 
                                 (res.id === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID ? 'Avocado Sign (AS)' : 
@@ -304,11 +320,15 @@ const statistikTabLogic = (() => {
         if (!contentArea) return;
         contentArea.innerHTML = '';
 
-        if (_isDataStale || !_statsDataKollektivGlobal) _statsDataKollektivGlobal = _calculateStatsForKollektiv(_currentKollektivGlobal);
-        if (_isDataStale || !_criteriaComparisonResults) _criteriaComparisonResults = _calculateCriteriaComparison(_currentKollektivGlobal);
-
-        if (!_statsDataKollektivGlobal) {
-            contentArea.innerHTML = `<p class="text-center text-muted p-3">Keine Daten für Kollektiv '${getKollektivDisplayName(_currentKollektivGlobal)}' vorhanden.</p>`;
+        if (_isDataStale || !_statsDataKollektivGlobal) {
+             _statsDataKollektivGlobal = _calculateStatsForKollektiv(_currentKollektivGlobal);
+        }
+        if (_isDataStale || !_criteriaComparisonResults) {
+            _criteriaComparisonResults = _calculateCriteriaComparison(_currentKollektivGlobal);
+        }
+        
+        if (!_statsDataKollektivGlobal || typeof _statsDataKollektivGlobal !== 'object') {
+            contentArea.innerHTML = `<p class="text-center text-muted p-3">Keine ausreichenden Daten für Kollektiv '${getKollektivDisplayName(_currentKollektivGlobal)}' vorhanden, um Statistiken zu berechnen.</p>`;
             return;
         }
         
@@ -352,6 +372,7 @@ const statistikTabLogic = (() => {
 
         if (_isDataStale || !_statsDataKollektiv1) _statsDataKollektiv1 = _calculateStatsForKollektiv(_statsKollektiv1);
         if (_isDataStale || !_statsDataKollektiv2) _statsDataKollektiv2 = _calculateStatsForKollektiv(_statsKollektiv2);
+        
         if (_isDataStale || !_statsVergleichKollektive) {
             const data1 = _getProcessedAndEvaluatedData(_statsKollektiv1);
             const data2 = _getProcessedAndEvaluatedData(_statsKollektiv2);
@@ -359,13 +380,14 @@ const statistikTabLogic = (() => {
                                         ? statisticsService.compareCohorts(data1, data2, _appliedT2Criteria, _appliedT2Logic)
                                         : null;
         }
-        if (_isDataStale || !_criteriaComparisonResults) _criteriaComparisonResults = _calculateCriteriaComparison(_currentKollektivGlobal);
-
+        if (_isDataStale || !_criteriaComparisonResults) {
+            _criteriaComparisonResults = _calculateCriteriaComparison(_currentKollektivGlobal);
+        }
 
         const col1 = document.createElement('div'); col1.className = 'col-lg-6 d-flex flex-column';
         const col2 = document.createElement('div'); col2.className = 'col-lg-6 d-flex flex-column';
 
-        if (_statsDataKollektiv1) {
+        if (_statsDataKollektiv1 && typeof _statsDataKollektiv1 === 'object') {
             const deskHTML1 = _createDeskriptiveStatistikContentHTML(_statsDataKollektiv1, '1', _statsKollektiv1);
             const gueteASHTML1 = _createGueteContentHTML(_statsDataKollektiv1.gueteAS, 'AS', _statsKollektiv1);
             const gueteT2HTML1 = _createGueteContentHTML(_statsDataKollektiv1.gueteT2_angewandt, `T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, _statsKollektiv1);
@@ -376,7 +398,7 @@ const statistikTabLogic = (() => {
             col1.innerHTML = `<p class="text-center text-muted p-3">Keine Daten für Kollektiv '${getKollektivDisplayName(_statsKollektiv1)}'.</p>`;
         }
 
-        if (_statsDataKollektiv2) {
+        if (_statsDataKollektiv2 && typeof _statsDataKollektiv2 === 'object') {
             const deskHTML2 = _createDeskriptiveStatistikContentHTML(_statsDataKollektiv2, '2', _statsKollektiv2);
             const gueteASHTML2 = _createGueteContentHTML(_statsDataKollektiv2.gueteAS, 'AS', _statsKollektiv2);
             const gueteT2HTML2 = _createGueteContentHTML(_statsDataKollektiv2.gueteT2_angewandt, `T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, _statsKollektiv2);
