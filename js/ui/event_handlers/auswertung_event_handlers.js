@@ -1,4 +1,9 @@
 const auswertungEventHandlers = (() => {
+    let _mainAppInterface = null;
+
+    function initialize(mainAppInterface) {
+        _mainAppInterface = mainAppInterface;
+    }
 
     function handleT2CheckboxChange(checkbox) {
         const key = checkbox.value;
@@ -65,26 +70,34 @@ const auswertungEventHandlers = (() => {
         ui_helpers.showToast('T2 Kriterien auf Standard zurückgesetzt (Änderungen noch nicht angewendet).', 'info');
     }
 
-    function handleApplyCriteria(mainAppInterface) {
-        if (typeof mainAppInterface.applyAndRefreshAll === 'function') {
-            mainAppInterface.applyAndRefreshAll();
+    function handleApplyCriteria(mainAppInterfaceRef) {
+        const appInterface = mainAppInterfaceRef || _mainAppInterface;
+        if (appInterface && typeof appInterface.notifyDataProcessingChange === 'function' && typeof appInterface.refreshCurrentTab === 'function') {
+            t2CriteriaManager.applyCriteria();
+            appInterface.notifyDataProcessingChange(); 
+            appInterface.refreshCurrentTab(true); 
             ui_helpers.showToast('T2-Kriterien angewendet & gespeichert.', 'success');
         } else {
-            console.error("auswertungEventHandlers.handleApplyCriteria: mainAppInterface.applyAndRefreshAll ist nicht definiert.");
+            console.error("auswertungEventHandlers.handleApplyCriteria: mainAppInterface oder benötigte Methoden nicht definiert.");
+            ui_helpers.showToast("Fehler beim Anwenden der Kriterien.", "danger");
         }
     }
 
-    function handleStartBruteForce(mainAppInterface) {
-        if (bruteForceManager.isRunning() || !bruteForceManager.isWorkerAvailable()) {
-            ui_helpers.showToast(bruteForceManager.isRunning() ? "Optimierung läuft bereits." : "Brute-Force Worker nicht verfügbar.", "warning");
+    function handleStartBruteForce(mainAppInterfaceRef) {
+        const appInterface = mainAppInterfaceRef || _mainAppInterface;
+        if (bruteForceManager.getState() === 'running' || !bruteForceManager.isWorkerAvailable()) {
+            ui_helpers.showToast(bruteForceManager.getState() === 'running' ? "Optimierung läuft bereits." : "Brute-Force Worker nicht verfügbar.", "warning");
             return;
         }
-        const metric = document.getElementById('brute-force-metric')?.value || APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC;
+        const metricSelect = document.getElementById('brute-force-metric');
+        const metric = metricSelect ? metricSelect.value : APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC;
         const currentKollektiv = state.getCurrentKollektiv();
-        
-        if (mainAppInterface && typeof mainAppInterface.getProcessedData === 'function') {
-            const dataForWorker = dataProcessor.filterDataByKollektiv(mainAppInterface.getProcessedData(), currentKollektiv).map(p => ({
+
+        if (appInterface && typeof appInterface.getGlobalData === 'function') {
+            const globalData = appInterface.getGlobalData();
+            const dataForWorker = dataProcessor.filterDataByKollektiv(globalData.processedData, currentKollektiv).map(p => ({
                 nr: p.nr,
+                id_patient: p.id_patient,
                 n: p.n,
                 lymphknoten_t2: cloneDeep(p.lymphknoten_t2)
             }));
@@ -94,34 +107,36 @@ const auswertungEventHandlers = (() => {
                 ui_helpers.updateBruteForceUI('idle', {}, bruteForceManager.isWorkerAvailable(), currentKollektiv);
                 return;
             }
-            ui_helpers.updateBruteForceUI('start', { metric: metric, kollektiv: currentKollektiv }, true, currentKollektiv);
-            bruteForceManager.startAnalysis(dataForWorker, metric, currentKollektiv);
-            if (mainAppInterface && typeof mainAppInterface.updateGlobalUIState === 'function') {
-                mainAppInterface.updateGlobalUIState();
-            }
+            
+            const t2SizeRangeSettings = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE;
+
+            ui_helpers.updateBruteForceUI('start', { metric: metric, kollektiv: currentKollektiv }, bruteForceManager.isWorkerAvailable(), currentKollektiv);
+            bruteForceManager.startOptimization(dataForWorker, currentKollektiv, metric, t2SizeRangeSettings);
+
         } else {
-             console.error("auswertungEventHandlers.handleStartBruteForce: mainAppInterface.getProcessedData ist nicht definiert.");
+             console.error("auswertungEventHandlers.handleStartBruteForce: mainAppInterface.getGlobalData ist nicht definiert.");
              ui_helpers.showToast("Fehler beim Start der Optimierung: Datenquelle nicht verfügbar.", "danger");
         }
     }
 
     function handleCancelBruteForce() {
-        if (!bruteForceManager.isRunning() || !bruteForceManager.isWorkerAvailable()) {
+        if (bruteForceManager.getState() !== 'running' || !bruteForceManager.isWorkerAvailable()) {
             console.warn("Keine laufende Analyse zum Abbrechen oder Worker nicht verfügbar.");
             return;
         }
-        bruteForceManager.cancelAnalysis();
+        bruteForceManager.cancelOptimization();
     }
 
-    function handleApplyBestBfCriteria(mainAppInterface) {
+    function handleApplyBestBfCriteria(mainAppInterfaceRef) {
+        const appInterface = mainAppInterfaceRef || _mainAppInterface;
         const currentKollektiv = state.getCurrentKollektiv();
-        const bfResultForKollektiv = bruteForceManager.getResultsForKollektiv(currentKollektiv);
+        const bfResultForKollektiv = bruteForceManager.getBestResultForKollektiv(currentKollektiv);
 
-        if (!bfResultForKollektiv?.bestResult?.criteria) {
+        if (!bfResultForKollektiv || !bfResultForKollektiv.criteria) {
             ui_helpers.showToast('Keine gültigen Brute-Force-Ergebnisse für dieses Kollektiv zum Anwenden.', 'warning');
             return;
         }
-        const best = bfResultForKollektiv.bestResult;
+        const best = bfResultForKollektiv;
         Object.keys(best.criteria).forEach(key => {
             if (key === 'logic') return;
             const criterion = best.criteria[key];
@@ -136,23 +151,25 @@ const auswertungEventHandlers = (() => {
         });
         t2CriteriaManager.updateLogic(best.logic);
         ui_helpers.updateT2CriteriaControlsUI(t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic());
-        
-        if (typeof mainAppInterface.applyAndRefreshAll === 'function') {
-            mainAppInterface.applyAndRefreshAll();
+
+        if (appInterface && typeof appInterface.notifyDataProcessingChange === 'function' && typeof appInterface.refreshCurrentTab === 'function') {
+            t2CriteriaManager.applyCriteria();
+            appInterface.notifyDataProcessingChange();
+            appInterface.refreshCurrentTab(true);
             ui_helpers.showToast('Beste Brute-Force Kriterien angewendet & gespeichert.', 'success');
         } else {
-            console.error("auswertungEventHandlers.handleApplyBestBfCriteria: mainAppInterface.applyAndRefreshAll ist nicht definiert.");
+            console.error("auswertungEventHandlers.handleApplyBestBfCriteria: mainAppInterface oder benötigte Methoden nicht definiert.");
+            ui_helpers.showToast("Fehler beim Anwenden der besten Brute-Force Kriterien.", "danger");
         }
     }
 
     function handleBruteForceMetricChange(selectElement) {
-        // Currently, no direct action needed on change, metric is read on start.
-        // Could be used to save preference to state if desired in future.
         console.log("Brute-Force Zielmetrik Auswahl geändert zu:", selectElement.value);
     }
 
 
     return Object.freeze({
+        initialize,
         handleT2CheckboxChange,
         handleT2LogicChange,
         handleT2CriteriaButtonClick,
