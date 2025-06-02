@@ -9,7 +9,7 @@ const publicationRenderer = (() => {
             let numStrToFormat = val;
             let formattedNum;
             if (isP) {
-                formattedNum = formatPercent(numStrToFormat, d, 'N/A');
+                formattedNum = formatPercent(numStrToFormat, d, 'N/A%');
             } else {
                 formattedNum = formatNumber(numStrToFormat, d, 'N/A', useStandardFormat);
             }
@@ -64,7 +64,7 @@ const publicationRenderer = (() => {
 
                 tableHTML += `<tr>
                                 <td>${studySet.name || conf.nameKey}</td>
-                                <td>${getKollektivDisplayName(studySet.applicableKollektiv || 'N/A')} (${studySet.context || 'N/A'})</td>
+                                <td>${getKollektivDisplayName(studySet.applicableKollektiv || 'N/A')} (${studySet.studyInfo?.investigationType || studySet.context || 'N/A'})</td>
                                 <td style="white-space: normal;">${kriterienText}</td>
                                 <td>${UI_TEXTS.t2LogicDisplayNames[studySet.logic] || studySet.logic}</td>
                               </tr>`;
@@ -84,9 +84,9 @@ const publicationRenderer = (() => {
             <thead>
                 <tr>
                     <th>${lang === 'de' ? 'Merkmal' : 'Characteristic'}</th>
-                    <th>${getKollektivDisplayName('Gesamt')} (N=${_formatNumberForText(allKollektivStats.Gesamt?.deskriptiv?.anzahlPatienten, 0, lang, true) || 0})</th>
-                    <th>${getKollektivDisplayName('direkt OP')} (N=${_formatNumberForText(allKollektivStats['direkt OP']?.deskriptiv?.anzahlPatienten, 0, lang, true) || 0})</th>
-                    <th>${getKollektivDisplayName('nRCT')} (N=${_formatNumberForText(allKollektivStats.nRCT?.deskriptiv?.anzahlPatienten, 0, lang, true) || 0})</th>
+                    <th>${getKollektivDisplayName('Gesamt')} (N=${formatNumber(allKollektivStats.Gesamt?.deskriptiv?.anzahlPatienten, 0, '0', true) || 0})</th>
+                    <th>${getKollektivDisplayName('direkt OP')} (N=${formatNumber(allKollektivStats['direkt OP']?.deskriptiv?.anzahlPatienten, 0, '0', true) || 0})</th>
+                    <th>${getKollektivDisplayName('nRCT')} (N=${formatNumber(allKollektivStats.nRCT?.deskriptiv?.anzahlPatienten, 0, '0', true) || 0})</th>
                 </tr>
             </thead><tbody>`;
 
@@ -112,14 +112,14 @@ const publicationRenderer = (() => {
             p => `${fVal(p.alter?.median,1,'N/A',stdFormatNum)} (${fVal(p.alter?.min,0,'N/A',stdFormatNum)}–${fVal(p.alter?.max,0,'N/A',stdFormatNum)})`
         );
         addRow('Geschlecht, männlich [n (%)]', 'Sex, male [n (%)]',
-            p => `${_formatNumberForText(p.geschlecht?.m, 0, lang, true) ?? 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})`,
-            p => `${_formatNumberForText(p.geschlecht?.m, 0, lang, true) ?? 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})`,
-            p => `${_formatNumberForText(p.geschlecht?.m, 0, lang, true) ?? 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})`
+            p => `${formatNumber(p.geschlecht?.m, 0, '0', true) ?? 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})`,
+            p => `${formatNumber(p.geschlecht?.m, 0, '0', true) ?? 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})`,
+            p => `${formatNumber(p.geschlecht?.m, 0, '0', true) ?? 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})`
         );
         addRow('Pathologischer N-Status, positiv [n (%)]', 'Pathological N-Status, positive [n (%)]',
-            p => `${_formatNumberForText(p.nStatus?.plus, 0, lang, true) ?? 0} (${fPerc(p.nStatus?.plus, p.anzahlPatienten)})`,
-            p => `${_formatNumberForText(p.nStatus?.plus, 0, lang, true) ?? 0} (${fPerc(p.nStatus?.plus, p.anzahlPatienten)})`,
-            p => `${_formatNumberForText(p.nStatus?.plus, 0, lang, true) ?? 0} (${fPerc(p.nStatus?.plus, p.anzahlPatienten)})`
+            p => `${formatNumber(p.nStatus?.plus, 0, '0', true) ?? 0} (${fPerc(p.nStatus?.plus, p.anzahlPatienten)})`,
+            p => `${formatNumber(p.nStatus?.plus, 0, '0', true) ?? 0} (${fPerc(p.nStatus?.plus, p.anzahlPatienten)})`,
+            p => `${formatNumber(p.nStatus?.plus, 0, '0', true) ?? 0} (${fPerc(p.nStatus?.plus, p.anzahlPatienten)})`
         );
         tableHTML += `</tbody></table></div>`;
         return tableHTML;
@@ -147,18 +147,18 @@ const publicationRenderer = (() => {
                  if (stats && stats.matrix && (stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn > 0)) {
                     rows += `<tr>
                                 <td>${displayName}</td>
-                                <td>${getKollektivDisplayName(kolId)} (N=${_formatNumberForText(nPat,0,lang,true)})</td>
-                                <td>${_formatMetricWithCIForText(stats.sens, 1, true, lang)}</td>
-                                <td>${_formatMetricWithCIForText(stats.spez, 1, true, lang)}</td>
-                                <td>${_formatMetricWithCIForText(stats.ppv, 1, true, lang)}</td>
-                                <td>${_formatMetricWithCIForText(stats.npv, 1, true, lang)}</td>
-                                <td>${_formatMetricWithCIForText(stats.acc, 1, true, lang)}</td>
-                                <td>${_formatMetricWithCIForText(stats.auc, 3, false, lang)}</td>
+                                <td>${getKollektivDisplayName(kolId)} (N=${formatNumber(nPat,0,lang,true)})</td>
+                                <td>${_formatMetricForTable(stats.sens, 1, true, lang)}</td>
+                                <td>${_formatMetricForTable(stats.spez, 1, true, lang)}</td>
+                                <td>${_formatMetricForTable(stats.ppv, 1, true, lang)}</td>
+                                <td>${_formatMetricForTable(stats.npv, 1, true, lang)}</td>
+                                <td>${_formatMetricForTable(stats.acc, 1, true, lang)}</td>
+                                <td>${_formatMetricForTable(stats.auc, 3, false, lang)}</td>
                               </tr>`;
                 } else {
                      rows += `<tr>
                                 <td>${displayName}</td>
-                                <td>${getKollektivDisplayName(kolId)} (N=${_formatNumberForText(nPat,0,lang,true)})</td>
+                                <td>${getKollektivDisplayName(kolId)} (N=${formatNumber(nPat,0,lang,true)})</td>
                                 <td colspan="6" class="text-center text-muted small"><em>${lang === 'de' ? 'Keine validen Daten' : 'No valid data'}</em></td>
                               </tr>`;
                 }
@@ -175,18 +175,18 @@ const publicationRenderer = (() => {
             if (stats && stats.matrix && (stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn > 0)) {
                  rows += `<tr>
                             <td>${displayName}</td>
-                            <td>${getKollektivDisplayName(kolIdForSet)} (N=${_formatNumberForText(nPat,0,lang,true)})</td>
-                            <td>${_formatMetricWithCIForText(stats.sens, 1, true, lang)}</td>
-                            <td>${_formatMetricWithCIForText(stats.spez, 1, true, lang)}</td>
-                            <td>${_formatMetricWithCIForText(stats.ppv, 1, true, lang)}</td>
-                            <td>${_formatMetricWithCIForText(stats.npv, 1, true, lang)}</td>
-                            <td>${_formatMetricWithCIForText(stats.acc, 1, true, lang)}</td>
-                            <td>${_formatMetricWithCIForText(stats.auc, 3, false, lang)}</td>
+                            <td>${getKollektivDisplayName(kolIdForSet)} (N=${formatNumber(nPat,0,lang,true)})</td>
+                            <td>${_formatMetricForTable(stats.sens, 1, true, lang)}</td>
+                            <td>${_formatMetricForTable(stats.spez, 1, true, lang)}</td>
+                            <td>${_formatMetricForTable(stats.ppv, 1, true, lang)}</td>
+                            <td>${_formatMetricForTable(stats.npv, 1, true, lang)}</td>
+                            <td>${_formatMetricForTable(stats.acc, 1, true, lang)}</td>
+                            <td>${_formatMetricForTable(stats.auc, 3, false, lang)}</td>
                           </tr>`;
             } else {
                  rows += `<tr>
                             <td>${displayName}</td>
-                            <td>${getKollektivDisplayName(kolIdForSet)} (N=${_formatNumberForText(nPat,0,lang,true) || '?'})</td>
+                            <td>${getKollektivDisplayName(kolIdForSet)} (N=${formatNumber(nPat,0,lang,true) || '?'})</td>
                             <td colspan="6" class="text-center text-muted small"><em>${lang === 'de' ? 'Keine validen Daten oder nicht anwendbar' : 'No valid data or not applicable'}</em></td>
                           </tr>`;
             }
@@ -268,9 +268,9 @@ const publicationRenderer = (() => {
                         tableHTML += `<tr>
                             <td>AS vs. ${litShortName}</td>
                             <td>${getKollektivDisplayName(kolId)}</td>
-                            <td>AS (${_formatMetricWithCIForText(asStats.auc, 3, false, lang)})</td>
-                            <td>${litShortName} (${_formatMetricWithCIForText(litStats.auc, 3, false, lang)})</td>
-                            <td>${_formatNumberForText(vergleichASvsLit.delong?.diffAUC, 3, lang, lang==='en')}</td>
+                            <td>AS (${_formatMetricForTable(asStats.auc, false, 3, lang)})</td>
+                            <td>${litShortName} (${_formatMetricForTable(litStats.auc, false, 3, lang)})</td>
+                            <td>${formatNumber(vergleichASvsLit.delong?.diffAUC, 3, 'N/A', lang === 'en')}</td>
                             <td>${_getPValueTextForPublication(vergleichASvsLit.delong?.pValue, lang)} ${getStatisticalSignificanceSymbol(vergleichASvsLit.delong?.pValue)}</td>
                             <td>${_getPValueTextForPublication(vergleichASvsLit.mcnemar?.pValue, lang)} ${getStatisticalSignificanceSymbol(vergleichASvsLit.mcnemar?.pValue)}</td>
                         </tr>`;
@@ -281,9 +281,9 @@ const publicationRenderer = (() => {
                      tableHTML += `<tr>
                         <td>AS vs. BF-Optimiert (${bfDef.metricName})</td>
                         <td>${getKollektivDisplayName(kolId)}</td>
-                        <td>AS (${_formatMetricWithCIForText(asStats.auc, 3, false, lang)})</td>
-                        <td>BF (${_formatMetricWithCIForText(bfStats.auc, 3, false, lang)})</td>
-                        <td>${_formatNumberForText(vergleichASvsBF.delong?.diffAUC, 3, lang, lang==='en')}</td>
+                        <td>AS (${_formatMetricForTable(asStats.auc, false, 3, lang)})</td>
+                        <td>BF (${_formatMetricForTable(bfStats.auc, false, 3, lang)})</td>
+                        <td>${formatNumber(vergleichASvsBF.delong?.diffAUC, 3, 'N/A', lang === 'en')}</td>
                         <td>${_getPValueTextForPublication(vergleichASvsBF.delong?.pValue, lang)} ${getStatisticalSignificanceSymbol(vergleichASvsBF.delong?.pValue)}</td>
                         <td>${_getPValueTextForPublication(vergleichASvsBF.mcnemar?.pValue, lang)} ${getStatisticalSignificanceSymbol(vergleichASvsBF.mcnemar?.pValue)}</td>
                     </tr>`;
@@ -293,7 +293,6 @@ const publicationRenderer = (() => {
         }
         return tableHTML;
     }
-
 
     function renderSectionContent(sectionId, lang, allKollektivStats, commonDataFromLogic, options = {}) {
         if (!sectionId || !lang || !allKollektivStats || !commonDataFromLogic) {
@@ -320,8 +319,13 @@ const publicationRenderer = (() => {
             combinedHtml += `<div class="publication-sub-section border-bottom pb-4 mb-4" id="pub-content-${subSection.id}">`;
             combinedHtml += `<h2 class="mb-3 h4 publication-sub-title">${subSection.label}</h2>`;
 
-            const textContentHtml = publicationTextGenerator.getSectionText(subSection.id, lang, allKollektivStats, commonData);
-            combinedHtml += textContentHtml || `<p class="text-muted">Inhalt für diesen Unterabschnitt (ID: ${subSection.id}, Sprache: ${lang}) wird noch generiert.</p>`;
+            if (typeof publicationTextGenerator === 'undefined' || typeof publicationTextGenerator.getSectionText !== 'function') {
+                combinedHtml += `<p class="text-danger">Fehler: publicationTextGenerator.getSectionText ist nicht verfügbar.</p>`;
+            } else {
+                const textContentHtml = publicationTextGenerator.getSectionText(subSection.id, lang, allKollektivStats, commonData);
+                combinedHtml += textContentHtml || `<p class="text-muted">Inhalt für diesen Unterabschnitt (ID: ${subSection.id}, Sprache: ${lang}) wird noch generiert oder ist nicht vorhanden.</p>`;
+            }
+
 
             if (subSection.id === 'methoden_t2_definition') {
                 combinedHtml += _renderLiteraturT2KriterienTabelle(lang);
