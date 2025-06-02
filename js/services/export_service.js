@@ -26,7 +26,7 @@ const exportService = (() => {
 
     function _getFilename(typeKey, kollektivId = null, overrideExtension = null) {
         const stateSnapshot = _mainAppInterface?.getStateSnapshot ? _mainAppInterface.getStateSnapshot() : {};
-        const appConfig = stateSnapshot.appConfig || APP_CONFIG; // Fallback to global APP_CONFIG
+        const appConfig = stateSnapshot.appConfig || APP_CONFIG; 
         const exportSettings = appConfig.EXPORT_SETTINGS;
         
         const type = exportSettings.FILENAME_TYPES[typeKey] || typeKey.replace(/[^a-zA-Z0-9]/g, '_');
@@ -319,14 +319,13 @@ const exportService = (() => {
                 scale: scale,
                 logging: false,
                 useCORS: true,
-                onclone: (doc) => { // Ensure styles are applied if they are external or complex
+                onclone: (doc) => { 
                     const clonedSvg = doc.querySelector('svg');
                     if (clonedSvg) {
-                         // Try to inline styles if necessary, though html2canvas often handles it
                     }
                 }
             });
-            const filename = _getFilename(null, null, 'png').replace('Unbekannt', filenamePrefix);
+            const filename = _getFilename('CHART_SINGLE_PNG', null, 'png').replace('Diagramm', filenamePrefix);
             canvas.toBlob(blob => _triggerDownload(blob, filename), 'image/png');
         } catch (error) {
             console.error(`Fehler beim Exportieren von Diagramm #${chartContainerId} als PNG:`, error);
@@ -346,7 +345,7 @@ const exportService = (() => {
         
         source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
         const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
-        const filename = _getFilename(null, null, 'svg').replace('Unbekannt', filenamePrefix);
+        const filename = _getFilename('CHART_SINGLE_SVG', null, 'svg').replace('Diagramm_Vektor', filenamePrefix);
         _triggerDownload(blob, filename);
     }
     
@@ -364,7 +363,7 @@ const exportService = (() => {
                  logging: false,
                  useCORS: true
             });
-            const filename = _getFilename(null, null, 'png').replace('Unbekannt', filenamePrefix);
+            const filename = _getFilename('TABLE_PNG_EXPORT', null, 'png').replace('Tabelle', filenamePrefix);
             canvas.toBlob(blob => _triggerDownload(blob, filename), 'image/png');
         } catch (error) {
             console.error(`Fehler beim Exportieren von Tabelle #${tableContainerId} als PNG:`, error);
@@ -481,14 +480,13 @@ const exportService = (() => {
     async function exportComprehensiveReportToHTML() {
         const stateSnapshot = _mainAppInterface.getStateSnapshot();
         const uiHelpers = _mainAppInterface.getUiHelpers();
-        const allStats = await _mainAppInterface.getPublicationStats(); // Assuming this gets all needed data or we fetch specifically
+        const allStats = await _mainAppInterface.getPublicationStats(); 
         const currentKollektiv = stateSnapshot.currentKollektiv;
         let html = `<html><head><title>Analysebericht</title><meta charset="UTF-8"><style>body{font-family:sans-serif; margin:20px;} table{border-collapse:collapse; margin-bottom:15px;} th,td{border:1px solid #ccc;padding:5px;text-align:left;} th{background-color:#f0f0f0;} h1,h2,h3{color:#337ab7;}</style></head><body>`;
         html += `<h1>Analysebericht - ${getKollektivDisplayName(currentKollektiv)}</h1>`;
         html += `<p>Datum: ${_getFormattedTimestamp("YYYY-MM-DD HH:mm")}</p>`;
         html += `<p>App Version: ${APP_CONFIG.APP_VERSION}</p>`;
         
-        // Deskriptive Statistik
         if(allStats && allStats[currentKollektiv] && allStats[currentKollektiv].deskriptiv){
             html += `<h2>Deskriptive Statistik (${getKollektivDisplayName(currentKollektiv)})</h2>`;
             const desc = allStats[currentKollektiv].deskriptiv;
@@ -510,7 +508,7 @@ const exportService = (() => {
         const currentKollektiv = stateSnapshot.currentKollektiv;
         const allStats = _mainAppInterface.getPublicationStats(); 
         const filteredData = _mainAppInterface.getFilteredData(currentKollektiv);
-        const auswertungData = (typeof auswertungTabLogic !== 'undefined' && auswertungTabLogic.isInitialized()) ? auswertungTabLogic.getCurrentAuswertungData() : filteredData; // Approximation
+        const auswertungData = (typeof auswertungTabLogic !== 'undefined' && auswertungTabLogic.isInitialized() && typeof auswertungTabLogic.getCurrentAuswertungData === 'function') ? auswertungTabLogic.getCurrentAuswertungData() : filteredData;
         
         for (const type of exportTypes) {
             let contentBlob = null;
@@ -519,7 +517,7 @@ const exportService = (() => {
                 switch (type) {
                     case 'STATS_CSV':
                         if (allStats) {
-                            const rows = []; // Simplified for brevity, reuse logic from exportStatisticsToCSV
+                            const rows = []; 
                             rows.push(["Kategorie", "Kollektiv", "Metrik", "Wert"]);
                             if(allStats[currentKollektiv]?.gueteAS?.sens) rows.push(["Güte AS", currentKollektiv, "Sensitivität", formatNumber(allStats[currentKollektiv].gueteAS.sens.value,4,'',false)]);
                             const csv = _convertToCSV(rows);
@@ -543,7 +541,22 @@ const exportService = (() => {
                              filename = _getFilename('DESKRIPTIV_MD', currentKollektiv);
                         }
                         break;
-                     // Add more cases for other MD, TXT, HTML files as needed
+                    case 'DATEN_MD':
+                         if (filteredData) {
+                            let md = `## Patientendaten (${getKollektivDisplayName(currentKollektiv)})\n\n`;
+                            md += _convertToMarkdownTable(filteredData.map(p=>({ID: p.id_patient, Alter:p.alter, N:p.n_status_patient})), {ID:"Pat.ID"});
+                            contentBlob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });
+                            filename = _getFilename('DATEN_MD', currentKollektiv);
+                         }
+                         break;
+                    case 'AUSWERTUNG_MD':
+                        if (auswertungData) {
+                            let md = `## Auswertungstabelle (${getKollektivDisplayName(currentKollektiv)})\n\n`;
+                            md += _convertToMarkdownTable(auswertungData.map(p=>({ID:p.id_patient, N:p.n_status_patient, AS:p.as_status_patient, T2:p.t2_status_patient})),{ID:"Pat.ID"});
+                            contentBlob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });
+                            filename = _getFilename('AUSWERTUNG_MD', currentKollektiv);
+                        }
+                        break;
                 }
                 if (contentBlob && filename) {
                     blobs[filename] = contentBlob;
@@ -567,17 +580,18 @@ const exportService = (() => {
             blobsToZip = {...blobsToZip, ...individualBlobs};
         }
         
-        // Handling charts and tables requires DOM access and async operations
         if (blobGeneratorConfig.includeChartsPNG || blobGeneratorConfig.includeChartsSVG || blobGeneratorConfig.includeTablesPNG) {
             const chartContainers = Array.from(document.querySelectorAll('.statistik-chart-container[id], .dashboard-chart-container[id], #praes-as-performance-chart[id], #praes-comp-chart-container[id], #pub-chart-age[id], #pub-chart-gender[id], .pub-vergleich-chart[id]'));
             for (const container of chartContainers) {
-                if (container.offsetParent === null) continue; // Skip hidden elements
+                if (container.offsetParent === null || !container.querySelector('svg')) continue; 
                 const chartId = container.id;
-                const chartName = container.closest('.card')?.querySelector('.card-header')?.textContent.trim().replace(/\s+/g,'_') || chartId;
+                const chartName = container.closest('.card')?.querySelector('.card-header')?.textContent.trim().replace(/\s+/g,'_') || chartId || "chart";
                  if (blobGeneratorConfig.includeChartsPNG) {
-                    const canvas = await html2canvas(container.querySelector('svg'), {backgroundColor:null, scale:2});
-                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-                    if(blob) blobsToZip[`charts/${chartName}.png`] = blob;
+                    try {
+                        const canvas = await html2canvas(container.querySelector('svg'), {backgroundColor: APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR, scale:2, logging: false});
+                        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                        if(blob) blobsToZip[`charts_png/${chartName}.png`] = blob;
+                    } catch(e) { console.error("Fehler beim PNG Export von Chart:", chartId, e); }
                 }
                 if (blobGeneratorConfig.includeChartsSVG) {
                     const svgElement = container.querySelector('svg');
@@ -590,13 +604,15 @@ const exportService = (() => {
                 }
             }
              if (blobGeneratorConfig.includeTablesPNG) {
-                const tableContainers = Array.from(document.querySelectorAll('.publication-table[id], .daten-tabelle-export[id], .auswertung-tabelle-export[id]')); // Add specific table IDs/classes
+                const tableContainers = Array.from(document.querySelectorAll('.publication-table[id], .table-exportable[id]')); 
                 for (const tableEl of tableContainers) {
                      if (tableEl.offsetParent === null) continue;
                      const tableName = tableEl.closest('.card')?.querySelector('.card-header')?.textContent.trim().replace(/\s+/g,'_') || tableEl.id || 'table';
-                     const canvas = await html2canvas(tableEl, {scale:1.5});
-                     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-                     if(blob) blobsToZip[`tables_png/${tableName}.png`] = blob;
+                     try {
+                        const canvas = await html2canvas(tableEl, {scale:1.5, backgroundColor: APP_CONFIG.EXPORT_SETTINGS.TABLE_PNG_BACKGROUND_COLOR, logging: false});
+                        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                        if(blob) blobsToZip[`tables_png/${tableName}.png`] = blob;
+                     } catch(e) { console.error("Fehler beim PNG Export von Tabelle:", tableEl.id, e); }
                 }
             }
         }
@@ -625,14 +641,20 @@ const exportService = (() => {
     function triggerExport(exportType) {
         if (!_initialized || !_mainAppInterface) {
             console.error("ExportService nicht initialisiert oder MainAppInterface fehlt.");
-            alert("ExportService ist nicht bereit. Bitte laden Sie die Seite neu.");
+            if (typeof ui_helpers !== 'undefined' && ui_helpers.showToast) { // Direct call if interface fails
+                ui_helpers.showToast("ExportService ist nicht bereit.", "error");
+            } else {
+                alert("ExportService ist nicht bereit. Bitte laden Sie die Seite neu.");
+            }
             return;
         }
         const stateSnapshot = _mainAppInterface.getStateSnapshot();
         const currentKollektiv = stateSnapshot.currentKollektiv;
-        const allStats = _mainAppInterface.getPublicationStats(); // This can be slow if not cached
+        const allStats = _mainAppInterface.getPublicationStats(); 
         const filteredData = _mainAppInterface.getFilteredData(currentKollektiv);
-        const auswertungData = (typeof auswertungTabLogic !== 'undefined' && auswertungTabLogic.isInitialized()) ? auswertungTabLogic.getCurrentAuswertungData() : filteredData;
+        const auswertungData = (typeof auswertungTabLogic !== 'undefined' && auswertungTabLogic.isInitialized() && typeof auswertungTabLogic.getCurrentAuswertungData === 'function') 
+                                ? auswertungTabLogic.getCurrentAuswertungData() 
+                                : (filteredData || []); // Fallback for auswertungData
         const praesentationData = _mainAppInterface.getPraesentationData();
 
 
@@ -645,8 +667,17 @@ const exportService = (() => {
             case 'FILTERED_DATA_CSV': exportFilteredDataToCSV(filteredData, currentKollektiv); break;
             case 'COMPREHENSIVE_REPORT_HTML': exportComprehensiveReportToHTML(); break;
             case 'PUBLIKATION_GESAMT_MD':
+                const pubCommonData = (typeof publicationTabLogic !== 'undefined' && publicationTabLogic.isInitialized() && typeof publicationTabLogic._getCommonDataForTextGenerator === 'function') 
+                                    ? publicationTabLogic._getCommonDataForTextGenerator() 
+                                    : _mainAppInterface.getPublicationStats()?._getCommonDataForTextGenerator() || {};
                 const pubSections = (typeof publicationTabLogic !== 'undefined' && publicationTabLogic.isInitialized() && typeof publicationTextGenerator !== 'undefined')
-                    ? PUBLICATION_CONFIG.sections.flatMap(s => s.subSections ? s.subSections : [s]).map(sec => ({title: sec.labels[stateSnapshot.publikationLang] || sec.labels.de, content: publicationTextGenerator.getSectionText(sec.id, stateSnapshot.publikationLang, allStats, _mainAppInterface.getPublicationStats()?._getCommonDataForTextGenerator() || {}, {bruteForceMetric: stateSnapshot.publikationBruteForceMetric}) }))
+                    ? PUBLICATION_CONFIG.sections.flatMap(s => s.subSections ? s.subSections : [s]).map(sec => {
+                        const secLabelObj = sec.labels || {};
+                        return {
+                            title: secLabelObj[stateSnapshot.publikationLang] || secLabelObj.de || sec.id, 
+                            content: publicationTextGenerator.getSectionText(sec.id, stateSnapshot.publikationLang, allStats, pubCommonData, {bruteForceMetric: stateSnapshot.publikationBruteForceMetric}) 
+                        };
+                    })
                     : [];
                 exportFullPublicationToMD(pubSections, currentKollektiv, stateSnapshot.publikationLang);
                 break;
