@@ -6,7 +6,7 @@ const publicationTabLogic = (() => {
     let _appliedT2LogicGlobal = '';
     let _bruteForceResults = null;
     let _publikationLang = 'de';
-    let _publikationSection = 'methoden';
+    let _publikationSection = 'methoden_studienanlage';
     let _publikationBruteForceMetric = 'Balanced Accuracy';
     let _isInitialized = false;
     let _isDataStale = true;
@@ -48,7 +48,7 @@ const publicationTabLogic = (() => {
         if (!_isDataStale && _publicationStats && !_publicationStats.error) {
             return _publicationStats;
         }
-        _isDataStale = true; 
+        _isDataStale = true;
         _publicationStats = null;
 
         try {
@@ -59,13 +59,13 @@ const publicationTabLogic = (() => {
             if (!processedDataFull || !Array.isArray(processedDataFull) || processedDataFull.length === 0) {
                 throw new Error("Keine verarbeiteten Patientendaten verfügbar für Publikationsstatistiken.");
             }
-            
+
             const allStats = statisticsService.calculateAllStatsForPublication(
                 processedDataFull,
                 _appliedT2CriteriaGlobal,
                 _appliedT2LogicGlobal,
                 _bruteForceResults,
-                _publikationBruteForceMetric 
+                _publikationBruteForceMetric
             );
 
             if (!allStats) {
@@ -76,8 +76,8 @@ const publicationTabLogic = (() => {
 
         } catch (error) {
             console.error("Fehler bei der Berechnung der Statistikdaten für den Publikationstab:", error);
-            _publicationStats = { error: error.message, details: {} }; 
-            _isDataStale = false; 
+            _publicationStats = { error: error.message, details: {} };
+            _isDataStale = false;
         }
         return _publicationStats;
     }
@@ -90,7 +90,7 @@ const publicationTabLogic = (() => {
 
         if (!tabContentPane || !mainContentArea || !sidebarArea) {
             console.error("Ein oder mehrere Hauptcontainer für den Publikationstab nicht gefunden.");
-            if(tabContentPane) tabContentPane.innerHTML = '<p class="text-danger p-3">Fehler: Haupt-Layout-Elemente für Publikationstab fehlen.</p>';
+            if (tabContentPane) tabContentPane.innerHTML = '<p class="text-danger p-3">Fehler: Haupt-Layout-Elemente für Publikationstab fehlen.</p>';
             return;
         }
 
@@ -99,7 +99,7 @@ const publicationTabLogic = (() => {
             sidebarArea.innerHTML = '<p class="text-muted p-2 small">Daten nicht verfügbar.</p>';
             return;
         }
-        
+
         if (typeof publicationTextGenerator === 'undefined' || typeof publicationRenderer === 'undefined') {
             mainContentArea.innerHTML = '<p class="text-danger p-3">Fehler: Notwendige Publikationsmodule (Generator oder Renderer) nicht geladen.</p>';
             return;
@@ -107,7 +107,7 @@ const publicationTabLogic = (() => {
 
         const tocItems = publicationTextGenerator.getTableOfContents(_publikationLang, _publicationStats);
         sidebarArea.innerHTML = publicationRenderer.renderSidebarNavigation(tocItems, _publikationSection, _publikationLang);
-        
+
         const commonDataForRenderer = _getCommonDataForTextGenerator();
         const optionsForRenderer = { bruteForceMetric: _publikationBruteForceMetric };
 
@@ -119,7 +119,7 @@ const publicationTabLogic = (() => {
             optionsForRenderer
         );
         mainContentArea.innerHTML = sectionBaseHTML;
-        
+
         const pubElementsConfig = PUBLICATION_CONFIG.publicationElements;
 
         if (_publikationSection === 'methoden_t2_definition' && pubElementsConfig.methoden?.literaturT2KriterienTabelle) {
@@ -280,6 +280,24 @@ const publicationTabLogic = (() => {
         _publikationSection = publikationSection;
         _publikationBruteForceMetric = publikationBruteForceMetric;
         
+        const mainSectionConfig = PUBLICATION_CONFIG.sections.find(s => s.id === _publikationSection || (s.subSections && s.subSections.some(sub => sub.id === _publikationSection)));
+        let effectiveSection = _publikationSection;
+
+        if (mainSectionConfig && mainSectionConfig.subSections && mainSectionConfig.subSections.length > 0) {
+            const isCurrentSectionASubSection = mainSectionConfig.subSections.some(sub => sub.id === _publikationSection);
+            if (!isCurrentSectionASubSection) { // If _publikationSection is a main category, pick its first subSection
+                effectiveSection = mainSectionConfig.subSections[0].id;
+            }
+        } else if (!mainSectionConfig && PUBLICATION_CONFIG.sections.length > 0 && PUBLICATION_CONFIG.sections[0].subSections.length > 0) {
+            // Fallback if _publikationSection is completely invalid
+            effectiveSection = PUBLICATION_CONFIG.sections[0].subSections[0].id;
+        }
+        _publikationSection = effectiveSection; // Update internal state if changed
+        if (typeof state !== 'undefined' && state.getCurrentPublikationSection() !== _publikationSection) {
+            state.setCurrentPublikationSection(_publikationSection); // Update global state and save
+        }
+
+
         setDataStale(); 
         _initializeData(); 
         _renderPublicationTabContent(); 
