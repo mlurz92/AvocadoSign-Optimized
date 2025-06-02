@@ -21,7 +21,6 @@ const publicationTabLogic = (() => {
             if (configKey === 'PUBLICATION_CONFIG') return snapshot.publicationConfig;
             return snapshot.appConfig;
         }
-        // Fallback
         if (configKey === 'APP_CONFIG') return typeof APP_CONFIG !== 'undefined' ? APP_CONFIG : {};
         if (configKey === 'UI_TEXTS') return typeof UI_TEXTS !== 'undefined' ? UI_TEXTS : {};
         if (configKey === 'TOOLTIP_CONTENT') return typeof TOOLTIP_CONTENT !== 'undefined' ? TOOLTIP_CONTENT : {};
@@ -108,23 +107,65 @@ const publicationTabLogic = (() => {
 
 
     function _renderPublicationTabContent() {
-        const tabPane = document.getElementById('publikation-tab-pane');
+        const tabPaneId = 'publikation-tab-pane';
+        let tabPane = document.getElementById(tabPaneId);
+
+        if (!tabPane) {
+            console.error(`PublicationTabLogic: Tab-Pane '${tabPaneId}' nicht gefunden. Kann Tab nicht rendern.`);
+            return;
+        }
+        
         const appConfig = _getGlobalConfig('APP_CONFIG');
         const publicationConfig = _getGlobalConfig('PUBLICATION_CONFIG');
         const uiTexts = _getGlobalConfig('UI_TEXTS');
+        
+        const sidebarId = 'publikation-sidebar-nav-container';
+        const mainContentContainerId = appConfig?.TAB_CONTENT_AREAS?.['publikation-tab'] || 'publikation-main-content-container';
+        const controlsId = 'publikation-controls-container';
+        const contentAreaId = 'publikation-content-area';
 
-        const mainContentAreaContainerId = appConfig?.TAB_CONTENT_AREAS?.['publikation-tab'] || 'publikation-main-content-container';
-        const mainContentAreaContainer = document.getElementById(mainContentAreaContainerId);
-        const sidebarArea = document.getElementById('publikation-sidebar-nav-container');
-        const mainContentArea = document.getElementById('publikation-content-area'); // Der eigentliche Textbereich
-        const controlsArea = document.getElementById('publikation-controls-container');
+        let sidebarArea = document.getElementById(sidebarId);
+        let mainContentAreaContainer = document.getElementById(mainContentContainerId);
+        let controlsArea;
+        let mainContentArea;
 
+        if (!sidebarArea || !mainContentAreaContainer) {
+            console.warn("PublicationTabLogic: Grundstruktur (Sidebar oder Main-Content-Container) nicht im DOM gefunden. Erstelle sie neu innerhalb des Tab-Panes.");
+            tabPane.innerHTML = `
+                <div class="container-fluid mt-3">
+                    <div class="row">
+                        <div class="col-md-3" id="${sidebarId}"></div>
+                        <div class="col-md-9" id="${mainContentContainerId}"></div>
+                    </div>
+                </div>`;
+            sidebarArea = document.getElementById(sidebarId);
+            mainContentAreaContainer = document.getElementById(mainContentContainerId);
+        }
+        
+        if (mainContentAreaContainer) {
+            controlsArea = document.getElementById(controlsId);
+            mainContentArea = document.getElementById(contentAreaId);
 
-        if (!tabPane || !mainContentAreaContainer || !sidebarArea || !mainContentArea || !controlsArea) {
-            console.error("Ein oder mehrere Hauptcontainer/Steuerungselemente für den Publikationstab nicht gefunden.");
-            if (tabPane) tabPane.innerHTML = '<p class="text-danger p-3">Fehler: Layout-Elemente für Publikationstab fehlen.</p>';
+            if (!controlsArea || !mainContentArea) {
+                 console.warn("PublicationTabLogic: Controls- oder Content-Area nicht im Main-Content-Container gefunden. Erstelle sie neu.");
+                 mainContentAreaContainer.innerHTML = `
+                    <div class="d-flex justify-content-end align-items-center mb-2 p-2 border-bottom" id="${controlsId}"></div>
+                    <div id="${contentAreaId}" class="p-3 publication-text-render-area"></div>`;
+                 controlsArea = document.getElementById(controlsId);
+                 mainContentArea = document.getElementById(contentAreaId);
+            }
+        }
+
+        if (!sidebarArea || !mainContentAreaContainer || !controlsArea || !mainContentArea) {
+            console.error("Ein oder mehrere Hauptcontainer/Steuerungselemente für den Publikationstab konnten auch nach Neuerstellung nicht gefunden/erstellt werden.");
+            if (tabPane) tabPane.innerHTML = '<p class="text-danger p-3">Fehler: Kritisches Layout-Element für Publikationstab fehlt und konnte nicht wiederhergestellt werden.</p>';
             return;
         }
+        
+        controlsArea.innerHTML = ''; 
+        sidebarArea.innerHTML = '';
+        mainContentArea.innerHTML = '';
+
 
         if (typeof publicationTextGenerator === 'undefined' || typeof publicationRenderer === 'undefined') {
             mainContentArea.innerHTML = '<p class="text-danger p-3">Fehler: Notwendige Publikationsmodule (Generator oder Renderer) nicht geladen.</p>';
@@ -134,11 +175,9 @@ const publicationTabLogic = (() => {
         if (!_publicationStats || _publicationStats.error) {
             mainContentArea.innerHTML = `<div class="alert alert-danger m-3">Fehler beim Laden der Publikationsdaten: ${_publicationStats?.error || 'Unbekannter Fehler'}.</div>`;
             sidebarArea.innerHTML = '<p class="text-muted p-2 small">Daten nicht verfügbar.</p>';
-            controlsArea.innerHTML = ''; // Leere Steuerungselemente bei Fehler
             return;
         }
 
-        // Render Controls first
         const bfMetricOptionsHTML = publicationConfig.bruteForceMetricsForPublication.map(opt =>
             `<option value="${opt.value}" ${opt.value === _publikationBruteForceMetric ? 'selected' : ''}>${opt.label}</option>`
         ).join('');
@@ -332,7 +371,7 @@ const publicationTabLogic = (() => {
         const uiHelpers = _mainAppInterface.getUiHelpers();
         if (uiHelpers) {
             uiHelpers.updatePublikationUI(_publikationLang, _publikationSection, _publikationBruteForceMetric);
-            uiHelpers.initializeTooltips(tabPane);
+            uiHelpers.initializeTooltips(tabPane); // Initialize tooltips for the entire tab pane
         }
         if (typeof publicationRenderer.attachPublicationTabEventListeners === 'function') {
             publicationRenderer.attachPublicationTabEventListeners(mainContentArea, _publicationStats, _publikationLang, _publikationSection, _publikationBruteForceMetric, commonDataForGenerator, optionsForGenerator);
@@ -365,12 +404,15 @@ const publicationTabLogic = (() => {
             }
         } else if (!mainSectionConfig && publicationConfig.sections.length > 0 && publicationConfig.sections[0].subSections && publicationConfig.sections[0].subSections.length > 0) {
             effectiveSection = publicationConfig.sections[0].subSections[0].id;
+        } else if (!mainSectionConfig && publicationConfig.sections.length > 0) { // Fallback if section not found, go to first valid section
+             effectiveSection = publicationConfig.sections[0].subSections ? publicationConfig.sections[0].subSections[0].id : publicationConfig.sections[0].id;
         }
+
+
         _publikationSection = effectiveSection; 
         
-        const globalState = _mainAppInterface.getStateSnapshot().stateModule; // Hypothetischer Zugriff, falls state Modul direkt erreichbar wäre
         if (typeof state !== 'undefined' && state.getCurrentPublikationSection() !== _publikationSection) {
-            state.setCurrentPublikationSection(_publikationSection);
+            state.setCurrentPublikationSection(_publikationSection); // Update global state if effective section changed
         }
 
         setDataStale(); 
