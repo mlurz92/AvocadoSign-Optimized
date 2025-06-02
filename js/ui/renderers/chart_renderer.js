@@ -16,7 +16,7 @@ const chart_renderer = (() => {
             console.error(`Chart container #${containerId} not found.`);
             return { svg: null, width: 0, height: 0, margin: APP_CONFIG.CHART_SETTINGS.DEFAULT_MARGIN };
         }
-        container.html(''); // Ensure container is empty before appending
+        container.html('');
 
         const margin = { ...APP_CONFIG.CHART_SETTINGS.DEFAULT_MARGIN, ...options.margin };
         
@@ -32,10 +32,8 @@ const chart_renderer = (() => {
 
         if (width <= 0 || height <= 0) {
             console.warn(`Calculated chart dimensions for #${containerId} are invalid (width: ${width}, height: ${height}). Using defaults.`);
-             const defaultWidth = APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH - margin.left - margin.right;
-             const defaultHeight = APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT - margin.top - margin.bottom;
-             if (width <= 0) clientWidth = APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH;
-             if (height <= 0) clientHeight = APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT;
+             clientWidth = APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH;
+             clientHeight = APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT;
         }
 
 
@@ -65,6 +63,7 @@ const chart_renderer = (() => {
     }
 
     function _addAxes(svg, xScale, yScale, width, height, options = {}) {
+        const margin = options.margin || APP_CONFIG.CHART_SETTINGS.DEFAULT_MARGIN;
         const xAxis = d3.axisBottom(xScale);
         if (options.xAxisTickFormat) xAxis.tickFormat(options.xAxisTickFormat);
         if (options.xAxisTickValues) xAxis.tickValues(options.xAxisTickValues);
@@ -109,7 +108,7 @@ const chart_renderer = (() => {
                 .attr("class", "x-axis-label axis-label")
                 .attr("text-anchor", "middle")
                 .attr("x", width / 2)
-                .attr("y", height + options.margin.bottom - (parseFloat(APP_CONFIG.CHART_SETTINGS.RSNA_CHART_AXIS_LABEL_FONT_SIZE) / 1.5 || 10) )
+                .attr("y", height + margin.bottom - (parseFloat(APP_CONFIG.CHART_SETTINGS.RSNA_CHART_AXIS_LABEL_FONT_SIZE) / 1.5 || 10) )
                 .style("font-size", APP_CONFIG.CHART_SETTINGS.RSNA_CHART_AXIS_LABEL_FONT_SIZE || "10pt")
                 .style("fill", APP_CONFIG.CHART_SETTINGS.CHART_LABEL_COLOR || "#000")
                 .text(options.xAxisLabel);
@@ -119,7 +118,7 @@ const chart_renderer = (() => {
                 .attr("class", "y-axis-label axis-label")
                 .attr("text-anchor", "middle")
                 .attr("transform", "rotate(-90)")
-                .attr("y", 0 - options.margin.left + (parseFloat(APP_CONFIG.CHART_SETTINGS.RSNA_CHART_AXIS_LABEL_FONT_SIZE) || 12) )
+                .attr("y", 0 - margin.left + (parseFloat(APP_CONFIG.CHART_SETTINGS.RSNA_CHART_AXIS_LABEL_FONT_SIZE) || 12) )
                 .attr("x", 0 - (height / 2))
                 .style("font-size", APP_CONFIG.CHART_SETTINGS.RSNA_CHART_AXIS_LABEL_FONT_SIZE || "10pt")
                 .style("fill", APP_CONFIG.CHART_SETTINGS.CHART_LABEL_COLOR || "#000")
@@ -156,7 +155,7 @@ const chart_renderer = (() => {
         const legendItemSize = 12;
         const legendSpacing = 5;
         const legendPadding = 10;
-        let legendX = width; // Default right
+        let legendX = width; 
         let legendY = 0;
         const legendFontSize = APP_CONFIG.CHART_SETTINGS.RSNA_CHART_LEGEND_FONT_SIZE || "9pt";
 
@@ -192,15 +191,15 @@ const chart_renderer = (() => {
             totalLegendWidth -= legendSpacing * 3;
 
             let currentX = (width - totalLegendWidth) / 2;
-            if (totalLegendWidth > width) currentX = 0; // Prevent negative start
+            if (totalLegendWidth > width) currentX = 0; 
 
             legend.attr("transform", function(d, i) {
                 const itemWidth = this.getBBox().width;
                 const tx = currentX;
                 currentX += itemWidth + legendSpacing * 3;
-                return `translate(${tx}, ${margin.top + options.height + (options.margin.bottom / 2) - (parseFloat(legendFontSize)/2) })`;
+                return `translate(${tx}, ${margin.top + options.height + (margin.bottom / 2) - (parseFloat(legendFontSize)/2) })`;
             });
-        } else { // Default: right
+        } else { 
              legend.attr("transform", (d, i) => `translate(0, ${i * (legendItemSize + legendSpacing) + legendY})`);
         }
     }
@@ -246,16 +245,22 @@ const chart_renderer = (() => {
             });
     }
 
-    function _handleChartResize(containerId, renderFn, data, options) {
+    function _handleChartResize(containerId, renderFn, data, kollektivNameOrSeries, optionsOrOptions) {
         _clearResizeListeners();
         let resizeTimer;
         const debouncedRender = () => {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
                 if (document.getElementById(containerId)) {
-                    renderFn(containerId, data, options);
+                    if (renderFn.name === 'renderAgeDistributionChart' || renderFn.name === 'renderASPerformanceChart' || renderFn.name === 'renderROCChart') {
+                         renderFn(containerId, data, kollektivNameOrSeries, optionsOrOptions);
+                    } else if (renderFn.name === 'renderPieChart') {
+                         renderFn(containerId, data, kollektivNameOrSeries); // kollektivNameOrSeries ist hier options
+                    } else if (renderFn.name === 'renderComparisonBarChart') {
+                         renderFn(containerId, data, kollektivNameOrSeries, optionsOrOptions); // kollektivNameOrSeries ist hier series, optionsOrOptions ist options
+                    }
                 } else {
-                    _clearResizeListeners(); // Container nicht mehr vorhanden
+                    _clearResizeListeners(); 
                 }
             }, APP_CONFIG.PERFORMANCE_SETTINGS.DEBOUNCE_DELAY_MS || 250);
         };
@@ -269,7 +274,7 @@ const chart_renderer = (() => {
         const { svg, width, height, margin } = _getBaseSVG(containerId, options);
         if (!svg || !Array.isArray(ageData) || ageData.length === 0) return;
 
-        const title = options.title || `${UI_TEXTS.chartTitles.ageDistribution} (${getKollektivDisplayName(kollektivName)})`;
+        const title = options.title === '' ? null : (options.title || `${UI_TEXTS.chartTitles.ageDistribution} (${getKollektivDisplayName(kollektivName)})`);
         _addTitle(svg, title, width, margin);
 
         const xScale = d3.scaleLinear()
@@ -310,7 +315,9 @@ const chart_renderer = (() => {
         const { svg, width, height, margin } = _getBaseSVG(containerId, baseOptions);
         if (!svg || !Array.isArray(data) || data.length === 0) return;
 
-        _addTitle(svg, options.title, width, margin);
+        const titleToUse = options.title === '' ? null : options.title;
+        _addTitle(svg, titleToUse, width, margin);
+
 
         const radius = Math.min(width, height) / 2 - (options.compact ? 0 : 10);
         const pie = d3.pie().value(d => d.value).sort(null);
@@ -341,7 +348,9 @@ const chart_renderer = (() => {
         _clearResizeListeners();
         const { svg, width, height, margin } = _getBaseSVG(containerId, options);
         if (!svg || !Array.isArray(data) || data.length === 0 || !series || series.length === 0) return;
-        _addTitle(svg, options.title, width, margin);
+        const titleToUse = options.title === '' ? null : options.title;
+        _addTitle(svg, titleToUse, width, margin);
+
 
         const groupKey = options.groupKey || 'group';
         const groups = data.map(d => d[groupKey]);
@@ -358,8 +367,8 @@ const chart_renderer = (() => {
         })) || 1;
 
         if(options.yDomain) { yDomainMin = options.yDomain[0] ?? yDomainMin; yDomainMax = options.yDomain[1] ?? yDomainMax; }
-        if (yDomainMin > yDomainMax) yDomainMax = yDomainMin + 0.1; // Ensure max is greater than min
-        if (yDomainMin === yDomainMax && yDomainMin === 0) yDomainMax = 0.1; // Avoid 0-0 domain
+        if (yDomainMin > yDomainMax) yDomainMax = yDomainMin + 0.1; 
+        if (yDomainMin === yDomainMax && yDomainMin === 0) yDomainMax = 0.1; 
         else if (yDomainMin === yDomainMax) { yDomainMin -= 0.05; yDomainMax += 0.05;}
 
 
@@ -375,7 +384,7 @@ const chart_renderer = (() => {
             .attr("transform", d => `translate(${x0Scale(d[groupKey])},0)`);
 
         const bars = group.selectAll("rect.bar")
-            .data(d => series.map(s => ({ key: s.key, value: d[s.key]?.value ?? d[s.key], ci: d[s.key]?.ci, color: s.color, seriesName: s.name })))
+            .data(d => series.map(s => ({ key: s.key, value: d[s.key]?.value ?? d[s.key], ci: d[s.key]?.ci, color: s.color, seriesName: s.name, groupName: d[groupKey] })))
             .join("rect")
             .attr("class", "bar comparison-bar")
             .attr("x", d => x1Scale(d.key))
@@ -398,25 +407,24 @@ const chart_renderer = (() => {
                 .each(function(d) {
                     if (d.ci && typeof d.value === 'number' && typeof d.ci.lower === 'number' && typeof d.ci.upper === 'number') {
                         const barX = x1Scale(d.key) + x1Scale.bandwidth() / 2;
-                        const yVal = yScale(d.value);
                         const yLower = yScale(d.ci.lower);
                         const yUpper = yScale(d.ci.upper);
 
                         if(isFinite(barX) && isFinite(yLower) && isFinite(yUpper)){
-                            d3.select(this).append("line") // Main CI line
+                            d3.select(this).append("line") 
                                 .attr("class", "error-bar-line")
                                 .attr("x1", barX).attr("x2", barX)
                                 .attr("y1", yUpper).attr("y2", yLower)
                                 .style("stroke", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_COLOR)
                                 .style("stroke-width", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_WIDTH + "px");
-                            d3.select(this).append("line") // Top cap
+                            d3.select(this).append("line") 
                                 .attr("class", "error-bar-cap")
                                 .attr("x1", barX - APP_CONFIG.CHART_SETTINGS.ERROR_BAR_CAP_SIZE)
                                 .attr("x2", barX + APP_CONFIG.CHART_SETTINGS.ERROR_BAR_CAP_SIZE)
                                 .attr("y1", yUpper).attr("y2", yUpper)
                                 .style("stroke", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_COLOR)
                                 .style("stroke-width", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_WIDTH + "px");
-                            d3.select(this).append("line") // Bottom cap
+                            d3.select(this).append("line") 
                                 .attr("class", "error-bar-cap")
                                 .attr("x1", barX - APP_CONFIG.CHART_SETTINGS.ERROR_BAR_CAP_SIZE)
                                 .attr("x2", barX + APP_CONFIG.CHART_SETTINGS.ERROR_BAR_CAP_SIZE)
@@ -429,7 +437,7 @@ const chart_renderer = (() => {
         }
 
         _addTooltipToElements(bars, d => {
-            let tooltipText = `<strong>${options.groupDisplayName || 'Gruppe'}:</strong> ${d3.select(this.parentNode).datum()[groupKey]}<br><strong>${d.seriesName || d.key}:</strong> ${formatNumber(d.value, (d.value < 1 && d.value > -1 ? 3 : 1), '--', true)}`;
+            let tooltipText = `<strong>${options.groupDisplayName || groupKey.charAt(0).toUpperCase() + groupKey.slice(1)}:</strong> ${d.groupName}<br><strong>${d.seriesName || d.key}:</strong> ${formatNumber(d.value, (d.value < 1 && d.value > -1 && d.value !== 0 ? 3 : 1), '--', true)}`;
             if(options.includeCI && d.ci && typeof d.ci.lower === 'number' && typeof d.ci.upper === 'number') {
                  tooltipText += ` (95% CI: ${formatNumber(d.ci.lower, 3, '--', true)} - ${formatNumber(d.ci.upper, 3, '--', true)})`;
             }
@@ -439,7 +447,7 @@ const chart_renderer = (() => {
         _handleChartResize(containerId, renderComparisonBarChart, data, series, options);
     }
 
-    function renderASPerformanceChart(containerId, data, kollektivName, options = {}) { // Data: { sens: {value, ci}, spez: ... }
+    function renderASPerformanceChart(containerId, data, kollektivName, options = {}) { 
          _clearResizeListeners();
         if(!data) { console.warn(`Keine Daten für AS Performance Chart (${kollektivName})`); return; }
         const chartData = Object.keys(data)
@@ -458,8 +466,8 @@ const chart_renderer = (() => {
         const { svg, width, height, margin } = _getBaseSVG(containerId, options);
         if (!svg) return;
 
-        const title = options.title || `${UI_TEXTS.chartTitles.asPerformance} (${getKollektivDisplayName(kollektivName)})`;
-        _addTitle(svg, title, width, margin);
+        const titleToUse = options.title === '' ? null : (options.title || `${UI_TEXTS.chartTitles.asPerformance} (${getKollektivDisplayName(kollektivName)})`);
+        _addTitle(svg, titleToUse, width, margin);
 
         const xScale = d3.scaleBand()
             .domain(chartData.map(d => d.metric))
@@ -475,7 +483,7 @@ const chart_renderer = (() => {
 
 
         const yScale = d3.scaleLinear()
-            .domain([yDomainMin, Math.min(1, yDomainMax) * 1.05]) // Max 100%
+            .domain([yDomainMin, Math.min(1, yDomainMax) * 1.05]) 
             .range([height, 0]).nice();
 
         _addAxes(svg, xScale, yScale, width, height, { ...options, margin, yAxisTickFormat: d => d3.format(".0%")(d), xAxisLabel: UI_TEXTS.axisLabels.metric, yAxisLabel: UI_TEXTS.axisLabels.metricValue, rotateXLabels: true, rotateXLabelsAngle: 30});
@@ -520,17 +528,18 @@ const chart_renderer = (() => {
     }
 
 
-    function renderROCChart(containerId, data, methodenName, kollektivName, options = {}) { // data = [{fpr, tpr, threshold, color (optional)}, aucData: {value, ci}]
+    function renderROCChart(containerId, data, methodenName, kollektivName, options = {}) { 
         _clearResizeListeners();
         const { svg, width, height, margin } = _getBaseSVG(containerId, options);
         if (!svg || !Array.isArray(data) || data.length === 0) {
             console.warn(`Keine Daten für ROC Chart (${methodenName}, ${kollektivName})`);
-             svg?.append("text").attr("x", width/2).attr("y", height/2).attr("text-anchor", "middle").text("Keine ROC-Daten verfügbar.");
+             if (svg) svg.append("text").attr("x", width/2).attr("y", height/2).attr("text-anchor", "middle").text("Keine ROC-Daten verfügbar.");
             return;
         }
         
-        const title = options.title || `${UI_TEXTS.chartTitles.rocCurve.replace('{Method}', methodenName)} (${getKollektivDisplayName(kollektivName)})`;
-        _addTitle(svg, title, width, margin);
+        const titleToUse = options.title === '' ? null : (options.title || `${UI_TEXTS.chartTitles.rocCurve.replace('{Method}', methodenName)} (${getKollektivDisplayName(kollektivName)})`);
+        _addTitle(svg, titleToUse, width, margin);
+
 
         const xScale = d3.scaleLinear().domain([0, 1]).range([0, width]);
         const yScale = d3.scaleLinear().domain([0, 1]).range([height, 0]);
@@ -538,7 +547,7 @@ const chart_renderer = (() => {
         _addAxes(svg, xScale, yScale, width, height, { ...options, margin, xAxisLabel: UI_TEXTS.axisLabels.oneMinusSpecificity, yAxisLabel: UI_TEXTS.axisLabels.sensitivity, yAxisTickFormat: d3.format(".0%"), xAxisTickFormat: d3.format(".0%") });
         _addGridlines(svg, xScale, yScale, width, height, {maxTicksX:5, maxTicksY: 5, forceGridlines: options.forceGridlines});
 
-        svg.append("line") // Reference line
+        svg.append("line") 
             .attr("class", "reference-line")
             .attr("x1", 0).attr("y1", height)
             .attr("x2", width).attr("y2", 0)
@@ -555,7 +564,7 @@ const chart_renderer = (() => {
 
         if (options.showPoints) {
             const points = svg.selectAll(".roc-point")
-                .data(data.filter(d => d.threshold !== undefined)) // Nur Punkte mit Threshold anzeigen
+                .data(data.filter(d => d.threshold !== undefined)) 
                 .join("circle")
                 .attr("class", "roc-point")
                 .attr("cx", d => xScale(d.fpr))
