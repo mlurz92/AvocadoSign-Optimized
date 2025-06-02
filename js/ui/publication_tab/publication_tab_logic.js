@@ -261,7 +261,7 @@ const publicationTabLogic = (() => {
         }
         
         if (typeof ui_helpers !== 'undefined') {
-            ui_helpers.updatePublicationControlsUI(_publikationLang, _publikationSection, _publikationBruteForceMetric, _bruteForceResults);
+            ui_helpers.updatePublikationUI(_publikationLang, _publikationSection, _publikationBruteForceMetric, _bruteForceResults);
             ui_helpers.initializeTooltips(tabContentPane);
         }
         if (typeof publicationRenderer.attachPublicationTabEventListeners === 'function') {
