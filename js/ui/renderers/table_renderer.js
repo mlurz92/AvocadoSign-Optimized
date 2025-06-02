@@ -1,206 +1,213 @@
 const tableRenderer = (() => {
 
-    function _createDatenDetailRowContent(patient) {
-         if (!Array.isArray(patient.lymphknoten_t2) || patient.lymphknoten_t2.length === 0) {
-             return '<p class="m-0 p-2 text-muted small">Keine T2-Lymphknoten für diesen Patienten erfasst.</p>';
-         }
+    function _getGlobalConfig(configKey, fallback = {}) {
+        if (configKey === 'APP_CONFIG') return typeof APP_CONFIG !== 'undefined' ? APP_CONFIG : fallback;
+        if (configKey === 'UI_TEXTS') return typeof UI_TEXTS !== 'undefined' ? UI_TEXTS : fallback;
+        if (configKey === 'TOOLTIP_CONTENT') return typeof TOOLTIP_CONTENT !== 'undefined' ? TOOLTIP_CONTENT : fallback;
+        return fallback;
+    }
 
-         let content = '<h6 class="w-100 mb-2 ps-1">T2 Lymphknoten Merkmale:</h6>';
-         patient.lymphknoten_t2.forEach((lk, index) => {
-            if (!lk) return;
-            const groesseText = formatNumber(lk.groesse, 1, 'N/A');
-            const formText = lk.form || '--';
-            const konturText = lk.kontur || '--';
-            const homogenitaetText = lk.homogenitaet || '--';
-            const signalText = lk.signal || 'N/A';
-
-            const signalIcon = ui_helpers.getT2IconSVG('signal', lk.signal);
-            const formIcon = ui_helpers.getT2IconSVG('form', lk.form);
-            const konturIcon = ui_helpers.getT2IconSVG('kontur', lk.kontur);
-            const homogenitaetIcon = ui_helpers.getT2IconSVG('homogenitaet', lk.homogenitaet);
-            const sizeIcon = ui_helpers.getT2IconSVG('ruler-horizontal', null);
-
-            const sizeTooltip = TOOLTIP_CONTENT.t2Size?.description || 'Größe (Kurzachse)';
-            const formTooltip = TOOLTIP_CONTENT.t2Form?.description || 'Form';
-            const konturTooltip = TOOLTIP_CONTENT.t2Kontur?.description || 'Kontur';
-            const homogenitaetTooltip = TOOLTIP_CONTENT.t2Homogenitaet?.description || 'Homogenität';
-            const signalTooltip = TOOLTIP_CONTENT.t2Signal?.description || 'Signalintensität';
-
-
-            content += `<div class="sub-row-item border rounded mb-1 p-1 w-100 align-items-center small">
-                           <strong class="me-2">LK ${index + 1}:</strong>
-                           <span class="me-2 text-nowrap" data-tippy-content="${sizeTooltip}">${sizeIcon}${groesseText !== 'N/A' ? groesseText + 'mm' : groesseText}</span>
-                           <span class="me-2 text-nowrap" data-tippy-content="${formTooltip}">${formIcon}${formText}</span>
-                           <span class="me-2 text-nowrap" data-tippy-content="${konturTooltip}">${konturIcon}${konturText}</span>
-                           <span class="me-2 text-nowrap" data-tippy-content="${homogenitaetTooltip}">${homogenitaetIcon}${homogenitaetText}</span>
-                           <span class="me-2 text-nowrap" data-tippy-content="${signalTooltip}">${signalIcon}${signalText}</span>
-                        </div>`;
-         });
-         return content;
+    function _getStatusBadge(statusValue, positiveClass = 'bg-danger', negativeClass = 'bg-success', unknownClass = 'bg-secondary', positiveText = '+', negativeText = '-', unknownText = '?') {
+        let badgeClass = unknownClass;
+        let badgeText = unknownText;
+        if (statusValue === 1) {
+            badgeClass = positiveClass;
+            badgeText = positiveText;
+        } else if (statusValue === 0) {
+            badgeClass = negativeClass;
+            badgeText = negativeText;
+        }
+        return `<span class="badge ${badgeClass} status-badge">${badgeText}</span>`;
     }
 
     function createDatenTableRow(patient) {
-        if (!patient || typeof patient.nr !== 'number') return '';
-        const rowId = `daten-row-${patient.nr}`;
-        const detailRowId = `daten-detail-${patient.nr}`;
-        const hasT2Nodes = Array.isArray(patient.lymphknoten_t2) && patient.lymphknoten_t2.length > 0;
-        const geschlechtText = patient.geschlecht === 'm' ? (UI_TEXTS.legendLabels.male || 'Männlich') : patient.geschlecht === 'f' ? (UI_TEXTS.legendLabels.female || 'Weiblich') : (UI_TEXTS.legendLabels.unknownGender || 'Unbekannt');
-        const therapieText = getKollektivDisplayName(patient.therapie);
-        const naPlaceholder = '--';
+        if (!patient || typeof patient !== 'object') return '<tr><td colspan="9" class="text-danger">Fehlerhafte Patientendaten.</td></tr>';
+        const appConfig = _getGlobalConfig('APP_CONFIG', { UI_SETTINGS: {} });
+        const uiTexts = _getGlobalConfig('UI_TEXTS', { geschlecht: {}, therapie: {} });
+        const tooltipContent = _getGlobalConfig('TOOLTIP_CONTENT', { datenTableDetails: {} });
+        const uiHelpersAvailable = typeof ui_helpers !== 'undefined';
 
-        const tooltipNr = TOOLTIP_CONTENT.datenTable.nr || 'Nr.';
-        const tooltipName = TOOLTIP_CONTENT.datenTable.name || 'Name';
-        const tooltipVorname = TOOLTIP_CONTENT.datenTable.vorname || 'Vorname';
-        const tooltipGeschlecht = TOOLTIP_CONTENT.datenTable.geschlecht || 'Geschlecht';
-        const tooltipAlter = TOOLTIP_CONTENT.datenTable.alter || 'Alter';
-        const tooltipTherapie = TOOLTIP_CONTENT.datenTable.therapie || 'Therapie';
-        const tooltipStatus = TOOLTIP_CONTENT.datenTable.n_as_t2 || 'N/AS/T2 Status';
-        const bemerkungText = ui_helpers.escapeMarkdown(patient.bemerkung || '');
-        const tooltipBemerkung = bemerkungText ? bemerkungText : (TOOLTIP_CONTENT.datenTable.bemerkung || 'Bemerkung');
-        const tooltipExpand = hasT2Nodes ? (TOOLTIP_CONTENT.datenTable.expandRow || 'Details anzeigen/ausblenden') : 'Keine T2-Lymphknoten Details verfügbar';
+        const escapedBemerkung = uiHelpersAvailable && typeof ui_helpers.escapeMarkdown === 'function'
+                                ? ui_helpers.escapeMarkdown(patient.bemerkung || '')
+                                : (patient.bemerkung || '').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 
-        const t2StatusIcon = patient.t2 === '+' ? 'plus' : patient.t2 === '-' ? 'minus' : 'unknown';
-        const t2StatusText = patient.t2 ?? '?';
+        const rowId = `patient-row-${patient.id_patient || generateUUID()}`;
+        const detailsId = `details-${patient.id_patient || generateUUID()}`;
+        const hasLymphknoten = patient.lymphknoten && patient.lymphknoten.length > 0;
+        const geschlechtText = uiTexts.geschlecht?.[patient.geschlecht] || patient.geschlecht || '--';
+        const therapieText = uiTexts.therapie?.[patient.therapie] || patient.therapie || '--';
 
-        return `
-            <tr id="${rowId}" ${hasT2Nodes ? `class="clickable-row"` : ''} ${hasT2Nodes ? `data-bs-toggle="collapse"` : ''} data-bs-target="#${detailRowId}" aria-expanded="false" aria-controls="${detailRowId}">
-                <td data-label="Nr." data-tippy-content="${tooltipNr}">${patient.nr}</td>
-                <td data-label="Name" data-tippy-content="${tooltipName}">${patient.name || naPlaceholder}</td>
-                <td data-label="Vorname" data-tippy-content="${tooltipVorname}">${patient.vorname || naPlaceholder}</td>
-                <td data-label="Geschlecht" data-tippy-content="${tooltipGeschlecht}">${geschlechtText}</td>
-                <td data-label="Alter" data-tippy-content="${tooltipAlter}">${formatNumber(patient.alter, 0, naPlaceholder)}</td>
-                <td data-label="Therapie" data-tippy-content="${tooltipTherapie}">${therapieText}</td>
-                <td data-label="N/AS/T2" data-tippy-content="${tooltipStatus}">
-                    <span class="status-${patient.n === '+' ? 'plus' : (patient.n === '-' ? 'minus' : 'unknown')}" data-tippy-content="Pathologie N-Status (Goldstandard)">${patient.n ?? '?'}</span> /
-                    <span class="status-${patient.as === '+' ? 'plus' : (patient.as === '-' ? 'minus' : 'unknown')}" data-tippy-content="Avocado Sign Status (Vorhersage)">${patient.as ?? '?'}</span> /
-                    <span class="status-${t2StatusIcon}" id="status-t2-pat-${patient.nr}" data-tippy-content="T2 Status (Vorhersage basierend auf aktuell angewendeten Kriterien)">${t2StatusText}</span>
-                </td>
-                <td data-label="Bemerkung" class="text-truncate" style="max-width: 150px;" data-tippy-content="${tooltipBemerkung}">${bemerkungText || naPlaceholder}</td>
-                 <td class="text-center p-1" style="width: 30px;" data-tippy-content="${tooltipExpand}">
-                     ${hasT2Nodes ? '<button class="btn btn-sm btn-outline-secondary p-1 row-toggle-button" aria-label="Details ein-/ausklappen"><i class="fas fa-chevron-down row-toggle-icon"></i></button>' : ''}
-                 </td>
-            </tr>
-            ${hasT2Nodes ? `
-            <tr class="sub-row">
-                 <td colspan="9" class="p-0 border-0">
-                    <div class="collapse" id="${detailRowId}">
-                        <div class="sub-row-content p-2 bg-light border-top border-bottom">
-                            ${_createDatenDetailRowContent(patient)}
-                        </div>
-                    </div>
-                 </td>
-            </tr>` : ''}
-        `;
-    }
+        let lymphknotenDetailsHTML = `<p class="text-muted small">${tooltipContent.datenTableDetails.keineLymphknoten || 'Keine Lymphknoten für diesen Patienten erfasst.'}</p>`;
+        if (hasLymphknoten) {
+            lymphknotenDetailsHTML = `<table class="table table-sm table-borderless table-responsive-sm small mb-0">
+                <thead class="small"><tr>
+                    <th data-tippy-content="${tooltipContent.datenTableDetails.lkNr || 'LK Nr.'}">${uiTexts.datenTableDetails?.lkNr || 'LK Nr.'}</th>
+                    <th data-tippy-content="${tooltipContent.datenTableDetails.asStatus || 'AS Status'}">${uiTexts.datenTableDetails?.asStatus || 'AS'}</th>
+                    <th data-tippy-content="${tooltipContent.datenTableDetails.nStatus || 'N Status'}">${uiTexts.datenTableDetails?.nStatus || 'N'}</th>
+                    <th data-tippy-content="${tooltipContent.datenTableDetails.t2Details || 'T2 Details'}">${uiTexts.datenTableDetails?.t2Details || 'T2-Details'}</th>
+                </tr></thead><tbody>`;
+            patient.lymphknoten.forEach((lk, index) => {
+                let t2DetailsIcons = '';
+                if (lk.t2_kriterien && typeof lk.t2_kriterien === 'object' && uiHelpersAvailable && typeof ui_helpers.getT2IconSVG === 'function') {
+                    Object.entries(lk.t2_kriterien).forEach(([key, crit]) => {
+                        if (crit && typeof crit === 'object' && crit.erfuellt !== undefined) { // Check for detailed object structure
+                           let displayValue = crit.wert_text || crit.wert || (key === 'size' ? (crit.groesse_mm !== undefined ? `${formatNumber(crit.groesse_mm,1)}mm` : '?') : '?');
+                           if (crit.erfuellt) {
+                             t2DetailsIcons += `<span class="me-1" data-tippy-content="${uiTexts.t2CriteriaShort?.[key] || key}: ${displayValue} (${uiTexts.t2KriterienErfuelltKurz || 'erfüllt'})">${ui_helpers.getT2IconSVG(key, crit.wert)}</span>`;
+                           } else {
+                             t2DetailsIcons += `<span class="me-1 opacity-50" data-tippy-content="${uiTexts.t2CriteriaShort?.[key] || key}: ${displayValue} (${uiTexts.t2KriterienNichtErfuelltKurz || 'n.e.'})">${ui_helpers.getT2IconSVG(key, crit.wert)}</span>`;
+                           }
+                        } else if (typeof crit === 'boolean' && crit === true) { // Fallback for simple boolean true if erfuellt/wert not present
+                             t2DetailsIcons += `<span class="me-1" data-tippy-content="${uiTexts.t2CriteriaShort?.[key] || key}: ${uiTexts.t2KriterienErfuelltKurz || 'erfüllt'}">${ui_helpers.getT2IconSVG(key, 'erfuellt')}</span>`;
+                        }
+                    });
+                } else if (lk.t2_kriterien && typeof lk.t2_kriterien === 'object') { // Fallback if no getT2IconSVG but object exists
+                     t2DetailsIcons = JSON.stringify(lk.t2_kriterien);
+                } else {
+                    t2DetailsIcons = '--';
+                }
+                if(t2DetailsIcons === '') t2DetailsIcons = '--';
 
-    function _createAuswertungDetailRowContent(patient, appliedCriteria, appliedLogic) {
-        if (!Array.isArray(patient.lymphknoten_t2_bewertet) || patient.lymphknoten_t2_bewertet.length === 0) {
-            return '<p class="m-0 p-2 text-muted small">Keine T2-Lymphknoten für Bewertung vorhanden oder Bewertung nicht durchgeführt.</p>';
+
+                lymphknotenDetailsHTML += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${_getStatusBadge(lk.as_status_lk, 'bg-as-positive', 'bg-as-negative')}</td>
+                        <td>${_getStatusBadge(lk.n_status_lk)}</td>
+                        <td class="lk-t2-details-icons">${t2DetailsIcons}</td>
+                    </tr>`;
+            });
+            lymphknotenDetailsHTML += `</tbody></table>`;
         }
 
-        const activeCriteriaKeys = Object.keys(appliedCriteria || {}).filter(key => key !== 'logic' && appliedCriteria[key]?.active === true);
-        const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
-        const criteriaFormatted = formatCriteriaFunc(appliedCriteria, appliedLogic, true);
-        const naPlaceholder = '--';
-
-        let content = `<h6 class="w-100 mb-2 ps-1" data-tippy-content="Zeigt die Bewertung jedes einzelnen T2-Lymphknotens basierend auf den aktuell angewendeten Kriterien. Erfüllte Kriterien, die zur Positiv-Bewertung beitragen, sind hervorgehoben.">T2 LK Bewertung (Logik: ${UI_TEXTS.t2LogicDisplayNames[appliedLogic] || appliedLogic || 'N/A'}, Kriterien: ${criteriaFormatted || 'N/A'})</h6>`;
-
-        patient.lymphknoten_t2_bewertet.forEach((lk, index) => {
-            if (!lk || !lk.checkResult) {
-                content += `<div class="sub-row-item border rounded mb-1 p-1 w-100 align-items-center small fst-italic text-muted">LK ${index + 1}: Ungültige Bewertungsdaten</div>`;
-                return;
-            }
-
-            const baseClass = "sub-row-item border rounded mb-1 p-1 w-100 align-items-center small";
-            const highlightClass = lk.isPositive ? 'bg-status-red-light' : '';
-            let itemContent = `<strong class="me-2">LK ${index + 1}: ${lk.isPositive ? '<span class="badge bg-danger text-white ms-1" data-tippy-content="Positiv bewertet">Pos.</span>' : '<span class="badge bg-success text-white ms-1" data-tippy-content="Negativ bewertet">Neg.</span>'}</strong>`;
-
-            const formatCriterionCheck = (key, iconType, valueText, checkResultForLK) => {
-                if (!appliedCriteria?.[key]?.active) return '';
-                const checkMet = checkResultForLK[key] === true;
-                const checkFailed = checkResultForLK[key] === false;
-                let hlClass = '';
-
-                if (lk.isPositive) { // Highlight only if the LK itself is positive overall
-                    if (checkMet && (appliedLogic === 'ODER' || (appliedLogic === 'UND' && activeCriteriaKeys.every(k => checkResultForLK[k] === true)))) {
-                        hlClass = 'highlight-suspekt-feature';
-                    }
-                }
-
-
-                const icon = ui_helpers.getT2IconSVG(iconType || key, valueText);
-                const text = valueText || naPlaceholder;
-                const tooltipKey = 't2' + key.charAt(0).toUpperCase() + key.slice(1);
-                const tooltipBase = TOOLTIP_CONTENT[tooltipKey]?.description || `Merkmal ${key}`;
-                const statusText = checkMet ? 'Erfüllt' : (checkFailed ? 'Nicht erfüllt' : (checkResultForLK[key] === null ? 'Nicht anwendbar/geprüft' : 'Unbekannt'));
-                const tooltip = `${tooltipBase} | Status: ${statusText}`;
-
-                return `<span class="me-2 text-nowrap ${hlClass}" data-tippy-content="${tooltip}">${icon} ${text}</span>`;
-            };
-
-            itemContent += formatCriterionCheck('size', 'ruler-horizontal', `${formatNumber(lk.groesse, 1, 'N/A')}mm`, lk.checkResult);
-            itemContent += formatCriterionCheck('form', null, lk.form, lk.checkResult);
-            itemContent += formatCriterionCheck('kontur', null, lk.kontur, lk.checkResult);
-            itemContent += formatCriterionCheck('homogenitaet', null, lk.homogenitaet, lk.checkResult);
-            itemContent += formatCriterionCheck('signal', null, lk.signal || 'N/A', lk.checkResult);
-
-            content += `<div class="${baseClass} ${highlightClass}">${itemContent}</div>`;
-        });
-        return content;
-    }
-
-    function createAuswertungTableRow(patient, appliedCriteria, appliedLogic) {
-        if (!patient || typeof patient.nr !== 'number') return '';
-        const rowId = `auswertung-row-${patient.nr}`;
-        const detailRowId = `auswertung-detail-${patient.nr}`;
-        const hasBewerteteNodes = Array.isArray(patient.lymphknoten_t2_bewertet) && patient.lymphknoten_t2_bewertet.length > 0;
-        const therapieText = getKollektivDisplayName(patient.therapie);
-        const naPlaceholder = '--';
-
-        const nCountsText = `${formatNumber(patient.anzahl_patho_n_plus_lk, 0, '-')} / ${formatNumber(patient.anzahl_patho_lk, 0, '-')}`;
-        const asCountsText = `${formatNumber(patient.anzahl_as_plus_lk, 0, '-')} / ${formatNumber(patient.anzahl_as_lk, 0, '-')}`;
-        const t2CountsText = `${formatNumber(patient.anzahl_t2_plus_lk, 0, '-')} / ${formatNumber(patient.anzahl_t2_lk, 0, '-')}`;
-
-        const tooltipNr = TOOLTIP_CONTENT.auswertungTable.nr || 'Nr.';
-        const tooltipName = TOOLTIP_CONTENT.auswertungTable.name || 'Name';
-        const tooltipTherapie = TOOLTIP_CONTENT.auswertungTable.therapie || 'Therapie';
-        const tooltipStatus = TOOLTIP_CONTENT.auswertungTable.n_as_t2 || 'N/AS/T2 Status';
-        const tooltipNCounts = TOOLTIP_CONTENT.auswertungTable.n_counts || 'N+ LKs / N gesamt LKs (Pathologie)';
-        const tooltipASCounts = TOOLTIP_CONTENT.auswertungTable.as_counts || 'AS+ LKs / AS gesamt LKs (T1KM)';
-        const tooltipT2Counts = TOOLTIP_CONTENT.auswertungTable.t2_counts || 'T2+ LKs / T2 gesamt LKs (angew. Kriterien)';
-        const tooltipExpand = hasBewerteteNodes ? (TOOLTIP_CONTENT.auswertungTable.expandRow || 'Details zur T2-Bewertung anzeigen/ausblenden') : 'Keine T2-Lymphknoten Bewertung verfügbar';
-
-        const t2StatusIcon = patient.t2 === '+' ? 'plus' : patient.t2 === '-' ? 'minus' : 'unknown';
-        const t2StatusText = patient.t2 ?? '?';
-
         return `
-            <tr id="${rowId}" ${hasBewerteteNodes ? `class="clickable-row"` : ''} ${hasBewerteteNodes ? `data-bs-toggle="collapse"` : ''} data-bs-target="#${detailRowId}" aria-expanded="false" aria-controls="${detailRowId}">
-                <td data-label="Nr." data-tippy-content="${tooltipNr}">${patient.nr}</td>
-                <td data-label="Name" data-tippy-content="${tooltipName}">${patient.name || naPlaceholder}</td>
-                <td data-label="Therapie" data-tippy-content="${tooltipTherapie}">${therapieText}</td>
-                <td data-label="N/AS/T2" data-tippy-content="${tooltipStatus}">
-                    <span class="status-${patient.n === '+' ? 'plus' : (patient.n === '-' ? 'minus' : 'unknown')}" data-tippy-content="Pathologie N-Status (Goldstandard)">${patient.n ?? '?'}</span> /
-                    <span class="status-${patient.as === '+' ? 'plus' : (patient.as === '-' ? 'minus' : 'unknown')}" data-tippy-content="Avocado Sign Status (Vorhersage)">${patient.as ?? '?'}</span> /
-                    <span class="status-${t2StatusIcon}" id="status-t2-ausw-${patient.nr}" data-tippy-content="T2 Status (Vorhersage basierend auf aktuell angewendeten Kriterien)">${t2StatusText}</span>
+            <tr id="${rowId}" data-bs-toggle="collapse" data-bs-target="#${detailsId}" aria-expanded="false" aria-controls="${detailsId}" class="${hasLymphknoten ? 'accordion-toggle' : ''} table-row-main">
+                <td class="text-center col-nr">${patient.nr || '--'}</td>
+                <td class="col-name">${patient.name || '--'}</td>
+                <td class="col-vorname">${patient.vorname || '--'}</td>
+                <td class="text-center col-geschlecht">${geschlechtText}</td>
+                <td class="text-center col-alter">${formatNumber(patient.alter_jahre, 0) || '--'}</td>
+                <td class="col-therapie">${therapieText}</td>
+                <td class="text-center col-status">
+                    ${_getStatusBadge(patient.n_status_patient)}
+                    ${_getStatusBadge(patient.as_status_patient, 'bg-as-positive', 'bg-as-negative')}
+                    ${_getStatusBadge(patient.t2_status_patient, 'bg-t2-positive', 'bg-t2-negative')}
                 </td>
-                <td data-label="N+/N ges." class="text-center" data-tippy-content="${tooltipNCounts}">${nCountsText}</td>
-                <td data-label="AS+/AS ges." class="text-center" data-tippy-content="${tooltipASCounts}">${asCountsText}</td>
-                <td data-label="T2+/T2 ges." class="text-center" id="t2-counts-${patient.nr}" data-tippy-content="${tooltipT2Counts}">${t2CountsText}</td>
-                 <td class="text-center p-1" style="width: 30px;" data-tippy-content="${tooltipExpand}">
-                     ${hasBewerteteNodes ? '<button class="btn btn-sm btn-outline-secondary p-1 row-toggle-button" aria-label="Details ein-/ausklappen"><i class="fas fa-chevron-down row-toggle-icon"></i></button>' : ''}
-                 </td>
+                <td class="col-bemerkung small">${escapedBemerkung}</td>
+                <td class="text-center col-details">
+                    ${hasLymphknoten ? '<i class="fas fa-chevron-down row-toggle-icon"></i>' : ''}
+                </td>
             </tr>
-             ${hasBewerteteNodes ? `
+            ${hasLymphknoten ? `
             <tr class="sub-row">
-                 <td colspan="8" class="p-0 border-0">
-                    <div class="collapse" id="${detailRowId}">
-                        <div class="sub-row-content p-2 bg-light border-top border-bottom">
-                           ${_createAuswertungDetailRowContent(patient, appliedCriteria, appliedLogic)}
+                <td colspan="9" class="p-0">
+                    <div id="${detailsId}" class="collapse">
+                        <div class="card card-body sub-row-card">
+                            <h6 class="card-title small mb-1">${tooltipContent.datenTableDetails.lkUebersichtTitel || 'Lymphknoten Details'} für Pat. ${patient.name || '--'} (${patient.nr || '?'})</h6>
+                            ${lymphknotenDetailsHTML}
                         </div>
                     </div>
-                 </td>
-            </tr>` : ''}
-        `;
+                </td>
+            </tr>` : ''}`;
+    }
+
+    function createAuswertungTableRow(patient, currentAppliedCriteria, currentAppliedLogic) {
+        if (!patient || typeof patient !== 'object') return '<tr><td colspan="8" class="text-danger">Fehlerhafte Patientendaten.</td></tr>';
+        const appConfig = _getGlobalConfig('APP_CONFIG', { UI_SETTINGS: {}, SPECIAL_IDS: {} });
+        const uiTexts = _getGlobalConfig('UI_TEXTS', { therapie: {} });
+        const tooltipContent = _getGlobalConfig('TOOLTIP_CONTENT', { auswertungTableDetails: {} });
+        const uiHelpersAvailable = typeof ui_helpers !== 'undefined';
+        const appliedCriteriaDisplayName = appConfig.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME || "Angewandt";
+
+        const rowId = `auswertung-row-${patient.id_patient || generateUUID()}`;
+        const detailsId = `auswertung-details-${patient.id_patient || generateUUID()}`;
+        const hasLymphknoten = patient.lymphknoten && patient.lymphknoten.length > 0;
+        const therapieText = uiTexts.therapie?.[patient.therapie] || patient.therapie || '--';
+
+        let lymphknotenDetailsHTML = `<p class="text-muted small">${tooltipContent.auswertungTableDetails.keineLymphknoten || 'Keine Lymphknoten für diesen Patienten erfasst oder nach Filterung relevant.'}</p>`;
+        if (hasLymphknoten) {
+            lymphknotenDetailsHTML = `<table class="table table-sm table-borderless table-responsive-sm small mb-0">
+                <thead class="small"><tr>
+                    <th data-tippy-content="${tooltipContent.auswertungTableDetails.lkNr || 'LK Nr.'}">${uiTexts.auswertungTableDetails?.lkNr || 'LK Nr.'}</th>
+                    <th data-tippy-content="${tooltipContent.auswertungTableDetails.asStatusLk || 'AS Status (LK)'}">${uiTexts.auswertungTableDetails?.asStatusLk || 'AS (LK)'}</th>
+                    <th data-tippy-content="${tooltipContent.auswertungTableDetails.nStatusLk || 'N Status (LK)'}">${uiTexts.auswertungTableDetails?.nStatusLk || 'N (LK)'}</th>
+                    <th data-tippy-content="${tooltipContent.auswertungTableDetails.t2StatusLk || 'T2 Status (LK)'}">${uiTexts.auswertungTableDetails?.t2StatusLk || `T2 (${appliedCriteriaDisplayName}, LK)`}</th>
+                    <th data-tippy-content="${tooltipContent.auswertungTableDetails.t2DetailsLk || 'Erfüllte T2 Kriterien (LK)'}">${uiTexts.auswertungTableDetails?.t2DetailsLk || 'T2 Details (LK)'}</th>
+                </tr></thead><tbody>`;
+
+            patient.lymphknoten.forEach((lk, index) => {
+                let t2DetailsIconsLk = '';
+                let t2ErfuelltLk = false;
+                if (lk.t2_kriterien_details && typeof lk.t2_kriterien_details === 'object' && uiHelpersAvailable && typeof ui_helpers.getT2IconSVG === 'function') {
+                     Object.entries(lk.t2_kriterien_details).forEach(([key, crit]) => {
+                        if (crit && typeof crit === 'object' && crit.erfuellt !== undefined && currentAppliedCriteria[key]?.active) {
+                           let displayValue = crit.wert_text || crit.wert || (key === 'size' ? (crit.groesse_mm !== undefined ? `${formatNumber(crit.groesse_mm,1)}mm` : '?') : '?');
+                           if (crit.erfuellt) {
+                             t2DetailsIconsLk += `<span class="me-1" data-tippy-content="${uiTexts.t2CriteriaShort?.[key] || key}: ${displayValue} (${uiTexts.t2KriterienErfuelltKurz || 'erfüllt'})">${ui_helpers.getT2IconSVG(key, crit.wert)}</span>`;
+                             t2ErfuelltLk = true; // Mark if any applied criterion is met (for simple OR logic, more complex for AND)
+                           } else {
+                             t2DetailsIconsLk += `<span class="me-1 opacity-50" data-tippy-content="${uiTexts.t2CriteriaShort?.[key] || key}: ${displayValue} (${uiTexts.t2KriterienNichtErfuelltKurz || 'n.e.'})">${ui_helpers.getT2IconSVG(key, crit.wert)}</span>`;
+                           }
+                        }
+                    });
+                     if(t2DetailsIconsLk === '') t2DetailsIconsLk = '--';
+                } else {
+                    t2DetailsIconsLk = '--';
+                }
+                 // Determine LK T2 status based on individual criteria and logic
+                const lkT2Status = (typeof t2CriteriaManager !== 'undefined' && lk.t2_kriterien_details)
+                                    ? t2CriteriaManager.evaluateSingleLymphnode(lk.t2_kriterien_details, currentAppliedCriteria, currentAppliedLogic)
+                                    : lk.t2_status_lk; // Fallback to pre-calculated if manager not available or no details
+
+
+                lymphknotenDetailsHTML += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${_getStatusBadge(lk.as_status_lk, 'bg-as-positive', 'bg-as-negative')}</td>
+                        <td>${_getStatusBadge(lk.n_status_lk)}</td>
+                        <td>${_getStatusBadge(lkT2Status, 'bg-t2-positive', 'bg-t2-negative')}</td>
+                        <td class="lk-t2-details-icons">${t2DetailsIconsLk}</td>
+                    </tr>`;
+            });
+            lymphknotenDetailsHTML += `</tbody></table>`;
+        }
+        
+        const nPathoGesamt = patient.lymphknoten_n_patho_gesamt ?? 0;
+        const nGesamt = patient.lymphknoten_n_gesichtet_gesamt ?? 0;
+        const asPosGesamt = patient.lymphknoten_as_pos_gesamt ?? 0;
+        const asGesamt = patient.lymphknoten_as_gesichtet_gesamt ?? 0;
+        const t2PosGesamt = patient.lymphknoten_t2_pos_gesamt ?? 0;
+        const t2Gesamt = patient.lymphknoten_t2_gesichtet_gesamt ?? 0;
+
+
+        return `
+            <tr id="${rowId}" data-bs-toggle="collapse" data-bs-target="#${detailsId}" aria-expanded="false" aria-controls="${detailsId}" class="${hasLymphknoten ? 'accordion-toggle' : ''} table-row-main">
+                <td class="text-center col-nr">${patient.nr || '--'}</td>
+                <td class="col-name">${patient.name || '--'}</td>
+                <td class="col-therapie">${therapieText}</td>
+                <td class="text-center col-status">
+                    ${_getStatusBadge(patient.n_status_patient)}
+                    ${_getStatusBadge(patient.as_status_patient, 'bg-as-positive', 'bg-as-negative')}
+                    ${_getStatusBadge(patient.t2_status_patient, 'bg-t2-positive', 'bg-t2-negative')}
+                </td>
+                <td class="text-center col-lk-count" data-tippy-content="${tooltipContent.auswertungTable?.n_counts || 'Pathologische N / Gesamt N Lymphknoten'}">${nPathoGesamt}/${nGesamt}</td>
+                <td class="text-center col-lk-count" data-tippy-content="${tooltipContent.auswertungTable?.as_counts || 'AS Positive / Gesamt AS Lymphknoten'}">${asPosGesamt}/${asGesamt}</td>
+                <td class="text-center col-lk-count" data-tippy-content="${tooltipContent.auswertungTable?.t2_counts || 'T2 Positive / Gesamt T2 Lymphknoten'}">${t2PosGesamt}/${t2Gesamt}</td>
+                <td class="text-center col-details">
+                    ${hasLymphknoten ? '<i class="fas fa-chevron-down row-toggle-icon"></i>' : ''}
+                </td>
+            </tr>
+            ${hasLymphknoten ? `
+            <tr class="sub-row">
+                <td colspan="8" class="p-0">
+                    <div id="${detailsId}" class="collapse">
+                        <div class="card card-body sub-row-card">
+                            <h6 class="card-title small mb-1">${tooltipContent.auswertungTableDetails.lkUebersichtTitel || 'Lymphknoten Details'} für Pat. ${patient.name || '--'} (${patient.nr || '?'})</h6>
+                            ${lymphknotenDetailsHTML}
+                        </div>
+                    </div>
+                </td>
+            </tr>` : ''}`;
     }
 
     return Object.freeze({
