@@ -42,6 +42,11 @@ const publicationRenderer = (() => {
         return valStr;
     }
 
+    function _getPValueTextForPublication(pValue, lang = 'de') {
+        if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return 'N/A';
+        return getPValueText(pValue, lang);
+    }
+
     function _renderLiteraturT2KriterienTabelle(lang) {
         const tableConfig = PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle;
         let tableHTML = `<h4 class="mt-4 mb-3 publication-table-title" id="${tableConfig.id}-title">${lang === 'de' ? tableConfig.titleDe : tableConfig.titleEn}</h4>`;
@@ -61,10 +66,11 @@ const publicationRenderer = (() => {
                 const kriterienText = studySet.logic === 'KOMBINIERT' ?
                     (studySet.studyInfo?.keyCriteriaSummary || studySet.description || (lang === 'de' ? 'Kombinierte Logik' : 'Combined Logic')) :
                     studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic, false) || (lang === 'de' ? 'Keine Beschreibung verfügbar' : 'No description available');
+                const investigationType = studySet.studyInfo?.investigationType || studySet.context || 'N/A';
 
                 tableHTML += `<tr>
                                 <td>${studySet.name || conf.nameKey}</td>
-                                <td>${getKollektivDisplayName(studySet.applicableKollektiv || 'N/A')} (${studySet.studyInfo?.investigationType || studySet.context || 'N/A'})</td>
+                                <td>${getKollektivDisplayName(studySet.applicableKollektiv || 'N/A')} (${investigationType})</td>
                                 <td style="white-space: normal;">${kriterienText}</td>
                                 <td>${UI_TEXTS.t2LogicDisplayNames[studySet.logic] || studySet.logic}</td>
                               </tr>`;
@@ -126,7 +132,7 @@ const publicationRenderer = (() => {
     }
 
     function _renderDiagnostischeGueteTabellen(allKollektivStats, lang, sectionId, commonData) {
-        if (!allKollektivStats) return `<p class="text-muted small">Keine Gütedaten für diese Sektion verfügbar.</p>`;
+        if (!allKollektivStats) return `<p class="text-muted small">${lang === 'de' ? 'Keine Gütedaten für diese Sektion verfügbar.' : 'No performance data available for this section.'}</p>`;
         let tableHTML = '';
         let tableIdForHTML = 'pub-table-default-guete';
         let tableTitleDe = 'Diagnostische Güte';
@@ -293,6 +299,7 @@ const publicationRenderer = (() => {
         }
         return tableHTML;
     }
+
 
     function renderSectionContent(sectionId, lang, allKollektivStats, commonDataFromLogic, options = {}) {
         if (!sectionId || !lang || !allKollektivStats || !commonDataFromLogic) {
