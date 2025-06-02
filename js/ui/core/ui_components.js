@@ -1,522 +1,439 @@
 const uiComponents = (() => {
 
-    function _createHeaderButtonHTML(buttons, targetId, defaultTitle = 'Element') {
-        let headerButtonHtml = '';
-        if (buttons && buttons.length > 0 && targetId) {
-            headerButtonHtml = buttons.map(btn => {
-                const btnId = btn.id || `dl-${targetId.replace(/[^a-zA-Z0-9_-]/g, '')}-${btn.format || 'action'}`;
-                
-                let iconClass = btn.icon || 'fa-download';
-                if (btn.format === 'png' && btn.chartId) {
-                    iconClass = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image' : 'fa-download';
-                } else if (btn.format === 'svg' && btn.chartId) {
-                    iconClass = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code' : 'fa-download';
-                } else if (btn.format === 'png' && btn.tableId) {
-                    iconClass = 'fa-image';
-                }
-
-                let tooltip = btn.tooltip || `Als ${String(btn.format || 'Aktion').toUpperCase()} herunterladen/anzeigen`;
-
-                const safeDefaultTitle = String(defaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
-                const safeChartName = String(btn.chartName || safeDefaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
-                const safeTableName = String(btn.tableName || safeDefaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
-
-                if (btn.format === 'png' && btn.chartId && TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description) {
-                    tooltip = TOOLTIP_CONTENT.exportTab.chartSinglePNG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
-                } else if (btn.format === 'svg' && btn.chartId && TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description) {
-                    tooltip = TOOLTIP_CONTENT.exportTab.chartSingleSVG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
-                } else if (btn.format === 'png' && btn.tableId && TOOLTIP_CONTENT.exportTab.tableSinglePNG?.description) {
-                    tooltip = TOOLTIP_CONTENT.exportTab.tableSinglePNG.description.replace('{TableName}', `<strong>${safeTableName}</strong>`);
-                }
+    function _createHeaderButtonHTML(buttonConfig, cardId) {
+        if (!buttonConfig || typeof buttonConfig !== 'object' || typeof APP_CONFIG === 'undefined') return '';
+        const iconClass = buttonConfig.icon || 'fa-question-circle';
+        const title = buttonConfig.tooltip || buttonConfig.label || 'Aktion';
+        const btnClass = buttonConfig.class || 'btn-outline-secondary';
+        const id = buttonConfig.id || `${cardId}-btn-${generateUUID().substring(0,8)}`;
+        let attributes = '';
+        if (buttonConfig.action) attributes += ` data-action="${buttonConfig.action}"`;
+        if (buttonConfig.targetId) attributes += ` data-target-id="${buttonConfig.targetId}"`;
+        if (buttonConfig.format) attributes += ` data-format="${buttonConfig.format}"`;
+        if (buttonConfig.chartId) attributes += ` data-chart-id="${buttonConfig.chartId}"`;
+        if (buttonConfig.tableId) attributes += ` data-table-id="${buttonConfig.tableId}"`;
+        if (buttonConfig.chartName) attributes += ` data-chart-name="${buttonConfig.chartName}"`;
 
 
-                const dataAttributes = [];
-                if (btn.chartId) dataAttributes.push(`data-chart-id="${btn.chartId}"`);
-                if (btn.tableId) dataAttributes.push(`data-table-id="${btn.tableId}"`);
-                
-                if (btn.tableName) dataAttributes.push(`data-table-name="${safeTableName.replace(/\s/g, '_')}"`);
-                else if (btn.chartName && btn.chartId) dataAttributes.push(`data-chart-name="${safeChartName.replace(/\s/g, '_')}"`);
-                else dataAttributes.push(`data-default-name="${safeDefaultTitle.replace(/\s/g, '_')}"`);
-
-
-                if (btn.format) dataAttributes.push(`data-format="${btn.format}"`);
-
-                const additionalClasses = btn.class || '';
-
-                return `<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 ${additionalClasses} ${btn.tableId ? 'table-download-png-btn' : (btn.chartId ? 'chart-download-btn' : '')}" id="${btnId}" ${dataAttributes.join(' ')} data-tippy-content="${tooltip}"><i class="fas ${iconClass}"></i></button>`;
-            }).join('');
-        }
-        return headerButtonHtml;
+        return `<button type="button" class="btn btn-sm ${btnClass} ms-1 praes-dl-btn" id="${id}" data-tippy-content="${title}" ${attributes}><i class="fas ${iconClass}"></i></button>`;
     }
 
-    function createDashboardCard(title, content, chartId = null, cardClasses = '', headerClasses = '', bodyClasses = '', downloadButtons = []) {
-        const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, chartId || title.replace(/[^a-z0-9]/gi, '_'), title);
-        
-        const tooltipKeyRaw = chartId ? chartId.replace(/^chart-dash-/, '') : title.toLowerCase().replace(/\s+/g, '');
-        let tooltipKey = tooltipKeyRaw;
-
-        if (tooltipKeyRaw === 'as-status') tooltipKey = 'statusAS';
-        else if (tooltipKeyRaw === 't2-status') tooltipKey = 'statusT2';
-        else if (tooltipKeyRaw === 'age') tooltipKey = 'chartAge';
-        else if (tooltipKeyRaw === 'gender') tooltipKey = 'chartGender';
-
-
-        let tooltipContent = title || ''; 
-
-        if (TOOLTIP_CONTENT.statistikTab?.deskriptiv?.[tooltipKey]?.description) {
-            tooltipContent = TOOLTIP_CONTENT.statistikTab.deskriptiv[tooltipKey].description;
-        } else if (TOOLTIP_CONTENT.headerStats?.[tooltipKey]) {
-            tooltipContent = TOOLTIP_CONTENT.headerStats[tooltipKey];
-        }
-        
-
-        if (tooltipContent && typeof tooltipContent === 'string') {
-            tooltipContent = tooltipContent.replace('[KOLLEKTIV]', '<strong>dem aktuellen Kollektiv</strong>');
-        } else {
-            tooltipContent = title || '';
-        }
-        
-        return `
-            <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 dashboard-card-col ${cardClasses}">
-                <div class="card h-100 dashboard-card">
-                    <div class="card-header ${headerClasses} d-flex justify-content-between align-items-center" data-tippy-content="${tooltipContent}">
-                        <span class="text-truncate">${title}</span>
-                        <span class="card-header-buttons flex-shrink-0 ps-1">${headerButtonHtml}</span>
-                    </div>
-                    <div class="card-body d-flex flex-column justify-content-between ${bodyClasses}">
-                        <div class="dashboard-card-content">${content}</div>
-                        ${chartId ? `<div id="${chartId}" class="mt-1 w-100 dashboard-chart-container"></div>` : ''}
-                    </div>
-                </div>
-            </div>`;
-    }
 
     function createT2CriteriaControls(initialCriteria, initialLogic) {
-        if (!initialCriteria || !initialLogic) return '<p class="text-danger">Fehler: Initialkriterien konnten nicht geladen werden.</p>';
-        const logicChecked = initialLogic === 'ODER';
-        const defaultCriteriaForSize = getDefaultT2Criteria();
-        const sizeThreshold = initialCriteria.size?.threshold ?? defaultCriteriaForSize?.size?.threshold ?? 5.0;
-        const sizeMin = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min;
-        const sizeMax = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max;
-        const sizeStep = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step;
-        const formattedThreshold = formatNumber(sizeThreshold, 1, '5.0', true);
+        if (typeof APP_CONFIG === 'undefined' || typeof UI_TEXTS === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined' || typeof ui_helpers === 'undefined') {
+            return '<p class="text-danger">Fehler: Globale Konfigurationen oder UI Helfer für T2 Kriterien Controls nicht verfügbar.</p>';
+        }
 
-        const createButtonOptions = (key, isChecked, criterionLabel) => {
-            const valuesKey = key.toUpperCase() + '_VALUES';
-            const values = APP_CONFIG.T2_CRITERIA_SETTINGS[valuesKey] || [];
-            const currentValue = initialCriteria[key]?.value;
-            return values.map(value => {
-                const isActiveValue = isChecked && currentValue === value;
-                const icon = ui_helpers.getT2IconSVG(key, value);
-                const buttonTooltip = `Kriterium '${criterionLabel}' auf '${value}' setzen. ${isChecked ? '' : '(Kriterium ist derzeit inaktiv)'}`;
-                return `<button class="btn t2-criteria-button criteria-icon-button ${isActiveValue ? 'active' : ''} ${isChecked ? '' : 'inactive-option'}" data-criterion="${key}" data-value="${value}" data-tippy-content="${buttonTooltip}" ${isChecked ? '' : 'disabled'}>${icon}</button>`;
-            }).join('');
-        };
+        const defaultConfig = APP_CONFIG.DEFAULT_SETTINGS.DEFAULT_T2_CRITERIA;
+        const criteriaSettings = APP_CONFIG.T2_CRITERIA_SETTINGS;
+        const criteriaToUse = {};
 
-        const createCriteriaGroup = (key, label, tooltipKey, contentGenerator) => {
-            const isChecked = initialCriteria[key]?.active === true;
-            const tooltip = TOOLTIP_CONTENT[tooltipKey]?.description || label;
-            return `
-                <div class="col-md-6 criteria-group">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input criteria-checkbox" type="checkbox" value="${key}" id="check-${key}" ${isChecked ? 'checked' : ''}>
-                        <label class="form-check-label fw-bold" for="check-${key}">${label}</label>
-                         <span data-tippy-content="${tooltip}"> <i class="fas fa-info-circle text-muted ms-1"></i></span>
+        Object.keys(defaultConfig).forEach(key => {
+            if (key === 'logic') return;
+            criteriaToUse[key] = {
+                active: initialCriteria?.[key]?.active ?? defaultConfig[key].active,
+                value: initialCriteria?.[key]?.value ?? defaultConfig[key].value,
+                threshold: initialCriteria?.[key]?.threshold ?? defaultConfig[key].threshold
+            };
+        });
+        const logicToUse = initialLogic || defaultConfig.logic;
+
+        const t2Tooltips = TOOLTIP_CONTENT.t2CriteriaCard || {};
+        const t2Texts = UI_TEXTS.t2CriteriaCard || {};
+
+        let html = `
+            <div class="card card-primary shadow-sm" id="t2-criteria-card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">${t2Texts.title || 'T2-gewichtete MRT Kriterien Definition'}</h6>
+                    <div class="card-header-actions">
+                        <button class="btn btn-sm btn-outline-secondary" id="btn-save-t2-criteria" data-tippy-content="${t2Tooltips.saveButton?.description || 'Kriterien speichern'}"><i class="fas fa-save me-1"></i> ${t2Texts.saveButtonLabel || 'Speichern'}</button>
+                        <button class="btn btn-sm btn-outline-danger ms-2" id="btn-reset-t2-criteria" data-tippy-content="${t2Tooltips.resetButton?.description || 'Kriterien zurücksetzen'}"><i class="fas fa-undo me-1"></i> ${t2Texts.resetButtonLabel || 'Reset'}</button>
                     </div>
-                    <div class="criteria-options-container ps-3">
-                        ${contentGenerator(key, isChecked, label)}
-                    </div>
-                </div>`;
-        };
-
-        return `
-            <div class="card criteria-card" id="t2-criteria-card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>T2 Malignitäts-Kriterien Definieren</span>
-                    <div class="form-check form-switch" data-tippy-content="${TOOLTIP_CONTENT.t2Logic.description}">
-                         <label class="form-check-label small me-2" for="t2-logic-switch" id="t2-logic-label-prefix">Logik:</label>
-                         <input class="form-check-input" type="checkbox" role="switch" id="t2-logic-switch" ${logicChecked ? 'checked' : ''}>
-                         <label class="form-check-label fw-bold" for="t2-logic-switch" id="t2-logic-label">${UI_TEXTS.t2LogicDisplayNames[initialLogic] || initialLogic}</label>
-                     </div>
                 </div>
                 <div class="card-body">
-                     <div class="row g-4">
-                        ${createCriteriaGroup('size', 'Größe', 't2Size', (key, isChecked) => `
-                            <div class="d-flex align-items-center flex-wrap">
-                                 <span class="me-1 small text-muted">≥</span>
-                                 <input type="range" class="form-range criteria-range flex-grow-1 me-2" id="range-size" min="${sizeMin}" max="${sizeMax}" step="${sizeStep}" value="${formattedThreshold}" ${isChecked ? '' : 'disabled'} data-tippy-content="Schwellenwert für Kurzachsendurchmesser (≥) einstellen.">
-                                 <span class="criteria-value-display text-end me-1 fw-bold" id="value-size">${formatNumber(sizeThreshold, 1)}</span><span class="me-2 small text-muted">mm</span>
-                                 <input type="number" class="form-control form-control-sm criteria-input-manual" id="input-size" min="${sizeMin}" max="${sizeMax}" step="${sizeStep}" value="${formattedThreshold}" ${isChecked ? '' : 'disabled'} style="width: 70px;" aria-label="Größe manuell eingeben" data-tippy-content="Schwellenwert manuell eingeben oder anpassen.">
+                    <div class="row">
+                        <div class="col-md-6 criteria-set">`;
+
+        ['size', 'form', 'kontur'].forEach(key => {
+            const criterion = criteriaToUse[key];
+            const setting = criteriaSettings[key.toUpperCase() + '_VALUES'] || (key === 'size' ? criteriaSettings.SIZE_RANGE : []);
+            const label = UI_TEXTS.t2CriteriaShort[key] || key.charAt(0).toUpperCase() + key.slice(1);
+            const tooltip = t2Tooltips[key]?.description || `Einstellung für ${label}`;
+            const iconSVG = ui_helpers.getT2IconSVG(key === 'size' ? 'ruler-horizontal' : key, key === 'size' ? null : criterion.value);
+            
+            html += `<div class="mb-3 criteria-group" data-criterion="${key}">
+                        <div class="d-flex align-items-center mb-1">
+                            <div class="form-check form-switch me-2">
+                                <input class="form-check-input t2-criterion-active-check" type="checkbox" role="switch" id="check-${key}" data-criterion="${key}" ${criterion.active ? 'checked' : ''}>
+                                <label class="form-check-label visually-hidden" for="check-${key}">Aktiv</label>
                             </div>
-                        `)}
-                        ${createCriteriaGroup('form', 'Form', 't2Form', createButtonOptions)}
-                        ${createCriteriaGroup('kontur', 'Kontur', 't2Kontur', createButtonOptions)}
-                        ${createCriteriaGroup('homogenitaet', 'Homogenität', 't2Homogenitaet', createButtonOptions)}
-                        ${createCriteriaGroup('signal', 'Signal', 't2Signal', (key, isChecked, label) => `
-                            <div>${createButtonOptions(key, isChecked, label)}</div>
-                            <small class="text-muted d-block mt-1">Hinweis: Lymphknoten mit Signal 'null' (d.h. nicht beurteilbar/nicht vorhanden) erfüllen das Signal-Kriterium nie.</small>
-                        `)}
-                        <div class="col-12 d-flex justify-content-end align-items-center border-top pt-3 mt-3">
-                            <button class="btn btn-sm btn-outline-secondary me-2" id="btn-reset-criteria" data-tippy-content="${TOOLTIP_CONTENT.t2Actions.reset}">
-                                <i class="fas fa-undo me-1"></i> Zurücksetzen (Standard)
-                            </button>
-                            <button class="btn btn-sm btn-primary" id="btn-apply-criteria" data-tippy-content="${TOOLTIP_CONTENT.t2Actions.apply}">
-                                <i class="fas fa-check me-1"></i> Anwenden & Speichern
-                            </button>
+                            <span class="fw-bold me-2" data-tippy-content="${tooltip}">${iconSVG} ${label}</span>
+                            ${key === 'size' ? `<span class="ms-auto badge bg-secondary criteria-value-display" id="value-${key}">${formatNumber(criterion.threshold, 1)} mm</span>` : ''}
                         </div>
+                        <div class="criteria-options-container ${criterion.active ? '' : 'disabled-criterion-control-group'}">`;
+            if (key === 'size') {
+                html += `<div class="d-flex align-items-center">
+                            <input type="range" class="form-range flex-grow-1 me-2" id="range-${key}" min="${setting.min}" max="${setting.max}" step="${setting.step}" value="${criterion.threshold || setting.default}" ${criterion.active ? '' : 'disabled'}>
+                            <input type="number" class="form-control form-control-sm text-center" id="input-${key}" min="${setting.min}" max="${setting.max}" step="${setting.step}" value="${criterion.threshold || setting.default}" style="width: 70px;" ${criterion.active ? '' : 'disabled'}>
+                         </div>`;
+            } else {
+                html += `<div class="btn-group btn-group-sm w-100" role="group" aria-label="${label} Optionen">`;
+                setting.forEach(val => {
+                    const valLabel = UI_TEXTS.t2CriteriaValues[key]?.[val] || val;
+                    const valIcon = ui_helpers.getT2IconSVG(key, val);
+                    html += `<button type="button" class="btn btn-outline-secondary t2-criteria-button ${criterion.value === val && criterion.active ? 'active' : ''} ${criterion.active ? '' : 'inactive-option'}" data-criterion="${key}" data-value="${val}" data-tippy-content="${valLabel}" ${criterion.active ? '' : 'disabled'}>${valIcon}</button>`;
+                });
+                html += `</div>`;
+            }
+            html += `</div></div>`;
+        });
+        html += `</div><div class="col-md-6 criteria-set">`;
+
+        ['homogenitaet', 'signal'].forEach(key => {
+            const criterion = criteriaToUse[key];
+            const setting = criteriaSettings[key.toUpperCase() + '_VALUES'] || [];
+            const label = UI_TEXTS.t2CriteriaShort[key] || key.charAt(0).toUpperCase() + key.slice(1);
+            const tooltip = t2Tooltips[key]?.description || `Einstellung für ${label}`;
+            const iconSVG = ui_helpers.getT2IconSVG(key, criterion.value);
+
+            html += `<div class="mb-3 criteria-group" data-criterion="${key}">
+                        <div class="d-flex align-items-center mb-1">
+                             <div class="form-check form-switch me-2">
+                                <input class="form-check-input t2-criterion-active-check" type="checkbox" role="switch" id="check-${key}" data-criterion="${key}" ${criterion.active ? 'checked' : ''}>
+                                <label class="form-check-label visually-hidden" for="check-${key}">Aktiv</label>
+                            </div>
+                            <span class="fw-bold me-2" data-tippy-content="${tooltip}">${iconSVG} ${label}</span>
+                        </div>
+                        <div class="criteria-options-container ${criterion.active ? '' : 'disabled-criterion-control-group'}">
+                            <div class="btn-group btn-group-sm w-100" role="group" aria-label="${label} Optionen">`;
+            setting.forEach(val => {
+                 const valLabel = UI_TEXTS.t2CriteriaValues[key]?.[val] || val;
+                 const valIcon = ui_helpers.getT2IconSVG(key, val);
+                 html += `<button type="button" class="btn btn-outline-secondary t2-criteria-button ${criterion.value === val && criterion.active ? 'active' : ''} ${criterion.active ? '' : 'inactive-option'}" data-criterion="${key}" data-value="${val}" data-tippy-content="${valLabel}" ${criterion.active ? '' : 'disabled'}>${valIcon}</button>`;
+            });
+            html += `</div></div></div>`;
+        });
+        html += `<div class="mt-3">
+                    <div class="form-check form-switch d-flex align-items-center justify-content-center">
+                        <input class="form-check-input me-2" type="checkbox" role="switch" id="t2-logic-switch" ${logicToUse === 'ODER' ? 'checked' : ''}>
+                        <label class="form-check-label fw-bold" for="t2-logic-switch" id="t2-logic-label" data-tippy-content="${t2Tooltips.logicSwitch?.description || 'Logische Verknüpfung der Kriterien'}">${UI_TEXTS.t2LogicDisplayNames[logicToUse] || logicToUse}</label>
                     </div>
-                </div>
-            </div>`;
+                 </div>`;
+        html += `</div></div></div></div>`;
+        return html;
     }
 
-    function createBruteForceCard(currentKollektivName, workerAvailable) {
-        const disabledAttribute = !workerAvailable ? 'disabled' : '';
-        const startButtonText = workerAvailable ? '<i class="fas fa-cogs me-1"></i> Optimierung starten' : '<i class="fas fa-times-circle me-1"></i> Worker nicht verfügbar';
-        const statusText = workerAvailable ? 'Bereit.' : 'Worker konnte nicht initialisiert werden.';
+    function createBruteForceCard(currentKollektiv, workerAvailable) {
+        if (typeof APP_CONFIG === 'undefined' || typeof UI_TEXTS === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined') {
+            return '<p class="text-danger">Fehler: Globale Konfigurationen für Brute-Force Karte nicht verfügbar.</p>';
+        }
+        const bfTooltips = TOOLTIP_CONTENT.bruteForceCard || {};
+        const bfTexts = UI_TEXTS.bruteForceCard || {};
         const defaultMetric = APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC || 'Balanced Accuracy';
-        const displayKollektivName = getKollektivDisplayName(currentKollektivName);
-        const resultContainerTooltip = (TOOLTIP_CONTENT.bruteForceResult.description || 'Ergebnis der Optimierung.')
-                                      .replace('[N_GESAMT]', '--')
-                                      .replace('[N_PLUS]', '--')
-                                      .replace('[N_MINUS]', '--');
-        const bfInfoTooltip = (TOOLTIP_CONTENT.bruteForceInfo.description || 'Status des Optimierungs-Workers und aktuelles Kollektiv.')
-                                      .replace('[KOLLEKTIV_NAME]', `<strong>${displayKollektivName}</strong>`);
-
 
         return `
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">Kriterien-Optimierung (Brute-Force)</div>
-                <div class="card-body">
-                    <p class="card-text small">Findet automatisch die Kombination von T2-Kriterien (Größe, Form, Kontur, Homogenität, Signal) und Logik (UND/ODER), die eine gewählte diagnostische Metrik im Vergleich zum N-Status maximiert.</p>
-                    <div class="row g-3 align-items-end mb-3">
-                        <div class="col-md-4">
-                            <label for="brute-force-metric" class="form-label form-label-sm">Zielmetrik:</label>
-                            <select class="form-select form-select-sm" id="brute-force-metric" data-tippy-content="${TOOLTIP_CONTENT.bruteForceMetric.description}">
-                                <option value="Accuracy" ${defaultMetric === 'Accuracy' ? 'selected' : ''}>Accuracy</option>
-                                <option value="Balanced Accuracy" ${defaultMetric === 'Balanced Accuracy' ? 'selected' : ''}>Balanced Accuracy</option>
-                                <option value="F1-Score" ${defaultMetric === 'F1-Score' ? 'selected' : ''}>F1-Score</option>
-                                <option value="PPV" ${defaultMetric === 'PPV' ? 'selected' : ''}>Positiver Prädiktiver Wert (PPV)</option>
-                                <option value="NPV" ${defaultMetric === 'NPV' ? 'selected' : ''}>Negativer Prädiktiver Wert (NPV)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                             <button class="btn btn-primary btn-sm w-100" id="btn-start-brute-force" data-tippy-content="${TOOLTIP_CONTENT.bruteForceStart.description}" ${disabledAttribute}>
-                                 ${startButtonText}
-                             </button>
-                        </div>
-                         <div class="col-md-4">
-                             <div id="brute-force-info" class="text-muted small text-md-end" data-tippy-content="${bfInfoTooltip}">
-                                 Status: <span id="bf-status-text" class="fw-bold">${statusText}</span><br>Kollektiv: <strong id="bf-kollektiv-info">${displayKollektivName}</strong>
-                             </div>
-                         </div>
-                    </div>
-                     <div id="brute-force-progress-container" class="mt-3 d-none" data-tippy-content="${(TOOLTIP_CONTENT.bruteForceProgress.description || 'Fortschritt der laufenden Optimierung.').replace('[TOTAL]', '0')}">
-                         <div class="d-flex justify-content-between mb-1 small">
-                            <span>Fortschritt: <span id="bf-tested-count">0</span> / <span id="bf-total-count">0</span></span>
-                            <span id="bf-progress-percent">0%</span>
-                         </div>
-                         <div class="progress" style="height: 8px;">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" id="bf-progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                         </div>
-                         <div class="mt-2 small">
-                            Beste <span id="bf-metric-label" class="fw-bold">Metrik</span> bisher: <span id="bf-best-metric" class="fw-bold" data-tippy-content="Bester bisher gefundener Wert für die Zielmetrik.">--</span>
-                            <div id="bf-best-criteria" class="mt-1 text-muted" style="word-break: break-word;" data-tippy-content="Kriterienkombination und Logik für den besten bisherigen Metrikwert.">Beste Kriterien: --</div>
-                         </div>
-                          <button class="btn btn-danger btn-sm mt-2 d-none" id="btn-cancel-brute-force" data-tippy-content="Bricht die laufende Brute-Force-Optimierung ab. Bereits gefundene Ergebnisse gehen verloren.">
-                            <i class="fas fa-times me-1"></i> Abbrechen
-                         </button>
-                     </div>
-                     <div id="brute-force-result-container" class="mt-3 d-none alert alert-success p-2" role="alert" data-tippy-content="${resultContainerTooltip}">
-                         <h6 class="alert-heading small">Optimierung Abgeschlossen</h6>
-                         <p class="mb-1 small">Beste Kombi für <strong id="bf-result-metric"></strong> (Koll.: <strong id="bf-result-kollektiv"></strong>):</p>
-                         <ul class="list-unstyled mb-1 small">
-                            <li><strong>Wert:</strong> <span id="bf-result-value" class="fw-bold"></span></li>
-                            <li><strong>Logik:</strong> <span id="bf-result-logic" class="fw-bold"></span></li>
-                            <li style="word-break: break-word;"><strong>Kriterien:</strong> <span id="bf-result-criteria" class="fw-bold"></span></li>
-                         </ul>
-                         <p class="mb-1 small text-muted">Dauer: <span id="bf-result-duration"></span>s | Getestet: <span id="bf-result-total-tested"></span></p>
-                         <p class="mb-0 small text-muted" data-tippy-content="${TOOLTIP_CONTENT.bruteForceResult.kollektivStats || 'Statistik des für diese Optimierung verwendeten Kollektivs.'}">Kollektiv N: <span id="bf-result-kollektiv-n">--</span> (N+: <span id="bf-result-kollektiv-nplus">--</span>, N-: <span id="bf-result-kollektiv-nminus">--</span>)</p>
-                         <hr class="my-1">
-                         <button class="btn btn-success btn-sm me-2" id="btn-apply-best-bf-criteria" data-tippy-content="Wendet die beste gefundene Kriterienkombination an und speichert sie. Die Auswertungstabelle und alle Statistiken werden aktualisiert.">
-                             <i class="fas fa-check me-1"></i> Anwenden
-                         </button>
-                         <button class="btn btn-outline-secondary btn-sm" id="btn-show-brute-force-details" data-bs-toggle="modal" data-bs-target="#brute-force-modal" data-tippy-content="${TOOLTIP_CONTENT.bruteForceDetailsButton.description || 'Zeigt die Top 10 Ergebnisse und weitere Details.'}">
-                             <i class="fas fa-list-ol me-1"></i> Top Ergebnisse
-                         </button>
-                     </div>
+            <div class="card card-accent-info shadow-sm" id="brute-force-card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">${bfTexts.title || 'Brute-Force T2-Kriterien Optimierung'}</h6>
                 </div>
-            </div>
-        </div>
-        `;
-    }
-
-    function createStatistikCard(id, title, content = '', addPadding = true, tooltipKey = null, downloadButtons = [], tableIdForPng = null) {
-        let cardTooltipHtml = `data-tippy-content="${title}"`;
-        if (tooltipKey && TOOLTIP_CONTENT.statistikTab?.[tooltipKey]?.cardTitle) {
-            cardTooltipHtml = `data-tippy-content="${(TOOLTIP_CONTENT.statistikTab[tooltipKey].cardTitle || title).replace(/\[KOLLEKTIV\]/g, '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>')}"`;
-        } else if (tooltipKey && TOOLTIP_CONTENT[tooltipKey]?.cardTitle) {
-             cardTooltipHtml = `data-tippy-content="${(TOOLTIP_CONTENT[tooltipKey].cardTitle || title).replace(/\[KOLLEKTIV\]/g, '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>')}"`;
-        }
-
-
-        let finalButtonHtml = _createHeaderButtonHTML(downloadButtons, id + '-content', title);
-        
-        if (APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT && tableIdForPng && !downloadButtons.some(b => b.tableId === tableIdForPng && b.format === 'png')) {
-             const pngExportButton = {
-                 id: `dl-card-${id.replace(/[^a-zA-Z0-9]/g, '')}-${tableIdForPng.replace(/[^a-zA-Z0-9]/g, '')}-png`,
-                 icon: 'fa-image',
-                 tooltip: (TOOLTIP_CONTENT.exportTab.tableSinglePNG?.description || 'Tabelle als PNG').replace('{TableName}', title),
-                 format: 'png',
-                 tableId: tableIdForPng,
-                 tableName: title
-             };
-             finalButtonHtml += _createHeaderButtonHTML([pngExportButton], tableIdForPng, title);
-        }
-
-
-        return `
-            <div class="col-12 stat-card" id="${id}-card-container">
-                <div class="card h-100">
-                    <div class="card-header" ${cardTooltipHtml}>
-                         ${title}
-                         <span class="float-end card-header-buttons">
-                            ${finalButtonHtml}
-                         </span>
-                     </div>
-                    <div class="card-body ${addPadding ? '' : 'p-0'}" style="overflow-y: auto; overflow-x: hidden;">
-                        <div id="${id}-content">
-                            ${content}
+                <div class="card-body">
+                    <div class="mb-2" id="brute-force-info" data-tippy-content="${(bfTooltips.info?.description || 'Optimiere T2-Kriterien für Kollektiv [KOLLEKTIV_NAME]. Aktueller Status: [STATUS_TEXT].').replace('[KOLLEKTIV_NAME]', getKollektivDisplayName(currentKollektiv)).replace('[STATUS_TEXT]', workerAvailable ? 'Bereit' : 'Worker nicht verfügbar')}">
+                        <small class="text-muted">Kollektiv: <strong id="bf-kollektiv-info">${getKollektivDisplayName(currentKollektiv)}</strong>. <span id="bf-status-text">${workerAvailable ? 'Bereit.' : 'Worker nicht verfügbar.'}</span></small>
+                    </div>
+                    <div class="input-group input-group-sm mb-3">
+                        <label class="input-group-text" for="brute-force-metric">${bfTexts.metricSelectLabel || 'Zielmetrik:'}</label>
+                        <select class="form-select" id="brute-force-metric" data-tippy-content="${bfTooltips.metricSelect?.description || 'Metrik für die Optimierung auswählen'}">
+                            ${Object.entries(UI_TEXTS.statMetrics).filter(([key, val]) => val.optimizable).map(([key, val]) => `<option value="${val.name}" ${val.name === defaultMetric ? 'selected' : ''}>${val.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button class="btn btn-sm btn-primary" id="btn-start-brute-force" ${workerAvailable ? '' : 'disabled'} data-tippy-content="${bfTooltips.startButton?.description || 'Startet die Brute-Force Optimierung'}">
+                            <i class="fas fa-cogs me-1"></i> ${workerAvailable ? (bfTexts.startButtonLabel || 'Optimierung starten') : 'Starten (Worker fehlt)'}
+                        </button>
+                        <button class="btn btn-sm btn-danger d-none" id="btn-cancel-brute-force" data-tippy-content="${bfTooltips.cancelButton?.description || 'Bricht die laufende Optimierung ab'}">
+                            <i class="fas fa-times-circle me-1"></i> ${bfTexts.cancelButtonLabel || 'Abbrechen'}
+                        </button>
+                    </div>
+                    <div id="brute-force-progress-container" class="mt-3 d-none">
+                        <div class="progress" style="height: 20px;" data-tippy-content="${bfTooltips.progressBar?.description || 'Fortschritt der Optimierung. Getestete Kombinationen von [TOTAL]'}">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" id="bf-progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"><span id="bf-progress-percent">0%</span></div>
+                        </div>
+                        <div class="text-muted small mt-1 d-flex justify-content-between">
+                            <span>Getestet: <span id="bf-tested-count">0</span> / <span id="bf-total-count">0</span></span>
+                            <span>Akt. Best (<span id="bf-metric-label">${defaultMetric}</span>): <strong id="bf-best-metric">--</strong></span>
+                        </div>
+                         <div class="text-muted small mt-1" id="bf-best-criteria" style="font-size: 0.75rem; line-height: 1.2;">Beste Kriterien: --</div>
+                    </div>
+                    <div id="brute-force-result-container" class="mt-3 p-2 border rounded bg-light d-none" data-tippy-content="${(bfTooltips.resultContainer?.description || 'Bestes Ergebnis der Optimierung für N=[N_GESAMT] Patienten ([N_PLUS] N+, [N_MINUS] N-).').replace('[N_GESAMT]', '?').replace('[N_PLUS]','?').replace('[N_MINUS]','?')}">
+                        <h6 class="small mb-1">Bestes Ergebnis für <span id="bf-result-metric">${defaultMetric}</span> (<span id="bf-result-kollektiv">${getKollektivDisplayName(currentKollektiv)}</span>):</h6>
+                        <p class="mb-1"><strong>Wert: <span id="bf-result-value">--</span></strong></p>
+                        <p class="mb-1 small">Kriterien: <code id="bf-result-criteria" class="small">--</code> (<span id="bf-result-logic"></span>)</p>
+                        <p class="mb-0 small text-muted">
+                            Dauer: <span id="bf-result-duration">--</span>s | Getestet: <span id="bf-result-total-tested">--</span> Komb. <br/>
+                            Basis: N=<span id="bf-result-kollektiv-n">--</span> (<span id="bf-result-kollektiv-nplus">--</span> N+, <span id="bf-result-kollektiv-nminus">--</span> N-)
+                        </p>
+                        <div class="d-flex justify-content-end mt-2">
+                            <button class="btn btn-sm btn-success me-2" id="btn-apply-best-bf-criteria" data-tippy-content="${bfTooltips.applyButton?.description || 'Übernimmt die besten gefundenen Kriterien in den T2-Kriterien-Definitionsbereich.'}"><i class="fas fa-check-circle me-1"></i> ${bfTexts.applyButtonLabel || 'Anwenden'}</button>
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#bruteForceModal" data-tippy-content="${bfTooltips.detailsButton?.description || 'Zeigt die Top-Ergebnisse der Optimierung an.'}"><i class="fas fa-list-ul me-1"></i> ${bfTexts.detailsButtonLabel || 'Details'}</button>
                         </div>
                     </div>
                 </div>
             </div>`;
     }
 
-    function createExportOptions(currentKollektiv) {
-        const dateStr = getCurrentDateString(APP_CONFIG.EXPORT_SETTINGS.DATE_FORMAT);
-        const safeKollektiv = getKollektivDisplayName(currentKollektiv).replace(/[^a-z0-9_ .()-]/gi, '_').replace(/[\s.]+/g, '_');
-        const fileNameTemplate = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TEMPLATE;
-
-        const generateButtonHTML = (idSuffix, iconClass, text, tooltipKey, disabled = false, experimental = false) => {
-            const config = TOOLTIP_CONTENT.exportTab[tooltipKey]; if (!config || !APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]) return ``;
-            const type = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]; const ext = config.ext; const filename = fileNameTemplate.replace('{TYPE}', type).replace('{KOLLEKTIV}', safeKollektiv).replace('{DATE}', dateStr).replace('{EXT}', ext).replace(/__+/g, '_').replace(/_$/,''); const tooltipHtml = `data-tippy-content="${config.description}<br><small>Datei: ${filename}</small>"`; const disabledAttr = disabled ? 'disabled' : ''; const experimentalBadge = experimental ? '<span class="badge bg-warning text-dark ms-1 small">Experimentell</span>' : ''; const buttonClass = disabled ? 'btn-outline-secondary' : 'btn-outline-primary';
-            return `<button class="btn ${buttonClass} w-100 mb-2 d-flex justify-content-start align-items-center" id="export-${idSuffix}" ${tooltipHtml} ${disabledAttr}><i class="${iconClass} fa-fw me-2"></i> <span class="flex-grow-1 text-start">${text} (.${ext})</span> ${experimentalBadge}</button>`;
-        };
-
-         const generateZipButtonHTML = (idSuffix, iconClass, text, tooltipKey, disabled = false) => {
-            const config = TOOLTIP_CONTENT.exportTab[tooltipKey]; if (!config || !APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]) return ``;
-            const type = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES[config.type]; const ext = config.ext; const filename = fileNameTemplate.replace('{TYPE}', type).replace('{KOLLEKTIV}', safeKollektiv).replace('{DATE}', dateStr).replace('{EXT}', ext).replace(/__+/g, '_').replace(/_$/,''); const tooltipHtml = `data-tippy-content="${config.description}<br><small>Datei: ${filename}</small>"`; const disabledAttr = disabled ? 'disabled' : ''; const buttonClass = idSuffix === 'all-zip' ? 'btn-primary' : 'btn-outline-secondary';
-            return `<button class="btn ${buttonClass} w-100 mb-2 d-flex justify-content-start align-items-center" id="export-${idSuffix}" ${tooltipHtml} ${disabledAttr}><i class="${iconClass} fa-fw me-2"></i> <span class="flex-grow-1 text-start">${text} (.${ext})</span></button>`;
-         };
-
-        const exportDesc = TOOLTIP_CONTENT.exportTab.description.replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(currentKollektiv)}</strong>`);
+    function createDashboardCard(title, valueHTML, chartOrContentId, bgClass = 'bg-light', cardId = null, headerActions = null, downloadButtons = []) {
+        const id = cardId || `dash-card-${generateUUID().substring(0,8)}`;
+        let headerActionsHTML = '';
+        if (Array.isArray(downloadButtons) && downloadButtons.length > 0) {
+             headerActionsHTML += downloadButtons.map(btnConfig => _createHeaderButtonHTML(btnConfig, id)).join('');
+        }
+        if (headerActions) { // For custom buttons passed as string or array
+            if (Array.isArray(headerActions)) { headerActionsHTML += headerActions.map(btnHTML => btnHTML).join('');}
+            else { headerActionsHTML += String(headerActions); }
+        }
 
         return `
-            <div class="row export-options-container">
-                <div class="col-lg-6 col-xl-4 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header">${TOOLTIP_CONTENT.exportTab.singleExports}</div>
-                        <div class="card-body">
-                            <p class="small text-muted mb-3">${exportDesc}</p>
-                            <h6 class="text-muted small text-uppercase mb-2">Berichte & Statistiken</h6>
-                            ${generateButtonHTML('statistik-csv', 'fas fa-file-csv', 'Statistik Ergebnisse', 'statsCSV')}
-                            ${generateButtonHTML('bruteforce-txt', 'fas fa-file-alt', 'Brute-Force Bericht', 'bruteForceTXT', true)}
-                            ${generateButtonHTML('deskriptiv-md', 'fab fa-markdown', 'Deskriptive Statistik', 'deskriptivMD')}
-                            ${generateButtonHTML('comprehensive-report-html', 'fas fa-file-invoice', 'Umfassender Bericht', 'comprehensiveReportHTML')}
-                            ${generateButtonHTML('publication-gesamt-md', 'fas fa-book-open', 'Publikationsentwurf (MD)', 'publicationGesamtMD')}
-                             <h6 class="mt-3 text-muted small text-uppercase mb-2">Tabellen & Rohdaten</h6>
-                             ${generateButtonHTML('daten-md', 'fab fa-markdown', 'Datenliste', 'datenMD')}
-                             ${generateButtonHTML('auswertung-md', 'fab fa-markdown', 'Auswertungstabelle', 'auswertungMD')}
-                             ${generateButtonHTML('filtered-data-csv', 'fas fa-database', 'Gefilterte Rohdaten', 'filteredDataCSV')}
-                             <h6 class="mt-3 text-muted small text-uppercase mb-2">Diagramme & Tabellen (als Bilder)</h6>
-                             ${generateButtonHTML('charts-png', 'fas fa-images', 'Diagramme & Tabellen (PNG)', 'pngZIP')}
-                             ${generateButtonHTML('charts-svg', 'fas fa-file-code', 'Diagramme (SVG)', 'svgZIP')}
-                        </div>
+            <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 dashboard-card-col ${chartOrContentId && chartOrContentId.startsWith('chart-') ? 'chart-card' : 'metric-card'}">
+                <div class="card h-100 shadow-sm dashboard-card ${bgClass}" id="${id}">
+                    <div class="card-header pt-2 pb-1 ps-3 pe-2 d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0 small fw-bold text-uppercase text-muted">${title}</h6>
+                        ${headerActionsHTML ? `<div class="card-header-actions">${headerActionsHTML}</div>` : ''}
+                    </div>
+                    <div class="card-body text-center d-flex flex-column justify-content-center align-items-center p-2">
+                        ${chartOrContentId ? `<div id="${chartOrContentId}" class="w-100 h-100">` : ''}
+                        ${valueHTML || ''}
+                        ${chartOrContentId ? `</div>` : ''}
                     </div>
                 </div>
-                 <div class="col-lg-6 col-xl-4 mb-3">
-                    <div class="card h-100">
-                        <div class="card-header">${TOOLTIP_CONTENT.exportTab.exportPackages}</div>
-                        <div class="card-body">
-                             <p class="small text-muted mb-3">Bündelt mehrere thematisch zusammengehörige Exportdateien in einem ZIP-Archiv für das Kollektiv <strong>${getKollektivDisplayName(currentKollektiv)}</strong>.</p>
-                            ${generateZipButtonHTML('all-zip', 'fas fa-file-archive', 'Gesamtpaket (Alle Dateien)', 'allZIP')}
-                            ${generateZipButtonHTML('csv-zip', 'fas fa-file-csv', 'Nur CSVs', 'csvZIP')}
-                            ${generateZipButtonHTML('md-zip', 'fab fa-markdown', 'Nur Markdown', 'mdZIP')}
-                            ${generateZipButtonHTML('png-zip', 'fas fa-images', 'Nur Diagramm/Tabellen-PNGs', 'pngZIP')}
-                            ${generateZipButtonHTML('svg-zip', 'fas fa-file-code', 'Nur Diagramm-SVGs', 'svgZIP')}
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-12 col-xl-4 mb-3">
-                   <div class="card h-100"> <div class="card-header">Hinweise zum Export</div> <div class="card-body small"> <ul class="list-unstyled mb-0"> <li class="mb-2"><i class="fas fa-info-circle fa-fw me-1 text-primary"></i>Alle Exporte basieren auf dem aktuell gewählten Kollektiv und den zuletzt **angewendeten** T2-Kriterien.</li> <li class="mb-2"><i class="fas fa-table fa-fw me-1 text-primary"></i>**CSV:** Für Statistiksoftware; Trennzeichen: Semikolon (;). Numerische Werte mit Punkt als Dezimaltrennzeichen.</li> <li class="mb-2"><i class="fab fa-markdown fa-fw me-1 text-primary"></i>**MD:** Für Dokumentation und Weiterverarbeitung.</li> <li class="mb-2"><i class="fas fa-file-alt fa-fw me-1 text-primary"></i>**TXT:** Brute-Force-Bericht.</li> <li class="mb-2"><i class="fas fa-file-invoice fa-fw me-1 text-primary"></i>**HTML Bericht:** Umfassend, druckbar, enthält eingebettete Diagramme.</li> <li class="mb-2"><i class="fas fa-images fa-fw me-1 text-primary"></i>**PNG:** Pixelbasiert (Diagramme/Tabellen), feste Auflösung.</li> <li class="mb-2"><i class="fas fa-file-code fa-fw me-1 text-primary"></i>**SVG:** Vektorbasiert (Diagramme), verlustfrei skalierbar.</li> <li class="mb-0"><i class="fas fa-exclamation-triangle fa-fw me-1 text-warning"></i>ZIP-Exporte für Diagramme/Tabellen erfassen nur aktuell im Statistik-, Auswertung- oder Publikationstab sichtbare/gerenderte Elemente. Einzel-Downloads sind direkt am jeweiligen Element möglich.</li> </ul> </div> </div>
-                </div>
-            </div>
-        `;
+            </div>`;
     }
 
-    function createT2MetricsOverview(stats, kollektivName) {
-        const displayKollektivName = getKollektivDisplayName(kollektivName);
-        const cardTooltip = (TOOLTIP_CONTENT.t2MetricsOverview.cardTitle || 'Kurzübersicht der diagnostischen Güte (T2 vs. N) für Kollektiv [KOLLEKTIV].').replace('[KOLLEKTIV]', `<strong>${displayKollektivName}</strong>`);
-        if (!stats || !stats.matrix || stats.matrix.rp === undefined) {
-             return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)</div><div class="card-body p-2"><p class="m-0 text-muted small">Metriken für T2 nicht verfügbar für Kollektiv ${displayKollektivName}.</p></div></div>`;
+    function createStatistikCard(cardId, title, contentHTML, isCollapsible = false, tooltipKey = null, downloadButtons = [], exportTableId = null) {
+        if (typeof TOOLTIP_CONTENT === 'undefined') return '<p class="text-danger">Fehler: Globale Konfiguration für Statistik Karte nicht verfügbar.</p>';
+        const cardTooltip = (tooltipKey && TOOLTIP_CONTENT.statistikKarten && TOOLTIP_CONTENT.statistikKarten[tooltipKey]) ? TOOLTIP_CONTENT.statistikKarten[tooltipKey].description : title;
+        const collapseId = isCollapsible ? `${cardId}-collapse` : '';
+        let headerActionsHTML = '';
+
+        if (Array.isArray(downloadButtons) && downloadButtons.length > 0) {
+             headerActionsHTML += downloadButtons.map(btnConfig => _createHeaderButtonHTML(btnConfig, cardId)).join('');
         }
-        const metrics = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'f1', 'auc'];
-        const metricDisplayNames = { sens: 'Sens', spez: 'Spez', ppv: 'PPV', npv: 'NPV', acc: 'Acc', balAcc: 'BalAcc', f1: 'F1', auc: 'AUC' };
+        if(exportTableId && typeof APP_CONFIG !== 'undefined' && APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT){
+            headerActionsHTML += _createHeaderButtonHTML({ id: `dl-png-${exportTableId}`, format: 'png', icon: 'fa-image', tooltip: (TOOLTIP_CONTENT.statistikKarten?.exportTableAsPngButtonTooltip || 'Tabelle als PNG exportieren'), tableId: exportTableId}, cardId);
+        }
+
+        return `
+            <div class="card card-accent-primary shadow-sm mb-3 statistik-card" id="${cardId}" data-tippy-content="${cardTooltip}">
+                <div class="card-header ${isCollapsible ? 'collapsible-card-header' : ''}" ${isCollapsible ? `data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="true" aria-controls="${collapseId}" style="cursor: pointer;"` : ''}>
+                    <h6 class="card-title mb-0">${title}</h6>
+                    <div class="card-header-actions">
+                        ${headerActionsHTML}
+                        ${isCollapsible ? '<i class="fas fa-chevron-down collapse-icon ms-2"></i>' : ''}
+                    </div>
+                </div>
+                <div id="${collapseId}" class="collapse ${isCollapsible ? 'show' : ''}">
+                    <div class="card-body small p-2">
+                        ${contentHTML}
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    function createConfusionMatrixHTML(matrix, methodName, kollektivName, tableId = null, tooltipKey = null) {
+        if (!matrix || typeof matrix !== 'object' || typeof UI_TEXTS === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined') return '<p class="text-muted small">Konfusionsmatrix nicht verfügbar.</p>';
+        const id = tableId || `conf-matrix-${methodName.replace(/\s+/g, '_')}-${getKollektivDisplayName(kollektivName).replace(/\s+/g, '_')}`;
+        const tt = (tooltipKey && TOOLTIP_CONTENT.konfusionsmatrix && TOOLTIP_CONTENT.konfusionsmatrix[tooltipKey]) ? TOOLTIP_CONTENT.konfusionsmatrix[tooltipKey] : {};
+
+        return `
+            <table class="table table-sm table-bordered text-center small confusion-matrix-table" id="${id}">
+                <caption class="visually-hidden">Konfusionsmatrix für ${methodName} in Kollektiv ${getKollektivDisplayName(kollektivName)}</caption>
+                <thead>
+                    <tr>
+                        <th class="bg-light" scope="col" rowspan="2" colspan="2" data-tippy-content="${tt.achseBeschreibung || 'Vorhersage vs. Wahrheit'}"></th>
+                        <th class="bg-light" scope="col" colspan="2" data-tippy-content="${tt.wahrheitLabel || 'Wahrer N-Status'}">${UI_TEXTS.konfusionsmatrix.wahrheitLabel || 'Wahrheit (N-Status)'}</th>
+                    </tr>
+                    <tr>
+                        <th class="bg-light" scope="col" data-tippy-content="${tt.wahrheitPositivLabel || 'Positiv (N+)'}">${UI_TEXTS.konfusionsmatrix.wahrheitPositivLabel || 'N+'}</th>
+                        <th class="bg-light" scope="col" data-tippy-content="${tt.wahrheitNegativLabel || 'Negativ (N-)'}">${UI_TEXTS.konfusionsmatrix.wahrheitNegativLabel || 'N-'}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th class="bg-light" scope="row" rowspan="2" data-tippy-content="${tt.vorhersageLabel || 'Vorhersage durch Methode'}"><span class="cm-axis-label">${UI_TEXTS.konfusionsmatrix.vorhersageLabel || 'Vorhersage'}</span></th>
+                        <th class="bg-light" scope="row" data-tippy-content="${tt.vorhersagePositivLabel || 'Positiv'}">${UI_TEXTS.konfusionsmatrix.vorhersagePositivLabel || '+'}</th>
+                        <td data-tippy-content="${tt.tp || 'Richtig Positiv (TP)'}">${matrix.tp ?? 0}</td>
+                        <td data-tippy-content="${tt.fp || 'Falsch Positiv (FP)'}">${matrix.fp ?? 0}</td>
+                    </tr>
+                    <tr>
+                        <th class="bg-light" scope="row" data-tippy-content="${tt.vorhersageNegativLabel || 'Negativ'}">${UI_TEXTS.konfusionsmatrix.vorhersageNegativLabel || '-'}</th>
+                        <td data-tippy-content="${tt.fn || 'Falsch Negativ (FN)'}">${matrix.fn ?? 0}</td>
+                        <td data-tippy-content="${tt.tn || 'Richtig Negativ (TN)'}">${matrix.tn ?? 0}</td>
+                    </tr>
+                </tbody>
+            </table>`;
+    }
+    
+    function createT2MetricsOverview(statsT2, currentKollektiv) {
+        if (typeof UI_TEXTS === 'undefined' || typeof APP_CONFIG === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined') return '<p class="text-danger">Fehler: Konfiguration für T2 Metrik Übersicht nicht verfügbar.</p>';
         const na = '--';
+        const fCI = (metric, key, defaultDigits = 1) => {
+            const isRate = !(key === 'auc' || key === 'f1');
+            const digits = (key === 'auc' || key === 'f1') ? 3 : defaultDigits;
+            return formatCI(metric?.value, metric?.ci?.lower, metric?.ci?.upper, digits, isRate, na);
+        };
+        const getInterpretationTT = (mk, st) => { return (typeof ui_helpers !== 'undefined' && ui_helpers.getMetricInterpretationHTML) ? ui_helpers.getMetricInterpretationHTML(mk, st, `T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, currentKollektiv) : '';};
+        const ttOverview = TOOLTIP_CONTENT.t2MetricsOverview || {};
 
-        let contentHTML = '<div class="d-flex flex-wrap justify-content-around small text-center">';
-
-        metrics.forEach((key, index) => {
-            const metricData = stats[key];
-            const metricDescription = (TOOLTIP_CONTENT.t2MetricsOverview?.[key] || TOOLTIP_CONTENT.statMetrics[key]?.description || key).replace(/\[METHODE\]/g, '<strong>T2 (angewandt)</strong>');
-            const interpretationHTML = ui_helpers.getMetricInterpretationHTML(key, metricData, 'T2 (angewandt)', displayKollektivName);
-            const digits = (key === 'f1' || key === 'auc') ? APP_CONFIG.STATISTICAL_CONSTANTS.P_VALUE_PRECISION_TEXT : 1;
-            const isPercent = !(key === 'f1' || key === 'auc');
-            const formattedValue = formatCI(metricData?.value, metricData?.ci?.lower, metricData?.ci?.upper, digits, isPercent, na);
-
-            contentHTML += `
-                <div class="p-1 flex-fill bd-highlight ${index > 0 ? 'border-start' : ''}">
-                    <strong data-tippy-content="${metricDescription}">${metricDisplayNames[key]}:</strong>
-                    <span data-tippy-content="${interpretationHTML}"> ${formattedValue}</span>
+        let content = `<div class="row g-2 align-items-center t2-metrics-overview-bar">`;
+        const metricsToShow = ['sens', 'spez', 'acc', 'auc'];
+        metricsToShow.forEach(key => {
+            const metricConfig = UI_TEXTS.statMetrics?.[key] || {name: key.toUpperCase(), short: key.toUpperCase()};
+            const valueStr = statsT2 && statsT2[key] ? fCI(statsT2[key], key, metricConfig.digits) : na;
+            const interpretation = statsT2 && statsT2[key] ? getInterpretationTT(key, statsT2[key]) : (ttOverview[key]?.interpretationNoData || 'Keine Daten');
+            content += `
+                <div class="col text-center" data-tippy-content="${interpretation}">
+                    <span class="metric-label small text-muted">${metricConfig.short || metricConfig.name}</span>
+                    <span class="metric-value fw-bold d-block">${valueStr}</span>
                 </div>`;
         });
-
-        contentHTML += '</div>';
-
-        return `<div class="card bg-light border-secondary" data-tippy-content="${cardTooltip}"><div class="card-header card-header-sm bg-secondary text-white">Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)</div><div class="card-body p-2">${contentHTML}</div></div>`;
+        content += `</div>`;
+        return content;
     }
 
-    function createBruteForceModalContent(resultsData) {
-        const { results, metric, kollektiv, duration, totalTested, nGesamt, nPlus, nMinus } = resultsData;
-        if (!results || results.length === 0) return '<p class="text-muted">Keine Ergebnisse gefunden.</p>';
 
-        const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l) => 'Formatierungsfehler';
-        const getKollektivNameFunc = typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName : (k) => k;
-        const bestResult = results[0];
-        const kollektivName = getKollektivNameFunc(kollektiv);
-        const metricDisplayName = metric === 'PPV' ? 'PPV' : metric === 'NPV' ? 'NPV' : metric;
-        const resultContainerTooltip = (TOOLTIP_CONTENT.bruteForceResult.description || 'Ergebnis der Optimierung.')
-                                      .replace('[N_GESAMT]', formatNumber(nGesamt,0,'?'))
-                                      .replace('[N_PLUS]', formatNumber(nPlus,0,'?'))
-                                      .replace('[N_MINUS]', formatNumber(nMinus,0,'?'));
-        
-        const tooltips = TOOLTIP_CONTENT.bruteForceModal || {};
+    function createPresentationControls(currentView, studyCriteriaSets, currentStudyId) {
+         if (typeof UI_TEXTS === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined' || typeof APP_CONFIG === 'undefined') return '<p class="text-danger">Fehler: Konfiguration für Präsentations-Controls nicht verfügbar.</p>';
+         const praesTexts = UI_TEXTS.praesentationTab || {};
+         const praesTooltips = TOOLTIP_CONTENT.praesentation || {};
 
-        let tableHTML = `
-            <div class="alert alert-light small p-2 mb-3" data-tippy-content="${resultContainerTooltip}">
-                <p class="mb-1"><strong>Beste Kombi für '${metricDisplayName}' (Koll.: '${kollektivName}'):</strong></p>
-                <ul class="list-unstyled mb-1">
-                    <li><strong>Wert:</strong> ${formatNumber(bestResult.metricValue, 4)}</li>
-                    <li><strong>Logik:</strong> ${bestResult.logic.toUpperCase()}</li>
-                    <li><strong>Kriterien:</strong> ${formatCriteriaFunc(bestResult.criteria, bestResult.logic)}</li>
-                </ul>
-                <p class="mb-1 text-muted"><small>Dauer: ${formatNumber(duration / 1000, 1)}s | Getestet: ${formatNumber(totalTested, 0)}</small></p>
-                <p class="mb-0 text-muted" data-tippy-content="${TOOLTIP_CONTENT.bruteForceResult.kollektivStats || 'Statistik des für diese Optimierung verwendeten Kollektivs.'}"><small>Kollektiv N=${formatNumber(nGesamt,0,'N/A')} (N+: ${formatNumber(nPlus,0,'N/A')}, N-: ${formatNumber(nMinus,0,'N/A')})</small></p>
-            </div>
-            <h6 class="mb-2">Top Ergebnisse (inkl. identischer Werte):</h6>
-            <div class="table-responsive">
-                <table class="table table-sm table-striped table-hover small" id="bruteforce-results-table">
-                    <thead class="small">
-                        <tr>
-                            <th data-tippy-content="${tooltips.rank || 'Rang'}">Rang</th>
-                            <th data-tippy-content="${(tooltips.zielmetrik || 'Zielmetrikwert').replace('[ZIELMETRIK_NAME]', metricDisplayName)}">${metricDisplayName}</th>
-                            <th data-tippy-content="${tooltips.sens || 'Sens.'}">Sens.</th>
-                            <th data-tippy-content="${tooltips.spez || 'Spez.'}">Spez.</th>
-                            <th data-tippy-content="${tooltips.ppv || 'PPV'}">PPV</th>
-                            <th data-tippy-content="${tooltips.npv || 'NPV'}">NPV</th>
-                            <th data-tippy-content="${tooltips.logik || 'Logik'}">Logik</th>
-                            <th data-tippy-content="${tooltips.kriterien || 'Kriterien'}">Kriterien</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-
-        let rank = 1, displayedCount = 0, lastMetricValue = -Infinity;
-        const precision = 8;
-
-        for (let i = 0; i < results.length; i++) {
-            const result = results[i];
-            if (!result || typeof result.metricValue !== 'number' || !isFinite(result.metricValue)) continue;
-
-            const currentMetricValueRounded = parseFloat(result.metricValue.toFixed(precision));
-            const lastMetricValueRounded = parseFloat(lastMetricValue.toFixed(precision));
-            let currentRank = rank;
-
-            const isNewRank = Math.abs(currentMetricValueRounded - lastMetricValueRounded) > 1e-8;
-
-            if (i > 0 && isNewRank) {
-                rank = displayedCount + 1;
-                currentRank = rank;
-            } else if (i > 0) {
-                currentRank = rank;
-            }
-
-            if (rank > 10 && isNewRank && i >=10 ) break;
-
-            tableHTML += `
-                <tr>
-                    <td>${currentRank}.</td>
-                    <td>${formatNumber(result.metricValue, 4)}</td>
-                    <td>${result.sens !== undefined ? formatPercent(result.sens, 1) : 'N/A'}</td>
-                    <td>${result.spez !== undefined ? formatPercent(result.spez, 1) : 'N/A'}</td>
-                    <td>${result.ppv !== undefined ? formatPercent(result.ppv, 1) : 'N/A'}</td>
-                    <td>${result.npv !== undefined ? formatPercent(result.npv, 1) : 'N/A'}</td>
-                    <td>${result.logic.toUpperCase()}</td>
-                    <td>${formatCriteriaFunc(result.criteria, result.logic)}</td>
-                </tr>`;
-
-            if (isNewRank || i === 0) {
-                lastMetricValue = result.metricValue;
-            }
-            displayedCount++;
-        }
-        tableHTML += `</tbody></table></div>`;
-        return tableHTML;
-    }
-
-    function createPresentationControls(currentView, studySets, currentStudyId) {
-        const asPurChecked = currentView === 'as-pur' ? 'checked' : '';
-        const asVsT2Checked = currentView === 'as-vs-t2' ? 'checked' : '';
-        const studySelectDisabled = currentView !== 'as-vs-t2' ? 'disabled' : '';
-        const studySelectDisplay = currentView === 'as-vs-t2' ? '' : 'display: none;';
-
-        let studyOptionsHTML = `<option value="" ${!currentStudyId ? 'selected' : ''}>Bitte T2-Basis wählen...</option>`;
-        studySets.forEach(set => {
-            studyOptionsHTML += `<option value="${set.id}" ${currentStudyId === set.id ? 'selected' : ''}>${set.name}</option>`;
-        });
+         let optionsHTML = `<option value="${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID}" ${currentStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID ? 'selected' : ''}>${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME}</option>`;
+         if (Array.isArray(studyCriteriaSets)) {
+             studyCriteriaSets.forEach(set => {
+                 optionsHTML += `<option value="${set.id}" ${currentStudyId === set.id ? 'selected' : ''}>${set.name || set.id}</option>`;
+             });
+         }
 
         return `
             <div class="row align-items-center">
-                <div class="col-md-auto mb-2 mb-md-0">
-                    <div class="btn-group" role="group" aria-label="Präsentationsansicht wählen" data-tippy-content="${TOOLTIP_CONTENT.praesentation.viewSelect.description}">
-                        <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as-pur" value="as-pur" autocomplete="off" ${asPurChecked}>
-                        <label class="btn btn-sm btn-outline-primary" for="praes-ansicht-as-pur">Avocado Sign (Performance)</label>
+                <div class="col-md-auto">
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Präsentationsansicht Auswahl">
+                        <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-as-pur-radio" value="as-pur" ${currentView === 'as-pur' ? 'checked' : ''} autocomplete="off">
+                        <label class="btn btn-outline-primary ${currentView === 'as-pur' ? 'active' : ''}" for="praes-as-pur-radio" data-tippy-content="${praesTooltips.asPurView?.description || 'AS Pur Performance'}"><i class="fas fa-star me-1"></i> ${praesTexts.asPurViewLabel || 'AS Pur'}</label>
 
-                        <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as-vs-t2" value="as-vs-t2" autocomplete="off" ${asVsT2Checked}>
-                        <label class="btn btn-sm btn-outline-primary" for="praes-ansicht-as-vs-t2">AS vs. T2 (Vergleich)</label>
+                        <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-as-vs-t2-radio" value="as-vs-t2" ${currentView === 'as-vs-t2' ? 'checked' : ''} autocomplete="off">
+                        <label class="btn btn-outline-primary ${currentView === 'as-vs-t2' ? 'active' : ''}" for="praes-as-vs-t2-radio" data-tippy-content="${praesTooltips.asVsT2View?.description || 'AS vs. T2 Vergleich'}"><i class="fas fa-balance-scale me-1"></i> ${praesTexts.asVsT2ViewLabel || 'AS vs. T2'}</label>
                     </div>
                 </div>
-                <div class="col-md-auto" id="praes-study-select-container" style="${studySelectDisplay}">
+                <div class="col-md" id="praes-study-select-container" style="${currentView === 'as-vs-t2' ? '' : 'display: none;'}">
                     <div class="input-group input-group-sm">
-                        <label class="input-group-text" for="praes-study-select">T2-Basis für Vergleich:</label>
-                        <select class="form-select form-select-sm" id="praes-study-select" ${studySelectDisabled} data-tippy-content="${TOOLTIP_CONTENT.praesentation.studySelect.description}">
-                            ${studyOptionsHTML}
-                        </select>
+                         <label class="input-group-text" for="praes-study-select">${praesTexts.t2SetSelectLabel || 'T2-Basis:'}</label>
+                         <select class="form-select" id="praes-study-select" data-tippy-content="${praesTooltips.t2SetSelect?.description || 'Wähle das T2 Kriterienset für den Vergleich'}">
+                            ${optionsHTML}
+                         </select>
                     </div>
                 </div>
             </div>`;
     }
+    
+    function createExportOptions(currentKollektiv) {
+        if (typeof APP_CONFIG === 'undefined' || typeof UI_TEXTS === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined') {
+             return '<p class="text-danger">Fehler: Konfiguration für Export Optionen nicht verfügbar.</p>';
+        }
+        const exportTexts = UI_TEXTS.exportTab || {};
+        const exportTooltips = TOOLTIP_CONTENT.exportTab || {};
+        const filenameTypes = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES;
 
+        const createButton = (id, icon, textKey, tooltipKey, typeKeys, additionalClasses = '') => {
+            const text = exportTexts[textKey] || textKey;
+            const tooltip = exportTooltips[tooltipKey]?.description || text;
+            const types = Array.isArray(typeKeys) ? typeKeys.join(',') : typeKeys;
+            return `<button class="btn btn-primary mb-2 me-2 ${additionalClasses}" id="${id}" data-export-types="${types}" data-tippy-content="${tooltip}"><i class="fas ${icon} me-1"></i> ${text}</button>`;
+        };
+        
+        let html = `<p class="text-muted">Datenexport für Kollektiv: <strong>${getKollektivDisplayName(currentKollektiv)}</strong></p><hr/>`;
+        html += '<h5>Tabellen & Berichte</h5>';
+        html += createButton('export-statistik-csv', 'fa-table', 'exportGesamtStatistikCSV', 'exportGesamtStatistikCSV', filenameTypes.STATS_CSV);
+        html += createButton('export-bruteforce-txt', 'fa-file-alt', 'exportBruteForceBericht', 'exportBruteForceBericht', filenameTypes.BRUTEFORCE_TXT);
+        html += createButton('export-deskriptiv-md', 'fa-file-word', 'exportDeskriptiveStatistikMD', 'exportDeskriptiveStatistikMD', filenameTypes.DESKRIPTIV_MD);
+        html += createButton('export-daten-md', 'fa-users', 'exportDatenlisteMD', 'exportDatenlisteMD', filenameTypes.DATEN_MD);
+        html += createButton('export-auswertung-md', 'fa-tasks', 'exportAuswertungstabelleMD', 'exportAuswertungstabelleMD', filenameTypes.AUSWERTUNG_MD);
+        html += createButton('export-filtered-data-csv', 'fa-filter', 'exportAktuelleDatenCSV', 'exportAktuelleDatenCSV', filenameTypes.FILTERED_DATA_CSV);
+        html += createButton('export-publication-gesamt-md', 'fa-book-open', 'exportPublikationsentwurfMD', 'exportPublikationsentwurfMD', filenameTypes.PUBLIKATION_GESAMT_MD);
+        html += createButton('export-comprehensive-report-html', 'fa-file-invoice', 'exportGesamtberichtHTML', 'exportGesamtberichtHTML', filenameTypes.COMPREHENSIVE_REPORT_HTML);
+        
+        html += '<hr/><h5>Diagramme</h5>';
+        html += createButton('export-charts-png', 'fa-chart-bar', 'exportAlleDiagrammePNG', 'exportAlleDiagrammePNG', filenameTypes.CHART_SINGLE_PNG, 'btn-info');
+        html += createButton('export-charts-svg', 'fa-vector-square', 'exportAlleDiagrammeSVG', 'exportAlleDiagrammeSVG', filenameTypes.CHART_SINGLE_SVG, 'btn-info');
+
+        html += '<hr/><h5>ZIP-Pakete</h5>';
+        html += createButton('export-all-zip', 'fa-file-archive', 'exportAlleDateienZIP', 'exportAlleDateienZIP', filenameTypes.ALL_ZIP, 'btn-success');
+        html += createButton('export-csv-zip', 'fa-file-csv', 'exportAlleCsvZIP', 'exportAlleCsvZIP', filenameTypes.CSV_ZIP, 'btn-outline-success');
+        html += createButton('export-md-zip', 'fab fa-markdown', 'exportAlleMarkdownZIP', 'exportAlleMarkdownZIP', filenameTypes.MD_ZIP, 'btn-outline-success');
+        html += createButton('export-png-zip', 'fa-images', 'exportAllePngZIP', 'exportAllePngZIP', filenameTypes.PNG_ZIP, 'btn-outline-success');
+        html += createButton('export-svg-zip', 'fa-icons', 'exportAlleSvgZIP', 'exportAlleSvgZIP', filenameTypes.SVG_ZIP, 'btn-outline-success');
+        
+        // Placeholder for XLSX if ever implemented
+        // html += '<hr/><h5>Excel (XLSX) - Experimentell</h5>';
+        // html += createButton('export-statistik-xlsx', 'fa-file-excel', 'exportGesamtStatistikXLSX', 'exportGesamtStatistikXLSX', filenameTypes.XLSX_ZIP, 'btn-outline-secondary disabled');
+        // html += createButton('export-xlsx-zip', 'fa-file-excel', 'exportAlleXlsxZIP', 'exportAlleXlsxZIP', filenameTypes.XLSX_ZIP, 'btn-outline-secondary disabled');
+
+        return html;
+    }
+
+    function createBruteForceModalContent(resultsData) {
+        if (!resultsData || !resultsData.results || resultsData.results.length === 0 || typeof TOOLTIP_CONTENT === 'undefined' || typeof APP_CONFIG === 'undefined') {
+            return '<p class="text-muted">Keine Ergebnisse zum Anzeigen.</p>';
+        }
+        const formatCritFunc = (typeof studyT2CriteriaManager !== 'undefined' && studyT2CriteriaManager.formatCriteriaForDisplay) ? studyT2CriteriaManager.formatCriteriaForDisplay : (c,l) => 'N/A';
+        const topN = APP_CONFIG.PERFORMANCE_SETTINGS.BRUTE_FORCE_MAX_TOP_RESULTS || 20;
+        const resultsToDisplay = resultsData.results.slice(0, topN);
+        const ttModal = TOOLTIP_CONTENT.bruteForceModal || {};
+
+        let tableHTML = `
+            <p class="small text-muted">Zeige Top ${resultsToDisplay.length} von ${resultsData.results.length} gefundenen Ergebnissen. Optimiert für <strong>${escapeMarkdown(String(resultsData.metric))}</strong> auf Kollektiv <strong>${getKollektivDisplayName(resultsData.kollektiv)}</strong> (N=${resultsData.nGesamt || '?'}).</p>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped table-hover small" id="brute-force-results-table">
+                    <thead>
+                        <tr>
+                            <th data-tippy-content="${ttModal.rang || 'Rang'}">#</th>
+                            <th data-tippy-content="${ttModal.metrikWert || 'Wert der Zielmetrik'}">${escapeMarkdown(String(resultsData.metric))}</th>
+                            <th data-tippy-content="${ttModal.logik || 'Logische Verknüpfung'}">Logik</th>
+                            <th data-tippy-content="${ttModal.kriterien || 'Kriterienkombination'}">Kriterien</th>
+                            <th data-tippy-content="${ttModal.sens || 'Sensitivität'}">Sens.</th>
+                            <th data-tippy-content="${ttModal.spez || 'Spezifität'}">Spez.</th>
+                            <th data-tippy-content="${ttModal.auc || 'AUC'}">AUC</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+        
+        resultsToDisplay.forEach((res, index) => {
+            tableHTML += `
+                <tr>
+                    <td>${index + 1}.</td>
+                    <td><strong>${formatNumber(res.metricValue, 4)}</strong></td>
+                    <td>${res.logic || 'N/A'}</td>
+                    <td style="font-size: 0.8em; line-height:1.2;">${formatCritFunc(res.criteria, res.logic)}</td>
+                    <td>${formatPercent(res.performance?.sens?.value, 1)}</td>
+                    <td>${formatPercent(res.performance?.spez?.value, 1)}</td>
+                    <td>${formatNumber(res.performance?.auc?.value, 3)}</td>
+                </tr>`;
+        });
+
+        tableHTML += `</tbody></table></div>`;
+        if (resultsData.results.length > topN) {
+            tableHTML += `<p class="small text-muted mt-2">Hinweis: Die vollständige Liste aller Ergebnisse kann über den Export-Button auf der Brute-Force Karte (Auswertungstab) als Textdatei heruntergeladen werden.</p>`;
+        }
+        return tableHTML;
+    }
 
     return Object.freeze({
-        createDashboardCard,
         createT2CriteriaControls,
         createBruteForceCard,
+        createDashboardCard,
         createStatistikCard,
-        createExportOptions,
+        createConfusionMatrixHTML,
         createT2MetricsOverview,
-        createBruteForceModalContent,
-        createPresentationControls
+        createPresentationControls,
+        createExportOptions,
+        createBruteForceModalContent
     });
-
 })();
