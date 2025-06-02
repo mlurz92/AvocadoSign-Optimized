@@ -12,7 +12,7 @@ const uiComponents = (() => {
                 } else if (btn.format === 'svg' && btn.chartId) {
                     iconClass = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code' : 'fa-download';
                 } else if (btn.format === 'png' && btn.tableId) {
-                    iconClass = 'fa-image'; // Standard für Tabellen-PNG
+                    iconClass = 'fa-image';
                 }
 
                 let tooltip = btn.tooltip || `Als ${String(btn.format || 'Aktion').toUpperCase()} herunterladen/anzeigen`;
@@ -51,20 +51,35 @@ const uiComponents = (() => {
 
     function createDashboardCard(title, content, chartId = null, cardClasses = '', headerClasses = '', bodyClasses = '', downloadButtons = []) {
         const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, chartId || title.replace(/[^a-z0-9]/gi, '_'), title);
-        const tooltipKey = chartId ? chartId.replace(/^chart-dash-/, '') : title.toLowerCase().replace(/\s+/g, '');
-        let tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik[tooltipKey]?.description || title || '';
         
-        if(tooltipKey === 'ageDistribution' || tooltipKey === 'alter') tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.chartAge?.description || title;
-        else if(tooltipKey === 'genderDistribution' || tooltipKey === 'geschlecht') tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.chartGender?.description || title;
-        else if(tooltipKey === 'statusN') tooltipContent = TOOLTIP_CONTENT.headerStats.statusN;
-        else if(tooltipKey === 'statusAS') tooltipContent = TOOLTIP_CONTENT.headerStats.statusAS;
-        else if(tooltipKey === 'statusT2') tooltipContent = TOOLTIP_CONTENT.headerStats.statusT2;
+        const tooltipKeyRaw = chartId ? chartId.replace(/^chart-dash-/, '') : title.toLowerCase().replace(/\s+/g, '');
+        let tooltipKey = tooltipKeyRaw;
+
+        if (tooltipKeyRaw === 'as-status') tooltipKey = 'statusAS';
+        else if (tooltipKeyRaw === 't2-status') tooltipKey = 'statusT2';
+        else if (tooltipKeyRaw === 'age') tooltipKey = 'chartAge';
+        else if (tooltipKeyRaw === 'gender') tooltipKey = 'chartGender';
 
 
+        let tooltipContent = title || ''; 
+
+        if (TOOLTIP_CONTENT.statistikTab?.deskriptiv?.[tooltipKey]?.description) {
+            tooltipContent = TOOLTIP_CONTENT.statistikTab.deskriptiv[tooltipKey].description;
+        } else if (TOOLTIP_CONTENT.headerStats?.[tooltipKey]) {
+            tooltipContent = TOOLTIP_CONTENT.headerStats[tooltipKey];
+        }
+        
+
+        if (tooltipContent && typeof tooltipContent === 'string') {
+            tooltipContent = tooltipContent.replace('[KOLLEKTIV]', '<strong>dem aktuellen Kollektiv</strong>');
+        } else {
+            tooltipContent = title || '';
+        }
+        
         return `
             <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 dashboard-card-col ${cardClasses}">
                 <div class="card h-100 dashboard-card">
-                    <div class="card-header ${headerClasses} d-flex justify-content-between align-items-center" data-tippy-content="${tooltipContent.replace('[KOLLEKTIV]', '<strong>dem aktuellen Kollektiv</strong>')}">
+                    <div class="card-header ${headerClasses} d-flex justify-content-between align-items-center" data-tippy-content="${tooltipContent}">
                         <span class="text-truncate">${title}</span>
                         <span class="card-header-buttons flex-shrink-0 ps-1">${headerButtonHtml}</span>
                     </div>
@@ -237,9 +252,13 @@ const uiComponents = (() => {
     }
 
     function createStatistikCard(id, title, content = '', addPadding = true, tooltipKey = null, downloadButtons = [], tableIdForPng = null) {
-        const cardTooltipHtml = tooltipKey && TOOLTIP_CONTENT[tooltipKey]?.cardTitle
-            ? `data-tippy-content="${(TOOLTIP_CONTENT[tooltipKey].cardTitle || title).replace(/\[KOLLEKTIV\]/g, '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>')}"`
-            : `data-tippy-content="${title}"`;
+        let cardTooltipHtml = `data-tippy-content="${title}"`;
+        if (tooltipKey && TOOLTIP_CONTENT.statistikTab?.[tooltipKey]?.cardTitle) {
+            cardTooltipHtml = `data-tippy-content="${(TOOLTIP_CONTENT.statistikTab[tooltipKey].cardTitle || title).replace(/\[KOLLEKTIV\]/g, '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>')}"`;
+        } else if (tooltipKey && TOOLTIP_CONTENT[tooltipKey]?.cardTitle) {
+             cardTooltipHtml = `data-tippy-content="${(TOOLTIP_CONTENT[tooltipKey].cardTitle || title).replace(/\[KOLLEKTIV\]/g, '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>')}"`;
+        }
+
 
         let finalButtonHtml = _createHeaderButtonHTML(downloadButtons, id + '-content', title);
         
@@ -455,6 +474,40 @@ const uiComponents = (() => {
         return tableHTML;
     }
 
+    function createPresentationControls(currentView, studySets, currentStudyId) {
+        const asPurChecked = currentView === 'as-pur' ? 'checked' : '';
+        const asVsT2Checked = currentView === 'as-vs-t2' ? 'checked' : '';
+        const studySelectDisabled = currentView !== 'as-vs-t2' ? 'disabled' : '';
+        const studySelectDisplay = currentView === 'as-vs-t2' ? '' : 'display: none;';
+
+        let studyOptionsHTML = `<option value="" ${!currentStudyId ? 'selected' : ''}>Bitte T2-Basis wählen...</option>`;
+        studySets.forEach(set => {
+            studyOptionsHTML += `<option value="${set.id}" ${currentStudyId === set.id ? 'selected' : ''}>${set.name}</option>`;
+        });
+
+        return `
+            <div class="row align-items-center">
+                <div class="col-md-auto mb-2 mb-md-0">
+                    <div class="btn-group" role="group" aria-label="Präsentationsansicht wählen" data-tippy-content="${TOOLTIP_CONTENT.praesentation.viewSelect.description}">
+                        <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as-pur" value="as-pur" autocomplete="off" ${asPurChecked}>
+                        <label class="btn btn-sm btn-outline-primary" for="praes-ansicht-as-pur">Avocado Sign (Performance)</label>
+
+                        <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as-vs-t2" value="as-vs-t2" autocomplete="off" ${asVsT2Checked}>
+                        <label class="btn btn-sm btn-outline-primary" for="praes-ansicht-as-vs-t2">AS vs. T2 (Vergleich)</label>
+                    </div>
+                </div>
+                <div class="col-md-auto" id="praes-study-select-container" style="${studySelectDisplay}">
+                    <div class="input-group input-group-sm">
+                        <label class="input-group-text" for="praes-study-select">T2-Basis für Vergleich:</label>
+                        <select class="form-select form-select-sm" id="praes-study-select" ${studySelectDisabled} data-tippy-content="${TOOLTIP_CONTENT.praesentation.studySelect.description}">
+                            ${studyOptionsHTML}
+                        </select>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+
     return Object.freeze({
         createDashboardCard,
         createT2CriteriaControls,
@@ -462,7 +515,8 @@ const uiComponents = (() => {
         createStatistikCard,
         createExportOptions,
         createT2MetricsOverview,
-        createBruteForceModalContent
+        createBruteForceModalContent,
+        createPresentationControls
     });
 
 })();
