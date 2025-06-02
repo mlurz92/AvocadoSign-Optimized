@@ -16,14 +16,34 @@ const statistikTabLogic = (() => {
     let _statsVergleichKollektive = null;
     let _criteriaComparisonResults = null;
 
+    function _getGlobalConfig(configKey) {
+        if (_mainAppInterface && typeof _mainAppInterface.getStateSnapshot === 'function') {
+            const snapshot = _mainAppInterface.getStateSnapshot();
+            if (configKey === 'APP_CONFIG') return snapshot.appConfig;
+            if (configKey === 'UI_TEXTS') return snapshot.uiTexts;
+            if (configKey === 'TOOLTIP_CONTENT') return snapshot.tooltipContent;
+            return snapshot.appConfig; // Default to appConfig
+        }
+        // Fallback to global if interface not ready (should not happen in normal flow)
+        if (configKey === 'APP_CONFIG') return typeof APP_CONFIG !== 'undefined' ? APP_CONFIG : {};
+        if (configKey === 'UI_TEXTS') return typeof UI_TEXTS !== 'undefined' ? UI_TEXTS : {};
+        if (configKey === 'TOOLTIP_CONTENT') return typeof TOOLTIP_CONTENT !== 'undefined' ? TOOLTIP_CONTENT : {};
+        return typeof APP_CONFIG !== 'undefined' ? APP_CONFIG : {};
+    }
+
+
     function _createDeskriptiveStatistikContentHTML(statsData, suffix, kollektivName) {
         const displayName = getKollektivDisplayName(kollektivName);
+        const uiTexts = _getGlobalConfig('UI_TEXTS');
+        const tooltipContent = _getGlobalConfig('TOOLTIP_CONTENT');
+        const appConfig = _getGlobalConfig('APP_CONFIG');
+
         if (!statsData || typeof statsData !== 'object' || !statsData.deskriptiv || typeof statsData.deskriptiv !== 'object') {
              return `<p class="text-muted">Deskriptive Statistik Daten für Kollektiv '${displayName}' nicht verfügbar oder ungültig.</p>`;
         }
         const d = statsData.deskriptiv;
         const na = '--';
-        const tooltipKeys = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statistikTab && TOOLTIP_CONTENT.statistikTab.deskriptiv) ? TOOLTIP_CONTENT.statistikTab.deskriptiv : {};
+        const tooltipKeys = (tooltipContent?.statistikTab?.deskriptiv) || {};
 
         const createRow = (label, value, unit = '', tooltipKey = '') => {
             const tooltip = tooltipKeys[tooltipKey] || label;
@@ -31,17 +51,17 @@ const statistikTabLogic = (() => {
         };
         
         let tableHTML = `<table class="table table-sm table-borderless table-responsive-sm small mb-2" id="table-deskriptiv-demographie-${suffix}"><tbody>`;
-        tableHTML += createRow('Patienten gesamt', (d && d.anzahlPatienten !== undefined) ? d.anzahlPatienten : na, '', 'anzahlPatienten');
+        tableHTML += createRow('Patienten gesamt', (d?.anzahlPatienten !== undefined) ? d.anzahlPatienten : na, '', 'anzahlPatienten');
         
-        const alterMedianText = (d && d.alter && d.alter.median !== null && d.alter.median !== undefined && !isNaN(d.alter.median) &&
-                                d.alter.q1 !== null && d.alter.q1 !== undefined && !isNaN(d.alter.q1) &&
-                                d.alter.q3 !== null && d.alter.q3 !== undefined && !isNaN(d.alter.q3))
+        const alterMedianText = (d?.alter?.median !== null && d.alter?.median !== undefined && !isNaN(d.alter.median) &&
+                                d.alter?.q1 !== null && d.alter?.q1 !== undefined && !isNaN(d.alter.q1) &&
+                                d.alter?.q3 !== null && d.alter?.q3 !== undefined && !isNaN(d.alter.q3))
             ? `${formatNumber(d.alter.median,0,na)} (${formatNumber(d.alter.q1,0,na)}–${formatNumber(d.alter.q3,0,na)})`
             : na;
         tableHTML += createRow('Alter Median (IQR)', alterMedianText, ' Jahre', 'alterMedian');
 
-        const alterMeanText = (d && d.alter && d.alter.mean !== null && d.alter.mean !== undefined && !isNaN(d.alter.mean) && 
-                               d.alter.sd !== null && d.alter.sd !== undefined && !isNaN(d.alter.sd))
+        const alterMeanText = (d?.alter?.mean !== null && d.alter?.mean !== undefined && !isNaN(d.alter.mean) && 
+                               d.alter?.sd !== null && d.alter?.sd !== undefined && !isNaN(d.alter.sd))
             ? `${formatNumber(d.alter.mean,1,na)} (±${formatNumber(d.alter.sd,1,na)})`
             : na;
         tableHTML += createRow('Alter Mittel (SD)', alterMeanText, ' Jahre', 'alterMean');
@@ -50,9 +70,9 @@ const statistikTabLogic = (() => {
         tableHTML += createRow('Pathologischer N-Status (+/-)', `${d?.nStatus?.['+'] || 0} / ${d?.nStatus?.['-'] || 0}`, '', 'nStatus');
         tableHTML += createRow('Avocado Sign (+/-)', `${d?.asStatus?.['+'] || 0} / ${d?.asStatus?.['-'] || 0}`, '', 'asStatus');
         
-        const appliedCriteriaDisplayName = (APP_CONFIG && APP_CONFIG.SPECIAL_IDS && APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME) ? APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME : "Angewandt";
-        const t2StatusKey = 't2StatusAngewandt'; 
-        const t2StatusObject = d?.[t2StatusKey] || d?.t2Status;
+        const appliedCriteriaDisplayName = (appConfig?.SPECIAL_IDS?.APPLIED_CRITERIA_DISPLAY_NAME) || "Angewandt";
+        const t2StatusKey = 't2Status'; 
+        const t2StatusObject = d?.[t2StatusKey] || d?.t2Status; // Fallback if specific applied criteria key is not present
         tableHTML += createRow(`T2-Status (${appliedCriteriaDisplayName}) (+/-)`, `${t2StatusObject?.['+'] || 0} / ${t2StatusObject?.['-'] || 0}`, '', 't2StatusAngewandt');
         
         tableHTML += `</tbody></table>`;
@@ -71,20 +91,23 @@ const statistikTabLogic = (() => {
     function _createGueteContentHTML(statsData, methodenName, kollektivName) {
         if (!statsData) return `<p class="text-muted">Güte-Daten für ${methodenName} nicht verfügbar.</p>`;
         const na = '--';
+        const uiTexts = _getGlobalConfig('UI_TEXTS');
+        const tooltipContent = _getGlobalConfig('TOOLTIP_CONTENT');
+
         const fCI = (metric, key, defaultDigits = 1) => {
             const isRate = !(key === 'auc' || key === 'f1');
             const digits = (key === 'auc' || key === 'f1') ? 3 : defaultDigits;
             return formatCI(metric?.value, metric?.ci?.lower, metric?.ci?.upper, digits, isRate, na);
         };
         const getInterpretationTT = (mk, st) => { return (typeof ui_helpers !== 'undefined' && ui_helpers.getMetricInterpretationHTML) ? ui_helpers.getMetricInterpretationHTML(mk, st, methodenName, kollektivName) : '';};
-        const tooltipKeys = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statistikTab && TOOLTIP_CONTENT.statistikTab.diagnostischeGuete) ? TOOLTIP_CONTENT.statistikTab.diagnostischeGuete : {};
-        const matrixTableId = `table-guete-matrix-${methodenName}-${String(kollektivName).replace(/\s+/g, '_')}`;
+        const tooltipKeys = (tooltipContent?.statistikTab?.diagnostischeGuete) || {};
+        const matrixTableId = `table-guete-matrix-${methodenName.replace(/[^a-zA-Z0-9]/g, '_')}-${String(kollektivName).replace(/\s+/g, '_')}`;
 
         let tableHTML = `<table class="table table-sm table-borderless table-responsive-sm small mb-0"><tbody>`;
-        if (UI_TEXTS && UI_TEXTS.statMetrics) {
-            Object.keys(UI_TEXTS.statMetrics).forEach(key => {
-                if (statsData[key] && key !== 'phi' && UI_TEXTS.statMetrics[key] && UI_TEXTS.statMetrics[key].name) {
-                    const metricConfig = UI_TEXTS.statMetrics[key];
+        if (uiTexts?.statMetrics) {
+            Object.keys(uiTexts.statMetrics).forEach(key => {
+                if (statsData[key] && key !== 'phi' && uiTexts.statMetrics[key] && uiTexts.statMetrics[key].name) {
+                    const metricConfig = uiTexts.statMetrics[key];
                     const tooltip = tooltipKeys[key] || metricConfig.description?.replace('[METHOD]', methodenName).replace('[CRITERIA_SET]', '') || metricConfig.name;
                     tableHTML += `<tr><td data-tippy-content="${tooltip}">${metricConfig.name}</td><td data-tippy-content="${getInterpretationTT(key, statsData[key])}">${fCI(statsData[key], key, metricConfig.digits)}</td></tr>`;
                 }
@@ -102,9 +125,10 @@ const statistikTabLogic = (() => {
     function _createVergleichContentHTML(vergleichsDaten, kollektivName, t2SetName) {
         if (!vergleichsDaten) return `<p class="text-muted">Vergleichsdaten AS vs. T2 nicht verfügbar.</p>`;
         const na = '--';
-        const fPVal = (r, d=3) => { const p = r?.pValue; return (p !== null && p !== undefined && !isNaN(p)) ? (p < 0.001 ? '&lt;0.001' : formatNumber(p, d, na, true)) : na; };
+        const tooltipContent = _getGlobalConfig('TOOLTIP_CONTENT');
+        const fPVal = (r, d=3) => { const p = r?.pValue; return (p !== null && p !== undefined && !isNaN(p)) ? (p < (_getGlobalConfig('APP_CONFIG')?.STATISTICAL_CONSTANTS?.P_VALUE_THRESHOLD_LESS_THAN || 0.001) ? `&lt;${formatNumber(_getGlobalConfig('APP_CONFIG')?.STATISTICAL_CONSTANTS?.P_VALUE_THRESHOLD_LESS_THAN, d, '', true)}` : formatNumber(p, d, na, true)) : na; };
         const t2DisplayNameClean = String(t2SetName).replace(/\s*\(.*?\)\s*/g, '');
-        const tooltipKeys = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statistikTab && TOOLTIP_CONTENT.statistikTab.vergleichASvsT2) ? TOOLTIP_CONTENT.statistikTab.vergleichASvsT2 : {};
+        const tooltipKeys = (tooltipContent?.statistikTab?.vergleichASvsT2) || {};
         const tableId = `table-vergleich-as-vs-t2-${String(kollektivName).replace(/\s+/g, '_')}`;
 
         let tableHTML = `<table class="table table-sm table-borderless table-responsive-sm small mb-0" id="${tableId}"><tbody>`;
@@ -125,12 +149,15 @@ const statistikTabLogic = (() => {
         return tableHTML;
     }
     
-    function _createAssoziationContentHTML(assoziationsDaten, kollektivName, appliedT2Criteria) {
+    function _createAssoziationContentHTML(assoziationsDaten, kollektivName, appliedT2CriteriaUsedForCalc) {
         if (!assoziationsDaten || Object.keys(assoziationsDaten).length === 0) return `<p class="text-muted">Assoziationsdaten nicht verfügbar.</p>`;
-        if (!appliedT2Criteria || typeof appliedT2Criteria !== 'object') return `<p class="text-muted">Angewandte T2 Kriterien für Assoziationsanalyse nicht verfügbar.</p>`
+        if (!appliedT2CriteriaUsedForCalc || typeof appliedT2CriteriaUsedForCalc !== 'object') return `<p class="text-muted">Angewandte T2 Kriterien für Assoziationsanalyse nicht verfügbar.</p>`
+        const uiTexts = _getGlobalConfig('UI_TEXTS');
+        const tooltipContent = _getGlobalConfig('TOOLTIP_CONTENT');
+        const appConfig = _getGlobalConfig('APP_CONFIG');
 
         const na = '--';
-        const tooltipKeys = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statistikTab && TOOLTIP_CONTENT.statistikTab.assoziationsanalyse) ? TOOLTIP_CONTENT.statistikTab.assoziationsanalyse : {};
+        const tooltipKeys = (tooltipContent?.statistikTab?.assoziationsanalyse) || {};
         const tableId = `table-assoziation-${String(kollektivName).replace(/\s+/g, '_')}`;
 
         let tableHTML = `<table class="table table-sm table-striped table-hover small mb-0" id="${tableId}">
@@ -142,12 +169,14 @@ const statistikTabLogic = (() => {
                             </tr></thead><tbody>`;
         
         Object.entries(assoziationsDaten).forEach(([key, val]) => {
-            if (val && appliedT2Criteria[key] && appliedT2Criteria[key].active) { 
-                const criteriaDisplayName = UI_TEXTS.t2CriteriaShort[key] || key;
+            if (val && appliedT2CriteriaUsedForCalc[key] && appliedT2CriteriaUsedForCalc[key].active) { 
+                const criteriaDisplayName = uiTexts?.t2CriteriaShort?.[key] || key;
                 const praevalenzNplus = (val.Nplus_Merkmal !== undefined && val.Nplus_Gesamt !== undefined && val.Nplus_Gesamt > 0) ? formatPercent(val.Nplus_Merkmal / val.Nplus_Gesamt, 0) : na;
-                const orFormatted = (val.or && val.or.value !== undefined && val.or.ci && val.or.ci.lower !== undefined) ? `${formatNumber(val.or.value,2,na,true)} (${formatNumber(val.or.ci.lower,2,na,true)}–${formatNumber(val.or.ci.upper,2,na,true)})` : na;
-                const pValueForOR = val.pValueOR !== undefined ? val.pValueOR : (val.pValue !== undefined ? val.pValue : null);
-                const pValueFormatted = (pValueForOR !== null && pValueForOR !== undefined) ? (pValueForOR < 0.001 ? '&lt;0.001' : formatNumber(pValueForOR, 3, na, true)) : na;
+                const orFormatted = (val.oddsRatio && val.oddsRatio.value !== undefined && val.oddsRatio.ci && val.oddsRatio.ci.lower !== undefined) ? `${formatNumber(val.oddsRatio.value,2,na,true)} (${formatNumber(val.oddsRatio.ci.lower,2,na,true)}–${formatNumber(val.oddsRatio.ci.upper,2,na,true)})` : na;
+                
+                const pValueForOR = val?.fisherTest?.pValue !== undefined ? val.fisherTest.pValue : (val.oddsRatio?.pValue !== undefined ? val.oddsRatio.pValue : null) ;
+                const pValueFormatted = (pValueForOR !== null && pValueForOR !== undefined) ? (pValueForOR < (appConfig?.STATISTICAL_CONSTANTS?.P_VALUE_THRESHOLD_LESS_THAN || 0.001) ? `&lt;${formatNumber(appConfig?.STATISTICAL_CONSTANTS?.P_VALUE_THRESHOLD_LESS_THAN,3,'',true)}` : formatNumber(pValueForOR, 3, na, true)) : na;
+
                 const significanceSymbol = getStatisticalSignificanceSymbol(pValueForOR);
                 const interpretation = (typeof ui_helpers !== 'undefined' && ui_helpers.getAssociationInterpretationHTML) ? ui_helpers.getAssociationInterpretationHTML('or', val, criteriaDisplayName, kollektivName) : '';
 
@@ -166,11 +195,15 @@ const statistikTabLogic = (() => {
     function _createVergleichKollektiveContentHTML(vergleichsDaten, kollektiv1Name, kollektiv2Name) {
         if (!vergleichsDaten) return `<p class="text-muted">Daten für Kollektivvergleich nicht verfügbar.</p>`;
         const na = '--';
+        const uiTexts = _getGlobalConfig('UI_TEXTS');
+        const tooltipContent = _getGlobalConfig('TOOLTIP_CONTENT');
+        const appConfig = _getGlobalConfig('APP_CONFIG');
+
         const k1 = getKollektivDisplayName(kollektiv1Name);
         const k2 = getKollektivDisplayName(kollektiv2Name);
-        const tooltipKeys = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statistikTab && TOOLTIP_CONTENT.statistikTab.vergleichKollektive) ? TOOLTIP_CONTENT.statistikTab.vergleichKollektive : {};
+        const tooltipKeys = (tooltipContent?.statistikTab?.vergleichKollektive) || {};
         const tableId = `table-vergleich-kollektive-${String(kollektiv1Name).replace(/\s+/g, '_')}-vs-${String(kollektiv2Name).replace(/\s+/g, '_')}`;
-        const appliedCriteriaDisplayName = (APP_CONFIG && APP_CONFIG.SPECIAL_IDS && APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME) ? APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME : "Angewandt";
+        const appliedCriteriaDisplayName = (appConfig?.SPECIAL_IDS?.APPLIED_CRITERIA_DISPLAY_NAME) || "Angewandt";
 
         let tableHTML = `<table class="table table-sm table-striped table-hover small mb-0" id="${tableId}">
                             <thead><tr>
@@ -185,15 +218,15 @@ const statistikTabLogic = (() => {
         const methods = ['AS', 'T2_angewandt'];
 
         methods.forEach(method => {
-            const methodNameDisplay = method === 'AS' ? 'Avocado Sign' : `T2 (${appliedCriteriaDisplayName})`;
+            const methodNameDisplay = method === 'AS' ? (uiTexts?.legendLabels?.avocadoSign || 'Avocado Sign') : `T2 (${appliedCriteriaDisplayName})`;
             metrics.forEach(metricKey => {
-                if (UI_TEXTS && UI_TEXTS.statMetrics && UI_TEXTS.statMetrics[metricKey]) {
-                    const metricNameDisplay = UI_TEXTS.statMetrics[metricKey]?.name || metricKey.toUpperCase();
+                if (uiTexts?.statMetrics?.[metricKey]) {
+                    const metricNameDisplay = uiTexts.statMetrics[metricKey]?.name || metricKey.toUpperCase();
                     const data = vergleichsDaten[method]?.[metricKey];
                     if (data) {
                         const val1 = formatCI(data.val1, data.ci1_lower, data.ci1_upper, (metricKey === 'auc' ? 3:1), !(metricKey === 'auc'), na);
                         const val2 = formatCI(data.val2, data.ci2_lower, data.ci2_upper, (metricKey === 'auc' ? 3:1), !(metricKey === 'auc'), na);
-                        const pVal = (data.pValue !== null && data.pValue !== undefined) ? (data.pValue < 0.001 ? '&lt;0.001' : formatNumber(data.pValue, 3, na, true)) : na;
+                        const pVal = (data.pValue !== null && data.pValue !== undefined) ? (data.pValue < (appConfig?.STATISTICAL_CONSTANTS?.P_VALUE_THRESHOLD_LESS_THAN || 0.001) ? `&lt;${formatNumber(appConfig?.STATISTICAL_CONSTANTS?.P_VALUE_THRESHOLD_LESS_THAN,3,'',true)}` : formatNumber(data.pValue, 3, na, true)) : na;
                         const sigSymbol = getStatisticalSignificanceSymbol(data.pValue);
                         const interpretation = (typeof ui_helpers !== 'undefined' && ui_helpers.getTestInterpretationHTML) ? ui_helpers.getTestInterpretationHTML('cohortComparison', data, k1, k2, methodNameDisplay, metricNameDisplay) : '';
                         tableHTML += `<tr><td>${metricNameDisplay}</td><td>${methodNameDisplay}</td><td data-tippy-content="${(typeof ui_helpers !== 'undefined' && ui_helpers.getMetricInterpretationHTML) ? ui_helpers.getMetricInterpretationHTML(metricKey, {value: data.val1, ci: {lower: data.ci1_lower, upper: data.ci1_upper}}, methodNameDisplay, k1) : ''}">${val1}</td><td data-tippy-content="${(typeof ui_helpers !== 'undefined' && ui_helpers.getMetricInterpretationHTML) ? ui_helpers.getMetricInterpretationHTML(metricKey, {value: data.val2, ci: {lower: data.ci2_lower, upper: data.ci2_upper}}, methodNameDisplay, k2) : ''}">${val2}</td><td data-tippy-content="${interpretation}">${pVal} ${sigSymbol}</td></tr>`;
@@ -209,10 +242,11 @@ const statistikTabLogic = (() => {
         if (!comparisonResults || comparisonResults.length === 0) return `<p class="text-muted">Keine Daten für Kriterienvergleich verfügbar.</p>`;
         const na = '--';
         const tableId = "table-kriterien-vergleich";
-        const tooltipKeys = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statistikTab && TOOLTIP_CONTENT.statistikTab.kriterienVergleichsTabelle) ? TOOLTIP_CONTENT.statistikTab.kriterienVergleichsTabelle : {};
-        const appliedCriteriaDisplayName = (APP_CONFIG && APP_CONFIG.SPECIAL_IDS && APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME) ? APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME : "Eingestellte Kriterien";
-        const avocadoSignDisplayName = (APP_CONFIG && APP_CONFIG.SPECIAL_IDS && APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME) ? APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME : "Avocado Sign";
-
+        const tooltipContent = _getGlobalConfig('TOOLTIP_CONTENT');
+        const appConfig = _getGlobalConfig('APP_CONFIG');
+        const tooltipKeys = (tooltipContent?.statistikTab?.kriterienVergleichsTabelle) || {};
+        const appliedCriteriaDisplayName = (appConfig?.SPECIAL_IDS?.APPLIED_CRITERIA_DISPLAY_NAME) || "Eingestellte Kriterien";
+        const avocadoSignDisplayName = (appConfig?.SPECIAL_IDS?.AVOCADO_SIGN_DISPLAY_NAME) || "Avocado Sign";
 
         let tableHTML = `<table class="table table-sm table-striped table-hover small mb-0" id="${tableId}">
                             <thead><tr>
@@ -231,11 +265,14 @@ const statistikTabLogic = (() => {
             const kollektivText = `${getKollektivDisplayName(res.specificKollektivName)} (N=${res.specificKollektivN || '?'})`;
             
             let criteriaTooltipText = 'Details nicht verfügbar';
-            if (typeof studyT2CriteriaManager !== 'undefined') {
+            if (typeof studyT2CriteriaManager !== 'undefined' && res.id && res.criteria && res.logic) { // Use res.criteria and res.logic if available
+                criteriaTooltipText = studyT2CriteriaManager.formatCriteriaForDisplay(res.criteria, res.logic, false) || 
+                                (res.id === appConfig.SPECIAL_IDS.AVOCADO_SIGN_ID ? avocadoSignDisplayName : 'Details nicht verfügbar');
+            } else if (typeof studyT2CriteriaManager !== 'undefined' && res.id) {
                 const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(res.id);
                 criteriaTooltipText = studySet?.studyInfo?.keyCriteriaSummary || 
-                                (res.id === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID ? avocadoSignDisplayName : 
-                                (res.id === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID ? studyT2CriteriaManager.formatCriteriaForDisplay(_appliedT2Criteria, _appliedT2Logic, false) : 'Details nicht verfügbar'));
+                                (res.id === appConfig.SPECIAL_IDS.AVOCADO_SIGN_ID ? avocadoSignDisplayName : 
+                                (res.id === appConfig.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID && _appliedT2Criteria ? studyT2CriteriaManager.formatCriteriaForDisplay(_appliedT2Criteria, _appliedT2Logic, false) : 'Details nicht verfügbar'));
             }
             
             tableHTML += `<tr data-tippy-content="${criteriaTooltipText}">
@@ -254,7 +291,9 @@ const statistikTabLogic = (() => {
     }
 
     function initialize(mainAppInterface) {
+        if (_isInitialized) return;
         _mainAppInterface = mainAppInterface;
+        _isInitialized = true;
     }
 
     function setDataStale() {
@@ -270,49 +309,53 @@ const statistikTabLogic = (() => {
         return _isInitialized;
     }
 
-    function _getProcessedAndEvaluatedData(kollektivId) {
+    function _getProcessedAndEvaluatedData(kollektivId, t2Criteria, t2Logic) {
         if (!_globalRawData || _globalRawData.length === 0 || typeof dataProcessor === 'undefined' || typeof t2CriteriaManager === 'undefined') return [];
         const filteredRaw = dataProcessor.filterDataByKollektiv(cloneDeep(_globalRawData), kollektivId);
-        return t2CriteriaManager.evaluateDataset(filteredRaw, _appliedT2Criteria, _appliedT2Logic);
+        return t2CriteriaManager.evaluateDataset(filteredRaw, t2Criteria, t2Logic);
     }
 
-    function _calculateStatsForKollektiv(kollektivId) {
+    function _calculateStatsForKollektiv(kollektivId, t2CriteriaToUse, t2LogicToUse) {
         if (typeof statisticsService === 'undefined') return null;
-        const evaluatedData = _getProcessedAndEvaluatedData(kollektivId);
+        const evaluatedData = _getProcessedAndEvaluatedData(kollektivId, t2CriteriaToUse, t2LogicToUse);
         if (!evaluatedData || evaluatedData.length === 0) return null;
 
         return {
             deskriptiv: statisticsService.calculateDescriptiveStats(evaluatedData),
-            gueteAS: statisticsService.calculateDiagnosticPerformance(evaluatedData, 'as', 'n'),
-            gueteT2_angewandt: statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n'),
-            vergleichASvsT2_angewandt: statisticsService.compareDiagnosticMethods(evaluatedData, 'as', 't2', 'n'),
-            assoziation_angewandt: statisticsService.calculateAssociations(evaluatedData, _appliedT2Criteria)
+            gueteAS: statisticsService.calculateDiagnosticPerformance(evaluatedData, 'as', 'n_status_patient'),
+            gueteT2_angewandt: statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n_status_patient'),
+            vergleichASvsT2_angewandt: statisticsService.compareDiagnosticMethods(evaluatedData, 'as', 't2', 'n_status_patient'),
+            assoziation_angewandt: statisticsService.calculateAssociations(evaluatedData, t2CriteriaToUse)
         };
     }
 
-    function _calculateCriteriaComparison(globalKollektivId) {
-        if (typeof statisticsService === 'undefined' || typeof studyT2CriteriaManager === 'undefined' || typeof dataProcessor === 'undefined' || typeof APP_CONFIG === 'undefined') return [];
-        const evaluatedGlobalData = _getProcessedAndEvaluatedData(globalKollektivId);
-        if (!evaluatedGlobalData || evaluatedGlobalData.length === 0) return [];
+    function _calculateCriteriaComparison(globalKollektivId, currentT2Criteria, currentT2Logic) {
+        if (typeof statisticsService === 'undefined' || typeof studyT2CriteriaManager === 'undefined' || typeof dataProcessor === 'undefined' || typeof _mainAppInterface === 'undefined') return [];
+        
+        const appConfig = _getGlobalConfig('APP_CONFIG');
+        const evaluatedGlobalDataCurrent = _getProcessedAndEvaluatedData(globalKollektivId, currentT2Criteria, currentT2Logic);
+        if (!evaluatedGlobalDataCurrent || evaluatedGlobalDataCurrent.length === 0) return [];
         
         const results = [];
         const studySets = studyT2CriteriaManager.getAllStudyCriteriaSets(false); 
 
-        const asPerfGlobal = statisticsService.calculateDiagnosticPerformance(evaluatedGlobalData, 'as', 'n');
+        const asPerfGlobal = statisticsService.calculateDiagnosticPerformance(evaluatedGlobalDataCurrent, 'as', 'n_status_patient');
         if (asPerfGlobal) {
             results.push({
-                id: APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID, name: APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME,
+                id: appConfig.SPECIAL_IDS.AVOCADO_SIGN_ID, name: appConfig.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME,
                 sens: asPerfGlobal.sens?.value, spez: asPerfGlobal.spez?.value, ppv: asPerfGlobal.ppv?.value, npv: asPerfGlobal.npv?.value, acc: asPerfGlobal.acc?.value, auc: asPerfGlobal.auc?.value,
-                globalN: evaluatedGlobalData.length, specificKollektivName: globalKollektivId, specificKollektivN: evaluatedGlobalData.length
+                globalN: evaluatedGlobalDataCurrent.length, specificKollektivName: globalKollektivId, specificKollektivN: evaluatedGlobalDataCurrent.length,
+                criteria: null, logic: null // AS hat keine "Kriterien" in diesem Sinne
             });
         }
 
-        const t2AppliedPerfGlobal = statisticsService.calculateDiagnosticPerformance(evaluatedGlobalData, 't2', 'n');
+        const t2AppliedPerfGlobal = statisticsService.calculateDiagnosticPerformance(evaluatedGlobalDataCurrent, 't2', 'n_status_patient');
         if (t2AppliedPerfGlobal) {
              results.push({
-                id: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID, name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME,
+                id: appConfig.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID, name: appConfig.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME,
                 sens: t2AppliedPerfGlobal.sens?.value, spez: t2AppliedPerfGlobal.spez?.value, ppv: t2AppliedPerfGlobal.ppv?.value, npv: t2AppliedPerfGlobal.npv?.value, acc: t2AppliedPerfGlobal.acc?.value, auc: t2AppliedPerfGlobal.auc?.value,
-                globalN: evaluatedGlobalData.length, specificKollektivName: globalKollektivId, specificKollektivN: evaluatedGlobalData.length
+                globalN: evaluatedGlobalDataCurrent.length, specificKollektivName: globalKollektivId, specificKollektivN: evaluatedGlobalDataCurrent.length,
+                criteria: cloneDeep(currentT2Criteria), logic: currentT2Logic
             });
         }
         
@@ -322,12 +365,13 @@ const statistikTabLogic = (() => {
 
             if(baseDataForSet.length > 0) {
                 const studyEvaluatedData = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(baseDataForSet, set);
-                const perf = statisticsService.calculateDiagnosticPerformance(studyEvaluatedData, 't2', 'n');
+                const perf = statisticsService.calculateDiagnosticPerformance(studyEvaluatedData, 't2', 'n_status_patient');
                 if(perf) {
                     results.push({
                         id: set.id, name: set.name,
                         sens: perf.sens?.value, spez: perf.spez?.value, ppv: perf.ppv?.value, npv: perf.npv?.value, acc: perf.acc?.value, auc: perf.auc?.value,
-                        globalN: evaluatedGlobalData.length, specificKollektivName: targetKollektiv, specificKollektivN: baseDataForSet.length
+                        globalN: evaluatedGlobalDataCurrent.length, specificKollektivName: targetKollektiv, specificKollektivN: baseDataForSet.length,
+                        criteria: cloneDeep(set.criteria), logic: set.logic || set.criteria?.logic
                     });
                 }
             }
@@ -340,17 +384,18 @@ const statistikTabLogic = (() => {
         const contentArea = document.getElementById(containerId);
         if (!contentArea) { console.error("StatistikTab: Container für Einzelansicht nicht gefunden."); return; }
         contentArea.innerHTML = '';
+        const appConfig = _getGlobalConfig('APP_CONFIG');
 
         let localStatsData = _statsDataKollektivGlobal;
         if (_isDataStale || !localStatsData) {
-             localStatsData = _calculateStatsForKollektiv(_currentKollektivGlobal);
-             _statsDataKollektivGlobal = localStatsData; // Update cache
+             localStatsData = _calculateStatsForKollektiv(_currentKollektivGlobal, _appliedT2Criteria, _appliedT2Logic);
+             _statsDataKollektivGlobal = localStatsData;
         }
         
         let localCriteriaComparisonResults = _criteriaComparisonResults;
         if (_isDataStale || !localCriteriaComparisonResults) {
-            localCriteriaComparisonResults = _calculateCriteriaComparison(_currentKollektivGlobal);
-            _criteriaComparisonResults = localCriteriaComparisonResults; // Update cache
+            localCriteriaComparisonResults = _calculateCriteriaComparison(_currentKollektivGlobal, _appliedT2Criteria, _appliedT2Logic);
+            _criteriaComparisonResults = localCriteriaComparisonResults;
         }
 
         if (!localStatsData || typeof localStatsData !== 'object') {
@@ -363,8 +408,8 @@ const statistikTabLogic = (() => {
                              : `<p class="text-muted">Deskriptive Statistik nicht verfügbar für Kollektiv '${getKollektivDisplayName(_currentKollektivGlobal)}'.</p>`;
         
         const gueteASHTML = _createGueteContentHTML(localStatsData.gueteAS, 'AS', _currentKollektivGlobal);
-        const gueteT2HTML = _createGueteContentHTML(localStatsData.gueteT2_angewandt, `T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, _currentKollektivGlobal);
-        const vergleichHTML = _createVergleichContentHTML(localStatsData.vergleichASvsT2_angewandt, _currentKollektivGlobal, APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME);
+        const gueteT2HTML = _createGueteContentHTML(localStatsData.gueteT2_angewandt, `T2 (${appConfig.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, _currentKollektivGlobal);
+        const vergleichHTML = _createVergleichContentHTML(localStatsData.vergleichASvsT2_angewandt, _currentKollektivGlobal, appConfig.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME);
         const assoziationHTML = _createAssoziationContentHTML(localStatsData.assoziation_angewandt, _currentKollektivGlobal, _appliedT2Criteria);
         const criteriaComparisonHTML = _createCriteriaComparisonTableHTML(localCriteriaComparisonResults, _currentKollektivGlobal);
 
@@ -372,13 +417,13 @@ const statistikTabLogic = (() => {
         const col2 = document.createElement('div'); col2.className = 'col-lg-6 d-flex flex-column';
         
         if (typeof uiComponents !== 'undefined' && typeof uiComponents.createStatistikCard === 'function') {
-            col1.innerHTML += uiComponents.createStatistikCard('stat-deskriptiv', `Deskriptive Statistik (${getKollektivDisplayName(_currentKollektivGlobal)})`, deskriptivHTML, false, 'deskriptiveStatistik', [], 'table-deskriptiv-demographie-0');
-            col1.innerHTML += uiComponents.createStatistikCard('stat-guete-as', `Diagnostische Güte AS (${getKollektivDisplayName(_currentKollektivGlobal)})`, gueteASHTML, false, 'diagnostischeGueteAS', [], `table-guete-matrix-AS-${String(_currentKollektivGlobal).replace(/\s+/g, '_')}`);
-            col1.innerHTML += uiComponents.createStatistikCard('stat-assoziation', `Assoziationsanalyse (${getKollektivDisplayName(_currentKollektivGlobal)})`, assoziationHTML, false, 'assoziationEinzelkriterien', [], `table-assoziation-${String(_currentKollektivGlobal).replace(/\s+/g, '_')}`);
+            col1.innerHTML += uiComponents.createStatistikCard('stat-deskriptiv', `Deskriptive Statistik (${getKollektivDisplayName(_currentKollektivGlobal)})`, deskriptivHTML, true, 'deskriptiveStatistik', [], `table-deskriptiv-demographie-0`);
+            col1.innerHTML += uiComponents.createStatistikCard('stat-guete-as', `Diagnostische Güte AS (${getKollektivDisplayName(_currentKollektivGlobal)})`, gueteASHTML, true, 'diagnostischeGueteAS', [], `table-guete-matrix-AS-${String(_currentKollektivGlobal).replace(/\s+/g, '_')}`);
+            col1.innerHTML += uiComponents.createStatistikCard('stat-assoziation', `Assoziationsanalyse (${getKollektivDisplayName(_currentKollektivGlobal)})`, assoziationHTML, true, 'assoziationEinzelkriterien', [], `table-assoziation-${String(_currentKollektivGlobal).replace(/\s+/g, '_')}`);
             
-            col2.innerHTML += uiComponents.createStatistikCard('stat-guete-t2', `Diagnostische Güte T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME}, ${getKollektivDisplayName(_currentKollektivGlobal)})`, gueteT2HTML, false, 'diagnostischeGueteT2', [], `table-guete-matrix-T2-${String(_currentKollektivGlobal).replace(/\s+/g, '_')}`);
-            col2.innerHTML += uiComponents.createStatistikCard('stat-vergleich-as-t2', `Vergleich AS vs. T2 (${getKollektivDisplayName(_currentKollektivGlobal)})`, vergleichHTML, false, 'statistischerVergleichASvsT2', [], `table-vergleich-as-vs-t2-${String(_currentKollektivGlobal).replace(/\s+/g, '_')}`);
-            col2.innerHTML += uiComponents.createStatistikCard('stat-kriterien-vergleich', `Performance Vergleich (Basis: ${getKollektivDisplayName(_currentKollektivGlobal)})`, criteriaComparisonHTML, false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
+            col2.innerHTML += uiComponents.createStatistikCard('stat-guete-t2', `Diagnostische Güte T2 (${appConfig.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME}, ${getKollektivDisplayName(_currentKollektivGlobal)})`, gueteT2HTML, true, 'diagnostischeGueteT2', [], `table-guete-matrix-T2_(${appConfig.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME.replace(/\s+/g, '_')})-${String(_currentKollektivGlobal).replace(/\s+/g, '_')}`);
+            col2.innerHTML += uiComponents.createStatistikCard('stat-vergleich-as-t2', `Vergleich AS vs. T2 (${getKollektivDisplayName(_currentKollektivGlobal)})`, vergleichHTML, true, 'statistischerVergleichASvsT2', [], `table-vergleich-as-vs-t2-${String(_currentKollektivGlobal).replace(/\s+/g, '_')}`);
+            col2.innerHTML += uiComponents.createStatistikCard('stat-kriterien-vergleich', `Performance Vergleich (Basis: ${getKollektivDisplayName(_currentKollektivGlobal)})`, criteriaComparisonHTML, true, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
         } else {
              col1.innerHTML = "<p class='text-danger'>Fehler: Statistik Karten Komponente nicht geladen.</p>";
              col2.innerHTML = "<p class='text-danger'>Fehler: Statistik Karten Komponente nicht geladen.</p>";
@@ -386,14 +431,16 @@ const statistikTabLogic = (() => {
 
         contentArea.appendChild(col1);
         contentArea.appendChild(col2);
+        
+        const uiTexts = _getGlobalConfig('UI_TEXTS');
 
         if (localStatsData.deskriptiv?.alterData && localStatsData.deskriptiv.alterData.length > 0 && typeof chart_renderer !== 'undefined' && chart_renderer.renderAgeDistributionChart) {
             chart_renderer.renderAgeDistributionChart('chart-stat-age-0', localStatsData.deskriptiv.alterData, _currentKollektivGlobal, {title: ''});
         }
-        if (localStatsData.deskriptiv?.geschlecht && typeof chart_renderer !== 'undefined' && chart_renderer.renderPieChart && UI_TEXTS && UI_TEXTS.legendLabels && APP_CONFIG && APP_CONFIG.CHART_SETTINGS) {
+        if (localStatsData.deskriptiv?.geschlecht && typeof chart_renderer !== 'undefined' && chart_renderer.renderPieChart && uiTexts?.legendLabels && appConfig?.CHART_SETTINGS) {
             const genderData = [
-                { label: UI_TEXTS.legendLabels.male, value: localStatsData.deskriptiv.geschlecht.m || 0, color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE },
-                { label: UI_TEXTS.legendLabels.female, value: localStatsData.deskriptiv.geschlecht.f || 0, color: APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN }
+                { label: uiTexts.legendLabels.male, value: localStatsData.deskriptiv.geschlecht.m || 0, color: appConfig.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE },
+                { label: uiTexts.legendLabels.female, value: localStatsData.deskriptiv.geschlecht.f || 0, color: appConfig.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN }
             ].filter(d => d.value > 0);
             if(genderData.length > 0) chart_renderer.renderPieChart('chart-stat-gender-0', genderData, { title: '', compact: true, donut: true, showLegend: false });
         }
@@ -403,25 +450,28 @@ const statistikTabLogic = (() => {
         const contentArea = document.getElementById(containerId);
         if (!contentArea) { console.error("StatistikTab: Container für Vergleichsansicht nicht gefunden."); return;}
         contentArea.innerHTML = '';
+        const appConfig = _getGlobalConfig('APP_CONFIG');
+        const uiTexts = _getGlobalConfig('UI_TEXTS');
+
 
         let localStatsK1 = _statsDataKollektiv1;
         let localStatsK2 = _statsDataKollektiv2;
         let localStatsVergleich = _statsVergleichKollektive;
         let localCriteriaCompResults = _criteriaComparisonResults;
 
-        if (_isDataStale || !localStatsK1) { localStatsK1 = _calculateStatsForKollektiv(_statsKollektiv1); _statsDataKollektiv1 = localStatsK1; }
-        if (_isDataStale || !localStatsK2) { localStatsK2 = _calculateStatsForKollektiv(_statsKollektiv2); _statsDataKollektiv2 = localStatsK2; }
+        if (_isDataStale || !localStatsK1) { localStatsK1 = _calculateStatsForKollektiv(_statsKollektiv1, _appliedT2Criteria, _appliedT2Logic); _statsDataKollektiv1 = localStatsK1; }
+        if (_isDataStale || !localStatsK2) { localStatsK2 = _calculateStatsForKollektiv(_statsKollektiv2, _appliedT2Criteria, _appliedT2Logic); _statsDataKollektiv2 = localStatsK2; }
         
         if (_isDataStale || !localStatsVergleich) {
-            const data1 = _getProcessedAndEvaluatedData(_statsKollektiv1);
-            const data2 = _getProcessedAndEvaluatedData(_statsKollektiv2);
+            const data1 = _getProcessedAndEvaluatedData(_statsKollektiv1, _appliedT2Criteria, _appliedT2Logic);
+            const data2 = _getProcessedAndEvaluatedData(_statsKollektiv2, _appliedT2Criteria, _appliedT2Logic);
             localStatsVergleich = (data1 && data1.length > 0 && data2 && data2.length > 0 && typeof statisticsService !== 'undefined') 
-                                        ? statisticsService.compareCohorts(data1, data2, _appliedT2Criteria, _appliedT2Logic)
+                                        ? statisticsService.compareCohorts(data1, data2) // Removed criteria/logic here, as compareCohorts likely re-evaluates or uses its own logic
                                         : null;
             _statsVergleichKollektive = localStatsVergleich;
         }
         if (_isDataStale || !localCriteriaCompResults) {
-            localCriteriaCompResults = _calculateCriteriaComparison(_currentKollektivGlobal);
+            localCriteriaCompResults = _calculateCriteriaComparison(_currentKollektivGlobal, _appliedT2Criteria, _appliedT2Logic);
             _criteriaComparisonResults = localCriteriaCompResults;
         }
 
@@ -431,54 +481,62 @@ const statistikTabLogic = (() => {
         if (localStatsK1 && typeof localStatsK1 === 'object' && typeof uiComponents !== 'undefined') {
             const deskHTML1 = (localStatsK1.deskriptiv && typeof localStatsK1.deskriptiv === 'object') ? _createDeskriptiveStatistikContentHTML(localStatsK1, '1', _statsKollektiv1) : `<p class="text-muted">Deskriptive Daten für ${getKollektivDisplayName(_statsKollektiv1)} nicht verfügbar.</p>`;
             const gueteASHTML1 = _createGueteContentHTML(localStatsK1.gueteAS, 'AS', _statsKollektiv1);
-            const gueteT2HTML1 = _createGueteContentHTML(localStatsK1.gueteT2_angewandt, `T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, _statsKollektiv1);
-            col1.innerHTML += uiComponents.createStatistikCard('stat-deskriptiv-k1', `Deskriptiv (${getKollektivDisplayName(_statsKollektiv1)})`, deskHTML1, false, 'deskriptiveStatistik', [], 'table-deskriptiv-demographie-1');
-            col1.innerHTML += uiComponents.createStatistikCard('stat-guete-as-k1', `Güte AS (${getKollektivDisplayName(_statsKollektiv1)})`, gueteASHTML1, false, 'diagnostischeGueteAS', [], `table-guete-matrix-AS-${String(_statsKollektiv1).replace(/\s+/g, '_')}`);
-            col1.innerHTML += uiComponents.createStatistikCard('stat-guete-t2-k1', `Güte T2 (${getKollektivDisplayName(_statsKollektiv1)})`, gueteT2HTML1, false, 'diagnostischeGueteT2', [], `table-guete-matrix-T2-${String(_statsKollektiv1).replace(/\s+/g, '_')}`);
+            const gueteT2HTML1 = _createGueteContentHTML(localStatsK1.gueteT2_angewandt, `T2 (${appConfig.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, _statsKollektiv1);
+            col1.innerHTML += uiComponents.createStatistikCard('stat-deskriptiv-k1', `Deskriptiv (${getKollektivDisplayName(_statsKollektiv1)})`, deskHTML1, true, 'deskriptiveStatistik', [], `table-deskriptiv-demographie-1`);
+            col1.innerHTML += uiComponents.createStatistikCard('stat-guete-as-k1', `Güte AS (${getKollektivDisplayName(_statsKollektiv1)})`, gueteASHTML1, true, 'diagnostischeGueteAS', [], `table-guete-matrix-AS-${String(_statsKollektiv1).replace(/\s+/g, '_')}`);
+            col1.innerHTML += uiComponents.createStatistikCard('stat-guete-t2-k1', `Güte T2 (${getKollektivDisplayName(_statsKollektiv1)})`, gueteT2HTML1, true, 'diagnostischeGueteT2', [], `table-guete-matrix-T2_(${appConfig.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME.replace(/\s+/g, '_')})-${String(_statsKollektiv1).replace(/\s+/g, '_')}`);
         } else {
-            col1.innerHTML = `<p class="text-center text-muted p-3">Keine Daten für Kollektiv '${getKollektivDisplayName(_statsKollektiv1)}'${ typeof uiComponents === 'undefined' ? ' (UI Fehler)' : ''}.</p>`;
+            col1.innerHTML = `<div class="col-12"><p class="text-center text-muted p-3">Keine Daten für Kollektiv '${getKollektivDisplayName(_statsKollektiv1)}'${ typeof uiComponents === 'undefined' ? ' (UI Fehler)' : ''}.</p></div>`;
         }
 
         if (localStatsK2 && typeof localStatsK2 === 'object' && typeof uiComponents !== 'undefined') {
             const deskHTML2 = (localStatsK2.deskriptiv && typeof localStatsK2.deskriptiv === 'object') ? _createDeskriptiveStatistikContentHTML(localStatsK2, '2', _statsKollektiv2) : `<p class="text-muted">Deskriptive Daten für ${getKollektivDisplayName(_statsKollektiv2)} nicht verfügbar.</p>`;
             const gueteASHTML2 = _createGueteContentHTML(localStatsK2.gueteAS, 'AS', _statsKollektiv2);
-            const gueteT2HTML2 = _createGueteContentHTML(localStatsK2.gueteT2_angewandt, `T2 (${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, _statsKollektiv2);
-            col2.innerHTML += uiComponents.createStatistikCard('stat-deskriptiv-k2', `Deskriptiv (${getKollektivDisplayName(_statsKollektiv2)})`, deskHTML2, false, 'deskriptiveStatistik', [], 'table-deskriptiv-demographie-2');
-            col2.innerHTML += uiComponents.createStatistikCard('stat-guete-as-k2', `Güte AS (${getKollektivDisplayName(_statsKollektiv2)})`, gueteASHTML2, false, 'diagnostischeGueteAS', [], `table-guete-matrix-AS-${String(_statsKollektiv2).replace(/\s+/g, '_')}`);
-            col2.innerHTML += uiComponents.createStatistikCard('stat-guete-t2-k2', `Güte T2 (${getKollektivDisplayName(_statsKollektiv2)})`, gueteT2HTML2, false, 'diagnostischeGueteT2', [], `table-guete-matrix-T2-${String(_statsKollektiv2).replace(/\s+/g, '_')}`);
+            const gueteT2HTML2 = _createGueteContentHTML(localStatsK2.gueteT2_angewandt, `T2 (${appConfig.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME})`, _statsKollektiv2);
+            col2.innerHTML += uiComponents.createStatistikCard('stat-deskriptiv-k2', `Deskriptiv (${getKollektivDisplayName(_statsKollektiv2)})`, deskHTML2, true, 'deskriptiveStatistik', [], `table-deskriptiv-demographie-2`);
+            col2.innerHTML += uiComponents.createStatistikCard('stat-guete-as-k2', `Güte AS (${getKollektivDisplayName(_statsKollektiv2)})`, gueteASHTML2, true, 'diagnostischeGueteAS', [], `table-guete-matrix-AS-${String(_statsKollektiv2).replace(/\s+/g, '_')}`);
+            col2.innerHTML += uiComponents.createStatistikCard('stat-guete-t2-k2', `Güte T2 (${getKollektivDisplayName(_statsKollektiv2)})`, gueteT2HTML2, true, 'diagnostischeGueteT2', [], `table-guete-matrix-T2_(${appConfig.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME.replace(/\s+/g, '_')})-${String(_statsKollektiv2).replace(/\s+/g, '_')}`);
         } else {
-            col2.innerHTML = `<p class="text-center text-muted p-3">Keine Daten für Kollektiv '${getKollektivDisplayName(_statsKollektiv2)}'${ typeof uiComponents === 'undefined' ? ' (UI Fehler)' : ''}.</p>`;
+            col2.innerHTML = `<div class="col-12"><p class="text-center text-muted p-3">Keine Daten für Kollektiv '${getKollektivDisplayName(_statsKollektiv2)}'${ typeof uiComponents === 'undefined' ? ' (UI Fehler)' : ''}.</p></div>`;
         }
         
         const vergleichHTML = localStatsVergleich ? _createVergleichKollektiveContentHTML(localStatsVergleich, _statsKollektiv1, _statsKollektiv2) : '<p class="text-muted p-3">Vergleichsdaten nicht verfügbar (ggf. fehlen Daten für eines der Kollektive).</p>';
-        const vergleichCard = (typeof uiComponents !== 'undefined' && uiComponents.createStatistikCard) ? uiComponents.createStatistikCard('stat-vergleich-kollektive', `Vergleich Kollektiv ${getKollektivDisplayName(_statsKollektiv1)} vs. ${getKollektivDisplayName(_statsKollektiv2)}`, vergleichHTML, false, 'vergleichKollektive', [], `table-vergleich-kollektive-${String(_statsKollektiv1).replace(/\s+/g, '_')}-vs-${String(_statsKollektiv2).replace(/\s+/g, '_')}`) : "<p class='text-danger'>Fehler: Statistik Karten Komponente nicht geladen.</p>";
+        const vergleichCard = (typeof uiComponents !== 'undefined' && uiComponents.createStatistikCard) ? uiComponents.createStatistikCard('stat-vergleich-kollektive', `Vergleich Kollektiv ${getKollektivDisplayName(_statsKollektiv1)} vs. ${getKollektivDisplayName(_statsKollektiv2)}`, vergleichHTML, true, 'vergleichKollektive', [], `table-vergleich-kollektive-${String(_statsKollektiv1).replace(/\s+/g, '_')}-vs-${String(_statsKollektiv2).replace(/\s+/g, '_')}`) : "<p class='text-danger'>Fehler: Statistik Karten Komponente nicht geladen.</p>";
         
         const criteriaComparisonHTML = _createCriteriaComparisonTableHTML(localCriteriaCompResults, _currentKollektivGlobal);
-        const criteriaCard = (typeof uiComponents !== 'undefined' && uiComponents.createStatistikCard) ? uiComponents.createStatistikCard('stat-kriterien-vergleich-vergl', `Performance Vergleich (Basis: ${getKollektivDisplayName(_currentKollektivGlobal)})`, criteriaComparisonHTML, false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich') : "<p class='text-danger'>Fehler: Statistik Karten Komponente nicht geladen.</p>";
+        const criteriaCard = (typeof uiComponents !== 'undefined' && uiComponents.createStatistikCard) ? uiComponents.createStatistikCard('stat-kriterien-vergleich-vergl', `Performance Vergleich (Basis: ${getKollektivDisplayName(_currentKollektivGlobal)})`, criteriaComparisonHTML, true, 'criteriaComparisonTable', [], 'table-kriterien-vergleich') : "<p class='text-danger'>Fehler: Statistik Karten Komponente nicht geladen.</p>";
 
         contentArea.appendChild(col1);
         contentArea.appendChild(col2);
         const row2 = document.createElement('div'); row2.className = 'row g-3 mt-0'; 
-        row2.innerHTML = vergleichCard;
+        const row2col = document.createElement('div'); row2col.className = 'col-12';
+        row2col.innerHTML = vergleichCard;
+        row2.appendChild(row2col);
         contentArea.appendChild(row2);
 
         const row3 = document.createElement('div'); row3.className = 'row g-3 mt-0';
-        row3.innerHTML = criteriaCard;
+        const row3col = document.createElement('div'); row3col.className = 'col-12';
+        row3col.innerHTML = criteriaCard;
+        row3.appendChild(row3col);
         contentArea.appendChild(row3);
 
         if (localStatsK1?.deskriptiv?.alterData && localStatsK1.deskriptiv.alterData.length > 0 && typeof chart_renderer !== 'undefined') chart_renderer.renderAgeDistributionChart('chart-stat-age-1', localStatsK1.deskriptiv.alterData, _statsKollektiv1, {title:''});
-        if (localStatsK1?.deskriptiv?.geschlecht && typeof chart_renderer !== 'undefined' && UI_TEXTS && UI_TEXTS.legendLabels && APP_CONFIG && APP_CONFIG.CHART_SETTINGS) {
-            const genderData1 = [ { label: UI_TEXTS.legendLabels.male, value: localStatsK1.deskriptiv.geschlecht.m || 0, color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE }, { label: UI_TEXTS.legendLabels.female, value: localStatsK1.deskriptiv.geschlecht.f || 0, color: APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN }].filter(d=>d.value > 0);
+        if (localStatsK1?.deskriptiv?.geschlecht && typeof chart_renderer !== 'undefined' && uiTexts?.legendLabels && appConfig?.CHART_SETTINGS) {
+            const genderData1 = [ { label: uiTexts.legendLabels.male, value: localStatsK1.deskriptiv.geschlecht.m || 0, color: appConfig.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE }, { label: uiTexts.legendLabels.female, value: localStatsK1.deskriptiv.geschlecht.f || 0, color: appConfig.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN }].filter(d=>d.value > 0);
             if(genderData1.length > 0) chart_renderer.renderPieChart('chart-stat-gender-1', genderData1, {title: '', compact:true, donut:true, showLegend: false});
         }
         if (localStatsK2?.deskriptiv?.alterData && localStatsK2.deskriptiv.alterData.length > 0 && typeof chart_renderer !== 'undefined') chart_renderer.renderAgeDistributionChart('chart-stat-age-2', localStatsK2.deskriptiv.alterData, _statsKollektiv2, {title:''});
-        if (localStatsK2?.deskriptiv?.geschlecht && typeof chart_renderer !== 'undefined' && UI_TEXTS && UI_TEXTS.legendLabels && APP_CONFIG && APP_CONFIG.CHART_SETTINGS) {
-            const genderData2 = [ { label: UI_TEXTS.legendLabels.male, value: localStatsK2.deskriptiv.geschlecht.m || 0, color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE }, { label: UI_TEXTS.legendLabels.female, value: localStatsK2.deskriptiv.geschlecht.f || 0, color: APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN }].filter(d=>d.value > 0);
+        if (localStatsK2?.deskriptiv?.geschlecht && typeof chart_renderer !== 'undefined' && uiTexts?.legendLabels && appConfig?.CHART_SETTINGS) {
+            const genderData2 = [ { label: uiTexts.legendLabels.male, value: localStatsK2.deskriptiv.geschlecht.m || 0, color: appConfig.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE }, { label: uiTexts.legendLabels.female, value: localStatsK2.deskriptiv.geschlecht.f || 0, color: appConfig.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN }].filter(d=>d.value > 0);
             if(genderData2.length > 0) chart_renderer.renderPieChart('chart-stat-gender-2', genderData2, {title: '', compact:true, donut:true, showLegend: false});
         }
     }
 
     function initializeTab(data, currentKollektiv, appliedT2Criteria, appliedT2Logic, statsLayout, statsKollektiv1, statsKollektiv2) {
+        if (!_mainAppInterface) {
+            console.error("StatistikTabLogic: Hauptinterface nicht initialisiert.");
+            return;
+        }
         _globalRawData = cloneDeep(data);
         _currentKollektivGlobal = currentKollektiv;
         _appliedT2Criteria = cloneDeep(appliedT2Criteria);
@@ -489,20 +547,21 @@ const statistikTabLogic = (() => {
         
         setDataStale();
 
-        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.updateStatistikSelectorsUI === 'function') {
-            ui_helpers.updateStatistikSelectorsUI(_statsLayout, _statsKollektiv1, _statsKollektiv2);
+        const uiHelpers = _mainAppInterface.getUiHelpers();
+        if (uiHelpers && typeof uiHelpers.updateStatistikSelectorsUI === 'function') {
+            uiHelpers.updateStatistikSelectorsUI(_statsLayout, _statsKollektiv1, _statsKollektiv2);
         }
 
+        const contentAreaId = _getGlobalConfig('APP_CONFIG')?.TAB_CONTENT_AREAS?.['statistik-tab'] || 'statistik-content-area';
         if (_statsLayout === 'einzel') {
-            _renderEinzelansicht('statistik-content-area');
+            _renderEinzelansicht(contentAreaId);
         } else {
-            _renderVergleichsansicht('statistik-content-area');
+            _renderVergleichsansicht(contentAreaId);
         }
         
-        _isInitialized = true;
-        _isDataStale = false; // Setze stale auf false, nachdem die Daten neu berechnet und gerendert wurden
-        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.initializeTooltips === 'function') {
-             ui_helpers.initializeTooltips(document.getElementById('statistik-content-area'));
+        _isDataStale = false;
+        if (uiHelpers && typeof uiHelpers.initializeTooltips === 'function') {
+             uiHelpers.initializeTooltips(document.getElementById(contentAreaId));
         }
     }
 
