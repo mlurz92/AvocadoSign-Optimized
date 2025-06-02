@@ -28,19 +28,23 @@ const main = (() => {
             return bruteForceManager;
         },
         getPublicationStats: () => {
-            if (typeof publicationTabLogic === 'undefined' || !publicationTabLogic.isInitialized()) return null;
+            if (typeof publicationTabLogic === 'undefined' || !publicationTabLogic.isInitialized()) {
+                 console.warn("mainAppInterface.getPublicationStats: publicationTabLogic nicht bereit.");
+                 return null;
+            }
             return publicationTabLogic.getFullPublicationStats();
         },
         getPraesentationData: () => {
-             if (typeof praesentationTabLogic === 'undefined' || !praesentationTabLogic.isInitialized() || typeof praesentationTabLogic._prepareDatenAsPur !== 'function' || typeof praesentationTabLogic._prepareDatenAsVsT2 !== 'function') {
+             if (typeof praesentationTabLogic === 'undefined' || !praesentationTabLogic.isInitialized() || typeof state === 'undefined') {
+                 console.warn("mainAppInterface.getPraesentationData: praesentationTabLogic oder state nicht bereit.");
                  return { asPur: null, asVsT2: null};
              }
-             const logicModule = praesentationTabLogic;
-             const currentView = typeof state !== 'undefined' ? state.getCurrentPresentationView() : 'as-pur';
+             const currentView = state.getCurrentPresentationView();
+             const internalData = praesentationTabLogic._praesentationData;
 
              return {
-                 asPur: logicModule._praesentationData && currentView === 'as-pur' ? logicModule._praesentationData : logicModule._prepareDatenAsPur(),
-                 asVsT2: logicModule._praesentationData && currentView === 'as-vs-t2' ? logicModule._praesentationData : logicModule._prepareDatenAsVsT2()
+                 asPur: (internalData && currentView === 'as-pur') ? internalData : (typeof praesentationTabLogic._prepareDatenAsPur === 'function' ? praesentationTabLogic._prepareDatenAsPur() : null),
+                 asVsT2: (internalData && currentView === 'as-vs-t2') ? internalData : (typeof praesentationTabLogic._prepareDatenAsVsT2 === 'function' ? praesentationTabLogic._prepareDatenAsVsT2() : null)
              };
         },
         refreshCurrentTab: (forceFullRender = false, newSortState = null) => {
@@ -61,34 +65,30 @@ const main = (() => {
             _refreshCurrentTab(forceFullRender);
         },
         showToast: (message, type = 'info', duration = 3000) => {
-            if (typeof ui_helpers !== 'undefined') ui_helpers.showToast(message, type, duration);
+            if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showToast === 'function') {
+                 ui_helpers.showToast(message, type, duration);
+            }
         },
-        updateBruteForceUI: (status, data, isRunning, kollektiv) => {
-            if (typeof ui_helpers !== 'undefined') ui_helpers.updateBruteForceUI(status, data, isRunning, kollektiv);
+        updateBruteForceUI: (status, data, isWorkerAvailable, kollektiv, uiUpdatePayload = null) => {
+            if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.updateBruteForceUI === 'function') {
+                const payloadForUI = uiUpdatePayload || data;
+                ui_helpers.updateBruteForceUI(status, payloadForUI, isWorkerAvailable, kollektiv);
+            }
         },
         setBruteForceResults: (results) => {
-            if (typeof state !== 'undefined') state.setBruteForceResults(results);
+            if (typeof state !== 'undefined' && typeof state.setBruteForceResults === 'function') {
+                state.setBruteForceResults(results);
+            }
         },
         setBruteForceStatus: (status, details) => {
-             if (typeof state !== 'undefined') state.setBruteForceStatus(status, details);
+             if (typeof state !== 'undefined' && typeof state.setBruteForceStatus === 'function') {
+                 state.setBruteForceStatus(status, details);
+            }
         },
         clearBruteForceResults: (kollektivId) => {
-            if (typeof state !== 'undefined') state.clearBruteForceResults(kollektivId);
-        },
-        attachDataEventListeners: (containerId) => {
-            if (typeof dataEventHandlers !== 'undefined') dataEventHandlers.attachDataEventListeners(containerId);
-        },
-        attachAuswertungEventListeners: (containerId) => {
-            if (typeof auswertungEventHandlers !== 'undefined') auswertungEventHandlers.attachAuswertungEventListeners(containerId);
-        },
-        attachStatistikEventListeners: (containerId) => {
-            if (typeof statistikEventHandlers !== 'undefined') statistikEventHandlers.attachStatistikEventListeners(containerId);
-        },
-        attachPraesentationEventListeners: (containerId) => {
-            if (typeof praesentationEventHandlers !== 'undefined') praesentationEventHandlers.attachPraesentationEventListeners(containerId);
-        },
-        attachPublikationEventListeners: (containerId) => {
-            if (typeof publikationEventHandlers !== 'undefined') publikationEventHandlers.attachPublikationEventListeners(containerId);
+            if (typeof state !== 'undefined' && typeof state.clearBruteForceResults === 'function') {
+                state.clearBruteForceResults(kollektivId);
+            }
         }
     });
 
@@ -224,7 +224,7 @@ const main = (() => {
             newTabId = event.target.id;
         } else {
             const activeTabEl = document.querySelector('#main-tabs .nav-link.active');
-            newTabId = activeTabEl ? activeTabEl.id : (APP_CONFIG.DEFAULT_SETTINGS.DEFAULT_TAB_ID || 'daten-tab');
+            newTabId = activeTabEl ? activeTabEl.id : (state.getStateSnapshot().appConfig.DEFAULT_SETTINGS.DEFAULT_TAB_ID || 'daten-tab');
         }
 
         const previousTabId = state.getCurrentTabId();
@@ -239,8 +239,8 @@ const main = (() => {
     function _refreshCurrentTab(forceFullRender = false) {
         _showLoadingOverlay('Lade Tab-Inhalt...');
         console.log("main.js: _refreshCurrentTab aufgerufen.");
-        if (typeof state === 'undefined' || typeof viewRenderer === 'undefined') {
-            console.error("main.js: State oder ViewRenderer nicht verfügbar für Tab-Refresh.");
+        if (typeof state === 'undefined' || typeof viewRenderer === 'undefined' || typeof t2CriteriaManager === 'undefined') {
+            console.error("main.js: State, ViewRenderer oder T2CriteriaManager nicht verfügbar für Tab-Refresh.");
              _hideLoadingOverlay();
             return;
         }
@@ -259,8 +259,10 @@ const main = (() => {
         viewRenderer.renderTabContent(activeTabId, processedDataForTab, stateSnapshot);
 
         _attachTabEventListeners(activeTabId);
-         if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.updateExportButtonStates === 'function' && typeof bruteForceManager !== 'undefined') {
-            const hasBruteForceData = bruteForceManager.hasResults(stateSnapshot.currentKollektiv);
+
+        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.updateExportButtonStates === 'function') {
+            const bfManager = _mainAppInterface.getBruteForceManager();
+            const hasBruteForceData = bfManager && typeof bfManager.hasResults === 'function' ? bfManager.hasResults(stateSnapshot.currentKollektiv) : false;
             const canExportData = stateSnapshot.rawData && stateSnapshot.rawData.length > 0;
             ui_helpers.updateExportButtonStates(activeTabId, hasBruteForceData, canExportData);
         }
@@ -274,6 +276,8 @@ const main = (() => {
 
         switch (activeTabId) {
             case 'daten-tab':
+                if (typeof dataEventHandlers !== 'undefined' && dataEventHandlers.attachDataEventListeners) {
+                }
                 break;
             case 'auswertung-tab':
                 if (typeof auswertungEventHandlers !== 'undefined' && auswertungEventHandlers.attachAuswertungEventListeners) {
@@ -338,27 +342,35 @@ const main = (() => {
     }
 
     function _handleStatsLayoutToggle(event) {
-        if (typeof statistikEventHandlers !== 'undefined') statistikEventHandlers.handleStatsLayoutToggle(event.currentTarget, _mainAppInterface);
+        if (typeof statistikEventHandlers !== 'undefined' && typeof statistikEventHandlers.handleStatsLayoutToggle === 'function') {
+             statistikEventHandlers.handleStatsLayoutToggle(event.currentTarget, _mainAppInterface);
+        }
     }
     function _handleStatistikKollektivChange(event) {
-        if (typeof statistikEventHandlers !== 'undefined') statistikEventHandlers.handleStatistikKollektivChange(event.target, _mainAppInterface);
+        if (typeof statistikEventHandlers !== 'undefined' && typeof statistikEventHandlers.handleStatistikKollektivChange === 'function') {
+            statistikEventHandlers.handleStatistikKollektivChange(event.target, _mainAppInterface);
+        }
     }
     function _handlePublikationSpracheChange(event) {
-        if (typeof publikationEventHandlers !== 'undefined') publikationEventHandlers.handlePublikationSpracheChange(event.target, _mainAppInterface);
+        if (typeof publikationEventHandlers !== 'undefined' && typeof publikationEventHandlers.handlePublikationSpracheChange === 'function') {
+            publikationEventHandlers.handlePublikationSpracheChange(event.target, _mainAppInterface);
+        }
     }
     function _handlePublikationBfMetricChange(event) {
-        if (typeof publikationEventHandlers !== 'undefined') publikationEventHandlers.handlePublikationBfMetricChange(event.target, _mainAppInterface);
+        if (typeof publikationEventHandlers !== 'undefined' && typeof publikationEventHandlers.handlePublikationBfMetricChange === 'function') {
+            publikationEventHandlers.handlePublikationBfMetricChange(event.target, _mainAppInterface);
+        }
     }
     function _handlePublikationSectionClick(event) {
         const link = event.target.closest('a.publikation-section-link');
-        if (link && link.dataset.sectionId && typeof publikationEventHandlers !== 'undefined') {
+        if (link && link.dataset.sectionId && typeof publikationEventHandlers !== 'undefined' && typeof publikationEventHandlers.handlePublikationSectionChange === 'function') {
             event.preventDefault();
             publikationEventHandlers.handlePublikationSectionChange(link.dataset.sectionId, _mainAppInterface);
         }
     }
     function _handleExportButtonClick(event) {
         const button = event.target.closest('button[id^="export-"]');
-        if (button && typeof exportService !== 'undefined') {
+        if (button && typeof exportService !== 'undefined' && typeof exportService.triggerExport === 'function') {
             const exportType = button.id.substring('export-'.length).toUpperCase().replace(/-/g, '_');
             exportService.triggerExport(exportType);
         }
@@ -410,20 +422,26 @@ const main = (() => {
 
         _initializeGlobalEventListeners();
 
-        const initialTabEl = document.querySelector(`#main-tabs .nav-link[data-bs-target="#${state.getCurrentTabId()}-pane"]`) || document.getElementById(APP_CONFIG.DEFAULT_SETTINGS.DEFAULT_TAB_ID || 'daten-tab');
+        const initialTabId = state.getCurrentTabId();
+        const initialTabEl = document.querySelector(`#main-tabs .nav-link[data-bs-target="#${initialTabId}-pane"]`) || document.getElementById(initialTabId);
+
         if (initialTabEl) {
             const tabInstance = bootstrap.Tab.getInstance(initialTabEl) || new bootstrap.Tab(initialTabEl);
             tabInstance.show();
             _handleTabChange({target: initialTabEl});
         } else {
+             console.warn(`Initial-Tab-Element für ID '${initialTabId}' nicht gefunden. Fallback auf Default-Logik in _handleTabChange.`);
             _handleTabChange();
         }
         _isAppInitialized = true;
         console.log(`main.js: Anwendung initialisiert. Aktives Kollektiv: ${state.getCurrentKollektiv()}, Aktiver Tab: ${state.getCurrentTabId()}`);
 
-        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showKurzanleitung === 'function' && !loadFromLocalStorage('avocadoSignTool.kurzanleitungGesehen')) {
-            ui_helpers.showKurzanleitung();
-            saveToLocalStorage('avocadoSignTool.kurzanleitungGesehen', true);
+        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showKurzanleitung === 'function') {
+            const appConfigForKurzanleitung = state.getStateSnapshot().appConfig;
+            if (!loadFromLocalStorage(`${appConfigForKurzanleitung.STORAGE_PREFIX}.kurzanleitungGesehen`)) {
+                ui_helpers.showKurzanleitung();
+                saveToLocalStorage(`${appConfigForKurzanleitung.STORAGE_PREFIX}.kurzanleitungGesehen`, true);
+            }
         }
     }
 
@@ -446,7 +464,8 @@ const main = (() => {
     }
 
     function initializeApp() {
-        console.log(`main.js: Initialisiere Lymphknoten T2 - Avocado Sign Analyse v${APP_CONFIG.APP_VERSION}...`);
+        const appConfigGlobal = (typeof APP_CONFIG !== 'undefined') ? APP_CONFIG : { APP_VERSION: "N/A", STORAGE_PREFIX: "avocadoSignTool", DEFAULT_SETTINGS: {DEFAULT_TAB_ID: "daten-tab"} };
+        console.log(`main.js: Initialisiere ${appConfigGlobal.APP_NAME} v${appConfigGlobal.APP_VERSION}...`);
         document.addEventListener('DOMContentLoaded', () => {
              _showLoadingOverlay('Anwendung wird gestartet...');
             try {
