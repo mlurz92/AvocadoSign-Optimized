@@ -4,6 +4,11 @@ const APP_CONFIG = Object.freeze({
     STORAGE_PREFIX: "avocadoSignTool",
     LOG_LEVEL: "info", 
 
+    STORAGE_KEYS_T2: {
+        APPLIED_CRITERIA: `avocadoSignTool.t2Manager.appliedCriteria`,
+        APPLIED_LOGIC: `avocadoSignTool.t2Manager.appliedLogic`
+    },
+
     DEFAULT_SETTINGS: {
         DEFAULT_KOLLEKTIV: "nRCT", 
         DEFAULT_TAB_ID: "auswertung-tab",
