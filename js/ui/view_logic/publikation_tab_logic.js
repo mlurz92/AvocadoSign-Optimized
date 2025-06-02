@@ -13,18 +13,35 @@ const publikationTabLogic = (() => {
         bfResultsPerKollektivForLogic = bfResultsPerKollektiv;
 
         try {
+            if (typeof statisticsService === 'undefined' || typeof statisticsService.calculateAllStatsForPublication !== 'function') {
+                throw new Error("statisticsService.calculateAllStatsForPublication ist nicht verfügbar.");
+            }
+            if (typeof state === 'undefined' || typeof state.getCurrentPublikationBruteForceMetric !== 'function') {
+                throw new Error("state.getCurrentPublikationBruteForceMetric ist nicht verfügbar.");
+            }
+             if (typeof PUBLICATION_CONFIG === 'undefined' || typeof PUBLICATION_CONFIG.defaultBruteForceMetricForPublication === 'undefined') {
+                throw new Error("PUBLICATION_CONFIG.defaultBruteForceMetricForPublication ist nicht verfügbar.");
+            }
+
+            const currentPublikationBfMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+
             allKollektivStats = statisticsService.calculateAllStatsForPublication(
                 rawGlobalDataInputForLogic,
                 appliedCriteriaForLogic,
                 appliedLogicForLogic,
                 bfResultsPerKollektivForLogic,
-                state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication
+                currentPublikationBfMetric
             );
+
+            if (!allKollektivStats) {
+                throw new Error("calculateAllStatsForPublication lieferte null zurück.");
+            }
+
         } catch (error) {
-            console.error("Fehler bei der Berechnung der Publikationsstatistiken:", error);
+            console.error("Fehler bei der Berechnung der Publikationsstatistiken in publikationTabLogic.initializeData:", error);
             allKollektivStats = null;
             if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showToast === 'function') {
-                ui_helpers.showToast("Fehler bei der Vorbereitung der Publikationsdaten.", "danger");
+                ui_helpers.showToast("Fehler bei der Vorbereitung der Publikationsdaten: " + error.message, "danger");
             }
         }
     }
@@ -32,7 +49,7 @@ const publikationTabLogic = (() => {
     function getRenderedSectionContent(mainSectionId, lang, currentKollektivId) {
         if (!allKollektivStats) {
             console.warn("PublikationTabLogic: allKollektivStats nicht initialisiert. Versuche erneute Initialisierung.");
-            if (rawGlobalDataInputForLogic && appliedCriteriaForLogic && appliedLogicForLogic && typeof statisticsService !== 'undefined' && typeof state !== 'undefined' && typeof PUBLICATION_CONFIG !== 'undefined') {
+            if (rawGlobalDataInputForLogic && appliedCriteriaForLogic && appliedLogicForLogic && typeof statisticsService !== 'undefined' && typeof state !== 'undefined' && typeof PUBLICATION_CONFIG !== 'undefined' && typeof APP_CONFIG !== 'undefined') {
                 initializeData(rawGlobalDataInputForLogic, appliedCriteriaForLogic, appliedLogicForLogic, bfResultsPerKollektivForLogic);
             }
             if (!allKollektivStats) {
@@ -56,24 +73,29 @@ const publikationTabLogic = (() => {
             bruteForceMetricForPublication: currentPublikationBfMetric,
             ciMethodProportion: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_PROPORTION,
             ciMethodEffectsize: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE,
+            applied_criteria_definition: allKollektivStats.Gesamt?.applied_criteria_definition || { criteria: {}, logic: 'ODER' }
         };
 
         const optionsForRenderer = {
             currentKollektiv: currentKollektivId,
             bruteForceMetric: currentPublikationBfMetric
         };
-
+        
+        if (typeof publicationRenderer === 'undefined' || typeof publicationRenderer.renderSectionContent !== 'function') {
+            return '<p class="text-danger">Fehler: publicationRenderer.renderSectionContent ist nicht verfügbar.</p>';
+        }
         return publicationRenderer.renderSectionContent(mainSectionId, lang, allKollektivStats, commonDataForGenerator, optionsForRenderer);
     }
 
     function updateDynamicChartsForPublicationTab(mainSectionId, lang, currentKollektivNameForContextOnly) {
         if (!allKollektivStats) {
-            console.warn("Keine Daten für Chart-Rendering im Publikationstab vorhanden.");
+            console.warn("Keine Daten für Chart-Rendering im Publikationstab vorhanden (allKollektivStats ist null).");
             return;
         }
 
         const mainSectionConfig = PUBLICATION_CONFIG.sections.find(s => s.id === mainSectionId);
         if (!mainSectionConfig || !mainSectionConfig.subSections) {
+            console.warn(`Keine Konfiguration für Hauptsektion '${mainSectionId}' oder keine Untersektionen definiert.`);
             return;
         }
         
@@ -94,7 +116,7 @@ const publikationTabLogic = (() => {
                         if (dataForGesamtKollektiv.deskriptiv.alterData && dataForGesamtKollektiv.deskriptiv.alterData.length > 0) {
                             chartRenderer.renderAgeDistributionChart(dataForGesamtKollektiv.deskriptiv.alterData || [], alterChartConfig.id, { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 45 } });
                         } else {
-                            ui_helpers.updateElementHTML(alterChartConfig.id, `<p class="text-muted small text-center p-3">Keine Daten für Altersverteilung (Gesamtkollektiv).</p>`);
+                            ui_helpers.updateElementHTML(alterChartConfig.id, `<p class="text-muted small text-center p-3">${lang === 'de' ? 'Keine Daten für Altersverteilung (Gesamtkollektiv).' : 'No data for age distribution (overall cohort).'}</p>`);
                         }
                     }
                     if (genderChartElement && dataForGesamtKollektiv.deskriptiv.geschlecht) {
@@ -108,10 +130,10 @@ const publikationTabLogic = (() => {
                         if (genderData.some(d => d.value > 0)) {
                             chartRenderer.renderPieChart(genderData, genderChartConfig.id, { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true, legendItemCount: genderData.length });
                         } else {
-                            ui_helpers.updateElementHTML(genderChartConfig.id, `<p class="text-muted small text-center p-3">Keine Daten für Geschlechterverteilung (Gesamtkollektiv).</p>`);
+                            ui_helpers.updateElementHTML(genderChartConfig.id, `<p class="text-muted small text-center p-3">${lang === 'de' ? 'Keine Daten für Geschlechterverteilung (Gesamtkollektiv).' : 'No data for gender distribution (overall cohort).'}</p>`);
                         }
                     } else if (genderChartElement) {
-                        ui_helpers.updateElementHTML(genderChartConfig.id, `<p class="text-muted small text-center p-3">Keine Daten für Geschlechterverteilung (Gesamtkollektiv).</p>`);
+                        ui_helpers.updateElementHTML(genderChartConfig.id, `<p class="text-muted small text-center p-3">${lang === 'de' ? 'Keine Daten für Geschlechterverteilung (Gesamtkollektiv).' : 'No data for gender distribution (overall cohort).'}</p>`);
                     }
                 }
             } else if (subSectionId === 'ergebnisse_vergleich_performance') {
@@ -129,11 +151,10 @@ const publikationTabLogic = (() => {
 
                     if (chartElement && dataForThisKollektiv) {
                         const asStats = dataForThisKollektiv.gueteAS;
-                        let bfStatsForChart = dataForThisKollektiv.gueteT2_bruteforce;
+                        let bfStatsForChart = dataForThisKollektiv.gueteT2_bruteforce; 
                         let bfDefForChart = dataForThisKollektiv.bruteforce_definition;
 
                         if (!bfStatsForChart || !bfDefForChart || bfDefForChart.metricName !== currentPublikationBfMetric) {
-                            console.warn(`PublikationTabLogic: BF-Daten für Kollektiv ${kolId} und Metrik ${currentPublikationBfMetric} nicht direkt in allKollektivStats gefunden. Versuche Neuberechnung oder Fallback.`);
                             const bfResultsFromManager = bruteForceManager.getResultsForKollektiv(kolId);
                             if (bfResultsFromManager && bfResultsFromManager.metric === currentPublikationBfMetric && bfResultsFromManager.bestResult) {
                                  const tempEvalData = t2CriteriaManager.evaluateDataset(cloneDeep(dataProcessor.filterDataByKollektiv(rawGlobalDataInputForLogic, kolId)), bfResultsFromManager.bestResult.criteria, bfResultsFromManager.bestResult.logic);
@@ -145,12 +166,10 @@ const publikationTabLogic = (() => {
                                      metricValue: bfResultsFromManager.bestResult.metricValue
                                  };
                             } else {
-                                 bfStatsForChart = null;
-                                 bfDefForChart = null;
-                                 console.warn(`Keine passenden BF-Ergebnisse für ${kolId} und Metrik ${currentPublikationBfMetric} gefunden, auch nicht im Manager.`);
+                                bfStatsForChart = null;
+                                bfDefForChart = null;
                             }
                         }
-
 
                         if (asStats && bfStatsForChart && bfDefForChart) {
                             const chartDataComp = [
@@ -166,17 +185,17 @@ const publikationTabLogic = (() => {
                                 const t2Label = `BF-T2 (${(bfDefForChart.metricName || currentPublikationBfMetric).substring(0,6)}.)`;
                                 chartRenderer.renderComparisonBarChart(chartDataComp, chartConfig.id, { height: 250, margin: { top: 20, right: 20, bottom: 50, left: 50 } }, t2Label);
                             } else {
-                                ui_helpers.updateElementHTML(chartConfig.id, `<p class="text-muted small text-center p-3">Keine validen Vergleichsdaten für Chart (${getKollektivDisplayName(kolId)}).</p>`);
+                                ui_helpers.updateElementHTML(chartConfig.id, `<p class="text-muted small text-center p-3">${lang === 'de' ? `Keine validen Vergleichsdaten für Chart (${getKollektivDisplayName(kolId)}).` : `No valid comparison data for chart (${getKollektivDisplayName(kolId)}).`}</p>`);
                             }
                         } else {
-                             let reason = "Unvollständige Basisdaten";
-                             if (!asStats) reason = "AS Statistiken fehlen";
-                             else if (!bfStatsForChart) reason = `BF Statistiken für Metrik '${currentPublikationBfMetric}' fehlen`;
-                             else if (!bfDefForChart) reason = `BF Definition für Metrik '${currentPublikationBfMetric}' fehlt`;
-                            ui_helpers.updateElementHTML(chartConfig.id, `<p class="text-muted small text-center p-3">${reason} für Vergleichschart (${getKollektivDisplayName(kolId)}).</p>`);
+                             let reason = lang === 'de' ? "Unvollständige Basisdaten" : "Incomplete base data";
+                             if (!asStats) reason = lang === 'de' ? "AS Statistiken fehlen" : "AS statistics missing";
+                             else if (!bfStatsForChart) reason = lang === 'de' ? `BF Statistiken für Metrik '${currentPublikationBfMetric}' fehlen` : `BF statistics for metric '${currentPublikationBfMetric}' missing`;
+                             else if (!bfDefForChart) reason = lang === 'de' ? `BF Definition für Metrik '${currentPublikationBfMetric}' fehlt` : `BF definition for metric '${currentPublikationBfMetric}' missing`;
+                            ui_helpers.updateElementHTML(chartConfig.id, `<p class="text-muted small text-center p-3">${reason} ${lang === 'de' ? 'für Vergleichschart' : 'for comparison chart'} (${getKollektivDisplayName(kolId)}).</p>`);
                         }
                     } else if (chartElement) {
-                         ui_helpers.updateElementHTML(chartConfig.id, `<p class="text-muted small text-center p-3">Keine Daten für ${getKollektivDisplayName(kolId)}.</p>`);
+                         ui_helpers.updateElementHTML(chartConfig.id, `<p class="text-muted small text-center p-3">${lang === 'de' ? 'Keine Daten für' : 'No data for'} ${getKollektivDisplayName(kolId)}.</p>`);
                     }
                 });
             }
