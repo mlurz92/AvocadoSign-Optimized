@@ -32,10 +32,10 @@ const UI_TEXTS = {
             en: 'English'
         },
         sectionLabels: {
+            einleitung: 'Einleitung',
             methoden: 'Methoden',
             ergebnisse: 'Ergebnisse',
             diskussion: 'Diskussion',
-            einleitung: 'Einleitung',
             abstract: 'Abstract',
             referenzen: 'Referenzen'
         },
@@ -135,7 +135,7 @@ const UI_TEXTS = {
                 <li><strong>Kollektiv-Auswahl (Header):</strong> Wählen Sie hier das globale Patientenkollektiv (Gesamt, Direkt OP, nRCT). Diese Auswahl beeinflusst alle Analysen und Darstellungen.</li>
                 <li><strong>Tab-Navigation:</strong> Wechseln Sie zwischen den Hauptfunktionen (Daten, Auswertung, Statistik, etc.).</li>
                 <li><strong>Tooltips:</strong> Fahren Sie mit der Maus über Elemente für detaillierte Erklärungen.</li>
-                <li><strong>Statistische Signifikanz:</strong> p-Werte werden mit Symbolen versehen: * p < 0.05, ** p < 0.01, *** p < 0.001. Das Signifikanzniveau ist α = ${APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL}.</li>
+                <li><strong>Statistische Signifikanz:</strong> p-Werte werden mit Symbolen versehen: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Das Signifikanzniveau ist &alpha; = ${formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL, 2).replace('.',',')}.</li>
             </ul>
             <h6>Wichtige Tabs:</h6>
             <ul>
@@ -149,7 +149,7 @@ const UI_TEXTS = {
                 </li>
                 <li><strong>Statistik:</strong> Detaillierte statistische Analysen. Wählen Sie "Einzelansicht" oder "Vergleich Aktiv" für Kollektivvergleiche. Konfidenzintervalle (CI) sind 95%-CIs.</li>
                 <li><strong>Präsentation:</strong> Aufbereitete Ergebnisse, ideal für Vorträge.</li>
-                <li><strong>Publikation:</strong> Generiert Textvorschläge und Materialien für eine wissenschaftliche Publikation.</li>
+                <li><strong>Publikation:</strong> Generiert Textvorschläge und Materialien für eine wissenschaftliche Publikation zum Vergleich von Avocado Sign mit verschiedenen T2-Kriteriensets.</li>
                 <li><strong>Export:</strong> Lädt Analyseergebnisse und Daten herunter.</li>
             </ul>
              <h6>T2-Kriterien Anwendung:</h6>
@@ -176,7 +176,7 @@ const TOOLTIP_CONTENT = {
         auswertung: "Zentraler Tab zur Definition von T2-Kriterien, Anzeige eines deskriptiven Dashboards, Durchführung der Brute-Force-Optimierung und detaillierte Auswertungsergebnisse pro Patient basierend auf den angewendeten Kriterien.",
         statistik: "Bietet detaillierte statistische Analysen (Gütekriterien, Vergleiche, Assoziationen) für das global gewählte Kollektiv oder einen Vergleich zweier spezifisch wählbarer Kollektive. Alle Konfidenzintervalle (CI) sind 95%-CIs.",
         praesentation: "Stellt Analyseergebnisse in einem aufbereiteten, präsentationsfreundlichen Format dar, fokussiert auf den Vergleich des Avocado Signs mit T2-basierten Ansätzen (angewandt oder Literatur).",
-        publikation: "Generiert Textvorschläge und Materialien für eine wissenschaftliche Publikation zum Vergleich von Avocado Sign mit verschiedenen T2-Kriteriensets.",
+        publikation: "Generiert Textvorschläge und Materialien für eine wissenschaftliche Publikation zum Vergleich von Avocado Sign mit verschiedenen T2-Kriteriensets. Die generierten Texte und Elemente orientieren sich an den Anforderungen des Journals 'Radiology'.",
         export: "Bietet umfangreiche Optionen zum Herunterladen von Rohdaten, Analyseergebnissen, Tabellen und Diagrammen in verschiedenen Dateiformaten.",
         moreTabsDropdown: "Weitere Tabs anzeigen."
     },
@@ -345,23 +345,13 @@ const TOOLTIP_CONTENT = {
     publikationTabTooltips: {
         spracheSwitch: { description: "Wechselt die Sprache der generierten Texte und einiger Beschriftungen im Publikation-Tab zwischen Deutsch und Englisch." },
         sectionSelect: { description: "Wählen Sie den Abschnitt der wissenschaftlichen Publikation, für den Textvorschläge und relevante Daten/Grafiken angezeigt werden sollen." },
-        bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, deren Brute-Force-Optimierungsergebnisse im Ergebnisteil angezeigt werden sollen. Standardtexte beziehen sich meist auf die Default-Optimierungsmetrik (Balanced Accuracy)." },
-        methoden: {
-            studienanlage: "Textvorschlag und Informationen zu Studiendesign, Ethik und Software.",
-            patientenkohorte: "Textvorschlag und Informationen zum Patientenkollektiv und der Datenbasis.",
-            mrtProtokoll: "Textvorschlag und Informationen zum MRT-Protokoll und Kontrastmittel.",
-            asDefinition: "Textvorschlag und Informationen zur Definition und Bewertung des Avocado Signs.",
-            t2Definition: "Textvorschlag und Informationen zur Definition und Bewertung der T2-Kriterien (Literatur, Brute-Force optimiert).",
-            referenzstandard: "Textvorschlag und Informationen zum Referenzstandard (Histopathologie).",
-            statistischeAnalyse: "Textvorschlag und Informationen zu den statistischen Analysemethoden."
-        },
-        ergebnisse: {
-            patientencharakteristika: "Textvorschlag und relevante Tabellen/Diagramme zu den Patientencharakteristika.",
-            asPerformance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte des Avocado Signs.",
-            literaturT2Performance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Literatur-basierten T2-Kriterien.",
-            optimierteT2Performance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Brute-Force optimierten T2-Kriterien.",
-            vergleichPerformance: "Textvorschlag und relevante Tabellen/Diagramme zum statistischen Vergleich der diagnostischen Güte zwischen Avocado Sign und den T2-Kriteriensets."
-        }
+        bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, deren Brute-Force-Optimierungsergebnisse im Ergebnisteil der Publikationstexte verwendet werden sollen. Standardtexte beziehen sich meist auf die Default-Optimierungsmetrik (Balanced Accuracy)." },
+        einleitung: { description: "Zeigt Textvorschläge für die Einleitung der Publikation." },
+        methoden: { description: "Zeigt Textvorschläge für den Methodenteil der Publikation." },
+        ergebnisse: { description: "Zeigt Textvorschläge für den Ergebnisteil der Publikation, inklusive Tabellen und Diagramme." },
+        diskussion: { description: "Zeigt Textvorschläge für die Diskussion der Publikation." },
+        abstract: { description: "Zeigt einen Vorschlag für das Abstract der Publikation." },
+        referenzen: { description: "Zeigt eine Liste der im Text verwendeten Hauptreferenzen." }
     },
     statMetrics: {
         sens: { name: "Sensitivität", description: "Sensitivität ([METHODE] vs. N): Anteil der tatsächlich positiven Fälle (N+), die durch die Methode [METHODE] korrekt als positiv erkannt wurden.<br><i>Formel: RP / (RP + FN)</i>", interpretation: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N+ Patienten korrekt (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV].<hr><i>Bei kleinen Fallzahlen für RP oder FN ist das CI ggf. sehr breit.</i>"},
