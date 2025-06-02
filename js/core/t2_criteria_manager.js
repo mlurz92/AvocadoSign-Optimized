@@ -1,21 +1,22 @@
 const t2CriteriaManager = (() => {
     let currentT2Criteria = null;
     let appliedT2Criteria = null;
-    let currentT2Logic = APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC;
-    let appliedT2Logic = APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC;
+    let currentT2Logic = null;
+    let appliedT2Logic = null;
     let isCriteriaUnsaved = false;
+
+    function getDefaultT2Criteria() {
+        return cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DEFAULT_T2_CRITERIA);
+    }
 
     function initializeT2CriteriaState() {
         const savedCriteria = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS_T2.APPLIED_CRITERIA);
         const savedLogic = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS_T2.APPLIED_LOGIC);
         const defaultCriteriaObject = getDefaultT2Criteria();
+        const defaultLogicValue = APP_CONFIG.DEFAULT_SETTINGS.DEFAULT_T2_LOGIC;
 
         appliedT2Criteria = deepMerge(cloneDeep(defaultCriteriaObject), savedCriteria || {});
-        appliedT2Logic = (savedLogic === 'UND' || savedLogic === 'ODER' || savedLogic === 'KOMBINIERT') ? savedLogic : defaultCriteriaObject.logic;
-        if (typeof appliedT2Criteria.logic === 'undefined' && (appliedT2Logic === 'UND' || appliedT2Logic === 'ODER' || appliedT2Logic === 'KOMBINIERT')) {
-            appliedT2Criteria.logic = appliedT2Logic;
-        }
-
+        appliedT2Logic = (savedLogic === 'UND' || savedLogic === 'ODER' || savedLogic === 'KOMBINIERT') ? savedLogic : defaultLogicValue;
 
         currentT2Criteria = cloneDeep(appliedT2Criteria);
         currentT2Logic = appliedT2Logic;
@@ -124,7 +125,7 @@ const t2CriteriaManager = (() => {
     function resetCurrentT2Criteria() {
         const defaultCriteria = getDefaultT2Criteria();
         currentT2Criteria = cloneDeep(defaultCriteria);
-        currentT2Logic = defaultCriteria.logic;
+        currentT2Logic = APP_CONFIG.DEFAULT_SETTINGS.DEFAULT_T2_LOGIC;
         isCriteriaUnsaved = true;
     }
 
@@ -310,6 +311,7 @@ const t2CriteriaManager = (() => {
              return dataset.map(p => {
                  const pCopy = cloneDeep(p);
                  pCopy.t2 = null;
+                 pCopy.t2_status_patient = null;
                  pCopy.anzahl_t2_plus_lk = 0;
                  pCopy.lymphknoten_t2_bewertet = (pCopy.lymphknoten_t2 || []).map(lk => ({...cloneDeep(lk), isPositive: false, checkResult: {}}));
                  return pCopy;
@@ -321,20 +323,14 @@ const t2CriteriaManager = (() => {
             const patientCopy = cloneDeep(patient);
             const { t2Status, positiveLKCount, bewerteteLK } = applyT2CriteriaToPatient(patientCopy, criteria, logic);
             patientCopy.t2 = t2Status;
-            patientCopy.t2_status_patient = t2Status === '+' ? 1 : (t2Status === '-' ? 0 : null); // Fügt t2_status_patient hinzu
+            patientCopy.t2_status_patient = t2Status === '+' ? 1 : (t2Status === '-' ? 0 : null);
             patientCopy.anzahl_t2_plus_lk = positiveLKCount;
             patientCopy.lymphknoten_t2_bewertet = bewerteteLK;
             return patientCopy;
         }).filter(p => p !== null);
     }
-    
+
     function initialize(mainAppInterface) {
-        // Diese Funktion wird von main.js aufgerufen,
-        // aber der interne State wird bereits durch initializeT2CriteriaState() oben im IIFE gesetzt.
-        // Man könnte die Logik von initializeT2CriteriaState() hierher verschieben, um die Abhängigkeit
-        // vom Zeitpunkt des APP_CONFIG Ladens expliziter zu machen.
-        // Für die Behebung des aktuellen Fehlers ist dies aber nicht zwingend notwendig,
-        // da der Fehler im Key-Namen liegt.
     }
 
 
