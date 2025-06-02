@@ -70,7 +70,7 @@ const viewRenderer = (() => {
     function _showRenderError(tabId, specificError) {
         const tabPane = document.getElementById(`${tabId}-pane`);
         const errorMessage = specificError && specificError.message ? specificError.message : 'Unbekannter Fehler.';
-        const errorStack = specificError && specificError.stack ? `<pre class="small mt-2">${specificError.stack}</pre>` : '<pre class="small mt-2">Kein Stacktrace verfügbar.</pre>';
+        const errorStack = specificError && specificError.stack ? `<pre class="small mt-2">${String(specificError.stack).replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>` : '<pre class="small mt-2">Kein Stacktrace verfügbar.</pre>';
         const fullErrorMessage = `<div class="alert alert-danger m-3" role="alert"><strong>Fehler beim Rendern des Tabs '${tabId}'!</strong><br>${errorMessage}${errorStack}</div>`;
 
         if (tabPane) {
@@ -101,7 +101,7 @@ const viewRenderer = (() => {
 
     function _renderDatenTab(data, stateSnapshot) {
         if (typeof dataTabLogic !== 'undefined' && typeof dataTabLogic.initializeTab === 'function') {
-            const sortState = stateSnapshot.datenSortState || (typeof state !== 'undefined' ? state.getCurrentDatenSortState() : { key: 'nr', direction: 'asc', subKey: null });
+            const sortState = stateSnapshot.datenSortState || { key: 'nr', direction: 'asc', subKey: null };
             dataTabLogic.initializeTab(data, sortState);
         } else {
             const error = new Error("dataTabLogic oder dataTabLogic.initializeTab ist nicht definiert.");
@@ -114,7 +114,7 @@ const viewRenderer = (() => {
         if (typeof auswertungTabLogic !== 'undefined' && typeof auswertungTabLogic.initializeTab === 'function') {
             const bfManager = _mainAppInterface.getBruteForceManager();
             const workerAvailable = bfManager && typeof bfManager.isWorkerAvailable === 'function' ? bfManager.isWorkerAvailable() : false;
-            const sortState = stateSnapshot.auswertungSortState || (typeof state !== 'undefined' ? state.getCurrentAuswertungSortState() : { key: 'nr', direction: 'asc', subKey: null });
+            const sortState = stateSnapshot.auswertungSortState || { key: 'nr', direction: 'asc', subKey: null };
 
             auswertungTabLogic.initializeTab(
                 data,
@@ -122,7 +122,7 @@ const viewRenderer = (() => {
                 stateSnapshot.appliedT2Criteria,
                 stateSnapshot.appliedT2Logic,
                 sortState,
-                stateSnapshot.bruteForceResults.status || 'idle',
+                stateSnapshot.bruteForceResults?.status || 'idle',
                 stateSnapshot.bruteForceResults,
                 workerAvailable
             );
@@ -216,11 +216,12 @@ const viewRenderer = (() => {
                  } else if (!_isInitialized) {
                       console.warn("ViewRenderer Nachinitialisierung versuchte, aber UI Helpers nicht verfügbar.");
                  }
+                 _isInitialized = true; 
             } else {
                 console.error("ViewRenderer nicht initialisiert. MainAppInterface fehlt beim Aufruf von renderTabContent.");
                 _showRenderError(tabId, new Error("ViewRenderer ist nicht initialisiert."));
                 if (typeof _mainAppInterface !== 'undefined' && _mainAppInterface && typeof _mainAppInterface.hideLoadingOverlay === 'function') {
-                    _mainAppInterface.hideLoadingOverlay();
+                     _mainAppInterface.hideLoadingOverlay();
                 } else {
                      const loadingOverlay = document.getElementById('loading-overlay');
                      if (loadingOverlay) loadingOverlay.style.display = 'none';
@@ -271,11 +272,19 @@ const viewRenderer = (() => {
                         _showRenderError(tabId, unknownTabError);
                 }
             } catch (error) {
-                console.error(`Fehler beim Rendern von Tab ${tabId} (innerhalb setTimeout):`, error);
+                console.error(`Fehler beim Rendern von Tab ${tabId} (innerhalb setTimeout):`, error, error.stack);
                 _showRenderError(tabId, error);
             } finally {
-                if (_mainAppInterface && typeof _mainAppInterface.hideLoadingOverlay === 'function') {
-                    _mainAppInterface.hideLoadingOverlay();
+                 let hideLoadingFunc = null;
+                 if (_mainAppInterface && typeof _mainAppInterface.getUiHelpers === 'function' && _mainAppInterface.getUiHelpers() && typeof _mainAppInterface.getUiHelpers().hideLoadingOverlay === 'function') {
+                     hideLoadingFunc = _mainAppInterface.getUiHelpers().hideLoadingOverlay;
+                 } else if (typeof _mainAppInterface !== 'undefined' && _mainAppInterface && typeof _mainAppInterface.hideLoadingOverlay === 'function') { // Fallback, if hideLoadingOverlay is directly on mainAppInterface
+                     hideLoadingFunc = _mainAppInterface.hideLoadingOverlay;
+                 } else if (typeof hideLoadingOverlay === 'function') { // Global fallback, should not happen
+                      hideLoadingFunc = hideLoadingOverlay;
+                 }
+                if (hideLoadingFunc) {
+                     hideLoadingFunc();
                 } else {
                     const loadingOverlay = document.getElementById('loading-overlay');
                     if (loadingOverlay) loadingOverlay.style.display = 'none';
