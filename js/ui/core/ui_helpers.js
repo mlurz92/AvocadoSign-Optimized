@@ -3,18 +3,12 @@ const ui_helpers = (() => {
     let globalTippyInstances = [];
     let collapseEventListenersAttached = new Set();
     let kurzanleitungModalInstance = null;
-    let initialTabRenderFixed = false; // Wird in showKurzanleitung verwendet
+    let initialTabRenderFixed = false;
 
-    function escapeHTML(unsafeText) {
-        if (typeof unsafeText !== 'string') {
-            return unsafeText === null || unsafeText === undefined ? '' : String(unsafeText);
-        }
-        return unsafeText
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+    function escapeMarkdown(text) { // Umbenannt von escapeHTML zurück zu escapeMarkdown
+        if (typeof text !== 'string' || text === null) return text === null ? '' : String(text);
+        const map = { '\\': '\\\\', '`': '\\`', '*': '\\*', '_': '\\_', '{': '\\{', '}': '\\}', '[': '\\[', ']': '\\]', '(': '\\(', ')': '\\)', '#': '\\#', '+': '\\+', '-': '\\-', '.': '\\.', '!': '\\!', '|': '\\|' };
+        return text.replace(/[\\`*_{}[\]()#+\-.!|]/g, match => map[match] || match);
     }
 
     function showToast(message, type = 'info', duration = (typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.UI_SETTINGS.TOAST_DURATION_MS : 4000)) {
@@ -38,7 +32,7 @@ const ui_helpers = (() => {
           toastElement.setAttribute('data-bs-delay', String(duration));
           toastElement.setAttribute('data-bs-autohide', 'true');
 
-          toastElement.innerHTML = `<div class="d-flex"><div class="toast-body"><i class="fas ${iconClass} fa-fw me-2"></i> ${escapeHTML(String(message))}</div><button type="button" class="btn-close me-2 m-auto ${textClass === 'text-white' ? 'btn-close-white' : ''}" data-bs-dismiss="toast" aria-label="Schließen"></button></div>`;
+          toastElement.innerHTML = `<div class="d-flex"><div class="toast-body"><i class="fas ${iconClass} fa-fw me-2"></i> ${escapeMarkdown(String(message))}</div><button type="button" class="btn-close me-2 m-auto ${textClass === 'text-white' ? 'btn-close-white' : ''}" data-bs-dismiss="toast" aria-label="Schließen"></button></div>`;
           toastContainer.appendChild(toastElement);
 
           try {
@@ -261,7 +255,7 @@ const ui_helpers = (() => {
         const tooltipContentBase = (TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll || 'Alle Details ein-/ausblenden');
         const currentTooltipText = expand ? tooltipContentBase.replace('ein-', 'aus-').replace('anzeigen', 'ausblenden') : tooltipContentBase.replace('aus-', 'ein-').replace('ausblenden', 'anzeigen');
 
-        updateElementHTML(buttonId, `${escapeHTML(buttonText)} <i class="fas ${iconClass} ms-1"></i>`);
+        updateElementHTML(buttonId, `${escapeMarkdown(buttonText)} <i class="fas ${iconClass} ms-1"></i>`);
         button.setAttribute('data-tippy-content', currentTooltipText);
         if(button._tippy) { button._tippy.setContent(currentTooltipText); } else { initializeTooltips(button.parentElement || button); }
     }
@@ -348,7 +342,7 @@ const ui_helpers = (() => {
                 svgContent = unknownIconSVG;
         }
         const valueClass = (value !== null && typeof value === 'string') ? `icon-value-${value.replace(/\s+/g, '-').toLowerCase()}` : 'icon-value-unknown';
-        return `<svg class="icon-t2 icon-${type} ${valueClass} ${extraClass}" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeHTML(String(type))}: ${escapeHTML(String(value)) || 'unbekannt'}">${svgContent}</svg>`;
+        return `<svg class="icon-t2 icon-${type} ${valueClass} ${extraClass}" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${escapeMarkdown(String(type))}: ${escapeMarkdown(String(value)) || 'unbekannt'}">${svgContent}</svg>`;
     }
 
     function updateT2CriteriaControlsUI(currentCriteria, currentLogic) {
@@ -522,7 +516,7 @@ const ui_helpers = (() => {
             if(el && TOOLTIP_CONTENT && TOOLTIP_CONTENT[contentKey]) {
                 let content = TOOLTIP_CONTENT[contentKey]?.description || '';
                 Object.keys(replacements).forEach(placeholder => {
-                    content = content.replace(new RegExp(`\\[${placeholder}\\]`, 'g'), `<strong>${escapeHTML(String(replacements[placeholder]))}</strong>`);
+                    content = content.replace(new RegExp(`\\[${placeholder}\\]`, 'g'), `<strong>${escapeMarkdown(String(replacements[placeholder]))}</strong>`);
                 });
                 el.setAttribute('data-tippy-content', content);
                 if(el._tippy && el._tippy.setContent) { el._tippy.setContent(content); } else { initializeTooltips(el.parentElement || el); }
@@ -540,7 +534,7 @@ const ui_helpers = (() => {
                 let statusMsg = '';
                 if (stateValue === 'idle') statusMsg = workerAvailable ? 'Bereit.' : 'Worker nicht verfügbar.';
                 else if (stateValue === 'cancelled') statusMsg = 'Abgebrochen.';
-                else if (stateValue === 'error') statusMsg = `Fehler: ${escapeHTML(String(data?.message || data?.error || 'Unbekannt.'))}`;
+                else if (stateValue === 'error') statusMsg = `Fehler: ${escapeMarkdown(String(data?.message || data?.error || 'Unbekannt.'))}`;
                 if (elements.statusText) updateElementText(elements.statusText.id, statusMsg);
                 if (bfInfoElement && TOOLTIP_CONTENT.bruteForceInfo) addOrUpdateTooltip(bfInfoElement, 'bruteForceInfo', { KOLLEKTIV_NAME: getKollektivNameFunc(kollektivToDisplayForInfo), STATUS_TEXT: statusMsg });
                 break;
@@ -636,12 +630,12 @@ const ui_helpers = (() => {
 
         if (!resultsData || resultsData.status === 'nodata' || !resultsData.results || resultsData.results.length === 0) {
             modalTitle.textContent = `Brute-Force Optimierungsergebnisse (${getKollektivDisplayName(currentKollektiv)})`;
-            modalBody.innerHTML = `<p class="text-muted p-3">${escapeHTML(String(resultsData.message || 'Keine detaillierten Ergebnisse für diese Optimierung verfügbar.'))}</p>`;
+            modalBody.innerHTML = `<p class="text-muted p-3">${escapeMarkdown(String(resultsData.message || 'Keine detaillierten Ergebnisse für diese Optimierung verfügbar.'))}</p>`;
             return;
         }
         
         const metricForTitle = resultsData.metric || resultsData.bestResult?.metric || 'Ausgewählte Metrik';
-        modalTitle.textContent = `Top Brute-Force Ergebnisse für ${escapeHTML(String(metricForTitle))} (${getKollektivDisplayName(resultsData.kollektiv || currentKollektiv)})`;
+        modalTitle.textContent = `Top Brute-Force Ergebnisse für ${escapeMarkdown(String(metricForTitle))} (${getKollektivDisplayName(resultsData.kollektiv || currentKollektiv)})`;
         
         if (typeof uiComponents !== 'undefined' && typeof uiComponents.createBruteForceModalContent === 'function') {
             modalBody.innerHTML = uiComponents.createBruteForceModalContent(resultsData);
@@ -722,10 +716,21 @@ const ui_helpers = (() => {
         }
     }
 
+    function getPValueText(pValue, lang = null) {
+        const appConfig = typeof APP_CONFIG !== 'undefined' ? APP_CONFIG : { DEFAULT_SETTINGS: { DEFAULT_PUBLIKATION_LANG: 'de' }, STATISTICAL_CONSTANTS: { P_VALUE_PRECISION_TEXT: 3, P_VALUE_THRESHOLD_LESS_THAN: 0.001 }};
+        const effectiveLang = lang || appConfig.DEFAULT_SETTINGS.DEFAULT_PUBLIKATION_LANG;
+        const pValuePrecision = appConfig.STATISTICAL_CONSTANTS.P_VALUE_PRECISION_TEXT;
+        const pValueThresholdLessThan = appConfig.STATISTICAL_CONSTANTS.P_VALUE_THRESHOLD_LESS_THAN;
+
+        if (pValue === null || pValue === undefined || isNaN(pValue)) return '--';
+        if (pValue < pValueThresholdLessThan) return `<${formatNumber(pValueThresholdLessThan, pValuePrecision, '', true, effectiveLang)}`;
+        return formatNumber(pValue, pValuePrecision, '--', true, effectiveLang);
+    }
+
     function getMetricDescriptionHTML(key, methode = '') {
-       if (typeof TOOLTIP_CONTENT === 'undefined') return escapeHTML(String(key));
-       const desc = TOOLTIP_CONTENT?.statMetrics?.[key]?.description || escapeHTML(String(key));
-       return desc.replace(/\[METHODE\]/g, `<strong>${escapeHTML(String(methode))}</strong>`);
+       if (typeof TOOLTIP_CONTENT === 'undefined') return escapeMarkdown(String(key));
+       const desc = TOOLTIP_CONTENT?.statMetrics?.[key]?.description || escapeMarkdown(String(key));
+       return desc.replace(/\[METHODE\]/g, `<strong>${escapeMarkdown(String(methode))}</strong>`);
     }
 
     function getMetricInterpretationHTML(key, metricData, methode = '', kollektivName = '', lang = null) {
@@ -755,13 +760,13 @@ const ui_helpers = (() => {
         }
 
         let interpretation = interpretationTemplate
-            .replace(/\[METHODE\]/g, `<strong>${escapeHTML(String(methode))}</strong>`)
+            .replace(/\[METHODE\]/g, `<strong>${escapeMarkdown(String(methode))}</strong>`)
             .replace(/\[WERT\]/g, `<strong>${isPercent ? formatPercent(data?.value, digits, na) : valueStr}</strong>`)
             .replace(/\[LOWER\]/g, `<strong>${isPercent ? formatPercent(data?.ci?.lower, digits, na) : lowerStr}</strong>`)
             .replace(/\[UPPER\]/g, `<strong>${isPercent ? formatPercent(data?.ci?.upper, digits, na) : upperStr}</strong>`)
-            .replace(/\[METHOD_CI\]/g, `<em>${escapeHTML(String(ciMethodStr))}</em>`)
-            .replace(/\[KOLLEKTIV\]/g, `<strong>${escapeHTML(String(kollektivNameToUse))}</strong>`)
-            .replace(/\[BEWERTUNG\]/g, `<strong>${escapeHTML(String(bewertungStr))}</strong>`);
+            .replace(/\[METHOD_CI\]/g, `<em>${escapeMarkdown(String(ciMethodStr))}</em>`)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${escapeMarkdown(String(kollektivNameToUse))}</strong>`)
+            .replace(/\[BEWERTUNG\]/g, `<strong>${escapeMarkdown(String(bewertungStr))}</strong>`);
 
         if (lowerStr === na || upperStr === na || ciMethodStr === na || !data?.ci) {
              interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
@@ -774,9 +779,9 @@ const ui_helpers = (() => {
     }
 
     function getTestDescriptionHTML(key, t2ShortName = 'T2') {
-        if (typeof TOOLTIP_CONTENT === 'undefined') return escapeHTML(String(key));
-        const desc = TOOLTIP_CONTENT?.statMetrics?.[key]?.description || escapeHTML(String(key));
-        return desc.replace(/\[T2_SHORT_NAME\]/g, `<strong>${escapeHTML(String(t2ShortName))}</strong>`);
+        if (typeof TOOLTIP_CONTENT === 'undefined') return escapeMarkdown(String(key));
+        const desc = TOOLTIP_CONTENT?.statMetrics?.[key]?.description || escapeMarkdown(String(key));
+        return desc.replace(/\[T2_SHORT_NAME\]/g, `<strong>${escapeMarkdown(String(t2ShortName))}</strong>`);
     }
 
     function getTestInterpretationHTML(key, testData, kollektivName = '', t2ShortName = 'T2', methodeName = '', metricName = '', lang = null) {
@@ -800,13 +805,13 @@ const ui_helpers = (() => {
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
-            .replace(/\[KOLLEKTIV\]/g, `<strong>${escapeHTML(String(kollektivNameToUse))}</strong>`)
-            .replace(/\[KOLLEKTIV1\]/g, `<strong>${escapeHTML(String(kollektivNameToUse))}</strong>`)
-            .replace(/\[KOLLEKTIV2\]/g, `<strong>${escapeHTML(String(t2ShortName))}</strong>`)
-            .replace(/\[T2_SHORT_NAME\]/g, `<strong>${escapeHTML(String(t2ShortName))}</strong>`)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${escapeMarkdown(String(kollektivNameToUse))}</strong>`)
+            .replace(/\[KOLLEKTIV1\]/g, `<strong>${escapeMarkdown(String(kollektivNameToUse))}</strong>`)
+            .replace(/\[KOLLEKTIV2\]/g, `<strong>${escapeMarkdown(String(t2ShortName))}</strong>`)
+            .replace(/\[T2_SHORT_NAME\]/g, `<strong>${escapeMarkdown(String(t2ShortName))}</strong>`)
             .replace(/\[ALPHA_LEVEL\]/g, alphaLevelText)
-            .replace(/\[METHODE_NAME\]/g, `<strong>${escapeHTML(String(methodeName))}</strong>`)
-            .replace(/\[METRIC_NAME\]/g, `<strong>${escapeHTML(String(metricName))}</strong>`);
+            .replace(/\[METHODE_NAME\]/g, `<strong>${escapeMarkdown(String(methodeName))}</strong>`)
+            .replace(/\[METRIC_NAME\]/g, `<strong>${escapeMarkdown(String(metricName))}</strong>`);
         
         if (key === 'cohortComparison') {
              const pValuePrecision = APP_CONFIG?.STATISTICAL_CONSTANTS?.P_VALUE_PRECISION_TEXT || 3;
@@ -868,23 +873,23 @@ const ui_helpers = (() => {
                  .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
                  .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
                  .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
-                 .replace(/\[MERKMAL\]/g, `<strong>'${escapeHTML(String(merkmalName))}'</strong>`)
-                 .replace(/\[VARIABLE\]/g, `<strong>'${escapeHTML(String(merkmalName))}'</strong>`)
-                 .replace(/\[KOLLEKTIV\]/g, `<strong>${escapeHTML(String(kollektivNameToUse))}</strong>`)
+                 .replace(/\[MERKMAL\]/g, `<strong>'${escapeMarkdown(String(merkmalName))}'</strong>`)
+                 .replace(/\[VARIABLE\]/g, `<strong>'${escapeMarkdown(String(merkmalName))}'</strong>`)
+                 .replace(/\[KOLLEKTIV\]/g, `<strong>${escapeMarkdown(String(kollektivNameToUse))}</strong>`)
                  .replace(/\[ALPHA_LEVEL_FORMATTED\]/g, formatNumber(APP_CONFIG?.STATISTICAL_CONSTANTS?.SIGNIFICANCE_LEVEL || 0.05, 2).replace('.',','))
                  .replace(/<hr.*?>.*$/, '');
         }
 
         let interpretation = interpretationTemplate
-            .replace(/\[MERKMAL\]/g, `<strong>'${escapeHTML(String(merkmalName))}'</strong>`)
+            .replace(/\[MERKMAL\]/g, `<strong>'${escapeMarkdown(String(merkmalName))}'</strong>`)
             .replace(/\[WERT\]/g, `<strong>${valueStr}${key === 'rd' && valueStr !== na ? '%' : ''}</strong>`)
             .replace(/\[LOWER\]/g, `<strong>${lowerStr}${key === 'rd' && lowerStr !== na ? '%' : ''}</strong>`)
             .replace(/\[UPPER\]/g, `<strong>${upperStr}${key === 'rd' && upperStr !== na ? '%' : ''}</strong>`)
-            .replace(/\[METHOD_CI\]/g, `<em>${escapeHTML(String(ciMethodStr))}</em>`)
-            .replace(/\[KOLLEKTIV\]/g, `<strong>${escapeHTML(String(kollektivNameToUse))}</strong>`)
+            .replace(/\[METHOD_CI\]/g, `<em>${escapeMarkdown(String(ciMethodStr))}</em>`)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${escapeMarkdown(String(kollektivNameToUse))}</strong>`)
             .replace(/\[FAKTOR_TEXT\]/g, UI_TEXTS?.statMetrics?.orFaktorTexte?.[(assocObj?.oddsRatio?.value || assocObj?.or?.value) > 1 ? 'ERHOEHT' : ((assocObj?.oddsRatio?.value || assocObj?.or?.value) < 1 && (assocObj?.oddsRatio?.value || assocObj?.or?.value) > 0 ? 'VERRINGERT' : 'UNVERAENDERT')] || '')
             .replace(/\[HOEHER_NIEDRIGER\]/g, UI_TEXTS?.statMetrics?.rdRichtungTexte?.[assocObj?.rd?.value > 0 ? 'HOEHER' : (assocObj?.rd?.value < 0 ? 'NIEDRIGER' : 'GLEICH')] || '')
-            .replace(/\[BEWERTUNG\]/g, `<strong>${escapeHTML(String(bewertungStr))}</strong>`)
+            .replace(/\[BEWERTUNG\]/g, `<strong>${escapeMarkdown(String(bewertungStr))}</strong>`)
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/<hr.*?>.*$/, '');
@@ -916,8 +921,8 @@ const ui_helpers = (() => {
         const modalTitleEl = modalElement.querySelector('.modal-title');
         const modalBodyEl = modalElement.querySelector('.modal-body');
 
-        if(modalTitleEl && UI_TEXTS?.kurzanleitung?.title) modalTitleEl.innerHTML = escapeHTML(UI_TEXTS.kurzanleitung.title);
-        if(modalBodyEl) modalBodyEl.innerHTML = kurzanleitungContent; // HTML content is allowed here
+        if(modalTitleEl && UI_TEXTS?.kurzanleitung?.title) modalTitleEl.innerHTML = escapeMarkdown(UI_TEXTS.kurzanleitung.title);
+        if(modalBodyEl) modalBodyEl.innerHTML = kurzanleitungContent;
 
         if (!kurzanleitungModalInstance) {
              if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
@@ -932,9 +937,14 @@ const ui_helpers = (() => {
             kurzanleitungModalInstance.show();
         }
     }
+    function hideLoadingOverlay() { // Explizit hinzugefügt, falls von main.js benötigt
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) overlay.style.display = 'none';
+    }
+
 
     return Object.freeze({
-        escapeHTML,
+        escapeMarkdown, // Wieder umbenannt
         showToast,
         initializeTooltips,
         updateElementText,
@@ -960,12 +970,14 @@ const ui_helpers = (() => {
         populateBruteForceModal,
         updateExportButtonStates,
         updatePublikationUI,
+        getPValueText, // Geändert, um `lang` Parameter zu akzeptieren
         getMetricDescriptionHTML,
         getMetricInterpretationHTML,
         getTestDescriptionHTML,
         getTestInterpretationHTML,
         getAssociationInterpretationHTML,
-        showKurzanleitung
+        showKurzanleitung,
+        hideLoadingOverlay
     });
 
 })();
