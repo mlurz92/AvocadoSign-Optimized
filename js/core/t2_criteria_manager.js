@@ -6,8 +6,8 @@ const t2CriteriaManager = (() => {
     let isCriteriaUnsaved = false;
 
     function initializeT2CriteriaState() {
-        const savedCriteria = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA);
-        const savedLogic = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC);
+        const savedCriteria = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS_T2.APPLIED_CRITERIA);
+        const savedLogic = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS_T2.APPLIED_LOGIC);
         const defaultCriteriaObject = getDefaultT2Criteria();
 
         appliedT2Criteria = deepMerge(cloneDeep(defaultCriteriaObject), savedCriteria || {});
@@ -21,6 +21,9 @@ const t2CriteriaManager = (() => {
         currentT2Logic = appliedT2Logic;
         isCriteriaUnsaved = false;
     }
+
+    initializeT2CriteriaState();
+
 
     function getCurrentT2Criteria() {
         return cloneDeep(currentT2Criteria);
@@ -61,10 +64,10 @@ const t2CriteriaManager = (() => {
             return false;
          }
          let isValidValue = true;
-         const allowedValuesKey = key.toUpperCase() + '_VALUES';
-         if (APP_CONFIG.T2_CRITERIA_SETTINGS.hasOwnProperty(allowedValuesKey)) {
-            isValidValue = APP_CONFIG.T2_CRITERIA_SETTINGS[allowedValuesKey].includes(value);
-         } else if (key !== 'size'){ // Size hat keine 'VALUES', sondern 'RANGE'
+         const valuesKey = key.toUpperCase() + '_VALUES';
+         if (APP_CONFIG.T2_CRITERIA_SETTINGS.hasOwnProperty(valuesKey)) {
+            isValidValue = APP_CONFIG.T2_CRITERIA_SETTINGS[valuesKey].includes(value);
+         } else if (key !== 'size'){
              isValidValue = false;
          }
 
@@ -121,16 +124,16 @@ const t2CriteriaManager = (() => {
     function resetCurrentT2Criteria() {
         const defaultCriteria = getDefaultT2Criteria();
         currentT2Criteria = cloneDeep(defaultCriteria);
-        currentT2Logic = defaultCriteria.logic; // Auch die Logik zurücksetzen
-        isCriteriaUnsaved = true; // Als ungespeichert markieren, da zurückgesetzt
+        currentT2Logic = defaultCriteria.logic;
+        isCriteriaUnsaved = true;
     }
 
     function applyCurrentT2Criteria() {
         appliedT2Criteria = cloneDeep(currentT2Criteria);
         appliedT2Logic = currentT2Logic;
 
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA, appliedT2Criteria);
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC, appliedT2Logic);
+        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS_T2.APPLIED_CRITERIA, appliedT2Criteria);
+        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS_T2.APPLIED_LOGIC, appliedT2Logic);
 
         isCriteriaUnsaved = false;
     }
@@ -167,7 +170,7 @@ const t2CriteriaManager = (() => {
             } else {
                  checkResult.size = false;
             }
-            // Für ESGAR-Logik (KOMBINIERT): 'size' selbst zählt nicht als 'suspicious feature'
+
         }
 
         if (criteria.form?.active) {
@@ -216,7 +219,7 @@ const t2CriteriaManager = (() => {
         let patientIsPositive = false;
         let positiveLKCount = 0;
         const bewerteteLK = [];
-        const activeCriteriaKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true && key !== 'size_9mm' && key !== 'size_5_8mm' && key !== 'size_less_5mm'); // ESGAR size keys sind special
+        const activeCriteriaKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true && key !== 'size_9mm' && key !== 'size_5_8mm' && key !== 'size_less_5mm');
 
         if (lymphNodes.length === 0 && logic !== 'KOMBINIERT' && activeCriteriaKeys.length > 0) {
             return { t2Status: '-', positiveLKCount: 0, bewerteteLK: [] };
@@ -240,7 +243,7 @@ const t2CriteriaManager = (() => {
             const checkResult = checkSingleLymphNode(lk, criteria);
             let lkIsPositive = false;
 
-            if (logic === 'KOMBINIERT') { // Spezielle ESGAR Logik
+            if (logic === 'KOMBINIERT') {
                 const nodeSize = lk.groesse;
                 if (typeof nodeSize === 'number' && !isNaN(nodeSize)) {
                     if (nodeSize >= (criteria.size_9mm?.threshold || 9.0)) {
@@ -255,16 +258,12 @@ const t2CriteriaManager = (() => {
                         }
                     }
                 }
-                // Muzinöse LK werden in Rutegard et al. 2025 (ESGAR Validierung) als "immer suspekt" behandelt.
-                // Dies ist hier nicht direkt als Kriterium in den `criteria` abgebildet, die `checkSingleLymphNode` erwartet.
-                // Für eine exakte ESGAR-Abbildung müsste dies hier oder in `checkSingleLymphNode` berücksichtigt werden,
-                // z.B. durch ein Flag `lk.istMuzinoes` und eine Prüfung darauf. Aktuell fehlt diese Information.
-                // Die bereitgestellte ESGAR-Definition in study_criteria_manager.js hat `signal: active: false`.
 
-            } else if (activeCriteriaKeys.length > 0) { // Standard UND/ODER Logik
+
+            } else if (activeCriteriaKeys.length > 0) {
                 if (logic === 'UND') {
                     lkIsPositive = activeCriteriaKeys.every(key => checkResult[key] === true);
-                } else { // ODER
+                } else {
                     lkIsPositive = activeCriteriaKeys.some(key => checkResult[key] === true);
                 }
             }
@@ -322,14 +321,25 @@ const t2CriteriaManager = (() => {
             const patientCopy = cloneDeep(patient);
             const { t2Status, positiveLKCount, bewerteteLK } = applyT2CriteriaToPatient(patientCopy, criteria, logic);
             patientCopy.t2 = t2Status;
+            patientCopy.t2_status_patient = t2Status === '+' ? 1 : (t2Status === '-' ? 0 : null); // Fügt t2_status_patient hinzu
             patientCopy.anzahl_t2_plus_lk = positiveLKCount;
             patientCopy.lymphknoten_t2_bewertet = bewerteteLK;
             return patientCopy;
         }).filter(p => p !== null);
     }
+    
+    function initialize(mainAppInterface) {
+        // Diese Funktion wird von main.js aufgerufen,
+        // aber der interne State wird bereits durch initializeT2CriteriaState() oben im IIFE gesetzt.
+        // Man könnte die Logik von initializeT2CriteriaState() hierher verschieben, um die Abhängigkeit
+        // vom Zeitpunkt des APP_CONFIG Ladens expliziter zu machen.
+        // Für die Behebung des aktuellen Fehlers ist dies aber nicht zwingend notwendig,
+        // da der Fehler im Key-Namen liegt.
+    }
+
 
     return Object.freeze({
-        initialize: initializeT2CriteriaState,
+        initialize,
         getCurrentCriteria: getCurrentT2Criteria,
         getAppliedCriteria: getAppliedT2Criteria,
         getCurrentLogic: getCurrentT2Logic,
@@ -342,8 +352,8 @@ const t2CriteriaManager = (() => {
         updateLogic: updateCurrentT2Logic,
         resetCriteria: resetCurrentT2Criteria,
         applyCriteria: applyCurrentT2Criteria,
-        checkSingleNode: checkSingleLymphNode, // Beibehalten für externe Nutzung, falls benötigt
-        evaluatePatient: applyT2CriteriaToPatient, // Umbenannt von checkSinglePatientT2Status, da es den ganzen Patienten evaluiert
+        checkSingleNode: checkSingleLymphNode,
+        evaluatePatient: applyT2CriteriaToPatient,
         evaluateDataset: evaluateDataset
     });
 })();
