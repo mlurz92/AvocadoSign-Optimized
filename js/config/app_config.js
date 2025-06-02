@@ -64,7 +64,8 @@ const APP_CONFIG = Object.freeze({
         ]),
         DEFAULT_CI_METHOD_PROPORTION: 'Wilson Score',
         DEFAULT_CI_METHOD_EFFECTSIZE: 'Bootstrap Percentile',
-        FISHER_EXACT_THRESHOLD: 5
+        FISHER_EXACT_THRESHOLD: 5,
+        CI_WARNING_SAMPLE_SIZE_THRESHOLD: 10
     }),
 
     T2_CRITERIA_SETTINGS: Object.freeze({
@@ -99,6 +100,9 @@ const APP_CONFIG = Object.freeze({
         TERTIARY_COLOR_GREEN: '#2ca02c',
         AS_COLOR: '#4472C4',
         T2_COLOR: '#E0DC2C',
+        COLOR_SCHEMES: Object.freeze({
+            default: Object.freeze(['#4472C4', '#E0DC2C', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'])
+        }),
         ANIMATION_DURATION_MS: 750,
         AXIS_LABEL_FONT_SIZE: '11px',
         TICK_LABEL_FONT_SIZE: '10px',
@@ -184,6 +188,20 @@ const APP_CONFIG = Object.freeze({
         APPLIED_CRITERIA_DISPLAY_NAME: 'Eingestellte T2 Kriterien',
         AVOCADO_SIGN_ID: 'avocado_sign',
         AVOCADO_SIGN_DISPLAY_NAME: 'Avocado Sign'
+    }),
+
+    REFERENCES_FOR_PUBLICATION: Object.freeze({
+        lurzSchaefer2025: "Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11462-y",
+        koh2008: "Koh DM, Chau I, Tait D, Wotherspoon A, Cunningham D, Brown G. Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. Int J Radiat Oncol Biol Phys. 2008;71(2):456-461. DOI: 10.1016/j.ijrobp.2007.10.016",
+        barbaro2024: "Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: A single center experience. Radiother Oncol. 2024;193:110124. DOI: 10.1016/j.radonc.2024.110124",
+        rutegard2025: "Rutegård MK, Båtsman M, Blomqvist L, et al. Evaluation of MRI characterisation of histopathologically matched lymph nodes and other mesorectal nodal structures in rectal cancer. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11361-2",
+        beetsTan2018ESGAR: "Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for clinical management of rectal cancer: updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. Eur Radiol. 2018;28(4):1465-1475. DOI: 10.1007/s00330-017-5026-2",
+        ethicsVoteNumber: "EK-allg-01/24-1",
+        lurzSchaefer2025StudyPeriod: "Januar 2020 und November 2023",
+        lurzSchaefer2025MRISystem: "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers, Erlangen, Deutschland)",
+        lurzSchaefer2025ContrastAgent: "Gadoteridol (ProHance; Bracco Imaging Deutschland GmbH, Konstanz, Deutschland)",
+        lurzSchaefer2025T2SliceThickness: "2-3 mm",
+        lurzSchaefer2025RadiologistExperience: ["29", "7", "19"]
     })
 });
 
