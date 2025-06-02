@@ -294,7 +294,7 @@ function getStatisticalSignificanceSymbol(pValue) {
     const significanceLevels = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS;
     const overallSignificanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL;
 
-    for (const level of significanceLevels) { // Bereits absteigend sortiert in APP_CONFIG
+    for (const level of significanceLevels) { 
         if (pValue < level.threshold) {
             return level.symbol;
         }
@@ -322,12 +322,11 @@ function getPValueText(pValue, lang = 'de') {
 
     if (pValue < pLessThanDisplayThreshold) {
         const thresholdStr = String(pLessThanDisplayThreshold).replace('.', lang === 'de' ? ',' : '.');
-        return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','0.')}`; // Ensure English uses dot
+        return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','0.')}`; 
     }
 
-    let pFormatted = formatNumber(pValue, displayPrecision, 'N/A', true); // useStandardFormat = true for consistent dot
+    let pFormatted = formatNumber(pValue, displayPrecision, 'N/A', true); 
     
-    // Spezieller Fall, wenn pValue sehr klein ist, aber durch formatNumber auf pLessThanDisplayThreshold gerundet wird
     if (pFormatted === formatNumber(pLessThanDisplayThreshold, displayPrecision, '', true) && pValue < pLessThanDisplayThreshold) {
         const thresholdStr = String(pLessThanDisplayThreshold).replace('.', lang === 'de' ? ',' : '.');
         return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','0.')}`;
@@ -337,7 +336,7 @@ function getPValueText(pValue, lang = 'de') {
     if (lang === 'de' && pFormatted !== 'N/A') {
         pFormatted = pFormatted.replace('.', ',');
     } else if (lang === 'en' && pFormatted !== 'N/A') {
-        pFormatted = pFormatted.replace(',', '.'); // Ensure dot for English if somehow a comma slipped in
+        pFormatted = pFormatted.replace(',', '.'); 
     }
     return `p = ${pFormatted}`;
 }
@@ -402,4 +401,13 @@ function getPhiBewertung(phiValue) {
     if (absPhi >= 0.3) return texts.moderat || 'moderat';
     if (absPhi >= 0.1) return texts.schwach || 'schwach';
     return texts.sehr_schwach || 'sehr schwach oder kein';
+}
+
+function fisherExactTest(a, b, c, d) {
+    console.warn("Fisher's Exact Test: Dummy-Implementierung. Gibt NaN-Werte zurück. Eine korrekte Implementierung ist für Phase 3 vorgesehen.");
+    return {
+        pValue: NaN,
+        oddsRatio: { value: NaN, ci: { lower: NaN, upper: NaN } },
+        method: "Fisher's Exact Test (Dummy)"
+    };
 }
