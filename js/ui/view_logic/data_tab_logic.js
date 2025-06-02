@@ -1,8 +1,13 @@
 const dataTabLogic = (() => {
+    let _mainAppInterface = null;
     let _currentData = [];
     let _currentSortState = null;
     let _kollektivName = '';
     let _isInitialized = false;
+
+    function initialize(mainAppInterface) {
+        _mainAppInterface = mainAppInterface;
+    }
 
     function _createDatenTableHeaderHTML(tableId, sortState, columns) {
         let headerHTML = `<thead class="small sticky-top bg-light" id="${tableId}-header"><tr>`;
@@ -36,7 +41,7 @@ const dataTabLogic = (() => {
                     }
                 }
             }
-            
+
             const baseTooltipKeyValue = col.tooltipKey || `datenTable.${col.key}`;
             const baseTooltipContent = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.datenTable && TOOLTIP_CONTENT.datenTable[col.key] ? TOOLTIP_CONTENT.datenTable[col.key] : col.label) || col.label;
 
@@ -51,7 +56,7 @@ const dataTabLogic = (() => {
 
             const mainTooltip = col.subHeaders ? `${baseTooltipContent}` : (col.key === 'details' ? (TOOLTIP_CONTENT.datenTable.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
             const sortAttributes = col.sortable ? `data-sort-key="${col.key}" ${col.subHeaders || col.key === 'details' ? '' : 'style="cursor: pointer;"'}` : '';
-            
+
             let thContent = col.label;
             if (col.subHeaders) {
                 thContent += ` (${subHeadersHTML})`;
@@ -95,9 +100,9 @@ const dataTabLogic = (() => {
                 key: 'status', label: 'N/AS/T2', sortable: true, class: 'text-center col-status',
                 tooltipKey: 'datenTable.n_as_t2',
                 subHeaders: [
-                    { label: 'N', subKey: 'n' },
-                    { label: 'AS', subKey: 'as' },
-                    { label: 'T2', subKey: 't2' }
+                    { label: 'N', subKey: 'n_status_patient' },
+                    { label: 'AS', subKey: 'as_status_patient' },
+                    { label: 'T2', subKey: 't2_status_patient' }
                 ]
             },
             { key: 'bemerkung', label: 'Bemerkung', sortable: false, class: 'col-bemerkung small', tooltipKey: 'datenTable.bemerkung' },
@@ -121,24 +126,24 @@ const dataTabLogic = (() => {
 
     function initializeTab(data, sortStateParam) {
         _currentData = Array.isArray(data) ? data : [];
-        
-        if (sortStateParam) {
+
+        if (sortStateParam && typeof sortStateParam.key === 'string' && typeof sortStateParam.direction === 'string') {
             _currentSortState = sortStateParam;
-        } else if (typeof state !== 'undefined' && typeof state.getCurrentDatenSortState === 'function') {
-            _currentSortState = state.getCurrentDatenSortState();
+        } else if (typeof state !== 'undefined' && typeof state.getStateSnapshot === 'function') {
+            _currentSortState = state.getStateSnapshot().datenSortState || { key: 'nr', direction: 'asc', subKey: null };
         } else {
             _currentSortState = { key: 'nr', direction: 'asc', subKey: null };
         }
-
+        
         if (typeof state !== 'undefined' && typeof state.getCurrentKollektiv === 'function') {
             _kollektivName = state.getCurrentKollektiv();
         } else {
             _kollektivName = 'Unbekannt';
         }
-        
+
         _isInitialized = true;
         _renderDatenTable();
-        
+
         if (typeof ui_helpers !== 'undefined') {
             const tableHeaderElement = document.getElementById('daten-table-header');
             if(tableHeaderElement && typeof ui_helpers.updateSortIcons === 'function') {
@@ -155,6 +160,7 @@ const dataTabLogic = (() => {
     }
 
     return Object.freeze({
+        initialize,
         initializeTab,
         isInitialized
     });
