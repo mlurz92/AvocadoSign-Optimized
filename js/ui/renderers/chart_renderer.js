@@ -1,608 +1,481 @@
 const chart_renderer = (() => {
-    let activeResizeListeners = [];
 
-    function _clearResizeListeners() {
-        activeResizeListeners.forEach(listener => {
-            window.removeEventListener('resize', listener.handler);
-            if (listener.observer) listener.observer.disconnect();
-        });
-        activeResizeListeners = [];
+    function _getAppConfig() {
+        return typeof APP_CONFIG !== 'undefined' ? APP_CONFIG : { UI_SETTINGS: {}, CHART_SETTINGS: {}, STATISTICAL_CONSTANTS: {} };
+    }
+    function _getUiTexts() {
+        return typeof UI_TEXTS !== 'undefined' ? UI_TEXTS : { chartTooltips: {}, statMetrics: {}, legendLabels: {} };
     }
 
-    function _getBaseSVG(containerId, options = {}) {
-        d3.select(`#${containerId}`).select("svg").remove();
-        const container = d3.select(`#${containerId}`);
-        if (container.empty()) {
-            console.error(`Chart container #${containerId} not found.`);
-            return { svg: null, width: 0, height: 0, margin: APP_CONFIG.CHART_SETTINGS.DEFAULT_MARGIN };
+    function _prepareChartArea(containerId, data, options) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+            console.error(`Chart-Container #${containerId} nicht gefunden.`);
+            return null;
         }
-        container.html('');
+        container.innerHTML = ''; // Clear previous chart
 
-        const margin = { ...APP_CONFIG.CHART_SETTINGS.DEFAULT_MARGIN, ...options.margin };
-        
-        let clientWidth = container.node()?.clientWidth || APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH;
-        let clientHeight = options.fixedHeight || container.node()?.clientHeight || APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT;
+        const appConfig = _getAppConfig();
+        const defaultOptions = {
+            width: appConfig.CHART_SETTINGS.DEFAULT_WIDTH || 600,
+            height: appConfig.CHART_SETTINGS.DEFAULT_HEIGHT || 400,
+            margin: { ... (appConfig.CHART_SETTINGS.DEFAULT_MARGIN || { top: 40, right: 30, bottom: 60, left: 70 }) },
+            backgroundColor: appConfig.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || '#FFFFFF',
+            title: '',
+            xAxisLabel: '',
+            yAxisLabel: '',
+            showLegend: false,
+            legendPosition: 'top', // 'top', 'bottom', 'left', 'right'
+            fontFamily: appConfig.CHART_SETTINGS.RSNA_CHART_FONT_FAMILY || 'sans-serif',
+            titleFontSize: appConfig.CHART_SETTINGS.RSNA_CHART_TITLE_FONT_SIZE || '12pt',
+            axisLabelFontSize: appConfig.CHART_SETTINGS.RSNA_CHART_AXIS_LABEL_FONT_SIZE || '10pt',
+            tickLabelFontSize: appConfig.CHART_SETTINGS.RSNA_CHART_TICK_LABEL_FONT_SIZE || '9pt',
+            legendFontSize: appConfig.CHART_SETTINGS.RSNA_CHART_LEGEND_FONT_SIZE || '9pt',
+            gridlines: appConfig.CHART_SETTINGS.ENABLE_GRIDLINES !== false,
+            gridlineColor: appConfig.CHART_SETTINGS.GRIDLINE_COLOR || '#e0e0e0',
+            axisColor: appConfig.CHART_SETTINGS.CHART_AXIS_COLOR || '#444444',
+            labelColor: appConfig.CHART_SETTINGS.CHART_LABEL_COLOR || '#333333',
+            tooltipContent: (d) => `Wert: ${formatNumber(d.value, 2)}`
+        };
+        const mergedOptions = { ...defaultOptions, ...options, margin: { ...defaultOptions.margin, ...options?.margin } };
 
-        if (clientWidth <= 0) clientWidth = APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH;
-        if (clientHeight <= 0) clientHeight = APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT;
-
-
-        const width = clientWidth - margin.left - margin.right;
-        const height = clientHeight - margin.top - margin.bottom;
+        const width = Math.max(100, mergedOptions.width - mergedOptions.margin.left - mergedOptions.margin.right);
+        const height = Math.max(50, mergedOptions.height - mergedOptions.margin.top - mergedOptions.margin.bottom);
 
         if (width <= 0 || height <= 0) {
-            console.warn(`Calculated chart dimensions for #${containerId} are invalid (width: ${width}, height: ${height}). Using defaults.`);
-             clientWidth = APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH;
-             clientHeight = APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT;
+            container.innerHTML = '<p class="text-danger small p-2">Chart-Dimensionen sind ungültig (zu klein nach Abzug der Margins).</p>';
+            return null;
         }
 
-
-        const svg = container.append("svg")
-            .attr("width", clientWidth)
-            .attr("height", clientHeight)
-            .style("font-family", APP_CONFIG.CHART_SETTINGS.RSNA_CHART_FONT_FAMILY || "sans-serif")
-            .style("background-color", options.backgroundColor || APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR || "#ffffff")
+        const svg = d3.select(container)
+            .append("svg")
+            .attr("width", mergedOptions.width)
+            .attr("height", mergedOptions.height)
+            .attr("font-family", mergedOptions.fontFamily)
+            .style("background-color", mergedOptions.backgroundColor)
             .append("g")
-            .attr("transform", `translate(${margin.left},${margin.top})`);
+            .attr("transform", `translate(${mergedOptions.margin.left},${mergedOptions.margin.top})`);
 
-        return { svg, width, height, margin, clientWidth, clientHeight };
+        return { svg, width, height, options: mergedOptions };
     }
 
-    function _addTitle(svg, title, width, margin) {
-        if (title) {
-            svg.append("text")
-                .attr("x", width / 2)
-                .attr("y", 0 - (margin.top / 2) + (parseFloat(APP_CONFIG.CHART_SETTINGS.RSNA_CHART_TITLE_FONT_SIZE) / 2 || 6) )
-                .attr("text-anchor", "middle")
-                .attr("class", "title-text")
-                .style("font-size", APP_CONFIG.CHART_SETTINGS.RSNA_CHART_TITLE_FONT_SIZE || "12pt")
-                .style("font-weight", "bold")
-                .style("fill", APP_CONFIG.CHART_SETTINGS.CHART_LABEL_COLOR || "#000")
-                .text(title);
+    function _addAxes(svg, xScale, yScale, width, height, options) {
+        if (!xScale || !yScale) return;
+
+        const xAxis = d3.axisBottom(xScale).tickSizeOuter(0);
+        const yAxis = d3.axisLeft(yScale).tickSizeOuter(0);
+
+        if (options.gridlines) {
+            yAxis.tickSizeInner(-width);
+            svg.append("g")
+                .attr("class", "grid")
+                .call(yAxis)
+                .selectAll("line")
+                .attr("stroke", options.gridlineColor)
+                .attr("stroke-dasharray", "2,2");
+            svg.selectAll(".grid .domain").remove(); // Remove y-axis line, keep ticks
+             // Re-add yAxis without grid for proper domain line and ticks
+            svg.append("g")
+                .attr("class", "y-axis")
+                .call(d3.axisLeft(yScale).tickSizeOuter(0))
+                .attr("font-size", options.tickLabelFontSize)
+                .attr("color", options.axisColor);
+
+        } else {
+            svg.append("g")
+                .attr("class", "y-axis")
+                .call(yAxis)
+                .attr("font-size", options.tickLabelFontSize)
+                .attr("color", options.axisColor);
         }
-    }
 
-    function _addAxes(svg, xScale, yScale, width, height, options = {}) {
-        const margin = options.margin || APP_CONFIG.CHART_SETTINGS.DEFAULT_MARGIN;
-        const xAxis = d3.axisBottom(xScale);
-        if (options.xAxisTickFormat) xAxis.tickFormat(options.xAxisTickFormat);
-        if (options.xAxisTickValues) xAxis.tickValues(options.xAxisTickValues);
-        if (options.maxTicksX) xAxis.ticks(options.maxTicksX > xScale.domain().length ? xScale.domain().length : options.maxTicksX);
-
-
-        const xAxisGroup = svg.append("g")
-            .attr("class", "x-axis axis")
+        svg.append("g")
+            .attr("class", "x-axis")
             .attr("transform", `translate(0,${height})`)
-            .call(xAxis);
+            .call(xAxis)
+            .attr("font-size", options.tickLabelFontSize)
+            .attr("color", options.axisColor)
+            .selectAll("text")
+            .filter(function(d, i) { // Rotate labels only if they might overlap
+                const numTicks = xScale.domain().length;
+                const availableWidthPerTick = width / numTicks;
+                return this.getComputedTextLength() > availableWidthPerTick - 5 && numTicks > 5;
+            })
+            .style("text-anchor", "end")
+            .attr("dx", "-.8em")
+            .attr("dy", ".15em")
+            .attr("transform", "rotate(-45)");
 
-        xAxisGroup.selectAll("text")
-            .style("font-size", APP_CONFIG.CHART_SETTINGS.RSNA_CHART_TICK_LABEL_FONT_SIZE || "9pt")
-            .style("fill", APP_CONFIG.CHART_SETTINGS.CHART_LABEL_COLOR || "#000");
-        
-        if (options.rotateXLabels) {
-            xAxisGroup.selectAll("text")
-                .attr("transform", `translate(-10,0)rotate(-${options.rotateXLabelsAngle || 45})`)
-                .style("text-anchor", "end");
-        }
-
-        const yAxis = d3.axisLeft(yScale);
-        if (options.yAxisTickFormat) yAxis.tickFormat(options.yAxisTickFormat);
-        if (options.maxTicksY) yAxis.ticks(options.maxTicksY);
-
-        const yAxisGroup = svg.append("g")
-            .attr("class", "y-axis axis")
-            .call(yAxis);
-
-        yAxisGroup.selectAll("text")
-            .style("font-size", APP_CONFIG.CHART_SETTINGS.RSNA_CHART_TICK_LABEL_FONT_SIZE || "9pt")
-            .style("fill", APP_CONFIG.CHART_SETTINGS.CHART_LABEL_COLOR || "#000");
-
-        svg.selectAll(".axis path, .axis line")
-            .style("fill", "none")
-            .style("stroke", APP_CONFIG.CHART_SETTINGS.CHART_AXIS_COLOR || "#333")
-            .style("shape-rendering", "crispEdges")
-            .style("stroke-width", "1px");
 
         if (options.xAxisLabel) {
             svg.append("text")
-                .attr("class", "x-axis-label axis-label")
+                .attr("class", "x-axis-label")
                 .attr("text-anchor", "middle")
                 .attr("x", width / 2)
-                .attr("y", height + margin.bottom - (parseFloat(APP_CONFIG.CHART_SETTINGS.RSNA_CHART_AXIS_LABEL_FONT_SIZE) / 1.5 || 10) )
-                .style("font-size", APP_CONFIG.CHART_SETTINGS.RSNA_CHART_AXIS_LABEL_FONT_SIZE || "10pt")
-                .style("fill", APP_CONFIG.CHART_SETTINGS.CHART_LABEL_COLOR || "#000")
-                .text(options.xAxisLabel);
+                .attr("y", height + options.margin.bottom * 0.8)
+                .text(options.xAxisLabel)
+                .attr("font-size", options.axisLabelFontSize)
+                .attr("fill", options.labelColor);
         }
+
         if (options.yAxisLabel) {
             svg.append("text")
-                .attr("class", "y-axis-label axis-label")
+                .attr("class", "y-axis-label")
                 .attr("text-anchor", "middle")
                 .attr("transform", "rotate(-90)")
-                .attr("y", 0 - margin.left + (parseFloat(APP_CONFIG.CHART_SETTINGS.RSNA_CHART_AXIS_LABEL_FONT_SIZE) || 12) )
-                .attr("x", 0 - (height / 2))
-                .style("font-size", APP_CONFIG.CHART_SETTINGS.RSNA_CHART_AXIS_LABEL_FONT_SIZE || "10pt")
-                .style("fill", APP_CONFIG.CHART_SETTINGS.CHART_LABEL_COLOR || "#000")
-                .text(options.yAxisLabel);
+                .attr("x", -height / 2)
+                .attr("y", -options.margin.left * 0.7)
+                .text(options.yAxisLabel)
+                .attr("font-size", options.axisLabelFontSize)
+                .attr("fill", options.labelColor);
         }
     }
 
-    function _addGridlines(svg, xScale, yScale, width, height, options = {}) {
-        if (!APP_CONFIG.CHART_SETTINGS.ENABLE_GRIDLINES && !options.forceGridlines) return;
-
-        const xGrid = d3.axisBottom(xScale).tickSize(-height).tickFormat("").ticks(options.maxTicksX || 5);
-        const yGrid = d3.axisLeft(yScale).tickSize(-width).tickFormat("").ticks(options.maxTicksY || 5);
-
-        svg.append("g")
-            .attr("class", "grid x-grid")
-            .attr("transform", `translate(0,${height})`)
-            .call(xGrid)
-            .selectAll(".tick line")
-            .style("stroke", APP_CONFIG.CHART_SETTINGS.GRIDLINE_COLOR || "#e0e0e0")
-            .style("stroke-opacity", "0.6");
-
-        svg.append("g")
-            .attr("class", "grid y-grid")
-            .call(yGrid)
-            .selectAll(".tick line")
-            .style("stroke", APP_CONFIG.CHART_SETTINGS.GRIDLINE_COLOR || "#e0e0e0")
-            .style("stroke-opacity", "0.6");
-
-        svg.selectAll(".grid path").style("stroke-width", 0);
-    }
-
-    function _addLegend(svg, series, width, margin, options = {}) {
-        if (!options.showLegend || !series || series.length === 0) return;
-        const legendItemSize = 12;
-        const legendSpacing = 5;
-        const legendPadding = 10;
-        let legendX = width; 
-        let legendY = 0;
-        const legendFontSize = APP_CONFIG.CHART_SETTINGS.RSNA_CHART_LEGEND_FONT_SIZE || "9pt";
-
-        const legend = svg.append("g")
-            .attr("class", "legend-container")
-            .attr("font-family", APP_CONFIG.CHART_SETTINGS.RSNA_CHART_FONT_FAMILY || "sans-serif")
-            .attr("font-size", legendFontSize)
-            .attr("text-anchor", "start")
-            .selectAll("g")
-            .data(series)
-            .enter().append("g")
-            .attr("class", "legend-item")
-            .attr("transform", (d, i) => `translate(0, ${i * (legendItemSize + legendSpacing)})`);
-
-        legend.append("rect")
-            .attr("x", legendX - legendItemSize - legendPadding)
-            .attr("width", legendItemSize)
-            .attr("height", legendItemSize)
-            .attr("fill", d => d.color || '#ccc');
-
-        legend.append("text")
-            .attr("x", legendX - legendItemSize - legendPadding - legendSpacing)
-            .attr("y", legendItemSize / 2)
-            .attr("dy", "0.35em")
-            .style("fill", APP_CONFIG.CHART_SETTINGS.CHART_LABEL_COLOR || "#000")
-            .style("text-anchor", "end")
-            .text(d => d.name);
-
-        if (options.legendPosition === 'bottom') {
-            let totalLegendWidth = 0;
-            const legendItems = legend.nodes();
-            legendItems.forEach(node => { totalLegendWidth += node.getBBox().width + legendSpacing * 3; });
-            totalLegendWidth -= legendSpacing * 3;
-
-            let currentX = (width - totalLegendWidth) / 2;
-            if (totalLegendWidth > width) currentX = 0; 
-
-            legend.attr("transform", function(d, i) {
-                const itemWidth = this.getBBox().width;
-                const tx = currentX;
-                currentX += itemWidth + legendSpacing * 3;
-                return `translate(${tx}, ${margin.top + options.height + (margin.bottom / 2) - (parseFloat(legendFontSize)/2) })`;
-            });
-        } else { 
-             legend.attr("transform", (d, i) => `translate(0, ${i * (legendItemSize + legendSpacing) + legendY})`);
+    function _addTitle(svg, width, options) {
+        if (options.title) {
+            svg.append("text")
+                .attr("class", "chart-title")
+                .attr("x", width / 2)
+                .attr("y", -options.margin.top / 2)
+                .attr("text-anchor", "middle")
+                .text(options.title)
+                .attr("font-size", options.titleFontSize)
+                .attr("font-weight", "bold")
+                .attr("fill", options.labelColor);
         }
     }
-
-    function _addTooltipToElements(elements, tooltipFn) {
-        if (!tooltipFn || !elements) return;
-        const tooltipDiv = d3.select("body").selectAll(".chart-tooltip").data([null]).join("div")
-            .attr("class", "chart-tooltip")
-            .style("position", "absolute")
-            .style("background-color", "rgba(255,255,255,0.95)")
-            .style("border", "1px solid #ccc")
-            .style("border-radius", "4px")
-            .style("padding", "8px 12px")
-            .style("font-size", APP_CONFIG.CHART_SETTINGS.TOOLTIP_FONT_SIZE || "11px")
-            .style("color", "#333")
-            .style("box-shadow", "0 2px 5px rgba(0,0,0,0.2)")
-            .style("opacity", 0)
-            .style("pointer-events", "none")
-            .style("transition", "opacity 0.2s ease-out, transform 0.2s ease-out")
-            .style("transform", "translateY(10px)")
-            .style("z-index", "3000");
-
-        elements
-            .on("mouseover", function(event, d) {
-                const tooltipContent = tooltipFn(d, event, this);
-                if(tooltipContent && String(tooltipContent).trim() !== '') {
-                    tooltipDiv.transition().duration(200)
-                        .style("opacity", 1)
-                        .style("transform", "translateY(0px)");
-                    tooltipDiv.html(tooltipContent)
-                        .style("left", (event.pageX + 15) + "px")
-                        .style("top", (event.pageY - 15) + "px");
-                }
-            })
-            .on("mousemove", function(event) {
-                tooltipDiv.style("left", (event.pageX + 15) + "px")
-                          .style("top", (event.pageY - 15) + "px");
-            })
-            .on("mouseout", function() {
-                tooltipDiv.transition().duration(200)
-                    .style("opacity", 0)
-                    .style("transform", "translateY(10px)");
-            });
+    
+    function _createTooltip(containerId) {
+        const tooltipId = `tooltip-${containerId}`;
+        let tooltip = d3.select(`#${tooltipId}`);
+        if (tooltip.empty()) {
+            tooltip = d3.select("body").append("div")
+                .attr("id", tooltipId)
+                .attr("class", "chart-tooltip")
+                .style("opacity", 0);
+        }
+        return tooltip;
     }
 
-    function _handleChartResize(containerId, renderFn, data, kollektivNameOrSeries, optionsOrOptions) {
-        _clearResizeListeners();
-        let resizeTimer;
-        const debouncedRender = () => {
-            clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(() => {
-                if (document.getElementById(containerId)) {
-                    if (renderFn.name === 'renderAgeDistributionChart' || renderFn.name === 'renderASPerformanceChart' || renderFn.name === 'renderROCChart') {
-                         renderFn(containerId, data, kollektivNameOrSeries, optionsOrOptions);
-                    } else if (renderFn.name === 'renderPieChart') {
-                         renderFn(containerId, data, kollektivNameOrSeries); // kollektivNameOrSeries ist hier options
-                    } else if (renderFn.name === 'renderComparisonBarChart') {
-                         renderFn(containerId, data, kollektivNameOrSeries, optionsOrOptions); // kollektivNameOrSeries ist hier series, optionsOrOptions ist options
-                    }
-                } else {
-                    _clearResizeListeners(); 
-                }
-            }, APP_CONFIG.PERFORMANCE_SETTINGS.DEBOUNCE_DELAY_MS || 250);
-        };
-
-        window.addEventListener('resize', debouncedRender);
-        activeResizeListeners.push({ handler: debouncedRender, observer: null });
+    function _showTooltip(event, tooltip, htmlContent) {
+        tooltip.transition().duration(100).style("opacity", .95);
+        tooltip.html(htmlContent)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 28) + "px");
     }
 
-    function renderAgeDistributionChart(containerId, ageData, kollektivName, options = {}) {
-        _clearResizeListeners();
-        const { svg, width, height, margin } = _getBaseSVG(containerId, options);
-        if (!svg || !Array.isArray(ageData) || ageData.length === 0) return;
+    function _moveTooltip(event, tooltip) {
+        tooltip.style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 28) + "px");
+    }
 
-        const title = options.title === '' ? null : (options.title || `${UI_TEXTS.chartTitles.ageDistribution} (${getKollektivDisplayName(kollektivName)})`);
-        _addTitle(svg, title, width, margin);
-
-        const xScale = d3.scaleLinear()
-            .domain(d3.extent(ageData, d => d))
-            .range([0, width]);
-
-        const histogram = d3.histogram()
-            .value(d => d)
-            .domain(xScale.domain())
-            .thresholds(xScale.ticks(options.bins || 10));
-
-        const bins = histogram(ageData);
-
-        const yScale = d3.scaleLinear()
-            .domain([0, d3.max(bins, d => d.length) * 1.1 || 10])
-            .range([height, 0]);
-
-        _addAxes(svg, xScale, yScale, width, height, { ...options, margin, xAxisLabel: UI_TEXTS.axisLabels.age, yAxisLabel: UI_TEXTS.axisLabels.patientCount, maxTicksX: options.bins || 10 });
-        _addGridlines(svg, xScale, yScale, width, height, { maxTicksX: options.bins || 10, maxTicksY: 5, forceGridlines: options.forceGridlines });
-
-        const bars = svg.selectAll("rect.bar")
-            .data(bins)
-            .join("rect")
-            .attr("class", "bar age-distribution-bar")
-            .attr("x", d => xScale(d.x0) + 1)
-            .attr("width", d => Math.max(0, xScale(d.x1) - xScale(d.x0) - 1))
-            .attr("y", d => yScale(d.length))
-            .attr("height", d => height - yScale(d.length))
-            .style("fill", APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE);
-
-        _addTooltipToElements(bars, d => `<strong>Alter:</strong> ${d.x0}-${d.x1} Jahre<br><strong>Anzahl:</strong> ${d.length}`);
-        _handleChartResize(containerId, renderAgeDistributionChart, ageData, kollektivName, options);
+    function _hideTooltip(tooltip) {
+        tooltip.transition().duration(200).style("opacity", 0);
     }
 
     function renderPieChart(containerId, data, options = {}) {
-        _clearResizeListeners();
-        const baseOptions = { margin: options.compact ? APP_CONFIG.CHART_SETTINGS.COMPACT_PIE_MARGIN : APP_CONFIG.CHART_SETTINGS.DEFAULT_MARGIN, ...options};
-        const { svg, width, height, margin } = _getBaseSVG(containerId, baseOptions);
-        if (!svg || !Array.isArray(data) || data.length === 0) return;
-
-        const titleToUse = options.title === '' ? null : options.title;
-        _addTitle(svg, titleToUse, width, margin);
-
-
-        const radius = Math.min(width, height) / 2 - (options.compact ? 0 : 10);
-        const pie = d3.pie().value(d => d.value).sort(null);
-        const arc = d3.arc().innerRadius(options.donut ? radius * 0.6 : 0).outerRadius(radius);
-        const totalValue = d3.sum(data, d => d.value);
-
-        const g = svg.append("g")
-            .attr("transform", `translate(${width / 2},${height / 2})`);
-
-        const path = g.selectAll("path")
-            .data(pie(data))
-            .join("path")
-            .attr("d", arc)
-            .attr("fill", d => d.data.color)
-            .attr("stroke", options.strokeColor || "#fff")
-            .style("stroke-width", options.strokeWidth || "2px");
-
-        _addTooltipToElements(path, d => `<strong>${d.data.label}:</strong> ${formatNumber(d.data.value, 0)} (${formatPercent(d.data.value / totalValue, 1)})`);
-
-        if (options.showLegend && !options.compact) {
-             _addLegend(svg, data.map(d => ({name: `${d.label} (${formatNumber(d.value,0)})`, color: d.color})), width, margin, {...options, height:height});
-        }
-        _handleChartResize(containerId, renderPieChart, data, options);
-    }
-
-
-    function renderComparisonBarChart(containerId, data, series, options = {}) {
-        _clearResizeListeners();
-        const { svg, width, height, margin } = _getBaseSVG(containerId, options);
-        if (!svg || !Array.isArray(data) || data.length === 0 || !series || series.length === 0) return;
-        const titleToUse = options.title === '' ? null : options.title;
-        _addTitle(svg, titleToUse, width, margin);
-
-
-        const groupKey = options.groupKey || 'group';
-        const groups = data.map(d => d[groupKey]);
-        const x0Scale = d3.scaleBand().domain(groups).range([0, width]).padding(options.groupPadding || 0.2);
-        const x1Scale = d3.scaleBand().domain(series.map(s => s.key)).range([0, x0Scale.bandwidth()]).padding(options.barPadding || 0.05);
+        const prep = _prepareChartArea(containerId, data, options);
+        if (!prep) return;
+        const { svg, width, height, options: opts } = prep;
         
-        let yDomainMin = 0;
-        let yDomainMax = d3.max(data, d => d3.max(series, s => {
-            const metric = d[s.key];
-            if (options.includeCI && metric && metric.ci && typeof metric.ci.upper === 'number') {
-                return metric.ci.upper;
-            }
-            return (typeof metric === 'object' && metric !== null && typeof metric.value === 'number') ? metric.value : (typeof metric === 'number' ? metric : 0);
-        })) || 1;
-
-        if(options.yDomain) { yDomainMin = options.yDomain[0] ?? yDomainMin; yDomainMax = options.yDomain[1] ?? yDomainMax; }
-        if (yDomainMin > yDomainMax) yDomainMax = yDomainMin + 0.1; 
-        if (yDomainMin === yDomainMax && yDomainMin === 0) yDomainMax = 0.1; 
-        else if (yDomainMin === yDomainMax) { yDomainMin -= 0.05; yDomainMax += 0.05;}
-
-
-        const yScale = d3.scaleLinear().domain([yDomainMin, yDomainMax * 1.05]).range([height, 0]).nice();
-
-        _addAxes(svg, x0Scale, yScale, width, height, { ...options, margin, yAxisTickFormat: options.yAxisTickFormat || (d => d3.format(".0%")(d)), xAxisLabel: options.xAxisLabel, yAxisLabel: options.yAxisLabel });
-        _addGridlines(svg, x0Scale, yScale, width, height, {maxTicksY: 5, forceGridlines: options.forceGridlines });
-
-        const group = svg.selectAll(".bargroup")
-            .data(data)
-            .join("g")
-            .attr("class", "bargroup")
-            .attr("transform", d => `translate(${x0Scale(d[groupKey])},0)`);
-
-        const bars = group.selectAll("rect.bar")
-            .data(d => series.map(s => ({ key: s.key, value: d[s.key]?.value ?? d[s.key], ci: d[s.key]?.ci, color: s.color, seriesName: s.name, groupName: d[groupKey] })))
-            .join("rect")
-            .attr("class", "bar comparison-bar")
-            .attr("x", d => x1Scale(d.key))
-            .attr("y", d => yScale(Math.max(0, d.value ?? 0)))
-            .attr("width", x1Scale.bandwidth())
-            .attr("height", d => Math.max(0, height - yScale(Math.max(0, d.value ?? 0))))
-            .style("fill", d => d.color || APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE);
-
-        if(options.includeCI) {
-            group.selectAll(".error-bar-group")
-                .data(d => series.filter(s => s.showCI).map(s => ({
-                    key: s.key,
-                    value: d[s.key]?.value ?? d[s.key],
-                    ci: d[s.key]?.ci,
-                    seriesName: s.name
-                })))
-                .enter()
-                .append("g")
-                .attr("class", "error-bar-group")
-                .each(function(d) {
-                    if (d.ci && typeof d.value === 'number' && typeof d.ci.lower === 'number' && typeof d.ci.upper === 'number') {
-                        const barX = x1Scale(d.key) + x1Scale.bandwidth() / 2;
-                        const yLower = yScale(d.ci.lower);
-                        const yUpper = yScale(d.ci.upper);
-
-                        if(isFinite(barX) && isFinite(yLower) && isFinite(yUpper)){
-                            d3.select(this).append("line") 
-                                .attr("class", "error-bar-line")
-                                .attr("x1", barX).attr("x2", barX)
-                                .attr("y1", yUpper).attr("y2", yLower)
-                                .style("stroke", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_COLOR)
-                                .style("stroke-width", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_WIDTH + "px");
-                            d3.select(this).append("line") 
-                                .attr("class", "error-bar-cap")
-                                .attr("x1", barX - APP_CONFIG.CHART_SETTINGS.ERROR_BAR_CAP_SIZE)
-                                .attr("x2", barX + APP_CONFIG.CHART_SETTINGS.ERROR_BAR_CAP_SIZE)
-                                .attr("y1", yUpper).attr("y2", yUpper)
-                                .style("stroke", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_COLOR)
-                                .style("stroke-width", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_WIDTH + "px");
-                            d3.select(this).append("line") 
-                                .attr("class", "error-bar-cap")
-                                .attr("x1", barX - APP_CONFIG.CHART_SETTINGS.ERROR_BAR_CAP_SIZE)
-                                .attr("x2", barX + APP_CONFIG.CHART_SETTINGS.ERROR_BAR_CAP_SIZE)
-                                .attr("y1", yLower).attr("y2", yLower)
-                                .style("stroke", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_COLOR)
-                                .style("stroke-width", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_WIDTH + "px");
-                        }
-                    }
-            });
+        if (!data || !Array.isArray(data) || data.length === 0 || data.some(d => isNaN(d.value) || d.value < 0)) {
+            svg.append("text").attr("x", width / 2).attr("y", height / 2).attr("text-anchor", "middle").text("Keine validen Daten für Pie-Chart.");
+            return;
         }
 
-        _addTooltipToElements(bars, d => {
-            let tooltipText = `<strong>${options.groupDisplayName || groupKey.charAt(0).toUpperCase() + groupKey.slice(1)}:</strong> ${d.groupName}<br><strong>${d.seriesName || d.key}:</strong> ${formatNumber(d.value, (d.value < 1 && d.value > -1 && d.value !== 0 ? 3 : 1), '--', true)}`;
-            if(options.includeCI && d.ci && typeof d.ci.lower === 'number' && typeof d.ci.upper === 'number') {
-                 tooltipText += ` (95% CI: ${formatNumber(d.ci.lower, 3, '--', true)} - ${formatNumber(d.ci.upper, 3, '--', true)})`;
-            }
-            return tooltipText;
-        });
-        _addLegend(svg, series, width, margin, {...options, height: height});
-        _handleChartResize(containerId, renderComparisonBarChart, data, series, options);
+        _addTitle(svg, width, opts);
+        const radius = Math.min(width, height) / 2 * (opts.compact ? 0.9 : 0.8);
+        const pieGroup = svg.append("g").attr("transform", `translate(${width / 2},${height / 2})`);
+        const color = d3.scaleOrdinal().domain(data.map(d => d.label)).range(data.map(d => d.color || d3.schemeCategory10[data.indexOf(d) % 10]));
+        const pie = d3.pie().value(d => d.value).sort(null);
+        const arc = d3.arc().innerRadius(opts.donut ? radius * 0.5 : 0).outerRadius(radius);
+        const tooltip = _createTooltip(containerId);
+
+        const path = pieGroup.selectAll("path")
+            .data(pie(data))
+            .enter().append("path")
+            .attr("d", arc)
+            .attr("fill", d => color(d.data.label))
+            .attr("stroke", opts.backgroundColor || "white")
+            .style("stroke-width", "2px")
+            .on("mouseover", (event, d) => _showTooltip(event, tooltip, opts.tooltipContent(d.data)))
+            .on("mousemove", (event) => _moveTooltip(event, tooltip))
+            .on("mouseout", () => _hideTooltip(tooltip));
+            
+        if (opts.showLabels) { // Optional labels on slices
+            pieGroup.selectAll('text.slice-label')
+                .data(pie(data))
+                .enter().append('text')
+                .attr('class', 'slice-label')
+                .attr('transform', d => `translate(${arc.centroid(d)})`)
+                .attr('dy', '0.35em')
+                .attr('text-anchor', 'middle')
+                .attr('font-size', opts.tickLabelFontSize || '10px')
+                .attr('fill', opts.labelColor || '#333')
+                .text(d => d.data.label);
+        }
+
+        if (opts.showLegend && opts.legendPosition) {
+            const legendData = data.map(d => ({ name: d.label, color: color(d.label) }));
+            _addLegend(svg, legendData, color, width, { ...opts, height });
+        }
     }
 
-    function renderASPerformanceChart(containerId, data, kollektivName, options = {}) { 
-         _clearResizeListeners();
-        if(!data) { console.warn(`Keine Daten für AS Performance Chart (${kollektivName})`); return; }
-        const chartData = Object.keys(data)
-            .filter(key => ['sens', 'spez', 'ppv', 'npv', 'acc', 'auc'].includes(key) && data[key] && typeof data[key].value === 'number')
-            .map(key => {
-                const displayName = UI_TEXTS.statMetrics[key]?.name || key.toUpperCase();
-                return {
-                    metric: displayName,
-                    value: data[key].value,
-                    ci: data[key].ci
-                };
-            });
+    function renderAgeDistributionChart(containerId, ageData, kollektiv, options = {}) {
+        const prep = _prepareChartArea(containerId, ageData, options);
+        if (!prep) return;
+        const { svg, width, height, options: opts } = prep;
 
-        if(chartData.length === 0) { console.warn(`Keine validen Metriken für AS Performance Chart (${kollektivName})`); return; }
+        if (!ageData || !Array.isArray(ageData) || ageData.length === 0) {
+            svg.append("text").attr("x", width / 2).attr("y", height / 2).attr("text-anchor", "middle").text("Keine Daten für Altersverteilung.");
+            return;
+        }
+        const validAgeData = ageData.filter(d => d && d.ageGroup && Number.isFinite(d.count) && d.count >= 0);
+        if (validAgeData.length === 0) {
+            svg.append("text").attr("x", width / 2).attr("y", height / 2).attr("text-anchor", "middle").text("Keine validen Daten für Altersverteilung.");
+            return;
+        }
 
-        const { svg, width, height, margin } = _getBaseSVG(containerId, options);
-        if (!svg) return;
+        const xScale = d3.scaleBand().range([0, width]).padding(0.2).domain(validAgeData.map(d => d.ageGroup));
+        const yScale = d3.scaleLinear().range([height, 0]).domain([0, d3.max(validAgeData, d => d.count) || 1]);
+        const tooltip = _createTooltip(containerId);
+        const appConfig = _getAppConfig();
 
-        const titleToUse = options.title === '' ? null : (options.title || `${UI_TEXTS.chartTitles.asPerformance} (${getKollektivDisplayName(kollektivName)})`);
-        _addTitle(svg, titleToUse, width, margin);
+        _addAxes(svg, xScale, yScale, width, height, { ...opts, xAxisLabel: opts.xAxisLabel || 'Altersgruppe', yAxisLabel: opts.yAxisLabel || 'Anzahl Patienten'});
+        _addTitle(svg, width, opts);
 
-        const xScale = d3.scaleBand()
-            .domain(chartData.map(d => d.metric))
-            .range([0, width])
-            .padding(0.3);
-
-        let yDomainMin = 0;
-        let yDomainMax = d3.max(chartData, d => options.includeCI && d.ci && typeof d.ci.upper === 'number' ? d.ci.upper : d.value) || 1;
-        if(options.yDomain) { yDomainMin = options.yDomain[0] ?? yDomainMin; yDomainMax = options.yDomain[1] ?? yDomainMax; }
-        if (yDomainMin > yDomainMax) yDomainMax = yDomainMin + 0.1;
-        if (yDomainMin === yDomainMax && yDomainMin === 0) yDomainMax = 0.1;
-        else if (yDomainMin === yDomainMax) { yDomainMin -= 0.05; yDomainMax += 0.05;}
-
-
-        const yScale = d3.scaleLinear()
-            .domain([yDomainMin, Math.min(1, yDomainMax) * 1.05]) 
-            .range([height, 0]).nice();
-
-        _addAxes(svg, xScale, yScale, width, height, { ...options, margin, yAxisTickFormat: d => d3.format(".0%")(d), xAxisLabel: UI_TEXTS.axisLabels.metric, yAxisLabel: UI_TEXTS.axisLabels.metricValue, rotateXLabels: true, rotateXLabelsAngle: 30});
-        _addGridlines(svg, xScale, yScale, width, height, {maxTicksY: 5, forceGridlines: options.forceGridlines});
-
-        const bars = svg.selectAll(".bar")
-            .data(chartData)
-            .join("rect")
-            .attr("class", "bar as-performance-bar")
-            .attr("x", d => xScale(d.metric))
-            .attr("y", d => yScale(Math.max(0, d.value)))
+        svg.selectAll(".bar")
+            .data(validAgeData)
+            .enter().append("rect")
+            .attr("class", "bar")
+            .attr("x", d => xScale(d.ageGroup) ?? 0)
             .attr("width", xScale.bandwidth())
-            .attr("height", d => Math.max(0, height - yScale(Math.max(0, d.value))))
-            .style("fill", APP_CONFIG.CHART_SETTINGS.AS_COLOR);
-
-        if(options.includeCI) {
-            svg.selectAll(".error-bar-group")
-                .data(chartData.filter(d => d.ci && typeof d.ci.lower === 'number' && typeof d.ci.upper === 'number'))
-                .enter()
-                .append("g")
-                .attr("class", "error-bar-group")
-                .each(function(d) {
-                    const barX = xScale(d.metric) + xScale.bandwidth() / 2;
-                    const yLower = yScale(d.ci.lower);
-                    const yUpper = yScale(d.ci.upper);
-                    if(isFinite(barX) && isFinite(yLower) && isFinite(yUpper)){
-                        d3.select(this).append("line").attr("class", "error-bar-line").attr("x1", barX).attr("x2", barX).attr("y1", yUpper).attr("y2", yLower).style("stroke", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_COLOR).style("stroke-width", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_WIDTH + "px");
-                        d3.select(this).append("line").attr("class", "error-bar-cap").attr("x1", barX - APP_CONFIG.CHART_SETTINGS.ERROR_BAR_CAP_SIZE).attr("x2", barX + APP_CONFIG.CHART_SETTINGS.ERROR_BAR_CAP_SIZE).attr("y1", yUpper).attr("y2", yUpper).style("stroke", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_COLOR).style("stroke-width", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_WIDTH + "px");
-                        d3.select(this).append("line").attr("class", "error-bar-cap").attr("x1", barX - APP_CONFIG.CHART_SETTINGS.ERROR_BAR_CAP_SIZE).attr("x2", barX + APP_CONFIG.CHART_SETTINGS.ERROR_BAR_CAP_SIZE).attr("y1", yLower).attr("y2", yLower).style("stroke", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_COLOR).style("stroke-width", APP_CONFIG.CHART_SETTINGS.ERROR_BAR_WIDTH + "px");
-                    }
-                });
-        }
-
-        _addTooltipToElements(bars, d => {
-            let tooltipText = `<strong>${d.metric}:</strong> ${formatPercent(d.value, 1)}`;
-            if(options.includeCI && d.ci && typeof d.ci.lower === 'number' && typeof d.ci.upper === 'number') {
-                 tooltipText += ` (95% CI: ${formatPercent(d.ci.lower, 1)} - ${formatPercent(d.ci.upper, 1)})`;
-            }
-            return tooltipText;
-        });
-        _handleChartResize(containerId, renderASPerformanceChart, data, kollektivName, options);
+            .attr("y", d => Number.isFinite(yScale(d.count)) ? yScale(d.count) : height)
+            .attr("height", d => Math.max(0, height - (Number.isFinite(yScale(d.count)) ? yScale(d.count) : height)))
+            .attr("fill", appConfig.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE || "#69b3a2")
+            .on("mouseover", (event, d) => _showTooltip(event, tooltip, opts.tooltipContent(d)))
+            .on("mousemove", (event) => _moveTooltip(event, tooltip))
+            .on("mouseout", () => _hideTooltip(tooltip));
     }
 
+    function renderASPerformanceChart(containerId, performanceData, kollektiv, options = {}) {
+        const prep = _prepareChartArea(containerId, performanceData, options);
+        if (!prep) return;
+        const { svg, width, height, options: opts } = prep;
+        const appConfig = _getAppConfig();
+        const uiTexts = _getUiTexts();
 
-    function renderROCChart(containerId, data, methodenName, kollektivName, options = {}) { 
-        _clearResizeListeners();
-        const { svg, width, height, margin } = _getBaseSVG(containerId, options);
-        if (!svg || !Array.isArray(data) || data.length === 0) {
-            console.warn(`Keine Daten für ROC Chart (${methodenName}, ${kollektivName})`);
-             if (svg) svg.append("text").attr("x", width/2).attr("y", height/2).attr("text-anchor", "middle").text("Keine ROC-Daten verfügbar.");
+        if (!performanceData || typeof performanceData !== 'object') {
+             svg.append("text").attr("x", width / 2).attr("y", height / 2).attr("text-anchor", "middle").text("Keine AS Performancedaten.");
+             return;
+        }
+
+        const metrics = ['sens', 'spez', 'ppv', 'npv', 'acc', 'auc'];
+        const chartData = metrics.map(key => ({
+            name: uiTexts.statMetrics[key]?.name || key.toUpperCase(),
+            value: performanceData[key]?.value,
+            ci: performanceData[key]?.ci
+        })).filter(d => d.value !== null && d.value !== undefined && Number.isFinite(d.value));
+
+        if (chartData.length === 0) {
+            svg.append("text").attr("x", width / 2).attr("y", height / 2).attr("text-anchor", "middle").text("Keine validen AS Performancedaten zum Anzeigen.");
             return;
         }
         
-        const titleToUse = options.title === '' ? null : (options.title || `${UI_TEXTS.chartTitles.rocCurve.replace('{Method}', methodenName)} (${getKollektivDisplayName(kollektivName)})`);
-        _addTitle(svg, titleToUse, width, margin);
+        const xScale = d3.scaleBand().range([0, width]).padding(0.3).domain(chartData.map(d => d.name));
+        const yScale = d3.scaleLinear().range([height, 0]).domain(opts.yDomain || [0, 1]);
+        const tooltip = _createTooltip(containerId);
 
+        _addAxes(svg, xScale, yScale, width, height, { ...opts, yAxisLabel: opts.yAxisLabel || 'Wert'});
+        _addTitle(svg, width, opts);
+        
+        const barWidth = xScale.bandwidth();
 
-        const xScale = d3.scaleLinear().domain([0, 1]).range([0, width]);
-        const yScale = d3.scaleLinear().domain([0, 1]).range([height, 0]);
+        svg.selectAll(".bar")
+            .data(chartData)
+            .enter().append("rect")
+            .attr("class", "bar")
+            .attr("x", d => xScale(d.name) ?? 0)
+            .attr("width", barWidth)
+            .attr("y", d => Number.isFinite(d.value) && Number.isFinite(yScale(d.value)) ? yScale(d.value) : height)
+            .attr("height", d => Number.isFinite(d.value) && Number.isFinite(yScale(d.value)) ? Math.max(0, height - yScale(d.value)) : 0)
+            .attr("fill", appConfig.CHART_SETTINGS.AS_COLOR || "darkseagreen")
+            .on("mouseover", (event, d) => {
+                 const htmlContent = typeof ui_helpers !== 'undefined' ? ui_helpers.getMetricInterpretationHTML(d.name.toLowerCase(), d, "Avocado Sign", kollektiv) : `<strong>${d.name}</strong><br>Wert: ${formatNumber(d.value,3)}<br>95% CI: ${d.ci && Number.isFinite(d.ci.lower) && Number.isFinite(d.ci.upper) ? `${formatNumber(d.ci.lower,3)} - ${formatNumber(d.ci.upper,3)}` : 'N/A'}`;
+                _showTooltip(event, tooltip, htmlContent);
+            })
+            .on("mousemove", (event) => _moveTooltip(event, tooltip))
+            .on("mouseout", () => _hideTooltip(tooltip));
 
-        _addAxes(svg, xScale, yScale, width, height, { ...options, margin, xAxisLabel: UI_TEXTS.axisLabels.oneMinusSpecificity, yAxisLabel: UI_TEXTS.axisLabels.sensitivity, yAxisTickFormat: d3.format(".0%"), xAxisTickFormat: d3.format(".0%") });
-        _addGridlines(svg, xScale, yScale, width, height, {maxTicksX:5, maxTicksY: 5, forceGridlines: options.forceGridlines});
+        if (opts.includeCI) {
+            svg.selectAll(".error-bar")
+                .data(chartData.filter(d => d.ci && Number.isFinite(d.ci.lower) && Number.isFinite(d.ci.upper) && d.ci.lower <= d.ci.upper))
+                .enter().append("line")
+                .attr("class", "error-bar")
+                .attr("x1", d => (xScale(d.name) ?? 0) + barWidth / 2)
+                .attr("x2", d => (xScale(d.name) ?? 0) + barWidth / 2)
+                .attr("y1", d => yScale(d.ci.lower) ?? height)
+                .attr("y2", d => yScale(d.ci.upper) ?? height)
+                .attr("stroke", appConfig.CHART_SETTINGS.ERROR_BAR_COLOR || "gray")
+                .attr("stroke-width", appConfig.CHART_SETTINGS.ERROR_BAR_WIDTH || 1.5);
 
-        svg.append("line") 
-            .attr("class", "reference-line")
-            .attr("x1", 0).attr("y1", height)
-            .attr("x2", width).attr("y2", 0)
-            .style("stroke", "#adb5bd").style("stroke-width", "1px").style("stroke-dasharray", "4 2");
+            const capWidth = Math.min(10, barWidth * 0.4);
+            svg.selectAll(".error-cap-top")
+                .data(chartData.filter(d => d.ci && Number.isFinite(d.ci.upper)))
+                .enter().append("line")
+                .attr("class", "error-cap-top")
+                .attr("x1", d => ((xScale(d.name) ?? 0) + barWidth / 2) - capWidth / 2)
+                .attr("x2", d => ((xScale(d.name) ?? 0) + barWidth / 2) + capWidth / 2)
+                .attr("y1", d => yScale(d.ci.upper) ?? height)
+                .attr("y2", d => yScale(d.ci.upper) ?? height)
+                .attr("stroke", appConfig.CHART_SETTINGS.ERROR_BAR_COLOR || "gray")
+                .attr("stroke-width", appConfig.CHART_SETTINGS.ERROR_BAR_WIDTH || 1.5);
 
-        const line = d3.line().x(d => xScale(d.fpr)).y(d => yScale(d.tpr)).curve(d3.curveLinear);
-        svg.append("path")
-            .datum(data)
-            .attr("class", "roc-curve")
-            .attr("d", line)
-            .style("fill", "none")
-            .style("stroke", options.lineColor || APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE)
-            .style("stroke-width", (APP_CONFIG.CHART_SETTINGS.LINE_STROKE_WIDTH || 2) + "px");
+            svg.selectAll(".error-cap-bottom")
+                .data(chartData.filter(d => d.ci && Number.isFinite(d.ci.lower)))
+                .enter().append("line")
+                .attr("class", "error-cap-bottom")
+                .attr("x1", d => ((xScale(d.name) ?? 0) + barWidth / 2) - capWidth / 2)
+                .attr("x2", d => ((xScale(d.name) ?? 0) + barWidth / 2) + capWidth / 2)
+                .attr("y1", d => yScale(d.ci.lower) ?? height)
+                .attr("y2", d => yScale(d.ci.lower) ?? height)
+                .attr("stroke", appConfig.CHART_SETTINGS.ERROR_BAR_COLOR || "gray")
+                .attr("stroke-width", appConfig.CHART_SETTINGS.ERROR_BAR_WIDTH || 1.5);
+        }
+    }
 
-        if (options.showPoints) {
-            const points = svg.selectAll(".roc-point")
-                .data(data.filter(d => d.threshold !== undefined)) 
-                .join("circle")
-                .attr("class", "roc-point")
-                .attr("cx", d => xScale(d.fpr))
-                .attr("cy", d => yScale(d.tpr))
-                .attr("r", APP_CONFIG.CHART_SETTINGS.POINT_RADIUS || 3)
-                .style("fill", options.pointColor || options.lineColor || APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE)
-                .style("stroke", "#fff")
-                .style("stroke-width", "1px");
-            _addTooltipToElements(points, d => `<strong>Schwellenwert:</strong> ${formatNumber(d.threshold, 2)}<br><strong>Sens:</strong> ${formatPercent(d.tpr,1)}<br><strong>1-Spez:</strong> ${formatPercent(d.fpr,1)}`);
+    function renderComparisonBarChart(containerId, data, series, options = {}) {
+        const prep = _prepareChartArea(containerId, data, options);
+        if (!prep) return;
+        const { svg, width, height, options: opts } = prep;
+
+        if (!data || data.length === 0 || !series || series.length === 0) {
+            svg.append("text").attr("x", width / 2).attr("y", height / 2).attr("text-anchor", "middle").text("Keine Daten für Vergleichs-Chart.");
+            return;
         }
         
-        if (options.aucData && typeof options.aucData.value === 'number') {
-            const aucText = `AUC = ${formatNumber(options.aucData.value, 3)}`;
-            let aucFullText = aucText;
-            if (options.aucData.ci && typeof options.aucData.ci.lower === 'number' && typeof options.aucData.ci.upper === 'number') {
-                aucFullText += ` (95% CI: ${formatNumber(options.aucData.ci.lower, 3)} - ${formatNumber(options.aucData.ci.upper, 3)})`;
-            }
-            svg.append("text")
-                .attr("class", "auc-label")
-                .attr("x", width - 10)
-                .attr("y", height - 10)
-                .attr("text-anchor", "end")
-                .style("font-size", APP_CONFIG.CHART_SETTINGS.AXIS_LABEL_FONT_SIZE || "10pt")
-                .style("font-weight", "bold")
-                .style("fill", APP_CONFIG.CHART_SETTINGS.CHART_LABEL_COLOR || "#000")
-                .text(aucFullText);
+        const groupKey = opts.groupKey || 'group';
+        const groups = data.map(d => d[groupKey]);
+        const validSeries = series.filter(s => s && s.key && s.name);
+        if (validSeries.length === 0) {
+             svg.append("text").attr("x", width / 2).attr("y", height / 2).attr("text-anchor", "middle").text("Keine validen Serien für Vergleichs-Chart.");
+            return;
         }
-        _handleChartResize(containerId, renderROCChart, data, methodenName, kollektivName, options);
+
+        const x0Scale = d3.scaleBand().domain(groups).rangeRound([0, width]).paddingInner(opts.barType === 'grouped' ? 0.2 : 0.1);
+        const x1Scale = d3.scaleBand().domain(validSeries.map(s => s.key)).rangeRound([0, x0Scale.bandwidth()]).padding(0.05);
+        const yScale = d3.scaleLinear().rangeRound([height, 0]).domain(opts.yDomain || [0, 1]);
+        const colorScale = d3.scaleOrdinal().domain(validSeries.map(s => s.key)).range(validSeries.map(s => s.color || d3.schemeCategory10[validSeries.indexOf(s) % 10]));
+        const tooltip = _createTooltip(containerId);
+        const appConfig = _getAppConfig();
+
+        _addAxes(svg, x0Scale, yScale, width, height, { ...opts, yAxisLabel: opts.yAxisLabel || 'Wert'});
+        _addTitle(svg, width, opts);
+
+        const group = svg.selectAll(".group")
+            .data(data)
+            .enter().append("g")
+            .attr("class", "group")
+            .attr("transform", d => `translate(${x0Scale(d[groupKey]) ?? 0},0)`);
+
+        group.selectAll("rect")
+            .data(d => validSeries.map(s => ({ key: s.key, name: s.name, seriesData: d[s.key], groupValue: d[groupKey], showCI: s.showCI })))
+            .enter().append("rect")
+            .attr("x", d => x1Scale(d.key) ?? 0)
+            .attr("y", d => (d.seriesData && Number.isFinite(d.seriesData.value) && Number.isFinite(yScale(d.seriesData.value))) ? yScale(d.seriesData.value) : height)
+            .attr("width", x1Scale.bandwidth())
+            .attr("height", d => (d.seriesData && Number.isFinite(d.seriesData.value) && Number.isFinite(yScale(d.seriesData.value))) ? Math.max(0, height - yScale(d.seriesData.value)) : 0)
+            .attr("fill", d => colorScale(d.key))
+            .on("mouseover", (event, d) => {
+                 const htmlContent = typeof ui_helpers !== 'undefined' ? ui_helpers.getMetricInterpretationHTML(d.groupValue.toLowerCase(), d.seriesData, d.name, opts.kollektivForTooltip || '') : `<strong>${d.name} (${d.groupValue})</strong><br>Wert: ${formatNumber(d.seriesData?.value,3)}<br>95% CI: ${d.seriesData?.ci && Number.isFinite(d.seriesData.ci.lower) && Number.isFinite(d.seriesData.ci.upper) ? `${formatNumber(d.seriesData.ci.lower,3)} - ${formatNumber(d.seriesData.ci.upper,3)}` : 'N/A'}`;
+                _showTooltip(event, tooltip, htmlContent);
+            })
+            .on("mousemove", (event) => _moveTooltip(event, tooltip))
+            .on("mouseout", () => _hideTooltip(tooltip));
+
+        if (opts.includeCI) {
+            group.selectAll(".error-bar-group")
+                .data(d => validSeries.filter(s => s.showCI).map(s => ({ key: s.key, seriesData: d[s.key], groupValue: d[groupKey] })))
+                .enter()
+                .filter(d => d.seriesData && d.seriesData.ci && Number.isFinite(d.seriesData.ci.lower) && Number.isFinite(d.seriesData.ci.upper) && d.seriesData.ci.lower <= d.seriesData.ci.upper)
+                .append("g")
+                .attr("class", "error-bar-group")
+                .each(function(d) {
+                    const gParent = d3.select(this);
+                    const xPos = (x1Scale(d.key) ?? 0) + x1Scale.bandwidth() / 2;
+                    const y1Pos = yScale(d.seriesData.ci.lower) ?? height;
+                    const y2Pos = yScale(d.seriesData.ci.upper) ?? height;
+                    const capWidth = Math.min(8, x1Scale.bandwidth() * 0.3);
+
+                    gParent.append("line") // Vertical bar
+                        .attr("x1", xPos).attr("x2", xPos)
+                        .attr("y1", y1Pos).attr("y2", y2Pos)
+                        .attr("stroke", appConfig.CHART_SETTINGS.ERROR_BAR_COLOR || "dimgray")
+                        .attr("stroke-width", appConfig.CHART_SETTINGS.ERROR_BAR_WIDTH || 1);
+                    gParent.append("line") // Top cap
+                        .attr("x1", xPos - capWidth / 2).attr("x2", xPos + capWidth / 2)
+                        .attr("y1", y2Pos).attr("y2", y2Pos)
+                        .attr("stroke", appConfig.CHART_SETTINGS.ERROR_BAR_COLOR || "dimgray")
+                        .attr("stroke-width", appConfig.CHART_SETTINGS.ERROR_BAR_WIDTH || 1);
+                    gParent.append("line") // Bottom cap
+                        .attr("x1", xPos - capWidth / 2).attr("x2", xPos + capWidth / 2)
+                        .attr("y1", y1Pos).attr("y2", y1Pos)
+                        .attr("stroke", appConfig.CHART_SETTINGS.ERROR_BAR_COLOR || "dimgray")
+                        .attr("stroke-width", appConfig.CHART_SETTINGS.ERROR_BAR_WIDTH || 1);
+                });
+        }
+        
+        if (opts.showLegend) {
+             _addLegend(svg, validSeries, colorScale, width, { ...opts, height });
+        }
+    }
+    
+    function _addLegend(svg, seriesData, colorScale, chartWidth, options) {
+        if (!seriesData || seriesData.length === 0) return;
+        const legendFontSize = options.legendFontSize || '9pt';
+        const itemHeight = parseInt(legendFontSize, 10) + 8; 
+        const itemWidth = options.legendItemWidth || 100; 
+        const symbolSize = parseInt(legendFontSize, 10) * 0.8;
+
+        const legend = svg.append("g")
+            .attr("class", "chart-legend")
+            .attr("font-size", legendFontSize)
+            .attr("text-anchor", "start")
+            .selectAll("g")
+            .data(seriesData)
+            .join("g");
+
+        if (options.legendPosition === 'bottom') {
+            const legendWidth = seriesData.length * itemWidth;
+            legend.attr("transform", (d, i) => `translate(${(chartWidth - legendWidth)/2 + i * itemWidth}, ${options.height + options.margin.bottom * 0.5})`);
+        } else if (options.legendPosition === 'right') {
+             legend.attr("transform", (d, i) => `translate(${chartWidth + 10}, ${i * itemHeight})`);
+        } else if (options.legendPosition === 'left') {
+            legend.attr("transform", (d, i) => `translate(${-options.margin.left + 10}, ${i * itemHeight})`);
+        } else { // Default to top
+             const legendWidth = seriesData.length * itemWidth;
+             legend.attr("transform", (d, i) => `translate(${(chartWidth - legendWidth)/2 + i * itemWidth}, ${-options.margin.top * 0.5 + 5})`);
+        }
+
+        legend.append("rect")
+            .attr("x", 0)
+            .attr("width", symbolSize)
+            .attr("height", symbolSize)
+            .attr("fill", d => d.color || colorScale(d.name));
+
+        legend.append("text")
+            .attr("x", symbolSize + 5)
+            .attr("y", symbolSize / 2)
+            .attr("dy", "0.35em")
+            .text(d => d.name)
+            .attr("fill", options.labelColor);
     }
 
 
     return Object.freeze({
-        renderAgeDistributionChart,
         renderPieChart,
-        renderComparisonBarChart,
+        renderAgeDistributionChart,
         renderASPerformanceChart,
-        renderROCChart,
-        clearAllCharts: _clearResizeListeners
+        renderComparisonBarChart
     });
-
 })();
