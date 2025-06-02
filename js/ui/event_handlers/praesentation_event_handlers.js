@@ -1,15 +1,25 @@
 const praesentationEventHandlers = (() => {
     let _mainAppInterface = null;
+    let _isInitialized = false;
 
     function initialize(mainAppInterface) {
+        if (_isInitialized) return;
         _mainAppInterface = mainAppInterface;
+        _isInitialized = true;
     }
 
     function handlePresentationViewChange(event) {
         if (!event || !event.target || typeof state === 'undefined' || typeof ui_helpers === 'undefined') return;
         const newView = event.target.value;
         state.setCurrentPresentationView(newView);
-        ui_helpers.updatePresentationControlsUI(newView, state.getCurrentPresentationStudyId());
+        // Direkter UI-Update kann hier erfolgen für sofortiges Feedback,
+        // obwohl der State-Change auch einen Refresh auslöst.
+        // Stellt sicher, dass die korrekte Funktion aufgerufen wird:
+        if (typeof ui_helpers.updatePresentationViewSelectorUI === 'function') {
+            ui_helpers.updatePresentationViewSelectorUI(newView);
+        } else {
+            console.warn("ui_helpers.updatePresentationViewSelectorUI ist nicht definiert.");
+        }
     }
 
     function handlePresentationStudyChange(event) {
@@ -18,75 +28,129 @@ const praesentationEventHandlers = (() => {
         state.setCurrentPresentationStudyId(newStudyId);
     }
 
-    function _handleDownload(event) {
-        if (!event || !event.currentTarget || typeof exportService === 'undefined' || typeof state === 'undefined') return;
-        event.preventDefault();
-        const button = event.currentTarget;
-        const format = button.dataset.format;
-        const chartId = button.dataset.chartId;
-        const tableId = button.dataset.tableId;
-        const chartName = button.dataset.chartName || button.dataset.defaultName || 'chart';
-        const tableName = button.dataset.tableName || button.dataset.defaultName || 'table';
-        const stateSnapshot = state.getStateSnapshot();
-        const praesentationData = _mainAppInterface.getPraesentationData();
-
-        try {
-            if (format === 'csv') {
-                if (button.id === 'download-performance-as-pur-csv' && praesentationData?.asPur) {
-                    exportService.exportPraesentationAsPurToCSV(praesentationData.asPur, stateSnapshot.currentKollektiv);
-                } else if (button.id === 'download-performance-as-vs-t2-csv' && praesentationData?.asVsT2) {
-                    exportService.exportPraesentationAsVsT2ToCSV(praesentationData.asVsT2, stateSnapshot.currentKollektiv);
-                }
-            } else if (format === 'md') {
-                 if (button.id === 'download-comp-table-as-vs-t2-md' && praesentationData?.asVsT2) {
-                    exportService.exportPraesentationAsVsT2ToMD(praesentationData.asVsT2, stateSnapshot.currentKollektiv);
-                } else if (button.id === 'download-tests-as-vs-t2-md' && praesentationData?.asVsT2?.vergleich) {
-                    exportService.exportPraesentationComparisonTestsToMD(praesentationData.asVsT2, stateSnapshot.currentKollektiv);
-                } else if (button.id === 'dl-praes-as-pur-md' && praesentationData?.asPur) {
-                    exportService.exportPraesentationAsPurToMD(praesentationData.asPur, stateSnapshot.currentKollektiv);
-                }
-            } else if (format === 'png' && chartId) {
-                exportService.exportChartToPNG(chartId, chartName);
-            } else if (format === 'svg' && chartId) {
-                exportService.exportChartToSVG(chartId, chartName);
-            } else if (format === 'png' && tableId) {
-                 exportService.exportTableToPNG(tableId, tableName);
-            } else {
-                console.warn('Unbekanntes Download-Format oder fehlende Daten für Präsentationsexport:', button.id);
-                ui_helpers.showToast(`Export für ${button.id} nicht implementiert oder Daten fehlen.`, 'warning');
-            }
-        } catch (error) {
-            console.error('Fehler beim Präsentationsexport:', error);
-            ui_helpers.showToast(`Fehler beim Export: ${error.message}`, 'error');
-        }
-    }
-
-
-    function attachPraesentationEventListeners(containerId = 'praesentation-tab-pane') {
-        const container = document.getElementById(containerId);
-        if (!container) {
-            console.warn(`Container #${containerId} für Präsentations-Event-Listener nicht gefunden.`);
+    function attachPraesentationEventListeners(tabPaneId) {
+        if (!_isInitialized || !_mainAppInterface) {
+            console.warn("PraesentationEventHandlers nicht initialisiert oder kein mainAppInterface vorhanden.");
             return;
         }
 
-        const viewRadios = container.querySelectorAll('input[name="praesentationAnsicht"]');
+        const viewRadios = document.querySelectorAll('input[name="praesentationAnsicht"]');
         viewRadios.forEach(radio => {
-            radio.removeEventListener('change', handlePresentationViewChange); 
+            radio.removeEventListener('change', handlePresentationViewChange);
             radio.addEventListener('change', handlePresentationViewChange);
         });
 
-        const studySelect = container.querySelector('#praes-study-select');
+        const studySelect = document.getElementById('praes-study-select');
         if (studySelect) {
-            studySelect.removeEventListener('change', handlePresentationStudyChange); 
+            studySelect.removeEventListener('change', handlePresentationStudyChange);
             studySelect.addEventListener('change', handlePresentationStudyChange);
         }
         
-        const downloadButtons = container.querySelectorAll('.chart-download-btn, .table-download-png-btn, #download-performance-as-pur-csv, #dl-praes-as-pur-md, #download-performance-as-vs-t2-csv, #download-comp-table-as-vs-t2-md, #download-tests-as-vs-t2-md');
-        downloadButtons.forEach(button => {
-            button.removeEventListener('click', _handleDownload);
-            button.addEventListener('click', _handleDownload);
-        });
+        // Event Listener für dynamisch erstellte Download-Buttons in Statistik-Karten.
+        // Diese werden an den Container delegiert, der die Karten enthält.
+        const contentArea = document.getElementById('praesentation-content-area');
+        if (contentArea) {
+             contentArea.removeEventListener('click', _handlePraesentationCardButtonClick); // Alte Listener entfernen
+             contentArea.addEventListener('click', _handlePraesentationCardButtonClick);
+        }
     }
+
+    function _handlePraesentationCardButtonClick(event) {
+        const button = event.target.closest('button.praes-dl-btn');
+        if (!button || !button.dataset || !_mainAppInterface) return;
+
+        const exportService = (typeof exportService !== 'undefined') ? exportService : null;
+        if (!exportService || typeof exportService.triggerExport !== 'function') {
+            console.error("ExportService nicht verfügbar für Präsentations-Download.");
+            _mainAppInterface.showToast("Export-Service nicht bereit.", "error");
+            return;
+        }
+
+        const format = button.dataset.format;
+        const targetId = button.dataset.targetId; // Dies könnte eine Tabellen-ID oder Chart-Container-ID sein
+        const praesData = (typeof praesentationTabLogic !== 'undefined' && typeof praesentationTabLogic._praesentationData === 'object') ? praesentationTabLogic._praesentationData : null;
+        const view = (typeof state !== 'undefined') ? state.getCurrentPresentationView() : null;
+
+        let exportType = '';
+        let customData = null; // Für spezifische Daten, die an den ExportService übergeben werden
+        let chartContainerId = null;
+        let tableElementId = null;
+        let baseFilename = "Praesentation";
+
+        if (targetId === 'praes-as-pur-perf-table' && format) { // AS Pur Performance Tabelle
+            exportType = `TABLE_EXPORT_PRAES_AS_PUR_${format.toUpperCase()}`;
+            tableElementId = targetId;
+            baseFilename = `AS_Performance_Uebersicht`;
+            customData = { // Daten für CSV/MD Export der AS Pur Tabelle
+                kollektive: ['Gesamt', 'direkt OP', 'nRCT'],
+                stats: {
+                    'Gesamt': praesData?.statsGesamt,
+                    'direkt OP': praesData?.statsDirektOP,
+                    'nRCT': praesData?.statsNRCT
+                }
+            };
+        } else if (targetId === 'praes-as-performance-chart' && format) { // AS Performance Chart
+            exportType = `CHART_EXPORT_${format.toUpperCase()}`;
+            chartContainerId = targetId;
+            baseFilename = `AS_Performance_Chart_${state.getCurrentKollektiv().replace(/\s+/g,'_')}`;
+        } else if (targetId === 'praes-as-vs-t2-comp-table' && format) { // AS vs T2 Vergleichstabelle
+             exportType = `TABLE_EXPORT_PRAES_AS_VS_T2_COMP_${format.toUpperCase()}`;
+             tableElementId = targetId;
+             baseFilename = `AS_vs_T2_Vergleich_${praesData?.t2CriteriaLabelShort?.replace(/\s+/g,'_') || 'T2'}_${praesData?.kollektivForComparison?.replace(/\s+/g,'_') || 'Koll'}`;
+             customData = {
+                 statsAS: praesData?.statsAS,
+                 statsT2: praesData?.statsT2,
+                 kollektiv: praesData?.kollektivForComparison,
+                 t2SetName: praesData?.t2CriteriaLabelShort
+             };
+        } else if (targetId === 'praes-as-vs-t2-test-table' && format) { // AS vs T2 Test Tabelle
+            exportType = `TABLE_EXPORT_PRAES_AS_VS_T2_TESTS_${format.toUpperCase()}`;
+            tableElementId = targetId;
+            baseFilename = `AS_vs_T2_Tests_${praesData?.t2CriteriaLabelShort?.replace(/\s+/g,'_') || 'T2'}_${praesData?.kollektivForComparison?.replace(/\s+/g,'_') || 'Koll'}`;
+            customData = {
+                vergleich: praesData?.vergleich,
+                kollektiv: praesData?.kollektivForComparison,
+                t2SetName: praesData?.t2CriteriaLabelShort
+            };
+        } else if (targetId === 'praes-comp-chart-container' && format) { // AS vs T2 Vergleichs-Chart
+            exportType = `CHART_EXPORT_${format.toUpperCase()}`;
+            chartContainerId = targetId;
+            baseFilename = `VergleichsChart_AS_vs_${praesData?.t2CriteriaLabelShort?.replace(/\s+/g,'_') || 'T2'}_${praesData?.kollektivForComparison?.replace(/\s+/g,'_') || 'Koll'}`;
+        } else {
+            // Spezifische Download-IDs aus den Buttons, die in ui_helpers.js (createStatistikCard) generiert wurden
+            if (button.id === 'dl-praes-as-pur-csv' && format === 'csv') {
+                exportType = 'PRAES_AS_PUR_CSV';
+                customData = praesData;
+            } else if (button.id === 'dl-praes-as-pur-md' && format === 'md') {
+                exportType = 'PRAES_AS_PUR_MD';
+                 customData = praesData;
+            } else if (button.id === 'download-performance-as-vs-t2-csv' && format === 'csv') {
+                exportType = 'PRAES_AS_VS_T2_CSV';
+                customData = praesData;
+            } else if (button.id === 'download-comp-table-as-vs-t2-md' && format === 'md') {
+                exportType = 'PRAES_AS_VS_T2_MD';
+                customData = praesData;
+            } else if (button.id === 'download-tests-as-vs-t2-md' && format === 'md') {
+                exportType = 'PRAES_COMP_TESTS_MD';
+                customData = praesData;
+            }
+        }
+
+        if (exportType) {
+            exportService.triggerExport(exportType, {
+                baseFilename,
+                chartContainerId,
+                tableElementId,
+                specificData: customData, // Übergabe spezifischer Daten, die für den Export benötigt werden
+                view, // Übergabe des aktuellen Views, falls der ExportService dies benötigt
+                praesentationData: praesData // Übergabe der gesamten Präsentationsdaten
+            });
+        } else {
+            console.warn("Unbekannter Download-Button-Typ oder Format im Präsentationstab:", button.id, format, targetId);
+            _mainAppInterface.showToast("Unbekannter Exporttyp.", "warning");
+        }
+    }
+
 
     return Object.freeze({
         initialize,
@@ -94,4 +158,5 @@ const praesentationEventHandlers = (() => {
         handlePresentationViewChange,
         handlePresentationStudyChange
     });
+
 })();
