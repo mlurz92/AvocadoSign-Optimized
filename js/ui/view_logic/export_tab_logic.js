@@ -4,7 +4,9 @@ const exportTabLogic = (() => {
     let _currentKollektiv = null;
 
     function initialize(mainAppInterface) {
+        if (_isInitialized) return;
         _mainAppInterface = mainAppInterface;
+        _isInitialized = true;
     }
 
     function isInitialized() {
@@ -12,17 +14,29 @@ const exportTabLogic = (() => {
     }
 
     function setDataStale() {
-        // Für den Export-Tab ist "stale" weniger relevant, da er meist on-demand Daten generiert
-        // oder auf bereits berechneten globalen Daten basiert.
-        // Diese Funktion ist für Konsistenz mit anderen Logik-Modulen vorhanden.
+        // Diese Funktion ist für Konsistenz vorhanden, hat aber im Export-Tab
+        // aktuell keine spezifische Auswirkung auf zwischengespeicherte Daten,
+        // da die UI meist bei jedem Aufruf von initializeTab neu generiert wird
+        // und die Exportlogik auf aktuellen Daten aus dem State operiert.
     }
 
     function initializeTab(rawData, currentKollektiv, appliedT2Criteria, appliedT2Logic, bruteForceResults, allStudySets) {
-        _currentKollektiv = currentKollektiv; // Speichere das aktuelle Kollektiv für Dateinamen etc.
+        if (!_mainAppInterface) {
+            console.error("ExportTabLogic: Hauptinterface nicht initialisiert.");
+            return;
+        }
+        _currentKollektiv = currentKollektiv;
         
-        const contentArea = document.getElementById('export-content-area');
+        const appConfig = _mainAppInterface.getStateSnapshot().appConfig;
+        const contentAreaId = appConfig?.TAB_CONTENT_AREAS?.['export-tab'] || 'export-content-area';
+        const contentArea = document.getElementById(contentAreaId);
+
         if (!contentArea) {
-            console.error("ExportTabLogic: Content-Bereich 'export-content-area' nicht gefunden.");
+            console.error(`ExportTabLogic: Content-Bereich '${contentAreaId}' nicht gefunden.`);
+            const uiHelpers = _mainAppInterface.getUiHelpers();
+            if (uiHelpers && typeof uiHelpers.showToast === 'function') {
+                uiHelpers.showToast(`Export-Tab konnte nicht vollständig initialisiert werden (Container '${contentAreaId}' fehlt).`, "error");
+            }
             return;
         }
 
@@ -33,23 +47,18 @@ const exportTabLogic = (() => {
             console.error("ExportTabLogic: uiComponents.createExportOptions ist nicht definiert.");
         }
         
-        // Event-Listener für die Export-Buttons werden typischerweise global in main.js oder
-        // einem dedizierten Export-Event-Handler-Modul angehängt, da die Buttons dynamisch sind
-        // und der ExportService direkt aufgerufen wird.
-        // Hier könnten spezifische Initialisierungen für den Export-Tab erfolgen, falls nötig.
-
-        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.initializeTooltips === 'function') {
-            ui_helpers.initializeTooltips(contentArea);
+        const uiHelpers = _mainAppInterface.getUiHelpers();
+        if (uiHelpers && typeof uiHelpers.initializeTooltips === 'function') {
+            uiHelpers.initializeTooltips(contentArea);
         }
         
-        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.updateExportButtonStates === 'function' && typeof state !== 'undefined' && typeof bruteForceManager !== 'undefined') {
-            const hasBruteForceData = bruteForceManager.hasResults(currentKollektiv);
+        if (uiHelpers && typeof uiHelpers.updateExportButtonStates === 'function' && typeof _mainAppInterface.getStateSnapshot === 'function') {
+            const stateSnapshot = _mainAppInterface.getStateSnapshot();
+            const bfManager = _mainAppInterface.getBruteForceManager();
+            const hasBruteForceData = bfManager && typeof bfManager.hasResults === 'function' ? bfManager.hasResults(currentKollektiv) : false;
             const canExportData = rawData && rawData.length > 0;
-            ui_helpers.updateExportButtonStates(state.getActiveTabId(), hasBruteForceData, canExportData);
+            uiHelpers.updateExportButtonStates(stateSnapshot.currentTabId, hasBruteForceData, canExportData);
         }
-
-
-        _isInitialized = true;
     }
 
     return Object.freeze({
