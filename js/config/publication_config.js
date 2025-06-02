@@ -3,6 +3,14 @@ const PUBLICATION_CONFIG = Object.freeze({
     defaultSection: 'methoden',
     sections: Object.freeze([
         Object.freeze({
+            id: 'einleitung',
+            labelKey: 'einleitung',
+            subSections: Object.freeze([
+                Object.freeze({ id: 'einleitung_hintergrund', label: 'Hintergrund und Problemstellung' }),
+                Object.freeze({ id: 'einleitung_zielsetzung', label: 'Zielsetzung der Studie' })
+            ])
+        }),
+        Object.freeze({
             id: 'methoden',
             labelKey: 'methoden',
             subSections: Object.freeze([
@@ -24,6 +32,31 @@ const PUBLICATION_CONFIG = Object.freeze({
                 Object.freeze({ id: 'ergebnisse_literatur_t2_performance', label: 'Diagnostische Güte: Literatur-T2-Kriterien' }),
                 Object.freeze({ id: 'ergebnisse_optimierte_t2_performance', label: 'Diagnostische Güte: Optimierte T2-Kriterien (Brute-Force)' }),
                 Object.freeze({ id: 'ergebnisse_vergleich_performance', label: 'Vergleich: AS vs. T2-Kriterien' })
+            ])
+        }),
+        Object.freeze({
+            id: 'diskussion',
+            labelKey: 'diskussion',
+            subSections: Object.freeze([
+                Object.freeze({ id: 'diskussion_hauptergebnisse', label: 'Diskussion der Hauptergebnisse' }),
+                Object.freeze({ id: 'diskussion_as_vs_t2', label: 'Vergleich AS vs. T2-Kriterien im Kontext' }),
+                Object.freeze({ id: 'diskussion_limitationen', label: 'Limitationen der Studie' }),
+                Object.freeze({ id: 'diskussion_ausblick', label: 'Ausblick und zukünftige Forschung' }),
+                Object.freeze({ id: 'diskussion_schlussfolgerung', label: 'Schlussfolgerung' })
+            ])
+        }),
+        Object.freeze({
+            id: 'abstract',
+            labelKey: 'abstract',
+            subSections: Object.freeze([
+                Object.freeze({ id: 'abstract_text', label: 'Abstract' })
+            ])
+        }),
+        Object.freeze({
+            id: 'referenzen',
+            labelKey: 'referenzen',
+            subSections: Object.freeze([
+                Object.freeze({ id: 'referenzen_liste', label: 'Referenzliste' })
             ])
         })
     ]),
@@ -56,60 +89,75 @@ const PUBLICATION_CONFIG = Object.freeze({
         methoden: Object.freeze({
             literaturT2KriterienTabelle: {
                 id: 'pub-table-literatur-t2-kriterien',
-                titleDe: 'Übersicht der Literatur-basierten T2-Kriteriensets',
-                titleEn: 'Overview of Literature-Based T2 Criteria Sets'
+                titleDe: 'Übersicht der Literatur-basierten T2-Kriteriensets (Tabelle 2)',
+                titleEn: 'Overview of Literature-Based T2 Criteria Sets (Table 2)'
             }
         }),
         ergebnisse: Object.freeze({
             patientenCharakteristikaTabelle: {
                 id: 'pub-table-patienten-charakteristika',
-                titleDe: 'Patientencharakteristika',
-                titleEn: 'Patient Characteristics'
+                titleDe: 'Patientencharakteristika (Tabelle 1)',
+                titleEn: 'Patient Characteristics (Table 1)'
             },
-            diagnostischeGueteASTabelle: { // Hinzugefügt für Tabelle 3
+            diagnostischeGueteASTabelle: {
                 id: 'pub-table-diagnostische-guete-as',
-                titleDe: 'Diagnostische Güte: Avocado Sign (vs. N-Status)',
-                titleEn: 'Diagnostic Performance: Avocado Sign (vs. N-Status)'
+                titleDe: 'Diagnostische Güte: Avocado Sign vs. N-Status (Tabelle 3)',
+                titleEn: 'Diagnostic Performance: Avocado Sign vs. N-Status (Table 3)'
             },
-            diagnostischeGueteLiteraturT2Tabelle: { // Hinzugefügt für Tabelle 4
+            diagnostischeGueteLiteraturT2Tabelle: {
                 id: 'pub-table-diagnostische-guete-literatur-t2',
-                titleDe: 'Diagnostische Güte: Literatur-basierte T2-Kriterien (vs. N-Status)',
-                titleEn: 'Diagnostic Performance: Literature-Based T2 Criteria (vs. N-Status)'
+                titleDe: 'Diagnostische Güte: Literatur-basierte T2-Kriterien vs. N-Status (Tabelle 4)',
+                titleEn: 'Diagnostic Performance: Literature-Based T2 Criteria vs. N-Status (Table 4)'
             },
-            diagnostischeGueteOptimierteT2Tabelle: { // Hinzugefügt für Tabelle 5
+            diagnostischeGueteOptimierteT2Tabelle: {
                 id: 'pub-table-diagnostische-guete-optimierte-t2',
-                titleDe: 'Diagnostische Güte: Optimierte T2-Kriterien (Ziel: {BF_METRIC}, vs. N-Status)',
-                titleEn: 'Diagnostic Performance: Optimized T2 Criteria (Target: {BF_METRIC}, vs. N-Status)'
+                titleDe: 'Diagnostische Güte: Optimierte T2-Kriterien (Ziel: {BF_METRIC}) vs. N-Status (Tabelle 5)',
+                titleEn: 'Diagnostic Performance: Optimized T2 Criteria (Target: {BF_METRIC}) vs. N-Status (Table 5)'
             },
-            statistischerVergleichAST2Tabelle: { // Hinzugefügt für Tabelle 6
+            statistischerVergleichAST2Tabelle: {
                 id: 'pub-table-statistischer-vergleich-as-t2',
-                titleDe: 'Statistischer Vergleich: Avocado Sign vs. T2-Kriterien (Literatur und Optimiert)',
-                titleEn: 'Statistical Comparison: Avocado Sign vs. T2 Criteria (Literature and Optimized)'
+                titleDe: 'Statistischer Vergleich: Avocado Sign vs. T2-Kriterien (Literatur und Optimiert) (Tabelle 6)',
+                titleEn: 'Statistical Comparison: Avocado Sign vs. T2 Criteria (Literature and Optimized) (Table 6)'
             },
-            alterVerteilungChart: { // Hinzugefügt für Abbildung 1a
+            alterVerteilungChart: {
                 id: 'pub-chart-alter-Gesamt',
-                titleDe: 'Altersverteilung (Gesamtkollektiv)',
-                titleEn: 'Age Distribution (Overall Cohort)'
+                titleDe: 'Altersverteilung (Gesamtkollektiv) (Abbildung 1a)',
+                titleEn: 'Age Distribution (Overall Cohort) (Figure 1a)'
             },
-            geschlechtVerteilungChart: { // Hinzugefügt für Abbildung 1b
+            geschlechtVerteilungChart: {
                 id: 'pub-chart-gender-Gesamt',
-                titleDe: 'Geschlechterverteilung (Gesamtkollektiv)',
-                titleEn: 'Gender Distribution (Overall Cohort)'
+                titleDe: 'Geschlechterverteilung (Gesamtkollektiv) (Abbildung 1b)',
+                titleEn: 'Gender Distribution (Overall Cohort) (Figure 1b)'
             },
-            vergleichPerformanceChartGesamt: { // Hinzugefügt für Abbildung 2a
+            vergleichPerformanceChartGesamt: {
                 id: 'pub-chart-vergleich-Gesamt',
-                titleDe: 'Vergleichsmetriken für Gesamtkollektiv',
-                titleEn: 'Comparative Metrics for Overall Cohort'
+                titleDe: 'Vergleichsmetriken für Gesamtkollektiv (Abbildung 2a)',
+                titleEn: 'Comparative Metrics for Overall Cohort (Figure 2a)'
             },
-            vergleichPerformanceChartDirektOP: { // Hinzugefügt für Abbildung 2b
+            vergleichPerformanceChartDirektOP: {
                 id: 'pub-chart-vergleich-direkt-OP',
-                titleDe: 'Vergleichsmetriken für Direkt-OP Kollektiv',
-                titleEn: 'Comparative Metrics for Upfront Surgery Cohort'
+                titleDe: 'Vergleichsmetriken für Direkt-OP Kollektiv (Abbildung 2b)',
+                titleEn: 'Comparative Metrics for Upfront Surgery Cohort (Figure 2b)'
             },
-            vergleichPerformanceChartNRCT: { // Hinzugefügt für Abbildung 2c
+            vergleichPerformanceChartNRCT: {
                 id: 'pub-chart-vergleich-nRCT',
-                titleDe: 'Vergleichsmetriken für nRCT Kollektiv',
-                titleEn: 'Comparative Metrics for nRCT Cohort'
+                titleDe: 'Vergleichsmetriken für nRCT Kollektiv (Abbildung 2c)',
+                titleEn: 'Comparative Metrics for nRCT Cohort (Figure 2c)'
+            },
+            rocCurveVergleichGesamtChart: {
+                id: 'pub-chart-roc-vergleich-Gesamt',
+                titleDe: 'ROC-Kurven Vergleich (Gesamtkollektiv) (Abbildung 3a)',
+                titleEn: 'ROC Curve Comparison (Overall Cohort) (Figure 3a)'
+            },
+            rocCurveVergleichDirektOPChart: {
+                id: 'pub-chart-roc-vergleich-direkt-OP',
+                titleDe: 'ROC-Kurven Vergleich (Direkt-OP) (Abbildung 3b)',
+                titleEn: 'ROC Curve Comparison (Upfront Surgery) (Figure 3b)'
+            },
+            rocCurveVergleichNRCTChart: {
+                id: 'pub-chart-roc-vergleich-nRCT',
+                titleDe: 'ROC-Kurven Vergleich (nRCT) (Abbildung 3c)',
+                titleEn: 'ROC Curve Comparison (nRCT) (Figure 3c)'
             }
         })
     })
