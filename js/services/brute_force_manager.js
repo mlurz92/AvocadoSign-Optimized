@@ -1,263 +1,239 @@
 const bruteForceManager = (() => {
-    let worker = null;
-    let currentKollektivForRun = null;
-    let currentMetricForRun = '';
-    let startTimeForRun = null;
-    let totalCombinationsForRun = 0;
-    let testedCombinationsForRun = 0;
-    let currentBestResultForRun = null;
-    let allResultsForCurrentRun = []; 
-    let currentRunId = null;
+    let _worker = null;
+    let _isWorkerAvailable = false;
+    let _isOptimizationRunning = false;
+    let _currentOptimizationJob = null;
+    let _mainAppInterface = null;
 
-    let _allBruteForceResultsByKollektiv = {}; 
-    let _currentState = 'idle'; 
+    function initialize(mainAppInterface) {
+        _mainAppInterface = mainAppInterface;
+        _isWorkerAvailable = false;
+        _isOptimizationRunning = false;
+        _currentOptimizationJob = null;
 
-    let _onStartCallback = () => {};
-    let _onStartedCallback = () => {};
-    let _onProgressCallback = () => {};
-    let _onResultCallback = () => {};
-    let _onErrorCallback = () => {};
-    let _onCancelledCallback = () => {};
-    let _isInitializing = false;
-
-
-    function initialize(callbacks) {
-        if (_currentState !== 'idle' && _currentState !== 'error' && !_isInitializing) {
-            console.warn("Brute-Force Manager ist bereits initialisiert oder beschäftigt.");
-            if (_currentState === 'pending_init') return Promise.resolve(worker !== null); 
-            return Promise.resolve(worker !== null);
-        }
-        _isInitializing = true;
-        _currentState = 'pending_init';
-
-        return new Promise((resolve) => {
-            if (typeof Worker !== 'undefined') {
-                try {
-                    if (worker) { 
-                        worker.terminate();
-                        worker = null;
-                    }
-                    if (typeof APP_CONFIG === 'undefined' || !APP_CONFIG.PATHS || !APP_CONFIG.PATHS.BRUTE_FORCE_WORKER) {
-                        throw new Error("APP_CONFIG.PATHS.BRUTE_FORCE_WORKER ist nicht definiert.");
-                    }
-                    worker = new Worker(APP_CONFIG.PATHS.BRUTE_FORCE_WORKER);
-                    worker.onmessage = _handleWorkerMessage;
-                    worker.onerror = _handleWorkerError;
-
-                    if (callbacks) {
-                        _onStartCallback = typeof callbacks.onStart === 'function' ? callbacks.onStart : () => {};
-                        _onStartedCallback = typeof callbacks.onStarted === 'function' ? callbacks.onStarted : () => {};
-                        _onProgressCallback = typeof callbacks.onProgress === 'function' ? callbacks.onProgress : () => {};
-                        _onResultCallback = typeof callbacks.onResult === 'function' ? callbacks.onResult : () => {};
-                        _onErrorCallback = typeof callbacks.onError === 'function' ? callbacks.onError : () => {};
-                        _onCancelledCallback = typeof callbacks.onCancelled === 'function' ? callbacks.onCancelled : () => {};
-                    }
-                    _currentState = 'idle';
-                    _isInitializing = false;
-                    console.log("Brute-Force Worker initialisiert.");
-                    resolve(true);
-                } catch (e) {
-                    console.error("Fehler beim Initialisieren des Brute-Force Workers:", e);
-                    worker = null;
-                    _currentState = 'error';
-                    _isInitializing = false;
-                    _onErrorCallback({ message: `Worker-Initialisierungsfehler: ${e.message}` });
-                    resolve(false);
+        if (typeof Worker !== 'undefined') {
+            try {
+                const workerPath = APP_CONFIG.WORKER_PATHS.BRUTE_FORCE;
+                if (!workerPath) {
+                    throw new Error("Worker path for Brute-Force is not defined in APP_CONFIG.");
                 }
-            } else {
-                console.warn("Web Workers werden von diesem Browser nicht unterstützt.");
-                _currentState = 'error';
-                _isInitializing = false;
-                _onErrorCallback({ message: "Web Workers nicht unterstützt." });
-                resolve(false);
-            }
-        });
-    }
+                _worker = new Worker(workerPath);
+                _isWorkerAvailable = true; 
 
-    function _handleWorkerError(error) {
-        console.error('Fehler vom Brute-Force Worker:', error.message, error);
-        _currentState = 'error';
-        _onErrorCallback({ message: error.message || "Unbekannter Worker-Fehler", filename: error.filename, lineno: error.lineno });
-    }
+                _worker.onmessage = (e) => {
+                    const { type, payload, error, message } = e.data;
+                    const uiHelpers = _mainAppInterface.getUiHelpers();
+                    const appState = _mainAppInterface.getState();
 
-    function _handleWorkerMessage(e) {
-        if (!e.data || !e.data.type) {
-            console.warn("Ungültige Nachricht vom Worker empfangen:", e.data);
-            return;
-        }
-        
-        if (e.data.runId && e.data.runId !== currentRunId && e.data.type !== 'ready') {
-            console.log("Nachricht von veraltetem Worker-Lauf ignoriert:", e.data.runId, "Aktuell:", currentRunId);
-            return;
-        }
-
-        switch (e.data.type) {
-            case 'ready':
-                console.log("Brute-Force Worker ist bereit.");
-                break;
-            case 'started':
-                totalCombinationsForRun = e.data.payload.totalCombinations;
-                _currentState = 'running'; 
-                _onStartedCallback({
-                    totalCombinations: totalCombinationsForRun,
-                    kollektiv: currentKollektivForRun,
-                    metric: currentMetricForRun
-                });
-                break;
-            case 'progress':
-                testedCombinationsForRun = e.data.payload.testedCombinations;
-                if (e.data.payload.currentBest) {
-                    currentBestResultForRun = e.data.payload.currentBest;
-                }
-                _onProgressCallback({
-                    tested: testedCombinationsForRun,
-                    total: totalCombinationsForRun,
-                    currentBest: currentBestResultForRun,
-                    metric: currentMetricForRun,
-                    kollektiv: currentKollektivForRun
-                });
-                break;
-            case 'result':
-                _currentState = 'result';
-                const resultsPayload = e.data.payload;
-                allResultsForCurrentRun = resultsPayload.results;
-                currentBestResultForRun = resultsPayload.results[0] || null; 
-                const duration = performance.now() - startTimeForRun;
-
-                const fullResultData = {
-                    kollektiv: currentKollektivForRun,
-                    metric: currentMetricForRun,
-                    results: allResultsForCurrentRun,
-                    bestResult: currentBestResultForRun,
-                    duration: duration,
-                    totalTested: testedCombinationsForRun, 
-                    nGesamt: resultsPayload.nGesamt,
-                    nPlus: resultsPayload.nPlus,
-                    nMinus: resultsPayload.nMinus
+                    switch (type) {
+                        case 'initialized':
+                            _isWorkerAvailable = true;
+                            _isOptimizationRunning = false;
+                            if (uiHelpers && typeof uiHelpers.updateBruteForceUI === 'function') {
+                                uiHelpers.updateBruteForceUI('idle', 0, 0, '', null, appState.getCurrentKollektiv());
+                            }
+                            console.info("Brute-Force Worker erfolgreich initialisiert.");
+                            break;
+                        case 'started':
+                             _isOptimizationRunning = true;
+                             if (uiHelpers && typeof uiHelpers.updateBruteForceUI === 'function' && _currentOptimizationJob) {
+                                uiHelpers.updateBruteForceUI('running', 0, payload.totalCombinations || 0, _currentOptimizationJob.metric, null, _currentOptimizationJob.kollektiv);
+                             }
+                             if (appState && typeof appState.setBruteForceStatus === 'function') {
+                                 appState.setBruteForceStatus('running', { 
+                                     kollektiv: _currentOptimizationJob?.kollektiv, 
+                                     metric: _currentOptimizationJob?.metric,
+                                     progress: 0,
+                                     totalCombinations: payload.totalCombinations || 0,
+                                     startTime: Date.now()
+                                 });
+                             }
+                            break;
+                        case 'progress':
+                            if (uiHelpers && typeof uiHelpers.updateBruteForceUI === 'function' && _currentOptimizationJob) {
+                                uiHelpers.updateBruteForceUI('running', payload.testedCount, payload.totalCombinations, _currentOptimizationJob.metric, payload.currentBestResult, _currentOptimizationJob.kollektiv);
+                            }
+                             if (appState && typeof appState.setBruteForceStatus === 'function') {
+                                 const currentStatus = appState.getBruteForceResults() || {};
+                                 appState.setBruteForceStatus('running', { 
+                                     ...currentStatus,
+                                     progress: payload.testedCount,
+                                     totalCombinations: payload.totalCombinations,
+                                     currentBestResult: payload.currentBestResult
+                                 });
+                             }
+                            break;
+                        case 'completed':
+                            _isOptimizationRunning = false;
+                            if (appState && typeof appState.setBruteForceResults === 'function') {
+                                appState.setBruteForceResults(payload);
+                            }
+                            if (uiHelpers && typeof uiHelpers.updateBruteForceUI === 'function' && _currentOptimizationJob) {
+                                uiHelpers.updateBruteForceUI('completed', payload.totalTested, payload.totalTested, _currentOptimizationJob.metric, payload.bestResult, _currentOptimizationJob.kollektiv, payload);
+                            }
+                            _currentOptimizationJob = null;
+                            break;
+                        case 'error':
+                            _isOptimizationRunning = false;
+                            console.error('Brute-Force Worker Fehler:', error, message, payload);
+                            if (uiHelpers && typeof uiHelpers.showToast === 'function') {
+                                uiHelpers.showToast(`Brute-Force Fehler: ${message || error || 'Unbekannter Fehler'}`, 'error');
+                            }
+                            if (uiHelpers && typeof uiHelpers.updateBruteForceUI === 'function') {
+                                uiHelpers.updateBruteForceUI('error', 0, 0, _currentOptimizationJob?.metric, message || error || 'Fehler im Worker.', _currentOptimizationJob?.kollektiv);
+                            }
+                             if (appState && typeof appState.setBruteForceStatus === 'function') {
+                                 appState.setBruteForceStatus('error', { error: message || error, kollektiv: _currentOptimizationJob?.kollektiv, metric: _currentOptimizationJob?.metric });
+                             }
+                            _currentOptimizationJob = null;
+                            break;
+                        case 'cancelled':
+                            _isOptimizationRunning = false;
+                            if (uiHelpers && typeof uiHelpers.updateBruteForceUI === 'function' && _currentOptimizationJob) {
+                                uiHelpers.updateBruteForceUI('cancelled', payload?.testedCount || 0, payload?.totalCombinations || 0, _currentOptimizationJob.metric, null, _currentOptimizationJob.kollektiv);
+                            }
+                            if (appState && typeof appState.setBruteForceStatus === 'function') {
+                                 appState.setBruteForceStatus('cancelled', { kollektiv: _currentOptimizationJob?.kollektiv, metric: _currentOptimizationJob?.metric });
+                            }
+                            if (appState && typeof appState.clearBruteForceResults === 'function') {
+                                appState.clearBruteForceResults();
+                            }
+                            if (uiHelpers && typeof uiHelpers.showToast === 'function') {
+                                uiHelpers.showToast('Brute-Force Optimierung abgebrochen.', 'info');
+                            }
+                            _currentOptimizationJob = null;
+                            break;
+                        default:
+                            console.warn('Unbekannte Nachricht vom Brute-Force Worker:', e.data);
+                    }
                 };
-                _allBruteForceResultsByKollektiv[currentKollektivForRun] = fullResultData;
-                _onResultCallback(fullResultData);
-                break;
-            case 'cancelled': 
-                if(_currentState === 'running' || _currentState === 'start' || _currentState === 'pending_init') { 
-                     _currentState = 'cancelled';
-                     _onCancelledCallback({kollektiv: currentKollektivForRun, metric: currentMetricForRun});
+
+                _worker.onerror = (err) => {
+                    _isWorkerAvailable = false;
+                    _isOptimizationRunning = false;
+                    console.error('Fehler beim Initialisieren des Brute-Force Workers:', err.message, err);
+                    if (_mainAppInterface && _mainAppInterface.getUiHelpers() && typeof _mainAppInterface.getUiHelpers().showToast === 'function') {
+                        _mainAppInterface.getUiHelpers().showToast(`Kritischer Fehler: Brute-Force Worker konnte nicht geladen werden. Pfad: ${workerPath}. Fehler: ${err.message}. Weitere Details in der Konsole.`, 'error', 10000);
+                    }
+                    if (_mainAppInterface && _mainAppInterface.getUiHelpers() && typeof _mainAppInterface.getUiHelpers().updateBruteForceUI === 'function') {
+                         _mainAppInterface.getUiHelpers().updateBruteForceUI('error',0,0,'','Worker nicht geladen/Fehler.');
+                    }
+                     if (_mainAppInterface && _mainAppInterface.getState() && typeof _mainAppInterface.getState().setBruteForceStatus === 'function') {
+                        _mainAppInterface.getState().setBruteForceStatus('error', { error: 'Worker konnte nicht geladen werden.', fatal: true });
+                     }
+                    _currentOptimizationJob = null;
+                };
+                
+                _worker.postMessage({ type: 'initialize', payload: { appConfig: APP_CONFIG } });
+
+
+            } catch (error) {
+                _isWorkerAvailable = false;
+                console.error("Fehler bei der Erstellung des Brute-Force Workers:", error);
+                 if (_mainAppInterface && _mainAppInterface.getUiHelpers() && typeof _mainAppInterface.getUiHelpers().showToast === 'function') {
+                    _mainAppInterface.getUiHelpers().showToast(`Fehler bei Worker-Erstellung: ${error.message}`, 'error', 10000);
                 }
-                break;
-            case 'error':
-                _currentState = 'error';
-                _onErrorCallback({ message: e.data.payload.message || "Unbekannter Fehler im Worker.", kollektiv: currentKollektivForRun, metric: currentMetricForRun });
-                break;
-            default:
-                console.warn("Unbekannter Nachrichtentyp vom Worker:", e.data.type);
+                if (_mainAppInterface && _mainAppInterface.getUiHelpers() && typeof _mainAppInterface.getUiHelpers().updateBruteForceUI === 'function') {
+                    _mainAppInterface.getUiHelpers().updateBruteForceUI('error',0,0,'','Worker nicht erstellt.');
+                }
+            }
+        } else {
+            _isWorkerAvailable = false;
+            console.warn("Web Workers werden von diesem Browser nicht unterstützt.");
+            if (_mainAppInterface && _mainAppInterface.getUiHelpers() && typeof _mainAppInterface.getUiHelpers().showToast === 'function') {
+                _mainAppInterface.getUiHelpers().showToast("Web Workers nicht unterstützt. Brute-Force nicht verfügbar.", "warning", 8000);
+            }
         }
     }
 
-    async function startOptimization(data, kollektiv, metric) {
-        if (_isInitializing) {
-            ui_helpers.showToast("Brute-Force Manager initialisiert noch. Bitte kurz warten.", "info");
-            return;
-        }
-        if (!worker && _currentState !== 'error') { 
-            console.log("Worker nicht vorhanden, versuche Re-Initialisierung...");
-            const success = await initialize({}); 
-            if (!success) {
-                 ui_helpers.showToast("Brute-Force Worker konnte nicht initialisiert werden. Optimierung nicht möglich.", "danger");
-                 return;
+    function isWorkerAvailable() {
+        return _isWorkerAvailable;
+    }
+
+    function isOptimizationRunning() {
+        return _isOptimizationRunning;
+    }
+
+    function startOptimization(kollektiv, metric, rawData) {
+        if (!_isWorkerAvailable) {
+            console.error("Brute-Force Worker ist nicht verfügbar. Optimierung kann nicht gestartet werden.");
+            if (_mainAppInterface && _mainAppInterface.getUiHelpers() && typeof _mainAppInterface.getUiHelpers().showToast === 'function') {
+                _mainAppInterface.getUiHelpers().showToast('Brute-Force Optimierung nicht möglich: Worker nicht bereit.', 'error');
             }
-        } else if (_currentState === 'error' && !worker) {
-            ui_helpers.showToast("Brute-Force Worker ist in einem Fehlerzustand und nicht verfügbar.", "danger");
-            return;
+            return false;
         }
-
-        if (_currentState === 'running') {
-            ui_helpers.showToast("Eine Brute-Force-Optimierung läuft bereits.", "warning");
-            return;
-        }
-        if (!data || data.length === 0) {
-            _onErrorCallback({ message: "Keine Daten für die Optimierung vorhanden." });
-            return;
-        }
-
-        _currentState = 'start'; 
-        currentKollektivForRun = kollektiv;
-        currentMetricForRun = metric;
-        startTimeForRun = performance.now();
-        testedCombinationsForRun = 0;
-        totalCombinationsForRun = 0;
-        currentBestResultForRun = null;
-        allResultsForCurrentRun = [];
-        currentRunId = generateUUID(); 
-
-        _onStartCallback({ kollektiv: currentKollektivForRun, metric: currentMetricForRun });
-
-        if (typeof APP_CONFIG === 'undefined' || !APP_CONFIG.T2_CRITERIA_SETTINGS) {
-             _handleWorkerError(new Error("APP_CONFIG.T2_CRITERIA_SETTINGS ist nicht definiert."));
-             return;
-        }
-
-        worker.postMessage({
-            type: 'start',
-            payload: {
-                data: cloneDeep(data), 
-                metric: metric,
-                runId: currentRunId,
-                t2Settings: cloneDeep(APP_CONFIG.T2_CRITERIA_SETTINGS) 
+        if (_isOptimizationRunning) {
+            console.warn("Eine Brute-Force-Optimierung läuft bereits.");
+             if (_mainAppInterface && _mainAppInterface.getUiHelpers() && typeof _mainAppInterface.getUiHelpers().showToast === 'function') {
+                _mainAppInterface.getUiHelpers().showToast('Optimierung läuft bereits.', 'info');
             }
-        });
+            return false;
+        }
+
+        _isOptimizationRunning = true; 
+        _currentOptimizationJob = { kollektiv, metric, startTime: Date.now() };
+
+        try {
+            const clonedData = cloneDeep(rawData);
+            const allLiteratures = (typeof studyT2CriteriaManager !== 'undefined' && typeof studyT2CriteriaManager.getAllStudyCriteriaSets === 'function') 
+                                    ? studyT2CriteriaManager.getAllStudyCriteriaSets(false) 
+                                    : [];
+            const payloadForWorker = {
+                kollektiv,
+                metric,
+                rawData: clonedData,
+                t2CriteriaSettings: APP_CONFIG.T2_CRITERIA_SETTINGS,
+                allT2Literatures: allLiteratures,
+                appConfig: { 
+                    PERFORMANCE_SETTINGS: APP_CONFIG.PERFORMANCE_SETTINGS,
+                    STATISTICAL_CONSTANTS: APP_CONFIG.STATISTICAL_CONSTANTS
+                }
+            };
+            _worker.postMessage({ type: 'start', payload: payloadForWorker });
+            console.info(`Brute-Force Optimierung gestartet für Kollektiv '${kollektiv}' mit Metrik '${metric}'.`);
+            return true;
+
+        } catch (error) {
+            _isOptimizationRunning = false;
+            _currentOptimizationJob = null;
+            console.error("Fehler beim Vorbereiten oder Senden der Startnachricht an den Brute-Force Worker:", error);
+             if (_mainAppInterface && _mainAppInterface.getUiHelpers() && typeof _mainAppInterface.getUiHelpers().showToast === 'function') {
+                _mainAppInterface.getUiHelpers().showToast(`Fehler beim Start der Optimierung: ${error.message}`, 'error');
+            }
+            if (_mainAppInterface && _mainAppInterface.getUiHelpers() && typeof _mainAppInterface.getUiHelpers().updateBruteForceUI === 'function') {
+                _mainAppInterface.getUiHelpers().updateBruteForceUI('error',0,0,metric,'Startfehler',kollektiv);
+            }
+            return false;
+        }
     }
 
     function cancelOptimization() {
-        if ((_currentState === 'running' || _currentState === 'start') && worker) {
-            worker.postMessage({ type: 'cancel', payload: {runId: currentRunId} });
-            _currentState = 'cancelled'; 
-            _onCancelledCallback({kollektiv: currentKollektivForRun, metric: currentMetricForRun});
-            console.log("Brute-Force-Optimierung Abbruch angefordert.");
+        if (_isOptimizationRunning && _worker) {
+            _worker.postMessage({ type: 'cancel' });
+            console.info("Abbruchanforderung an Brute-Force Worker gesendet.");
         } else {
-            console.log("Keine laufende Optimierung zum Abbrechen oder Worker nicht aktiv.");
+            console.warn("Keine laufende Optimierung zum Abbrechen oder Worker nicht verfügbar.");
+            _isOptimizationRunning = false; 
+             if (_mainAppInterface && _mainAppInterface.getUiHelpers() && typeof _mainAppInterface.getUiHelpers().updateBruteForceUI === 'function' && _currentOptimizationJob) {
+                _mainAppInterface.getUiHelpers().updateBruteForceUI('cancelled', 0, 0, _currentOptimizationJob.metric, null, _currentOptimizationJob.kollektiv);
+             } else if (_mainAppInterface && _mainAppInterface.getUiHelpers()) {
+                 _mainAppInterface.getUiHelpers().updateBruteForceUI('idle');
+             }
+            _currentOptimizationJob = null;
         }
     }
     
-    function getResultsForCurrentRun() {
-        return {
-            kollektiv: currentKollektivForRun,
-            metric: currentMetricForRun,
-            results: cloneDeep(allResultsForCurrentRun),
-            bestResult: cloneDeep(currentBestResultForRun),
-            duration: (_currentState === 'result' && startTimeForRun) ? (performance.now() - startTimeForRun) : null,
-            totalTested: testedCombinationsForRun
-        };
-    }
-    
-    function getAllResults() {
-        return cloneDeep(_allBruteForceResultsByKollektiv);
-    }
-
-    function getBestResultForKollektiv(kollektivId) {
-        return cloneDeep(_allBruteForceResultsByKollektiv[kollektivId]?.bestResult || null);
-    }
-
-    function getState() {
-        return _currentState;
-    }
-
-    function hasResults(kollektivId) {
-        return !!_allBruteForceResultsByKollektiv[kollektivId]?.results?.length;
-    }
-    
-    function isWorkerAvailable() {
-        return typeof Worker !== 'undefined' && worker !== null && _currentState !== 'error' && _currentState !== 'pending_init';
+    function getCurrentOptimizationJobDetails() {
+        return cloneDeep(_currentOptimizationJob);
     }
 
     return Object.freeze({
         initialize,
+        isWorkerAvailable,
+        isOptimizationRunning,
         startOptimization,
         cancelOptimization,
-        getResultsForCurrentRun,
-        getAllResults,
-        getBestResultForKollektiv,
-        getState,
-        hasResults,
-        isWorkerAvailable
+        getCurrentOptimizationJobDetails
     });
+
 })();
