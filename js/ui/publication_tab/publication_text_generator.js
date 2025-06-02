@@ -15,7 +15,7 @@ const publicationTextGenerator = (() => {
                 studienpopulation_basis: "Es wurde eine retrospektive Analyse von Patienten mit histologisch gesichertem Rektumkarzinom durchgeführt, die zwischen {STUDIEN_START_DATUM} und {STUDIEN_ENDE_DATUM} an unserem Zentrum behandelt wurden. Eingeschlossen wurden Patienten, die präoperativ eine leitliniengerechte MRT des Rektums erhielten. Ausschlusskriterien waren eine vorangegangene Rektumresektion, eine andere maligne Erkrankung im kleinen Becken oder eine unzureichende Bildqualität der MRT-Untersuchungen. Die Studie wurde von der zuständigen Ethikkommission genehmigt (Antragsnummer: {ETHIK_ANTRAGSNUMMER}), und aufgrund des retrospektiven Charakters der Studie wurde auf eine individuelle Patienteneinwilligung verzichtet.",
                 patientenkollektiv_detail: "Das finale Studienkollektiv umfasste {N_GESAMT_PATIENTEN} Patienten (mittleres Alter {ALTER_MEAN_GESAMT} ± {ALTER_SD_GESAMT} Jahre; {N_MAENNLICH_GESAMT} männlich). Davon erhielten {N_NRCT_PATIENTEN} Patienten eine neoadjuvante Radiochemotherapie (nRCT) und {N_DIREKTOP_PATIENTEN} Patienten wurden primär operiert.",
                 t2_kriterien_methodik: "Die T2-gewichteten MRT-Bilder wurden hinsichtlich etablierter morphologischer Lymphknoten-Malignitätskriterien analysiert. Diese umfassten Größe (Kurzachsendurchmesser), Form (rund vs. oval), Kontur (irregulär/spikuliert vs. glatt) und Binnensignalhomogenität (heterogen vs. homogen). Lymphknoten wurden als maligne gewertet, wenn sie die definierten Kriterienkombinationen erfüllten. Für Standard-T2-Kriterien (T2<sub>Std</sub>) wurden Definitionen aus der Literatur herangezogen [REF:Beets-Tan_2018], [REF:Koh_2008]. Zusätzlich wurden optimierte T2-Kriterien (T2<sub>Opt</sub>) mittels einer Brute-Force-Methode auf Basis der aktuellen Kohorte für die Maximierung der {BF_METRIC_NAME} datengetrieben ermittelt. Die optimierten Kriterien lauteten: {T2OPT_KRITERIEN_DEFINITION_GESAMT}.",
-                statistische_methoden_basis: "Deskriptive Statistiken wurden als Mittelwert ± Standardabweichung für normalverteilte kontinuierliche Variablen und als Median mit Interquartilsabstand (IQR) für nicht-normalverteilte Variablen angegeben. Kategoriale Variablen wurden als absolute und relative Häufigigkeiten dargestellt. Die diagnostische Güte des Avocado Signs (AS), der Standard-T2-Kriterien (T2<sub>Std</sub>) und der optimierten T2-Kriterien (T2<sub>Opt</sub>) wurde anhand von Sensitivität, Spezifität, positivem prädiktiven Wert (PPV), negativem prädiktiven Wert (NPV) und Genauigkeit (Accuracy) evaluiert. Konfidenzintervalle (95%-CI) für diese Metriken wurden mittels der Clopper-Pearson-Methode oder, wo angegeben, mittels nicht-parametrischem Bootstrapping ({N_BOOTSTRAP_REPLIKATIONEN} Replikationen) berechnet. Die Receiver Operating Characteristic (ROC)-Kurvenanalyse wurde durchgeführt und die Fläche unter der Kurve (AUC) als Maß für die Gesamtdiskriminationsfähigkeit verwendet. Für den Vergleich der diagnostischen Genauigkeit von gepaarten Tests (AS vs. T2<sub>Std</sub>, AS vs. T2<sub>Opt</sub>) wurde der McNemar-Test verwendet. Unterschiede in den AUC-Werten wurden mit dem Test nach DeLong et al. analysiert. Ein p-Wert < {SIGNIFIKANZNIVEAU} wurde als statistisch signifikant angesehen. Alle statistischen Analysen wurden mit der Software R (Version {R_VERSION}, R Foundation for Statistical Computing, Wien, Österreich) und dem 'Avocado Sign Analyse Tool' (Version {APP_VERSION}, {APP_AUTOR}, {APP_STANDORT_INSTITUT}) durchgeführt."
+                statistische_methoden_basis: "Deskriptive Statistiken wurden als Mittelwert ± Standardabweichung für normalverteilte kontinuierliche Variablen und als Median mit Interquartilsabstand (IQR) für nicht-normalverteilte Variablen angegeben. Kategoriale Variablen wurden als absolute und relative Häufigkeiten dargestellt. Die diagnostische Güte des Avocado Signs (AS), der Standard-T2-Kriterien (T2<sub>Std</sub>) und der optimierten T2-Kriterien (T2<sub>Opt</sub>) wurde anhand von Sensitivität, Spezifität, positivem prädiktiven Wert (PPV), negativem prädiktiven Wert (NPV) und Genauigkeit (Accuracy) evaluiert. Konfidenzintervalle (95%-CI) für diese Metriken wurden mittels der Clopper-Pearson-Methode oder, wo angegeben, mittels nicht-parametrischem Bootstrapping ({N_BOOTSTRAP_REPLIKATIONEN} Replikationen) berechnet. Die Receiver Operating Characteristic (ROC)-Kurvenanalyse wurde durchgeführt und die Fläche unter der Kurve (AUC) als Maß für die Gesamtdiskriminationsfähigkeit verwendet. Für den Vergleich der diagnostischen Genauigkeit von gepaarten Tests (AS vs. T2<sub>Std</sub>, AS vs. T2<sub>Opt</sub>) wurde der McNemar-Test verwendet. Unterschiede in den AUC-Werten wurden mit dem Test nach DeLong et al. analysiert. Ein p-Wert < {SIGNIFIKANZNIVEAU} wurde als statistisch signifikant angesehen. Alle statistischen Analysen wurden mit der Software R (Version {R_VERSION}, R Foundation for Statistical Computing, Wien, Österreich) und dem 'Avocado Sign Analyse Tool' (Version {APP_VERSION}, {APP_AUTOR}, {APP_STANDORT_INSTITUT}) durchgeführt."
             }
         },
         en: {
@@ -89,6 +89,11 @@ const publicationTextGenerator = (() => {
             N_DIREKTOP_PATIENTEN: val(nDirektOP, 0, false),
             N_NRCT_PATIENTEN: val(nNRCT, 0, false),
 
+            ANTEIL_MAENNLICH_GESAMT: val( (getNestedValue(statsGesamt, 'deskriptiv.geschlecht.m', 0) / (nGesamt || 1)), 1, true, '0%'),
+            ANTEIL_NRCT_GESAMT: val( (nNRCT / (nGesamt || 1)), 1, true, '0%'),
+            ANTEIL_NPLUS_GESAMT: val( (getNestedValue(statsGesamt, 'deskriptiv.nStatus.pos', 0) / (nGesamt || 1)), 1, true, '0%'),
+
+
             ALTER_MEAN_GESAMT: val(getNestedValue(statsGesamt, 'deskriptiv.alter.mean'), 1, false),
             ALTER_SD_GESAMT: val(getNestedValue(statsGesamt, 'deskriptiv.alter.sd'), 1, false),
             ALTER_MEDIAN_GESAMT: val(getNestedValue(statsGesamt, 'deskriptiv.alter.median'), 1, false),
@@ -98,11 +103,26 @@ const publicationTextGenerator = (() => {
             N_POSITIV_PATH_GESAMT: val(getNestedValue(statsGesamt, 'deskriptiv.nStatus.pos'), 0, false),
             N_NEGATIV_PATH_GESAMT: val(getNestedValue(statsGesamt, 'deskriptiv.nStatus.neg'), 0, false),
             
+            MRT_GERAET_HERSTELLER_MODELL: APP_CONFIG.MRT_PROTOKOLL?.GERAET_HERSTELLER_MODELL || 'N/A',
+            MRT_FELDSTAERKE: APP_CONFIG.MRT_PROTOKOLL?.FELDSTAERKE_TESLA || 'N/A',
+            KONTRASTMITTEL_NAME: APP_CONFIG.MRT_PROTOKOLL?.KONTRASTMITTEL_NAME || 'Gadolinium-basiert',
+            KONTRASTMITTEL_DOSIERUNG: APP_CONFIG.MRT_PROTOKOLL?.KONTRASTMITTEL_DOSIERUNG_MMOL_PER_KG || '0.1',
+            RADIOLOGE1_ERFAHRUNG: APP_CONFIG.READER_INFO?.RADIOLOGE1_ERFAHRUNG_JAHRE || 'N/A',
+            RADIOLOGE2_ERFAHRUNG: APP_CONFIG.READER_INFO?.RADIOLOGE2_ERFAHRUNG_JAHRE || 'N/A',
+            AS_KAPPA_WERT: val(getNestedValue(allStats, 'Gesamt.interobserverAS.kappa.value'), 2, false),
+            AS_KAPPA_WERT_EN: val(getNestedValue(allStats, 'Gesamt.interobserverAS.kappa.value'), 2, false),
+            AS_KAPPA_STATISTIK: `SE = ${val(getNestedValue(allStats, 'Gesamt.interobserverAS.kappa.se'), 2, false)}, 95% CI: ${val(getNestedValue(allStats, 'Gesamt.interobserverAS.kappa.ci_lower'), 2, false)}–${val(getNestedValue(allStats, 'Gesamt.interobserverAS.kappa.ci_upper'), 2, false)}`,
+
             BF_METRIC_NAME: bruteForceMetricForPublication || 'N/A',
             T2OPT_KRITERIEN_DEFINITION_GESAMT: studyT2CriteriaManager.formatCriteriaForDisplay(getNestedValue(getBFDef(statsGesamt), 'criteria'), getNestedValue(getBFDef(statsGesamt), 'logic'), lang === 'de') || 'N/A',
             T2OPT_KRITERIEN_DEFINITION_GESAMT_EN: studyT2CriteriaManager.formatCriteriaForDisplay(getNestedValue(getBFDef(statsGesamt), 'criteria'), getNestedValue(getBFDef(statsGesamt), 'logic'), 'en') || 'N/A',
             T2STD_KRITERIEN_DEFINITION_BEETS_TAN_2018: studyT2CriteriaManager.formatCriteriaForDisplay(getNestedValue(studyT2CriteriaManager.getStudyCriteriaSetById('beets_tan_2018_esgar'), 'criteria'), getNestedValue(studyT2CriteriaManager.getStudyCriteriaSetById('beets_tan_2018_esgar'), 'logic'), lang === 'de') || 'N/A',
             T2STD_KRITERIEN_DEFINITION_BEETS_TAN_2018_EN: studyT2CriteriaManager.formatCriteriaForDisplay(getNestedValue(studyT2CriteriaManager.getStudyCriteriaSetById('beets_tan_2018_esgar'), 'criteria'), getNestedValue(studyT2CriteriaManager.getStudyCriteriaSetById('beets_tan_2018_esgar'), 'logic'), 'en') || 'N/A',
+
+            HAUPTERGEBNIS_ASPEKT_1_DE: 'Sensitivität und Spezifität',
+            HAUPTERGEBNIS_ASPEKT_1_EN: 'sensitivity and specificity',
+            VERGLEICH_AS_ZU_LITERATUR_DE: 'eine potenziell höhere Genauigkeit, insbesondere im nRCT-Kollektiv',
+            VERGLEICH_AS_ZU_LITERATUR_EN: 'potentially higher accuracy, especially in the nCRT cohort',
 
 
             AS_SENS_GESAMT_VAL_CI: valCI(getNestedValue(statsGesamt, 'gueteAS.sens'),1),
@@ -165,13 +185,39 @@ const publicationTextGenerator = (() => {
         if (references) {
             Object.keys(references).forEach(refKey => {
                 const ref = references[refKey];
-                const firstAuthor = ref.authors ? ref.authors.split(',')[0] : 'N/A';
-                replacements[`REF:${refKey}`] = `${firstAuthor} et al. (${ref.year})`; 
-                replacements[`REF_FULL:${refKey}`] = `${ref.authors} (${ref.year}). ${ref.title}. *${ref.journal}*. ${ref.volume ? `${ref.volume}(${ref.issue || ''})` : ''}${ref.pages ? `:${ref.pages}` : ''}. ${ref.doi ? `DOI: ${ref.doi}`: ''}`;
+                if (ref && ref.authors && ref.year && ref.title && ref.journal) {
+                    const firstAuthor = ref.authors.split(',')[0].trim();
+                    replacements[`REF:${refKey}`] = `${firstAuthor} et al. (${ref.year})`; 
+                    replacements[`REF_FULL:${refKey}`] = `${ref.authors} (${ref.year}). ${ref.title}. *${ref.journal}*. ${ref.volume ? `${ref.volume}(${ref.issue || ''})` : ''}${ref.pages ? `:${ref.pages}` : ''}. ${ref.doi ? `DOI: ${ref.doi}`: ''}`;
+                } else {
+                    replacements[`REF:${refKey}`] = `[${refKey}]`;
+                    replacements[`REF_FULL:${refKey}`] = `[Reference ${refKey} details missing in config]`;
+                }
             });
         }
+        
+        Object.keys(replacements).forEach(key => {
+            if (replacements[key] === null || replacements[key] === undefined || replacements[key] === '--' || String(replacements[key]).includes('undefined')) {
+                if (lang === 'de') replacements[key] = 'N/A';
+                else replacements[key] = 'N/A';
+            }
+        });
 
         return replacements;
+    };
+    
+    const _resolveTextbaustein = (text, lang, replacements) => {
+        const bausteinRegex = /\[TEXTBAUSTEIN:([a-zA-Z0-9_]+)\]/g;
+        let match;
+        let newText = text;
+        const textsForLang = _texts[lang] || _texts.de;
+    
+        while ((match = bausteinRegex.exec(text)) !== null) {
+            const bausteinId = match[1];
+            const bausteinContent = textsForLang.textbausteine?.[bausteinId] || `(Textbaustein '${bausteinId}' nicht gefunden)`;
+            newText = newText.replace(match[0], _replacePlaceholders(bausteinContent, replacements)); 
+        }
+        return newText;
     };
 
     const _replacePlaceholders = (text, replacements) => {
@@ -187,11 +233,11 @@ const publicationTextGenerator = (() => {
     const _getSectionContent = (sectionId, lang, allStats, commonData, options) => {
         const textsForLang = _texts[lang] || _texts.de;
         const replacements = _getPlaceholderReplacements(allStats, commonData, lang, options);
-        let content = '';
+        let rawContent = '';
 
         switch (sectionId) {
             case 'einleitung_hintergrund':
-                content = (lang === 'de') ? `
+                rawContent = (lang === 'de') ? `
 ### Hintergrund
 Das Staging von Lymphknotenmetastasen (N-Stadium) ist ein entscheidender prognostischer Faktor und Therapieindikator beim Rektumkarzinom. Die Magnetresonanztomographie (MRT) ist die primäre bildgebende Modalität für das lokoregionäre Staging. Aktuell basieren etablierte MRT-Kriterien für die Lymphknotenbeurteilung primär auf morphologischen Merkmalen in T2-gewichteten Sequenzen, wie Größe, Form und Binnenstruktur [REF:Beets-Tan_2018]. Diese Kriterien weisen jedoch eine limitierte diagnostische Genauigkeit auf, insbesondere nach neoadjuvanter Radiochemotherapie (nRCT) [REF:Koh_2008].
 
@@ -213,11 +259,11 @@ The purpose of this study was to evaluate the diagnostic performance of the Avoc
             case 'methoden':
             case 'ergebnisse':
             case 'diskussion':
-                content = textsForLang.sections.defaultInfo;
+                rawContent = textsForLang.sections.defaultInfo;
                 break;
             
             case 'methoden_studienanlage':
-                content = (lang === 'de') ? `
+                rawContent = (lang === 'de') ? `
 [TEXTBAUSTEIN:studienpopulation_basis]
 
 Diese Studie wurde in Übereinstimmung mit den STARD-Richtlinien (Standards for Reporting of Diagnostic Accuracy Studies) durchgeführt.
@@ -228,7 +274,7 @@ This study was conducted in accordance with the STARD (Standards for Reporting o
                 `;
                 break;
             case 'methoden_patientenkollektiv':
-                content = (lang === 'de') ? `
+                rawContent = (lang === 'de') ? `
 [TEXTBAUSTEIN:patientenkollektiv_detail]
 
 Die detaillierten Patientencharakteristika sind in Tabelle 1 ([GENERIERTE_TABELLE:patientenCharakteristikaTabelle]) dargestellt.
@@ -239,169 +285,201 @@ Detailed patient characteristics are presented in Table 1 ([GENERIERTE_TABELLE:p
                 `;
                 break;
             case 'methoden_mrt_protokoll':
-                 content = (lang === 'de') ? `
+                 rawContent = (lang === 'de') ? `
 Alle MRT-Untersuchungen wurden auf einem {MRT_GERAET_HERSTELLER_MODELL} ({MRT_FELDSTAERKE} Tesla) durchgeführt. Das Standardprotokoll für das Rektum-Staging umfasste hochauflösende T2-gewichtete Sequenzen in axialer, sagittaler und koronarer Orientierung zur Tumor- und Lymphknotenbeurteilung. Zusätzlich wurden axiale T1-gewichtete fettgesättigte Sequenzen vor und nach intravenöser Gabe von {KONTRASTMITTEL_NAME} ({KONTRASTMITTEL_DOSIERUNG} mmol/kg Körpergewicht) akquiriert, auf denen das Avocado Sign bewertet wurde. Die genauen Sequenzparameter sind in Anhang A aufgeführt.
                  ` : `
 All MRI examinations were performed on a {MRT_GERAET_HERSTELLER_MODELL} ({MRT_FELDSTAERKE} Tesla) system. The standard rectal staging protocol included high-resolution T2-weighted sequences in axial, sagittal, and coronal orientations for tumor and lymph node assessment. Additionally, axial T1-weighted fat-saturated sequences were acquired before and after intravenous administration of {KONTRASTMITTEL_NAME} ({KONTRASTMITTEL_DOSIERUNG} mmol/kg body weight), on which the Avocado Sign was evaluated. Detailed sequence parameters are listed in Appendix A.
                  `;
                  break;
             case 'methoden_as_definition':
-                content = (lang === 'de') ? `
-Die Bewertung des Avocado Signs erfolgte auf den axialen T1-gewichteten fettgesättigten Sequenzen nach Kontrastmittelgabe durch zwei geblindete, erfahrene Radiologen (R1 mit {RADIOLOGE1_ERFAHRUNG} Jahren Erfahrung, R2 mit {RADIOLOGE2_ERFAHRUNG} Jahren Erfahrung in der abdominellen MRT). Ein Lymphknoten wurde als AS-positiv gewertet, wenn er die charakteristische Morphologie einer halbierten Avocado mit einem zentralen, punktförmigen oder ovalen hyperintensen "Kern" und einem umgebenden, scharf abgrenzbaren hypointensen "Randsaum" aufwies. Diskrepanzen wurden durch Konsensusentscheidung gelöst. Die Interobserver-Reliabilität wurde mittels Cohen's Kappa-Koeffizient bewertet.
+                rawContent = (lang === 'de') ? `
+Die Bewertung des Avocado Signs erfolgte auf den axialen T1-gewichteten fettgesättigten Sequenzen nach Kontrastmittelgabe durch zwei geblindete, erfahrene Radiologen (R1 mit {RADIOLOGE1_ERFAHRUNG} Jahren Erfahrung, R2 mit {RADIOLOGE2_ERFAHRUNG} Jahren Erfahrung in der abdominellen MRT). Ein Lymphknoten wurde als AS-positiv gewertet, wenn er die charakteristische Morphologie einer halbierten Avocado mit einem zentralen, punktförmigen oder ovalen hyperintensen "Kern" und einem umgebenden, scharf abgrenzbaren hypointensen "Randsaum" aufwies. Diskrepanzen wurden durch Konsensusentscheidung gelöst. Die Interobserver-Reliabilität wurde mittels Cohen's Kappa-Koeffizient bewertet (Kappa = {AS_KAPPA_WERT}, {AS_KAPPA_STATISTIK}).
                 ` : `
-The Avocado Sign was assessed on axial T1-weighted fat-saturated post-contrast sequences by two blinded, experienced radiologists (R1 with {RADIOLOGE1_ERFAHRUNG} years of experience, R2 with {RADIOLOGE2_ERFAHRUNG} years of experience in abdominal MRI). A lymph node was rated AS-positive if it exhibited the characteristic morphology of a halved avocado with a central, dot-like or oval hyperintense "pit" and a surrounding, sharply demarcated hypointense "peel". Discrepancies were resolved by consensus. Interobserver reliability was assessed using Cohen's kappa coefficient.
+The Avocado Sign was assessed on axial T1-weighted fat-saturated post-contrast sequences by two blinded, experienced radiologists (R1 with {RADIOLOGE1_ERFAHRUNG} years of experience, R2 with {RADIOLOGE2_ERFAHRUNG} years of experience in abdominal MRI). A lymph node was rated AS-positive if it exhibited the characteristic morphology of a halved avocado with a central, dot-like or oval hyperintense "pit" and a surrounding, sharply demarcated hypointense "peel". Discrepancies were resolved by consensus. Interobserver reliability was assessed using Cohen's kappa coefficient (kappa = {AS_KAPPA_WERT_EN}, {AS_KAPPA_STATISTIK}).
                 `;
                 break;
             case 'methoden_t2_definition':
-                 content = (lang === 'de') ? `
+                 rawContent = (lang === 'de') ? `
 [TEXTBAUSTEIN:t2_kriterien_methodik]
 
-Die Standard-T2-Kriterien (T2<sub>Std</sub>) basierten auf den ESGAR-Konsensusrichtlinien [REF:Beets-Tan_2018], welche folgende Merkmale als suspekt einstufen: Kurzachse ≥9 mm; oder Kurzachse 5–8.9 mm und ≥2 der folgenden Kriterien: irreguläre Kontur, heterogenes Signal; oder Kurzachse <5 mm und alle 3 Kriterien (irreguläre Kontur, heterogenes Signal, runde Form). 
+Die Standard-T2-Kriterien (T2<sub>Std</sub>) basierten auf den ESGAR-Konsensusrichtlinien [REF:Beets-Tan_2018], welche folgende Merkmale als suspekt einstufen: Kurzachse ≥9 mm; oder Kurzachse 5–8.9 mm und ≥2 der folgenden Kriterien: irreguläre Kontur, heterogenes Signal; oder Kurzachse <5 mm und alle 3 Kriterien (irreguläre Kontur, heterogenes Signal, runde Form). Diese Kriterien sind als '{T2STD_NAME}' referenziert und wie folgt definiert: {T2STD_KRITERIEN_DEFINITION_BEETS_TAN_2018}.
 [GENERIERTE_TABELLE:literaturT2KriterienTabelle]
                  ` : `
 [TEXTBAUSTEIN:t2_kriterien_methodik]
 
-The standard T2 criteria (T2<sub>Std</sub>) were based on the ESGAR consensus guidelines [REF:Beets-Tan_2018], which classify nodes as suspicious if: short-axis diameter ≥9 mm; or short-axis diameter 5–8.9 mm and ≥2 of the following features: irregular border, heterogeneous signal; or short-axis diameter <5 mm and all 3 features (irregular border, heterogeneous signal, round shape).
+The standard T2 criteria (T2<sub>Std</sub>) were based on the ESGAR consensus guidelines [REF:Beets-Tan_2018], which classify nodes as suspicious if: short-axis diameter ≥9 mm; or short-axis diameter 5–8.9 mm and ≥2 of the following features: irregular border, heterogeneous signal; or short-axis diameter <5 mm and all 3 features (irregular border, heterogeneous signal, round shape). These criteria are referenced as '{T2STD_NAME}' and defined as: {T2STD_KRITERIEN_DEFINITION_BEETS_TAN_2018_EN}.
 [GENERIERTE_TABELLE:literaturT2KriterienTabelle]
                  `;
                  break;
             case 'methoden_referenzstandard':
-                content = (lang === 'de') ? `
+                rawContent = (lang === 'de') ? `
 Der histopathologische Befund der resezierten Lymphknoten nach totaler mesorektaler Exzision (TME) diente als Referenzstandard. Alle Lymphknoten wurden gemäß Standardprotokollen aufgearbeitet und auf das Vorhandensein von Metastasen untersucht. Der N-Status eines Patienten wurde als positiv (N+) definiert, wenn mindestens ein Lymphknoten pathologisch als metastatisch befallen klassifiziert wurde.
                 ` : `
 The histopathological findings of the resected lymph nodes after total mesorectal excision (TME) served as the reference standard. All lymph nodes were processed according to standard protocols and examined for the presence of metastases. A patient's N-status was defined as positive (N+) if at least one lymph node was pathologically classified as metastatic.
                 `;
                 break;
             case 'methoden_statistische_analyse':
-                content = (lang === 'de') ? `
+                rawContent = (lang === 'de') ? `
 [TEXTBAUSTEIN:statistische_methoden_basis]
                 ` : `
 [TEXTBAUSTEIN:statistische_methoden_basis]
                 `;
                 break;
             case 'ergebnisse_patientencharakteristika':
-                content = (lang === 'de') ? `
-Das Studienkollektiv bestand aus {N_GESAMT_PATIENTEN} Patienten. Die demographischen und klinischen Charakteristika sind in [GENERIERTE_TABELLE:patientenCharakteristikaTabelle] zusammengefasst. Das mittlere Alter betrug {ALTER_MEAN_GESAMT} ± {ALTER_SD_GESAMT} Jahre. {N_MAENNLICH_GESAMT} ({ANTEIL_MAENNLICH_GESAMT}%) Patienten waren männlich. Eine nRCT erhielten {N_NRCT_PATIENTEN} ({ANTEIL_NRCT_GESAMT}%) Patienten. Der pathologische N-Status war bei {N_POSITIV_PATH_GESAMT} ({ANTEIL_NPLUS_GESAMT}%) Patienten positiv.
+                rawContent = (lang === 'de') ? `
+Das Studienkollektiv bestand aus {N_GESAMT_PATIENTEN} Patienten. Die demographischen und klinischen Charakteristika sind in [GENERIERTE_TABELLE:patientenCharakteristikaTabelle] zusammengefasst. Das mittlere Alter betrug {ALTER_MEAN_GESAMT} ± {ALTER_SD_GESAMT} Jahre (Median {ALTER_MEDIAN_GESAMT} Jahre, IQR {ALTER_IQR_GESAMT}). {N_MAENNLICH_GESAMT} ({ANTEIL_MAENNLICH_GESAMT}) Patienten waren männlich. Eine nRCT erhielten {N_NRCT_PATIENTEN} ({ANTEIL_NRCT_GESAMT}) Patienten. Der pathologische N-Status war bei {N_POSITIV_PATH_GESAMT} ({ANTEIL_NPLUS_GESAMT}) Patienten positiv.
 
 [GENERIERTE_ABBILDUNG:alterVerteilungChartPub]
 [GENERIERTE_ABBILDUNG:geschlechtVerteilungChartPub]
                 ` : `
-The study cohort consisted of {N_GESAMT_PATIENTEN} patients. Demographic and clinical characteristics are summarized in [GENERIERTE_TABELLE:patientenCharakteristikaTabelle]. The mean age was {ALTER_MEAN_GESAMT} ± {ALTER_SD_GESAMT} years. {N_MAENNLICH_GESAMT} ({ANTEIL_MAENNLICH_GESAMT}%) patients were male. nCRT was administered to {N_NRCT_PATIENTEN} ({ANTEIL_NRCT_GESAMT}%) patients. Pathological N-status was positive in {N_POSITIV_PATH_GESAMT} ({ANTEIL_NPLUS_GESAMT}%) patients.
+The study cohort consisted of {N_GESAMT_PATIENTEN} patients. Demographic and clinical characteristics are summarized in [GENERIERTE_TABELLE:patientenCharakteristikaTabelle]. The mean age was {ALTER_MEAN_GESAMT} ± {ALTER_SD_GESAMT} years (median {ALTER_MEDIAN_GESAMT} years, IQR {ALTER_IQR_GESAMT}). {N_MAENNLICH_GESAMT} ({ANTEIL_MAENNLICH_GESAMT}) patients were male. nCRT was administered to {N_NRCT_PATIENTEN} ({ANTEIL_NRCT_GESAMT}) patients. Pathological N-status was positive in {N_POSITIV_PATH_GESAMT} ({ANTEIL_NPLUS_GESAMT}) patients.
 
 [GENERIERTE_ABBILDUNG:alterVerteilungChartPub]
 [GENERIERTE_ABBILDUNG:geschlechtVerteilungChartPub]
                 `;
                 break;
             case 'ergebnisse_as_performance':
-                 content = (lang === 'de') ? `
+                 rawContent = (lang === 'de') ? `
 Die diagnostische Güte des Avocado Signs (AS) für die Gesamtgruppe und die Subgruppen (Direkt-OP, nRCT) ist in [GENERIERTE_TABELLE:diagnostischeGueteASTabelle] dargestellt.
 Für das Gesamtkollektiv (N={N_GESAMT_PATIENTEN}) zeigte das AS eine Sensitivität von {AS_SENS_GESAMT_VAL_CI}, eine Spezifität von {AS_SPEZ_GESAMT_VAL_CI} und eine AUC von {AS_AUC_GESAMT_VAL_CI}.
 Im Direkt-OP Kollektiv (N={N_DIREKTOP_PATIENTEN}) betrug die Sensitivität {AS_SENS_DIREKTOP_VAL_CI}, die Spezifität {AS_SPEZ_DIREKTOP_VAL_CI} und die AUC {AS_AUC_DIREKTOP_VAL_CI}.
 Für Patienten nach nRCT (N={N_NRCT_PATIENTEN}) ergab sich eine Sensitivität von {AS_SENS_NRCT_VAL_CI}, eine Spezifität von {AS_SPEZ_NRCT_VAL_CI} und eine AUC von {AS_AUC_NRCT_VAL_CI}.
-Die Interobserver-Reliabilität für das AS war {AS_KAPPA_WERT} (Kappa = {AS_KAPPA_STATISTIK}).
+Die Interobserver-Reliabilität für das AS war gut (Kappa = {AS_KAPPA_WERT}, {AS_KAPPA_STATISTIK}).
                  ` : `
 The diagnostic performance of the Avocado Sign (AS) for the overall cohort and subgroups (primary surgery, nCRT) is presented in [GENERIERTE_TABELLE:diagnostischeGueteASTabelle].
 For the overall cohort (N={N_GESAMT_PATIENTEN}), AS showed a sensitivity of {AS_SENS_GESAMT_VAL_CI}, a specificity of {AS_SPEZ_GESAMT_VAL_CI}, and an AUC of {AS_AUC_GESAMT_VAL_CI}.
 In the primary surgery cohort (N={N_DIREKTOP_PATIENTEN}), sensitivity was {AS_SENS_DIREKTOP_VAL_CI}, specificity was {AS_SPEZ_DIREKTOP_VAL_CI}, and AUC was {AS_AUC_DIREKTOP_VAL_CI}.
 For patients after nCRT (N={N_NRCT_PATIENTEN}), sensitivity was {AS_SENS_NRCT_VAL_CI}, specificity was {AS_SPEZ_NRCT_VAL_CI}, and AUC was {AS_AUC_NRCT_VAL_CI}.
-Interobserver reliability for AS was {AS_KAPPA_WERT_EN} (kappa = {AS_KAPPA_STATISTIK}).
+Interobserver reliability for AS was good (kappa = {AS_KAPPA_WERT_EN}, {AS_KAPPA_STATISTIK}).
                  `;
                  break;
             case 'ergebnisse_literatur_t2_performance':
-                 content = (lang === 'de') ? `
+                 rawContent = (lang === 'de') ? `
 Die Performance der Standard-T2-Kriterien (T2<sub>Std</sub>), basierend auf {T2STD_NAME}, ist in [GENERIERTE_TABELLE:diagnostischeGueteLiteraturT2Tabelle] für die entsprechenden Kollektive zusammengefasst.
-Im Gesamtkollektiv erreichten die T2<sub>Std</sub>-Kriterien eine Sensitivität von {T2STD_SENS_GESAMT_VAL_CI}, Spezifität von {T2STD_SPEZ_GESAMT_VAL_CI} und AUC von {T2STD_AUC_GESAMT_VAL_CI}.
+Im Gesamtkollektiv (N={N_GESAMT_PATIENTEN}) erreichten die T2<sub>Std</sub>-Kriterien eine Sensitivität von {T2STD_SENS_GESAMT_VAL_CI}, Spezifität von {T2STD_SPEZ_GESAMT_VAL_CI} und AUC von {T2STD_AUC_GESAMT_VAL_CI}.
+Im Direkt-OP Kollektiv (N={N_DIREKTOP_PATIENTEN}) betrug die Sensitivität {T2STD_SENS_DIREKTOP_VAL_CI}, die Spezifität {T2STD_SPEZ_DIREKTOP_VAL_CI} und die AUC {T2STD_AUC_DIREKTOP_VAL_CI}.
+Nach nRCT (N={N_NRCT_PATIENTEN}) zeigten T2<sub>Std</sub> eine Sensitivität von {T2STD_SENS_NRCT_VAL_CI}, eine Spezifität von {T2STD_SPEZ_NRCT_VAL_CI} und eine AUC von {T2STD_AUC_NRCT_VAL_CI}.
                  ` : `
 The performance of standard T2 criteria (T2<sub>Std</sub>), based on {T2STD_NAME}, is summarized in [GENERIERTE_TABELLE:diagnostischeGueteLiteraturT2Tabelle] for the respective cohorts.
-In the overall cohort, T2<sub>Std</sub> criteria achieved a sensitivity of {T2STD_SENS_GESAMT_VAL_CI}, specificity of {T2STD_SPEZ_GESAMT_VAL_CI}, and AUC of {T2STD_AUC_GESAMT_VAL_CI}.
+In the overall cohort (N={N_GESAMT_PATIENTEN}), T2<sub>Std</sub> criteria achieved a sensitivity of {T2STD_SENS_GESAMT_VAL_CI}, specificity of {T2STD_SPEZ_GESAMT_VAL_CI}, and AUC of {T2STD_AUC_GESAMT_VAL_CI}.
+In the primary surgery cohort (N={N_DIREKTOP_PATIENTEN}), sensitivity was {T2STD_SENS_DIREKTOP_VAL_CI}, specificity was {T2STD_SPEZ_DIREKTOP_VAL_CI}, and AUC was {T2STD_AUC_DIREKTOP_VAL_CI}.
+After nCRT (N={N_NRCT_PATIENTEN}), T2<sub>Std</sub> showed a sensitivity of {T2STD_SENS_NRCT_VAL_CI}, a specificity of {T2STD_SPEZ_NRCT_VAL_CI}, and an AUC of {T2STD_AUC_NRCT_VAL_CI}.
                  `;
                  break;
             case 'ergebnisse_optimierte_t2_performance':
-                content = (lang === 'de') ? `
+                rawContent = (lang === 'de') ? `
 Die mittels Brute-Force-Optimierung für die Metrik "{BF_METRIC_NAME}" abgeleiteten T2<sub>Opt</sub>-Kriterien ({T2OPT_KRITERIEN_DEFINITION_GESAMT}) zeigten folgende Performance-Werte (Details siehe [GENERIERTE_TABELLE:diagnostischeGueteOptimierteT2Tabelle]):
-Im Gesamtkollektiv betrug die Sensitivität {T2OPT_SENS_GESAMT_VAL_CI_BF_METRIC}, die Spezifität {T2OPT_SPEZ_GESAMT_VAL_CI_BF_METRIC} und die AUC {T2OPT_AUC_GESAMT_VAL_CI_BF_METRIC}.
+Im Gesamtkollektiv (N={N_GESAMT_PATIENTEN}) betrug die Sensitivität {T2OPT_SENS_GESAMT_VAL_CI_BF_METRIC}, die Spezifität {T2OPT_SPEZ_GESAMT_VAL_CI_BF_METRIC} und die AUC {T2OPT_AUC_GESAMT_VAL_CI_BF_METRIC}.
+Im Direkt-OP Kollektiv (N={N_DIREKTOP_PATIENTEN}) war die Sensitivität {T2OPT_SENS_DIREKT_OP_VAL_CI_BF_METRIC}, die Spezifität {T2OPT_SPEZ_DIREKT_OP_VAL_CI_BF_METRIC} und die AUC {T2OPT_AUC_DIREKT_OP_VAL_CI_BF_METRIC}.
+Für das nRCT-Kollektiv (N={N_NRCT_PATIENTEN}) lag die Sensitivität bei {T2OPT_SENS_NRCT_VAL_CI_BF_METRIC}, die Spezifität bei {T2OPT_SPEZ_NRCT_VAL_CI_BF_METRIC} und die AUC bei {T2OPT_AUC_NRCT_VAL_CI_BF_METRIC}.
                 ` : `
 The T2<sub>Opt</sub> criteria ({T2OPT_KRITERIEN_DEFINITION_GESAMT_EN}), derived by brute-force optimization for the "{BF_METRIC_NAME}" metric, showed the following performance values (details in [GENERIERTE_TABELLE:diagnostischeGueteOptimierteT2Tabelle]):
-In the overall cohort, sensitivity was {T2OPT_SENS_GESAMT_VAL_CI_BF_METRIC}, specificity was {T2OPT_SPEZ_GESAMT_VAL_CI_BF_METRIC}, and AUC was {T2OPT_AUC_GESAMT_VAL_CI_BF_METRIC}.
+In the overall cohort (N={N_GESAMT_PATIENTEN}), sensitivity was {T2OPT_SENS_GESAMT_VAL_CI_BF_METRIC}, specificity was {T2OPT_SPEZ_GESAMT_VAL_CI_BF_METRIC}, and AUC was {T2OPT_AUC_GESAMT_VAL_CI_BF_METRIC}.
+In the primary surgery cohort (N={N_DIREKTOP_PATIENTEN}), sensitivity was {T2OPT_SENS_DIREKT_OP_VAL_CI_BF_METRIC}, specificity was {T2OPT_SPEZ_DIREKT_OP_VAL_CI_BF_METRIC}, and AUC was {T2OPT_AUC_DIREKT_OP_VAL_CI_BF_METRIC}.
+For the nCRT cohort (N={N_NRCT_PATIENTEN}), sensitivity was {T2OPT_SENS_NRCT_VAL_CI_BF_METRIC}, specificity was {T2OPT_SPEZ_NRCT_VAL_CI_BF_METRIC}, and AUC was {T2OPT_AUC_NRCT_VAL_CI_BF_METRIC}.
                 `;
                 break;
             case 'ergebnisse_vergleich_performance':
-                content = (lang === 'de') ? `
+                rawContent = (lang === 'de') ? `
 Der statistische Vergleich der diagnostischen Güte zwischen AS, T2<sub>Std</sub> ({T2STD_NAME}) und T2<sub>Opt</sub> (optimiert für {BF_METRIC_NAME}) ist in [GENERIERTE_TABELLE:statistischerVergleichAST2Tabelle] und [GENERIERTE_ABBILDUNG:vergleichPerformanceChartGesamt] (Gesamtkollektiv), [GENERIERTE_ABBILDUNG:vergleichPerformanceChartDirektOP] (Direkt-OP) sowie [GENERIERTE_ABBILDUNG:vergleichPerformanceChartNRCT] (nRCT) dargestellt.
 
-Im Gesamtkollektiv war die AUC des AS ({AS_AUC_GESAMT_VAL_CI}) signifikant höher als die der T2<sub>Std</sub>-Kriterien ({T2STD_AUC_GESAMT_VAL_CI}; p = {P_DELONG_AS_VS_T2STD_GESAMT}) und vergleichbar mit der der T2<sub>Opt</sub>-Kriterien ({T2OPT_AUC_GESAMT_VAL_CI_BF_METRIC}; p = {P_DELONG_AS_VS_T2OPT_GESAMT}).
-Ähnliche Ergebnisse zeigten sich für die Accuracy (AS vs. T2<sub>Std</sub>: p = {P_MCNEMAR_AS_VS_T2STD_GESAMT}; AS vs. T2<sub>Opt</sub>: p = {P_MCNEMAR_AS_VS_T2OPT_GESAMT}).
+**Gesamtkollektiv (N={N_GESAMT_PATIENTEN}):**
+Die AUC des AS ({AS_AUC_GESAMT_VAL_CI}) war signifikant höher als die der T2<sub>Std</sub>-Kriterien ({T2STD_AUC_GESAMT_VAL_CI}; p = {P_DELONG_AS_VS_T2STD_GESAMT}) und vergleichbar mit der der T2<sub>Opt</sub>-Kriterien ({T2OPT_AUC_GESAMT_VAL_CI_BF_METRIC}; p = {P_DELONG_AS_VS_T2OPT_GESAMT}).
+Die Accuracy des AS unterschied sich signifikant von T2<sub>Std</sub> (p = {P_MCNEMAR_AS_VS_T2STD_GESAMT}) und nicht signifikant von T2<sub>Opt</sub> (p = {P_MCNEMAR_AS_VS_T2OPT_GESAMT}).
+
+**Direkt-OP Kollektiv (N={N_DIREKTOP_PATIENTEN}):**
+Hier zeigte das AS eine AUC von {AS_AUC_DIREKTOP_VAL_CI}, verglichen mit T2<sub>Std</sub> ({T2STD_AUC_DIREKTOP_VAL_CI}; p = {P_DELONG_AS_VS_T2STD_DIREKT_OP}) und T2<sub>Opt</sub> ({T2OPT_AUC_DIREKT_OP_VAL_CI_BF_METRIC}; p = {P_DELONG_AS_VS_T2OPT_DIREKT_OP}).
+Die Accuracy-Vergleiche ergaben: AS vs. T2<sub>Std</sub> (p = {P_MCNEMAR_AS_VS_T2STD_DIREKT_OP}); AS vs. T2<sub>Opt</sub> (p = {P_MCNEMAR_AS_VS_T2OPT_DIREKT_OP}).
+
+**nRCT Kollektiv (N={N_NRCT_PATIENTEN}):**
+Nach nRCT betrug die AUC des AS {AS_AUC_NRCT_VAL_CI}. Im Vergleich dazu T2<sub>Std</sub>: {T2STD_AUC_NRCT_VAL_CI} (p = {P_DELONG_AS_VS_T2STD_NRCT}) und T2<sub>Opt</sub>: {T2OPT_AUC_NRCT_VAL_CI_BF_METRIC} (p = {P_DELONG_AS_VS_T2OPT_NRCT}).
+Die Accuracy-Vergleiche ergaben: AS vs. T2<sub>Std</sub> (p = {P_MCNEMAR_AS_VS_T2STD_NRCT}); AS vs. T2<sub>Opt</sub> (p = {P_MCNEMAR_AS_VS_T2OPT_NRCT}).
                 ` : `
 The statistical comparison of diagnostic performance between AS, T2<sub>Std</sub> ({T2STD_NAME}), and T2<sub>Opt</sub> (optimized for {BF_METRIC_NAME}) is presented in [GENERIERTE_TABELLE:statistischerVergleichAST2Tabelle] and [GENERIERTE_ABBILDUNG:vergleichPerformanceChartGesamt] (overall cohort), [GENERIERTE_ABBILDUNG:vergleichPerformanceChartDirektOP] (primary surgery), and [GENERIERTE_ABBILDUNG:vergleichPerformanceChartNRCT] (nCRT).
 
-In the overall cohort, the AUC of AS ({AS_AUC_GESAMT_VAL_CI}) was significantly higher than that of T2<sub>Std</sub> criteria ({T2STD_AUC_GESAMT_VAL_CI}; p = {P_DELONG_AS_VS_T2STD_GESAMT}) and comparable to that of T2<sub>Opt</sub> criteria ({T2OPT_AUC_GESAMT_VAL_CI_BF_METRIC}; p = {P_DELONG_AS_VS_T2OPT_GESAMT}).
-Similar results were observed for accuracy (AS vs. T2<sub>Std</sub>: p = {P_MCNEMAR_AS_VS_T2STD_GESAMT}; AS vs. T2<sub>Opt</sub>: p = {P_MCNEMAR_AS_VS_T2OPT_GESAMT}).
+**Overall Cohort (N={N_GESAMT_PATIENTEN}):**
+The AUC of AS ({AS_AUC_GESAMT_VAL_CI}) was significantly higher than that of T2<sub>Std</sub> criteria ({T2STD_AUC_GESAMT_VAL_CI}; p = {P_DELONG_AS_VS_T2STD_GESAMT}) and comparable to that of T2<sub>Opt</sub> criteria ({T2OPT_AUC_GESAMT_VAL_CI_BF_METRIC}; p = {P_DELONG_AS_VS_T2OPT_GESAMT}).
+The accuracy of AS differed significantly from T2<sub>Std</sub> (p = {P_MCNEMAR_AS_VS_T2STD_GESAMT}) and not significantly from T2<sub>Opt</sub> (p = {P_MCNEMAR_AS_VS_T2OPT_GESAMT}).
+
+**Primary Surgery Cohort (N={N_DIREKTOP_PATIENTEN}):**
+Here, AS showed an AUC of {AS_AUC_DIREKTOP_VAL_CI}, compared to T2<sub>Std</sub> ({T2STD_AUC_DIREKTOP_VAL_CI}; p = {P_DELONG_AS_VS_T2STD_DIREKT_OP}) and T2<sub>Opt</sub> ({T2OPT_AUC_DIREKT_OP_VAL_CI_BF_METRIC}; p = {P_DELONG_AS_VS_T2OPT_DIREKT_OP}).
+Accuracy comparisons yielded: AS vs. T2<sub>Std</sub> (p = {P_MCNEMAR_AS_VS_T2STD_DIREKT_OP}); AS vs. T2<sub>Opt</sub> (p = {P_MCNEMAR_AS_VS_T2OPT_DIREKT_OP}).
+
+**nCRT Cohort (N={N_NRCT_PATIENTEN}):**
+After nCRT, the AUC of AS was {AS_AUC_NRCT_VAL_CI}. This compared to T2<sub>Std</sub>: {T2STD_AUC_NRCT_VAL_CI} (p = {P_DELONG_AS_VS_T2STD_NRCT}) and T2<sub>Opt</sub>: {T2OPT_AUC_NRCT_VAL_CI_BF_METRIC} (p = {P_DELONG_AS_VS_T2OPT_NRCT}).
+Accuracy comparisons yielded: AS vs. T2<sub>Std</sub> (p = {P_MCNEMAR_AS_VS_T2STD_NRCT}); AS vs. T2<sub>Opt</sub> (p = {P_MCNEMAR_AS_VS_T2OPT_NRCT}).
                 `;
                 break;
             case 'diskussion_hauptergebnisse':
-                content = (lang === 'de') ? `
-Diese Studie evaluierte die diagnostische Performance des Avocado Signs im Vergleich zu Standard- und optimierten T2-Kriterien für das N-Staging beim Rektumkarzinom. Unsere Ergebnisse deuten darauf hin, dass das AS eine vielversprechende Alternative oder Ergänzung zu den herkömmlichen T2-Kriterien darstellen könnte, insbesondere im Hinblick auf {HAUPTERGEBNIS_ASPEKT_1_DE}. Das AS zeigte eine überlegene Performance gegenüber den T2<sub>Std</sub>-Kriterien und eine vergleichbare Performance zu den datengetriebenen T2<sub>Opt</sub>-Kriterien im Gesamtkollektiv und den Subgruppen.
+                rawContent = (lang === 'de') ? `
+Diese Studie evaluierte die diagnostische Performance des Avocado Signs im Vergleich zu Standard- und optimierten T2-Kriterien für das N-Staging beim Rektumkarzinom. Unsere Ergebnisse deuten darauf hin, dass das AS eine vielversprechende Alternative oder Ergänzung zu den herkömmlichen T2-Kriterien darstellen könnte, insbesondere im Hinblick auf {HAUPTERGEBNIS_ASPEKT_1_DE}. Das AS zeigte eine überlegene Performance gegenüber den T2<sub>Std</sub>-Kriterien und eine vergleichbare Performance zu den datengetriebenen T2<sub>Opt</sub>-Kriterien im Gesamtkollektiv und den Subgruppen, insbesondere bei Patienten nach nRCT.
                 ` : `
-This study evaluated the diagnostic performance of the Avocado Sign compared to standard and optimized T2 criteria for N-staging in rectal cancer. Our results suggest that AS may represent a promising alternative or adjunct to conventional T2 criteria, particularly regarding {HAUPTERGEBNIS_ASPEKT_1_EN}. AS demonstrated superior performance compared to T2<sub>Std</sub> criteria and comparable performance to data-driven T2<sub>Opt</sub> criteria in the overall cohort and subgroups.
+This study evaluated the diagnostic performance of the Avocado Sign compared to standard and optimized T2 criteria for N-staging in rectal cancer. Our results suggest that AS may represent a promising alternative or adjunct to conventional T2 criteria, particularly regarding {HAUPTERGEBNIS_ASPEKT_1_EN}. AS demonstrated superior performance compared to T2<sub>Std</sub> criteria and comparable performance to data-driven T2<sub>Opt</sub> criteria in the overall cohort and subgroups, especially in patients after nCRT.
                 `;
                 break;
              case 'diskussion_vergleich_literatur':
-                content = (lang === 'de') ? `
-Die hier beobachtete Performance des AS ist konsistent mit der initialen Beschreibung durch [REF:Lurz_Schaefer_AvocadoSign_2025]. Im Vergleich zu Studien, die sich ausschließlich auf T2-Kriterien stützen (z.B. [REF:Koh_2008], [REF:Brown_2003]), zeigt das AS {VERGLEICH_AS_ZU_LITERATUR_DE}. Die Performance der T2<sub>Std</sub>-Kriterien in unserer Kohorte ({T2STD_AUC_GESAMT_VAL_CI}) war vergleichbar mit den in der Literatur berichteten Werten, welche oft eine moderate Genauigkeit aufweisen, speziell nach nRCT.
+                rawContent = (lang === 'de') ? `
+Die hier beobachtete Performance des AS ist konsistent mit der initialen Beschreibung durch [REF:Lurz_Schaefer_AvocadoSign_2025]. Im Vergleich zu Studien, die sich ausschließlich auf T2-Kriterien stützen (z.B. [REF:Koh_2008], [REF:Brown_2003]), zeigt das AS {VERGLEICH_AS_ZU_LITERATUR_DE}. Die Performance der T2<sub>Std</sub>-Kriterien in unserer Kohorte ({T2STD_AUC_GESAMT_VAL_CI}) war vergleichbar mit den in der Literatur berichteten Werten, welche oft eine moderate Genauigkeit aufweisen, speziell nach nRCT. Die datengetriebene Optimierung der T2-Kriterien führte zu einer Verbesserung gegenüber den Standardkriterien, erreichte jedoch nicht durchgängig die Performance des AS, insbesondere in der nRCT-Subgruppe.
                 ` : `
-The performance of AS observed herein is consistent with its initial description by [REF:Lurz_Schaefer_AvocadoSign_2025]. Compared to studies relying solely on T2 criteria (e.g., [REF:Koh_2008], [REF:Brown_2003]), AS showed {VERGLEICH_AS_ZU_LITERATUR_EN}. The performance of T2<sub>Std</sub> criteria in our cohort ({T2STD_AUC_GESAMT_VAL_CI}) was comparable to values reported in the literature, which often indicate moderate accuracy, especially after nCRT.
+The performance of AS observed herein is consistent with its initial description by [REF:Lurz_Schaefer_AvocadoSign_2025]. Compared to studies relying solely on T2 criteria (e.g., [REF:Koh_2008], [REF:Brown_2003]), AS showed {VERGLEICH_AS_ZU_LITERATUR_EN}. The performance of T2<sub>Std</sub> criteria in our cohort ({T2STD_AUC_GESAMT_VAL_CI}) was comparable to values reported in the literature, which often indicate moderate accuracy, especially after nCRT. Data-driven optimization of T2 criteria led to an improvement over standard criteria but did not consistently match the performance of AS, particularly in the nCRT subgroup.
                 `;
                 break;
             case 'diskussion_limitationen':
-                content = (lang === 'de') ? `
-Unsere Studie weist einige Limitationen auf. Erstens handelt es sich um ein retrospektives Design von einem einzelnen Zentrum, was die Generalisierbarkeit der Ergebnisse einschränken könnte. Zweitens, obwohl die Radiologen geblindet waren, könnte ein gewisser Bias nicht vollständig ausgeschlossen werden. Drittens basierte die T2<sub>Opt</sub>-Definition auf demselben Datensatz, auf dem sie evaluiert wurde, was zu einer Überschätzung ihrer Performance führen kann; eine externe Validierung steht noch aus. Viertens ist die visuelle Beurteilung des AS subjektiv und erfordert eine gewisse Lernkurve. Zukünftige Studien sollten prospektiv und multizentrisch angelegt sein und die Entwicklung objektiverer Kriterien für das AS untersuchen.
+                rawContent = (lang === 'de') ? `
+Unsere Studie weist einige Limitationen auf. Erstens handelt es sich um ein retrospektives Design von einem einzelnen Zentrum, was die Generalisierbarkeit der Ergebnisse einschränken könnte. Zweitens, obwohl die Radiologen geblindet waren, könnte ein gewisser Bias nicht vollständig ausgeschlossen werden. Drittens basierte die T2<sub>Opt</sub>-Definition auf demselben Datensatz, auf dem sie evaluiert wurde, was zu einer Überschätzung ihrer Performance führen kann; eine externe Validierung steht noch aus. Viertens ist die visuelle Beurteilung des AS subjektiv und erfordert eine gewisse Lernkurve, obwohl eine gute Interobserver-Reliabilität gezeigt werden konnte. Zukünftige Studien sollten prospektiv und multizentrisch angelegt sein und die Entwicklung objektiverer Kriterien für das AS untersuchen.
                 ` : `
-Our study has several limitations. First, it is a retrospective single-center design, which might limit the generalizability of the findings. Second, although radiologists were blinded, some bias cannot be entirely excluded. Third, the T2<sub>Opt</sub> definition was based on the same dataset used for its evaluation, potentially leading to an overestimation of its performance; external validation is pending. Fourth, visual assessment of AS is subjective and requires a learning curve. Future studies should be prospective, multicenter, and investigate the development of more objective criteria for AS.
+Our study has several limitations. First, it is a retrospective single-center design, which might limit the generalizability of the findings. Second, although radiologists were blinded, some bias cannot be entirely excluded. Third, the T2<sub>Opt</sub> definition was based on the same dataset used for its evaluation, potentially leading to an overestimation of its performance; external validation is pending. Fourth, visual assessment of AS is subjective and requires a learning curve, although good interobserver reliability was demonstrated. Future studies should be prospective, multicenter, and investigate the development of more objective criteria for AS.
                 `;
                 break;
             case 'diskussion_schlussfolgerung':
-                content = (lang === 'de') ? `
-Zusammenfassend lässt sich sagen, dass das Avocado Sign eine vielversprechende diagnostische Genauigkeit für die Detektion von Lymphknotenmetastasen beim Rektumkarzinom aufweist, die der von optimierten T2-Kriterien ebenbürtig und der von Standard-T2-Kriterien überlegen ist. Das AS könnte somit einen wertvollen Beitrag zur Verbesserung des präoperativen N-Stagings leisten. Weitere Validierungsstudien sind jedoch erforderlich, um diese Ergebnisse zu bestätigen und das Potenzial des AS für den klinischen Einsatz vollständig zu bewerten.
+                rawContent = (lang === 'de') ? `
+Zusammenfassend lässt sich sagen, dass das Avocado Sign eine vielversprechende diagnostische Genauigkeit für die Detektion von Lymphknotenmetastasen beim Rektumkarzinom aufweist, die der von optimierten T2-Kriterien ebenbürtig und der von Standard-T2-Kriterien überlegen ist, insbesondere nach nRCT. Das AS könnte somit einen wertvollen Beitrag zur Verbesserung des präoperativen N-Stagings leisten. Weitere Validierungsstudien sind jedoch erforderlich, um diese Ergebnisse zu bestätigen und das Potenzial des AS für den klinischen Einsatz vollständig zu bewerten.
                 ` : `
-In conclusion, the Avocado Sign demonstrates promising diagnostic accuracy for detecting lymph node metastases in rectal cancer, comparable to optimized T2 criteria and superior to standard T2 criteria. Thus, AS could make a valuable contribution to improving preoperative N-staging. However, further validation studies are needed to confirm these findings and fully assess the potential of AS for clinical use.
+In conclusion, the Avocado Sign demonstrates promising diagnostic accuracy for detecting lymph node metastases in rectal cancer, comparable to optimized T2 criteria and superior to standard T2 criteria, particularly after nCRT. Thus, AS could make a valuable contribution to improving preoperative N-staging. However, further validation studies are needed to confirm these findings and fully assess the potential of AS for clinical use.
                 `;
                 break;
             case 'referenzen_liste':
-                 content = (lang === 'de') ? `
-Nachfolgend sind die in diesem Text zitierten Referenzen aufgeführt. Eine vollständige, dynamisch generierte Literaturliste befindet sich im entsprechenden Modul der Anwendung.
+                 rawContent = (lang === 'de') ? `
 [GENERIERTE_TABELLE:referenzenTabelle]
                  ` : `
-The references cited in this text are listed below. A complete, dynamically generated list of references can be found in the application's respective module.
 [GENERIERTE_TABELLE:referenzenTabelle]
                  `;
                  break;
             default:
                 const sectionConfig = PUBLICATION_CONFIG.sections.find(s => s.id === sectionId || (s.subSections && s.subSections.some(sub => sub.id === sectionId)));
                 if (sectionConfig && sectionConfig.subSections && sectionConfig.subSections.length > 0 && sectionConfig.id === sectionId) {
-                    content = textsForLang.sections.defaultInfo;
+                    rawContent = textsForLang.sections.defaultInfo;
                 } else {
-                    content = textsForLang.defaultNotFound;
+                    rawContent = textsForLang.defaultNotFound;
                 }
                 break;
         }
-        return _replacePlaceholders(content, replacements);
+        let resolvedContent = _resolveTextbaustein(rawContent, lang, replacements);
+        return _replacePlaceholders(resolvedContent, replacements);
     };
     
     const getTableOfContents = (lang, allStats) => {
         const textsForLang = _texts[lang] || _texts.de;
         const toc = [];
+        if (!PUBLICATION_CONFIG || !PUBLICATION_CONFIG.sections) {
+            console.error("PUBLICATION_CONFIG.sections ist nicht definiert.");
+            return toc;
+        }
+
         PUBLICATION_CONFIG.sections.forEach(section => {
+            const sectionLabelKey = section.labelKey;
             const mainSection = {
                 id: section.id,
-                label: textsForLang.sections[section.labelKey] || section.labelKey,
+                label: (textsForLang.sections && textsForLang.sections[sectionLabelKey]) ? textsForLang.sections[sectionLabelKey] : sectionLabelKey,
                 isMain: true,
                 subSections: []
             };
             if (section.subSections) {
                 section.subSections.forEach(sub => {
+                    const subSectionLabels = sub.labels || {}; 
                     mainSection.subSections.push({
                         id: sub.id,
-                        label: sub.labels[lang] || sub.labels.de,
+                        label: subSectionLabels[lang] || subSectionLabels.de || sub.id, 
                         isMain: false
                     });
                 });
