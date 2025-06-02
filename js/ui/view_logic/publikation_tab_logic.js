@@ -151,23 +151,32 @@ const publikationTabLogic = (() => {
 
                     if (chartElement && dataForThisKollektiv) {
                         const asStats = dataForThisKollektiv.gueteAS;
+                        
                         let bfStatsForChart = dataForThisKollektiv.gueteT2_bruteforce; 
                         let bfDefForChart = dataForThisKollektiv.bruteforce_definition;
 
                         if (!bfStatsForChart || !bfDefForChart || bfDefForChart.metricName !== currentPublikationBfMetric) {
+                           
                             const bfResultsFromManager = bruteForceManager.getResultsForKollektiv(kolId);
                             if (bfResultsFromManager && bfResultsFromManager.metric === currentPublikationBfMetric && bfResultsFromManager.bestResult) {
-                                 const tempEvalData = t2CriteriaManager.evaluateDataset(cloneDeep(dataProcessor.filterDataByKollektiv(rawGlobalDataInputForLogic, kolId)), bfResultsFromManager.bestResult.criteria, bfResultsFromManager.bestResult.logic);
-                                 bfStatsForChart = statisticsService.calculateDiagnosticPerformance(tempEvalData, 't2', 'n');
-                                 bfDefForChart = {
-                                     criteria: bfResultsFromManager.bestResult.criteria,
-                                     logic: bfResultsFromManager.bestResult.logic,
-                                     metricName: bfResultsFromManager.metric,
-                                     metricValue: bfResultsFromManager.bestResult.metricValue
-                                 };
+                                 const tempFilteredData = dataProcessor.filterDataByKollektiv(rawGlobalDataInputForLogic, kolId);
+                                 if (tempFilteredData && tempFilteredData.length > 0) {
+                                     const tempEvalData = t2CriteriaManager.evaluateDataset(cloneDeep(tempFilteredData), bfResultsFromManager.bestResult.criteria, bfResultsFromManager.bestResult.logic);
+                                     bfStatsForChart = statisticsService.calculateDiagnosticPerformance(tempEvalData, 't2', 'n');
+                                     bfDefForChart = {
+                                         criteria: bfResultsFromManager.bestResult.criteria,
+                                         logic: bfResultsFromManager.bestResult.logic,
+                                         metricName: bfResultsFromManager.metric,
+                                         metricValue: bfResultsFromManager.bestResult.metricValue
+                                     };
+                                 } else {
+                                     bfStatsForChart = null;
+                                     bfDefForChart = null;
+                                 }
                             } else {
-                                bfStatsForChart = null;
+                                bfStatsForChart = null; // Explicitly nullify if no matching data found
                                 bfDefForChart = null;
+                                console.warn(`Keine passenden BF-Ergebnisse für ${kolId} und Metrik ${currentPublikationBfMetric} gefunden, auch nicht im bruteForceManager oder allKollektivStats. Fallback nicht möglich.`);
                             }
                         }
 
