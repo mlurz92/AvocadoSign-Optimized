@@ -11,8 +11,24 @@ const praesentationTabLogic = (() => {
 
     let _praesentationData = {};
 
+    function _getGlobalConfig(configKey) {
+        if (_mainAppInterface && typeof _mainAppInterface.getStateSnapshot === 'function') {
+            const snapshot = _mainAppInterface.getStateSnapshot();
+            if (configKey === 'APP_CONFIG') return snapshot.appConfig;
+            if (configKey === 'UI_TEXTS') return snapshot.uiTexts;
+            if (configKey === 'TOOLTIP_CONTENT') return snapshot.tooltipContent;
+            return snapshot.appConfig;
+        }
+        if (configKey === 'APP_CONFIG') return typeof APP_CONFIG !== 'undefined' ? APP_CONFIG : {};
+        if (configKey === 'UI_TEXTS') return typeof UI_TEXTS !== 'undefined' ? UI_TEXTS : {};
+        if (configKey === 'TOOLTIP_CONTENT') return typeof TOOLTIP_CONTENT !== 'undefined' ? TOOLTIP_CONTENT : {};
+        return typeof APP_CONFIG !== 'undefined' ? APP_CONFIG : {};
+    }
+
     function initialize(mainAppInterface) {
+        if (_isInitialized) return;
         _mainAppInterface = mainAppInterface;
+        _isInitialized = true;
     }
 
     function isInitialized() {
@@ -25,14 +41,18 @@ const praesentationTabLogic = (() => {
     }
 
     function _prepareDatenAsPur() {
-        if (!_globalRawData || _globalRawData.length === 0) return null;
+        if (!_globalRawData || _globalRawData.length === 0 || typeof dataProcessor === 'undefined' || typeof statisticsService === 'undefined') {
+            console.error("PraesentationTabLogic._prepareDatenAsPur: Kritische Module (dataProcessor, statisticsService) oder Daten fehlen.");
+            return null;
+        }
         const processedDataFull = dataProcessor.processRawData(cloneDeep(_globalRawData));
 
-        const statsGesamt = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'Gesamt'), 'as', 'n');
-        const statsDirektOP = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'direkt OP'), 'as', 'n');
-        const statsNRCT = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'nRCT'), 'as', 'n');
+        const statsGesamt = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'Gesamt'), 'as', 'n_status_patient');
+        const statsDirektOP = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'direkt OP'), 'as', 'n_status_patient');
+        const statsNRCT = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'nRCT'), 'as', 'n_status_patient');
+        
         const currentKollektivDaten = dataProcessor.filterDataByKollektiv(processedDataFull, _currentKollektivGlobal);
-        const statsCurrentKollektiv = statisticsService.calculateDiagnosticPerformance(currentKollektivDaten, 'as', 'n');
+        const statsCurrentKollektiv = statisticsService.calculateDiagnosticPerformance(currentKollektivDaten, 'as', 'n_status_patient');
 
         return {
             statsGesamt,
@@ -44,19 +64,25 @@ const praesentationTabLogic = (() => {
     }
 
     function _prepareDatenAsVsT2() {
-        if (!_globalRawData || _globalRawData.length === 0) return null;
+        if (!_globalRawData || _globalRawData.length === 0 || typeof dataProcessor === 'undefined' || typeof statisticsService === 'undefined' || typeof studyT2CriteriaManager === 'undefined' || typeof t2CriteriaManager === 'undefined') {
+            console.error("PraesentationTabLogic._prepareDatenAsVsT2: Kritische Module oder Daten fehlen.");
+            return null;
+        }
+        const appConfig = _getGlobalConfig('APP_CONFIG');
+        const uiTexts = _getGlobalConfig('UI_TEXTS');
+
         const processedDataFull = dataProcessor.processRawData(cloneDeep(_globalRawData));
         let comparisonCohortData = dataProcessor.filterDataByKollektiv(processedDataFull, _currentKollektivGlobal);
         let comparisonKollektivName = _currentKollektivGlobal;
         let studySetToUse = null;
         let isAppliedCriteria = false;
 
-        if (_praesentationStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) {
+        if (_praesentationStudyId === appConfig.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) {
             isAppliedCriteria = true;
             studySetToUse = {
-                id: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID,
-                name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME,
-                shortName: UI_TEXTS.kollektivDisplayNames.applied_criteria || 'Angewandt',
+                id: appConfig.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID,
+                name: appConfig.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME,
+                shortName: uiTexts.kollektivDisplayNames.applied_criteria || 'Angewandt',
                 applicableKollektiv: _currentKollektivGlobal,
                 criteria: cloneDeep(_appliedT2CriteriaGlobal),
                 logic: _appliedT2LogicGlobal,
@@ -65,7 +91,7 @@ const praesentationTabLogic = (() => {
                     patientCohort: `Vergleichskollektiv: ${getKollektivDisplayName(_currentKollektivGlobal)} (N=${comparisonCohortData.length})`,
                     investigationType: "N/A",
                     focus: "Benutzereinstellung",
-                    keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(cloneDeep(_appliedT2CriteriaGlobal), _appliedT2LogicGlobal) || "Keine"
+                    keyCriteriaSummary: studyT2CriteriaManager.formatCriteriaForDisplay(cloneDeep(_appliedT2CriteriaGlobal), _appliedT2LogicGlobal, false) || "Keine"
                 }
             };
         } else if (_praesentationStudyId) {
@@ -89,7 +115,7 @@ const praesentationTabLogic = (() => {
             };
         }
         
-        const statsAS = statisticsService.calculateDiagnosticPerformance(comparisonCohortData, 'as', 'n');
+        const statsAS = statisticsService.calculateDiagnosticPerformance(comparisonCohortData, 'as', 'n_status_patient');
         let evaluatedDataT2;
 
         if (isAppliedCriteria) {
@@ -98,25 +124,23 @@ const praesentationTabLogic = (() => {
             evaluatedDataT2 = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(comparisonCohortData), studySetToUse);
         }
         
-        const statsT2 = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n');
-
-        let asDataForDirectComparison = cloneDeep(comparisonCohortData);
-        let t2DataForDirectComparison = cloneDeep(evaluatedDataT2);
+        const statsT2 = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n_status_patient');
         
-        const combinedDataForDeLong = [];
-        asDataForDirectComparison.forEach(pAS => {
-            const pT2 = t2DataForDirectComparison.find(pt => pt.id_patient === pAS.id_patient);
+        let combinedDataForComparison = [];
+        const baseDataForComparison = cloneDeep(comparisonCohortData); 
+        baseDataForComparison.forEach(pAS => {
+            const pT2 = evaluatedDataT2.find(pt => pt.id_patient === pAS.id_patient);
             if (pT2) {
-                combinedDataForDeLong.push({
+                combinedDataForComparison.push({
                     id_patient: pAS.id_patient,
-                    n: pAS.n,
-                    as: pAS.as,
-                    t2: pT2.t2
+                    n_status_patient: pAS.n_status_patient,
+                    as_status_patient: pAS.as_status_patient,
+                    t2_status_patient: pT2.t2_status_patient 
                 });
             }
         });
 
-        const vergleich = statisticsService.compareDiagnosticMethods(combinedDataForDeLong, 'as', 't2', 'n');
+        const vergleich = statisticsService.compareDiagnosticMethods(combinedDataForComparison, 'as_status_patient', 't2_status_patient', 'n_status_patient');
         
         const t2CriteriaLabelShort = studySetToUse.shortName || studySetToUse.name.substring(0,15);
         const t2CriteriaLabelFull = `${isAppliedCriteria ? 'Aktuell angewandt' : (studySetToUse.name || 'Studie')}: ${studyT2CriteriaManager.formatCriteriaForDisplay(studySetToUse.criteria, studySetToUse.logic, false)}`;
@@ -140,6 +164,9 @@ const praesentationTabLogic = (() => {
             return;
         }
         contentArea.innerHTML = '';
+        const appConfig = _getGlobalConfig('APP_CONFIG');
+        const uiTexts = _getGlobalConfig('UI_TEXTS');
+        const tooltipContent = _getGlobalConfig('TOOLTIP_CONTENT');
 
         if (_isDataStale) {
             if (_praesentationView === 'as-pur') {
@@ -150,7 +177,7 @@ const praesentationTabLogic = (() => {
             _isDataStale = false;
         }
 
-        if (!_praesentationData) {
+        if (!_praesentationData || Object.keys(_praesentationData).length === 0) {
             contentArea.innerHTML = '<p class="text-center text-muted p-3">Keine Daten für die Präsentationsansicht verfügbar.</p>';
             return;
         }
@@ -161,23 +188,24 @@ const praesentationTabLogic = (() => {
         if (_praesentationView === 'as-pur') {
             const { statsGesamt, statsDirektOP, statsNRCT, statsCurrentKollektiv, patientCountCurrentKollektiv } = _praesentationData;
             const tableData = [
-                { label: getKollektivDisplayName('Gesamt'), stats: statsGesamt, n: statsGesamt?.matrix ? (statsGesamt.matrix.rp + statsGesamt.matrix.fp + statsGesamt.matrix.fn + statsGesamt.matrix.rn) : 0 },
-                { label: getKollektivDisplayName('direkt OP'), stats: statsDirektOP, n: statsDirektOP?.matrix ? (statsDirektOP.matrix.rp + statsDirektOP.matrix.fp + statsDirektOP.matrix.fn + statsDirektOP.matrix.rn) : 0 },
-                { label: getKollektivDisplayName('nRCT'), stats: statsNRCT, n: statsNRCT?.matrix ? (statsNRCT.matrix.rp + statsNRCT.matrix.fp + statsNRCT.matrix.fn + statsNRCT.matrix.rn) : 0 }
+                { label: getKollektivDisplayName('Gesamt'), stats: statsGesamt, n: statsGesamt?.matrix ? (statsGesamt.matrix.tp + statsGesamt.matrix.fp + statsGesamt.matrix.fn + statsGesamt.matrix.tn) : 0 },
+                { label: getKollektivDisplayName('direkt OP'), stats: statsDirektOP, n: statsDirektOP?.matrix ? (statsDirektOP.matrix.tp + statsDirektOP.matrix.fp + statsDirektOP.matrix.fn + statsDirektOP.matrix.tn) : 0 },
+                { label: getKollektivDisplayName('nRCT'), stats: statsNRCT, n: statsNRCT?.matrix ? (statsNRCT.matrix.tp + statsNRCT.matrix.fp + statsNRCT.matrix.fn + statsNRCT.matrix.tn) : 0 }
             ];
 
+            const ttContentPraes = tooltipContent?.praesentation?.asPurPerfTable || {};
             let tableHTML = `
                 <h5 class="mt-2">Performance Avocado Sign (AS) vs. N-Status</h5>
                 <table class="table table-sm table-bordered table-hover text-center small publication-table" id="praes-as-pur-perf-table">
                     <thead class="small">
                         <tr>
-                            <th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable.kollektiv}">Kollektiv (N)</th>
-                            <th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable.sens}">Sens. (95% CI)</th>
-                            <th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable.spez}">Spez. (95% CI)</th>
-                            <th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable.ppv}">PPV (95% CI)</th>
-                            <th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable.npv}">NPV (95% CI)</th>
-                            <th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable.acc}">Acc. (95% CI)</th>
-                            <th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable.auc}">AUC (95% CI)</th>
+                            <th data-tippy-content="${ttContentPraes.kollektiv || 'Kollektiv (N)'}">Kollektiv (N)</th>
+                            <th data-tippy-content="${ttContentPraes.sens || 'Sens. (95% CI)'}">Sens. (95% CI)</th>
+                            <th data-tippy-content="${ttContentPraes.spez || 'Spez. (95% CI)'}">Spez. (95% CI)</th>
+                            <th data-tippy-content="${ttContentPraes.ppv || 'PPV (95% CI)'}">PPV (95% CI)</th>
+                            <th data-tippy-content="${ttContentPraes.npv || 'NPV (95% CI)'}">NPV (95% CI)</th>
+                            <th data-tippy-content="${ttContentPraes.acc || 'Acc. (95% CI)'}">Acc. (95% CI)</th>
+                            <th data-tippy-content="${ttContentPraes.auc || 'AUC (95% CI)'}">AUC (95% CI)</th>
                         </tr>
                     </thead>
                     <tbody>`;
@@ -192,10 +220,13 @@ const praesentationTabLogic = (() => {
                               </tr>`;
             });
             tableHTML += `</tbody></table>`;
-            html += uiComponents.createStatistikCard('praes-as-pur-table-card', 'AS Performance Metriken (vs. N)', tableHTML, true, 'praesentationAsPurPerformance', [{id: 'dl-praes-as-pur-csv', format: 'csv', icon: 'fa-file-csv'}, {id: 'dl-praes-as-pur-md', format: 'md', icon: 'fa-markdown'}, {tableId: 'praes-as-pur-perf-table', format: 'png'}]);
+            if (typeof uiComponents !== 'undefined' && uiComponents.createStatistikCard) {
+                html += uiComponents.createStatistikCard('praes-as-pur-table-card', 'AS Performance Metriken (vs. N)', tableHTML, true, 'praesentationAsPurPerformance', [{id: 'dl-praes-as-pur-csv', format: 'csv', icon: 'fa-file-csv', tooltip: 'Tabelle als CSV herunterladen'}, {id: 'dl-praes-as-pur-md', format: 'md', icon: 'fab fa-markdown', tooltip: 'Tabelle als Markdown herunterladen'}, {tableId: 'praes-as-pur-perf-table', format: 'png', icon: 'fa-image', tooltip:'Tabelle als PNG herunterladen'}]);
+            }
 
-            if (statsCurrentKollektiv) {
-                const chartCard = uiComponents.createStatistikCard('praes-as-pur-chart-card', `AS Performance für ${getKollektivDisplayName(_currentKollektivGlobal)} (N=${patientCountCurrentKollektiv})`, `<div id="praes-as-performance-chart" class="statistik-chart-container border rounded" style="min-height: 350px;"></div>`, false, 'praesentationAsPurChart', [{chartId: 'praes-as-performance-chart', format: 'png'}, {chartId: 'praes-as-performance-chart', format: 'svg'}]);
+
+            if (statsCurrentKollektiv && typeof uiComponents !== 'undefined' && uiComponents.createStatistikCard) {
+                const chartCard = uiComponents.createStatistikCard('praes-as-pur-chart-card', `AS Performance für ${getKollektivDisplayName(_currentKollektivGlobal)} (N=${patientCountCurrentKollektiv})`, `<div id="praes-as-performance-chart" class="statistik-chart-container border rounded" style="min-height: 350px;"></div>`, false, 'praesentationAsPurChart', [{chartId: 'praes-as-performance-chart', format: 'png', icon: 'fa-image', tooltip: 'Diagramm als PNG herunterladen'}, {chartId: 'praes-as-performance-chart', format: 'svg', icon: 'fa-file-code', tooltip:'Diagramm als SVG herunterladen'}]);
                 html += chartCard;
             }
 
@@ -203,61 +234,73 @@ const praesentationTabLogic = (() => {
             const { statsAS, statsT2, vergleich, comparisonCriteriaSet, kollektivForComparison, patientCountForComparison, t2CriteriaLabelShort, t2CriteriaLabelFull } = _praesentationData;
             
             const t2SetInfo = comparisonCriteriaSet?.studyInfo || {};
+            const ttContentPraesT2 = tooltipContent?.praesentation?.t2BasisInfoCard || {};
             let infoCardHTML = '<h6>Angewandte T2-Kriterien</h6>';
             if (comparisonCriteriaSet) {
                  infoCardHTML = `
                     <h6>${comparisonCriteriaSet.name || 'T2 Kriterien Set'}</h6>
                     <ul class="list-unstyled small">
-                        <li data-tippy-content="${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.reference}"><strong>Referenz:</strong> ${t2SetInfo.reference || (comparisonCriteriaSet.reference || 'N/A')}</li>
-                        <li data-tippy-content="${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.patientCohort}"><strong>Kollektiv (Basis):</strong> ${getKollektivDisplayName(kollektivForComparison)} (N=${patientCountForComparison || 'N/A'})</li>
-                        <li data-tippy-content="${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.investigationType}"><strong>Untersuchungstyp:</strong> ${t2SetInfo.investigationType || 'N/A'}</li>
-                        <li data-tippy-content="${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.focus}"><strong>Fokus:</strong> ${t2SetInfo.focus || 'N/A'}</li>
-                        <li data-tippy-content="${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.keyCriteriaSummary}"><strong>Kriterien:</strong> ${t2SetInfo.keyCriteriaSummary || studyT2CriteriaManager.formatCriteriaForDisplay(comparisonCriteriaSet.criteria, comparisonCriteriaSet.logic, false) || 'Nicht spezifiziert'}</li>
+                        <li data-tippy-content="${ttContentPraesT2.reference || 'Referenz'}"><strong>Referenz:</strong> ${t2SetInfo.reference || (comparisonCriteriaSet.reference || 'N/A')}</li>
+                        <li data-tippy-content="${ttContentPraesT2.patientCohort || 'Kollektiv (Basis)'}"><strong>Kollektiv (Basis):</strong> ${getKollektivDisplayName(kollektivForComparison)} (N=${patientCountForComparison || 'N/A'})</li>
+                        <li data-tippy-content="${ttContentPraesT2.investigationType || 'Untersuchungstyp'}"><strong>Untersuchungstyp:</strong> ${t2SetInfo.investigationType || 'N/A'}</li>
+                        <li data-tippy-content="${ttContentPraesT2.focus || 'Fokus'}"><strong>Fokus:</strong> ${t2SetInfo.focus || 'N/A'}</li>
+                        <li data-tippy-content="${ttContentPraesT2.keyCriteriaSummary || 'Kriterien'}"><strong>Kriterien:</strong> ${t2SetInfo.keyCriteriaSummary || studyT2CriteriaManager.formatCriteriaForDisplay(comparisonCriteriaSet.criteria, comparisonCriteriaSet.logic, false) || 'Nicht spezifiziert'}</li>
                     </ul>`;
             } else {
                 infoCardHTML = '<p class="text-muted">Kein T2-Kriterienset für Vergleich ausgewählt oder gültig.</p>';
             }
-            html += uiComponents.createStatistikCard('praes-t2-info-card', 'Details zur T2-Vergleichsbasis', infoCardHTML, true, 'praesentationT2Info');
+            if (typeof uiComponents !== 'undefined' && uiComponents.createStatistikCard) {
+                html += uiComponents.createStatistikCard('praes-t2-info-card', 'Details zur T2-Vergleichsbasis', infoCardHTML, true, 'praesentationT2Info');
+            }
+
 
             if (statsAS && statsT2) {
+                const ttContentAST2Perf = tooltipContent?.praesentation?.asVsT2PerfTable || {};
                 let perfTableHTML = `<table class="table table-sm table-bordered table-hover text-center small publication-table" id="praes-as-vs-t2-comp-table">
                                     <thead class="small">
                                         <tr>
-                                            <th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asVsT2PerfTable.metric}">Metrik</th>
-                                            <th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asVsT2PerfTable.asValue.replace('[KOLLEKTIV_NAME_VERGLEICH]', getKollektivDisplayName(kollektivForComparison))}">AS (95% CI)</th>
-                                            <th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asVsT2PerfTable.t2Value.replace('[KOLLEKTIV_NAME_VERGLEICH]', getKollektivDisplayName(kollektivForComparison)).replace('[T2_SHORT_NAME]', t2CriteriaLabelShort)}">${t2CriteriaLabelShort} (95% CI)</th>
+                                            <th data-tippy-content="${ttContentAST2Perf.metric || 'Metrik'}">Metrik</th>
+                                            <th data-tippy-content="${(ttContentAST2Perf.asValue || 'AS (95% CI) ({KOLLEKTIV_NAME_VERGLEICH})').replace('[KOLLEKTIV_NAME_VERGLEICH]', getKollektivDisplayName(kollektivForComparison))}">AS (95% CI)</th>
+                                            <th data-tippy-content="${(ttContentAST2Perf.t2Value || '{T2_SHORT_NAME} (95% CI) ({KOLLEKTIV_NAME_VERGLEICH})').replace('[KOLLEKTIV_NAME_VERGLEICH]', getKollektivDisplayName(kollektivForComparison)).replace('[T2_SHORT_NAME]', t2CriteriaLabelShort)}">${t2CriteriaLabelShort} (95% CI)</th>
                                         </tr>
                                     </thead><tbody>`;
                 const metricsToCompare = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'f1', 'auc'];
                 metricsToCompare.forEach(key => {
-                    const metricNameDisplay = UI_TEXTS.statMetrics[key]?.name || key.toUpperCase();
-                    const isP = !(key === 'f1' || key === 'auc'); const d = (key === 'f1' || key === 'auc') ? 3 : 1;
+                    const metricNameDisplay = uiTexts.statMetrics[key]?.name || key.toUpperCase();
+                    const isP = !(key === 'f1' || key === 'auc' || key === 'balAcc'); const d = (key === 'f1' || key === 'auc' || key === 'balAcc') ? 3 : 1;
                     perfTableHTML += `<tr><td>${metricNameDisplay}</td>
                                       <td>${formatCI(statsAS[key]?.value, statsAS[key]?.ci?.lower, statsAS[key]?.ci?.upper, d, isP, na)}</td>
                                       <td>${formatCI(statsT2[key]?.value, statsT2[key]?.ci?.lower, statsT2[key]?.ci?.upper, d, isP, na)}</td></tr>`;
                 });
                 perfTableHTML += `</tbody></table>`;
-                html += uiComponents.createStatistikCard('praes-comp-table-card', `Vergleich Performance: AS vs. ${t2CriteriaLabelShort} (Kollektiv: ${getKollektivDisplayName(kollektivForComparison)}, N=${patientCountForComparison})`, perfTableHTML, true, 'praesentationComparisonTable', [{id: 'download-performance-as-vs-t2-csv', format: 'csv', icon: 'fa-file-csv'}, {id: 'download-comp-table-as-vs-t2-md', format: 'md', icon: 'fa-markdown'}, {tableId: 'praes-as-vs-t2-comp-table', format: 'png'}]);
+                if (typeof uiComponents !== 'undefined' && uiComponents.createStatistikCard) {
+                    html += uiComponents.createStatistikCard('praes-comp-table-card', `Vergleich Performance: AS vs. ${t2CriteriaLabelShort} (Kollektiv: ${getKollektivDisplayName(kollektivForComparison)}, N=${patientCountForComparison})`, perfTableHTML, true, 'praesentationComparisonTable', [{id: 'download-performance-as-vs-t2-csv', format: 'csv', icon: 'fa-file-csv', tooltip: 'Vergleichsperformancetabelle als CSV herunterladen'}, {id: 'download-comp-table-as-vs-t2-md', format: 'md', icon: 'fab fa-markdown', tooltip: 'Vergleichsperformancetabelle als Markdown herunterladen'}, {tableId: 'praes-as-vs-t2-comp-table', format: 'png', icon: 'fa-image', tooltip: 'Vergleichsperformancetabelle als PNG herunterladen'}]);
+                }
+
 
                 if (vergleich) {
+                    const ttContentAST2Test = tooltipContent?.praesentation?.asVsT2TestTable || {};
                     let testTableHTML = `<table class="table table-sm table-bordered table-hover text-center small publication-table" id="praes-as-vs-t2-test-table">
                                         <thead class="small">
                                             <tr>
-                                                <th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asVsT2TestTable.test.replace('[T2_SHORT_NAME]',t2CriteriaLabelShort)}">Test</th>
-                                                <th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asVsT2TestTable.statistic}">Statistik</th>
-                                                <th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asVsT2TestTable.pValue.replace('[T2_SHORT_NAME]',t2CriteriaLabelShort).replace('[ALPHA_LEVEL]', String(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL)).replace('[KOLLEKTIV_NAME_VERGLEICH]',getKollektivDisplayName(kollektivForComparison))}">p-Wert</th>
-                                                <th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asVsT2TestTable.method}">Methode</th>
+                                                <th data-tippy-content="${(ttContentAST2Test.test || 'Test ({T2_SHORT_NAME})').replace('[T2_SHORT_NAME]',t2CriteriaLabelShort)}">Test</th>
+                                                <th data-tippy-content="${ttContentAST2Test.statistic || 'Statistik'}">Statistik</th>
+                                                <th data-tippy-content="${(ttContentAST2Test.pValue || 'p-Wert ({T2_SHORT_NAME}, {KOLLEKTIV_NAME_VERGLEICH}, &alpha;={ALPHA_LEVEL})').replace('[T2_SHORT_NAME]',t2CriteriaLabelShort).replace('[ALPHA_LEVEL]', String(appConfig.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL)).replace('[KOLLEKTIV_NAME_VERGLEICH]',getKollektivDisplayName(kollektivForComparison))}">p-Wert</th>
+                                                <th data-tippy-content="${ttContentAST2Test.method || 'Methode'}">Methode</th>
                                             </tr>
                                         </thead><tbody>`;
-                    const fPValHTML = (p) => (p !== null && !isNaN(p)) ? (p < APP_CONFIG.STATISTICAL_CONSTANTS.P_VALUE_THRESHOLD_LESS_THAN ? `&lt;${formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.P_VALUE_THRESHOLD_LESS_THAN, APP_CONFIG.STATISTICAL_CONSTANTS.P_VALUE_PRECISION_TEXT, '--', true)}` : formatNumber(p, APP_CONFIG.STATISTICAL_CONSTANTS.P_VALUE_PRECISION_TEXT, '--', true)) : '--';
-                    testTableHTML += `<tr><td>McNemar (Accuracy)</td><td>${formatNumber(vergleich.mcnemar?.statistic, 3, na, true)} (df=${vergleich.mcnemar?.df || na})</td><td>${fPValHTML(vergleich.mcnemar?.pValue)} ${getStatisticalSignificanceSymbol(vergleich.mcnemar?.pValue)}</td><td>${vergleich.mcnemar?.method || na}</td></tr>`;
-                    testTableHTML += `<tr><td>DeLong (AUC)</td><td>Z=${formatNumber(vergleich.delong?.Z, 3, na, true)}</td><td>${fPValHTML(vergleich.delong?.pValue)} ${getStatisticalSignificanceSymbol(vergleich.delong?.pValue)}</td><td>${vergleich.delong?.method || na}</td></tr>`;
+                    const fPValHTML = (p) => (p !== null && !isNaN(p)) ? (p < appConfig.STATISTICAL_CONSTANTS.P_VALUE_THRESHOLD_LESS_THAN ? `&lt;${formatNumber(appConfig.STATISTICAL_CONSTANTS.P_VALUE_THRESHOLD_LESS_THAN, appConfig.STATISTICAL_CONSTANTS.P_VALUE_PRECISION_TEXT, '--', true)}` : formatNumber(p, appConfig.STATISTICAL_CONSTANTS.P_VALUE_PRECISION_TEXT, '--', true)) : '--';
+                    if(vergleich.mcnemar) testTableHTML += `<tr><td>McNemar (Accuracy)</td><td>&Chi;&sup2;=${formatNumber(vergleich.mcnemar?.statistic, 3, na, true)} (df=${vergleich.mcnemar?.df || na})</td><td>${fPValHTML(vergleich.mcnemar?.pValue)} ${getStatisticalSignificanceSymbol(vergleich.mcnemar?.pValue)}</td><td>${vergleich.mcnemar?.method || na}</td></tr>`;
+                    if(vergleich.delong) testTableHTML += `<tr><td>DeLong (AUC)</td><td>Z=${formatNumber(vergleich.delong?.Z, 3, na, true)}</td><td>${fPValHTML(vergleich.delong?.pValue)} ${getStatisticalSignificanceSymbol(vergleich.delong?.pValue)}</td><td>${vergleich.delong?.method || na}</td></tr>`;
                     testTableHTML += `</tbody></table>`;
-                    html += uiComponents.createStatistikCard('praes-test-table-card', `Statistische Tests: AS vs. ${t2CriteriaLabelShort} (Kollektiv: ${getKollektivDisplayName(kollektivForComparison)})`, testTableHTML, true, 'praesentationComparisonTests', [{id: 'download-tests-as-vs-t2-md', format: 'md', icon: 'fa-markdown'}, {tableId: 'praes-as-vs-t2-test-table', format: 'png'}]);
+                     if (typeof uiComponents !== 'undefined' && uiComponents.createStatistikCard) {
+                        html += uiComponents.createStatistikCard('praes-test-table-card', `Statistische Tests: AS vs. ${t2CriteriaLabelShort} (Kollektiv: ${getKollektivDisplayName(kollektivForComparison)})`, testTableHTML, true, 'praesentationComparisonTests', [{id: 'download-tests-as-vs-t2-md', format: 'md', icon: 'fab fa-markdown', tooltip: 'Statistiktest-Tabelle als Markdown herunterladen'}, {tableId: 'praes-as-vs-t2-test-table', format: 'png', icon: 'fa-image', tooltip: 'Statistiktest-Tabelle als PNG herunterladen'}]);
+                    }
                 }
-
-                const chartCard = uiComponents.createStatistikCard('praes-comp-chart-card', `Vergleich: AS vs. ${t2CriteriaLabelShort} (Kollektiv: ${getKollektivDisplayName(kollektivForComparison)}, N=${patientCountForComparison})`, `<div id="praes-comp-chart-container" class="statistik-chart-container border rounded" style="min-height: 400px;"></div>`, false, 'praesentationComparisonChart', [{id: 'dl-praes-comp-chart-png', chartId: 'praes-comp-chart-container', format: 'png', chartName: `AS_vs_${t2CriteriaLabelShort.replace(/\s+/g,'_')}_${kollektivForComparison.replace(/\s+/g,'_')}`}, {id: 'dl-praes-comp-chart-svg', chartId: 'praes-comp-chart-container', format: 'svg', chartName: `AS_vs_${t2CriteriaLabelShort.replace(/\s+/g,'_')}_${kollektivForComparison.replace(/\s+/g,'_')}`}]);
-                html += chartCard;
+                if (typeof uiComponents !== 'undefined' && uiComponents.createStatistikCard) {
+                    const chartCard = uiComponents.createStatistikCard('praes-comp-chart-card', `Vergleich: AS vs. ${t2CriteriaLabelShort} (Kollektiv: ${getKollektivDisplayName(kollektivForComparison)}, N=${patientCountForComparison})`, `<div id="praes-comp-chart-container" class="statistik-chart-container border rounded" style="min-height: 400px;"></div>`, false, 'praesentationComparisonChart', [{id: 'dl-praes-comp-chart-png', chartId: 'praes-comp-chart-container', format: 'png', chartName: `AS_vs_${t2CriteriaLabelShort.replace(/\s+/g,'_')}_${kollektivForComparison.replace(/\s+/g,'_')}`, icon: 'fa-image', tooltip: 'Diagramm als PNG herunterladen'}, {id: 'dl-praes-comp-chart-svg', chartId: 'praes-comp-chart-container', format: 'svg', chartName: `AS_vs_${t2CriteriaLabelShort.replace(/\s+/g,'_')}_${kollektivForComparison.replace(/\s+/g,'_')}`, icon: 'fa-file-code', tooltip: 'Diagramm als SVG herunterladen'}]);
+                    html += chartCard;
+                }
             } else {
                  html += `<div class="col-12"><p class="text-muted text-center p-3">Statistikdaten für AS vs. ${t2CriteriaLabelShort} nicht verfügbar oder unvollständig.</p></div>`;
             }
@@ -269,16 +312,16 @@ const praesentationTabLogic = (() => {
             chart_renderer.renderASPerformanceChart('praes-as-performance-chart', _praesentationData.statsCurrentKollektiv, _currentKollektivGlobal, {includeCI: true, yDomain: [0,1]});
         } else if (_praesentationView === 'as-vs-t2' && _praesentationData.statsAS && _praesentationData.statsT2 && typeof chart_renderer !== 'undefined') {
             const chartDataForComp = [
-                { group: UI_TEXTS.statMetrics.sens.name || 'Sens.', AS: _praesentationData.statsAS.sens, T2: _praesentationData.statsT2.sens },
-                { group: UI_TEXTS.statMetrics.spez.name || 'Spez.', AS: _praesentationData.statsAS.spez, T2: _praesentationData.statsT2.spez },
-                { group: UI_TEXTS.statMetrics.ppv.name || 'PPV', AS: _praesentationData.statsAS.ppv, T2: _praesentationData.statsT2.ppv },
-                { group: UI_TEXTS.statMetrics.npv.name || 'NPV', AS: _praesentationData.statsAS.npv, T2: _praesentationData.statsT2.npv },
-                { group: UI_TEXTS.statMetrics.acc.name || 'Acc.', AS: _praesentationData.statsAS.acc, T2: _praesentationData.statsT2.acc },
-                { group: UI_TEXTS.statMetrics.auc.name || 'AUC', AS: _praesentationData.statsAS.auc, T2: _praesentationData.statsT2.auc }
+                { group: uiTexts.statMetrics.sens.name || 'Sens.', AS: _praesentationData.statsAS.sens, T2: _praesentationData.statsT2.sens },
+                { group: uiTexts.statMetrics.spez.name || 'Spez.', AS: _praesentationData.statsAS.spez, T2: _praesentationData.statsT2.spez },
+                { group: uiTexts.statMetrics.ppv.name || 'PPV', AS: _praesentationData.statsAS.ppv, T2: _praesentationData.statsT2.ppv },
+                { group: uiTexts.statMetrics.npv.name || 'NPV', AS: _praesentationData.statsAS.npv, T2: _praesentationData.statsT2.npv },
+                { group: uiTexts.statMetrics.acc.name || 'Acc.', AS: _praesentationData.statsAS.acc, T2: _praesentationData.statsT2.acc },
+                { group: uiTexts.statMetrics.auc.name || 'AUC', AS: _praesentationData.statsAS.auc, T2: _praesentationData.statsT2.auc }
             ];
             const seriesForComp = [
-                { name: UI_TEXTS.legendLabels.avocadoSign || 'AS', key: 'AS', color: APP_CONFIG.CHART_SETTINGS.AS_COLOR, showCI: true },
-                { name: _praesentationData.t2CriteriaLabelShort || UI_TEXTS.legendLabels.currentT2, key: 'T2', color: APP_CONFIG.CHART_SETTINGS.T2_COLOR, showCI: true }
+                { name: uiTexts.legendLabels.avocadoSign || 'AS', key: 'AS', color: appConfig.CHART_SETTINGS.AS_COLOR, showCI: true },
+                { name: _praesentationData.t2CriteriaLabelShort || uiTexts.legendLabels.currentT2, key: 'T2', color: appConfig.CHART_SETTINGS.T2_COLOR, showCI: true }
             ];
             chart_renderer.renderComparisonBarChart('praes-comp-chart-container', chartDataForComp, seriesForComp, { title: '', yAxisLabel: 'Wert', barType: 'grouped', groupKey: 'group', showLegend: true, legendPosition: 'bottom', includeCI: true, yDomain: [0,1] });
         }
@@ -286,6 +329,10 @@ const praesentationTabLogic = (() => {
 
 
     function initializeTab(rawData, currentKollektiv, appliedT2Criteria, appliedT2Logic, praesentationView, praesentationStudyId) {
+        if (!_mainAppInterface) {
+            console.error("PraesentationTabLogic: Hauptinterface nicht initialisiert.");
+            return;
+        }
         _globalRawData = cloneDeep(rawData);
         _currentKollektivGlobal = currentKollektiv;
         _appliedT2CriteriaGlobal = cloneDeep(appliedT2Criteria);
@@ -296,18 +343,21 @@ const praesentationTabLogic = (() => {
         setDataStale();
 
         const controlsContainer = document.getElementById('praesentation-controls-container');
-        if (controlsContainer && typeof uiComponents !== 'undefined' && typeof uiComponents.createPresentationControls === 'function') {
+        if (controlsContainer && typeof uiComponents !== 'undefined' && typeof uiComponents.createPresentationControls === 'function' && typeof studyT2CriteriaManager !== 'undefined') {
             const studySetsForSelect = studyT2CriteriaManager.getAllStudyCriteriaSets(true);
             controlsContainer.innerHTML = uiComponents.createPresentationControls(_praesentationView, studySetsForSelect, _praesentationStudyId);
         } else if(controlsContainer) {
-            controlsContainer.innerHTML = '<p class="text-danger">Fehler: Präsentations-Steuerungskomponente nicht verfügbar.</p>';
+            controlsContainer.innerHTML = '<p class="text-danger">Fehler: Präsentations-Steuerungskomponente nicht verfügbar oder studyT2CriteriaManager fehlt.</p>';
         }
 
         _renderPraesentationContent();
-        _isInitialized = true;
-
-        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.initializeTooltips === 'function') {
-             ui_helpers.initializeTooltips(document.getElementById('praesentation-tab-pane'));
+        
+        const uiHelpers = _mainAppInterface.getUiHelpers();
+        if (uiHelpers && typeof uiHelpers.initializeTooltips === 'function') {
+             uiHelpers.initializeTooltips(document.getElementById('praesentation-tab-pane'));
+        }
+        if (typeof praesentationEventHandlers !== 'undefined' && typeof praesentationEventHandlers.attachPraesentationEventListeners === 'function') {
+            praesentationEventHandlers.attachPraesentationEventListeners('praesentation-tab-pane');
         }
     }
 
@@ -315,6 +365,9 @@ const praesentationTabLogic = (() => {
         initialize,
         isInitialized,
         setDataStale,
-        initializeTab
+        initializeTab,
+        _prepareDatenAsPur, 
+        _prepareDatenAsVsT2, 
+        _praesentationData 
     });
 })();
