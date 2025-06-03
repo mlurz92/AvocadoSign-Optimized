@@ -65,17 +65,18 @@ const dataTabLogic = (() => {
                  const style = isActiveSubSort ? 'font-weight: bold; text-decoration: underline; color: var(--primary-color);' : '';
                  const subLabel = sk.label || sk.key.toUpperCase();
                  const subTooltip = `Sortieren nach Status ${subLabel}. ${baseTooltipContent}`;
-                 return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-tippy-content="${subTooltip}">${subLabel}</span>`;
+                 return `<span class="sortable-sub-header" data-sub-key="${sk.key}" style="cursor: pointer; ${style}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${subTooltip}">${subLabel}</span>`;
              }).join(' / ') : '';
             
             const mainTooltip = col.subKeys ? `${baseTooltipContent} Klicken Sie auf N, AS oder T2 für Sub-Sortierung.` : (col.key === 'details' ? (TOOLTIP_CONTENT.datenTable.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
             const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys || col.key === 'details' ? '' : 'style="cursor: pointer;"'}`;
             const thClass = mainHeaderClass;
+            const tooltipAttributes = `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${mainTooltip}"`;
 
             if (col.subKeys) {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} data-tippy-content="${mainTooltip}" ${thStyle}>${col.label} ${subHeaders ? `(${subHeaders})` : ''} ${isMainKeyActiveSort && !activeSubKey ? sortIconHTML : '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>'}</th>`;
+                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltipAttributes} ${thStyle}>${col.label} ${subHeaders ? `(${subHeaders})` : ''} ${isMainKeyActiveSort && !activeSubKey ? sortIconHTML : '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>'}</th>`;
              } else {
-                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} data-tippy-content="${mainTooltip}" ${thStyle}>${col.label} ${col.key === 'details' ? '' : sortIconHTML}</th>`;
+                 headerHTML += `<th scope="col" class="${thClass}" ${sortAttributes} ${tooltipAttributes} ${thStyle}>${col.label} ${col.key === 'details' ? '' : sortIconHTML}</th>`;
              }
         });
         headerHTML += `</tr></thead>`;
