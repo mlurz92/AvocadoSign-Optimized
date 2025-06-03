@@ -1,45 +1,125 @@
 const statistikEventHandlers = (() => {
 
-    function handleStatsLayoutToggle(button, mainAppInterface) {
-        if (!button || !mainAppInterface || typeof mainAppInterface.refreshCurrentTab !== 'function' || typeof mainAppInterface.updateGlobalUIState !== 'function') {
-            console.error("statistikEventHandlers.handleStatsLayoutToggle: Ungültige Parameter.");
-            return;
-        }
-        
-        setTimeout(() => {
-            const isPressed = button.classList.contains('active');
-            const newLayout = isPressed ? 'vergleich' : 'einzel';
-            if (state.setCurrentStatsLayout(newLayout)) {
-                mainAppInterface.updateGlobalUIState();
-                if (state.getActiveTabId() === 'statistik-tab') {
-                    mainAppInterface.refreshCurrentTab();
-                }
-            }
-        }, 50);
-    }
-
-    function handleStatistikKollektivChange(selectElement, mainAppInterface) {
-        if (!selectElement || !mainAppInterface || typeof mainAppInterface.refreshCurrentTab !== 'function') {
-             console.error("statistikEventHandlers.handleStatistikKollektivChange: Ungültige Parameter.");
-            return;
-        }
-
-        let needsRender = false;
-        const newValue = selectElement.value;
-
-        if (selectElement.id === 'statistik-kollektiv-select-1') {
-            needsRender = state.setCurrentStatsKollektiv1(newValue);
-        } else if (selectElement.id === 'statistik-kollektiv-select-2') {
-            needsRender = state.setCurrentStatsKollektiv2(newValue);
-        }
-
-        if (needsRender && state.getCurrentStatsLayout() === 'vergleich' && state.getActiveTabId() === 'statistik-tab') {
+    function _handleLayoutToggle() {
+        const currentLayout = stateManager.getCurrentStatsLayout();
+        const newLayout = currentLayout === 'einzel' ? 'vergleich' : 'einzel';
+        stateManager.setCurrentStatsLayout(newLayout);
+        // UI-Update wird durch 'stateChanged'-Event in main.js ausgelöst, 
+        // oder direkt, falls mainAppInterface.updateAllUIComponents verfügbar ist.
+        if (mainAppInterface && typeof mainAppInterface.updateAllUIComponents === 'function') {
+            mainAppInterface.updateAllUIComponents();
+        } else if (mainAppInterface && typeof mainAppInterface.refreshCurrentTab === 'function') {
             mainAppInterface.refreshCurrentTab();
         }
     }
 
+    function _handleKollektivSelectChange(event) {
+        const selectId = event.target.id;
+        const newKollektiv = event.target.value;
+
+        if (selectId === 'statistik-kollektiv-select-einzel') {
+            stateManager.setCurrentKollektiv(newKollektiv); 
+            // Auch Kollektiv 1 im Vergleichsmodus aktualisieren für Konsistenz, falls Nutzer umschaltet
+            stateManager.setStatsKollektiv1(newKollektiv);
+        } else if (selectId === 'statistik-kollektiv-select-1') {
+            stateManager.setStatsKollektiv1(newKollektiv);
+            // Wenn Einzelansicht aktiv ist, auch Hauptkollektiv setzen
+            if(stateManager.getCurrentStatsLayout() === 'einzel') {
+                stateManager.setCurrentKollektiv(newKollektiv);
+            }
+        } else if (selectId === 'statistik-kollektiv-select-2') {
+            stateManager.setStatsKollektiv2(newKollektiv);
+        }
+        // UI-Update wird durch 'stateChanged'-Event in main.js ausgelöst
+        if (mainAppInterface && typeof mainAppInterface.refreshCurrentTab === 'function') {
+             mainAppInterface.refreshCurrentTab(true); // true to force stat recalculation
+        }
+    }
+    
+    function _handleFilterMerkmalChange(event) {
+        const newMerkmal = event.target.value;
+        if (typeof stateManager !== 'undefined' && typeof stateManager.setStatistikFilterMerkmal === 'function') { // Annahme: stateManager hat diese Funktion
+            stateManager.setStatistikFilterMerkmal(newMerkmal);
+             if (mainAppInterface && typeof mainAppInterface.refreshCurrentTab === 'function') {
+                mainAppInterface.refreshCurrentTab(true);
+            }
+        } else {
+            console.warn("stateManager.setStatistikFilterMerkmal nicht verfügbar.");
+        }
+    }
+    
+    function _handleT2VergleichSetChange(event) {
+        const newSetId = event.target.value;
+         if (typeof stateManager !== 'undefined' && typeof stateManager.setStatistikT2VergleichSet === 'function') { // Annahme: stateManager hat diese Funktion
+            stateManager.setStatistikT2VergleichSet(newSetId);
+            if (mainAppInterface && typeof mainAppInterface.refreshCurrentTab === 'function') {
+                mainAppInterface.refreshCurrentTab(true);
+            }
+        } else {
+            console.warn("stateManager.setStatistikT2VergleichSet nicht verfügbar.");
+        }
+    }
+
+
+    function register() {
+        const statistikTabPane = document.getElementById('statistik-tab-pane');
+        if (!statistikTabPane) {
+            console.warn("StatistikEventHandlers: Statistik-Tab-Pane ('statistik-tab-pane') nicht gefunden. Handler nicht registriert.");
+            return;
+        }
+
+        const layoutToggleButton = statistikTabPane.querySelector('#statistik-toggle-vergleich');
+        if (layoutToggleButton) {
+            layoutToggleButton.removeEventListener('click', _handleLayoutToggle);
+            layoutToggleButton.addEventListener('click', _handleLayoutToggle);
+        } else {
+            console.warn("StatistikEventHandlers: Layout-Toggle-Button ('statistik-toggle-vergleich') nicht gefunden.");
+        }
+
+        const kollektivSelectEinzel = statistikTabPane.querySelector('#statistik-kollektiv-select-einzel');
+        if (kollektivSelectEinzel) {
+            kollektivSelectEinzel.removeEventListener('change', _handleKollektivSelectChange);
+            kollektivSelectEinzel.addEventListener('change', _handleKollektivSelectChange);
+        } else {
+            console.warn("StatistikEventHandlers: Kollektiv-Select-Einzel ('statistik-kollektiv-select-einzel') nicht gefunden.");
+        }
+        
+        const kollektivSelect1 = statistikTabPane.querySelector('#statistik-kollektiv-select-1');
+        if (kollektivSelect1) {
+            kollektivSelect1.removeEventListener('change', _handleKollektivSelectChange);
+            kollektivSelect1.addEventListener('change', _handleKollektivSelectChange);
+        } else {
+            console.warn("StatistikEventHandlers: Kollektiv-Select-1 ('statistik-kollektiv-select-1') nicht gefunden.");
+        }
+
+        const kollektivSelect2 = statistikTabPane.querySelector('#statistik-kollektiv-select-2');
+        if (kollektivSelect2) {
+            kollektivSelect2.removeEventListener('change', _handleKollektivSelectChange);
+            kollektivSelect2.addEventListener('change', _handleKollektivSelectChange);
+        } else {
+            console.warn("StatistikEventHandlers: Kollektiv-Select-2 ('statistik-kollektiv-select-2') nicht gefunden.");
+        }
+        
+        const filterMerkmalSelect = statistikTabPane.querySelector('#statistik-filter-merkmal-select');
+        if (filterMerkmalSelect) {
+            filterMerkmalSelect.removeEventListener('change', _handleFilterMerkmalChange);
+            filterMerkmalSelect.addEventListener('change', _handleFilterMerkmalChange);
+        } else {
+            // Dieses Element ist optional und wird ggf. erst später dynamisch hinzugefügt.
+            // console.warn("StatistikEventHandlers: Filter-Merkmal-Select ('statistik-filter-merkmal-select') nicht gefunden.");
+        }
+        
+        const t2VergleichSelect = statistikTabPane.querySelector('#statistik-t2-vergleich-select');
+        if (t2VergleichSelect) {
+            t2VergleichSelect.removeEventListener('change', _handleT2VergleichSetChange);
+            t2VergleichSelect.addEventListener('change', _handleT2VergleichSetChange);
+        } else {
+            // Dieses Element ist optional.
+            // console.warn("StatistikEventHandlers: T2-Vergleich-Set-Select ('statistik-t2-vergleich-select') nicht gefunden.");
+        }
+    }
+
     return Object.freeze({
-        handleStatsLayoutToggle,
-        handleStatistikKollektivChange
+        register
     });
 })();
