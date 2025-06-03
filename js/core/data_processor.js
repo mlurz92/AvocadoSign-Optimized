@@ -1,151 +1,117 @@
 const dataProcessor = (() => {
+    let processedData = [];
+    let rawData = [];
 
-    function calculateAge(birthdate, examDate) {
-        if (!birthdate || !examDate) {
-            return null;
-        }
-        let birth;
-        let exam;
+    function calculateAge(geburtsdatum, untersuchungsdatum) {
+        if (!geburtsdatum || !untersuchungsdatum) return null;
         try {
-            birth = new Date(birthdate);
-            exam = new Date(examDate);
-            if (isNaN(birth.getTime()) || isNaN(exam.getTime()) || birth > exam) {
-                return null;
+            const birthDate = new Date(geburtsdatum);
+            const examDate = new Date(untersuchungsdatum);
+            if (isNaN(birthDate.getTime()) || isNaN(examDate.getTime())) return null;
+
+            let age = examDate.getFullYear() - birthDate.getFullYear();
+            const monthDiff = examDate.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && examDate.getDate() < birthDate.getDate())) {
+                age--;
             }
+            return age >= 0 ? age : null;
         } catch (e) {
+            console.error("Fehler bei Altersberechnung:", e);
             return null;
         }
-        let age = exam.getFullYear() - birth.getFullYear();
-        const monthDiff = exam.getMonth() - birth.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && exam.getDate() < birth.getDate())) {
-            age--;
-        }
-        return age >= 0 ? age : null;
     }
 
-    function processSinglePatient(patient, index, config) {
-        const processedPatient = {};
-        const patientNr = typeof patient.nr === 'number' ? patient.nr : index + 1;
-
-        processedPatient.nr = patientNr;
-        processedPatient.name = typeof patient.name === 'string' ? patient.name.trim() : 'Unbekannt';
-        processedPatient.vorname = typeof patient.vorname === 'string' ? patient.vorname.trim() : '';
-        processedPatient.geburtsdatum = patient.geburtsdatum || null;
-        processedPatient.untersuchungsdatum = patient.untersuchungsdatum || null;
-        processedPatient.geschlecht = (patient.geschlecht === 'm' || patient.geschlecht === 'f') ? patient.geschlecht : 'unbekannt';
-        processedPatient.therapie = (patient.therapie === 'direkt OP' || patient.therapie === 'nRCT') ? patient.therapie : 'unbekannt';
-        processedPatient.n = (patient.n === '+' || patient.n === '-') ? patient.n : null;
-        processedPatient.as = (patient.as === '+' || patient.as === '-') ? patient.as : null;
-
-        const validateCount = (value) => (typeof value === 'number' && value >= 0 && Number.isInteger(value)) ? value : 0;
-        processedPatient.anzahl_patho_lk = validateCount(patient.anzahl_patho_lk);
-        processedPatient.anzahl_patho_n_plus_lk = validateCount(patient.anzahl_patho_n_plus_lk);
-        processedPatient.anzahl_as_lk = validateCount(patient.anzahl_as_lk);
-        processedPatient.anzahl_as_plus_lk = validateCount(patient.anzahl_as_plus_lk);
-
-        processedPatient.bemerkung = typeof patient.bemerkung === 'string' ? patient.bemerkung.trim() : '';
-        processedPatient.alter = calculateAge(processedPatient.geburtsdatum, processedPatient.untersuchungsdatum);
-
-        const rawLymphknotenT2 = patient.lymphknoten_t2;
-        processedPatient.lymphknoten_t2 = [];
-        processedPatient.anzahl_t2_lk = 0;
-
-        if (Array.isArray(rawLymphknotenT2)) {
-            processedPatient.lymphknoten_t2 = rawLymphknotenT2.map(lk => {
-                if (typeof lk !== 'object' || lk === null) return null;
-                const processedLk = {};
-                processedLk.groesse = (typeof lk.groesse === 'number' && !isNaN(lk.groesse) && lk.groesse >= 0) ? lk.groesse : null;
-
-                const validateEnum = (value, allowedValues) => {
-                     return (typeof value === 'string' && value !== null && allowedValues.includes(value.trim().toLowerCase()))
-                         ? value.trim().toLowerCase()
-                         : null;
-                };
-
-                processedLk.form = validateEnum(lk.form, config.T2_CRITERIA_SETTINGS.FORM_VALUES);
-                processedLk.kontur = validateEnum(lk.kontur, config.T2_CRITERIA_SETTINGS.KONTUR_VALUES);
-                processedLk.homogenitaet = validateEnum(lk.homogenitaet, config.T2_CRITERIA_SETTINGS.HOMOGENITAET_VALUES);
-                processedLk.signal = validateEnum(lk.signal, config.T2_CRITERIA_SETTINGS.SIGNAL_VALUES);
-
-                return processedLk;
-            }).filter(lk => lk !== null);
-            processedPatient.anzahl_t2_lk = processedPatient.lymphknoten_t2.length;
+    function initializeData(patientDataRawInput) {
+        if (!Array.isArray(patientDataRawInput)) {
+            console.error("DataProcessor: Ungültige Rohdaten für Initialisierung empfangen.");
+            rawData = [];
+            processedData = [];
+            return;
         }
+        rawData = patientDataRawInput;
+        processedData = rawData.map(patient => {
+            const age = calculateAge(patient.geburtsdatum, patient.untersuchungsdatum);
+            const anzahl_patho_lk_val = parseInt(patient.anzahl_patho_lk, 10);
+            const anzahl_patho_n_plus_lk_val = parseInt(patient.anzahl_patho_n_plus_lk, 10);
+            const anzahl_as_lk_val = parseInt(patient.anzahl_as_lk, 10);
+            const anzahl_as_plus_lk_val = parseInt(patient.anzahl_as_plus_lk, 10);
+            
+            let lymphknoten_t2_processed = [];
+            if (Array.isArray(patient.lymphknoten_t2)) {
+                lymphknoten_t2_processed = patient.lymphknoten_t2.map(lk => ({
+                    ...lk,
+                    groesse: parseFloat(lk.groesse) || null
+                }));
+            }
 
-        processedPatient.t2 = null;
-        processedPatient.anzahl_t2_plus_lk = 0;
-        processedPatient.lymphknoten_t2_bewertet = [];
 
-        return processedPatient;
+            return {
+                ...patient,
+                id: String(patient.nr), 
+                alter: age,
+                anzahl_patho_lk: isNaN(anzahl_patho_lk_val) ? null : anzahl_patho_lk_val,
+                anzahl_patho_n_plus_lk: isNaN(anzahl_patho_n_plus_lk_val) ? null : anzahl_patho_n_plus_lk_val,
+                anzahl_as_lk: isNaN(anzahl_as_lk_val) ? null : anzahl_as_lk_val,
+                anzahl_as_plus_lk: isNaN(anzahl_as_plus_lk_val) ? null : anzahl_as_plus_lk_val,
+                lymphknoten_t2: lymphknoten_t2_processed,
+                t2_status_calculated: 'unbekannt', 
+                anzahl_t2_plus_lk_calculated: 0,
+                anzahl_t2_lk_calculated: lymphknoten_t2_processed.length
+            };
+        });
     }
 
-    function processPatientData(rawData) {
-        if (!Array.isArray(rawData)) {
-            console.error("processPatientData: Ungültige Eingabedaten, Array erwartet.");
-            return [];
+    function getProcessedData(kollektivId = null) {
+        if (!kollektivId || kollektivId === 'Gesamt') {
+            return cloneDeep(processedData);
         }
-        if (typeof APP_CONFIG === 'undefined') {
-             console.error("processPatientData: APP_CONFIG ist nicht verfügbar.");
-             return [];
-        }
-
-        return rawData.map((patient, index) => processSinglePatient(patient, index, APP_CONFIG));
+        return cloneDeep(processedData.filter(p => p.therapie === kollektivId));
+    }
+    
+    function getPatientById(patientId) {
+        const idStr = String(patientId);
+        return cloneDeep(processedData.find(p => p.id === idStr));
     }
 
-    function filterDataByKollektiv(data, kollektiv) {
-        if (!Array.isArray(data)) {
-            console.error("filterDataByKollektiv: Ungültige Eingabedaten, Array erwartet.");
-            return [];
+    function getHeaderStats(kollektivId, t2Criteria, t2Logic) {
+        const dataFuerKollektiv = getProcessedData(kollektivId);
+        if (!dataFuerKollektiv || dataFuerKollektiv.length === 0) {
+            return { kollektiv: getKollektivDisplayName(kollektivId), anzahlPatienten: 0, statusN: '0/0', statusAS: '0/0', statusT2: '0/0' };
         }
-        const filteredData = (kollektiv && kollektiv !== 'Gesamt')
-            ? data.filter(p => p && p.therapie === kollektiv)
-            : data;
 
-        return cloneDeep(filteredData);
+        let nPlusCount = 0;
+        let asPlusCount = 0;
+        let t2PlusCount = 0;
+
+        const dataWithT2Applied = t2CriteriaManager.evaluateCriteriaForAllPatients(dataFuerKollektiv, t2Criteria, t2Logic, 'header_t2_status');
+
+        dataWithT2Applied.forEach(patient => {
+            if (patient.n === '+') nPlusCount++;
+            if (patient.as === '+') asPlusCount++;
+            if (patient.header_t2_status === '+') t2PlusCount++;
+        });
+        
+        const totalPatients = dataFuerKollektiv.length;
+
+        return {
+            kollektiv: getKollektivDisplayName(kollektivId),
+            anzahlPatienten: totalPatients,
+            statusN: `${nPlusCount}/${totalPatients}`,
+            statusAS: `${asPlusCount}/${totalPatients}`,
+            statusT2: `${t2PlusCount}/${totalPatients}`
+        };
     }
-
-    function calculateHeaderStats(data, currentKollektiv) {
-         const n = data?.length ?? 0;
-         const kollektivName = getKollektivDisplayName(currentKollektiv);
-         const placeholder = '--';
-
-         if (!Array.isArray(data) || n === 0) {
-             return { kollektiv: kollektivName, anzahlPatienten: 0, statusN: placeholder, statusAS: placeholder, statusT2: placeholder, nPos: 0, nNeg: 0, asPos: 0, asNeg: 0, t2Pos: 0, t2Neg: 0 };
-         }
-
-         let nPos = 0, nNeg = 0, asPos = 0, asNeg = 0, t2Pos = 0, t2Neg = 0;
-         data.forEach(p => {
-             if (p) {
-                if (p.n === '+') nPos++; else if (p.n === '-') nNeg++;
-                if (p.as === '+') asPos++; else if (p.as === '-') asNeg++;
-                if (p.t2 === '+') t2Pos++; else if (p.t2 === '-') t2Neg++;
-             }
-         });
-
-         const formatStatus = (pos, neg) => {
-             const totalKnown = pos + neg;
-             return totalKnown > 0 ? `${formatPercent(pos / totalKnown, 1)} (+)` : placeholder;
-         };
-
-         return {
-            kollektiv: kollektivName,
-            anzahlPatienten: n,
-            statusN: formatStatus(nPos, nNeg),
-            statusAS: formatStatus(asPos, asNeg),
-            statusT2: formatStatus(t2Pos, t2Neg),
-            nPos: nPos,
-            nNeg: nNeg,
-            asPos: asPos,
-            asNeg: asNeg,
-            t2Pos: t2Pos,
-            t2Neg: t2Neg
-         };
+    
+    function getRawData() {
+        return cloneDeep(rawData);
     }
 
     return Object.freeze({
-        processPatientData,
-        filterDataByKollektiv,
-        calculateHeaderStats
+        initializeData,
+        getProcessedData,
+        getPatientById,
+        getHeaderStats,
+        getRawData,
+        calculateAge 
     });
-
 })();
