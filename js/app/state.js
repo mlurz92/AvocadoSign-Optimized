@@ -1,236 +1,204 @@
-const state = (() => {
-    let currentState = {};
+const stateManager = (() => {
+    let state = {};
 
-    const defaultState = {
+    const defaultState = Object.freeze({
         currentKollektiv: APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV,
+        appliedT2Criteria: getDefaultT2Criteria(),
+        appliedT2Logic: APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC,
         datenTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT),
         auswertungTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT),
-        currentPublikationLang: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG,
-        currentPublikationSection: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION,
-        currentPublikationBruteForceMetric: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC,
-        currentStatsLayout: APP_CONFIG.DEFAULT_SETTINGS.STATS_LAYOUT,
-        currentStatsKollektiv1: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1,
-        currentStatsKollektiv2: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2,
-        currentPresentationView: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW,
-        currentPresentationStudyId: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID,
-        activeTabId: 'publikation-tab'
-    };
+        activeTabId: 'daten-tab-pane',
+        statistikLayout: APP_CONFIG.DEFAULT_SETTINGS.STATS_LAYOUT,
+        statistikKollektiv1: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1,
+        statistikKollektiv2: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2,
+        presentationView: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW,
+        presentationStudyId: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID,
+        publikationLang: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG,
+        publikationSection: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION,
+        publikationBruteForceMetric: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC,
+        bruteForceMetric: APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC,
+        criteriaComparisonSets: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.CRITERIA_COMPARISON_SETS),
+        chartColorScheme: APP_CONFIG.DEFAULT_SETTINGS.CHART_COLOR_SCHEME,
+        isFirstAppStart: true
+    });
 
-    function init() {
-        currentState = {
-            currentKollektiv: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV) ?? defaultState.currentKollektiv,
-            currentPublikationLang: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG) ?? defaultState.currentPublikationLang,
-            currentPublikationSection: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION) ?? defaultState.currentPublikationSection,
-            currentPublikationBruteForceMetric: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC) ?? defaultState.currentPublikationBruteForceMetric,
-            currentStatsLayout: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT) ?? defaultState.currentStatsLayout,
-            currentStatsKollektiv1: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1) ?? defaultState.currentStatsKollektiv1,
-            currentStatsKollektiv2: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2) ?? defaultState.currentStatsKollektiv2,
-            currentPresentationView: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW) ?? defaultState.currentPresentationView,
-            currentPresentationStudyId: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID) ?? defaultState.currentPresentationStudyId,
-            datenTableSort: cloneDeep(defaultState.datenTableSort),
-            auswertungTableSort: cloneDeep(defaultState.auswertungTableSort),
-            activeTabId: defaultState.activeTabId
-        };
-        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) {
-            localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
-        }
-        console.log("State Manager initialisiert mit:", currentState);
-    }
-
-    function getCurrentKollektiv() {
-        return currentState.currentKollektiv;
-    }
-
-    function setCurrentKollektiv(newKollektiv) {
-        if (typeof newKollektiv === 'string' && currentState.currentKollektiv !== newKollektiv) {
-            currentState.currentKollektiv = newKollektiv;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV, currentState.currentKollektiv);
-            return true;
-        }
-        return false;
-    }
-
-    function getDatenTableSort() {
-        return cloneDeep(currentState.datenTableSort);
-    }
-
-    function updateDatenTableSortDirection(key, subKey = null) {
-        if (!key) return false;
-        if (currentState.datenTableSort.key === key && currentState.datenTableSort.subKey === subKey) {
-            currentState.datenTableSort.direction = currentState.datenTableSort.direction === 'asc' ? 'desc' : 'asc';
-        } else {
-            currentState.datenTableSort = { key: key, direction: 'asc', subKey: subKey };
-        }
-        return true;
-     }
-
-    function getAuswertungTableSort() {
-        return cloneDeep(currentState.auswertungTableSort);
-    }
-
-     function updateAuswertungTableSortDirection(key, subKey = null) {
-         if (!key) return false;
-         if (currentState.auswertungTableSort.key === key && currentState.auswertungTableSort.subKey === subKey) {
-            currentState.auswertungTableSort.direction = currentState.auswertungTableSort.direction === 'asc' ? 'desc' : 'asc';
-        } else {
-            currentState.auswertungTableSort = { key: key, direction: 'asc', subKey: subKey };
-        }
-        return true;
-     }
-
-    function getCurrentPublikationLang() {
-        return currentState.currentPublikationLang;
-    }
-
-    function setCurrentPublikationLang(newLang) {
-        if ((newLang === 'de' || newLang === 'en') && currentState.currentPublikationLang !== newLang) {
-            currentState.currentPublikationLang = newLang;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG, currentState.currentPublikationLang);
-            return true;
-        }
-        return false;
-    }
-
-    function getCurrentPublikationSection() {
-        return currentState.currentPublikationSection;
-    }
-
-    function setCurrentPublikationSection(newSectionId) {
-        const isValidSection = PUBLICATION_CONFIG.sections.some(section => section.id === newSectionId);
-        if (typeof newSectionId === 'string' && isValidSection && currentState.currentPublikationSection !== newSectionId) {
-            currentState.currentPublikationSection = newSectionId;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION, currentState.currentPublikationSection);
-            return true;
-        }
-        if (!isValidSection) {
-            console.warn(`setCurrentPublikationSection: Ungültige Sektions-ID '${newSectionId}'`);
-        }
-        return false;
-    }
-
-    function getCurrentPublikationBruteForceMetric() {
-        return currentState.currentPublikationBruteForceMetric;
-    }
-
-    function setCurrentPublikationBruteForceMetric(newMetric) {
-        const isValidMetric = PUBLICATION_CONFIG.bruteForceMetricsForPublication.some(m => m.value === newMetric);
-        if (isValidMetric && currentState.currentPublikationBruteForceMetric !== newMetric) {
-            currentState.currentPublikationBruteForceMetric = newMetric;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC, currentState.currentPublikationBruteForceMetric);
-            return true;
-        }
-        return false;
-    }
-
-    function getCurrentStatsLayout() {
-        return currentState.currentStatsLayout;
-    }
-
-    function setCurrentStatsLayout(newLayout) {
-        if ((newLayout === 'einzel' || newLayout === 'vergleich') && currentState.currentStatsLayout !== newLayout) {
-            currentState.currentStatsLayout = newLayout;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT, currentState.currentStatsLayout);
-            return true;
-        }
-        return false;
-    }
-
-    function getCurrentStatsKollektiv1() {
-        return currentState.currentStatsKollektiv1;
-    }
-
-    function setCurrentStatsKollektiv1(newKollektiv) {
-         if (typeof newKollektiv === 'string' && currentState.currentStatsKollektiv1 !== newKollektiv) {
-            currentState.currentStatsKollektiv1 = newKollektiv;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1, currentState.currentStatsKollektiv1);
-            return true;
-        }
-        return false;
-    }
-
-    function getCurrentStatsKollektiv2() {
-        return currentState.currentStatsKollektiv2;
-    }
-
-    function setCurrentStatsKollektiv2(newKollektiv) {
-         if (typeof newKollektiv === 'string' && currentState.currentStatsKollektiv2 !== newKollektiv) {
-            currentState.currentStatsKollektiv2 = newKollektiv;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2, currentState.currentStatsKollektiv2);
-            return true;
-        }
-        return false;
-    }
-
-    function getCurrentPresentationView() {
-        return currentState.currentPresentationView;
-    }
-
-    function setCurrentPresentationView(newView) {
-        if ((newView === 'as-pur' || newView === 'as-vs-t2') && currentState.currentPresentationView !== newView) {
-            currentState.currentPresentationView = newView;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW, currentState.currentPresentationView);
-            if (newView === 'as-pur') {
-                setCurrentPresentationStudyId(null); 
-            } else if (!currentState.currentPresentationStudyId && newView === 'as-vs-t2') {
-                setCurrentPresentationStudyId(APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID);
+    function initialize() {
+        const loadedState = {};
+        let needsSave = false;
+        for (const key in defaultState) {
+            const storageKey = APP_CONFIG.STORAGE_KEYS[key.toUpperCase()] || APP_CONFIG.STORAGE_KEYS[key];
+            if (storageKey) {
+                const item = loadFromLocalStorage(storageKey);
+                if (item !== null) {
+                    loadedState[key] = item;
+                } else {
+                    loadedState[key] = cloneDeep(defaultState[key]);
+                    if (key !== 'isFirstAppStart') { 
+                        needsSave = true; 
+                    }
+                }
+            } else {
+                loadedState[key] = cloneDeep(defaultState[key]);
+                 if (key !== 'isFirstAppStart') {
+                    console.warn(`Kein Storage Key für State-Eigenschaft '${key}' definiert. Wird nicht persistent gespeichert.`);
+                 }
             }
-            return true;
         }
-        return false;
-    }
-
-    function getCurrentPresentationStudyId() {
-        return currentState.currentPresentationStudyId;
-    }
-
-    function setCurrentPresentationStudyId(newStudyId) {
-        const newStudyIdValue = newStudyId === undefined ? null : newStudyId;
-        if (currentState.currentPresentationStudyId !== newStudyIdValue) {
-            currentState.currentPresentationStudyId = newStudyIdValue;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID, currentState.currentPresentationStudyId);
-            return true;
+        
+        if (loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START) === null) {
+            loadedState.isFirstAppStart = true;
+            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, false); // Nach dem ersten Start auf false setzen
+        } else {
+            loadedState.isFirstAppStart = false;
         }
-        return false;
-    }
 
-    function getActiveTabId() {
-        return currentState.activeTabId;
-    }
-
-    function setActiveTabId(newTabId) {
-        if (typeof newTabId === 'string' && currentState.activeTabId !== newTabId) {
-            currentState.activeTabId = newTabId;
-            return true;
+        state = loadedState;
+        if (needsSave) {
+            _saveAllToLocalStorage();
         }
-        return false;
+        _dispatchStateChangedEvent(Object.keys(defaultState));
     }
+    
+    function _saveAllToLocalStorage() {
+        for (const key in state) {
+            if (key === 'isFirstAppStart') continue; 
+            const storageKey = APP_CONFIG.STORAGE_KEYS[key.toUpperCase()] || APP_CONFIG.STORAGE_KEYS[key];
+            if (storageKey && defaultState.hasOwnProperty(key)) {
+                saveToLocalStorage(storageKey, state[key]);
+            }
+        }
+    }
+
+    function _dispatchStateChangedEvent(changedKeys = []) {
+        const event = new CustomEvent('stateChanged', { detail: { newState: cloneDeep(state), changedKeys: changedKeys } });
+        document.dispatchEvent(event);
+    }
+
+    function _updateState(key, value, storageKeyName) {
+        if (state[key] === undefined && !defaultState.hasOwnProperty(key)) {
+            console.warn(`Versuch, unbekannten State-Key zu setzen: ${key}`);
+            return;
+        }
+        if (JSON.stringify(state[key]) !== JSON.stringify(value)) {
+            state[key] = cloneDeep(value);
+            const storageKey = APP_CONFIG.STORAGE_KEYS[storageKeyName] || APP_CONFIG.STORAGE_KEYS[key.toUpperCase()] || APP_CONFIG.STORAGE_KEYS[key];
+            if (storageKey) {
+                saveToLocalStorage(storageKey, state[key]);
+            }
+            _dispatchStateChangedEvent([key]);
+        }
+    }
+
+    function getCurrentKollektiv() { return state.currentKollektiv || defaultState.currentKollektiv; }
+    function setCurrentKollektiv(kollektiv) { _updateState('currentKollektiv', kollektiv, 'CURRENT_KOLLEKTIV'); }
+
+    function getAppliedT2Criteria() { return cloneDeep(state.appliedT2Criteria || defaultState.appliedT2Criteria); }
+    function setAppliedT2Criteria(criteria) { _updateState('appliedT2Criteria', criteria, 'APPLIED_CRITERIA'); }
+
+    function getAppliedT2Logic() { return state.appliedT2Logic || defaultState.appliedT2Logic; }
+    function setAppliedT2Logic(logic) { _updateState('appliedT2Logic', logic, 'APPLIED_LOGIC'); }
+
+    function getDatenTableSort() { return cloneDeep(state.datenTableSort || defaultState.datenTableSort); }
+    function setDatenTableSort(sortConfig) { _updateState('datenTableSort', sortConfig, 'DATEN_TABLE_SORT'); }
+
+    function getAuswertungTableSort() { return cloneDeep(state.auswertungTableSort || defaultState.auswertungTableSort); }
+    function setAuswertungTableSort(sortConfig) { _updateState('auswertungTableSort', sortConfig, 'AUSWERTUNG_TABLE_SORT'); }
+    
+    function getActiveTabId() { return state.activeTabId || defaultState.activeTabId; }
+    function setActiveTabId(tabId) { _updateState('activeTabId', tabId, 'ACTIVE_TAB_ID'); }
+
+    function getCurrentStatsLayout() { return state.statistikLayout || defaultState.statistikLayout; }
+    function setCurrentStatsLayout(layout) { _updateState('statistikLayout', layout, 'STATS_LAYOUT'); }
+    
+    function getStatsKollektiv1() { return state.statistikKollektiv1 || defaultState.statistikKollektiv1; }
+    function setStatsKollektiv1(kollektiv) { _updateState('statistikKollektiv1', kollektiv, 'STATS_KOLLEKTIV1'); }
+
+    function getStatsKollektiv2() { return state.statistikKollektiv2 || defaultState.statistikKollektiv2; }
+    function setStatsKollektiv2(kollektiv) { _updateState('statistikKollektiv2', kollektiv, 'STATS_KOLLEKTIV2'); }
+
+    function getCurrentPresentationView() { return state.presentationView || defaultState.presentationView; }
+    function setCurrentPresentationView(view) { _updateState('presentationView', view, 'PRESENTATION_VIEW'); }
+
+    function getCurrentPresentationStudyId() { return state.presentationStudyId || defaultState.presentationStudyId; }
+    function setCurrentPresentationStudyId(studyId) { _updateState('presentationStudyId', studyId, 'PRESENTATION_STUDY_ID'); }
+
+    function getCurrentPublikationLang() { return state.publikationLang || defaultState.publikationLang; }
+    function setCurrentPublikationLang(lang) { _updateState('publikationLang', lang, 'PUBLIKATION_LANG'); }
+
+    function getCurrentPublikationSection() { return state.publikationSection || defaultState.publikationSection; }
+    function setCurrentPublikationSection(section) { _updateState('publikationSection', section, 'PUBLIKATION_SECTION'); }
+    
+    function getCurrentPublikationBruteForceMetric() { return state.publikationBruteForceMetric || defaultState.publikationBruteForceMetric; }
+    function setCurrentPublikationBruteForceMetric(metric) { _updateState('publikationBruteForceMetric', metric, 'PUBLIKATION_BRUTE_FORCE_METRIC'); }
+
+    function getBruteForceMetric() { return state.bruteForceMetric || defaultState.bruteForceMetric; }
+    function setBruteForceMetric(metric) { _updateState('bruteForceMetric', metric, 'BRUTE_FORCE_METRIC'); }
+    
+    function getCriteriaComparisonSets() { return cloneDeep(state.criteriaComparisonSets || defaultState.criteriaComparisonSets); }
+    function setCriteriaComparisonSets(sets) { _updateState('criteriaComparisonSets', sets, 'CRITERIA_COMPARISON_SETS'); }
+
+    function getChartColorScheme() { return state.chartColorScheme || defaultState.chartColorScheme; }
+    function setChartColorScheme(scheme) { _updateState('chartColorScheme', scheme, 'CHART_COLOR_SCHEME'); }
+
+    function isFirstAppStart() { return state.isFirstAppStart === true; } // Explizit true prüfen
+    function setFirstAppStart(value) { 
+        state.isFirstAppStart = !!value; // Erzwinge boolean
+        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, state.isFirstAppStart);
+        _dispatchStateChangedEvent(['isFirstAppStart']);
+    }
+    
+    function resetStateToDefaults() {
+        const keysToReset = Object.keys(defaultState).filter(k => k !== 'isFirstAppStart');
+        keysToReset.forEach(key => {
+            state[key] = cloneDeep(defaultState[key]);
+            const storageKey = APP_CONFIG.STORAGE_KEYS[key.toUpperCase()] || APP_CONFIG.STORAGE_KEYS[key];
+            if (storageKey) {
+                saveToLocalStorage(storageKey, state[key]);
+            }
+        });
+        _dispatchStateChangedEvent(keysToReset);
+        ui_helpers.showToast("Alle Einstellungen auf Standardwerte zurückgesetzt.", "info");
+    }
+
 
     return Object.freeze({
-        init,
+        initialize,
         getCurrentKollektiv,
         setCurrentKollektiv,
+        getAppliedT2Criteria,
+        setAppliedT2Criteria,
+        getAppliedT2Logic,
+        setAppliedT2Logic,
         getDatenTableSort,
-        updateDatenTableSortDirection,
+        setDatenTableSort,
         getAuswertungTableSort,
-        updateAuswertungTableSortDirection,
+        setAuswertungTableSort,
+        getActiveTabId,
+        setActiveTabId,
+        getCurrentStatsLayout,
+        setCurrentStatsLayout,
+        getStatsKollektiv1,
+        setStatsKollektiv1,
+        getStatsKollektiv2,
+        setStatsKollektiv2,
+        getCurrentPresentationView,
+        setCurrentPresentationView,
+        getCurrentPresentationStudyId,
+        setCurrentPresentationStudyId,
         getCurrentPublikationLang,
         setCurrentPublikationLang,
         getCurrentPublikationSection,
         setCurrentPublikationSection,
         getCurrentPublikationBruteForceMetric,
         setCurrentPublikationBruteForceMetric,
-        getCurrentStatsLayout,
-        setCurrentStatsLayout,
-        getCurrentStatsKollektiv1,
-        setCurrentStatsKollektiv1,
-        getCurrentStatsKollektiv2,
-        setCurrentStatsKollektiv2,
-        getCurrentPresentationView,
-        setCurrentPresentationView,
-        getCurrentPresentationStudyId,
-        setCurrentPresentationStudyId,
-        getActiveTabId,
-        setActiveTabId
+        getBruteForceMetric,
+        setBruteForceMetric,
+        getCriteriaComparisonSets,
+        setCriteriaComparisonSets,
+        getChartColorScheme,
+        setChartColorScheme,
+        isFirstAppStart,
+        setFirstAppStart,
+        resetStateToDefaults
     });
-
 })();
