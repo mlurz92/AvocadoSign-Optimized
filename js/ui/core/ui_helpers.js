@@ -74,7 +74,7 @@ const ui_helpers = (() => {
             }
 
             const delayConfig = APP_CONFIG.UI_SETTINGS.TOOLTIP_DELAY;
-            let bsDelay = { show: 200, hide: 100 }; // Default
+            let bsDelay = { show: 200, hide: 100 };
             if (Array.isArray(delayConfig) && delayConfig.length === 2) {
                 bsDelay = { show: delayConfig[0], hide: delayConfig[1] };
             } else if (typeof delayConfig === 'number') {
@@ -91,7 +91,7 @@ const ui_helpers = (() => {
                     trigger: 'hover focus',
                     delay: bsDelay,
                     customClass: tooltipTriggerEl.getAttribute('data-bs-custom-class') || '',
-                    container: 'body' // Verhindert Probleme mit z-index in komplexen Layouts
+                    container: 'body'
                 });
             } catch (error) {
                 console.error("Fehler bei der Bootstrap Tooltip Initialisierung für Element:", error, tooltipTriggerEl);
@@ -215,13 +215,13 @@ const ui_helpers = (() => {
         button.dataset.action = newAction;
         const iconClass = expand ? 'fa-chevron-up' : 'fa-chevron-down';
         const currentLang = typeof stateManager !== 'undefined' && typeof stateManager.getCurrentPublikationLang === 'function' ? stateManager.getCurrentPublikationLang() : 'de';
-        const buttonText = expand ? (currentLang === 'de' ? 'Alle Details Ausblenden' : 'Collapse All Details')
-                                  : (currentLang === 'de' ? 'Alle Details Anzeigen' : 'Expand All Details');
+        const buttonText = expand ? (UI_TEXTS.datenTab.toggleDetailsButton?.collapse || (currentLang === 'de' ? 'Alle Details Ausblenden' : 'Collapse All Details'))
+                                  : (UI_TEXTS.datenTab.toggleDetailsButton?.expand || (currentLang === 'de' ? 'Alle Details Anzeigen' : 'Expand All Details'));
 
         let tooltipKeyBase = '';
         if (buttonId === 'daten-toggle-details') tooltipKeyBase = 'datenTable';
         else if (buttonId === 'auswertung-toggle-details') tooltipKeyBase = 'auswertungTable';
-        
+
         const tooltipContentBase = (TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll || (currentLang === 'de' ? 'Alle Details ein-/ausblenden' : 'Expand/collapse all details'));
         const currentTooltipText = expand ? tooltipContentBase.replace(currentLang === 'de' ? 'ein-' : 'Expand', currentLang === 'de' ? 'aus-' : 'Collapse').replace(currentLang === 'de' ? 'anzeigen' : 'Expand', currentLang === 'de' ? 'ausblenden' : 'Collapse')
                                       : tooltipContentBase.replace(currentLang === 'de' ? 'aus-' : 'Collapse', currentLang === 'de' ? 'ein-' : 'Expand').replace(currentLang === 'de' ? 'ausblenden' : 'Collapse', currentLang === 'de' ? 'anzeigen' : 'Expand');
@@ -245,7 +245,7 @@ const ui_helpers = (() => {
 
         const icon = triggerRow.querySelector('.row-toggle-icon');
         const isShowing = event.type === 'show.bs.collapse' || event.type === 'shown.bs.collapse';
-        
+
         if (icon) {
             icon.classList.toggle('fa-chevron-up', isShowing);
             icon.classList.toggle('fa-chevron-down', !isShowing);
@@ -369,20 +369,20 @@ const ui_helpers = (() => {
         if (!card) return;
         const shouldShowIndicator = !!isUnsaved;
         card.classList.toggle('criteria-unsaved-indicator', shouldShowIndicator);
-    
+
         const tooltipInstance = bootstrap.Tooltip.getInstance(card);
         const tooltipContent = TOOLTIP_CONTENT?.t2CriteriaCard?.unsavedIndicator || "Ungespeicherte Änderungen vorhanden.";
-    
+
         if (shouldShowIndicator) {
             card.setAttribute('data-bs-title', tooltipContent);
             card.setAttribute('data-bs-custom-class', 'tooltip-warning');
             if (tooltipInstance) {
                 tooltipInstance.setContent({ '.tooltip-inner': tooltipContent });
-                tooltipInstance.enable(); 
+                tooltipInstance.enable();
             } else {
-                // Tooltip wird beim nächsten Hover durch initializeTooltips() mit den neuen Attributen erstellt.
-                // Oder explizit hier, falls es sofort (ohne Hover) erscheinen soll (nicht Standard für Bootstrap):
-                // new bootstrap.Tooltip(card, { title: tooltipContent, html: true, customClass: 'tooltip-warning', trigger: 'manual' }).show();
+                 if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                    new bootstrap.Tooltip(card);
+                 }
             }
         } else {
             const originalTooltip = card.dataset.originalTitle || TOOLTIP_CONTENT?.t2CriteriaCard?.description || "T2 Malignitäts-Kriterien definieren";
@@ -390,18 +390,12 @@ const ui_helpers = (() => {
             card.removeAttribute('data-bs-custom-class');
             if (tooltipInstance) {
                 tooltipInstance.setContent({ '.tooltip-inner': originalTooltip });
-                // Tooltip nicht disablen, falls es einen Standard-Tooltip gibt
             }
         }
-        // Ggf. Tooltip-Instanz neu initialisieren/updaten, wenn Attribute direkt geändert wurden
         if (tooltipInstance) {
             tooltipInstance.update();
-        } else if (shouldShowIndicator) { // Nur neu initialisieren, wenn ein Warning-Tooltip angezeigt werden soll und keiner da war
-             if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-                new bootstrap.Tooltip(card);
-             }
         }
-    }    
+    }
 
     function updateStatistikSelectorsUI(layout, kollektiv1, kollektiv2) {
         const toggleBtn = document.getElementById('statistik-toggle-vergleich');
@@ -415,11 +409,13 @@ const ui_helpers = (() => {
 
         if (toggleBtn) {
             toggleBtn.classList.toggle('active', isVergleich);
+            toggleBtn.classList.toggle('btn-primary', isVergleich);
+            toggleBtn.classList.toggle('btn-outline-primary', !isVergleich);
             toggleBtn.setAttribute('aria-pressed', String(isVergleich));
             const buttonText = isVergleich ? (UI_TEXTS.statistikTab.layoutSwitchLabel.vergleich || '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv')
                                           : (UI_TEXTS.statistikTab.layoutSwitchLabel.einzel || '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv');
             updateElementHTML(toggleBtn.id, buttonText);
-            
+
             const tooltipTextKey = isVergleich ? 'vergleich' : 'einzel';
             const tooltipText = (TOOLTIP_CONTENT.statistikLayoutSwitch?.[tooltipTextKey] || (currentLang === 'de' ? 'Layout umschalten.' : 'Toggle layout.'));
             toggleBtn.setAttribute('data-bs-title', tooltipText);
@@ -428,12 +424,12 @@ const ui_helpers = (() => {
         }
         if (container1) container1.classList.toggle('d-none', !isVergleich);
         if (container2) container2.classList.toggle('d-none', !isVergleich);
-        
+
         const einzelSelectContainer = document.getElementById('statistik-kollektiv-select-einzel-container');
         if (einzelSelectContainer) einzelSelectContainer.classList.toggle('d-none', isVergleich);
-        
+
         const einzelSelect = document.getElementById('statistik-kollektiv-select-einzel');
-        if(einzelSelect) einzelSelect.value = stateManager.getCurrentKollektiv() || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
+        if(einzelSelect && typeof stateManager !== 'undefined') einzelSelect.value = stateManager.getCurrentKollektiv() || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
 
         if (select1) select1.value = kollektiv1 || APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1;
         if (select2) select2.value = kollektiv2 || APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2;
@@ -504,7 +500,7 @@ const ui_helpers = (() => {
         if (elements.bfInfoKollektiv) {
             updateElementText(elements.bfInfoKollektiv.id, getKollektivNameFunc(kollektivToDisplayForInfo));
         }
-        
+
         const addOrUpdateBsTooltip = (el, content) => {
             if (el && typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
                 const existingTooltip = bootstrap.Tooltip.getInstance(el);
@@ -513,7 +509,7 @@ const ui_helpers = (() => {
                     if (existingTooltip) {
                         existingTooltip.setContent({ '.tooltip-inner': content });
                     } else {
-                        new bootstrap.Tooltip(el); // Initialisieren, falls nicht vorhanden
+                        new bootstrap.Tooltip(el);
                     }
                 } else if (existingTooltip) {
                     existingTooltip.dispose();
@@ -521,7 +517,7 @@ const ui_helpers = (() => {
                 }
             }
         };
-        
+
         const bfInfoElement = elements.bfInfoKollektiv?.closest('#brute-force-info');
 
         switch (status) {
@@ -637,7 +633,7 @@ const ui_helpers = (() => {
         trySetDisabled('export-md-zip', dataDisabled);
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
-        
+
         const isPresentationTabActive = activeTabId === 'praesentation-tab-pane';
         const praesButtons = [
             'download-performance-as-pur-csv', 'download-performance-as-pur-md',
