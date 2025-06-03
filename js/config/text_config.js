@@ -202,8 +202,8 @@ const TOOLTIP_CONTENT = Object.freeze({
         anzahlPathoNplus: "Anzahl der histopathologisch positiven Lymphknoten.",
         anzahlPathoLymphknoten: "Gesamtzahl der untersuchten Lymphknoten (histopathologisch)."
     },
-    auswertungTable: { /* Analog zu datenTable, wenn benötigt */
-        expandAll: "Alle Patientendetails (Lymphknoten) ein-/ausblenden.",
+    auswertungTable: { 
+        expandAll: "Alle Patientendetails (Lymphknoten) ein-/ausblenden."
     },
     t2CriteriaCard: {
         unsavedIndicator: "Ungespeicherte Änderungen an den T2-Kriterien vorhanden. Klicken Sie auf 'Anwenden & Speichern'.",
@@ -412,7 +412,7 @@ const TOOLTIP_CONTENT = Object.freeze({
         },
         or: {
             description: "Odds Ratio (OR): Verhältnis der Odds für ein positives Ergebnis in einer Gruppe (z.B. Merkmal vorhanden) zu den Odds für ein positives Ergebnis in einer anderen Gruppe (z.B. Merkmal nicht vorhanden). Ein OR > 1 bedeutet höhere Odds in der ersten Gruppe, OR < 1 niedrigere Odds.",
-            interpretation: "Das Vorhandensein von [MERKMAL] [FAKTOR_TEXT] die Odds für einen positiven N-Status um den Faktor [WERT] (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]), p=[P_WERT], [SIGNIFIKANZ]."
+            interpretation: "Das Vorhandensein von [MERKMAL] [FAKTOR_TEXT] die Odds für einen positiven N-Status um den Faktor [WERT] (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]), p=[P_WERT] ([TEST_STATISTIK]), [SIGNIFIKANZ]."
         },
         rd: {
             description: "Risikodifferenz (RD): Absolute Differenz der Risiken für ein positives Ergebnis zwischen zwei Gruppen. Gibt an, um wie viel Prozentpunkte das Risiko in einer Gruppe höher oder niedriger ist als in der anderen.",
@@ -424,23 +424,23 @@ const TOOLTIP_CONTENT = Object.freeze({
         },
         mcnemar: {
             description: "McNemar-Test: Statistischer Test zum Vergleich zweier gepaarter binärer Klassifikationen (z.B. Avocado Sign vs. T2-Kriterien bei denselben Patienten) hinsichtlich ihrer Genauigkeit (Accuracy) bzw. der diskordanten Paare.",
-            interpretation: "Der McNemar-Test zum Vergleich der Genauigkeiten von AS und [T2_SHORT_NAME] im Kollektiv [KOLLEKTIV] ergab einen p-Wert von [P_WERT] ([TEST_STATISTIK], df=[FREIHEITSGRADE]). Dies ist [SIGNIFIKANZ_TEXT]."
+            interpretation: "Der McNemar-Test zum Vergleich der Genauigkeiten von AS und [T2_SHORT_NAME] im Kollektiv [KOLLEKTIV] ergab: [TEST_STATISTIK], df=[FREIHEITSGRADE], p=[P_WERT]. Dies ist [SIGNIFIKANZ_TEXT]."
         },
         delong: {
             description: "DeLong-Test: Statistischer Test zum Vergleich zweier AUC-Werte von ROC-Kurven, die auf denselben Daten basieren (gepaarte Daten).",
-            interpretation: "Der DeLong-Test zum Vergleich der AUC-Werte von AS und [T2_SHORT_NAME] im Kollektiv [KOLLEKTIV] ergab einen p-Wert von [P_WERT] (Z=[Z_WERT]). Die Differenz der AUCs (AS - T2) betrug [DIFF_AUC]. Dies ist [SIGNIFIKANZ_TEXT]."
+            interpretation: "Der DeLong-Test zum Vergleich der AUC-Werte von AS und [T2_SHORT_NAME] im Kollektiv [KOLLEKTIV] ergab: Z=[Z_WERT], p=[P_WERT]. Die Differenz der AUCs (AS - T2) betrug [DIFF_AUC]. Dies ist [SIGNIFIKANZ_TEXT]."
         },
         fisher: {
             description: "Fisher's Exact Test: Statistischer Test zur Prüfung der Unabhängigkeit zweier kategorialer Variablen in einer Kontingenztafel. Wird oft bei kleinen Stichproben verwendet, wenn die Voraussetzungen für den Chi-Quadrat-Test nicht erfüllt sind.",
             interpretation: "Der Fisher's Exact Test für die Assoziation von [MERKMAL] und dem N-Status im Kollektiv [KOLLEKTIV] ergab einen p-Wert von [P_WERT]. Dies ist [SIGNIFIKANZ_TEXT]."
         },
-        mannwhitney: { /* Alias size_mwu */
+        mannwhitney: { 
             description: "Mann-Whitney-U-Test (auch Wilcoxon-Rangsummentest): Nichtparametrischer Test zum Vergleich der Verteilungen zweier unabhängiger Stichproben. Prüft, ob die Werte in einer Gruppe tendenziell höher oder niedriger sind als in der anderen.",
-            interpretation: "Der Mann-Whitney-U-Test zum Vergleich von [VARIABLE] zwischen den Gruppen (N+ vs. N0) im Kollektiv [KOLLEKTIV] ergab einen p-Wert von [P_WERT] (U=[U_WERT], Z=[Z_WERT]). Dies ist [SIGNIFIKANZ_TEXT]."
+            interpretation: "Der Mann-Whitney-U-Test zum Vergleich von [VARIABLE] zwischen den Gruppen (N+ vs. N0) im Kollektiv [KOLLEKTIV] ergab: U=[U_WERT], Z=[Z_WERT], p=[P_WERT]. Dies ist [SIGNIFIKANZ_TEXT]."
         },
         size_mwu: {
             description: "Mann-Whitney-U-Test zum Vergleich der Lymphknoten-Größenverteilungen zwischen Patienten mit positivem und negativem N-Status.",
-            interpretation: "Der Mann-Whitney-U-Test zum Vergleich der Lymphknoten-Größenverteilungen (basierend auf [VARIABLE]) zwischen Patienten mit N+ und N0 Status im Kollektiv [KOLLEKTIV] ergab einen p-Wert von [P_WERT] (U=[U_WERT], Z=[Z_WERT]). Dies ist [SIGNIFIKANZ_TEXT]."
+            interpretation: "Der Mann-Whitney-U-Test zum Vergleich der Lymphknoten-Größenverteilungen (basierend auf [VARIABLE]) zwischen Patienten mit N+ und N0 Status im Kollektiv [KOLLEKTIV] ergab: U=[U_WERT], Z=[Z_WERT], p=[P_WERT]. Dies ist [SIGNIFIKANZ_TEXT]."
         },
         defaultP: {
              description: "P-Wert eines statistischen Tests.",
