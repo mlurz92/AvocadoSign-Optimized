@@ -21,8 +21,8 @@ const auswertungTabLogic = (() => {
             bruteForceManagerInstance = bruteForceManager;
         }
         
-        currentKollektiv = state.getCurrentKollektiv();
-        currentSortState = state.getAuswertungTableSort() || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
+        currentKollektiv = stateManager.getCurrentKollektiv();
+        currentSortState = stateManager.getAuswertungTableSort() || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
         _updateAppliedCriteriaDisplay();
         _renderTable();
     }
@@ -33,7 +33,7 @@ const auswertungTabLogic = (() => {
             return;
         }
         dataView = newData;
-        currentKollektiv = state.getCurrentKollektiv();
+        currentKollektiv = stateManager.getCurrentKollektiv();
         _renderTable();
         if (bruteForceManagerInstance) {
             bruteForceManagerInstance.updateData(getFilteredData(currentKollektiv));
@@ -64,28 +64,32 @@ const auswertungTabLogic = (() => {
     function _renderTable() {
         const tableContainer = document.getElementById('auswertung-table-container');
         const toggleDetailsButtonId = 'auswertung-toggle-details';
-        const tableHeaderId = 'auswertung-table-header';
-
+        
         if (!tableContainer) {
             console.error("AuswertungTabLogic: Tabellencontainer nicht gefunden.");
             return;
         }
 
         const filteredData = getFilteredData(currentKollektiv);
+        const tableHeaderId = 'auswertung-table-header'; 
 
-        if (!tableRendererInstance) {
+        if (!tableRendererInstance && typeof TableRenderer === 'function') {
             tableRendererInstance = new TableRenderer(
                 filteredData,
-                auswertungTableConfig,
+                auswertungTableConfig, 
                 tableContainer.id,
                 toggleDetailsButtonId,
                 currentSortState,
                 handleSortChange,
-                handleRowClick
+                handleRowClick 
             );
-        } else {
+        } else if (tableRendererInstance) {
             tableRendererInstance.updateData(filteredData);
             tableRendererInstance.updateSortState(currentSortState);
+        } else {
+            console.error("TableRenderer Klasse nicht verfügbar oder Instanz konnte nicht erstellt werden.");
+            ui_helpers.updateElementHTML(tableContainer.id, '<p class="text-danger">Fehler beim Laden der Tabelle.</p>');
+            return;
         }
         tableRendererInstance.render();
         ui_helpers.updateSortIcons(tableHeaderId, currentSortState);
@@ -99,7 +103,7 @@ const auswertungTabLogic = (() => {
             currentSortState.subKey = newSubKey;
             currentSortState.direction = 'asc';
         }
-        state.setAuswertungTableSort(cloneDeep(currentSortState));
+        stateManager.setAuswertungTableSort(cloneDeep(currentSortState));
         _renderTable();
     }
 
@@ -107,11 +111,11 @@ const auswertungTabLogic = (() => {
         if (event.target.closest('.no-row-click, .form-check-input, button, a')) {
             return;
         }
-        const rowElement = document.querySelector(`#${auswertungTableConfig.bodyContainerId} tr[data-patient-id="${patientId}"]`);
-        const detailsRowId = `details-auswertung-${patientId}`;
+        
+        const detailsRowId = `auswertung-detail-${patientId}`;
         const detailsRow = document.getElementById(detailsRowId);
 
-        if (rowElement && detailsRow) {
+        if (detailsRow && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
             const bsCollapse = bootstrap.Collapse.getOrCreateInstance(detailsRow);
             bsCollapse.toggle();
         }
@@ -120,8 +124,10 @@ const auswertungTabLogic = (() => {
     function applyBruteForceResults(criteria, logic) {
         if (criteria && logic) {
             t2CriteriaManager.setCriteria(criteria, logic);
-            t2CriteriaManager.saveCriteria();
-            mainAppInterface.refreshAllTabs();
+            t2CriteriaManager.saveAll(); 
+            if (mainAppInterface && typeof mainAppInterface.refreshAllTabs === 'function') {
+                mainAppInterface.refreshAllTabs(true);
+            }
             ui_helpers.showToast("Brute-Force Kriterien wurden erfolgreich angewendet und gespeichert.", "success");
             ui_helpers.highlightElement('t2-criteria-card');
             _updateAppliedCriteriaDisplay();
@@ -131,8 +137,8 @@ const auswertungTabLogic = (() => {
     }
     
     function refreshUI() {
-        currentKollektiv = state.getCurrentKollektiv();
-        currentSortState = state.getAuswertungTableSort() || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
+        currentKollektiv = stateManager.getCurrentKollektiv();
+        currentSortState = stateManager.getAuswertungTableSort() || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
          _updateAppliedCriteriaDisplay();
         _renderTable();
         if (bruteForceManagerInstance) {
@@ -145,6 +151,7 @@ const auswertungTabLogic = (() => {
         updateData,
         getFilteredData,
         handleSortChange,
+        handleRowClick,
         applyBruteForceResults,
         refreshUI
     });
