@@ -1,10 +1,21 @@
+function getDefaultT2Criteria() {
+    return Object.freeze({
+        logic: 'UND', // Direkter Wert statt APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC
+        size: { active: true, threshold: 5.0, condition: '>=' },
+        form: { active: false, value: 'rund' },
+        kontur: { active: false, value: 'irregulär' },
+        homogenitaet: { active: false, value: 'heterogen' },
+        signal: { active: false, value: 'signalreich' }
+    });
+}
+
 const APP_CONFIG = Object.freeze({
     APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
     APP_VERSION: "2.3.0",
 
     DEFAULT_SETTINGS: Object.freeze({
         KOLLEKTIV: 'Gesamt',
-        T2_LOGIC: 'UND',
+        T2_LOGIC: 'UND', // Dieser Wert wird nun in getDefaultT2Criteria direkt verwendet
         DATEN_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
         AUSWERTUNG_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
         STATS_LAYOUT: 'einzel',
@@ -23,23 +34,29 @@ const APP_CONFIG = Object.freeze({
             'barbaro_2024_restaging'
         ]),
         CHART_COLOR_SCHEME: 'default',
-        BRUTE_FORCE_METRIC: 'Balanced Accuracy'
+        BRUTE_FORCE_METRIC: 'Balanced Accuracy',
+        APPLIED_CRITERIA: getDefaultT2Criteria() // Aufruf erfolgt jetzt nach der Definition
     }),
 
     STORAGE_KEYS: Object.freeze({
         APPLIED_CRITERIA: 'appliedT2Criteria_v4.2_detailed',
         APPLIED_LOGIC: 'appliedT2Logic_v4.2_detailed',
         CURRENT_KOLLEKTIV: 'currentKollektiv_v4.2_detailed',
-        PUBLIKATION_LANG: 'currentPublikationLang_v4.2_detailed',
-        PUBLIKATION_SECTION: 'currentPublikationSection_v4.2_detailed',
-        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v4.2_detailed',
+        DATEN_TABLE_SORT: 'datenTableSort_v4.2_detailed',
+        AUSWERTUNG_TABLE_SORT: 'auswertungTableSort_v4.2_detailed',
+        ACTIVE_TAB_ID: 'activeTabId_v4.2_detailed',
         STATS_LAYOUT: 'currentStatsLayout_v4.2_detailed',
         STATS_KOLLEKTIV1: 'currentStatsKollektiv1_v4.2_detailed',
         STATS_KOLLEKTIV2: 'currentStatsKollektiv2_v4.2_detailed',
         PRESENTATION_VIEW: 'currentPresentationView_v4.2_detailed',
         PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
+        PUBLIKATION_LANG: 'currentPublikationLang_v4.2_detailed',
+        PUBLIKATION_SECTION: 'currentPublikationSection_v4.2_detailed',
+        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v4.2_detailed',
+        BRUTE_FORCE_METRIC: 'bruteForceMetric_v4.2_detailed',
         CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
         CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
+        BRUTE_FORCE_RESULTS: 'bruteForceResults_v4.2_detailed',
         FIRST_APP_START: 'appFirstStart_v2.3'
     }),
 
@@ -77,8 +94,8 @@ const APP_CONFIG = Object.freeze({
     }),
 
     UI_SETTINGS: Object.freeze({
-        ICON_SIZE: 20,
-        ICON_STROKE_WIDTH: 1.5,
+        ICON_SIZE: 18, // Leicht reduziert für Kompaktheit
+        ICON_STROKE_WIDTH: 1.25,
         ICON_COLOR: 'var(--text-dark)',
         ICON_COLOR_INACTIVE: 'var(--text-medium)',
         DEFAULT_TABLE_ROWS_PER_PAGE: 50,
@@ -87,7 +104,7 @@ const APP_CONFIG = Object.freeze({
         TRANSITION_DURATION_MS: 350,
         MODAL_BACKDROP_OPACITY: 0.6,
         SPINNER_DELAY_MS: 300,
-        STICKY_HEADER_OFFSET: '111px'
+        STICKY_HEADER_OFFSET: '111px' // Höhe Header + Navigationsleiste
     }),
 
     CHART_SETTINGS: Object.freeze({
@@ -95,11 +112,11 @@ const APP_CONFIG = Object.freeze({
         DEFAULT_HEIGHT: 350,
         DEFAULT_MARGIN: Object.freeze({ top: 30, right: 40, bottom: 70, left: 70 }),
         COMPACT_PIE_MARGIN: Object.freeze({ top: 15, right: 15, bottom: 50, left: 15 }),
-        NEW_PRIMARY_COLOR_BLUE: '#4472C4',
-        NEW_SECONDARY_COLOR_YELLOW_GREEN: '#E0DC2C',
+        NEW_PRIMARY_COLOR_BLUE: '#4472C4', // Primärfarbe
+        NEW_SECONDARY_COLOR_YELLOW_GREEN: '#E0DC2C', // Akzentfarbe
         TERTIARY_COLOR_GREEN: '#2ca02c',
-        AS_COLOR: '#4472C4',
-        T2_COLOR: '#E0DC2C',
+        AS_COLOR: '#4472C4', // Konstistent mit Primärfarbe
+        T2_COLOR: '#E0DC2C', // Konstistent mit Akzentfarbe
         ANIMATION_DURATION_MS: 750,
         AXIS_LABEL_FONT_SIZE: '11px',
         TICK_LABEL_FONT_SIZE: '10px',
@@ -118,7 +135,7 @@ const APP_CONFIG = Object.freeze({
         TABLE_PNG_EXPORT_SCALE: 2,
         ENABLE_TABLE_PNG_EXPORT: true,
         CSV_DELIMITER: ';',
-        COMPREHENSIVE_REPORT_LOGO_URL: '',
+        COMPREHENSIVE_REPORT_LOGO_URL: '', // Kann später hinzugefügt werden
         INCLUDE_TIMESTAMP_IN_FILENAME: false,
         FILENAME_TYPES: Object.freeze({
             STATS_CSV: 'StatistikCSV',
@@ -126,34 +143,29 @@ const APP_CONFIG = Object.freeze({
             DESKRIPTIV_MD: 'DeskriptiveStatistikMD',
             DATEN_MD: 'DatenlisteMD',
             AUSWERTUNG_MD: 'AuswertungTabelleMD',
-            CHARTS_PNG: 'ChartsPNG',
-            CHARTS_SVG: 'ChartsSVG',
+            CHARTS_PNG: 'ChartsPNG', // Für ZIP mit mehreren PNGs
+            CHARTS_SVG: 'ChartsSVG', // Für ZIP mit mehreren SVGs
             ALL_ZIP: 'GesamtPaketZIP',
             CSV_ZIP: 'CSVPaketZIP',
             MD_ZIP: 'MDPaketZIP',
-            PNG_ZIP: 'PNGPaketZIP',
-            SVG_ZIP: 'SVGPaketZIP',
+            PNG_ZIP: 'PNGPaketZIP', // Wird für den Export aller Diagramme als PNGs verwendet
+            SVG_ZIP: 'SVGPaketZIP', // Wird für den Export aller Diagramme als SVGs verwendet
             XLSX_ZIP: 'XLSXPaketZIP',
             FILTERED_DATA_CSV: 'GefilterteDatenCSV',
-            FILTERED_DATA_XLSX: 'GefilterteDatenXLSX',
+            FILTERED_DATA_XLSX: 'GefilterteDatenXLSX', // Platzhalter für zukünftige Excel-Exporte
             COMPREHENSIVE_REPORT_HTML: 'AnalyseberichtHTML',
             AUSWERTUNG_XLSX: 'AuswertungTabelleXLSX',
             DATEN_XLSX: 'DatenlisteXLSX',
             STATISTIK_XLSX: 'StatistikUebersichtXLSX',
             CHART_SINGLE_PNG: '{ChartName}_PNG',
             CHART_SINGLE_SVG: '{ChartName}_SVG',
-            PRAES_AS_PERF_CSV: 'PraesPerformanceASPUR_CSV',
-            PRAES_AS_PERF_MD: 'PraesPerformanceASPUR_MD',
-            PRAES_AS_VS_T2_PERF_CSV: 'PraesPerformanceASvsT2_{StudyID}_CSV',
-            PRAES_AS_VS_T2_COMP_MD: 'PraesMetricsASvsT2_{StudyID}_MD',
-            PRAES_AS_VS_T2_TESTS_MD: 'PraesTestsASvsT2_{StudyID}_MD',
-            PRAES_AS_VS_T2_CHART_PNG: 'PraesChartASvsT2_{StudyID}_PNG',
-            PRAES_AS_VS_T2_CHART_SVG: 'PraesChartASvsT2_{StudyID}_SVG',
-            TABLE_PNG_EXPORT: '{TableName}_PNG',
+            TABLE_PNG_EXPORT: '{TableName}_PNG', // Bezieht sich auf den Export einer HTML-Tabelle als PNG
             CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
             PUBLIKATION_METHODEN_MD: 'Publikation_Methoden_Abschnitt_{SectionName}_MD',
             PUBLIKATION_ERGEBNISSE_MD: 'Publikation_Ergebnisse_Abschnitt_{SectionName}_MD',
-            PUBLIKATION_REFERENZEN_MD: 'Publikation_Referenzen_MD'
+            PUBLIKATION_REFERENZEN_MD: 'Publikation_Referenzen_MD',
+            PUBLIKATION_TABLE_TSV: 'Publikation_Tabelle_{TableName}_TSV',
+            REFERENCES_BIBTEX: 'Referenzen_BibTeX'
         }),
         EXCEL_SHEET_NAME_DATEN: 'Datenliste',
         EXCEL_SHEET_NAME_AUSWERTUNG: 'Auswertung',
@@ -176,7 +188,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch ${"Lymphknoten T2 - Avocado Sign Analyse"} v${"2.3.0"}`,
+        REPORT_AUTHOR: `Generiert durch ${"Lymphknoten T2 - Avocado Sign Analyse"} v${"2.3.0"}`, // Version dynamisch
         REPORT_LOGO_ALT_TEXT: 'Institutslogo'
     }),
 
@@ -196,7 +208,7 @@ const APP_CONFIG = Object.freeze({
             mriSystem: "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers)",
             contrastAgent: "Gadoteridol (ProHance; Bracco)",
             t2SliceThickness: "2-3 mm",
-            radiologistExperience: ["29", "7", "19"],
+            radiologistExperience: ["29", "7", "19"], // Jahre Erfahrung
             ethicsVote: "Ethikvotum Nr. 2023-101, Ethikkommission der Landesärztekammer Sachsen"
         },
         koh2008: {
@@ -239,26 +251,15 @@ const APP_CONFIG = Object.freeze({
             short: "Lahaye et al. (2009)",
             doi: "10.1148/radiol.2521081364"
         },
-        vliegen2005BeetsTan: {
+        vliegen2005BeetsTan: { // Alias to distinguish from other Beets-Tan
             fullCitation: "Vliegen RFA, Beets GL, von Meyenfeldt MF, et al. Rectal Cancer: MR Imaging in Local Staging—Is Gadolinium-based Contrast Material Helpful? Radiology. 2005;234(1):179-188.",
             short: "Vliegen et al. (2005)",
             doi: "10.1148/radiol.2341031403"
         },
          barbaro2010: {
-            fullCitation: "Barbaro B, Vitale R, Leccisotti L, et al. Restaging Locally Advanced Rectal Cancer with MR Imaging after Chemoradiation Therapy. RadioGraphics. 2010;30(3):699-721.",
+            fullCitation: "Barbaro B, Vitale R, Leccisotti L, Vecchio FM, Santoro L, Valentini V, et al. Restaging Locally Advanced Rectal Cancer with MR Imaging after Chemoradiation Therapy. RadioGraphics. 2010;30(3):699-721.",
             short: "Barbaro et al. (2010)",
             doi: "10.1148/rg.303095085"
         }
     })
 });
-
-function getDefaultT2Criteria() {
-    return Object.freeze({
-        logic: APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC,
-        size: { active: true, threshold: 5.0, condition: '>=' },
-        form: { active: false, value: 'rund' },
-        kontur: { active: false, value: 'irregulär' },
-        homogenitaet: { active: false, value: 'heterogen' },
-        signal: { active: false, value: 'signalreich' }
-    });
-}
