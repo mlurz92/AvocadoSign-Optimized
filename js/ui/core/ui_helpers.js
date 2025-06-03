@@ -1,6 +1,5 @@
 const ui_helpers = (() => {
 
-    let globalTippyInstances = [];
     let collapseEventListenersAttached = new Set();
     let kurzanleitungModalInstance = null;
     let initialTabRenderFixed = false;
@@ -43,91 +42,61 @@ const ui_helpers = (() => {
     }
 
     function initializeTooltips(scope = document.body) {
-        if (!window.tippy || typeof scope?.querySelectorAll !== 'function') {
-            console.warn("Tippy.js nicht verfügbar oder ungültiger Scope für Tooltips.");
+        if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) {
+            console.warn("Bootstrap Tooltip ist nicht verfügbar. Tooltips werden nicht initialisiert.");
             return;
         }
 
-        // 1. Bereinige globalTippyInstances von Instanzen, deren Elemente nicht mehr im DOM sind oder nicht mehr im aktuellen Scope (falls spezifisch)
-        globalTippyInstances = globalTippyInstances.filter(instance => {
-            if (!instance || !instance.reference || !document.body.contains(instance.reference)) {
-                try { if (instance.destroy) instance.destroy(); } catch (e) { /* Fehler beim Zerstören ignorieren */ }
-                return false;
-            }
-            if (scope !== document.body && instance.reference && !scope.contains(instance.reference)) {
-                 try { if (instance.destroy) instance.destroy(); } catch (e) { /* Fehler beim Zerstören ignorieren */ }
-                 return false;
-            }
-            return true;
-        });
-
-        // 2. Identifiziere Elemente im aktuellen Scope, die einen Tooltip benötigen
-        let elementsInScope = [];
-        if (scope.matches && scope.matches('[data-tippy-content]')) {
-            elementsInScope.push(scope);
-        }
-        elementsInScope.push(...Array.from(scope.querySelectorAll('[data-tippy-content]')));
-        
-        // Entferne Duplikate, falls scope selbst selektiert wurde und auch in querySelectorAll enthalten ist
-        elementsInScope = [...new Set(elementsInScope)];
-
-
-        // 3. Zerstöre explizit alle *bekannten* Tippy-Instanzen, die an Elemente gebunden sind, die jetzt neu initialisiert werden sollen.
-        const instancesToReinitialize = globalTippyInstances.filter(instance =>
-            instance.reference && elementsInScope.includes(instance.reference)
-        );
-
-        instancesToReinitialize.forEach(instance => {
-            try {
-                instance.destroy();
-            } catch (e) {
-                console.warn("Fehler beim gezielten Zerstören einer Tippy-Instanz vor Neuanlage:", e, instance.reference);
-            }
-        });
-        globalTippyInstances = globalTippyInstances.filter(instance => !instancesToReinitialize.includes(instance));
-        
-        // 4. Erstelle neue Tippy-Instanzen für die Elemente im Scope, die tatsächlich noch im DOM sind
-        const validElementsForTippy = elementsInScope.filter(el => document.body.contains(el));
-
-        if (validElementsForTippy.length > 0) {
-            try {
-                const newInstances = tippy(validElementsForTippy, {
-                    allowHTML: true,
-                    theme: 'glass',
-                    placement: 'top',
-                    animation: 'fade',
-                    interactive: false,
-                    appendTo: () => document.body, // Sicherstellen, dass appendTo ein gültiges Element zurückgibt
-                    delay: APP_CONFIG.UI_SETTINGS.TOOLTIP_DELAY || [150, 50],
-                    maxWidth: 400,
-                    duration: [150, 150],
-                    zIndex: 3050,
-                    onCreate(instance) {
-                        const content = instance.reference.getAttribute('data-tippy-content');
-                        if (!content || String(content).trim() === '') {
-                            instance.disable();
-                        }
-                    },
-                    onShow(instance) {
-                        const content = instance.reference.getAttribute('data-tippy-content');
-                        if (content && String(content).trim() !== '') {
-                            instance.setContent(content);
-                            return true;
-                        } else {
-                            return false;
-                        }
-                    }
-                });
-
-                if (Array.isArray(newInstances)) {
-                    globalTippyInstances.push(...newInstances.filter(inst => inst !== null && inst !== undefined));
-                } else if (newInstances) {
-                    globalTippyInstances.push(newInstances);
+        let tooltipTriggerElements = [];
+        if (scope && typeof scope.querySelectorAll === 'function') {
+            tooltipTriggerElements = Array.from(scope.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            if (scope.matches && scope.matches('[data-bs-toggle="tooltip"]')) {
+                if (!tooltipTriggerElements.includes(scope)) {
+                    tooltipTriggerElements.push(scope);
                 }
-            } catch (error) {
-                console.error("Fehler während der Tippy-Initialisierung:", error, validElementsForTippy);
             }
+        } else if (scope && scope.hasAttribute && scope.hasAttribute('data-bs-toggle') && scope.getAttribute('data-bs-toggle') === 'tooltip') {
+            tooltipTriggerElements.push(scope);
         }
+
+
+        tooltipTriggerElements.forEach(tooltipTriggerEl => {
+            if (!document.body.contains(tooltipTriggerEl)) return;
+
+            const existingTooltip = bootstrap.Tooltip.getInstance(tooltipTriggerEl);
+            if (existingTooltip) {
+                existingTooltip.dispose();
+            }
+
+            const title = tooltipTriggerEl.getAttribute('data-bs-title') || tooltipTriggerEl.getAttribute('title') || '';
+            if (String(title).trim() === '') {
+                return;
+            }
+
+            const delayConfig = APP_CONFIG.UI_SETTINGS.TOOLTIP_DELAY;
+            let bsDelay = { show: 200, hide: 100 }; // Default
+            if (Array.isArray(delayConfig) && delayConfig.length === 2) {
+                bsDelay = { show: delayConfig[0], hide: delayConfig[1] };
+            } else if (typeof delayConfig === 'number') {
+                bsDelay = { show: delayConfig, hide: delayConfig };
+            }
+
+
+            try {
+                new bootstrap.Tooltip(tooltipTriggerEl, {
+                    html: tooltipTriggerEl.getAttribute('data-bs-html') === 'true',
+                    placement: tooltipTriggerEl.getAttribute('data-bs-placement') || 'top',
+                    fallbackPlacements: ['bottom', 'left', 'right'],
+                    boundary: document.body,
+                    trigger: 'hover focus',
+                    delay: bsDelay,
+                    customClass: tooltipTriggerEl.getAttribute('data-bs-custom-class') || '',
+                    container: 'body' // Verhindert Probleme mit z-index in komplexen Layouts
+                });
+            } catch (error) {
+                console.error("Fehler bei der Bootstrap Tooltip Initialisierung für Element:", error, tooltipTriggerEl);
+            }
+        });
     }
 
     function updateElementText(elementId, text) {
@@ -193,9 +162,9 @@ const ui_helpers = (() => {
                     span.style.fontWeight = isActiveSort ? 'bold' : 'normal';
                     span.style.textDecoration = isActiveSort ? 'underline' : 'none';
                     span.style.color = isActiveSort ? 'var(--primary-color)' : 'inherit';
-                    const thLabel = th.getAttribute('data-tippy-content')?.split('.')[0] || th.textContent.split('(')[0].trim() || key;
+                    const thLabel = th.getAttribute('data-bs-title')?.split('.')[0] || th.textContent.split('(')[0].trim() || key;
                     const spanLabel = span.textContent.trim();
-                    span.setAttribute('data-tippy-content', `Sortieren nach: ${thLabel} -> ${spanLabel}`);
+                    span.setAttribute('data-bs-title', `Sortieren nach: ${thLabel} -> ${spanLabel}`);
                     if (isActiveSort) {
                         icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
                         isSubKeySortActive = true;
@@ -215,7 +184,7 @@ const ui_helpers = (() => {
                 }
             }
         });
-        if (typeof tippy !== 'undefined' && tableHeader.querySelectorAll('[data-tippy-content]').length > 0) {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip && tableHeader.querySelectorAll('[data-bs-toggle="tooltip"]').length > 0) {
             initializeTooltips(tableHeader);
         }
     }
@@ -258,8 +227,13 @@ const ui_helpers = (() => {
                                       : tooltipContentBase.replace(currentLang === 'de' ? 'aus-' : 'Collapse', currentLang === 'de' ? 'ein-' : 'Expand').replace(currentLang === 'de' ? 'ausblenden' : 'Collapse', currentLang === 'de' ? 'anzeigen' : 'Expand');
 
         updateElementHTML(buttonId, `${buttonText} <i class="fas ${iconClass} ms-1"></i>`);
-        button.setAttribute('data-tippy-content', currentTooltipText);
-        if(button._tippy) { button._tippy.setContent(currentTooltipText); } else { initializeTooltips(button.parentElement || button); }
+        button.setAttribute('data-bs-title', currentTooltipText);
+        const existingTooltip = bootstrap.Tooltip.getInstance(button);
+        if (existingTooltip) {
+            existingTooltip.setContent({ '.tooltip-inner': currentTooltipText });
+        } else {
+            initializeTooltips(button.parentElement || button);
+        }
     }
 
     function handleCollapseEvent(event) {
@@ -287,8 +261,8 @@ const ui_helpers = (() => {
     }
 
     function getT2IconSVG(type, value) {
-        const s = APP_CONFIG.UI_SETTINGS.ICON_SIZE || 20;
-        const sw = APP_CONFIG.UI_SETTINGS.ICON_STROKE_WIDTH || 1.5;
+        const s = APP_CONFIG.UI_SETTINGS.ICON_SIZE || 18;
+        const sw = APP_CONFIG.UI_SETTINGS.ICON_STROKE_WIDTH || 1.25;
         const iconColor = APP_CONFIG.UI_SETTINGS.ICON_COLOR || '#212529';
         const c = s / 2;
         const r = Math.max(1, (s - sw) / 2);
@@ -395,22 +369,39 @@ const ui_helpers = (() => {
         if (!card) return;
         const shouldShowIndicator = !!isUnsaved;
         card.classList.toggle('criteria-unsaved-indicator', shouldShowIndicator);
-
-        const existingTippy = card._tippy;
+    
+        const tooltipInstance = bootstrap.Tooltip.getInstance(card);
         const tooltipContent = TOOLTIP_CONTENT?.t2CriteriaCard?.unsavedIndicator || "Ungespeicherte Änderungen vorhanden.";
-
-        if (shouldShowIndicator && (!existingTippy || !existingTippy.state.isEnabled)) {
-            tippy(card, { content: tooltipContent, placement: 'top-start', theme: 'glass warning', trigger: 'manual', showOnCreate: true, zIndex: 1100, hideOnClick: false });
-        } else if (shouldShowIndicator && existingTippy) {
-            existingTippy.setContent(tooltipContent);
-            existingTippy.setProps({ theme: 'glass warning' });
-            if(!existingTippy.state.isEnabled) existingTippy.enable();
-            if(!existingTippy.state.isVisible) existingTippy.show();
-        } else if (!shouldShowIndicator && existingTippy && existingTippy.state.isEnabled) {
-            if(existingTippy.state.isVisible) existingTippy.hide();
-            existingTippy.disable();
+    
+        if (shouldShowIndicator) {
+            card.setAttribute('data-bs-title', tooltipContent);
+            card.setAttribute('data-bs-custom-class', 'tooltip-warning');
+            if (tooltipInstance) {
+                tooltipInstance.setContent({ '.tooltip-inner': tooltipContent });
+                tooltipInstance.enable(); 
+            } else {
+                // Tooltip wird beim nächsten Hover durch initializeTooltips() mit den neuen Attributen erstellt.
+                // Oder explizit hier, falls es sofort (ohne Hover) erscheinen soll (nicht Standard für Bootstrap):
+                // new bootstrap.Tooltip(card, { title: tooltipContent, html: true, customClass: 'tooltip-warning', trigger: 'manual' }).show();
+            }
+        } else {
+            const originalTooltip = card.dataset.originalTitle || TOOLTIP_CONTENT?.t2CriteriaCard?.description || "T2 Malignitäts-Kriterien definieren";
+            card.setAttribute('data-bs-title', originalTooltip);
+            card.removeAttribute('data-bs-custom-class');
+            if (tooltipInstance) {
+                tooltipInstance.setContent({ '.tooltip-inner': originalTooltip });
+                // Tooltip nicht disablen, falls es einen Standard-Tooltip gibt
+            }
         }
-    }
+        // Ggf. Tooltip-Instanz neu initialisieren/updaten, wenn Attribute direkt geändert wurden
+        if (tooltipInstance) {
+            tooltipInstance.update();
+        } else if (shouldShowIndicator) { // Nur neu initialisieren, wenn ein Warning-Tooltip angezeigt werden soll und keiner da war
+             if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                new bootstrap.Tooltip(card);
+             }
+        }
+    }    
 
     function updateStatistikSelectorsUI(layout, kollektiv1, kollektiv2) {
         const toggleBtn = document.getElementById('statistik-toggle-vergleich');
@@ -431,8 +422,9 @@ const ui_helpers = (() => {
             
             const tooltipTextKey = isVergleich ? 'vergleich' : 'einzel';
             const tooltipText = (TOOLTIP_CONTENT.statistikLayoutSwitch?.[tooltipTextKey] || (currentLang === 'de' ? 'Layout umschalten.' : 'Toggle layout.'));
-            if(toggleBtn._tippy) toggleBtn._tippy.setContent(tooltipText);
-            else initializeTooltips(toggleBtn.parentElement || toggleBtn);
+            toggleBtn.setAttribute('data-bs-title', tooltipText);
+            const existingTooltip = bootstrap.Tooltip.getInstance(toggleBtn);
+            if(existingTooltip) existingTooltip.setContent({ '.tooltip-inner': tooltipText });
         }
         if (container1) container1.classList.toggle('d-none', !isVergleich);
         if (container2) container2.classList.toggle('d-none', !isVergleich);
@@ -513,19 +505,19 @@ const ui_helpers = (() => {
             updateElementText(elements.bfInfoKollektiv.id, getKollektivNameFunc(kollektivToDisplayForInfo));
         }
         
-        const addOrUpdateTooltip = (el, content) => {
-            if (el) {
-                const currentTippy = el._tippy;
+        const addOrUpdateBsTooltip = (el, content) => {
+            if (el && typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                const existingTooltip = bootstrap.Tooltip.getInstance(el);
                 if (content) {
-                    el.setAttribute('data-tippy-content', content);
-                    if (currentTippy && currentTippy.state.isEnabled) {
-                        currentTippy.setContent(content);
-                    } else if (!currentTippy && typeof tippy !== 'undefined') { // Sicherstellen, dass tippy verfügbar ist
-                        initializeTooltips(el.parentElement || el);
+                    el.setAttribute('data-bs-title', content);
+                    if (existingTooltip) {
+                        existingTooltip.setContent({ '.tooltip-inner': content });
+                    } else {
+                        new bootstrap.Tooltip(el); // Initialisieren, falls nicht vorhanden
                     }
-                } else if (currentTippy && currentTippy.state.isEnabled) {
-                    currentTippy.hide();
-                    currentTippy.disable();
+                } else if (existingTooltip) {
+                    existingTooltip.dispose();
+                    el.removeAttribute('data-bs-title');
                 }
             }
         };
@@ -545,7 +537,7 @@ const ui_helpers = (() => {
                 else if (status === 'cancelled') statusMsg = 'Abgebrochen.';
                 else if (status === 'error') statusMsg = `Fehler: ${data?.message || 'Unbekannt.'}`;
                 if (elements.statusText) updateElementText(elements.statusText.id, statusMsg);
-                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Aktueller Status: ${statusMsg}`);
+                if (bfInfoElement) addOrUpdateBsTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Aktueller Status: ${statusMsg}`);
                 break;
             case 'start':
                 if (elements.progressBar) { elements.progressBar.style.width = '0%'; elements.progressBar.setAttribute('aria-valuenow', '0'); }
@@ -556,14 +548,14 @@ const ui_helpers = (() => {
                 if (elements.bestMetric) updateElementText(elements.bestMetric.id, '--');
                 if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, 'Beste Kriterien: --');
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Initialisiere...');
-                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: Initialisiere...`);
+                if (bfInfoElement) addOrUpdateBsTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: Initialisiere...`);
                 break;
             case 'started':
                 const totalComb = formatNumber(data?.totalCombinations || 0, 0, 'N/A');
                 if (elements.totalCount) updateElementText(elements.totalCount.id, totalComb);
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Teste...');
-                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: Teste ${totalComb} Kombinationen...`);
-                if (elements.progressContainer) addOrUpdateTooltip(elements.progressContainer, (TOOLTIP_CONTENT.bruteForceProgress?.description || '').replace('[TOTAL]', totalComb));
+                if (bfInfoElement) addOrUpdateBsTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: Teste ${totalComb} Kombinationen...`);
+                if (elements.progressContainer) addOrUpdateBsTooltip(elements.progressContainer, (TOOLTIP_CONTENT.bruteForceProgress?.description || '').replace('[TOTAL]', totalComb));
                 break;
             case 'progress':
                 const percent = (data?.total && data.total > 0) ? Math.round((data.tested / data.total) * 100) : 0;
@@ -575,7 +567,7 @@ const ui_helpers = (() => {
                 if (elements.testedCount) updateElementText(elements.testedCount.id, testedNum);
                 if (elements.totalCount) updateElementText(elements.totalCount.id, totalNumProg);
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Läuft...');
-                if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: ${percentStr} (${testedNum}/${totalNumProg})`);
+                if (bfInfoElement) addOrUpdateBsTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: ${percentStr} (${testedNum}/${totalNumProg})`);
                 if (data?.currentBest && data.currentBest.criteria && isFinite(data.currentBest.metricValue)) {
                     const bestValStr = formatNumber(data.currentBest.metricValue, 4);
                     const bestCritStr = formatCriteriaFunc(data.currentBest.criteria, data.currentBest.logic, false);
@@ -608,18 +600,18 @@ const ui_helpers = (() => {
                     if (elements.resultKollektivNplus) updateElementText(elements.resultKollektivNplus.id, formatNumber(data.nPlus,0,'--'));
                     if (elements.resultKollektivNminus) updateElementText(elements.resultKollektivNminus.id, formatNumber(data.nMinus,0,'--'));
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig.');
-                     if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${resultKollektivName}</strong>`) + ` Status: Fertig.`);
+                     if (bfInfoElement) addOrUpdateBsTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${resultKollektivName}</strong>`) + ` Status: Fertig.`);
                      if (elements.resultContainer) {
                          const resultTooltip = (TOOLTIP_CONTENT.bruteForceResult.description || '')
                             .replace('[N_GESAMT]', formatNumber(data.nGesamt,0,'?'))
                             .replace('[N_PLUS]', formatNumber(data.nPlus,0,'?'))
                             .replace('[N_MINUS]', formatNumber(data.nMinus,0,'?'));
-                         addOrUpdateTooltip(elements.resultContainer, resultTooltip);
+                         addOrUpdateBsTooltip(elements.resultContainer, resultTooltip);
                      }
                 } else {
                     if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true);
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig (kein valides Ergebnis).');
-                     if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${resultKollektivName}</strong>`) + ` Status: Fertig (kein Ergebnis).`);
+                     if (bfInfoElement) addOrUpdateBsTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${resultKollektivName}</strong>`) + ` Status: Fertig (kein Ergebnis).`);
                 }
                 break;
         }
