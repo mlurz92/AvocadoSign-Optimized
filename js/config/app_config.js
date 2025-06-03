@@ -1,6 +1,6 @@
 function getDefaultT2Criteria() {
     return Object.freeze({
-        logic: 'UND', // Direkter Wert statt APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC
+        logic: 'UND',
         size: { active: true, threshold: 5.0, condition: '>=' },
         form: { active: false, value: 'rund' },
         kontur: { active: false, value: 'irregulär' },
@@ -15,7 +15,7 @@ const APP_CONFIG = Object.freeze({
 
     DEFAULT_SETTINGS: Object.freeze({
         KOLLEKTIV: 'Gesamt',
-        T2_LOGIC: 'UND', // Dieser Wert wird nun in getDefaultT2Criteria direkt verwendet
+        T2_LOGIC: 'UND',
         DATEN_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
         AUSWERTUNG_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
         STATS_LAYOUT: 'einzel',
@@ -35,7 +35,7 @@ const APP_CONFIG = Object.freeze({
         ]),
         CHART_COLOR_SCHEME: 'default',
         BRUTE_FORCE_METRIC: 'Balanced Accuracy',
-        APPLIED_CRITERIA: getDefaultT2Criteria() // Aufruf erfolgt jetzt nach der Definition
+        APPLIED_CRITERIA: getDefaultT2Criteria()
     }),
 
     STORAGE_KEYS: Object.freeze({
@@ -94,7 +94,7 @@ const APP_CONFIG = Object.freeze({
     }),
 
     UI_SETTINGS: Object.freeze({
-        ICON_SIZE: 18, // Leicht reduziert für Kompaktheit
+        ICON_SIZE: 18,
         ICON_STROKE_WIDTH: 1.25,
         ICON_COLOR: 'var(--text-dark)',
         ICON_COLOR_INACTIVE: 'var(--text-medium)',
@@ -104,7 +104,7 @@ const APP_CONFIG = Object.freeze({
         TRANSITION_DURATION_MS: 350,
         MODAL_BACKDROP_OPACITY: 0.6,
         SPINNER_DELAY_MS: 300,
-        STICKY_HEADER_OFFSET: '111px' // Höhe Header + Navigationsleiste
+        STICKY_HEADER_OFFSET: '111px'
     }),
 
     CHART_SETTINGS: Object.freeze({
@@ -112,11 +112,11 @@ const APP_CONFIG = Object.freeze({
         DEFAULT_HEIGHT: 350,
         DEFAULT_MARGIN: Object.freeze({ top: 30, right: 40, bottom: 70, left: 70 }),
         COMPACT_PIE_MARGIN: Object.freeze({ top: 15, right: 15, bottom: 50, left: 15 }),
-        NEW_PRIMARY_COLOR_BLUE: '#4472C4', // Primärfarbe
-        NEW_SECONDARY_COLOR_YELLOW_GREEN: '#E0DC2C', // Akzentfarbe
+        NEW_PRIMARY_COLOR_BLUE: '#4472C4',
+        NEW_SECONDARY_COLOR_YELLOW_GREEN: '#E0DC2C',
         TERTIARY_COLOR_GREEN: '#2ca02c',
-        AS_COLOR: '#4472C4', // Konstistent mit Primärfarbe
-        T2_COLOR: '#E0DC2C', // Konstistent mit Akzentfarbe
+        AS_COLOR: '#4472C4',
+        T2_COLOR: '#E0DC2C',
         ANIMATION_DURATION_MS: 750,
         AXIS_LABEL_FONT_SIZE: '11px',
         TICK_LABEL_FONT_SIZE: '10px',
@@ -135,7 +135,7 @@ const APP_CONFIG = Object.freeze({
         TABLE_PNG_EXPORT_SCALE: 2,
         ENABLE_TABLE_PNG_EXPORT: true,
         CSV_DELIMITER: ';',
-        COMPREHENSIVE_REPORT_LOGO_URL: '', // Kann später hinzugefügt werden
+        COMPREHENSIVE_REPORT_LOGO_URL: '',
         INCLUDE_TIMESTAMP_IN_FILENAME: false,
         FILENAME_TYPES: Object.freeze({
             STATS_CSV: 'StatistikCSV',
@@ -143,23 +143,23 @@ const APP_CONFIG = Object.freeze({
             DESKRIPTIV_MD: 'DeskriptiveStatistikMD',
             DATEN_MD: 'DatenlisteMD',
             AUSWERTUNG_MD: 'AuswertungTabelleMD',
-            CHARTS_PNG: 'ChartsPNG', // Für ZIP mit mehreren PNGs
-            CHARTS_SVG: 'ChartsSVG', // Für ZIP mit mehreren SVGs
+            CHARTS_PNG: 'ChartsPNG',
+            CHARTS_SVG: 'ChartsSVG',
             ALL_ZIP: 'GesamtPaketZIP',
             CSV_ZIP: 'CSVPaketZIP',
             MD_ZIP: 'MDPaketZIP',
-            PNG_ZIP: 'PNGPaketZIP', // Wird für den Export aller Diagramme als PNGs verwendet
-            SVG_ZIP: 'SVGPaketZIP', // Wird für den Export aller Diagramme als SVGs verwendet
+            PNG_ZIP: 'PNGPaketZIP',
+            SVG_ZIP: 'SVGPaketZIP',
             XLSX_ZIP: 'XLSXPaketZIP',
             FILTERED_DATA_CSV: 'GefilterteDatenCSV',
-            FILTERED_DATA_XLSX: 'GefilterteDatenXLSX', // Platzhalter für zukünftige Excel-Exporte
+            FILTERED_DATA_XLSX: 'GefilterteDatenXLSX',
             COMPREHENSIVE_REPORT_HTML: 'AnalyseberichtHTML',
             AUSWERTUNG_XLSX: 'AuswertungTabelleXLSX',
             DATEN_XLSX: 'DatenlisteXLSX',
             STATISTIK_XLSX: 'StatistikUebersichtXLSX',
             CHART_SINGLE_PNG: '{ChartName}_PNG',
             CHART_SINGLE_SVG: '{ChartName}_SVG',
-            TABLE_PNG_EXPORT: '{TableName}_PNG', // Bezieht sich auf den Export einer HTML-Tabelle als PNG
+            TABLE_PNG_EXPORT: '{TableName}_PNG',
             CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
             PUBLIKATION_METHODEN_MD: 'Publikation_Methoden_Abschnitt_{SectionName}_MD',
             PUBLIKATION_ERGEBNISSE_MD: 'Publikation_Ergebnisse_Abschnitt_{SectionName}_MD',
@@ -188,7 +188,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch ${"Lymphknoten T2 - Avocado Sign Analyse"} v${"2.3.0"}`, // Version dynamisch
+        REPORT_AUTHOR: `Generiert durch ${"Lymphknoten T2 - Avocado Sign Analyse"} v${"2.3.0"}`,
         REPORT_LOGO_ALT_TEXT: 'Institutslogo'
     }),
 
@@ -208,7 +208,7 @@ const APP_CONFIG = Object.freeze({
             mriSystem: "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers)",
             contrastAgent: "Gadoteridol (ProHance; Bracco)",
             t2SliceThickness: "2-3 mm",
-            radiologistExperience: ["29", "7", "19"], // Jahre Erfahrung
+            radiologistExperience: ["29", "7", "19"],
             ethicsVote: "Ethikvotum Nr. 2023-101, Ethikkommission der Landesärztekammer Sachsen"
         },
         koh2008: {
@@ -251,7 +251,7 @@ const APP_CONFIG = Object.freeze({
             short: "Lahaye et al. (2009)",
             doi: "10.1148/radiol.2521081364"
         },
-        vliegen2005BeetsTan: { // Alias to distinguish from other Beets-Tan
+        vliegen2005BeetsTan: {
             fullCitation: "Vliegen RFA, Beets GL, von Meyenfeldt MF, et al. Rectal Cancer: MR Imaging in Local Staging—Is Gadolinium-based Contrast Material Helpful? Radiology. 2005;234(1):179-188.",
             short: "Vliegen et al. (2005)",
             doi: "10.1148/radiol.2341031403"
