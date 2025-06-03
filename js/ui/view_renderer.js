@@ -1,139 +1,138 @@
 const viewRenderer = (() => {
-    let currentKollektiv = null;
-    let currentActiveTabId = null;
-    let isInitialized = false;
+    let currentData = null;
+    let activeTabId = null;
+    let bruteForceManagerInstance = null;
+    let dataProcessed = false;
 
     const tabContentFunctions = {
-        'daten-tab-pane': (data) => dataTabLogic.createDatenTableHTML(data.patienten, stateManager.getDatenTableSort()),
-        'auswertung-tab-pane': (data) => {
-            const t2ControlsHTML = uiComponents.createT2CriteriaControls(t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
-            const bruteForceCardHTML = uiComponents.createBruteForceCard(currentKollektiv, bruteForceManager.isWorkerAvailable());
-            const tableContainerHTML = `<div class="mt-3 card"><div class="card-header d-flex justify-content-between align-items-center"><span>Auswertungstabelle (Kollektiv: ${getKollektivDisplayName(currentKollektiv)})</span><button class="btn btn-sm btn-outline-secondary" id="auswertung-toggle-details" data-action="expand"><i class="fas fa-chevron-down me-1"></i>Alle Details Anzeigen</button></div><div id="auswertung-table-container" class="table-responsive"></div></div>`;
-            return `<div class="row g-3"><div class="col-xl-5">${t2ControlsHTML}</div><div class="col-xl-7">${bruteForceCardHTML}</div></div>${tableContainerHTML}`;
+        'daten-tab-pane': (data, options) => dataTabLogic.createDatenTableHTML(data.patientenDaten, options.sortState),
+        'auswertung-tab-pane': (data, options) => {
+            const t2ControlsHTML = uiComponents.createT2CriteriaControls(options.appliedCriteria, options.appliedLogic);
+            const bruteForceCardHTML = uiComponents.createBruteForceCard(options.currentKollektivName, options.workerAvailable);
+            const t2MetricsOverviewHTML = uiComponents.createT2MetricsOverview(options.t2Metrics, options.currentKollektiv);
+            const toggleDetailsButton = `<div class="d-flex justify-content-end mb-2"><button class="btn btn-sm btn-outline-secondary" id="auswertung-toggle-details" data-action="expand">${UI_TEXTS.auswertungTab.toggleDetailsExpand}</button></div>`;
+            return `<div class="row"><div class="col-lg-5 col-xl-4">${t2ControlsHTML}</div><div class="col-lg-7 col-xl-8">${bruteForceCardHTML}${t2MetricsOverviewHTML}</div></div><hr class="my-3">${toggleDetailsButton}<div id="auswertung-table-container"></div>`;
         },
-        'statistik-tab-pane': (data) => {
-            const layout = stateManager.getCurrentStatsLayout();
-            let content = '';
-            if (layout === 'einzel') {
-                const stats = data.statistics[currentKollektiv];
-                if (stats) {
-                    content += uiComponents.createStatistikCard('deskriptiv-stats', `Deskriptive Statistik - Kollektiv: ${getKollektivDisplayName(currentKollektiv)}`, statistikTabLogic.createDeskriptiveStatistikContentHTML(stats, 'single', currentKollektiv), true, 'statistikTab.deskriptivCard');
-                    content += uiComponents.createStatistikCard('as-guete', `Diagnostische Güte AS - Kollektiv: ${getKollektivDisplayName(currentKollektiv)}`, statistikTabLogic.createGueteContentHTML(stats.as, 'AS', currentKollektiv), false, 'statistikTab.asGueteCard', [{chartId: 'chart-stat-as-roc-single', format:'svg'},{chartId: 'chart-stat-as-roc-single', format:'png'}]);
-                    content += uiComponents.createStatistikCard('t2-guete', `Diagnostische Güte T2 - Kollektiv: ${getKollektivDisplayName(currentKollektiv)}`, statistikTabLogic.createGueteContentHTML(stats.t2, 'T2', currentKollektiv), false, 'statistikTab.t2GueteCard', [{chartId: 'chart-stat-t2-roc-single', format:'svg'},{chartId: 'chart-stat-t2-roc-single', format:'png'}]);
-                    content += uiComponents.createStatistikCard('as-vs-t2-vergleich', `Vergleich AS vs. T2 - Kollektiv: ${getKollektivDisplayName(currentKollektiv)}`, statistikTabLogic.createVergleichContentHTML(stats.vergleich, currentKollektiv, 'T2'), false, 'statistikTab.asVsT2VergleichCard');
-                    content += uiComponents.createStatistikCard('assoziationen', `Assoziationen mit N-Status - Kollektiv: ${getKollektivDisplayName(currentKollektiv)}`, statistikTabLogic.createAssoziationContentHTML(stats.assoziationen, currentKollektiv, t2CriteriaManager.getAppliedCriteria()), false, 'statistikTab.assoziationenCard');
-                    content += uiComponents.createStatistikCard('kriterien-vergleich-global', `Vergleich Kriteriensätze - Kollektiv: ${getKollektivDisplayName(currentKollektiv)}`, statistikTabLogic.createCriteriaComparisonTableHTML(data.criteriaComparisonResults || [], currentKollektiv), false, 'statistikTab.kriterienVergleichCard');
-
-                } else {
-                    content = `<p class="text-muted">Statistiken für Kollektiv ${getKollektivDisplayName(currentKollektiv)} nicht verfügbar.</p>`;
-                }
-            } else if (layout === 'vergleich') {
-                const kollektiv1 = stateManager.getCurrentStatsKollektiv1();
-                const kollektiv2 = stateManager.getCurrentStatsKollektiv2();
-                const stats1 = data.statistics[kollektiv1];
-                const stats2 = data.statistics[kollektiv2];
-                content = `<div class="row g-3">
-                                <div class="col-lg-6">${uiComponents.createStatistikCard('deskriptiv-stats-k1', `Deskriptive Statistik - Kollektiv: ${getKollektivDisplayName(kollektiv1)}`, stats1 ? statistikTabLogic.createDeskriptiveStatistikContentHTML(stats1, 'k1', kollektiv1) : '<p class="text-muted small p-2">Daten nicht verfügbar.</p>', true, 'statistikTab.deskriptivCard')}</div>
-                                <div class="col-lg-6">${uiComponents.createStatistikCard('deskriptiv-stats-k2', `Deskriptive Statistik - Kollektiv: ${getKollektivDisplayName(kollektiv2)}`, stats2 ? statistikTabLogic.createDeskriptiveStatistikContentHTML(stats2, 'k2', kollektiv2) : '<p class="text-muted small p-2">Daten nicht verfügbar.</p>', true, 'statistikTab.deskriptivCard')}</div>
-                                <div class="col-lg-6">${uiComponents.createStatistikCard('as-guete-k1', `Diagnostische Güte AS - Kollektiv: ${getKollektivDisplayName(kollektiv1)}`, stats1 ? statistikTabLogic.createGueteContentHTML(stats1.as, 'AS', kollektiv1) : '<p class="text-muted small p-2">Daten nicht verfügbar.</p>', false, 'statistikTab.asGueteCard',[{chartId: 'chart-stat-as-roc-k1', format:'svg'},{chartId: 'chart-stat-as-roc-k1', format:'png'}])}</div>
-                                <div class="col-lg-6">${uiComponents.createStatistikCard('as-guete-k2', `Diagnostische Güte AS - Kollektiv: ${getKollektivDisplayName(kollektiv2)}`, stats2 ? statistikTabLogic.createGueteContentHTML(stats2.as, 'AS', kollektiv2) : '<p class="text-muted small p-2">Daten nicht verfügbar.</p>', false, 'statistikTab.asGueteCard',[{chartId: 'chart-stat-as-roc-k2', format:'svg'},{chartId: 'chart-stat-as-roc-k2', format:'png'}])}</div>
-                                <div class="col-lg-6">${uiComponents.createStatistikCard('t2-guete-k1', `Diagnostische Güte T2 - Kollektiv: ${getKollektivDisplayName(kollektiv1)}`, stats1 ? statistikTabLogic.createGueteContentHTML(stats1.t2, 'T2', kollektiv1) : '<p class="text-muted small p-2">Daten nicht verfügbar.</p>', false, 'statistikTab.t2GueteCard',[{chartId: 'chart-stat-t2-roc-k1', format:'svg'},{chartId: 'chart-stat-t2-roc-k1', format:'png'}])}</div>
-                                <div class="col-lg-6">${uiComponents.createStatistikCard('t2-guete-k2', `Diagnostische Güte T2 - Kollektiv: ${getKollektivDisplayName(kollektiv2)}`, stats2 ? statistikTabLogic.createGueteContentHTML(stats2.t2, 'T2', kollektiv2) : '<p class="text-muted small p-2">Daten nicht verfügbar.</p>', false, 'statistikTab.t2GueteCard', [{chartId: 'chart-stat-t2-roc-k2', format:'svg'},{chartId: 'chart-stat-t2-roc-k2', format:'png'}])}</div>
-                           </div>`;
-                if (data.kollektivVergleichStats) {
-                    content += `<div class="mt-3">${uiComponents.createStatistikCard('kollektiv-vergleich', `Direkter Vergleich: ${getKollektivDisplayName(kollektiv1)} vs. ${getKollektivDisplayName(kollektiv2)}`, statistikTabLogic.createVergleichKollektiveContentHTML(data.kollektivVergleichStats, kollektiv1, kollektiv2), false, 'statistikTab.kollektivVergleichCard')}</div>`;
-                }
-            }
-            return `<div id="statistik-layout-controls" class="mb-3"></div>${content}`;
-        },
-        'praesentation-tab-pane': (data) => {
-            const currentView = stateManager.getCurrentPresentationView();
-            const selectedStudyId = stateManager.getCurrentPresentationStudyId();
-            return praesentationTabLogic.createPresentationTabContent(currentView, data.presentationData, selectedStudyId, currentKollektiv);
-        },
-        'publikation-tab-pane': (data) => {
-             const headerHTML = uiComponents.createPublikationTabHeader();
-             return headerHTML;
-        },
-        'export-tab-pane': (data) => uiComponents.createExportOptions(currentKollektiv)
+        'statistik-tab-pane': (data, options) => statistikTabLogic.createStatistikTabContent(data.patientenDaten, options.currentKollektiv, options.statsLayout, options.statsKollektiv1, options.statsKollektiv2, options.selectedAppliedCriteria, options.selectedT2Logic),
+        'praesentation-tab-pane': (data, options) => praesentationTabLogic.createPresentationTabContent(options.currentView, options.presentationData, options.selectedStudyId, options.currentKollektiv),
+        'publikation-tab-pane': (data, options) => publikationTabLogic.getPublikationTabHTML(options.currentLang, options.currentSection, options.publicationData),
+        'export-tab-pane': (data, options) => uiComponents.createExportOptions(options.currentKollektiv)
     };
 
-    function initialize(initialKollektiv) {
-        currentKollektiv = initialKollektiv;
-        currentActiveTabId = stateManager.getActiveTabId();
-        isInitialized = true;
-    }
-
-    function renderTabContent(tabId, data = {}, options = {}) {
-        currentActiveTabId = tabId;
-        currentKollektiv = stateManager.getCurrentKollektiv();
-        const tabPaneContentContainer = document.getElementById(tabId);
-
-        if (!tabPaneContentContainer) {
-            console.error(`Tab-Container '${tabId}' nicht gefunden.`);
-            return;
+    function initialize(data, bfManager) {
+        currentData = data;
+        bruteForceManagerInstance = bfManager;
+        if (currentData && currentData.patientenDaten && Array.isArray(currentData.patientenDaten)) {
+            dataProcessed = true;
         }
-        if (typeof tabContentFunctions[tabId] !== 'function') {
-            console.error(`Keine Rendering-Funktion für Tab-ID '${tabId}' definiert.`);
-            ui_helpers.updateElementHTML(tabPaneContentContainer.id, `<p class="text-danger">Inhalt für diesen Tab konnte nicht geladen werden.</p>`);
-            return;
-        }
-
-        try {
-            const content = tabContentFunctions[tabId](data);
-            ui_helpers.updateElementHTML(tabPaneContentContainer.id, content);
-
-            if (tabId === 'statistik-tab-pane') {
-                 statistikEventHandlers.renderLayoutControls(stateManager.getCurrentStatsLayout(), stateManager.getCurrentStatsKollektiv1(), stateManager.getCurrentStatsKollektiv2());
-                 if (data.statistics && chartRenderer) {
-                    const layout = stateManager.getCurrentStatsLayout();
-                    const kollektiv1 = layout === 'vergleich' ? stateManager.getCurrentStatsKollektiv1() : currentKollektiv;
-                    const kollektiv2 = layout === 'vergleich' ? stateManager.getCurrentStatsKollektiv2() : null;
-                    chartRenderer.renderStatistikCharts(data.statistics, kollektiv1, kollektiv2, layout);
-                 }
-            } else if (tabId === 'auswertung-tab-pane') {
-                auswertungTabLogic.initialize(data.patientenFuerAuswertung, bruteForceManager);
-                ui_helpers.updateT2CriteriaControlsUI(t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
-                if (bruteForceManager) {
-                    bruteForceManager.updateKollektiv(currentKollektiv);
-                    bruteForceManager.updateUIBasedOnState();
-                }
-            } else if (tabId === 'daten-tab-pane') {
-                dataTabLogic.initialize(data.patienten, stateManager.getDatenTableSort());
-            } else if (tabId === 'praesentation-tab-pane') {
-                 if (data.presentationData && chartRenderer) {
-                     chartRenderer.renderPraesentationCharts(stateManager.getCurrentPresentationView(), data.presentationData, stateManager.getCurrentPresentationStudyId());
-                 }
-                 praesentationEventHandlers.renderStudySelector(stateManager.getCurrentPresentationStudyId(), data.presentationData?.availableStudySets || []);
-                 ui_helpers.updatePresentationViewSelectorUI(stateManager.getCurrentPresentationView());
-            } else if (tabId === 'export-tab-pane') {
-                exportEventHandlers.updateButtonStates();
-            } else if (tabId === 'publikation-tab-pane') {
-                publikationTabLogic.renderContent();
-            }
-
-            ui_helpers.initializeTooltips(tabPaneContentContainer);
-            if (options.focusElementId) {
-                const focusEl = document.getElementById(options.focusElementId);
-                if (focusEl) focusEl.focus();
-            }
-
-        } catch (error) {
-            console.error(`Fehler beim Rendern des Tabs '${tabId}':`, error);
-            ui_helpers.updateElementHTML(tabPaneContentContainer.id, `<p class="text-danger">Ein Fehler ist beim Laden dieses Tabs aufgetreten. Details siehe Konsole.</p>`);
-        }
+        activeTabId = stateManager.getActiveTabId() || 'daten-tab-pane';
+        renderTabContent(activeTabId);
     }
     
-    function refreshCurrentTab(data, options) {
-        if (currentActiveTabId && isInitialized) {
-            renderTabContent(currentActiveTabId, data, options);
+    function showInitialScreen() {
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const appContainer = document.getElementById('app-container');
+        if (loadingIndicator) loadingIndicator.style.display = 'flex';
+        if (appContainer) appContainer.style.visibility = 'hidden';
+
+        setTimeout(() => {
+            ui_helpers.showKurzanleitung();
+            if (loadingIndicator) loadingIndicator.style.display = 'none';
+            if (appContainer) appContainer.style.visibility = 'visible';
+        }, APP_CONFIG.UI_SETTINGS.SPINNER_DELAY_MS + 500);
+    }
+
+    function hideLoadingIndicator() {
+         const loadingIndicator = document.getElementById('loading-indicator');
+         if (loadingIndicator) loadingIndicator.style.display = 'none';
+         const appContainer = document.getElementById('app-container');
+         if (appContainer) appContainer.style.visibility = 'visible';
+    }
+
+    function renderTabContent(tabId, options = {}) {
+        const tabPaneContentContainer = document.getElementById(tabId);
+        if (!tabPaneContentContainer) {
+            console.error(`Tab-Container mit ID ${tabId} nicht gefunden.`);
+            return;
+        }
+
+        if (!currentData || !dataProcessed) {
+            console.warn("Daten sind noch nicht vollständig geladen oder verarbeitet für Tab:", tabId);
+            ui_helpers.updateElementHTML(tabPaneContentContainer.id, '<p class="text-center text-muted">Daten werden geladen...</p>');
+            return;
+        }
+
+        let content = `<p class="text-danger">Inhalt für Tab '${tabId}' konnte nicht generiert werden.</p>`;
+        const renderFunction = tabContentFunctions[tabId];
+
+        if (typeof renderFunction === 'function') {
+            const defaultOptions = {
+                currentKollektiv: stateManager.getCurrentKollektiv(),
+                currentKollektivName: getKollektivDisplayName(stateManager.getCurrentKollektiv()),
+                sortState: tabId === 'daten-tab-pane' ? stateManager.getDatenTableSort() : stateManager.getAuswertungTableSort(),
+                appliedCriteria: t2CriteriaManager.getAppliedCriteria(),
+                appliedLogic: t2CriteriaManager.getAppliedLogic(),
+                workerAvailable: bruteForceManagerInstance ? bruteForceManagerInstance.isWorkerAvailable() : false,
+                t2Metrics: statisticsService.calculatePerformanceMetrics(currentData.patientenDaten, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), stateManager.getCurrentKollektiv()).t2,
+                statsLayout: stateManager.getStatsLayout(),
+                statsKollektiv1: stateManager.getStatsKollektiv1(),
+                statsKollektiv2: stateManager.getStatsKollektiv2(),
+                selectedAppliedCriteria: t2CriteriaManager.getAppliedCriteria(),
+                selectedT2Logic: t2CriteriaManager.getAppliedLogic(),
+                currentView: stateManager.getPresentationView(),
+                presentationData: mainAppInterface.getPresentationData(),
+                selectedStudyId: stateManager.getPresentationStudyId(),
+                currentLang: stateManager.getCurrentPublikationLang(),
+                currentSection: stateManager.getCurrentPublikationSection(),
+                publicationData: mainAppInterface.getPublicationData()
+            };
+            const mergedOptions = { ...defaultOptions, ...options };
+            try {
+                content = renderFunction(currentData, mergedOptions);
+            } catch (error) {
+                console.error(`Fehler beim Generieren des Inhalts für Tab ${tabId}:`, error);
+                content = `<p class="text-danger">Fehler beim Laden des Inhalts für Tab ${tabId}. Details siehe Konsole.</p>`;
+            }
+        }
+        
+        ui_helpers.updateElementHTML(tabPaneContentContainer.id, content);
+
+        if (typeof ui_helpers.initializeTooltips === 'function') {
+            ui_helpers.initializeTooltips(tabPaneContentContainer);
+        }
+
+        if (tabId === 'daten-tab-pane' && typeof dataTabLogic.refreshUI === 'function') {
+            dataTabLogic.refreshUI();
+        } else if (tabId === 'auswertung-tab-pane' && typeof auswertungTabLogic.refreshUI === 'function') {
+            auswertungTabLogic.refreshUI();
+        } else if (tabId === 'statistik-tab-pane' && typeof statistikEventHandlers.attachStatistikEventListeners === 'function') {
+            statistikEventHandlers.attachStatistikEventListeners(currentData.patientenDaten);
+        } else if (tabId === 'praesentation-tab-pane' && typeof praesentationEventHandlers.attachPraesentationEventListeners === 'function') {
+            praesentationEventHandlers.attachPraesentationEventListeners();
+        } else if (tabId === 'publikation-tab-pane' && typeof publikationEventHandlers.attachPublikationEventListeners === 'function') {
+            publikationEventHandlers.attachPublikationEventListeners();
+        } else if (tabId === 'export-tab-pane' && typeof exportEventHandlers.attachExportEventListeners === 'function') {
+            exportEventHandlers.attachExportEventListeners();
+        }
+        
+        const mainTabContent = document.getElementById('mainTabContent');
+        if(mainTabContent) mainTabContent.scrollTop = 0;
+    }
+
+    function updateCurrentData(newData) {
+        currentData = newData;
+        if (currentData && currentData.patientenDaten && Array.isArray(currentData.patientenDaten)) {
+            dataProcessed = true;
+        } else {
+            dataProcessed = false;
         }
     }
 
     return Object.freeze({
         initialize,
         renderTabContent,
-        refreshCurrentTab
+        updateCurrentData,
+        showInitialScreen,
+        hideLoadingIndicator
     });
-
 })();
