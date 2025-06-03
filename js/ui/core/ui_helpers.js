@@ -48,72 +48,84 @@ const ui_helpers = (() => {
             return;
         }
 
-        // 1. Bereinige globalTippyInstances von Instanzen, deren Elemente nicht mehr im DOM sind
+        // 1. Bereinige globalTippyInstances von Instanzen, deren Elemente nicht mehr im DOM sind oder nicht mehr im aktuellen Scope (falls spezifisch)
         globalTippyInstances = globalTippyInstances.filter(instance => {
             if (!instance || !instance.reference || !document.body.contains(instance.reference)) {
                 try { if (instance.destroy) instance.destroy(); } catch (e) { /* Fehler beim Zerstören ignorieren */ }
-                return false; // Entferne aus dem Array
+                return false;
+            }
+            if (scope !== document.body && instance.reference && !scope.contains(instance.reference)) {
+                 try { if (instance.destroy) instance.destroy(); } catch (e) { /* Fehler beim Zerstören ignorieren */ }
+                 return false;
             }
             return true;
         });
 
         // 2. Identifiziere Elemente im aktuellen Scope, die einen Tooltip benötigen
-        const elementsInScope = Array.from(scope.matches('[data-tippy-content]') ? [scope] : scope.querySelectorAll('[data-tippy-content]'));
+        let elementsInScope = [];
+        if (scope.matches && scope.matches('[data-tippy-content]')) {
+            elementsInScope.push(scope);
+        }
+        elementsInScope.push(...Array.from(scope.querySelectorAll('[data-tippy-content]')));
+        
+        // Entferne Duplikate, falls scope selbst selektiert wurde und auch in querySelectorAll enthalten ist
+        elementsInScope = [...new Set(elementsInScope)];
 
-        // 3. Zerstöre alle *bekannten* (in globalTippyInstances) Tippy-Instanzen, die an Elemente im aktuellen `scope` gebunden sind.
-        // Dies ist wichtig, um sicherzustellen, dass wir nicht versuchen, auf alten Instanzen aufzubauen oder Konflikte zu erzeugen.
-        const instancesToDestroyInScope = globalTippyInstances.filter(instance =>
+
+        // 3. Zerstöre explizit alle *bekannten* Tippy-Instanzen, die an Elemente gebunden sind, die jetzt neu initialisiert werden sollen.
+        const instancesToReinitialize = globalTippyInstances.filter(instance =>
             instance.reference && elementsInScope.includes(instance.reference)
         );
 
-        instancesToDestroyInScope.forEach(instance => {
+        instancesToReinitialize.forEach(instance => {
             try {
                 instance.destroy();
             } catch (e) {
-                console.warn("Fehler beim gezielten Zerstören einer Tippy-Instanz im Scope:", e, instance.reference);
+                console.warn("Fehler beim gezielten Zerstören einer Tippy-Instanz vor Neuanlage:", e, instance.reference);
             }
         });
-
-        // 4. Entferne die zerstörten Instanzen aus globalTippyInstances
-        globalTippyInstances = globalTippyInstances.filter(instance => !instancesToDestroyInScope.includes(instance));
+        globalTippyInstances = globalTippyInstances.filter(instance => !instancesToReinitialize.includes(instance));
         
-        // 5. Erstelle neue Tippy-Instanzen für die Elemente im Scope
-        if (elementsInScope.length > 0) {
-            const newInstances = tippy(elementsInScope, {
-                allowHTML: true,
-                theme: 'glass',
-                placement: 'top',
-                animation: 'fade',
-                interactive: false,
-                appendTo: () => document.body,
-                delay: APP_CONFIG.UI_SETTINGS.TOOLTIP_DELAY || [150, 50],
-                maxWidth: 400,
-                duration: [150, 150],
-                zIndex: 3050, // Höher als Modal-Backdrop (Bootstrap default 1050, Toast 1100)
-                onCreate(instance) {
-                    // Deaktiviere Tooltips, die keinen Inhalt haben oder nur aus Leerzeichen bestehen
-                    const content = instance.reference.getAttribute('data-tippy-content');
-                    if (!content || String(content).trim() === '') {
-                        instance.disable();
-                    }
-                },
-                onShow(instance) {
-                    // Stelle sicher, dass der Inhalt aktuell ist, falls er dynamisch geändert wurde
-                    const content = instance.reference.getAttribute('data-tippy-content');
-                    if (content && String(content).trim() !== '') {
-                        instance.setContent(content);
-                        return true; // Tooltip anzeigen
-                    } else {
-                        return false; // Tooltip nicht anzeigen, wenn kein Inhalt
-                    }
-                }
-            });
+        // 4. Erstelle neue Tippy-Instanzen für die Elemente im Scope, die tatsächlich noch im DOM sind
+        const validElementsForTippy = elementsInScope.filter(el => document.body.contains(el));
 
-            // Füge die neu erstellten Instanzen zu globalTippyInstances hinzu
-            if (Array.isArray(newInstances)) {
-                globalTippyInstances.push(...newInstances.filter(inst => inst !== null && inst !== undefined));
-            } else if (newInstances) { // Falls tippy nur eine einzelne Instanz zurückgibt
-                globalTippyInstances.push(newInstances);
+        if (validElementsForTippy.length > 0) {
+            try {
+                const newInstances = tippy(validElementsForTippy, {
+                    allowHTML: true,
+                    theme: 'glass',
+                    placement: 'top',
+                    animation: 'fade',
+                    interactive: false,
+                    appendTo: () => document.body, // Sicherstellen, dass appendTo ein gültiges Element zurückgibt
+                    delay: APP_CONFIG.UI_SETTINGS.TOOLTIP_DELAY || [150, 50],
+                    maxWidth: 400,
+                    duration: [150, 150],
+                    zIndex: 3050,
+                    onCreate(instance) {
+                        const content = instance.reference.getAttribute('data-tippy-content');
+                        if (!content || String(content).trim() === '') {
+                            instance.disable();
+                        }
+                    },
+                    onShow(instance) {
+                        const content = instance.reference.getAttribute('data-tippy-content');
+                        if (content && String(content).trim() !== '') {
+                            instance.setContent(content);
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    }
+                });
+
+                if (Array.isArray(newInstances)) {
+                    globalTippyInstances.push(...newInstances.filter(inst => inst !== null && inst !== undefined));
+                } else if (newInstances) {
+                    globalTippyInstances.push(newInstances);
+                }
+            } catch (error) {
+                console.error("Fehler während der Tippy-Initialisierung:", error, validElementsForTippy);
             }
         }
     }
@@ -193,8 +205,8 @@ const ui_helpers = (() => {
                      th.style.color = 'var(--primary-color)';
                      icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
                 } else if (!isSubKeySortActive && (!sortState.key || key !== sortState.key)) {
-                    // Reset main header icon if no subkey is active under a different main key
-                    th.querySelector('i.fas').className = 'fas fa-sort text-muted opacity-50 ms-1';
+                    const thIcon = th.querySelector('i.fas');
+                    if (thIcon) thIcon.className = 'fas fa-sort text-muted opacity-50 ms-1';
                 }
             } else {
                 if (key === sortState.key && (sortState.subKey === null || sortState.subKey === undefined)) {
@@ -203,7 +215,9 @@ const ui_helpers = (() => {
                 }
             }
         });
-        initializeTooltips(tableHeader);
+        if (typeof tippy !== 'undefined' && tableHeader.querySelectorAll('[data-tippy-content]').length > 0) {
+            initializeTooltips(tableHeader);
+        }
     }
 
     function toggleAllDetails(tableBodyId, buttonId) {
@@ -411,11 +425,12 @@ const ui_helpers = (() => {
         if (toggleBtn) {
             toggleBtn.classList.toggle('active', isVergleich);
             toggleBtn.setAttribute('aria-pressed', String(isVergleich));
-            const buttonText = isVergleich ? (currentLang === 'de' ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-users-cog me-1"></i> Comparison Active')
-                                          : (currentLang === 'de' ? '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv' : '<i class="fas fa-user-cog me-1"></i> Single View Active');
+            const buttonText = isVergleich ? (UI_TEXTS.statistikTab.layoutSwitchLabel.vergleich || '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv')
+                                          : (UI_TEXTS.statistikTab.layoutSwitchLabel.einzel || '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv');
             updateElementHTML(toggleBtn.id, buttonText);
             
-            const tooltipText = (TOOLTIP_CONTENT.statistikTab?.layoutSwitchLabel?.description || (currentLang === 'de' ? 'Layout umschalten zwischen Einzel- und Vergleichsansicht.' : 'Toggle layout between single and comparison view.'));
+            const tooltipTextKey = isVergleich ? 'vergleich' : 'einzel';
+            const tooltipText = (TOOLTIP_CONTENT.statistikLayoutSwitch?.[tooltipTextKey] || (currentLang === 'de' ? 'Layout umschalten.' : 'Toggle layout.'));
             if(toggleBtn._tippy) toggleBtn._tippy.setContent(tooltipText);
             else initializeTooltips(toggleBtn.parentElement || toggleBtn);
         }
@@ -505,7 +520,7 @@ const ui_helpers = (() => {
                     el.setAttribute('data-tippy-content', content);
                     if (currentTippy && currentTippy.state.isEnabled) {
                         currentTippy.setContent(content);
-                    } else if (!currentTippy) {
+                    } else if (!currentTippy && typeof tippy !== 'undefined') { // Sicherstellen, dass tippy verfügbar ist
                         initializeTooltips(el.parentElement || el);
                     }
                 } else if (currentTippy && currentTippy.state.isEnabled) {
@@ -639,7 +654,10 @@ const ui_helpers = (() => {
             'download-tests-as-vs-t2-md'
         ];
         praesButtons.forEach(id => {
-            trySetDisabled(id, !isPresentationTabActive || dataDisabled);
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.disabled = !isPresentationTabActive || dataDisabled;
+            }
         });
 
         document.querySelectorAll('.chart-download-btn, .table-download-png-btn').forEach(btn => {
@@ -875,8 +893,8 @@ const ui_helpers = (() => {
             if (!initialTabRenderFixed && typeof mainAppInterfaceInstance?.refreshCurrentTab === 'function') {
                 modalElement.addEventListener('hidden.bs.modal', () => {
                     if (!initialTabRenderFixed) {
-                        const defaultInitialTabId = APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION === 'methoden' && APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG ? 'publikation-tab-pane' : 'daten-tab-pane';
-                        if (typeof stateManager !== 'undefined' && stateManager.getActiveTabId() === defaultInitialTabId || (typeof stateManager !== 'undefined' && stateManager.getActiveTabId() === 'publikation-tab-pane')) {
+                        const defaultInitialTabId = (APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION === 'methoden' && APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG) ? 'publikation-tab-pane' : 'daten-tab-pane';
+                        if (typeof stateManager !== 'undefined' && (stateManager.getActiveTabId() === defaultInitialTabId || stateManager.getActiveTabId() === 'publikation-tab-pane')) {
                              try { mainAppInterfaceInstance.refreshCurrentTab(); } catch (e) { console.error("Fehler beim Refresh nach Kurzanleitung:", e); }
                         }
                     }
