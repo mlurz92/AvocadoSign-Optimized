@@ -48,24 +48,36 @@ const ui_helpers = (() => {
             return;
         }
 
-        const elementsInScope = Array.from(scope.matches('[data-tippy-content]') ? [scope] : scope.querySelectorAll('[data-tippy-content]'));
-
+        // 1. Bereinige globalTippyInstances von Instanzen, deren Elemente nicht mehr im DOM sind
         globalTippyInstances = globalTippyInstances.filter(instance => {
             if (!instance || !instance.reference || !document.body.contains(instance.reference)) {
-                try { if(instance.destroy) instance.destroy(); } catch (e) {}
-                return false;
+                try { if (instance.destroy) instance.destroy(); } catch (e) { /* Fehler beim Zerstören ignorieren */ }
+                return false; // Entferne aus dem Array
             }
             return true;
         });
 
-        elementsInScope.forEach(el => {
-            if (el._tippy) {
-                try {
-                    el._tippy.destroy();
-                } catch (e) {}
+        // 2. Identifiziere Elemente im aktuellen Scope, die einen Tooltip benötigen
+        const elementsInScope = Array.from(scope.matches('[data-tippy-content]') ? [scope] : scope.querySelectorAll('[data-tippy-content]'));
+
+        // 3. Zerstöre alle *bekannten* (in globalTippyInstances) Tippy-Instanzen, die an Elemente im aktuellen `scope` gebunden sind.
+        // Dies ist wichtig, um sicherzustellen, dass wir nicht versuchen, auf alten Instanzen aufzubauen oder Konflikte zu erzeugen.
+        const instancesToDestroyInScope = globalTippyInstances.filter(instance =>
+            instance.reference && elementsInScope.includes(instance.reference)
+        );
+
+        instancesToDestroyInScope.forEach(instance => {
+            try {
+                instance.destroy();
+            } catch (e) {
+                console.warn("Fehler beim gezielten Zerstören einer Tippy-Instanz im Scope:", e, instance.reference);
             }
         });
+
+        // 4. Entferne die zerstörten Instanzen aus globalTippyInstances
+        globalTippyInstances = globalTippyInstances.filter(instance => !instancesToDestroyInScope.includes(instance));
         
+        // 5. Erstelle neue Tippy-Instanzen für die Elemente im Scope
         if (elementsInScope.length > 0) {
             const newInstances = tippy(elementsInScope, {
                 allowHTML: true,
@@ -77,25 +89,30 @@ const ui_helpers = (() => {
                 delay: APP_CONFIG.UI_SETTINGS.TOOLTIP_DELAY || [150, 50],
                 maxWidth: 400,
                 duration: [150, 150],
-                zIndex: 3050,
+                zIndex: 3050, // Höher als Modal-Backdrop (Bootstrap default 1050, Toast 1100)
                 onCreate(instance) {
-                    if (!instance.props.content || String(instance.props.content).trim() === '') {
+                    // Deaktiviere Tooltips, die keinen Inhalt haben oder nur aus Leerzeichen bestehen
+                    const content = instance.reference.getAttribute('data-tippy-content');
+                    if (!content || String(content).trim() === '') {
                         instance.disable();
                     }
                 },
                 onShow(instance) {
+                    // Stelle sicher, dass der Inhalt aktuell ist, falls er dynamisch geändert wurde
                     const content = instance.reference.getAttribute('data-tippy-content');
                     if (content && String(content).trim() !== '') {
                         instance.setContent(content);
-                        return true;
+                        return true; // Tooltip anzeigen
                     } else {
-                        return false;
+                        return false; // Tooltip nicht anzeigen, wenn kein Inhalt
                     }
                 }
             });
+
+            // Füge die neu erstellten Instanzen zu globalTippyInstances hinzu
             if (Array.isArray(newInstances)) {
-                globalTippyInstances = globalTippyInstances.concat(newInstances.filter(inst => inst !== null && inst !== undefined));
-            } else if (newInstances) {
+                globalTippyInstances.push(...newInstances.filter(inst => inst !== null && inst !== undefined));
+            } else if (newInstances) { // Falls tippy nur eine einzelne Instanz zurückgibt
                 globalTippyInstances.push(newInstances);
             }
         }
@@ -175,6 +192,9 @@ const ui_helpers = (() => {
                 if (!isSubKeySortActive && key === sortState.key && (sortState.subKey === null || sortState.subKey === undefined)) {
                      th.style.color = 'var(--primary-color)';
                      icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
+                } else if (!isSubKeySortActive && (!sortState.key || key !== sortState.key)) {
+                    // Reset main header icon if no subkey is active under a different main key
+                    th.querySelector('i.fas').className = 'fas fa-sort text-muted opacity-50 ms-1';
                 }
             } else {
                 if (key === sortState.key && (sortState.subKey === null || sortState.subKey === undefined)) {
@@ -211,7 +231,7 @@ const ui_helpers = (() => {
         const newAction = expand ? 'collapse' : 'expand';
         button.dataset.action = newAction;
         const iconClass = expand ? 'fa-chevron-up' : 'fa-chevron-down';
-        const currentLang = typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function' ? state.getCurrentPublikationLang() : 'de';
+        const currentLang = typeof stateManager !== 'undefined' && typeof stateManager.getCurrentPublikationLang === 'function' ? stateManager.getCurrentPublikationLang() : 'de';
         const buttonText = expand ? (currentLang === 'de' ? 'Alle Details Ausblenden' : 'Collapse All Details')
                                   : (currentLang === 'de' ? 'Alle Details Anzeigen' : 'Expand All Details');
 
@@ -219,7 +239,7 @@ const ui_helpers = (() => {
         if (buttonId === 'daten-toggle-details') tooltipKeyBase = 'datenTable';
         else if (buttonId === 'auswertung-toggle-details') tooltipKeyBase = 'auswertungTable';
         
-        const tooltipContentBase = TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll || (currentLang === 'de' ? 'Alle Details ein-/ausblenden' : 'Expand/collapse all details');
+        const tooltipContentBase = (TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll || (currentLang === 'de' ? 'Alle Details ein-/ausblenden' : 'Expand/collapse all details'));
         const currentTooltipText = expand ? tooltipContentBase.replace(currentLang === 'de' ? 'ein-' : 'Expand', currentLang === 'de' ? 'aus-' : 'Collapse').replace(currentLang === 'de' ? 'anzeigen' : 'Expand', currentLang === 'de' ? 'ausblenden' : 'Collapse')
                                       : tooltipContentBase.replace(currentLang === 'de' ? 'aus-' : 'Collapse', currentLang === 'de' ? 'ein-' : 'Expand').replace(currentLang === 'de' ? 'ausblenden' : 'Collapse', currentLang === 'de' ? 'anzeigen' : 'Expand');
 
@@ -385,7 +405,7 @@ const ui_helpers = (() => {
         const select1 = document.getElementById('statistik-kollektiv-select-1');
         const select2 = document.getElementById('statistik-kollektiv-select-2');
         const isVergleich = layout === 'vergleich';
-        const currentLang = typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function' ? state.getCurrentPublikationLang() : 'de';
+        const currentLang = typeof stateManager !== 'undefined' && typeof stateManager.getCurrentPublikationLang === 'function' ? stateManager.getCurrentPublikationLang() : 'de';
 
 
         if (toggleBtn) {
@@ -395,12 +415,19 @@ const ui_helpers = (() => {
                                           : (currentLang === 'de' ? '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv' : '<i class="fas fa-user-cog me-1"></i> Single View Active');
             updateElementHTML(toggleBtn.id, buttonText);
             
-            const tooltipText = TOOLTIP_CONTENT.statistikToggleVergleich?.description || (currentLang === 'de' ? 'Layout umschalten' : 'Toggle layout');
+            const tooltipText = (TOOLTIP_CONTENT.statistikTab?.layoutSwitchLabel?.description || (currentLang === 'de' ? 'Layout umschalten zwischen Einzel- und Vergleichsansicht.' : 'Toggle layout between single and comparison view.'));
             if(toggleBtn._tippy) toggleBtn._tippy.setContent(tooltipText);
             else initializeTooltips(toggleBtn.parentElement || toggleBtn);
         }
         if (container1) container1.classList.toggle('d-none', !isVergleich);
         if (container2) container2.classList.toggle('d-none', !isVergleich);
+        
+        const einzelSelectContainer = document.getElementById('statistik-kollektiv-select-einzel-container');
+        if (einzelSelectContainer) einzelSelectContainer.classList.toggle('d-none', isVergleich);
+        
+        const einzelSelect = document.getElementById('statistik-kollektiv-select-einzel');
+        if(einzelSelect) einzelSelect.value = stateManager.getCurrentKollektiv() || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
+
         if (select1) select1.value = kollektiv1 || APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1;
         if (select2) select2.value = kollektiv2 || APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2;
     }
@@ -536,7 +563,7 @@ const ui_helpers = (() => {
                 if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: ${percentStr} (${testedNum}/${totalNumProg})`);
                 if (data?.currentBest && data.currentBest.criteria && isFinite(data.currentBest.metricValue)) {
                     const bestValStr = formatNumber(data.currentBest.metricValue, 4);
-                    const bestCritStr = formatCriteriaFunc(data.currentBest.criteria, data.currentBest.logic);
+                    const bestCritStr = formatCriteriaFunc(data.currentBest.criteria, data.currentBest.logic, false);
                     if (elements.metricLabel) updateElementText(elements.metricLabel.id, data.metric || 'Metrik');
                     if (elements.bestMetric) updateElementText(elements.bestMetric.id, bestValStr);
                     if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, `Beste: ${data.currentBest.logic?.toUpperCase()} - ${bestCritStr}`);
@@ -552,7 +579,7 @@ const ui_helpers = (() => {
                     const metricName = data.metric || 'N/A';
                     const bestValueStr = formatNumber(best.metricValue, 4);
                     const logicStr = best.logic?.toUpperCase() || 'N/A';
-                    const criteriaStr = formatCriteriaFunc(best.criteria, best.logic);
+                    const criteriaStr = formatCriteriaFunc(best.criteria, best.logic, false);
                     const durationStr = formatNumber((data.duration || 0) / 1000, 1);
                     const totalTestedStr = formatNumber(data.totalTested || 0, 0);
                     if (elements.resultMetric) updateElementText(elements.resultMetric.id, metricName);
@@ -603,14 +630,8 @@ const ui_helpers = (() => {
         trySetDisabled('export-md-zip', dataDisabled);
         trySetDisabled('export-png-zip', dataDisabled);
         trySetDisabled('export-svg-zip', dataDisabled);
-
-        trySetDisabled('export-statistik-xlsx', true);
-        trySetDisabled('export-daten-xlsx', true);
-        trySetDisabled('export-auswertung-xlsx', true);
-        trySetDisabled('export-filtered-data-xlsx', true);
-        trySetDisabled('export-xlsx-zip', true);
-
-        const isPresentationTabActive = activeTabId === 'praesentation-tab';
+        
+        const isPresentationTabActive = activeTabId === 'praesentation-tab-pane';
         const praesButtons = [
             'download-performance-as-pur-csv', 'download-performance-as-pur-md',
             'download-performance-as-vs-t2-csv',
@@ -622,10 +643,10 @@ const ui_helpers = (() => {
         });
 
         document.querySelectorAll('.chart-download-btn, .table-download-png-btn').forEach(btn => {
-            if (btn.closest('#statistik-tab-pane')) btn.disabled = activeTabId !== 'statistik-tab' || dataDisabled;
-            else if (btn.closest('#auswertung-tab-pane .dashboard-card-col')) btn.disabled = activeTabId !== 'auswertung-tab' || dataDisabled;
-            else if (btn.closest('#praesentation-tab-pane')) btn.disabled = activeTabId !== 'praesentation-tab' || dataDisabled;
-            else if (btn.closest('#publikation-tab-pane')) btn.disabled = activeTabId !== 'publikation-tab' || dataDisabled;
+            if (btn.closest('#statistik-tab-pane')) btn.disabled = activeTabId !== 'statistik-tab-pane' || dataDisabled;
+            else if (btn.closest('#auswertung-tab-pane .dashboard-card-col')) btn.disabled = activeTabId !== 'auswertung-tab-pane' || dataDisabled;
+            else if (btn.closest('#praesentation-tab-pane')) btn.disabled = activeTabId !== 'praesentation-tab-pane' || dataDisabled;
+            else if (btn.closest('#publikation-tab-pane')) btn.disabled = activeTabId !== 'publikation-tab-pane' || dataDisabled;
         });
          if(document.getElementById('export-bruteforce-modal-txt')) {
             trySetDisabled('export-bruteforce-modal-txt', bfDisabled);
@@ -659,7 +680,7 @@ const ui_helpers = (() => {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
         const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: null, n_trials: null, matrix_components: null };
         const na = '--';
-        const currentLang = typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function' ? state.getCurrentPublikationLang() : 'de';
+        const currentLang = typeof stateManager !== 'undefined' && typeof stateManager.getCurrentPublikationLang === 'function' ? stateManager.getCurrentPublikationLang() : 'de';
         const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
         const isPercent = !(key === 'f1' || key === 'auc');
         const valueStr = formatNumber(data?.value, digits, na, currentLang === 'en');
@@ -681,7 +702,7 @@ const ui_helpers = (() => {
             ciWarning = currentWarningText.replace(currentLang === 'de' ? 'Fallzahlen.' : 'sample sizes.', (currentLang === 'de' ? 'Fallzahlen' : 'sample sizes') + (currentLang === 'de' ? nTrialsWarningDe : nTrialsWarningEn));
         } else if (data?.matrix_components && (key === 'balAcc' || key === 'f1' || key === 'auc')) {
             const mc = data.matrix_components;
-            if (mc && (mc.total < ciWarningThreshold * 2 || mc.rp < ciWarningThreshold/2 || mc.fp < ciWarningThreshold/2 || mc.fn < ciWarningThreshold/2 || mc.rn < ciWarningThreshold/2 )) {
+            if (mc && (mc.total < ciWarningThreshold * 2 || (mc.rp ?? 0) < ciWarningThreshold/2 || (mc.fp ?? 0) < ciWarningThreshold/2 || (mc.fn ?? 0) < ciWarningThreshold/2 || (mc.rn ?? 0) < ciWarningThreshold/2 )) {
                  const matrixWarningDe = ` in der Konfusionsmatrix (Gesamt=${mc.total}).`;
                  const matrixWarningEn = ` in confusion matrix (Total=${mc.total}).`;
                  ciWarning = currentWarningText.replace(currentLang === 'de' ? 'Fallzahlen.' : 'sample sizes.', (currentLang === 'de' ? 'Fallzahlen' : 'sample sizes') + (currentLang === 'de' ? matrixWarningDe : matrixWarningEn));
@@ -716,7 +737,7 @@ const ui_helpers = (() => {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
          if (!testData) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
-        const currentLang = typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function' ? state.getCurrentPublikationLang() : 'de';
+        const currentLang = typeof stateManager !== 'undefined' && typeof stateManager.getCurrentPublikationLang === 'function' ? stateManager.getCurrentPublikationLang() : 'de';
         const pValue = testData?.pValue;
         const pStr = (pValue !== null && !isNaN(pValue)) ? (pValue < 0.001 ? (currentLang === 'de' ? '&lt;0,001' : '&lt;0.001') : formatNumber(pValue, 3, na, currentLang === 'en')) : na;
         const sigSymbol = getStatisticalSignificanceSymbol(pValue);
@@ -735,7 +756,7 @@ const ui_helpers = (() => {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
         if (!assocObj) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
-        const currentLang = typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function' ? state.getCurrentPublikationLang() : 'de';
+        const currentLang = typeof stateManager !== 'undefined' && typeof stateManager.getCurrentPublikationLang === 'function' ? stateManager.getCurrentPublikationLang() : 'de';
         let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '', pVal = NaN, ciWarning = '';
         const assozPValue = assocObj?.pValue;
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
@@ -854,8 +875,8 @@ const ui_helpers = (() => {
             if (!initialTabRenderFixed && typeof mainAppInterfaceInstance?.refreshCurrentTab === 'function') {
                 modalElement.addEventListener('hidden.bs.modal', () => {
                     if (!initialTabRenderFixed) {
-                        const defaultInitialTabId = APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION === 'methoden' && APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG ? 'publikation-tab' : 'daten-tab';
-                        if (typeof state !== 'undefined' && state.getActiveTabId() === defaultInitialTabId || (typeof state !== 'undefined' && state.getActiveTabId() === 'publikation-tab')) {
+                        const defaultInitialTabId = APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION === 'methoden' && APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG ? 'publikation-tab-pane' : 'daten-tab-pane';
+                        if (typeof stateManager !== 'undefined' && stateManager.getActiveTabId() === defaultInitialTabId || (typeof stateManager !== 'undefined' && stateManager.getActiveTabId() === 'publikation-tab-pane')) {
                              try { mainAppInterfaceInstance.refreshCurrentTab(); } catch (e) { console.error("Fehler beim Refresh nach Kurzanleitung:", e); }
                         }
                     }
