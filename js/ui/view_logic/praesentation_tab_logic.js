@@ -12,23 +12,23 @@ const praesentationTabLogic = (() => {
             const kollektivDisplayName = getKollektivDisplayName(kollektivKey);
             const na = '--';
             const fCI_p = (m, k) => { const d = (k === 'auc'||k==='f1') ? 3 : 1; const p = !(k === 'auc'||k==='f1'); return formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, d, p, na); };
-            const getInterpretationTT = (mk, st) => { return ui_helpers.getMetricInterpretationHTML(mk, st, 'AS', kollektivDisplayName); };
-            const tt = TOOLTIP_CONTENT.praesentation.asPurPerfTable || {};
+            const getInterpretationTT = (mk, stData) => { return ui_helpers.getMetricInterpretationHTML(mk, stData, 'AS', kollektivDisplayName); };
+            const ttContext = TOOLTIP_CONTENT.praesentation.asPurPerfTable || {};
 
             if (!stats || typeof stats.matrix !== 'object') {
-                const nPatientsForThisKollektiv = (kollektivKey === 'Gesamt' ? presentationData.statsGesamt?.matrix : (kollektivKey === 'direkt OP' ? presentationData.statsDirektOP?.matrix : presentationData.statsNRCT?.matrix));
-                const countN = nPatientsForThisKollektiv ? (nPatientsForThisKollektiv.rp + nPatientsForThisKollektiv.fp + nPatientsForThisKollektiv.fn + nPatientsForThisKollektiv.rn) : '?';
-                return `<tr><td class="fw-bold" data-tippy-content="${tt.kollektiv || 'Kollektiv'}">${kollektivDisplayName} (N=${countN})</td><td colspan="6" class="text-muted text-center">Daten fehlen</td></tr>`;
+                const nPatientsForThisKollektivData = (kollektivKey === 'Gesamt' ? presentationData.statsGesamt?.matrix : (kollektivKey === 'direkt OP' ? presentationData.statsDirektOP?.matrix : presentationData.statsNRCT?.matrix));
+                const countN = nPatientsForThisKollektivData ? (nPatientsForThisKollektivData.rp + nPatientsForThisKollektivData.fp + nPatientsForThisKollektivData.fn + nPatientsForThisKollektivData.rn) : '?';
+                return `<tr><td class="fw-bold" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${ttContext.kollektiv || 'Kollektiv'}">${kollektivDisplayName} (N=${countN})</td><td colspan="6" class="text-muted text-center">Daten fehlen</td></tr>`;
             }
             const count = stats.matrix ? (stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn) : 0;
             return `<tr>
-                        <td class="fw-bold" data-tippy-content="${tt.kollektiv || 'Patientenkollektiv und dessen Größe (N).'}">${kollektivDisplayName} (N=${count})</td>
-                        <td data-tippy-content="${getInterpretationTT('sens', stats.sens)}">${fCI_p(stats.sens, 'sens')}</td>
-                        <td data-tippy-content="${getInterpretationTT('spez', stats.spez)}">${fCI_p(stats.spez, 'spez')}</td>
-                        <td data-tippy-content="${getInterpretationTT('ppv', stats.ppv)}">${fCI_p(stats.ppv, 'ppv')}</td>
-                        <td data-tippy-content="${getInterpretationTT('npv', stats.npv)}">${fCI_p(stats.npv, 'npv')}</td>
-                        <td data-tippy-content="${getInterpretationTT('acc', stats.acc)}">${fCI_p(stats.acc, 'acc')}</td>
-                        <td data-tippy-content="${getInterpretationTT('auc', stats.auc)}">${fCI_p(stats.auc, 'auc')}</td>
+                        <td class="fw-bold" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${ttContext.kollektiv || 'Patientenkollektiv und dessen Größe (N).'}">${kollektivDisplayName} (N=${count})</td>
+                        <td data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${getInterpretationTT('sens', stats.sens)}">${fCI_p(stats.sens, 'sens')}</td>
+                        <td data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${getInterpretationTT('spez', stats.spez)}">${fCI_p(stats.spez, 'spez')}</td>
+                        <td data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${getInterpretationTT('ppv', stats.ppv)}">${fCI_p(stats.ppv, 'ppv')}</td>
+                        <td data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${getInterpretationTT('npv', stats.npv)}">${fCI_p(stats.npv, 'npv')}</td>
+                        <td data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${getInterpretationTT('acc', stats.acc)}">${fCI_p(stats.acc, 'acc')}</td>
+                        <td data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${getInterpretationTT('auc', stats.auc)}">${fCI_p(stats.auc, 'auc')}</td>
                     </tr>`;
         };
 
@@ -43,26 +43,32 @@ const praesentationTabLogic = (() => {
         const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download';
 
         const tooltipKeys = ['kollektiv', 'sens', 'spez', 'ppv', 'npv', 'acc', 'auc'];
+        let tableHeaderHTML = tooltipKeys.map((key, index) => {
+            const label = index === 0 ? 'Kollektiv' : (key.charAt(0).toUpperCase() + key.slice(1) + '. (95% CI)');
+            const tooltip = TOOLTIP_CONTENT.praesentation.asPurPerfTable?.[key] || ui_helpers.getMetricDescriptionHTML(key, 'AS') || '';
+            return `<th data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${tooltip}">${label}</th>`;
+        }).join('');
+
         let tableHTML = `
             <div class="col-12">
                 <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>AS Performance vs. N für alle Kollektive</span>
-                        <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="dl-${tableId}-png" data-table-id="${tableId}" data-table-name="Praes_AS_Perf_Uebersicht" data-tippy-content="${tablePNGTooltip}"><i class="fas fa-image"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="dl-${tableId}-png" data-table-id="${tableId}" data-table-name="Praes_AS_Perf_Uebersicht" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${tablePNGTooltip}"><i class="fas fa-image"></i></button>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-striped table-hover table-sm small mb-0" id="${tableId}">
                                 <thead class="small">
-                                    <tr>${tooltipKeys.map((key, index) => `<th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable?.[key] || ui_helpers.getMetricDescriptionHTML(key, 'AS') || ''}">${index === 0 ? 'Kollektiv' : (key.charAt(0).toUpperCase() + key.slice(1) + '. (95% CI)')}</th>`).join('')}</tr>
+                                    <tr>${tableHeaderHTML}</tr>
                                 </thead>
                                 <tbody>${kollektives.map(k => createPerfTableRow(statsMap[k], k)).join('')}</tbody>
                             </table>
                         </div>
                     </div>
                     <div class="card-footer text-end p-1">
-                        <button class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-pur-csv" data-tippy-content="${perfCSVTooltip}"><i class="fas fa-file-csv me-1"></i>CSV</button>
-                        <button class="btn btn-sm btn-outline-secondary" id="download-performance-as-pur-md" data-tippy-content="${perfMDTooltip}"><i class="fab fa-markdown me-1"></i>MD</button>
+                        <button class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-pur-csv" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${perfCSVTooltip}"><i class="fas fa-file-csv me-1"></i>CSV</button>
+                        <button class="btn btn-sm btn-outline-secondary" id="download-performance-as-pur-md" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${perfMDTooltip}"><i class="fab fa-markdown me-1"></i>MD</button>
                     </div>
                 </div>
             </div>`;
@@ -73,12 +79,12 @@ const praesentationTabLogic = (() => {
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Visualisierung Güte (AS vs. N) - Kollektiv: ${currentKollektivName}</span>
                         <span class="card-header-buttons">
-                            <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="dl-${chartId}-png" data-chart-id="${chartId}" data-format="png" data-chart-name="AS_Performance_${currentKollektivName.replace(/\s+/g, '_')}" data-tippy-content="${perfChartPNGTooltip}"><i class="fas ${dlIconPNG}"></i></button>
-                            <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="dl-${chartId}-svg" data-chart-id="${chartId}" data-format="svg" data-chart-name="AS_Performance_${currentKollektivName.replace(/\s+/g, '_')}" data-tippy-content="${perfChartSVGTooltip}"><i class="fas ${dlIconSVG}"></i></button>
+                            <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="dl-${chartId}-png" data-chart-id="${chartId}" data-format="png" data-chart-name="AS_Performance_${currentKollektivName.replace(/\s+/g, '_')}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${perfChartPNGTooltip}"><i class="fas ${dlIconPNG}"></i></button>
+                            <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="dl-${chartId}-svg" data-chart-id="${chartId}" data-format="svg" data-chart-name="AS_Performance_${currentKollektivName.replace(/\s+/g, '_')}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${perfChartSVGTooltip}"><i class="fas ${dlIconSVG}"></i></button>
                         </span>
                     </div>
                     <div class="card-body p-1">
-                        <div id="${chartId}" class="praes-chart-container border rounded" style="min-height: 280px;" data-tippy-content="Balkendiagramm der diagnostischen Gütekriterien für Avocado Sign (AS) vs. pathologischen N-Status für das Kollektiv ${currentKollektivName}.">
+                        <div id="${chartId}" class="praes-chart-container border rounded" style="min-height: 280px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="Balkendiagramm der diagnostischen Gütekriterien für Avocado Sign (AS) vs. pathologischen N-Status für das Kollektiv ${currentKollektivName}.">
                             ${hasDataForCurrent ? '' : `<p class="text-center text-muted p-3">Keine Daten für Chart (${currentKollektivName}).</p>`}
                         </div>
                     </div>
@@ -97,6 +103,7 @@ const praesentationTabLogic = (() => {
 
         let comparisonBasisName = "N/A";
         let comparisonInfoHTML = '<p class="text-muted small">Bitte wählen Sie eine Vergleichsbasis für die T2-Kriterien.</p>';
+        const ttContextBasisInfo = TOOLTIP_CONTENT.praesentation.t2BasisInfoCard || {};
 
         if (selectedStudyId && comparisonCriteriaSet) {
             const studyInfo = comparisonCriteriaSet.studyInfo;
@@ -112,11 +119,11 @@ const praesentationTabLogic = (() => {
             }
 
             comparisonInfoHTML = `<dl class="row small mb-0">
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.reference || 'Quelle/Publikation der Kriterien.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.reference ? 'Referenz:' : 'Referenz:'}</dt><dd class="col-sm-8">${studyInfo?.reference || (isApplied ? 'Benutzerdefiniert (aktuell im Auswertungstab eingestellt)' : 'N/A')}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.patientCohort || 'Ursprüngliche Studienkohorte bzw. aktuelles Vergleichskollektiv.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.patientCohort ? 'Orig.-Kohorte / Vergleichsbasis:' : 'Orig.-Kohorte / Vergleichsbasis:'}</dt><dd class="col-sm-8">${studyInfo?.patientCohort || `Aktuell: ${displayKollektivForComparison} (N=${patientCountForComparison || '?'})`}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.investigationType || 'Art der Untersuchung in der Originalstudie (z.B. Primärstaging).')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.investigationType ? 'Untersuchungstyp:' : 'Untersuchungstyp:'}</dt><dd class="col-sm-8">${studyInfo?.investigationType || 'N/A'}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.focus || 'Hauptfokus der Originalstudie bzgl. dieser Kriterien.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.focus ? 'Studienfokus:' : 'Studienfokus:'}</dt><dd class="col-sm-8">${studyInfo?.focus || 'N/A'}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.keyCriteriaSummary || 'Zusammenfassung der angewendeten T2-Kriterien und deren Logik.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.keyCriteriaSummary ? 'Kriterien:' : 'Kriterien:'}</dt><dd class="col-sm-8">${criteriaHTML}</dd>
+                                    <dt class="col-sm-4" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${(ttContextBasisInfo.reference || 'Quelle/Publikation der Kriterien.')}">${ttContextBasisInfo.reference ? 'Referenz:' : 'Referenz:'}</dt><dd class="col-sm-8">${studyInfo?.reference || (isApplied ? 'Benutzerdefiniert (aktuell im Auswertungstab eingestellt)' : 'N/A')}</dd>
+                                    <dt class="col-sm-4" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${(ttContextBasisInfo.patientCohort || 'Ursprüngliche Studienkohorte bzw. aktuelles Vergleichskollektiv.')}">${ttContextBasisInfo.patientCohort ? 'Orig.-Kohorte / Vergleichsbasis:' : 'Orig.-Kohorte / Vergleichsbasis:'}</dt><dd class="col-sm-8">${studyInfo?.patientCohort || `Aktuell: ${displayKollektivForComparison} (N=${patientCountForComparison || '?'})`}</dd>
+                                    <dt class="col-sm-4" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${(ttContextBasisInfo.investigationType || 'Art der Untersuchung in der Originalstudie (z.B. Primärstaging).')}">${ttContextBasisInfo.investigationType ? 'Untersuchungstyp:' : 'Untersuchungstyp:'}</dt><dd class="col-sm-8">${studyInfo?.investigationType || 'N/A'}</dd>
+                                    <dt class="col-sm-4" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${(ttContextBasisInfo.focus || 'Hauptfokus der Originalstudie bzgl. dieser Kriterien.')}">${ttContextBasisInfo.focus ? 'Studienfokus:' : 'Studienfokus:'}</dt><dd class="col-sm-8">${studyInfo?.focus || 'N/A'}</dd>
+                                    <dt class="col-sm-4" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${(ttContextBasisInfo.keyCriteriaSummary || 'Zusammenfassung der angewendeten T2-Kriterien und deren Logik.')}">${ttContextBasisInfo.keyCriteriaSummary ? 'Kriterien:' : 'Kriterien:'}</dt><dd class="col-sm-8">${criteriaHTML}</dd>
                                 </dl>`;
         }
 
@@ -129,6 +136,7 @@ const praesentationTabLogic = (() => {
         const na = '--';
         const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image':'fa-download';
         const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download';
+        const ttContextStudySelect = TOOLTIP_CONTENT.praesentation.studySelect || {};
 
         if (canDisplayResults) {
             const fPVal = (r,d=3) => { const p = r?.pValue; return (p !== null && !isNaN(p)) ? (p < 0.001 ? '&lt;0.001' : formatNumber(p, d, na)) : na; };
@@ -149,8 +157,9 @@ const praesentationTabLogic = (() => {
             const infoCardId = "praes-t2-basis-info-card";
             const chartContainerId = "praes-comp-chart-container";
             const chartBaseName = `AS_vs_${(comparisonCriteriaSet?.displayShortName || selectedStudyId || 'T2').replace(/\s+/g, '_')}_Koll_${displayKollektivForComparison.replace(/\s+/g, '_')}`;
+            const ttContextPerfTable = TOOLTIP_CONTENT.praesentation.asVsT2PerfTable || {};
 
-            let comparisonTableHTML = `<div class="table-responsive"><table class="table table-sm table-striped small mb-0" id="${perfTableId}"><thead class="small"><tr><th data-tippy-content="${(TOOLTIP_CONTENT.praesentation.asVsT2PerfTable?.metric || 'Diagnostische Metrik.')}">Metrik</th><th data-tippy-content="${(TOOLTIP_CONTENT.praesentation.asVsT2PerfTable?.asValue || 'Wert für Avocado Sign (AS).')}">AS (Wert, 95% CI)</th><th data-tippy-content="${(TOOLTIP_CONTENT.praesentation.asVsT2PerfTable?.t2Value || 'Wert für die ausgewählte T2-Basis.').replace('[T2_SHORT_NAME]', `<strong>${t2ShortNameEffective}</strong>`)}">${t2ShortNameEffective} (Wert, 95% CI)</th></tr></thead><tbody>`;
+            let comparisonTableHTML = `<div class="table-responsive"><table class="table table-sm table-striped small mb-0" id="${perfTableId}"><thead class="small"><tr><th data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${(ttContextPerfTable.metric || 'Diagnostische Metrik.')}">Metrik</th><th data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${(ttContextPerfTable.asValue || 'Wert für Avocado Sign (AS).')}">AS (Wert, 95% CI)</th><th data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${(ttContextPerfTable.t2Value || 'Wert für die ausgewählte T2-Basis.').replace('[T2_SHORT_NAME]', `<strong>${t2ShortNameEffective}</strong>`)}">${t2ShortNameEffective} (Wert, 95% CI)</th></tr></thead><tbody>`;
             const metrics = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'f1', 'auc'];
             const metricNames = { sens: 'Sensitivität', spez: 'Spezifität', ppv: 'PPV', npv: 'NPV', acc: 'Accuracy', balAcc: 'Bal. Accuracy', f1: 'F1-Score', auc: 'AUC' };
             metrics.forEach(key => {
@@ -160,7 +169,7 @@ const praesentationTabLogic = (() => {
                  const tooltipDesc = ui_helpers.getMetricDescriptionHTML(key, 'Wert');
                  const tooltipAS = ui_helpers.getMetricInterpretationHTML(key, statsAS[key], 'AS', displayKollektivForComparison);
                  const tooltipT2 = ui_helpers.getMetricInterpretationHTML(key, statsT2[key], t2ShortNameEffective, displayKollektivForComparison);
-                 comparisonTableHTML += `<tr><td data-tippy-content="${tooltipDesc}">${metricNames[key]}</td><td data-tippy-content="${tooltipAS}">${valAS}</td><td data-tippy-content="${tooltipT2}">${valT2}</td></tr>`;
+                 comparisonTableHTML += `<tr><td data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${tooltipDesc}">${metricNames[key]}</td><td data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${tooltipAS}">${valAS}</td><td data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${tooltipT2}">${valT2}</td></tr>`;
             });
             comparisonTableHTML += `</tbody></table></div>`;
             const compTableDownloadBtns = [ {id: `dl-${perfTableId}-png`, icon: 'fa-image', tooltip: compTablePNG, format: 'png', tableId: perfTableId, tableName: `Praes_ASvsT2_Metrics_${(comparisonCriteriaSet?.id || selectedStudyId || 'T2').replace(/\s+/g, '_')}`} ];
@@ -171,8 +180,8 @@ const praesentationTabLogic = (() => {
             const mcNemarInterp = ui_helpers.getTestInterpretationHTML('mcnemar', vergleich?.mcnemar, displayKollektivForComparison, t2ShortNameEffective);
             const delongDesc = ui_helpers.getTestDescriptionHTML('delong', t2ShortNameEffective);
             const delongInterp = ui_helpers.getTestInterpretationHTML('delong', vergleich?.delong, displayKollektivForComparison, t2ShortNameEffective);
-            testsTableHTML += `<tr><td data-tippy-content="${mcNemarDesc}">McNemar (Acc)</td><td>${formatNumber(vergleich?.mcnemar?.statistic, 3, '--')} (df=${vergleich?.mcnemar?.df || '--'})</td><td data-tippy-content="${mcNemarInterp}"> ${fPVal(vergleich?.mcnemar)} ${getStatisticalSignificanceSymbol(vergleich?.mcnemar?.pValue)}</td><td class="text-muted">${vergleich?.mcnemar?.method || '--'}</td></tr>`;
-            testsTableHTML += `<tr><td data-tippy-content="${delongDesc}">DeLong (AUC)</td><td>Z=${formatNumber(vergleich?.delong?.Z, 3, '--')}</td><td data-tippy-content="${delongInterp}"> ${fPVal(vergleich?.delong)} ${getStatisticalSignificanceSymbol(vergleich?.delong?.pValue)}</td><td class="text-muted">${vergleich?.delong?.method || '--'}</td></tr>`;
+            testsTableHTML += `<tr><td data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${mcNemarDesc}">McNemar (Acc)</td><td>${formatNumber(vergleich?.mcnemar?.statistic, 3, '--')} (df=${vergleich?.mcnemar?.df || '--'})</td><td data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${mcNemarInterp}"> ${fPVal(vergleich?.mcnemar)} ${getStatisticalSignificanceSymbol(vergleich?.mcnemar?.pValue)}</td><td class="text-muted">${vergleich?.mcnemar?.method || '--'}</td></tr>`;
+            testsTableHTML += `<tr><td data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${delongDesc}">DeLong (AUC)</td><td>Z=${formatNumber(vergleich?.delong?.Z, 3, '--')}</td><td data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${delongInterp}"> ${fPVal(vergleich?.delong)} ${getStatisticalSignificanceSymbol(vergleich?.delong?.pValue)}</td><td class="text-muted">${vergleich?.delong?.method || '--'}</td></tr>`;
             testsTableHTML += `</tbody></table>`;
             const testTableDownloadBtns = [ {id: `dl-${testTableId}-png`, icon: 'fa-image', tooltip: tablePNG, format: 'png', tableId: testTableId, tableName: `Praes_ASvsT2_Tests_${(comparisonCriteriaSet?.id || selectedStudyId || 'T2').replace(/\s+/g, '_')}`} ];
             const testsCardHTML = uiComponents.createStatistikCard(testTableId+'_card', compTitle, testsTableHTML, false, null, testTableDownloadBtns, testTableId);
@@ -184,24 +193,24 @@ const praesentationTabLogic = (() => {
                              <div class="card-header d-flex justify-content-between align-items-center">
                                  <span>${chartTitle}</span>
                                  <span class="card-header-buttons">
-                                     <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-vs-t2-png" data-chart-id="${chartContainerId}" data-format="png" data-chart-name="${chartBaseName}" data-tippy-content="${chartPNG}"><i class="fas ${dlIconPNG}"></i></button>
-                                     <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-vs-t2-svg" data-chart-id="${chartContainerId}" data-format="svg" data-chart-name="${chartBaseName}" data-tippy-content="${chartSVG}"><i class="fas ${dlIconSVG}"></i></button>
+                                     <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-vs-t2-png" data-chart-id="${chartContainerId}" data-format="png" data-chart-name="${chartBaseName}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${chartPNG}"><i class="fas ${dlIconPNG}"></i></button>
+                                     <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-vs-t2-svg" data-chart-id="${chartContainerId}" data-format="svg" data-chart-name="${chartBaseName}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${chartSVG}"><i class="fas ${dlIconSVG}"></i></button>
                                  </span>
                              </div>
                             <div class="card-body p-1 d-flex align-items-center justify-content-center">
-                                 <div id="${chartContainerId}" class="praes-chart-container w-100" style="min-height: 300px;" data-tippy-content="Balkendiagramm: Vergleich der Gütekriterien (AS vs. ${t2ShortNameEffective}) für Kollektiv ${displayKollektivForComparison}.">
+                                 <div id="${chartContainerId}" class="praes-chart-container w-100" style="min-height: 300px;" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="Balkendiagramm: Vergleich der Gütekriterien (AS vs. ${t2ShortNameEffective}) für Kollektiv ${displayKollektivForComparison}.">
                                      <p class="text-muted small text-center p-3">Lade Vergleichschart...</p>
                                  </div>
                             </div>
                              <div class="card-footer text-end p-1">
-                                <button class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-vs-t2-csv" data-tippy-content="${perfCSV}"><i class="fas fa-file-csv me-1"></i>Tabelle (CSV)</button>
-                                <button class="btn btn-sm btn-outline-secondary" id="download-comp-table-as-vs-t2-md" data-tippy-content="${compTableMD}"><i class="fab fa-markdown me-1"></i>Metriken (MD)</button>
+                                <button class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-vs-t2-csv" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${perfCSV}"><i class="fas fa-file-csv me-1"></i>Tabelle (CSV)</button>
+                                <button class="btn btn-sm btn-outline-secondary" id="download-comp-table-as-vs-t2-md" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${compTableMD}"><i class="fab fa-markdown me-1"></i>Metriken (MD)</button>
                            </div>
                         </div>
                     </div>
                     <div class="col-lg-5 col-xl-5 presentation-comparison-col-right d-flex flex-column">
-                         <div class="card mb-3 flex-shrink-0 praes-t2-basis-info-card" id="${infoCardId}" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.description || 'Details zur ausgewählten T2-Vergleichsbasis und dem aktuellen Vergleichskollektiv.')}">
-                            <div class="card-header card-header-sm">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.title || 'Details zur T2-Vergleichsbasis'}</div>
+                         <div class="card mb-3 flex-shrink-0 praes-t2-basis-info-card" id="${infoCardId}" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${(ttContextBasisInfo.description || 'Details zur ausgewählten T2-Vergleichsbasis und dem aktuellen Vergleichskollektiv.')}">
+                            <div class="card-header card-header-sm">${ttContextBasisInfo.title || 'Details zur T2-Vergleichsbasis'}</div>
                             <div class="card-body p-2">${comparisonInfoHTML}</div>
                          </div>
                          <div class="card mb-3 flex-grow-0">
@@ -210,7 +219,7 @@ const praesentationTabLogic = (() => {
                          <div class="card flex-grow-1">
                               ${testsCardHTML}
                              <div class="card-footer text-end p-1">
-                                <button class="btn btn-sm btn-outline-secondary" id="download-tests-as-vs-t2-md" data-tippy-content="${testsMD}"><i class="fab fa-markdown me-1"></i>Tests (MD)</button>
+                                <button class="btn btn-sm btn-outline-secondary" id="download-tests-as-vs-t2-md" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${testsMD}"><i class="fab fa-markdown me-1"></i>Tests (MD)</button>
                             </div>
                          </div>
                     </div>
@@ -228,14 +237,15 @@ const praesentationTabLogic = (() => {
             : `(N=${patientCountForComparison || '?'})`;
 
 
-        return `<div class="row mb-4"><div class="col-12"><h4 class="text-center mb-1">Vergleich: Avocado Sign vs. T2-Kriterien</h4><p class="text-center text-muted small mb-3">Aktuelles Vergleichskollektiv: <strong>${displayKollektivForComparison}</strong> ${kollektivHinweis}</p><div class="row justify-content-center"><div class="col-md-9 col-lg-7" id="praes-study-select-container"><div class="input-group input-group-sm"><label class="input-group-text" for="praes-study-select">T2-Vergleichsbasis:</label><select class="form-select" id="praes-study-select" data-tippy-content="${TOOLTIP_CONTENT.praesentation.studySelect.description}"><option value="" ${!selectedStudyId ? 'selected' : ''} disabled>-- Bitte wählen --</option>${appliedOptionHTML}<option value="" disabled>--- Publizierte Kriterien ---</option>${studyOptionsHTML}</select></div><div id="praes-study-description" class="mt-2 small text-muted">${comparisonBasisName === 'N/A' ? 'Keine Basis gewählt' : `Aktuelle T2 Basis: <strong>${comparisonBasisName}</strong>`}</div></div></div></div></div><div id="praesentation-as-vs-t2-results">${resultsHTML}</div>`;
+        return `<div class="row mb-4"><div class="col-12"><h4 class="text-center mb-1">Vergleich: Avocado Sign vs. T2-Kriterien</h4><p class="text-center text-muted small mb-3">Aktuelles Vergleichskollektiv: <strong>${displayKollektivForComparison}</strong> ${kollektivHinweis}</p><div class="row justify-content-center"><div class="col-md-9 col-lg-7" id="praes-study-select-container"><div class="input-group input-group-sm"><label class="input-group-text" for="praes-study-select">T2-Vergleichsbasis:</label><select class="form-select" id="praes-study-select" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-html="true" data-bs-title="${ttContextStudySelect.description || 'Wählen Sie ein T2-Kriterienset für den Vergleich.'}"><option value="" ${!selectedStudyId ? 'selected' : ''} disabled>-- Bitte wählen --</option>${appliedOptionHTML}<option value="" disabled>--- Publizierte Kriterien ---</option>${studyOptionsHTML}</select></div><div id="praes-study-description" class="mt-2 small text-muted">${comparisonBasisName === 'N/A' ? 'Keine Basis gewählt' : `Aktuelle T2 Basis: <strong>${comparisonBasisName}</strong>`}</div></div></div></div></div><div id="praesentation-as-vs-t2-results">${resultsHTML}</div>`;
     }
 
     function createPresentationTabContent(view, presentationData, selectedStudyId = null, currentGlobalKollektiv = 'Gesamt') {
+        const ttContextViewSelect = TOOLTIP_CONTENT.praesentation.viewSelect || {};
         let viewSelectorHTML = `
             <div class="row mb-4">
                 <div class="col-12 d-flex justify-content-center">
-                    <div class="btn-group btn-group-sm" role="group" aria-label="Präsentationsansicht Auswahl" data-tippy-content="${TOOLTIP_CONTENT.praesentation.viewSelect.description}">
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Präsentationsansicht Auswahl" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-html="true" data-bs-title="${ttContextViewSelect.description || 'Wählen Sie die Präsentationsansicht.'}">
                         <input type="radio" class="btn-check" name="praesentationAnsicht" id="ansicht-as-pur" autocomplete="off" value="as-pur" ${view === 'as-pur' ? 'checked' : ''}>
                         <label class="btn btn-outline-primary praes-view-btn" for="ansicht-as-pur"><i class="fas fa-star me-1"></i> Avocado Sign (Performance)</label>
                         <input type="radio" class="btn-check" name="praesentationAnsicht" id="ansicht-as-vs-t2" value="as-vs-t2" autocomplete="off" ${view === 'as-vs-t2' ? 'checked' : ''}>
