@@ -1,168 +1,190 @@
 const auswertungEventHandlers = (() => {
+    let bruteForceManagerInstance = null;
+    let currentCriteria = {};
+    let currentLogic = APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC;
+    let tableInstanceAuswertung = null;
 
-    function handleT2CheckboxChange(checkbox) {
-        const key = checkbox.value;
-        const isActive = checkbox.checked;
-        if (t2CriteriaManager.toggleCriterionActive(key, isActive)) {
-            ui_helpers.updateT2CriteriaControlsUI(t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic());
-            ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
-        }
-    }
 
-    function handleT2LogicChange(logicSwitch) {
-        const newLogic = logicSwitch.checked ? 'ODER' : 'UND';
-        if (t2CriteriaManager.updateLogic(newLogic)) {
-            ui_helpers.updateT2CriteriaControlsUI(t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic());
-            ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
-        }
-    }
-
-    function handleT2CriteriaButtonClick(button) {
-        const criterionKey = button.dataset.criterion;
-        const value = button.dataset.value;
-        let changed = false;
-        if (!t2CriteriaManager.getCurrentCriteria()[criterionKey]?.active) {
-            changed = t2CriteriaManager.toggleCriterionActive(criterionKey, true) || changed;
-        }
-        changed = t2CriteriaManager.updateCriterionValue(criterionKey, value) || changed;
-        if (changed) {
-            ui_helpers.updateT2CriteriaControlsUI(t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic());
-            ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
-        }
-    }
-
-    function handleT2SizeInputChange(value) {
-        if (t2CriteriaManager.updateCriterionThreshold(value)) {
-            if (!t2CriteriaManager.getCurrentCriteria().size?.active) {
-                t2CriteriaManager.toggleCriterionActive('size', true);
-            }
-            ui_helpers.updateT2CriteriaControlsUI(t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic());
-            ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
-        } else {
-            const currentThreshold = t2CriteriaManager.getCurrentCriteria().size?.threshold;
-            const inputElement = document.getElementById('input-size');
-            if (inputElement && currentThreshold !== undefined) {
-                inputElement.value = formatNumber(currentThreshold, 1, '', true);
-            }
-            ui_helpers.showToast("Ungültiger Wert für Größe. Bitte geben Sie eine Zahl ein.", "warning");
-        }
-    }
-
-    function handleT2SizeRangeChange(value) {
-         if (t2CriteriaManager.updateCriterionThreshold(value)) {
-            if (!t2CriteriaManager.getCurrentCriteria().size?.active) {
-                t2CriteriaManager.toggleCriterionActive('size', true);
-            }
-            ui_helpers.updateT2CriteriaControlsUI(t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic());
-            ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
-        }
-    }
-
-    function handleResetCriteria() {
-        t2CriteriaManager.resetCriteria();
-        ui_helpers.updateT2CriteriaControlsUI(t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic());
-        ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
-        ui_helpers.showToast('T2 Kriterien auf Standard zurückgesetzt (Änderungen noch nicht angewendet).', 'info');
-    }
-
-    function handleApplyCriteria(mainAppInterface) {
-        if (typeof mainAppInterface.applyAndRefreshAll === 'function') {
-            mainAppInterface.applyAndRefreshAll();
-            ui_helpers.showToast('T2-Kriterien angewendet & gespeichert.', 'success');
-        } else {
-            console.error("auswertungEventHandlers.handleApplyCriteria: mainAppInterface.applyAndRefreshAll ist nicht definiert.");
-        }
-    }
-
-    function handleStartBruteForce(mainAppInterface) {
-        if (bruteForceManager.isRunning() || !bruteForceManager.isWorkerAvailable()) {
-            ui_helpers.showToast(bruteForceManager.isRunning() ? "Optimierung läuft bereits." : "Brute-Force Worker nicht verfügbar.", "warning");
-            return;
-        }
-        const metric = document.getElementById('brute-force-metric')?.value || APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC;
-        const currentKollektiv = state.getCurrentKollektiv();
-        
-        if (mainAppInterface && typeof mainAppInterface.getProcessedData === 'function') {
-            const dataForWorker = dataProcessor.filterDataByKollektiv(mainAppInterface.getProcessedData(), currentKollektiv).map(p => ({
-                nr: p.nr,
-                n: p.n,
-                lymphknoten_t2: cloneDeep(p.lymphknoten_t2)
-            }));
-
-            if (dataForWorker.length === 0) {
-                ui_helpers.showToast("Keine Daten für Optimierung im aktuellen Kollektiv.", "warning");
-                ui_helpers.updateBruteForceUI('idle', {}, bruteForceManager.isWorkerAvailable(), currentKollektiv);
-                return;
-            }
-            ui_helpers.updateBruteForceUI('start', { metric: metric, kollektiv: currentKollektiv }, true, currentKollektiv);
-            bruteForceManager.startAnalysis(dataForWorker, metric, currentKollektiv);
-            if (mainAppInterface && typeof mainAppInterface.updateGlobalUIState === 'function') {
-                mainAppInterface.updateGlobalUIState();
-            }
-        } else {
-             console.error("auswertungEventHandlers.handleStartBruteForce: mainAppInterface.getProcessedData ist nicht definiert.");
-             ui_helpers.showToast("Fehler beim Start der Optimierung: Datenquelle nicht verfügbar.", "danger");
-        }
-    }
-
-    function handleCancelBruteForce() {
-        if (!bruteForceManager.isRunning() || !bruteForceManager.isWorkerAvailable()) {
-            console.warn("Keine laufende Analyse zum Abbrechen oder Worker nicht verfügbar.");
-            return;
-        }
-        bruteForceManager.cancelAnalysis();
-    }
-
-    function handleApplyBestBfCriteria(mainAppInterface) {
-        const currentKollektiv = state.getCurrentKollektiv();
-        const bfResultForKollektiv = bruteForceManager.getResultsForKollektiv(currentKollektiv);
-
-        if (!bfResultForKollektiv?.bestResult?.criteria) {
-            ui_helpers.showToast('Keine gültigen Brute-Force-Ergebnisse für dieses Kollektiv zum Anwenden.', 'warning');
-            return;
-        }
-        const best = bfResultForKollektiv.bestResult;
-        Object.keys(best.criteria).forEach(key => {
-            if (key === 'logic') return;
-            const criterion = best.criteria[key];
-            t2CriteriaManager.toggleCriterionActive(key, criterion.active);
-            if (criterion.active) {
+    function _updateLocalCriteriaStateFromUI() {
+        currentLogic = document.getElementById('t2-logic-switch')?.checked ? 'ODER' : 'UND';
+        const newCriteria = {};
+        t2CriteriaManager.criteriaKeys.forEach(key => {
+            const checkbox = document.getElementById(`check-${key}`);
+            newCriteria[key] = { active: checkbox?.checked || false };
+            if (newCriteria[key].active) {
                 if (key === 'size') {
-                    t2CriteriaManager.updateCriterionThreshold(criterion.threshold);
+                    newCriteria[key].threshold = parseFloat(document.getElementById('input-size')?.value) || getDefaultT2Criteria().size.threshold;
+                    newCriteria[key].condition = '>=';
                 } else {
-                    t2CriteriaManager.updateCriterionValue(key, criterion.value);
+                    const activeButton = document.querySelector(`.criteria-options-container button.t2-criteria-button[data-criterion="${key}"].active`);
+                    newCriteria[key].value = activeButton?.dataset.value || (getDefaultT2Criteria()[key] ? getDefaultT2Criteria()[key].value : null);
+                }
+            } else { // Ensure inactive criteria have default/null values if needed for consistency
+                 if (key === 'size') {
+                    newCriteria[key].threshold = getDefaultT2Criteria().size.threshold;
+                    newCriteria[key].condition = '>=';
+                } else {
+                    newCriteria[key].value = (getDefaultT2Criteria()[key] ? getDefaultT2Criteria()[key].value : null);
                 }
             }
         });
-        t2CriteriaManager.updateLogic(best.logic);
-        ui_helpers.updateT2CriteriaControlsUI(t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic());
-        
-        if (typeof mainAppInterface.applyAndRefreshAll === 'function') {
-            mainAppInterface.applyAndRefreshAll();
-            ui_helpers.showToast('Beste Brute-Force Kriterien angewendet & gespeichert.', 'success');
-        } else {
-            console.error("auswertungEventHandlers.handleApplyBestBfCriteria: mainAppInterface.applyAndRefreshAll ist nicht definiert.");
+        currentCriteria = newCriteria;
+    }
+
+    function _handleCriteriaInputChange() {
+        _updateLocalCriteriaStateFromUI();
+        if (mainAppInterface && typeof mainAppInterface.handleT2CriteriaChange === 'function') {
+            mainAppInterface.handleT2CriteriaChange(currentCriteria, currentLogic);
+        }
+         ui_helpers.markCriteriaSavedIndicator(true); 
+    }
+    
+    function _handleT2CriteriaButtonClick(event) {
+        const button = event.currentTarget;
+        const criterionKey = button.dataset.criterion;
+        const value = button.dataset.value;
+        const isActive = document.getElementById(`check-${criterionKey}`)?.checked;
+
+        if (isActive && criterionKey && value) {
+            document.querySelectorAll(`.t2-criteria-button[data-criterion="${criterionKey}"]`).forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            _handleCriteriaInputChange();
         }
     }
 
-    function handleBruteForceMetricChange(selectElement) {
-        // Currently, no direct action needed on change, metric is read on start.
-        // Could be used to save preference to state if desired in future.
-        console.log("Brute-Force Zielmetrik Auswahl geändert zu:", selectElement.value);
+
+    function register(bfManager) {
+        if (bfManager) {
+            bruteForceManagerInstance = bfManager;
+        } else {
+            console.error("AuswertungEventHandlers: BruteForceManager Instanz nicht übergeben.");
+        }
+
+        const auswertungTabPane = document.getElementById('auswertung-tab-pane');
+        if (!auswertungTabPane) {
+            console.warn("AuswertungEventHandlers: Auswertung-Tab-Pane nicht gefunden. Handler nicht vollständig registriert.");
+            return;
+        }
+        
+        currentCriteria = t2CriteriaManager.getAppliedCriteria();
+        currentLogic = t2CriteriaManager.getAppliedLogic();
+
+        const debouncedCriteriaChange = debounce(_handleCriteriaInputChange, APP_CONFIG.PERFORMANCE_SETTINGS.DEBOUNCE_DELAY_MS);
+
+        auswertungTabPane.addEventListener('change', (event) => {
+            const target = event.target;
+            if (target.matches('.criteria-checkbox') || target.id === 't2-logic-switch') {
+                _updateLocalCriteriaStateFromUI(); 
+                ui_helpers.updateT2CriteriaControlsUI(currentCriteria, currentLogic);
+                _handleCriteriaInputChange(); 
+            } else if (target.matches('#range-size, #input-size')) {
+                 if (document.getElementById('check-size')?.checked) {
+                    const value = parseFloat(target.value);
+                    const sizeInput = document.getElementById('input-size');
+                    const sizeRange = document.getElementById('range-size');
+                    const sizeValueDisplay = document.getElementById('value-size');
+                    if (sizeInput && sizeRange && sizeValueDisplay) {
+                        const clampedValue = clampNumber(value, parseFloat(sizeRange.min), parseFloat(sizeRange.max));
+                        sizeInput.value = formatNumber(clampedValue, 1, '', true);
+                        sizeRange.value = formatNumber(clampedValue, 1, '', true);
+                        sizeValueDisplay.textContent = formatNumber(clampedValue, 1);
+                    }
+                    debouncedCriteriaChange();
+                 }
+            } else if (target.id === 'brute-force-metric') {
+                if(typeof stateManager !== 'undefined') stateManager.setBruteForceMetric(target.value);
+            }
+        });
+        
+        auswertungTabPane.addEventListener('click', (event) => {
+            const target = event.target.closest('button');
+            if (!target) return;
+
+            if (target.matches('.t2-criteria-button')) {
+                _handleT2CriteriaButtonClick({currentTarget: target});
+            } else if (target.id === 'btn-reset-criteria') {
+                if (confirm(UI_TEXTS.general.confirmResetCriteria || "Möchten Sie die T2-Kriterien auf die Standardwerte zurücksetzen? Ungespeicherte Änderungen gehen verloren.")) {
+                    t2CriteriaManager.resetToDefaults();
+                    _updateLocalCriteriaStateFromUI(); 
+                    ui_helpers.updateT2CriteriaControlsUI(currentCriteria, currentLogic);
+                    _handleCriteriaInputChange(); 
+                    ui_helpers.showToast("T2-Kriterien auf Standard zurückgesetzt.", "info");
+                }
+            } else if (target.id === 'btn-apply-criteria') {
+                t2CriteriaManager.setCriteria(currentCriteria, currentLogic);
+                t2CriteriaManager.saveAll();
+                ui_helpers.markCriteriaSavedIndicator(false);
+                if (mainAppInterface && typeof mainAppInterface.refreshAllTabs === 'function') {
+                    mainAppInterface.refreshAllTabs(true);
+                }
+                ui_helpers.showToast("T2-Kriterien angewendet und gespeichert.", "success");
+            } else if (target.id === 'btn-start-brute-force') {
+                 if (bruteForceManagerInstance) {
+                    const metric = document.getElementById('brute-force-metric')?.value || APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC;
+                    const currentKollektiv = stateManager.getCurrentKollektiv();
+                    bruteForceManagerInstance.startOptimization(currentKollektiv, metric);
+                 }
+            } else if (target.id === 'btn-cancel-brute-force') {
+                 if (bruteForceManagerInstance) bruteForceManagerInstance.cancelOptimization();
+            } else if (target.id === 'btn-apply-best-bf-criteria') {
+                const results = bruteForceManagerInstance.getResultsForKollektiv(
+                    bruteForceManagerInstance.getCurrentKollektiv() || stateManager.getCurrentKollektiv(),
+                    bruteForceManagerInstance.getCurrentTargetMetric() || stateManager.getBruteForceMetric()
+                );
+                if (results && results.bestResult) {
+                    currentCriteria = results.bestResult.criteria;
+                    currentLogic = results.bestResult.logic;
+                    t2CriteriaManager.setCriteria(currentCriteria, currentLogic);
+                    ui_helpers.updateT2CriteriaControlsUI(currentCriteria, currentLogic);
+                    _handleCriteriaInputChange(); // Mark as unsaved until "Apply & Save" on main criteria card is hit
+                    ui_helpers.showToast("Beste Brute-Force Kriterien in Definition geladen. Bitte 'Anwenden & Speichern'.", "info");
+                    if(bootstrap.Modal.getInstance(document.getElementById('brute-force-modal'))) {
+                         bootstrap.Modal.getInstance(document.getElementById('brute-force-modal')).hide();
+                    }
+                } else {
+                    ui_helpers.showToast("Keine Brute-Force Ergebnisse zum Anwenden vorhanden.", "warning");
+                }
+            }
+        });
+        
+        const tableHeader = document.getElementById('auswertung-table-header');
+        if (tableHeader) {
+            tableHeader.addEventListener('click', (event) => {
+                const headerCell = event.target.closest('th[data-sort-key]');
+                if (headerCell) {
+                    const sortKey = headerCell.dataset.sortKey;
+                    let subKey = null;
+                    if (event.target.closest('.sortable-sub-header')) {
+                        subKey = event.target.closest('.sortable-sub-header').dataset.subKey;
+                    }
+                     if (typeof auswertungTabLogic !== 'undefined' && typeof auswertungTabLogic.handleSortChange === 'function') {
+                         auswertungTabLogic.handleSortChange(sortKey, subKey);
+                    } else {
+                        console.error("Sortierfunktion in auswertungTabLogic nicht gefunden.");
+                    }
+                }
+            });
+        } else {
+            console.warn("AuswertungEventHandlers: Tabellenkopf 'auswertung-table-header' nicht gefunden.");
+        }
+        
+        const tableBody = document.getElementById('auswertung-table-body');
+        if(tableBody) {
+            ui_helpers.attachRowCollapseListeners(tableBody);
+            tableBody.addEventListener('click', (event) => {
+                 const row = event.target.closest('tr[data-patient-id]');
+                 if (row && row.dataset.patientId) {
+                     if (typeof auswertungTabLogic !== 'undefined' && typeof auswertungTabLogic.handleRowClick === 'function') {
+                         auswertungTabLogic.handleRowClick(row.dataset.patientId, Array.from(row.parentNode.children).indexOf(row), event);
+                     }
+                 }
+            });
+        } else {
+            console.warn("AuswertungEventHandlers: Tabellenkörper 'auswertung-table-body' nicht gefunden.");
+        }
     }
 
-
     return Object.freeze({
-        handleT2CheckboxChange,
-        handleT2LogicChange,
-        handleT2CriteriaButtonClick,
-        handleT2SizeInputChange,
-        handleT2SizeRangeChange,
-        handleResetCriteria,
-        handleApplyCriteria,
-        handleStartBruteForce,
-        handleCancelBruteForce,
-        handleApplyBestBfCriteria,
-        handleBruteForceMetricChange
+        register
     });
 })();
