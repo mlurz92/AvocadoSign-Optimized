@@ -3,14 +3,16 @@ function getKollektivDisplayName(kollektivId) {
     return displayName;
 }
 
-function formatNumber(num, digits = 1, placeholder = '--', useStandardFormat = false) {
+function formatNumber(num, digits = 1, placeholder = '--', lang = 'de') {
     const number = parseFloat(num);
     if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
         return placeholder;
     }
-    if (useStandardFormat) {
+    
+    if (lang === 'en') {
         return number.toFixed(digits);
     }
+
     try {
         return number.toLocaleString('de-DE', {
             minimumFractionDigits: digits,
@@ -22,28 +24,32 @@ function formatNumber(num, digits = 1, placeholder = '--', useStandardFormat = f
     }
 }
 
-function formatPercent(num, digits = 1, placeholder = '--%') {
+function formatPercent(num, digits = 1, placeholder = '--%', lang = 'de') {
     const number = parseFloat(num);
     if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
         return placeholder;
     }
+    
+    const targetLocale = lang === 'en' ? 'en-US' : 'de-DE';
+
     try {
-        return new Intl.NumberFormat('de-DE', {
+        return new Intl.NumberFormat(targetLocale, {
             style: 'percent',
             minimumFractionDigits: digits,
             maximumFractionDigits: digits
         }).format(number);
     } catch (e) {
-        console.error("Fehler bei formatPercent mit de-DE Locale:", e);
-        return (number * 100).toFixed(digits) + '%';
+        console.error(`Fehler bei formatPercent mit ${targetLocale} Locale:`, e);
+        const fallbackValue = (number * 100).toFixed(digits);
+        return `${fallbackValue}%`;
     }
 }
 
-function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeholder = '--') {
-    const formatFn = isPercent ? formatPercent : formatNumber;
-    const formattedValue = formatFn(value, digits, placeholder, !isPercent); // Use standard format for non-percent numbers in CI
+function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeholder = '--', lang = 'de') {
+    const formatFn = isPercent ? (n, d, p) => formatPercent(n, d, p, lang) : (n, d, p) => formatNumber(n, d, p, lang);
+    const formattedValue = formatFn(value, digits, placeholder);
 
-    if (formattedValue === placeholder && !(value === 0 && placeholder === '--')) { // Allow 0 to be formatted
+    if (formattedValue === placeholder && !(value === 0 && placeholder === '--')) {
         return placeholder;
     }
     
@@ -52,17 +58,16 @@ function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeh
          valueToDisplay = formattedValue.replace('%','');
     }
 
+    const formattedLower = formatFn(ciLower, digits, null);
+    const formattedUpper = formatFn(ciUpper, digits, null);
 
-    const formattedLower = formatFn(ciLower, digits, null, !isPercent);
-    const formattedUpper = formatFn(ciUpper, digits, null, !isPercent);
-
-    if (formattedLower !== null && formattedUpper !== null) {
+    if (formattedLower !== null && formattedUpper !== null && formattedLower !== placeholder && formattedUpper !== placeholder) {
         const lowerStr = isPercent ? String(formattedLower).replace('%','') : String(formattedLower);
         const upperStr = isPercent ? String(formattedUpper).replace('%','') : String(formattedUpper);
-        const ciStr = `(${lowerStr}\u00A0-\u00A0${upperStr})`; // Non-breaking space
+        const ciStr = `(${lowerStr}\u00A0–\u00A0${upperStr})`;
         return `${valueToDisplay} ${ciStr}${isPercent ? '%' : ''}`;
     } else {
-        return formattedValue; // Return value with % if applicable and CI is not available
+        return formattedValue;
     }
 }
 
@@ -144,14 +149,14 @@ function cloneDeep(obj) {
             return JSON.parse(JSON.stringify(obj));
          }
     } catch (e) {
-        console.warn("Fehler beim Deep Cloning via structuredClone/JSON, versuche Fallback:", e);
+        console.warn("Fehler beim Deep Cloning via structuredClone/JSON, versuche Fallback:", e, obj);
         if (Array.isArray(obj)) {
              const arrCopy = [];
              for(let i = 0; i < obj.length; i++){
                  arrCopy[i] = cloneDeep(obj[i]);
              }
              return arrCopy;
-         };
+         }
         if (typeof obj === 'object') {
              const objCopy = {};
              for(const key in obj) {
@@ -160,7 +165,7 @@ function cloneDeep(obj) {
                  }
              }
              return objCopy;
-         };
+         }
         return obj;
     }
 }
@@ -292,7 +297,7 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
 
 function getStatisticalSignificanceSymbol(pValue) {
     if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return '';
-    const significanceLevels = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS; // Bereits absteigend sortiert
+    const significanceLevels = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS;
     const overallSignificanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL;
 
     for (const level of significanceLevels) {
@@ -300,40 +305,43 @@ function getStatisticalSignificanceSymbol(pValue) {
             return level.symbol;
         }
     }
-    if (pValue < overallSignificanceLevel) { // Falls kein Symbol in der Liste passt, aber unter dem allgemeinen Niveau
-        return significanceLevels[significanceLevels.length - 1]?.symbol || '*'; // Fallback zum geringsten definierten Symbol
+    if (pValue < overallSignificanceLevel) {
+        return significanceLevels[significanceLevels.length - 1]?.symbol || '*';
     }
-    return 'ns'; // not significant
+    return 'ns';
 }
 
-function getStatisticalSignificanceText(pValue, significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL) {
+function getStatisticalSignificanceText(pValue, significanceLevel) {
+     const level = significanceLevel || APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL;
      if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return '';
-     const level = significanceLevel;
-     return pValue < level
-         ? UI_TEXTS.statMetrics.signifikanzTexte.SIGNIFIKANT || 'statistisch signifikant'
-         : UI_TEXTS.statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT || 'statistisch nicht signifikant';
+     
+     const textKey = pValue < level ? 'SIGNIFIKANT' : 'NICHT_SIGNIFIKANT';
+     const defaultText = pValue < level ? 'statistisch signifikant' : 'statistisch nicht signifikant';
+     
+     return UI_TEXTS?.statMetrics?.signifikanzTexte?.[textKey] || defaultText;
 }
 
 function getPValueText(pValue, lang = 'de') {
     if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return 'N/A';
 
-    const pLessThanThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS[0]?.threshold || 0.001; // kleinster Schwellenwert für 'p < ...'
-    if (pValue < pLessThanThreshold) {
-        const thresholdStr = String(pLessThanThreshold).replace('.', lang === 'de' ? ',' : '.');
-        return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','.')}`;
+    const pLessThanThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS[0]?.threshold || 0.001;
+    const pValueFormattedForComparison = parseFloat(pValue.toPrecision(4)); // Use a reasonable precision for comparison
+    
+    if (pValueFormattedForComparison < pLessThanThreshold) {
+        const thresholdStr = formatNumber(pLessThanThreshold, String(pLessThanThreshold).split('.')[1]?.length || 3, 'N/A', lang === 'en');
+        return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr}`;
     }
 
-    let pFormatted = formatNumber(pValue, 3, 'N/A', true); // useStandardFormat = true
-    if (pFormatted === '0.000' && pLessThanThreshold === 0.001) { // Spezifischer Fall, wenn p sehr klein, aber nicht <0.001 laut Formatierung
-         const thresholdStr = String(pLessThanThreshold).replace('.', lang === 'de' ? ',' : '.');
-         return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','.')}`;
-    }
+    let pFormatted = formatNumber(pValue, 3, 'N/A', lang === 'en');
 
-    if (lang === 'de' && pFormatted !== 'N/A') {
-        pFormatted = pFormatted.replace('.', ',');
+    if (pFormatted !== 'N/A' && parseFloat(pFormatted.replace(',', '.')) === 0 && pValue > 0) {
+         const thresholdStr = formatNumber(pLessThanThreshold, String(pLessThanThreshold).split('.')[1]?.length || 3, 'N/A', lang === 'en');
+         return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr}`;
     }
+    
     return `p = ${pFormatted}`;
 }
+
 
 function generateUUID() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -362,7 +370,7 @@ function clampNumber(num, min, max) {
     if(isNaN(number) || isNaN(minVal) || isNaN(maxVal)) {
         console.warn(`Ungültige Eingabe für clampNumber: num=${num}, min=${min}, max=${max}`);
         return NaN;
-    };
+    }
     return Math.min(Math.max(number, minVal), maxVal);
 }
 
@@ -377,19 +385,25 @@ function arraysAreEqual(arr1, arr2) {
 
 function getAUCBewertung(aucValue) {
     const value = parseFloat(aucValue);
-    if (isNaN(value) || value < 0 || value > 1) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_bestimmbar || 'N/A';
-    if (value >= 0.9) return 'exzellent';
-    if (value >= 0.8) return 'gut';
-    if (value >= 0.7) return 'moderat';
-    if (value > 0.5) return 'schwach';
-    return 'nicht informativ';
+    const defaultText = 'N/A';
+    const texts = UI_TEXTS?.statMetrics?.assoziationStaerkeTexte || {};
+
+    if (isNaN(value) || value < 0 || value > 1) return texts.nicht_bestimmbar || defaultText;
+    if (value >= 0.9) return texts.exzellent || 'exzellent';
+    if (value >= 0.8) return texts.gut || 'gut';
+    if (value >= 0.7) return texts.moderat || 'moderat';
+    if (value > 0.5) return texts.schwach || 'schwach';
+    return texts.nicht_informativ || 'nicht informativ';
 }
 
 function getPhiBewertung(phiValue) {
     const value = parseFloat(phiValue);
-    if (isNaN(value)) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_bestimmbar || 'N/A';
+    const defaultText = 'N/A';
+    const texts = UI_TEXTS?.statMetrics?.assoziationStaerkeTexte || {};
+
+    if (isNaN(value)) return texts.nicht_bestimmbar || defaultText;
     const absPhi = Math.abs(value);
-    const texts = UI_TEXTS.statMetrics.assoziationStaerkeTexte || {};
+    
     if (absPhi >= 0.5) return texts.stark || 'stark';
     if (absPhi >= 0.3) return texts.moderat || 'moderat';
     if (absPhi >= 0.1) return texts.schwach || 'schwach';
