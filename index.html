@@ -23,32 +23,32 @@
             <div class="container-fluid">
                 <h1 class="app-title mb-0">Lymphknoten T2 & Avocado Sign Analyse</h1>
                 <div class="header-meta ms-auto">
-                    <span data-tippy-content="Aktuell ausgewähltes Patientenkollektiv">Kollektiv: <strong id="header-kollektiv">--</strong></span>
-                    <span data-tippy-content="Anzahl der Patienten im aktuellen Kollektiv">Pat.: <strong id="header-anzahl-patienten">--</strong></span>
-                    <span data-tippy-content="Pathologischer N-Status im aktuellen Kollektiv (N+/Gesamt)">N-Status: <strong id="header-status-n">--</strong></span>
-                    <span data-tippy-content="Avocado Sign Status im aktuellen Kollektiv (AS+/Gesamt)">AS-Status: <strong id="header-status-as">--</strong></span>
-                    <span data-tippy-content="T2-basierter Status (angew. Kriterien) im aktuellen Kollektiv (T2+/Gesamt)">T2-Status: <strong id="header-status-t2">--</strong></span>
+                    <span data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Aktuell ausgewähltes Patientenkollektiv">Kollektiv: <strong id="header-kollektiv">--</strong></span>
+                    <span data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Anzahl der Patienten im aktuellen Kollektiv">Pat.: <strong id="header-anzahl-patienten">--</strong></span>
+                    <span data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Pathologischer N-Status im aktuellen Kollektiv (N+/Gesamt)">N-Status: <strong id="header-status-n">--</strong></span>
+                    <span data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Avocado Sign Status im aktuellen Kollektiv (AS+/Gesamt)">AS-Status: <strong id="header-status-as">--</strong></span>
+                    <span data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="T2-basierter Status (angew. Kriterien) im aktuellen Kollektiv (T2+/Gesamt)">T2-Status: <strong id="header-status-t2">--</strong></span>
                 </div>
                  <div class="btn-group btn-group-sm ms-3" role="group" aria-label="Kollektiv Auswahl">
-                    <button type="button" class="btn btn-outline-primary" data-kollektiv="Gesamt" data-tippy-content="Gesamtkollektiv anzeigen (N=<span id='n-gesamt-count'>0</span>)">Gesamt</button>
-                    <button type="button" class="btn btn-outline-primary" data-kollektiv="direkt OP" data-tippy-content="Nur Patienten mit Direkt-OP anzeigen (N=<span id='n-direktop-count'>0</span>)">Direkt-OP</button>
-                    <button type="button" class="btn btn-outline-primary" data-kollektiv="nRCT" data-tippy-content="Nur Patienten nach nRCT anzeigen (N=<span id='n-nrct-count'>0</span>)">nRCT</button>
+                    <button type="button" class="btn btn-outline-primary" data-kollektiv="Gesamt" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Gesamtkollektiv anzeigen (N=<span id='n-gesamt-count'>0</span>)">Gesamt</button>
+                    <button type="button" class="btn btn-outline-primary" data-kollektiv="direkt OP" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Nur Patienten mit Direkt-OP anzeigen (N=<span id='n-direktop-count'>0</span>)">Direkt-OP</button>
+                    <button type="button" class="btn btn-outline-primary" data-kollektiv="nRCT" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Nur Patienten nach nRCT anzeigen (N=<span id='n-nrct-count'>0</span>)">nRCT</button>
                 </div>
-                 <button class="btn btn-sm btn-outline-secondary ms-2" id="btn-show-kurzanleitung" data-tippy-content="Kurzanleitung und wichtige Hinweise anzeigen">
+                 <button class="btn btn-sm btn-outline-secondary ms-2" id="btn-show-kurzanleitung" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Kurzanleitung und wichtige Hinweise anzeigen">
                     <i class="fas fa-question-circle"></i> Hilfe
                 </button>
-                <button class="btn btn-sm btn-outline-danger ms-2" id="btn-reset-state" data-tippy-content="Alle Einstellungen auf Standardwerte zurücksetzen.">
+                <button class="btn btn-sm btn-outline-danger ms-2" id="btn-reset-state" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Alle Einstellungen auf Standardwerte zurücksetzen.">
                     <i class="fas fa-undo"></i> Reset Einstellungen
                 </button>
                  <div class="dropdown ms-2">
-                    <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button" id="dropdownMenuExtras" data-bs-toggle="dropdown" aria-expanded="false" data-tippy-content="Weitere Optionen und Werkzeuge">
+                    <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button" id="dropdownMenuExtras" data-bs-toggle="dropdown" aria-expanded="false" data-bs-title="Weitere Optionen und Werkzeuge">
                         <i class="fas fa-cog"></i> Extras
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuExtras">
                         <li>
                             <div class="px-2 py-1">
                                 <label for="chart-theme-selector" class="form-label form-label-sm">Diagramm-Farbschema:</label>
-                                <select class="form-select form-select-sm" id="chart-theme-selector" data-tippy-content="Wählen Sie ein Farbschema für die Diagramme.">
+                                <select class="form-select form-select-sm" id="chart-theme-selector" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Wählen Sie ein Farbschema für die Diagramme.">
                                     <option value="default">Standard</option>
                                     <option value="primary">Primärfarben</option>
                                     <option value="accent">Akzentfarben</option>
@@ -60,7 +60,7 @@
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
-                            <button class="dropdown-item text-danger" type="button" id="btn-reset-bruteforce-results" data-tippy-content="Löscht ALLE gespeicherten Brute-Force Ergebnisse für alle Kollektive und Metriken!">
+                            <button class="dropdown-item text-danger" type="button" id="btn-reset-bruteforce-results" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Löscht ALLE gespeicherten Brute-Force Ergebnisse für alle Kollektive und Metriken!">
                                 <i class="fas fa-trash-alt fa-fw me-1"></i> Brute-Force Ergebnisse löschen
                             </button>
                         </li>
@@ -73,22 +73,22 @@
             <div class="container-fluid">
                 <ul class="nav nav-tabs" id="mainTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="daten-tab-link" data-bs-toggle="tab" data-bs-target="#daten-tab-pane" type="button" role="tab" aria-controls="daten-tab-pane" aria-selected="true" data-tippy-content="Patientenrohdaten anzeigen und filtern."><i class="fas fa-table fa-fw"></i> Daten</button>
+                        <button class="nav-link active" id="daten-tab-link" data-bs-toggle="tab" data-bs-target="#daten-tab-pane" type="button" role="tab" aria-controls="daten-tab-pane" aria-selected="true" data-bs-title="Patientenrohdaten anzeigen und filtern."><i class="fas fa-table fa-fw"></i> Daten</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="auswertung-tab-link" data-bs-toggle="tab" data-bs-target="#auswertung-tab-pane" type="button" role="tab" aria-controls="auswertung-tab-pane" aria-selected="false" data-tippy-content="T2-Kriterien definieren und Brute-Force-Optimierung."><i class="fas fa-cogs fa-fw"></i> Auswertung</button>
+                        <button class="nav-link" id="auswertung-tab-link" data-bs-toggle="tab" data-bs-target="#auswertung-tab-pane" type="button" role="tab" aria-controls="auswertung-tab-pane" aria-selected="false" data-bs-title="T2-Kriterien definieren und Brute-Force-Optimierung."><i class="fas fa-cogs fa-fw"></i> Auswertung</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="statistik-tab-link" data-bs-toggle="tab" data-bs-target="#statistik-tab-pane" type="button" role="tab" aria-controls="statistik-tab-pane" aria-selected="false" data-tippy-content="Detaillierte statistische Kennzahlen."><i class="fas fa-chart-pie fa-fw"></i> Statistik</button>
+                        <button class="nav-link" id="statistik-tab-link" data-bs-toggle="tab" data-bs-target="#statistik-tab-pane" type="button" role="tab" aria-controls="statistik-tab-pane" aria-selected="false" data-bs-title="Detaillierte statistische Kennzahlen."><i class="fas fa-chart-pie fa-fw"></i> Statistik</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="praesentation-tab-link" data-bs-toggle="tab" data-bs-target="#praesentation-tab-pane" type="button" role="tab" aria-controls="praesentation-tab-pane" aria-selected="false" data-tippy-content="Diagramme zur Ergebnispräsentation."><i class="fas fa-chart-bar fa-fw"></i> Präsentation</button>
+                        <button class="nav-link" id="praesentation-tab-link" data-bs-toggle="tab" data-bs-target="#praesentation-tab-pane" type="button" role="tab" aria-controls="praesentation-tab-pane" aria-selected="false" data-bs-title="Diagramme zur Ergebnispräsentation."><i class="fas fa-chart-bar fa-fw"></i> Präsentation</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="publikation-tab-link" data-bs-toggle="tab" data-bs-target="#publikation-tab-pane" type="button" role="tab" aria-controls="publikation-tab-pane" aria-selected="false" data-tippy-content="Textbausteine und Tabellen für Publikation."><i class="fas fa-file-alt fa-fw"></i> Publikation</button>
+                        <button class="nav-link" id="publikation-tab-link" data-bs-toggle="tab" data-bs-target="#publikation-tab-pane" type="button" role="tab" aria-controls="publikation-tab-pane" aria-selected="false" data-bs-title="Textbausteine und Tabellen für Publikation."><i class="fas fa-file-alt fa-fw"></i> Publikation</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="export-tab-link" data-bs-toggle="tab" data-bs-target="#export-tab-pane" type="button" role="tab" aria-controls="export-tab-pane" aria-selected="false" data-tippy-content="Daten und Ergebnisse exportieren."><i class="fas fa-download fa-fw"></i> Export</button>
+                        <button class="nav-link" id="export-tab-link" data-bs-toggle="tab" data-bs-target="#export-tab-pane" type="button" role="tab" aria-controls="export-tab-pane" aria-selected="false" data-bs-title="Daten und Ergebnisse exportieren."><i class="fas fa-download fa-fw"></i> Export</button>
                     </li>
                 </ul>
             </div>
@@ -116,7 +116,7 @@
                         <p class="text-center">Ergebnisse werden geladen...</p>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="export-bruteforce-modal-txt" data-tippy-content="Exportiert die angezeigten Top-Ergebnisse als Textdatei (.txt);" disabled>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="export-bruteforce-modal-txt" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Exportiert die angezeigten Top-Ergebnisse als Textdatei (.txt);" disabled>
                             <i class="fas fa-file-alt me-1"></i> Ergebnisse als TXT
                         </button>
                         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Schließen</button>
@@ -130,7 +130,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tippy.js/6.3.7/tippy-bundle.umd.min.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
