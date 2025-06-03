@@ -151,8 +151,8 @@ const APP_CONFIG = Object.freeze({
             PRAES_AS_VS_T2_CHART_SVG: 'PraesChartASvsT2_{StudyID}_SVG',
             TABLE_PNG_EXPORT: '{TableName}_PNG',
             CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
-            PUBLIKATION_METHODEN_MD: 'Publikation_Methoden_{SectionName}_MD',
-            PUBLIKATION_ERGEBNISSE_MD: 'Publikation_Ergebnisse_{SectionName}_MD',
+            PUBLIKATION_METHODEN_MD: 'Publikation_Methoden_Abschnitt_{SectionName}_MD',
+            PUBLIKATION_ERGEBNISSE_MD: 'Publikation_Ergebnisse_Abschnitt_{SectionName}_MD',
             PUBLIKATION_REFERENZEN_MD: 'Publikation_Referenzen_MD'
         }),
         EXCEL_SHEET_NAME_DATEN: 'Datenliste',
@@ -176,7 +176,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch ${APP_CONFIG.APP_NAME} v${APP_CONFIG.APP_VERSION}`,
+        REPORT_AUTHOR: `Generiert durch ${"Lymphknoten T2 - Avocado Sign Analyse"} v${"2.3.0"}`,
         REPORT_LOGO_ALT_TEXT: 'Institutslogo'
     }),
 
@@ -225,7 +225,7 @@ const APP_CONFIG = Object.freeze({
             doi: "10.1148/radiol.2272011747"
         },
         horvat2019: {
-            fullCitation: "Horvat N, Tavares Rocha CC, Oliveira BC, Petkovska I, Gollub MJ. MRI of Rectal Cancer: Tumor Staging, Imaging Techniques, and Management. RadioGraphics. 2019;39(2):367-387.",
+            fullCitation: "Horvat N, Rocha CCT, Oliveira BC, Petkovska I, Gollub MJ. MRI of Rectal Cancer: Tumor Staging, Imaging Techniques, and Management. RadioGraphics. 2019;39(2):367-387.",
             short: "Horvat et al. (2019)",
             doi: "10.1148/rg.2019180114"
         },
@@ -245,7 +245,7 @@ const APP_CONFIG = Object.freeze({
             doi: "10.1148/radiol.2341031403"
         },
          barbaro2010: {
-            fullCitation: "Barbaro B, Vitale R, Leccisotti L, et al. Restaging Locally Advanced Rectal Cancer with MR Imaging after Chemoradiation Therapy. RadioGraphics. 2010;30(3):699-716.",
+            fullCitation: "Barbaro B, Vitale R, Leccisotti L, et al. Restaging Locally Advanced Rectal Cancer with MR Imaging after Chemoradiation Therapy. RadioGraphics. 2010;30(3):699-721.",
             short: "Barbaro et al. (2010)",
             doi: "10.1148/rg.303095085"
         }
