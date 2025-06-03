@@ -37,6 +37,35 @@
                  <button class="btn btn-sm btn-outline-secondary ms-2" id="btn-show-kurzanleitung" data-tippy-content="Kurzanleitung und wichtige Hinweise anzeigen">
                     <i class="fas fa-question-circle"></i> Hilfe
                 </button>
+                <button class="btn btn-sm btn-outline-danger ms-2" id="btn-reset-state" data-tippy-content="Alle Einstellungen auf Standardwerte zurücksetzen.">
+                    <i class="fas fa-undo"></i> Reset Einstellungen
+                </button>
+                 <div class="dropdown ms-2">
+                    <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button" id="dropdownMenuExtras" data-bs-toggle="dropdown" aria-expanded="false" data-tippy-content="Weitere Optionen und Werkzeuge">
+                        <i class="fas fa-cog"></i> Extras
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuExtras">
+                        <li>
+                            <div class="px-2 py-1">
+                                <label for="chart-theme-selector" class="form-label form-label-sm">Diagramm-Farbschema:</label>
+                                <select class="form-select form-select-sm" id="chart-theme-selector" data-tippy-content="Wählen Sie ein Farbschema für die Diagramme.">
+                                    <option value="default">Standard</option>
+                                    <option value="primary">Primärfarben</option>
+                                    <option value="accent">Akzentfarben</option>
+                                    <option value="grayscale">Graustufen</option>
+                                    <option value="print_friendly_qualitative">Druckfreundlich (Qualitativ)</option>
+                                    <option value="radiology_publication">Publikation (Graustufen)</option>
+                                </select>
+                            </div>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <button class="dropdown-item text-danger" type="button" id="btn-reset-bruteforce-results" data-tippy-content="Löscht ALLE gespeicherten Brute-Force Ergebnisse für alle Kollektive und Metriken!">
+                                <i class="fas fa-trash-alt fa-fw me-1"></i> Brute-Force Ergebnisse löschen
+                            </button>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </header>
 
@@ -87,7 +116,7 @@
                         <p class="text-center">Ergebnisse werden geladen...</p>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="export-bruteforce-modal-txt" data-tippy-content="Exportiert die angezeigten Top-Ergebnisse als Textdatei (.txt)." disabled>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="export-bruteforce-modal-txt" data-tippy-content="Exportiert die angezeigten Top-Ergebnisse als Textdatei (.txt);" disabled>
                             <i class="fas fa-file-alt me-1"></i> Ergebnisse als TXT
                         </button>
                         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Schließen</button>
@@ -106,7 +135,6 @@
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvg@4.0.1/lib/umd.min.js"></script>
-
 
     <script src="js/config/app_config.js"></script>
     <script src="js/config/text_config.js"></script>
