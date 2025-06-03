@@ -7,7 +7,7 @@ const ui_helpers = (() => {
 
     function escapeMarkdown(text) {
         if (typeof text !== 'string' || text === null) return text === null ? '' : String(text);
-        const map = { '\\': '\\\\', '`': '\\`', '*': '\\*', '_': '\\_', '{': '\\{', '}': '\\}', '[': '\\[', ']': '\\]', '(': '\\(', ')': '\\)', '#': '\\#', '+': '\\+', '-': '\\-', '.': '\\.', '!': '\\!', '|': '\\|' };
+        const map = { '\\': '\\\\', '`': '\\`', '*': '\\*', '_': '\\_', '{': '\\{', '}': '\\}', '[': '\\[', ']': '\\[', '(': '\\(', ')': '\\)', '#': '\\#', '+': '\\+', '-': '\\-', '.': '\\.', '!': '\\!', '|': '\\|' };
         return text.replace(/[\\`*_{}[\]()#+\-.!|]/g, match => map[match]);
     }
 
@@ -43,18 +43,21 @@ const ui_helpers = (() => {
     }
 
     function initializeTooltips(scope = document.body) {
-        if (!window.tippy || typeof scope?.querySelectorAll !== 'function') { console.warn("Tippy.js nicht verfügbar oder ungültiger Scope für Tooltips."); return; }
+        if (!window.tippy || typeof scope?.querySelectorAll !== 'function') {
+            console.warn("Tippy.js nicht verfügbar oder ungültiger Scope für Tooltips.");
+            return;
+        }
 
         const elementsInScope = Array.from(scope.matches('[data-tippy-content]') ? [scope] : scope.querySelectorAll('[data-tippy-content]'));
-        
+
         globalTippyInstances = globalTippyInstances.filter(instance => {
             if (!instance || !instance.reference || !document.body.contains(instance.reference)) {
-                try { instance?.destroy(); } catch(e){}
+                try { if(instance.destroy) instance.destroy(); } catch (e) {}
                 return false;
             }
-            return true; 
+            return true;
         });
-        
+
         elementsInScope.forEach(el => {
             if (el._tippy) {
                 try {
@@ -63,18 +66,40 @@ const ui_helpers = (() => {
             }
         });
         
-        const newInstances = tippy(elementsInScope, {
-           allowHTML: true, theme: 'glass', placement: 'top', animation: 'fade',
-           interactive: false, appendTo: () => document.body, delay: APP_CONFIG.UI_SETTINGS.TOOLTIP_DELAY || [150, 50],
-           maxWidth: 400, duration: [150, 150], zIndex: 3050,
-           onCreate(instance) { if (!instance.props.content || String(instance.props.content).trim() === '') { instance.disable(); } },
-           onShow(instance) { const content = instance.reference.getAttribute('data-tippy-content'); if (content && String(content).trim() !== '') { instance.setContent(content); return true; } else { return false; } }
-        });
-
-        if (Array.isArray(newInstances)) { globalTippyInstances = globalTippyInstances.concat(newInstances.filter(inst => inst !== null && inst !== undefined)); }
-        else if (newInstances) { globalTippyInstances.push(newInstances); }
+        if (elementsInScope.length > 0) {
+            const newInstances = tippy(elementsInScope, {
+                allowHTML: true,
+                theme: 'glass',
+                placement: 'top',
+                animation: 'fade',
+                interactive: false,
+                appendTo: () => document.body,
+                delay: APP_CONFIG.UI_SETTINGS.TOOLTIP_DELAY || [150, 50],
+                maxWidth: 400,
+                duration: [150, 150],
+                zIndex: 3050,
+                onCreate(instance) {
+                    if (!instance.props.content || String(instance.props.content).trim() === '') {
+                        instance.disable();
+                    }
+                },
+                onShow(instance) {
+                    const content = instance.reference.getAttribute('data-tippy-content');
+                    if (content && String(content).trim() !== '') {
+                        instance.setContent(content);
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            });
+            if (Array.isArray(newInstances)) {
+                globalTippyInstances = globalTippyInstances.concat(newInstances.filter(inst => inst !== null && inst !== undefined));
+            } else if (newInstances) {
+                globalTippyInstances.push(newInstances);
+            }
+        }
     }
-
 
     function updateElementText(elementId, text) {
         const element = document.getElementById(elementId);
@@ -186,18 +211,17 @@ const ui_helpers = (() => {
         const newAction = expand ? 'collapse' : 'expand';
         button.dataset.action = newAction;
         const iconClass = expand ? 'fa-chevron-up' : 'fa-chevron-down';
-        const buttonText = expand ? (lang === 'de' ? 'Alle Details Ausblenden' : 'Collapse All Details') : (lang === 'de' ? 'Alle Details Anzeigen' : 'Expand All Details');
-        const lang = state.getCurrentPublikationLang() || 'de';
-
+        const currentLang = typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function' ? state.getCurrentPublikationLang() : 'de';
+        const buttonText = expand ? (currentLang === 'de' ? 'Alle Details Ausblenden' : 'Collapse All Details')
+                                  : (currentLang === 'de' ? 'Alle Details Anzeigen' : 'Expand All Details');
 
         let tooltipKeyBase = '';
         if (buttonId === 'daten-toggle-details') tooltipKeyBase = 'datenTable';
         else if (buttonId === 'auswertung-toggle-details') tooltipKeyBase = 'auswertungTable';
         
-        const tooltipContentBase = TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll || (lang === 'de' ? 'Alle Details ein-/ausblenden' : 'Expand/collapse all details');
-        const currentTooltipText = expand ? tooltipContentBase.replace(lang === 'de' ? 'ein-' : 'Expand', lang === 'de' ? 'aus-' : 'Collapse').replace(lang === 'de' ? 'anzeigen' : 'Expand', lang === 'de' ? 'ausblenden' : 'Collapse')
-                                      : tooltipContentBase.replace(lang === 'de' ? 'aus-' : 'Collapse', lang === 'de' ? 'ein-' : 'Expand').replace(lang === 'de' ? 'ausblenden' : 'Collapse', lang === 'de' ? 'anzeigen' : 'Expand');
-
+        const tooltipContentBase = TOOLTIP_CONTENT[tooltipKeyBase]?.expandAll || (currentLang === 'de' ? 'Alle Details ein-/ausblenden' : 'Expand/collapse all details');
+        const currentTooltipText = expand ? tooltipContentBase.replace(currentLang === 'de' ? 'ein-' : 'Expand', currentLang === 'de' ? 'aus-' : 'Collapse').replace(currentLang === 'de' ? 'anzeigen' : 'Expand', currentLang === 'de' ? 'ausblenden' : 'Collapse')
+                                      : tooltipContentBase.replace(currentLang === 'de' ? 'aus-' : 'Collapse', currentLang === 'de' ? 'ein-' : 'Expand').replace(currentLang === 'de' ? 'ausblenden' : 'Collapse', currentLang === 'de' ? 'anzeigen' : 'Expand');
 
         updateElementHTML(buttonId, `${buttonText} <i class="fas ${iconClass} ms-1"></i>`);
         button.setAttribute('data-tippy-content', currentTooltipText);
@@ -361,15 +385,17 @@ const ui_helpers = (() => {
         const select1 = document.getElementById('statistik-kollektiv-select-1');
         const select2 = document.getElementById('statistik-kollektiv-select-2');
         const isVergleich = layout === 'vergleich';
-        const lang = state.getCurrentPublikationLang() || 'de';
+        const currentLang = typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function' ? state.getCurrentPublikationLang() : 'de';
+
 
         if (toggleBtn) {
             toggleBtn.classList.toggle('active', isVergleich);
             toggleBtn.setAttribute('aria-pressed', String(isVergleich));
-            const buttonText = isVergleich ? (lang === 'de' ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-users-cog me-1"></i> Comparison Active')
-                                          : (lang === 'de' ? '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv' : '<i class="fas fa-user-cog me-1"></i> Single View Active');
+            const buttonText = isVergleich ? (currentLang === 'de' ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-users-cog me-1"></i> Comparison Active')
+                                          : (currentLang === 'de' ? '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv' : '<i class="fas fa-user-cog me-1"></i> Single View Active');
             updateElementHTML(toggleBtn.id, buttonText);
-            const tooltipText = TOOLTIP_CONTENT.statistikToggleVergleich?.description || (lang === 'de' ? 'Layout umschalten' : 'Toggle layout');
+            
+            const tooltipText = TOOLTIP_CONTENT.statistikToggleVergleich?.description || (currentLang === 'de' ? 'Layout umschalten' : 'Toggle layout');
             if(toggleBtn._tippy) toggleBtn._tippy.setContent(tooltipText);
             else initializeTooltips(toggleBtn.parentElement || toggleBtn);
         }
@@ -633,12 +659,12 @@ const ui_helpers = (() => {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
         const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: null, n_trials: null, matrix_components: null };
         const na = '--';
-        const lang = state ? state.getCurrentPublikationLang() || 'de' : 'de';
+        const currentLang = typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function' ? state.getCurrentPublikationLang() : 'de';
         const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
         const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na, lang === 'en');
-        const lowerStr = formatNumber(data?.ci?.lower, digits, na, lang === 'en');
-        const upperStr = formatNumber(data?.ci?.upper, digits, na, lang === 'en');
+        const valueStr = formatNumber(data?.value, digits, na, currentLang === 'en');
+        const lowerStr = formatNumber(data?.ci?.lower, digits, na, currentLang === 'en');
+        const upperStr = formatNumber(data?.ci?.upper, digits, na, currentLang === 'en');
         const ciMethodStr = data?.method || 'N/A';
         const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value) : ((key === 'phi') ? getPhiBewertung(data?.value) : '');
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
@@ -647,14 +673,18 @@ const ui_helpers = (() => {
         const ciWarningThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 10;
         const warningTextDe = `<hr class="my-1"><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahlen.</i>`;
         const warningTextEn = `<hr class="my-1"><i>Note: Confidence interval may be unreliable due to small sample sizes.</i>`;
-        const currentWarningText = lang === 'de' ? warningTextDe : warningTextEn;
+        const currentWarningText = currentLang === 'de' ? warningTextDe : warningTextEn;
 
         if (data?.n_trials !== undefined && data?.n_trials !== null && data.n_trials < ciWarningThreshold && (key === 'sens' || key === 'spez' || key === 'ppv' || key === 'npv' || key === 'acc')) {
-            ciWarning = currentWarningText.replace('Fallzahlen.', `Fallzahlen (Nenner=${data.n_trials}).`).replace('sample sizes.', `sample sizes (denominator=${data.n_trials}).`);
+            const nTrialsWarningDe = ` (Nenner=${data.n_trials}).`;
+            const nTrialsWarningEn = ` (denominator=${data.n_trials}).`;
+            ciWarning = currentWarningText.replace(currentLang === 'de' ? 'Fallzahlen.' : 'sample sizes.', (currentLang === 'de' ? 'Fallzahlen' : 'sample sizes') + (currentLang === 'de' ? nTrialsWarningDe : nTrialsWarningEn));
         } else if (data?.matrix_components && (key === 'balAcc' || key === 'f1' || key === 'auc')) {
             const mc = data.matrix_components;
             if (mc && (mc.total < ciWarningThreshold * 2 || mc.rp < ciWarningThreshold/2 || mc.fp < ciWarningThreshold/2 || mc.fn < ciWarningThreshold/2 || mc.rn < ciWarningThreshold/2 )) {
-                 ciWarning = currentWarningText.replace('Fallzahlen.', `Fallzahlen in der Konfusionsmatrix (Gesamt=${mc.total}).`).replace('sample sizes.', `sample sizes in confusion matrix (Total=${mc.total}).`);
+                 const matrixWarningDe = ` in der Konfusionsmatrix (Gesamt=${mc.total}).`;
+                 const matrixWarningEn = ` in confusion matrix (Total=${mc.total}).`;
+                 ciWarning = currentWarningText.replace(currentLang === 'de' ? 'Fallzahlen.' : 'sample sizes.', (currentLang === 'de' ? 'Fallzahlen' : 'sample sizes') + (currentLang === 'de' ? matrixWarningDe : matrixWarningEn));
             }
         }
 
@@ -668,7 +698,7 @@ const ui_helpers = (() => {
             .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`);
 
         if (lowerStr === na || upperStr === na || ciMethodStr === na || !data?.ci) {
-             interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, lang === 'de' ? '(Keine CI-Daten verfügbar)' : '(No CI data available)');
+             interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, currentLang === 'de' ? '(Keine CI-Daten verfügbar)' : '(No CI data available)');
              interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
         }
         interpretation = interpretation.replace(/, p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
@@ -686,9 +716,9 @@ const ui_helpers = (() => {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
          if (!testData) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
-        const lang = state ? state.getCurrentPublikationLang() || 'de' : 'de';
+        const currentLang = typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function' ? state.getCurrentPublikationLang() : 'de';
         const pValue = testData?.pValue;
-        const pStr = (pValue !== null && !isNaN(pValue)) ? (pValue < 0.001 ? (lang === 'de' ? '&lt;0,001' : '&lt;0.001') : formatNumber(pValue, 3, na, lang === 'en')) : na;
+        const pStr = (pValue !== null && !isNaN(pValue)) ? (pValue < 0.001 ? (currentLang === 'de' ? '&lt;0,001' : '&lt;0.001') : formatNumber(pValue, 3, na, currentLang === 'en')) : na;
         const sigSymbol = getStatisticalSignificanceSymbol(pValue);
         const sigText = getStatisticalSignificanceText(pValue);
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
@@ -705,44 +735,44 @@ const ui_helpers = (() => {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
         if (!assocObj) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
-        const lang = state ? state.getCurrentPublikationLang() || 'de' : 'de';
+        const currentLang = typeof state !== 'undefined' && typeof state.getCurrentPublikationLang === 'function' ? state.getCurrentPublikationLang() : 'de';
         let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '', pVal = NaN, ciWarning = '';
         const assozPValue = assocObj?.pValue;
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
         const ciWarningThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD || 10;
         const warningTextDe = `<hr class="my-1"><i>Hinweis: Konfidenzintervall oder Maß ggf. unsicher aufgrund kleiner Fallzahlen.</i>`;
         const warningTextEn = `<hr class="my-1"><i>Note: Confidence interval or measure may be unreliable due to small sample sizes.</i>`;
-        const currentWarningText = lang === 'de' ? warningTextDe : warningTextEn;
-
+        const currentWarningText = currentLang === 'de' ? warningTextDe : warningTextEn;
 
         if(assocObj.matrix && (key === 'or' || key === 'rd' || key === 'phi')) {
             const m = assocObj.matrix;
-            const totalInMatrix = m.rp + m.fp + m.fn + m.rn;
-            if (totalInMatrix < ciWarningThreshold * 2 || m.rp < ciWarningThreshold/2 || m.fp < ciWarningThreshold/2 || m.fn < ciWarningThreshold/2 || m.rn < ciWarningThreshold/2) {
-                ciWarning = currentWarningText.replace('Fallzahlen.', `Fallzahlen in der zugrundeliegenden 2x2 Tabelle (Gesamt=${totalInMatrix}).`).replace('sample sizes.', `sample sizes in the underlying 2x2 table (Total=${totalInMatrix}).`);
+            const totalInMatrix = (m.rp || 0) + (m.fp || 0) + (m.fn || 0) + (m.rn || 0) ;
+            if (totalInMatrix < ciWarningThreshold * 2 || (m.rp || 0) < ciWarningThreshold/2 || (m.fp || 0) < ciWarningThreshold/2 || (m.fn || 0) < ciWarningThreshold/2 || (m.rn || 0) < ciWarningThreshold/2) {
+                 const matrixWarningDe = ` in der zugrundeliegenden 2x2 Tabelle (Gesamt=${totalInMatrix}).`;
+                 const matrixWarningEn = ` in the underlying 2x2 table (Total=${totalInMatrix}).`;
+                 ciWarning = currentWarningText.replace(currentLang === 'de' ? 'Fallzahlen.' : 'sample sizes.', (currentLang === 'de' ? 'Fallzahlen' : 'sample sizes') + (currentLang === 'de' ? matrixWarningDe : matrixWarningEn));
             }
         }
 
-
         if (key === 'or') {
-            valueStr = formatNumber(assocObj.or?.value, 2, na, lang === 'en');
-            lowerStr = formatNumber(assocObj.or?.ci?.lower, 2, na, lang === 'en');
-            upperStr = formatNumber(assocObj.or?.ci?.upper, 2, na, lang === 'en');
+            valueStr = formatNumber(assocObj.or?.value, 2, na, currentLang === 'en');
+            lowerStr = formatNumber(assocObj.or?.ci?.lower, 2, na, currentLang === 'en');
+            upperStr = formatNumber(assocObj.or?.ci?.upper, 2, na, currentLang === 'en');
             ciMethodStr = assocObj.or?.method || na;
-            pStr = (assozPValue !== null && !isNaN(assozPValue)) ? (assozPValue < 0.001 ? (lang === 'de' ? '&lt;0,001' : '&lt;0.001') : formatNumber(assozPValue, 3, na, lang === 'en')) : na;
+            pStr = (assozPValue !== null && !isNaN(assozPValue)) ? (assozPValue < 0.001 ? (currentLang === 'de' ? '&lt;0,001' : '&lt;0.001') : formatNumber(assozPValue, 3, na, currentLang === 'en')) : na;
             sigSymbol = getStatisticalSignificanceSymbol(assozPValue);
             sigText = getStatisticalSignificanceText(assozPValue);
         } else if (key === 'rd') {
-            valueStr = formatNumber(assocObj.rd?.value !== null && !isNaN(assocObj.rd?.value) ? assocObj.rd.value * 100 : NaN, 1, na, lang === 'en');
-            lowerStr = formatNumber(assocObj.rd?.ci?.lower !== null && !isNaN(assocObj.rd?.ci?.lower) ? assocObj.rd.ci.lower * 100 : NaN, 1, na, lang === 'en');
-            upperStr = formatNumber(assocObj.rd?.ci?.upper !== null && !isNaN(assocObj.rd?.ci?.upper) ? assocObj.rd.ci.upper * 100 : NaN, 1, na, lang === 'en');
+            valueStr = formatNumber(assocObj.rd?.value !== null && !isNaN(assocObj.rd?.value) ? assocObj.rd.value * 100 : NaN, 1, na, currentLang === 'en');
+            lowerStr = formatNumber(assocObj.rd?.ci?.lower !== null && !isNaN(assocObj.rd?.ci?.lower) ? assocObj.rd.ci.lower * 100 : NaN, 1, na, currentLang === 'en');
+            upperStr = formatNumber(assocObj.rd?.ci?.upper !== null && !isNaN(assocObj.rd?.ci?.upper) ? assocObj.rd.ci.upper * 100 : NaN, 1, na, currentLang === 'en');
             ciMethodStr = assocObj.rd?.method || na;
         } else if (key === 'phi') {
-            valueStr = formatNumber(assocObj.phi?.value, 2, na, lang === 'en');
+            valueStr = formatNumber(assocObj.phi?.value, 2, na, currentLang === 'en');
             bewertungStr = getPhiBewertung(assocObj.phi?.value);
         } else if (key === 'fisher' || key === 'mannwhitney' || key === 'pvalue' || key === 'size_mwu' || key === 'defaultP') {
              pVal = assocObj?.pValue;
-             pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? (lang === 'de' ? '&lt;0,001' : '&lt;0.001') : formatNumber(pVal, 3, na, lang === 'en')) : na;
+             pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? (currentLang === 'de' ? '&lt;0,001' : '&lt;0.001') : formatNumber(pVal, 3, na, currentLang === 'en')) : na;
              sigSymbol = getStatisticalSignificanceSymbol(pVal);
              sigText = getStatisticalSignificanceText(pVal);
              const templateToUse = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || TOOLTIP_CONTENT.statMetrics.defaultP.interpretation;
@@ -772,7 +802,7 @@ const ui_helpers = (() => {
 
          if (key === 'or' || key === 'rd') {
             if (lowerStr === na || upperStr === na || ciMethodStr === na || !assocObj?.[key]?.ci) {
-                interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, lang === 'de' ? '(Keine CI-Daten verfügbar)' : '(No CI data available)');
+                interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, currentLang === 'de' ? '(Keine CI-Daten verfügbar)' : '(No CI data available)');
                 interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
             }
          }
@@ -785,7 +815,7 @@ const ui_helpers = (() => {
 
     function showKurzanleitung() {
         const modalElement = document.getElementById('kurzanleitung-modal');
-        let mainAppInterfaceInstance = null; 
+        let mainAppInterfaceInstance = null;
         if (typeof mainAppInterface !== 'undefined') {
             mainAppInterfaceInstance = mainAppInterface;
         }
@@ -810,8 +840,13 @@ const ui_helpers = (() => {
                 </div>`;
             document.body.insertAdjacentHTML('beforeend', modalHTML);
             const newModalElement = document.getElementById('kurzanleitung-modal');
-            kurzanleitungModalInstance = new bootstrap.Modal(newModalElement);
-        } else if (!kurzanleitungModalInstance) {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                 kurzanleitungModalInstance = new bootstrap.Modal(newModalElement);
+            } else {
+                console.error("Bootstrap Modal nicht verfügbar für Kurzanleitung.");
+                return;
+            }
+        } else if (!kurzanleitungModalInstance && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
              kurzanleitungModalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
         }
 
@@ -819,8 +854,8 @@ const ui_helpers = (() => {
             if (!initialTabRenderFixed && typeof mainAppInterfaceInstance?.refreshCurrentTab === 'function') {
                 modalElement.addEventListener('hidden.bs.modal', () => {
                     if (!initialTabRenderFixed) {
-                        const defaultInitialTabId = APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION === 'methoden' ? 'publikation-tab' : 'daten-tab';
-                        if (state.getActiveTabId() === defaultInitialTabId || state.getActiveTabId() === 'publikation-tab') {
+                        const defaultInitialTabId = APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION === 'methoden' && APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG ? 'publikation-tab' : 'daten-tab';
+                        if (typeof state !== 'undefined' && state.getActiveTabId() === defaultInitialTabId || (typeof state !== 'undefined' && state.getActiveTabId() === 'publikation-tab')) {
                              try { mainAppInterfaceInstance.refreshCurrentTab(); } catch (e) { console.error("Fehler beim Refresh nach Kurzanleitung:", e); }
                         }
                     }
@@ -828,8 +863,11 @@ const ui_helpers = (() => {
                 }, { once: true });
             }
             kurzanleitungModalInstance.show();
+        } else if (!kurzanleitungModalInstance) {
+             console.error("Kurzanleitung Modal Instanz konnte nicht erstellt werden.");
         }
     }
+
 
     return Object.freeze({
         escapeMarkdown,
