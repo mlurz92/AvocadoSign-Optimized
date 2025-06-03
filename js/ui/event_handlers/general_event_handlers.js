@@ -1,98 +1,113 @@
 const generalEventHandlers = (() => {
 
-    function handleKollektivChange(newKollektiv, mainAppInterface) {
-        if (mainAppInterface && typeof mainAppInterface.handleGlobalKollektivChange === 'function') {
-            mainAppInterface.handleGlobalKollektivChange(newKollektiv, "user");
+    function _handleKollektivButtonClick(event) {
+        const newKollektiv = event.currentTarget.dataset.kollektiv;
+        if (mainAppInterface && typeof mainAppInterface.handleKollektivChange === 'function') {
+            mainAppInterface.handleKollektivChange(newKollektiv);
         } else {
-            console.error("generalEventHandlers.handleKollektivChange: mainAppInterface.handleGlobalKollektivChange ist nicht definiert.");
+            console.error("mainAppInterface.handleKollektivChange ist nicht verfügbar.");
         }
     }
 
-    function handleTabShownEvent(event, mainAppInterface) {
-        if (event.target && event.target.id && mainAppInterface && typeof mainAppInterface.processTabChange === 'function') {
-            mainAppInterface.processTabChange(event.target.id);
+    function _handleHilfeButtonClick() {
+        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showKurzanleitung === 'function') {
+            ui_helpers.showKurzanleitung();
         } else {
-             console.error("generalEventHandlers.handleTabShownEvent: Event-Ziel oder mainAppInterface.processTabChange ist nicht definiert.");
+            console.error("ui_helpers.showKurzanleitung ist nicht verfügbar.");
+        }
+    }
+    
+    function _handleThemeChange(event) {
+        const newScheme = event.target.value;
+        if (typeof stateManager !== 'undefined' && typeof stateManager.setChartColorScheme === 'function') {
+            stateManager.setChartColorScheme(newScheme);
+            if (mainAppInterface && typeof mainAppInterface.refreshCurrentTab === 'function') {
+                mainAppInterface.refreshCurrentTab(); // Um Charts neu zu rendern
+            }
+        }
+    }
+    
+    function _handleResetStateClick() {
+        if (confirm(UI_TEXTS.general.confirmResetState || "Möchten Sie wirklich alle Einstellungen (Kriterien, Sortierungen, Auswahlen) auf die Standardwerte zurücksetzen? Gespeicherte Brute-Force-Ergebnisse bleiben erhalten.")) {
+            if (typeof stateManager !== 'undefined' && typeof stateManager.resetStateToDefaults === 'function') {
+                stateManager.resetStateToDefaults();
+                 if (mainAppInterface && typeof mainAppInterface.refreshAllTabs === 'function') {
+                    mainAppInterface.refreshAllTabs(true); 
+                }
+                 if (typeof t2CriteriaManager !== 'undefined' && typeof t2CriteriaManager.resetToDefaults === 'function' && typeof t2CriteriaManager.saveAll === 'function' ) {
+                    t2CriteriaManager.resetToDefaults(); // Reset criteria in manager
+                    t2CriteriaManager.saveAll(); // Save defaults and update state
+                }
+
+                if (mainAppInterface && typeof mainAppInterface.updateAllUIComponents === 'function'){
+                    mainAppInterface.updateAllUIComponents();
+                } else if (mainAppInterface && typeof mainAppInterface.refreshCurrentTab === 'function') {
+                     mainAppInterface.refreshCurrentTab();
+                }
+                
+                ui_helpers.showToast("Alle Einstellungen wurden auf Standard zurückgesetzt.", "success");
+            }
+        }
+    }
+    
+    function _handleResetBruteForceClick() {
+         if (confirm(UI_TEXTS.general.confirmResetBruteForce || "Möchten Sie wirklich ALLE gespeicherten Brute-Force-Optimierungsergebnisse für ALLE Kollektive und Metriken löschen?")) {
+            if (typeof bruteForceManager !== 'undefined' && typeof bruteForceManager.resetResults === 'function') {
+                bruteForceManager.resetResults(); 
+            }
         }
     }
 
-    function handleSortClick(sortHeader, sortSubHeader, mainAppInterface) {
-        const key = sortHeader?.dataset.sortKey;
-        if (!key || !mainAppInterface || typeof mainAppInterface.handleSortRequest !== 'function') {
-            if(!key) console.warn("Sort Key nicht gefunden im Header-Element.");
-            if(!mainAppInterface || typeof mainAppInterface.handleSortRequest !== 'function') console.error("mainAppInterface.handleSortRequest ist nicht definiert.");
-            return;
-        }
-        const subKey = sortSubHeader?.dataset.subKey || null;
-        const tableBody = sortHeader.closest('table')?.querySelector('tbody');
-        let tableContext = null;
-        if (tableBody?.id === 'daten-table-body') {
-            tableContext = 'daten';
-        } else if (tableBody?.id === 'auswertung-table-body') {
-            tableContext = 'auswertung';
-        }
 
-        if (tableContext) {
-            mainAppInterface.handleSortRequest(tableContext, key, subKey);
+    function register() {
+        const kollektivButtons = document.querySelectorAll('header .btn-group button[data-kollektiv]');
+        if (kollektivButtons && kollektivButtons.length > 0) {
+            kollektivButtons.forEach(button => {
+                button.removeEventListener('click', _handleKollektivButtonClick); 
+                button.addEventListener('click', _handleKollektivButtonClick);
+            });
         } else {
-            console.warn("Unbekannter Tabellenkontext für Sortierung:", tableBody?.id);
+            console.warn("GeneralEventHandlers: Kollektiv-Buttons nicht gefunden.");
         }
-    }
 
-    function handleSingleChartDownload(button) {
-        const chartId = button.dataset.chartId;
-        const format = button.dataset.format;
-        const chartName = button.dataset.chartName || button.dataset.defaultName || chartId.replace(/^chart-/, '').replace(/-container$/, '').replace(/-content$/, '').replace(/-[0-9]+$/, '');
-        const currentKollektiv = state.getCurrentKollektiv();
-
-        if (chartId && (format === 'png' || format === 'svg')) {
-            exportService.exportSingleChart(chartId, format, currentKollektiv, { chartName: chartName });
+        const hilfeButton = document.getElementById('btn-show-kurzanleitung');
+        if (hilfeButton) {
+            hilfeButton.removeEventListener('click', _handleHilfeButtonClick); 
+            hilfeButton.addEventListener('click', _handleHilfeButtonClick);
         } else {
-            ui_helpers.showToast("Fehler beim Chart-Download: Ungültige Parameter.", "danger");
-            console.error("handleSingleChartDownload: Ungültige Parameter", {chartId, format});
+            console.warn("GeneralEventHandlers: Hilfe-Button ('btn-show-kurzanleitung') nicht gefunden.");
         }
-    }
-
-    function handleSingleTableDownload(button) {
-        const tableId = button.dataset.tableId;
-        const tableName = button.dataset.tableName || button.dataset.defaultName || 'Tabelle';
-        const currentKollektiv = state.getCurrentKollektiv();
-
-        if (tableId && APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT) {
-            exportService.exportTablePNG(tableId, currentKollektiv, 'TABLE_PNG_EXPORT', tableName);
-        } else if (!tableId) {
-            ui_helpers.showToast(`Fehler: Tabellen-ID für PNG-Export nicht gefunden für '${tableName}'.`, "danger");
-        } else if (!APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT) {
-            ui_helpers.showToast("Tabellen-PNG-Export ist derzeit deaktiviert.", "info");
-        }
-    }
-
-    function handleToggleAllDetailsClick(buttonId, tableBodyId) {
-        ui_helpers.toggleAllDetails(tableBodyId, buttonId);
-    }
-
-    function handleKurzanleitungClick() {
-        ui_helpers.showKurzanleitung();
-    }
-
-    function handleModalExportBruteForceClick() {
-        const currentKollektiv = state.getCurrentKollektiv();
-        const resultsData = bruteForceManager.getResultsForKollektiv(currentKollektiv);
-        if (resultsData && resultsData.results && resultsData.results.length > 0) {
-            exportService.exportBruteForceReport(resultsData);
+        
+        const themeSelector = document.getElementById('chart-theme-selector');
+        if (themeSelector) {
+            themeSelector.removeEventListener('change', _handleThemeChange);
+            themeSelector.addEventListener('change', _handleThemeChange);
+            if(typeof stateManager !== 'undefined') {
+                 themeSelector.value = stateManager.getChartColorScheme();
+            }
         } else {
-            ui_helpers.showToast("Keine Brute-Force-Ergebnisse für den Export vorhanden.", "warning");
+             console.warn("GeneralEventHandlers: Theme-Selector ('chart-theme-selector') nicht gefunden.");
         }
+        
+        const resetStateButton = document.getElementById('btn-reset-state');
+        if(resetStateButton) {
+            resetStateButton.removeEventListener('click', _handleResetStateClick);
+            resetStateButton.addEventListener('click', _handleResetStateClick);
+        } else {
+            console.warn("GeneralEventHandlers: Reset-State-Button ('btn-reset-state') nicht gefunden.");
+        }
+        
+        const resetBruteForceButton = document.getElementById('btn-reset-bruteforce-results');
+         if(resetBruteForceButton) {
+            resetBruteForceButton.removeEventListener('click', _handleResetBruteForceClick);
+            resetBruteForceButton.addEventListener('click', _handleResetBruteForceClick);
+        } else {
+            console.warn("GeneralEventHandlers: Reset-BruteForce-Button ('btn-reset-bruteforce-results') nicht gefunden.");
+        }
+
     }
 
     return Object.freeze({
-        handleKollektivChange,
-        handleTabShownEvent,
-        handleSortClick,
-        handleSingleChartDownload,
-        handleSingleTableDownload,
-        handleToggleAllDetailsClick,
-        handleKurzanleitungClick,
-        handleModalExportBruteForceClick
+        register
     });
 })();
