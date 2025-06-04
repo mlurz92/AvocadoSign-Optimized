@@ -68,12 +68,12 @@
         handleKollektivChange: (newKollektiv) => {
             currentKollektiv = newKollektiv;
             stateManager.setCurrentKollektiv(newKollektiv);
-            refreshAllTabs(true);
+            mainAppInterface.refreshAllTabs(true);
         },
         handleT2CriteriaChange: (newCriteria, newLogic) => {
             currentT2Criteria = newCriteria;
             currentT2Logic = newLogic;
-            refreshCurrentTab(true);
+            mainAppInterface.refreshCurrentTab(true);
         },
         handleSortChange: (tabId, sortKey, subKey = null) => {
             if (tabId === 'daten-tab-pane') {
@@ -83,7 +83,7 @@
             }
         },
         handlePublikationSettingsChange: () => {
-            refreshPublikationTab();
+            mainAppInterface.refreshPublikationTab();
         },
         handleExportRequest: (exportType, options = {}) => {
             const allStats = statisticsService.calculateAllStatsForPublication(
@@ -137,7 +137,7 @@
                     break;
                 case 'filteredDataCSV':
                     const filteredData = dataProcessor.getProcessedData(stateManager.getCurrentKollektiv());
-                    exportService.exportStatistikCSV(allStats, stateManager.getCurrentKollektiv(), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic()); // Reusing statsCSV for now
+                    exportService.exportStatistikCSV(allStats, stateManager.getCurrentKollektiv(), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
                     break;
                 case 'comprehensiveReportHTML':
                     ui_helpers.showToast("Umfassender HTML-Bericht wird generiert (Funktion noch nicht vollständig implementiert).", "info");
@@ -195,11 +195,11 @@
         updateAllUIComponents: () => {
             _updateUI();
         },
-        refreshStatistikTab: () => {
-             _renderStatistikTab(true);
+        refreshStatistikTab: (forceStatRecalculation = false) => {
+             _renderStatistikTab(forceStatRecalculation);
         },
-        refreshPublikationTab: () => {
-             _renderPublikationTab(true);
+        refreshPublikationTab: (forceStatRecalculation = false) => {
+             _renderPublikationTab(forceStatRecalculation);
         }
     };
 
@@ -267,7 +267,14 @@
     }
 
     function _renderCurrentTab(forceStatRecalculation = false) {
-        const activeTabId = stateManager.getActiveTabId();
+        let activeTabId = stateManager.getActiveTabId();
+        // Fallback für ungültige oder alte Tab-IDs aus dem Local Storage
+        const validTabIds = ['daten-tab-pane', 'auswertung-tab-pane', 'statistik-tab-pane', 'praesentation-tab-pane', 'publikation-tab-pane', 'export-tab-pane'];
+        if (!validTabIds.includes(activeTabId)) {
+            console.warn(`Unbekannter oder ungültiger Tab-ID: ${activeTabId}. Setze auf Standard: ${APP_CONFIG.DEFAULT_SETTINGS.activeTabId}`);
+            activeTabId = APP_CONFIG.DEFAULT_SETTINGS.activeTabId;
+            stateManager.setActiveTabId(activeTabId); // Korrigiere den Zustand im StateManager
+        }
         currentActiveTabId = activeTabId; 
 
         if (forceStatRecalculation) {
@@ -295,7 +302,7 @@
                 viewRenderer.renderExportTab(currentKollektiv);
                 break;
             default:
-                console.warn(`Unbekannter Tab-ID: ${activeTabId}`);
+                console.warn(`Unerwarteter aktiver Tab-ID: ${activeTabId}`);
         }
         _updateUI();
     }
@@ -308,7 +315,7 @@
         viewRenderer.renderAuswertungTab(currentData, bruteForceManager);
         _renderStatistikTab(forceStatRecalculation);
         _renderPraesentationTab(forceStatRecalculation);
-        viewRenderer.renderPublikationTab();
+        _renderPublikationTab(forceStatRecalculation);
         viewRenderer.renderExportTab(currentKollektiv);
 
         _updateUI();
@@ -333,16 +340,25 @@
         if (currentStatsLayout === 'einzel') {
             statsEinze = window.allKollektivStatsForStatistikTab[stateManager.getCurrentKollektiv()];
         } else if (currentStatsLayout === 'vergleich') {
-            statsVergleich = {
-                accuracyComparison: {
-                    as: statisticsService.calculateComparisonStats(window.allKollektivStatsForStatistikTab[kollektiv1], kollektiv1, studyT2CriteriaManager.getAllStudyCriteriaSets(), bruteForceManager.getAllStoredResults())?.accuracyComparison?.as,
-                    t2: statisticsService.calculateComparisonStats(window.allKollektivStatsForStatistikTab[kollektiv1], kollektiv1, studyT2CriteriaManager.getAllStudyCriteriaSets(), bruteForceManager.getAllStoredResults())?.accuracyComparison?.t2
-                },
-                aucComparison: {
-                    as: statisticsService.calculateComparisonStats(window.allKollektivStatsForStatistikTab[kollektiv1], kollektiv1, studyT2CriteriaManager.getAllStudyCriteriaSets(), bruteForceManager.getAllStoredResults())?.aucComparison?.as,
-                    t2: statisticsService.calculateComparisonStats(window.allKollektivStatsForStatistikTab[kollektiv1], kollektiv1, studyT2CriteriaManager.getAllStudyCriteriaSets(), bruteForceManager.getAllStoredResults())?.aucComparison?.t2
-                }
-            };
+            // Sicherstellen, dass die Kollektive für den Vergleich existieren, bevor darauf zugegriffen wird
+            const statsKoll1 = window.allKollektivStatsForStatistikTab[kollektiv1];
+            const statsKoll2 = window.allKollektivStatsForStatistikTab[kollektiv2];
+
+            if (statsKoll1 && statsKoll2) {
+                statsVergleich = {
+                    accuracyComparison: {
+                        as: statisticsService.calculateComparisonStats(statsKoll1, kollektiv1, studyT2CriteriaManager.getAllStudyCriteriaSets(), bruteForceManager.getAllStoredResults())?.accuracyComparison?.as,
+                        t2: statisticsService.calculateComparisonStats(statsKoll1, kollektiv1, studyT2CriteriaManager.getAllStudyCriteriaSets(), bruteForceManager.getAllStoredResults())?.accuracyComparison?.t2
+                    },
+                    aucComparison: {
+                        as: statisticsService.calculateComparisonStats(statsKoll1, kollektiv1, studyT2CriteriaManager.getAllStudyCriteriaSets(), bruteForceManager.getAllStoredResults())?.aucComparison?.as,
+                        t2: statisticsService.calculateComparisonStats(statsKoll1, kollektiv1, studyT2CriteriaManager.getAllStudyCriteriaSets(), bruteForceManager.getAllStoredResults())?.aucComparison?.t2
+                    }
+                };
+            } else {
+                console.warn(`Statistik-Tab: Daten für Vergleichskollektive '${kollektiv1}' oder '${kollektiv2}' nicht verfügbar.`);
+                statsVergleich = null;
+            }
         }
         viewRenderer.renderStatistikTab(statsEinze, statsVergleich, currentStatsLayout, kollektiv1, kollektiv2, currentKollektiv);
     }
@@ -444,7 +460,9 @@
         const currentKollektivForContext = stateManager.getCurrentKollektiv();
         
         const content = publikationTabLogic.getRenderedSectionContent(currentPublikationSection, currentPublikationLang, currentKollektivForContext);
-        renderTabContent('publikation-tab-pane', uiComponents.createPublikationTabHeader(), {
+        // viewRenderer.renderTabContent muss hier aufgerufen werden, um den Header des Publikation-Tabs zu rendern
+        // und dann den Inhalt in den dafür vorgesehenen Bereich zu injizieren.
+        viewRenderer.renderTabContent('publikation-tab-pane', uiComponents.createPublikationTabHeader(), {
             afterRender: () => {
                 const contentArea = document.getElementById('publikation-content-area');
                 if (contentArea) {
@@ -478,7 +496,6 @@
 
             _updateUI();
 
-            const initialTabId = stateManager.getActiveTabId();
             const mainTabsElement = document.getElementById('mainTabs');
 
             if (mainTabsElement) {
