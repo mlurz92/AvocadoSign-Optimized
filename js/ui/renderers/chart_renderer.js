@@ -1,13 +1,36 @@
 const chartRenderer = (() => {
-    const defaultMargin = () => cloneDeep(APP_CONFIG.CHART_SETTINGS.DEFAULT_MARGIN);
-    const defaultColors = () => APP_CONFIG.CHART_SETTINGS.DEFAULT_COLORS || ['#4e79a7', '#f28e2c', '#e15759', '#76b7b2', '#59a14f', '#edc949', '#af7aa1', '#ff9da7', '#9c755f', '#bab0ab'];
+    const safeGetChartSettings = () => {
+        if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG && typeof APP_CONFIG.CHART_SETTINGS !== 'undefined' && APP_CONFIG.CHART_SETTINGS) {
+            return APP_CONFIG.CHART_SETTINGS;
+        }
+        console.warn("APP_CONFIG.CHART_SETTINGS nicht verfügbar, verwende Fallback-Werte für Diagramme.");
+        return {
+            DEFAULT_WIDTH: 450,
+            DEFAULT_HEIGHT: 300,
+            DEFAULT_MARGIN: Object.freeze({ top: 20, right: 20, bottom: 40, left: 45 }),
+            COMPACT_PIE_MARGIN: Object.freeze({ top: 10, right: 10, bottom: 40, left: 10 }),
+            NEW_PRIMARY_COLOR_BLUE: '#4472C4',
+            NEW_SECONDARY_COLOR_YELLOW_GREEN: '#A9D18E',
+            DEFAULT_COLORS: Object.freeze(['#4e79a7', '#f28e2c', '#e15759', '#76b7b2', '#59a14f', '#edc949', '#af7aa1', '#ff9da7', '#9c755f', '#bab0ab']),
+            AXIS_LABEL_FONT_SIZE: '11px',
+            TICK_LABEL_FONT_SIZE: '10px',
+            LEGEND_FONT_SIZE: '10px',
+            POINT_RADIUS: 4,
+            LINE_STROKE_WIDTH: 2,
+            ENABLE_GRIDLINES: true
+        };
+    };
+
+    const defaultMargin = () => cloneDeep(safeGetChartSettings().DEFAULT_MARGIN);
+    const defaultColors = () => safeGetChartSettings().DEFAULT_COLORS || ['#4e79a7', '#f28e2c', '#e15759', '#76b7b2', '#59a14f', '#edc949', '#af7aa1', '#ff9da7', '#9c755f', '#bab0ab'];
 
     function _getColors(numColors, schemeName = null) {
+        const chartSettings = safeGetChartSettings();
         const currentSchemeName = schemeName || (typeof stateManager !== 'undefined' ? stateManager.getChartColorScheme() : 'default');
         const schemes = {
-            default: defaultColors(),
-            primary: [APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE, APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN, '#76b7b2', '#e15759', '#59a14f', '#edc949'],
-            accent: [APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN, APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE, '#e15759', '#76b7b2', '#59a14f', '#edc949'],
+            default: chartSettings.DEFAULT_COLORS,
+            primary: [chartSettings.NEW_PRIMARY_COLOR_BLUE, chartSettings.NEW_SECONDARY_COLOR_YELLOW_GREEN, '#76b7b2', '#e15759', '#59a14f', '#edc949'],
+            accent: [chartSettings.NEW_SECONDARY_COLOR_YELLOW_GREEN, chartSettings.NEW_PRIMARY_COLOR_BLUE, '#e15759', '#76b7b2', '#59a14f', '#edc949'],
             grayscale: ['#333333', '#666666', '#999999', '#cccccc', '#dddddd', '#eeeeee'],
             print_friendly_qualitative: ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'],
             radiology_publication: ['#000000', '#505050', '#808080', '#B0B0B0', '#D0D0D0', '#E0E0E0'] 
@@ -44,13 +67,14 @@ const chartRenderer = (() => {
     }
 
     function _addAxisLabels(svg, xLabel, yLabel, width, height, margin) {
+        const chartSettings = safeGetChartSettings();
         if (xLabel) {
             svg.append("text")
                 .attr("class", "axis-label x-axis-label")
                 .attr("text-anchor", "middle")
                 .attr("x", width / 2)
                 .attr("y", height + margin.top + margin.bottom - (margin.bottom / 4) )
-                .style("font-size", APP_CONFIG.CHART_SETTINGS.AXIS_LABEL_FONT_SIZE)
+                .style("font-size", chartSettings.AXIS_LABEL_FONT_SIZE)
                 .style("fill", "var(--chart-label-color)")
                 .text(xLabel);
         }
@@ -61,7 +85,7 @@ const chartRenderer = (() => {
                 .attr("transform", "rotate(-90)")
                 .attr("y", 0 - margin.left + (margin.left / 3))
                 .attr("x", 0 - (height / 2) - margin.top)
-                .style("font-size", APP_CONFIG.CHART_SETTINGS.AXIS_LABEL_FONT_SIZE)
+                .style("font-size", chartSettings.AXIS_LABEL_FONT_SIZE)
                 .style("fill", "var(--chart-label-color)")
                 .text(yLabel);
         }
@@ -69,7 +93,8 @@ const chartRenderer = (() => {
 
     function _addLegend(svg, legendData, width, margin, options = {}) {
         if (!legendData || legendData.length === 0) return;
-        const legendFontSize = options.legendFontSize || APP_CONFIG.CHART_SETTINGS.LEGEND_FONT_SIZE;
+        const chartSettings = safeGetChartSettings();
+        const legendFontSize = options.legendFontSize || chartSettings.LEGEND_FONT_SIZE;
         const itemHeight = parseInt(legendFontSize, 10) + 8;
         const itemWidth = options.legendItemWidth || 120;
         const symbolSize = parseInt(legendFontSize, 10);
@@ -113,7 +138,8 @@ const chartRenderer = (() => {
     }
 
     function _addGridlines(svg, xScale, yScale, width, height, xGrid, yGrid) {
-        if (APP_CONFIG.CHART_SETTINGS.ENABLE_GRIDLINES) {
+        const chartSettings = safeGetChartSettings();
+        if (chartSettings.ENABLE_GRIDLINES) {
             if (yGrid && yScale.ticks) {
                 svg.append("g")
                     .attr("class", "grid y-grid")
@@ -138,7 +164,8 @@ const chartRenderer = (() => {
 
     function renderBarChart(data, targetElementId, options = {}) {
         d3.select(`#${targetElementId}`).select("svg").remove();
-        const { width = APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH, height = APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT, margin = defaultMargin(), xLabel = '', yLabel = '', title = '', colorScheme = null, barLabel = false, yAxisMin = 0 } = options;
+        const chartSettings = safeGetChartSettings();
+        const { width = chartSettings.DEFAULT_WIDTH, height = chartSettings.DEFAULT_HEIGHT, margin = defaultMargin(), xLabel = '', yLabel = '', title = '', colorScheme = null, barLabel = false, yAxisMin = 0 } = options;
         const chartWidth = width - margin.left - margin.right;
         const chartHeight = height - margin.top - margin.bottom;
         const colors = _getColors(data.length, colorScheme);
@@ -207,7 +234,8 @@ const chartRenderer = (() => {
 
     function renderPieChart(data, targetElementId, options = {}) {
         d3.select(`#${targetElementId}`).select("svg").remove();
-        const { width = APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH / 1.5, height = APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT / 1.5, margin = APP_CONFIG.CHART_SETTINGS.COMPACT_PIE_MARGIN, title = '', colorScheme = null, innerRadiusFactor = 0.4, legendBelow = false, legendItemCount = 2, fontSize = APP_CONFIG.CHART_SETTINGS.LEGEND_FONT_SIZE } = options;
+        const chartSettings = safeGetChartSettings();
+        const { width = chartSettings.DEFAULT_WIDTH / 1.5, height = chartSettings.DEFAULT_HEIGHT / 1.5, margin = chartSettings.COMPACT_PIE_MARGIN, title = '', colorScheme = null, innerRadiusFactor = 0.4, legendBelow = false, legendItemCount = 2, fontSize = chartSettings.LEGEND_FONT_SIZE } = options;
         const radius = Math.min(width - margin.left - margin.right, height - margin.top - margin.bottom - (legendBelow ? (legendItemCount * (parseInt(fontSize,10) + 8) + 10) : 0) ) / 2;
         const colors = _getColors(data.length, colorScheme);
 
@@ -255,7 +283,8 @@ const chartRenderer = (() => {
     
     function renderHistogram(data, targetElementId, options = {}) {
         d3.select(`#${targetElementId}`).select("svg").remove();
-        const { width = APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH, height = APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT, margin = defaultMargin(), xLabel = '', yLabel = '', title = '', color = APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE, numBins = 10 } = options;
+        const chartSettings = safeGetChartSettings();
+        const { width = chartSettings.DEFAULT_WIDTH, height = chartSettings.DEFAULT_HEIGHT, margin = defaultMargin(), xLabel = '', yLabel = '', title = '', color = chartSettings.NEW_PRIMARY_COLOR_BLUE, numBins = 10 } = options;
         const chartWidth = width - margin.left - margin.right;
         const chartHeight = height - margin.top - margin.bottom;
 
@@ -315,7 +344,8 @@ const chartRenderer = (() => {
 
     function renderROCCurve(rocDataSets, targetElementId, options = {}) {
         d3.select(`#${targetElementId}`).select("svg").remove();
-        const { width = APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH, height = APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT, margin = defaultMargin(), title = "ROC-Kurve(n)", xLabel = "1 - Spezifität", yLabel = "Sensitivität", colorScheme = null } = options;
+        const chartSettings = safeGetChartSettings();
+        const { width = chartSettings.DEFAULT_WIDTH, height = chartSettings.DEFAULT_HEIGHT, margin = defaultMargin(), title = "ROC-Kurve(n)", xLabel = "1 - Spezifität", yLabel = "Sensitivität", colorScheme = null } = options;
         const chartWidth = width - margin.left - margin.right;
         const chartHeight = height - margin.top - margin.bottom;
         const colors = _getColors(rocDataSets.length, colorScheme);
@@ -354,7 +384,7 @@ const chartRenderer = (() => {
                 .attr("class", "roc-curve")
                 .attr("fill", "none")
                 .attr("stroke", colors[index])
-                .attr("stroke-width", APP_CONFIG.CHART_SETTINGS.LINE_STROKE_WIDTH)
+                .attr("stroke-width", chartSettings.LINE_STROKE_WIDTH)
                 .attr("d", line);
 
             svg.selectAll(`.dot-${index}`)
@@ -363,11 +393,11 @@ const chartRenderer = (() => {
                 .attr("class", `roc-point dot-${index}`)
                 .attr("cx", d => x(d.fpr))
                 .attr("cy", d => y(d.tpr))
-                .attr("r", APP_CONFIG.CHART_SETTINGS.POINT_RADIUS / 1.5)
+                .attr("r", chartSettings.POINT_RADIUS / 1.5)
                 .attr("fill", colors[index])
                 .on("mouseover", (event, d) => {
                     tooltip.style("visibility", "visible").style("opacity", 1);
-                    d3.select(event.currentTarget).attr("r", APP_CONFIG.CHART_SETTINGS.POINT_RADIUS * 1.2);
+                    d3.select(event.currentTarget).attr("r", chartSettings.POINT_RADIUS * 1.2);
                 })
                 .on("mousemove", (event, d) => {
                     let tooltipText = `<strong>${dataSet.name}</strong><br>1-Spez: ${formatNumber(d.fpr, 3, 'N/A', 'en')}<br>Sens: ${formatNumber(d.tpr, 3, 'N/A', 'en')}`;
@@ -378,7 +408,7 @@ const chartRenderer = (() => {
                 })
                 .on("mouseout", (event, d) => {
                     tooltip.style("visibility", "hidden").style("opacity", 0);
-                    d3.select(event.currentTarget).attr("r", APP_CONFIG.CHART_SETTINGS.POINT_RADIUS / 1.5);
+                    d3.select(event.currentTarget).attr("r", chartSettings.POINT_RADIUS / 1.5);
                 });
 
             if (dataSet.auc !== undefined) {
@@ -389,7 +419,7 @@ const chartRenderer = (() => {
                  svg.append("text")
                     .attr("class", "auc-label")
                     .attr("x", chartWidth - 10)
-                    .attr("y", margin.top + index * (parseInt(APP_CONFIG.CHART_SETTINGS.AXIS_LABEL_FONT_SIZE, 10) + 5))
+                    .attr("y", margin.top + index * (parseInt(chartSettings.AXIS_LABEL_FONT_SIZE, 10) + 5))
                     .attr("text-anchor", "end")
                     .style("fill", colors[index])
                     .text(aucText);
@@ -406,7 +436,8 @@ const chartRenderer = (() => {
 
     function renderComparisonBarChart(data, targetElementId, options = {}, t2LabelOverride = "T2-optimiert") {
         d3.select(`#${targetElementId}`).select("svg").remove();
-        const { width = APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH / 1.2, height = APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT / 1.3, margin = {top:30, right: 20, bottom:50, left:50}, title = "", yLabel = "Wert", colorScheme = null, axisLabelFontSize = '10px', tickLabelFontSize = '9px', legendFontSize = '9px' } = options;
+        const chartSettings = safeGetChartSettings();
+        const { width = chartSettings.DEFAULT_WIDTH / 1.2, height = chartSettings.DEFAULT_HEIGHT / 1.3, margin = {top:30, right: 20, bottom:50, left:50}, title = "", yLabel = "Wert", colorScheme = null, axisLabelFontSize = '10px', tickLabelFontSize = '9px', legendFontSize = '9px' } = options;
 
         const chartWidth = width - margin.left - margin.right;
         const chartHeight = height - margin.top - margin.bottom;
@@ -472,7 +503,8 @@ const chartRenderer = (() => {
     
     function renderPerformanceComparisonPlot(data, targetElementId, options = {}) {
         d3.select(`#${targetElementId}`).select("svg").remove();
-        const { width = APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH * 1.2, height = APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT * 0.8, margin = { top: 30, right: 30, bottom: 50, left: 200 }, title = "Performance Vergleich", xLabel = "AUC (95% CI)", colorScheme = null, valueDomain = [0.4, 1.0] } = options;
+        const chartSettings = safeGetChartSettings();
+        const { width = chartSettings.DEFAULT_WIDTH * 1.2, height = chartSettings.DEFAULT_HEIGHT * 0.8, margin = { top: 30, right: 30, bottom: 50, left: 200 }, title = "Performance Vergleich", xLabel = "AUC (95% CI)", colorScheme = null, valueDomain = [0.4, 1.0] } = options;
 
         const chartWidth = width - margin.left - margin.right;
         const chartHeight = height - margin.top - margin.bottom;
@@ -555,7 +587,7 @@ const chartRenderer = (() => {
             .attr("class", "dot-estimate")
             .attr("cx", d => x(d.value))
             .attr("cy", d => y(d.name) + y.bandwidth() / 2)
-            .attr("r", APP_CONFIG.CHART_SETTINGS.POINT_RADIUS)
+            .attr("r", chartSettings.POINT_RADIUS)
             .attr("fill", (d,i) => colors[i])
             .on("mouseover", (event, d) => tooltip.style("visibility", "visible").style("opacity", 1))
             .on("mousemove", (event, d) => {
@@ -577,14 +609,15 @@ const chartRenderer = (() => {
             ui_helpers.updateElementHTML(targetElementId, `<p class="text-muted small text-center p-3">Keine Daten für Altersverteilung (${kollektivName}).</p>`);
             return;
         }
+        const chartSettings = safeGetChartSettings();
         const options = {
             title: `Altersverteilung (${kollektivName})`,
             xLabel: 'Alter (Jahre)',
             yLabel: 'Anzahl Patienten',
-            color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE,
+            color: chartSettings.NEW_PRIMARY_COLOR_BLUE,
             numBins: 10,
-            width: APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH,
-            height: APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT / 1.5,
+            width: chartSettings.DEFAULT_WIDTH,
+            height: chartSettings.DEFAULT_HEIGHT / 1.5,
             margin: { top: 20, right: 20, bottom: 40, left: 45 }
         };
         renderHistogram(ageData, targetElementId, options);
@@ -602,16 +635,17 @@ const chartRenderer = (() => {
             ui_helpers.updateElementHTML(targetElementId, `<p class="text-muted small text-center p-3">Keine Daten für Geschlechterverteilung (${kollektivName}).</p>`);
             return;
         }
+        const chartSettings = safeGetChartSettings();
         const options = {
             title: `Geschlechterverteilung (${kollektivName})`,
             colorScheme: 'default', 
-            width: APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH,
-            height: APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT / 1.5,
-            margin: { top: 20, right: 20, bottom: 20, left: 20 },
+            width: chartSettings.DEFAULT_WIDTH,
+            height: chartSettings.DEFAULT_HEIGHT / 1.5,
+            margin: chartSettings.COMPACT_PIE_MARGIN,
             innerRadiusFactor: 0.4,
             legendBelow: true,
             legendItemCount: data.length,
-            fontSize: '10px'
+            fontSize: chartSettings.LEGEND_FONT_SIZE
         };
         renderPieChart(data, targetElementId, options);
     }
@@ -630,15 +664,16 @@ const chartRenderer = (() => {
             { label: 'Acc.', value: stats.acc?.value, unit: '%' },
             { label: 'AUC', value: stats.auc?.value, unit: '' }
         ].filter(d => d.value !== undefined && !isNaN(d.value));
-
+        
+        const chartSettings = safeGetChartSettings();
         const options = {
             title: `Diagnostische Güte (AS vs. N) - Kollektiv: ${kollektivName}`,
             yLabel: 'Wert (%)',
             colorScheme: 'primary',
             barLabel: true,
             yAxisMin: 0,
-            width: APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH,
-            height: APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT,
+            width: chartSettings.DEFAULT_WIDTH,
+            height: chartSettings.DEFAULT_HEIGHT,
             margin: { top: 30, right: 20, bottom: 40, left: 50 }
         };
         renderBarChart(data, targetElementId, options);
@@ -659,12 +694,13 @@ const chartRenderer = (() => {
             { metric: 'AUC', AS: statsAS.auc?.value, T2: statsT2.auc?.value }
         ].filter(d => d.AS !== undefined && d.T2 !== undefined && !isNaN(d.AS) && !isNaN(d.T2));
 
+        const chartSettings = safeGetChartSettings();
         const options = {
             title: `Vergleich: AS vs. ${t2Label} (${kollektivName})`,
             yLabel: 'Wert (%)',
             colorScheme: 'default_comparison',
-            width: APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH,
-            height: APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT,
+            width: chartSettings.DEFAULT_WIDTH,
+            height: chartSettings.DEFAULT_HEIGHT,
             margin: { top: 30, right: 20, bottom: 50, left: 50 }
         };
         renderComparisonBarChart(data, targetElementId, options, t2Label);
@@ -675,7 +711,7 @@ const chartRenderer = (() => {
         const svgElement = typeof svgElementOrId === 'string' ? document.getElementById(svgElementOrId)?.querySelector('svg') : svgElementOrId;
         if (!svgElement) { console.error("SVG Element für PNG-Export nicht gefunden."); return; }
         
-        const scale = options.scale || APP_CONFIG.EXPORT_SETTINGS.TABLE_PNG_EXPORT_SCALE || 2;
+        const scale = options.scale || (typeof APP_CONFIG !== 'undefined' && APP_CONFIG?.EXPORT_SETTINGS?.TABLE_PNG_EXPORT_SCALE) || 2;
         const backgroundColor = options.backgroundColor || 'var(--bg-white)';
 
         if (typeof _svgToPngDataURL === 'function') {
