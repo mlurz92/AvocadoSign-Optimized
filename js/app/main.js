@@ -6,13 +6,13 @@ const mainAppInterface = {};
 
 const debouncedUpdateSizeInput_Main = debounce((value) => {
     if (typeof auswertungEventHandlers !== 'undefined' && typeof auswertungEventHandlers.handleT2SizeInputChange === 'function') {
-        auswertungEventHandlers.handleT2SizeInputChange(value, mainAppInterface);
+        auswertungEventHandlers.handleT2SizeInputChange(value);
     }
 }, APP_CONFIG.PERFORMANCE_SETTINGS.DEBOUNCE_DELAY_MS);
 
 const debouncedUpdateSizeRange_Main = debounce((value) => {
     if (typeof auswertungEventHandlers !== 'undefined' && typeof auswertungEventHandlers.handleT2SizeRangeChange === 'function') {
-        auswertungEventHandlers.handleT2SizeRangeChange(value, mainAppInterface);
+        auswertungEventHandlers.handleT2SizeRangeChange(value);
     }
 }, APP_CONFIG.PERFORMANCE_SETTINGS.DEBOUNCE_DELAY_MS);
 
@@ -44,8 +44,11 @@ function initializeApp() {
             typeof viewRenderer === 'undefined' || typeof ui_helpers === 'undefined' || typeof exportService === 'undefined' ||
             typeof dataTabLogic === 'undefined' || typeof auswertungTabLogic === 'undefined' ||
             typeof statistikTabLogic === 'undefined' || typeof praesentationTabLogic === 'undefined' ||
-            typeof publikationTabLogic === 'undefined' || typeof publicationRenderer === 'undefined' ||
-            typeof publicationTextGenerator === 'undefined' || typeof studyT2CriteriaManager === 'undefined' ||
+            typeof publikationTabLogic === 'undefined' || typeof publicationRenderer === 'undefined' || // Path updated by HTML import
+            typeof publicationTextGenerator === 'undefined' || // Path updated by HTML import
+            typeof publicationTables === 'undefined' || // New module
+            typeof publicationFigures === 'undefined' || // New module
+            typeof studyT2CriteriaManager === 'undefined' ||
             typeof bruteForceManager === 'undefined' || typeof generalEventHandlers === 'undefined' ||
             typeof auswertungEventHandlers === 'undefined' || typeof statistikEventHandlers === 'undefined' ||
             typeof praesentationEventHandlers === 'undefined' || typeof publikationEventHandlers === 'undefined'
@@ -61,7 +64,6 @@ function initializeApp() {
         mainAppInterface.getRawData = () => localRawData;
         mainAppInterface.updateGlobalUIState = updateUIState;
         mainAppInterface.refreshCurrentTab = refreshCurrentTab;
-        mainAppInterface.startBruteForceAnalysis = handleStartBruteForce_Internal;
 
 
         state.init();
@@ -87,14 +89,14 @@ function initializeApp() {
         updateUIState();
         setupEventListeners();
 
-        const initialTabId = state.getActiveTabId() || 'daten-tab';
+        const initialTabId = state.getActiveTabId() || 'publikation-tab'; // Default to publikation-tab
         const initialTabElement = document.getElementById(initialTabId);
          if(initialTabElement && bootstrap.Tab) {
             const tab = bootstrap.Tab.getOrCreateInstance(initialTabElement);
             if(tab) tab.show();
          } else {
-             state.setActiveTabId('daten-tab');
-             const fallbackTabElement = document.getElementById('daten-tab');
+             state.setActiveTabId('publikation-tab');
+             const fallbackTabElement = document.getElementById('publikation-tab');
              if(fallbackTabElement && bootstrap.Tab) bootstrap.Tab.getOrCreateInstance(fallbackTabElement).show();
          }
         processTabChange(state.getActiveTabId());
@@ -116,11 +118,6 @@ function initializeApp() {
 
         ui_helpers.initializeTooltips(document.body);
         ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
-
-        const kurzanleitungModalTitle = document.querySelector('#kurzanleitung-modal .modal-title');
-        const kurzanleitungModalBody = document.querySelector('#kurzanleitung-modal .modal-body');
-        if (kurzanleitungModalTitle && UI_TEXTS.kurzanleitung?.title) kurzanleitungModalTitle.innerHTML = UI_TEXTS.kurzanleitung.title;
-        if (kurzanleitungModalBody && UI_TEXTS.kurzanleitung?.content) kurzanleitungModalBody.innerHTML = UI_TEXTS.kurzanleitung.content;
 
 
         ui_helpers.showToast('Anwendung initialisiert.', 'success', 2500);
@@ -363,8 +360,6 @@ function refreshCurrentTab(){
     _renderCurrentTab(state.getActiveTabId());
 }
 
-function handleStartBruteForce_Internal() {
-}
 
 function initializeBruteForceManager() {
     const bfCallbacks = {
@@ -399,6 +394,8 @@ function handleBruteForceResult(payload) {
             ui_helpers.initializeTooltips(modalBody);
         }
         ui_helpers.showToast('Optimierung abgeschlossen.', 'success');
+        // Initialisierung des Publikations-Tabs nach Abschluss der Brute-Force-Analyse,
+        // um sicherzustellen, dass die neuesten BF-Ergebnisse verfügbar sind.
         if (state.getActiveTabId() === 'publikation-tab') {
             publikationTabLogic.initializeData(localRawData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getAllResults());
             _renderCurrentTab('publikation-tab');
