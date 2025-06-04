@@ -54,17 +54,16 @@ const studyT2CriteriaManager = (() => {
                     size_ge_9: { active: true, type: 'size', threshold: 9.0, condition: '>='},
                     size_5_8_and_2plus_morph: { 
                         active: true, type: 'size_morph_combo', 
-                        size_min: 5.0, size_max: 8.9, // 8.9 statt 8 um >=5 und <9 abzudecken
+                        size_min: 5.0, size_max: 8.9, 
                         min_morph_criteria: 2,
                         morph_keys: ['form_round', 'kontur_irrgular', 'homogenitaet_heterogen'] 
                     },
                     size_lt_5_and_3morph: {
                         active: true, type: 'size_morph_combo',
-                        size_max_lt: 5.0, // <5
+                        size_max_lt: 5.0, 
                         min_morph_criteria: 3,
                         morph_keys: ['form_round', 'kontur_irrgular', 'homogenitaet_heterogen']
                     },
-                    // Dummy criteria for the main 'criteria' object structure, real logic in evaluatePatientForESGAR
                     size: { active: false }, 
                     form: { active: false },
                     kontur: { active: false },
@@ -141,13 +140,13 @@ const studyT2CriteriaManager = (() => {
             }
         }
         
-        if (criteria.isESGAR2016 || (criteria.size_ge_9 && criteria.size_ge_9.active)) { // Special handling for ESGAR display
+        if (criteria.isESGAR2016 || (criteria.size_ge_9 && criteria.size_ge_9.active && criteria.size_5_8_and_2plus_morph && criteria.size_5_8_and_2plus_morph.active && criteria.size_lt_5_and_3morph && criteria.size_lt_5_and_3morph.active)) { 
             return "ESGAR 2016 Kriterien (komplex, siehe Beschreibung)";
         }
 
 
         if (parts.length === 0) return "Keine aktiven Kriterien";
-        return parts.join(` <span class="text-primary fw-bold">${logic}</span> `);
+        return parts.join(` <span class="text-primary fw-bold">${UI_TEXTS.t2LogicDisplayNames[logic] || logic}</span> `);
     }
     
     function getApplicableStudySetsForKollektiv(kollektivId) {
@@ -166,3 +165,5 @@ const studyT2CriteriaManager = (() => {
         getApplicableStudySetsForKollektiv
     });
 })();
+
+window.studyT2CriteriaManager = studyT2CriteriaManager;
