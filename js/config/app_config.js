@@ -107,28 +107,6 @@ const APP_CONFIG = Object.freeze({
         STICKY_HEADER_OFFSET: '111px'
     }),
 
-    CHART_SETTINGS: Object.freeze({
-        DEFAULT_WIDTH: 450,
-        DEFAULT_HEIGHT: 350,
-        DEFAULT_MARGIN: Object.freeze({ top: 30, right: 40, bottom: 70, left: 70 }),
-        COMPACT_PIE_MARGIN: Object.freeze({ top: 15, right: 15, bottom: 50, left: 15 }),
-        NEW_PRIMARY_COLOR_BLUE: '#4472C4',
-        NEW_SECONDARY_COLOR_YELLOW_GREEN: '#E0DC2C',
-        TERTIARY_COLOR_GREEN: '#2ca02c',
-        AS_COLOR: '#4472C4',
-        T2_COLOR: '#E0DC2C',
-        ANIMATION_DURATION_MS: 750,
-        AXIS_LABEL_FONT_SIZE: '11px',
-        TICK_LABEL_FONT_SIZE: '10px',
-        LEGEND_FONT_SIZE: '10px',
-        TOOLTIP_FONT_SIZE: '11px',
-        PLOT_BACKGROUND_COLOR: '#ffffff',
-        GRIDLINE_COLOR: '#e9ecef',
-        ENABLE_GRIDLINES: true,
-        POINT_RADIUS: 4,
-        LINE_STROKE_WIDTH: 2
-    }),
-
     EXPORT_SETTINGS: Object.freeze({
         DATE_FORMAT: 'YYYYMMDD',
         FILENAME_TEMPLATE: 'AvocadoSignT2_{TYPE}_{KOLLEKTIV}_{DATE}.{EXT}',
@@ -263,3 +241,7 @@ const APP_CONFIG = Object.freeze({
         }
     })
 });
+
+// Exportiere APP_CONFIG und getDefaultT2Criteria global
+window.APP_CONFIG = APP_CONFIG;
+window.getDefaultT2Criteria = getDefaultT2Criteria;
