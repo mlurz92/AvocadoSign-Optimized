@@ -1,4 +1,4 @@
-const patientData = [
+const patientDataRaw = [
   {
     nr: 1,
     name: "John",
@@ -5837,5 +5837,3 @@ const patientData = [
     alter: 64,
   },
 ];
-
-window.patientData = patientData;
