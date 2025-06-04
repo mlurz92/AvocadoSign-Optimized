@@ -71,28 +71,21 @@ const auswertungTabLogic = (() => {
         }
 
         const filteredData = getFilteredData(currentKollektiv);
-        const tableHeaderId = 'auswertung-table-header'; 
+        const sortedData = [...filteredData].sort(getSortFunction(currentSortState.key, currentSortState.direction, currentSortState.subKey));
+        
+        const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
+        const appliedLogic = t2CriteriaManager.getAppliedLogic();
 
-        if (!tableRendererInstance && typeof TableRenderer === 'function') {
-            tableRendererInstance = new TableRenderer(
-                filteredData,
-                auswertungTableConfig, 
-                tableContainer.id,
-                toggleDetailsButtonId,
-                currentSortState,
-                handleSortChange,
-                handleRowClick 
-            );
-        } else if (tableRendererInstance) {
-            tableRendererInstance.updateData(filteredData);
-            tableRendererInstance.updateSortState(currentSortState);
-        } else {
-            console.error("TableRenderer Klasse nicht verfügbar oder Instanz konnte nicht erstellt werden.");
-            ui_helpers.updateElementHTML(tableContainer.id, '<p class="text-danger">Fehler beim Laden der Tabelle.</p>');
-            return;
+        const tableHTML = uiComponents.createAuswertungTableHTML(sortedData, currentSortState, appliedCriteria, appliedLogic);
+        
+        ui_helpers.updateElementHTML(tableContainer.id, tableHTML);
+        
+        if (typeof auswertungEventHandlers !== 'undefined' && auswertungEventHandlers.register) {
+            auswertungEventHandlers.register(bruteForceManagerInstance);
         }
-        tableRendererInstance.render();
-        ui_helpers.updateSortIcons(tableHeaderId, currentSortState);
+        ui_helpers.initializeTooltips(tableContainer);
+        ui_helpers.updateSortIcons('auswertung-table-header', currentSortState);
+        ui_helpers.attachRowCollapseListeners(document.getElementById('auswertung-table-body'));
     }
 
     function handleSortChange(newSortKey, newSubKey = null) {
@@ -156,3 +149,5 @@ const auswertungTabLogic = (() => {
         refreshUI
     });
 })();
+
+window.auswertungTabLogic = auswertungTabLogic;
