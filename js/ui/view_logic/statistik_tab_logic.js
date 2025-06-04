@@ -302,3 +302,5 @@ const statistikTabLogic = (() => {
     });
 
 })();
+
+window.statistikTabLogic = statistikTabLogic;
