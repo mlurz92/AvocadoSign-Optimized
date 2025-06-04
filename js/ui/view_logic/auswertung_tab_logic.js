@@ -22,9 +22,9 @@ const auswertungTabLogic = (() => {
         }
         
         currentKollektiv = stateManager.getCurrentKollektiv();
-        currentSortState = stateManager.getAuswertungTableSort() || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
+        currentSortState = stateManager.getAuswertungTableSort();
         _updateAppliedCriteriaDisplay();
-        _renderTable();
+        // _renderTable(); // Entfernt: refreshUI() wird direkt danach aufgerufen und rendert die Tabelle
     }
 
     function updateData(newData) {
@@ -131,7 +131,7 @@ const auswertungTabLogic = (() => {
     
     function refreshUI() {
         currentKollektiv = stateManager.getCurrentKollektiv();
-        currentSortState = stateManager.getAuswertungTableSort() || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
+        currentSortState = stateManager.getAuswertungTableSort();
          _updateAppliedCriteriaDisplay();
         _renderTable();
         if (bruteForceManagerInstance) {
