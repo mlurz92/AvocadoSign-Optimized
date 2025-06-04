@@ -111,7 +111,7 @@ const ui_helpers = (() => {
 
     function toggleElementClass(elementId, className, add) {
         const element = document.getElementById(elementId);
-        if (element && className) { element.classList.toggle(className, add); }
+        if (element) { element.classList.toggle(className, add); }
     }
 
     function setElementDisabled(elementId, isDisabled) {
@@ -509,7 +509,9 @@ const ui_helpers = (() => {
                     if (existingTooltip) {
                         existingTooltip.setContent({ '.tooltip-inner': content });
                     } else {
-                        new bootstrap.Tooltip(el);
+                         if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                            new bootstrap.Tooltip(el);
+                         }
                     }
                 } else if (existingTooltip) {
                     existingTooltip.dispose();
@@ -928,3 +930,5 @@ const ui_helpers = (() => {
     });
 
 })();
+
+window.ui_helpers = ui_helpers;
