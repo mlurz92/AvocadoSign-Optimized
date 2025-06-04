@@ -70,7 +70,7 @@ const exportService = (() => {
             const row = headers.map(header => {
                 let value = obj[header];
                 if (value === null || value === undefined) value = '';
-                else if (typeof value === 'number' && !Number.isInteger(value)) value = formatNumber(value, 4, '', 'en'); // Exakte numerische Werte
+                else if (typeof value === 'number' && !Number.isInteger(value)) value = formatNumber(value, 4, '', 'en'); 
                 else if (typeof value === 'boolean') value = value ? 'Ja' : 'Nein';
                 return String(value).replace(/\|/g, '\\|');
             }).join(' | ');
@@ -81,7 +81,7 @@ const exportService = (() => {
     
     function _formatPValueForExport(pValue, lang = 'de') {
         if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return 'N/A';
-        return parseFloat(pValue.toPrecision(8)); // Return as number with high precision
+        return parseFloat(pValue.toPrecision(8)); 
     }
 
     function exportStatistikCSV(allStats, kollektivId, currentT2Criteria, currentT2Logic) {
@@ -105,11 +105,11 @@ const exportService = (() => {
                     dataToExport.push({
                         ...baseInfo,
                         Metrik: key.toUpperCase(),
-                        Wert: formatNumber(m.value, 6, '', 'en'), // High precision for export
+                        Wert: formatNumber(m.value, 6, '', 'en'), 
                         CI_lower: formatNumber(m.ci?.lower, 6, '', 'en'),
                         CI_upper: formatNumber(m.ci?.upper, 6, '', 'en'),
                         CI_Methode: m.method || '',
-                        N_Trials: m.n_trials || (m.matrix_components ? m.matrix_components.total : '')
+                        N_Trials: m.n_trials || (m.matrix_components ? mc.total : '')
                     });
                 }
             });
@@ -160,6 +160,7 @@ const exportService = (() => {
                 if (assoc.rd) dataToExport.push({ Kollektiv: kollektivName, Methode: 'Assoziation', Metrik: `RD (${merkmal})`, Wert: formatNumber(assoc.rd.value,4,'','en'), CI_lower: formatNumber(assoc.rd.ci?.lower,4,'','en'), CI_upper: formatNumber(assoc.rd.ci?.upper,4,'','en')});
                 if (assoc.phi) dataToExport.push({ Kollektiv: kollektivName, Methode: 'Assoziation', Metrik: `Phi (${merkmal})`, Wert: formatNumber(assoc.phi.value,4,'','en')});
                 if (assoc.fisher) dataToExport.push({ Kollektiv: kollektivName, Methode: 'Assoziation', Metrik: `Fisher (${merkmal})`, P_Value: _formatPValueForExport(assoc.fisher.pValue)});
+                if (assoc.uValue) dataToExport.push({ Kollektiv: kollektivName, Methode: 'Assoziation', Metrik: `Mann-Whitney U (${merkmal})`, U_Value: formatNumber(assoc.uValue,4,'','en'), Z_Value: formatNumber(assoc.zValue,4,'','en'), P_Value: _formatPValueForExport(assoc.pValue)});
              });
         }
 
@@ -358,7 +359,7 @@ const exportService = (() => {
                 }
             });
         }
-        return _createTSVString(dataForTsv.map(row => { // Ensure correct header order for TSV
+        return _createTSVString(dataForTsv.map(row => { 
             const orderedRow = {};
             headers.forEach(h => orderedRow[h] = row[h] !== undefined ? row[h] : na);
             return orderedRow;
@@ -385,7 +386,7 @@ const exportService = (() => {
         for (const key in refs) {
             const ref = refs[key];
             let entry = `@article{${key},\n`;
-            const titleMatch = ref.fullCitation.match(/"(.*?)"|“(.*?)”|'(.*?)'|‘(.*?)’/); // Try to find title in quotes
+            const titleMatch = ref.fullCitation.match(/"(.*?)"|“(.*?)”|'(.*?)'|‘(.*?)’/); 
             let parsedTitle = titleMatch ? (titleMatch[1] || titleMatch[2] || titleMatch[3] || titleMatch[4]) : ref.fullCitation.split('.')[1]?.trim();
             if (!parsedTitle) parsedTitle = "Unknown Title";
 
@@ -432,8 +433,8 @@ const exportService = (() => {
         };
         
         if (exportFunctions.statistikCSV) addFileToZip(generateFilename(APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.STATS_CSV, kollektivId, 'csv'), _createCSVString(exportFunctions.statistikCSV.data));
-        if (exportFunctions.bruteForceTXT && bruteForceManager.getResultsForKollektiv(kollektivId, state.getBruteForceMetric())) {
-            const bfResults = bruteForceManager.getResultsForKollektiv(kollektivId, state.getBruteForceMetric());
+        if (exportFunctions.bruteForceTXT && bruteForceManager.getResultsForKollektiv(kollektivId, stateManager.getBruteForceMetric())) {
+            const bfResults = bruteForceManager.getResultsForKollektiv(kollektivId, stateManager.getBruteForceMetric());
             let bfTxt = `Brute-Force Optimierungsergebnisse...\nKollektiv: ${safeKollektiv}\nZielmetrik: ${bfResults.metric}\n...\n`;
             bfResults.results.forEach(r => { bfTxt += `${r.metricValue}\t${r.logic}\t${studyT2CriteriaManager.formatCriteriaForDisplay(r.criteria,r.logic,false)}\n`; });
             addFileToZip(generateFilename(APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.BRUTEFORCE_TXT, kollektivId, 'txt'), bfTxt);
@@ -488,3 +489,5 @@ const exportService = (() => {
     });
 
 })();
+
+window.exportService = exportService;
