@@ -44,7 +44,7 @@ const t2CriteriaManager = (() => {
     }
 
     function saveCriteria() {
-        const storageKey = APP_CONFIG.STORAGE_KEYS.appliedT2Criteria;
+        const storageKey = APP_CONFIG?.STORAGE_KEYS?.appliedT2Criteria;
         if (typeof storageKey === 'string' && storageKey.length > 0) {
             if (appliedCriteria) {
                 saveToLocalStorage(storageKey, appliedCriteria);
@@ -56,7 +56,7 @@ const t2CriteriaManager = (() => {
     }
     
     function saveLogic() {
-        const storageKey = APP_CONFIG.STORAGE_KEYS.appliedT2Logic;
+        const storageKey = APP_CONFIG?.STORAGE_KEYS?.appliedT2Logic;
         if (typeof storageKey === 'string' && storageKey.length > 0) {
             if (appliedLogic) {
                 saveToLocalStorage(storageKey, appliedLogic);
@@ -78,7 +78,7 @@ const t2CriteriaManager = (() => {
     }
 
     function loadCriteria() {
-        const storageKey = APP_CONFIG.STORAGE_KEYS.appliedT2Criteria;
+        const storageKey = APP_CONFIG?.STORAGE_KEYS?.appliedT2Criteria;
         if (typeof storageKey === 'string' && storageKey.length > 0) {
             return loadFromLocalStorage(storageKey);
         } else {
@@ -88,7 +88,7 @@ const t2CriteriaManager = (() => {
     }
     
     function loadLogic() {
-        const storageKey = APP_CONFIG.STORAGE_KEYS.appliedT2Logic;
+        const storageKey = APP_CONFIG?.STORAGE_KEYS?.appliedT2Logic;
         if (typeof storageKey === 'string' && storageKey.length > 0) {
             return loadFromLocalStorage(storageKey);
         } else {
