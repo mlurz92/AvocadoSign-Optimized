@@ -62,7 +62,7 @@ const viewRenderer = (() => {
 
     function renderDatenTab() {
         const filteredData = dataTabLogic.getFilteredData ? dataTabLogic.getFilteredData(currentKollektiv) : currentData.filter(p => currentKollektiv === 'Gesamt' || p.therapie === currentKollektiv);
-        const sortState = stateManager.getDatenTableSort() || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT);
+        const sortState = stateManager.getDatenTableSort();
         
         const tableHTML = dataTabLogic.createDatenTableHTML(filteredData, sortState);
         const toggleButtonId = 'daten-toggle-details';
