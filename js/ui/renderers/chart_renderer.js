@@ -3,7 +3,7 @@ const chartRenderer = (() => {
     const defaultColors = () => APP_CONFIG.CHART_SETTINGS.DEFAULT_COLORS || ['#4e79a7', '#f28e2c', '#e15759', '#76b7b2', '#59a14f', '#edc949', '#af7aa1', '#ff9da7', '#9c755f', '#bab0ab'];
 
     function _getColors(numColors, schemeName = null) {
-        const currentSchemeName = schemeName || (typeof state !== 'undefined' ? state.getChartColorScheme() : 'default');
+        const currentSchemeName = schemeName || (typeof stateManager !== 'undefined' ? stateManager.getChartColorScheme() : 'default');
         const schemes = {
             default: defaultColors(),
             primary: [APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE, APP_CONFIG.CHART_SETTINGS.NEW_SECONDARY_COLOR_YELLOW_GREEN, '#76b7b2', '#e15759', '#59a14f', '#edc949'],
@@ -87,7 +87,10 @@ const chartRenderer = (() => {
             .attr("class", "legend-item")
             .attr("transform", (d, i) => `translate(0, ${i * itemHeight})`)
             .style("cursor", "default")
-            .attr("data-tippy-content", d => d.tooltip || d.name);
+            .attr("data-bs-toggle", "tooltip")
+            .attr("data-bs-placement", "top")
+            .attr("data-bs-html", "true")
+            .attr("data-bs-title", d => d.tooltip || d.name);
 
         legendItems.append("rect")
             .attr("x", 0)
@@ -156,6 +159,8 @@ const chartRenderer = (() => {
         
         _addGridlines(svg, x, y, chartWidth, chartHeight, false, true);
 
+        const tooltip = _createTooltip(targetElementId);
+
         svg.selectAll(".bar")
             .data(data)
             .enter().append("rect")
@@ -165,7 +170,19 @@ const chartRenderer = (() => {
             .attr("y", d => y(d.value))
             .attr("height", d => chartHeight - y(d.value))
             .attr("fill", (d, i) => colors[i])
-            .attr("data-tippy-content", d => `${d.label}: ${formatNumber(d.value, d.value < 1 && d.value !==0 ? 2 : 0, 'N/A')}${d.unit || ''}`);
+            .on("mouseover", (event, d) => {
+                tooltip.style("visibility", "visible").style("opacity", 1);
+                d3.select(event.currentTarget).style("filter", "brightness(0.9)");
+            })
+            .on("mousemove", (event, d) => {
+                tooltip.html(`<strong>${d.label}</strong><br>${formatNumber(d.value, d.value < 1 && d.value !==0 ? 2 : 0, 'N/A')}${d.unit || ''}`)
+                    .style("top", (event.pageY - 10) + "px")
+                    .style("left", (event.pageX + 10) + "px");
+            })
+            .on("mouseout", (event, d) => {
+                tooltip.style("visibility", "hidden").style("opacity", 0);
+                d3.select(event.currentTarget).style("filter", "none");
+            });
 
         if (barLabel) {
             svg.selectAll(".bar-label")
@@ -264,6 +281,8 @@ const chartRenderer = (() => {
         
         _addGridlines(svg, x, y, chartWidth, chartHeight, false, true);
 
+        const tooltip = _createTooltip(targetElementId);
+
         svg.selectAll("rect")
             .data(bins)
             .enter().append("rect")
@@ -272,9 +291,21 @@ const chartRenderer = (() => {
             .attr("width", d => Math.max(0, x(d.x1) - x(d.x0) - 1))
             .attr("height", d => chartHeight - y(d.length))
             .style("fill", color)
-            .attr("data-tippy-content", d => `Range: ${formatNumber(d.x0,1)}–${formatNumber(d.x1,1)}<br>Anzahl: ${d.length}`);
+            .on("mouseover", (event, d) => {
+                tooltip.style("visibility", "visible").style("opacity", 1);
+                d3.select(event.currentTarget).style("filter", "brightness(0.9)");
+            })
+            .on("mousemove", (event, d) => {
+                tooltip.html(`Range: ${formatNumber(d.x0,1)}–${formatNumber(d.x1,1)}<br>Anzahl: ${d.length}`)
+                    .style("top", (event.pageY - 10) + "px")
+                    .style("left", (event.pageX + 10) + "px");
+            })
+            .on("mouseout", (event, d) => {
+                tooltip.style("visibility", "hidden").style("opacity", 0);
+                d3.select(event.currentTarget).style("filter", "none");
+            });
 
-        svg.append("g").attr("class", "axis x-axis").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(x).ticks(Math.min(numBins, 10)).tickSizeOuter(0));
+        svg.append("g").attr("class", "axis x-axis").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(x).ticks(Math.min(numBins, 10)).tickFormat(d3.format(".1f")).tickSizeOuter(0));
         svg.append("g").attr("class", "axis y-axis").call(d3.axisLeft(y).ticks(5).tickSizeOuter(0));
 
         _addChartTitle(svg.node().parentNode, title, width, margin);
@@ -327,7 +358,7 @@ const chartRenderer = (() => {
                 .attr("d", line);
 
             svg.selectAll(`.dot-${index}`)
-                .data(dataSet.points.filter(p => p.threshold !== undefined)) // Nur Punkte mit Schwellenwert für Tooltip
+                .data(dataSet.points.filter(p => p.threshold !== undefined)) 
                 .enter().append("circle")
                 .attr("class", `roc-point dot-${index}`)
                 .attr("cx", d => x(d.fpr))
@@ -465,7 +496,7 @@ const chartRenderer = (() => {
 
         _addGridlines(svg, x, y, chartWidth, chartHeight, true, false);
         
-        svg.append("line") // Reference line at 0.5 for AUC
+        svg.append("line") 
             .attr("x1", x(0.5))
             .attr("x2", x(0.5))
             .attr("y1", 0)
@@ -541,6 +572,104 @@ const chartRenderer = (() => {
         _addAxisLabels(svg, xLabel, "", chartWidth, chartHeight, margin);
     }
 
+    function renderAgeDistributionChart(targetElementId, ageData, kollektivName) {
+        if (!ageData || ageData.length === 0) {
+            ui_helpers.updateElementHTML(targetElementId, `<p class="text-muted small text-center p-3">Keine Daten für Altersverteilung (${kollektivName}).</p>`);
+            return;
+        }
+        const options = {
+            title: `Altersverteilung (${kollektivName})`,
+            xLabel: 'Alter (Jahre)',
+            yLabel: 'Anzahl Patienten',
+            color: APP_CONFIG.CHART_SETTINGS.NEW_PRIMARY_COLOR_BLUE,
+            numBins: 10,
+            width: APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH,
+            height: APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT / 1.5,
+            margin: { top: 20, right: 20, bottom: 40, left: 45 }
+        };
+        renderHistogram(ageData, targetElementId, options);
+    }
+
+    function renderGenderDistributionChart(targetElementId, genderData, kollektivName) {
+        const data = [
+            { label: UI_TEXTS.legendLabels.male, value: genderData.m ?? 0 },
+            { label: UI_TEXTS.legendLabels.female, value: genderData.f ?? 0 }
+        ];
+        if (genderData.unbekannt > 0) {
+            data.push({ label: UI_TEXTS.legendLabels.unknownGender, value: genderData.unbekannt });
+        }
+        if (data.every(d => d.value === 0)) {
+            ui_helpers.updateElementHTML(targetElementId, `<p class="text-muted small text-center p-3">Keine Daten für Geschlechterverteilung (${kollektivName}).</p>`);
+            return;
+        }
+        const options = {
+            title: `Geschlechterverteilung (${kollektivName})`,
+            colorScheme: 'default', 
+            width: APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH,
+            height: APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT / 1.5,
+            margin: { top: 20, right: 20, bottom: 20, left: 20 },
+            innerRadiusFactor: 0.4,
+            legendBelow: true,
+            legendItemCount: data.length,
+            fontSize: '10px'
+        };
+        renderPieChart(data, targetElementId, options);
+    }
+
+    function renderASPerformanceBarChart(targetElementId, stats, kollektivName) {
+        if (!stats || !stats.matrix || (stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn) === 0) {
+            ui_helpers.updateElementHTML(targetElementId, `<p class="text-center text-muted p-3">Keine Daten für Chart (${kollektivName}).</p>`);
+            return;
+        }
+
+        const data = [
+            { label: 'Sens.', value: stats.sens?.value, unit: '%' },
+            { label: 'Spez.', value: stats.spez?.value, unit: '%' },
+            { label: 'PPV', value: stats.ppv?.value, unit: '%' },
+            { label: 'NPV', value: stats.npv?.value, unit: '%' },
+            { label: 'Acc.', value: stats.acc?.value, unit: '%' },
+            { label: 'AUC', value: stats.auc?.value, unit: '' }
+        ].filter(d => d.value !== undefined && !isNaN(d.value));
+
+        const options = {
+            title: `Diagnostische Güte (AS vs. N) - Kollektiv: ${kollektivName}`,
+            yLabel: 'Wert (%)',
+            colorScheme: 'primary',
+            barLabel: true,
+            yAxisMin: 0,
+            width: APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH,
+            height: APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT,
+            margin: { top: 30, right: 20, bottom: 40, left: 50 }
+        };
+        renderBarChart(data, targetElementId, options);
+    }
+
+    function renderASvsT2ComparisonBarChart(targetElementId, statsAS, statsT2, t2Label, kollektivName) {
+        if (!statsAS || !statsT2 || !statsAS.matrix || !statsT2.matrix || (statsAS.matrix.rp + statsAS.matrix.fp + statsAS.matrix.fn + statsAS.matrix.rn) === 0 || (statsT2.matrix.rp + statsT2.matrix.fp + statsT2.matrix.fn + statsT2.matrix.rn) === 0) {
+            ui_helpers.updateElementHTML(targetElementId, `<p class="text-center text-muted p-3">Keine validen Vergleichsdaten für Chart (${kollektivName}).</p>`);
+            return;
+        }
+
+        const data = [
+            { metric: 'Sens.', AS: statsAS.sens?.value, T2: statsT2.sens?.value },
+            { metric: 'Spez.', AS: statsAS.spez?.value, T2: statsT2.spez?.value },
+            { metric: 'PPV', AS: statsAS.ppv?.value, T2: statsT2.ppv?.value },
+            { metric: 'NPV', AS: statsAS.npv?.value, T2: statsT2.npv?.value },
+            { metric: 'Acc.', AS: statsAS.acc?.value, T2: statsT2.acc?.value },
+            { metric: 'AUC', AS: statsAS.auc?.value, T2: statsT2.auc?.value }
+        ].filter(d => d.AS !== undefined && d.T2 !== undefined && !isNaN(d.AS) && !isNaN(d.T2));
+
+        const options = {
+            title: `Vergleich: AS vs. ${t2Label} (${kollektivName})`,
+            yLabel: 'Wert (%)',
+            colorScheme: 'default_comparison',
+            width: APP_CONFIG.CHART_SETTINGS.DEFAULT_WIDTH,
+            height: APP_CONFIG.CHART_SETTINGS.DEFAULT_HEIGHT,
+            margin: { top: 30, right: 20, bottom: 50, left: 50 }
+        };
+        renderComparisonBarChart(data, targetElementId, options, t2Label);
+    }
+
 
     function exportChartAsPNG(svgElementOrId, filename, options = {}) {
         const svgElement = typeof svgElementOrId === 'string' ? document.getElementById(svgElementOrId)?.querySelector('svg') : svgElementOrId;
@@ -604,7 +733,13 @@ const chartRenderer = (() => {
         renderROCCurve,
         renderComparisonBarChart,
         renderPerformanceComparisonPlot,
+        renderAgeDistributionChart,
+        renderGenderDistributionChart,
+        renderASPerformanceBarChart,
+        renderASvsT2ComparisonBarChart,
         exportChartAsPNG,
         exportChartAsSVG
     });
 })();
+
+window.chartRenderer = chartRenderer;
