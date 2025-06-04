@@ -138,6 +138,5 @@ const PUBLICATION_CONFIG = Object.freeze({
     })
 });
 
-if (typeof Object.freeze === 'function') {
-    Object.freeze(PUBLICATION_CONFIG);
-}
+// Exportiere PUBLICATION_CONFIG global
+window.PUBLICATION_CONFIG = PUBLICATION_CONFIG;
