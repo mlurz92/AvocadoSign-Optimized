@@ -410,7 +410,6 @@ function getPhiBewertung(phiValue) {
     return texts.sehr_schwach || 'sehr schwach';
 }
 
-// Exportiere Hilfsfunktionen global
 window.getKollektivDisplayName = getKollektivDisplayName;
 window.formatNumber = formatNumber;
 window.formatPercent = formatPercent;
