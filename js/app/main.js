@@ -83,7 +83,39 @@
             }
         },
         handlePublikationSettingsChange: () => {
-            mainAppInterface.refreshPublikationTab();
+            const currentPublikationSection = stateManager.getCurrentPublikationSection();
+            const currentPublikationLang = stateManager.getCurrentPublikationLang();
+            const currentKollektivForContext = stateManager.getCurrentKollektiv();
+
+            const commonData = {
+                appName: APP_CONFIG.APP_NAME,
+                appVersion: APP_CONFIG.APP_VERSION,
+                nGesamt: window.allKollektivStatsForPublikationTab?.Gesamt?.deskriptiv?.anzahlPatienten || 0,
+                nDirektOP: window.allKollektivStatsForPublikationTab?.['direkt OP']?.deskriptiv?.anzahlPatienten || 0,
+                nNRCT: window.allKollektivStatsForPublikationTab?.nRCT?.deskriptiv?.anzahlPatienten || 0,
+                t2SizeMin: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min,
+                t2SizeMax: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max,
+                bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
+                significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
+                references: APP_CONFIG.REFERENCES_FOR_PUBLICATION || {},
+                bruteForceMetricForPublication: stateManager.getCurrentPublikationBruteForceMetric()
+            };
+            const publicationOptions = {
+                currentKollektiv: currentKollektivForContext,
+                bruteForceMetric: stateManager.getCurrentPublikationBruteForceMetric(),
+                appliedCriteria: t2CriteriaManager.getAppliedCriteria(),
+                appliedLogic: t2CriteriaManager.getAppliedLogic(),
+                publicationElements: PUBLICATION_CONFIG.publicationElements
+            };
+            
+            const content = publikationTabLogic.getRenderedSectionContent(currentPublikationSection, currentPublikationLang, window.allKollektivStatsForPublikationTab, commonData, publicationOptions);
+            const contentArea = document.getElementById('publikation-content-area');
+            if (contentArea) {
+                ui_helpers.updateElementHTML(contentArea.id, content);
+                publikationTabLogic.updateDynamicChartsForPublicationTab(currentPublikationSection, currentPublikationLang, currentKollektivForContext);
+                ui_helpers.initializeTooltips(contentArea);
+            }
+            ui_helpers.updatePublikationUI(currentPublikationLang, currentPublikationSection, stateManager.getCurrentPublikationBruteForceMetric());
         },
         handleExportRequest: (exportType, options = {}) => {
             const allStats = statisticsService.calculateAllStatsForPublication(
@@ -119,32 +151,36 @@
                     break;
                 case 'bruteforce-txt':
                     const bfResults = bruteForceManager.getResultsForKollektiv(options.kollektiv, options.metric);
-                    exportService.exportBruteForceTXT(bfResults);
+                    if (bfResults) {
+                        exportService.exportBruteForceTXT(bfResults);
+                    } else {
+                        ui_helpers.showToast(`Keine Brute-Force Ergebnisse für Kollektiv '${getKollektivDisplayName(options.kollektiv)}' und Metrik '${options.metric}' vorhanden.`, "warning");
+                    }
                     break;
                 case 'deskriptivMD':
-                    const deskriptivHtml = statistikTabLogic.createDeskriptiveStatistikContentHTML(allStats[stateManager.getCurrentKollektiv()], '0', stateManager.getCurrentKollektiv());
-                    exportService.exportPublikationSectionMarkdown('statistik', 'deskriptiv', stateManager.getCurrentPublikationLang(), allStats, commonData, publicationOptions);
+                     exportService.exportPublikationSectionMarkdown('statistik', 'deskriptiv', stateManager.getCurrentPublikationLang(), allStats, commonData, publicationOptions);
                     break;
                 case 'datenMD':
-                    const datenData = dataProcessor.getProcessedData(stateManager.getCurrentKollektiv());
-                    const datenMd = dataTabLogic.createDatenTableHTML(datenData, stateManager.getDatenTableSort());
                     exportService.exportPublikationSectionMarkdown('daten', 'datenliste', stateManager.getCurrentPublikationLang(), allStats, commonData, publicationOptions);
                     break;
                 case 'auswertungMD':
-                    const auswertungData = dataProcessor.getProcessedData(stateManager.getCurrentKollektiv());
-                    const auswertungMd = uiComponents.createAuswertungTableHTML(auswertungData, stateManager.getAuswertungTableSort(), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
                     exportService.exportPublikationSectionMarkdown('auswertung', 'auswertungstabelle', stateManager.getCurrentPublikationLang(), allStats, commonData, publicationOptions);
                     break;
                 case 'filteredDataCSV':
-                    const filteredData = dataProcessor.getProcessedData(stateManager.getCurrentKollektiv());
                     exportService.exportStatistikCSV(allStats, stateManager.getCurrentKollektiv(), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
                     break;
                 case 'comprehensiveReportHTML':
                     ui_helpers.showToast("Umfassender HTML-Bericht wird generiert (Funktion noch nicht vollständig implementiert).", "info");
                     break;
                 case 'chartSinglePNG':
+                     if (options.chartId && options.format === 'png') {
+                        chartRenderer.exportChartAsPNG(options.chartId, exportService.generateFilename(options.chartName || 'Diagramm', stateManager.getCurrentKollektiv(), 'png'), { scale: 2 });
+                    }
+                    break;
                 case 'chartSingleSVG':
-                    chartRenderer.exportChartAsPNG(options.chartId, exportService.generateFilename(options.chartName, stateManager.getCurrentKollektiv(), 'png'), { scale: 2 });
+                     if (options.chartId && options.format === 'svg') {
+                        chartRenderer.exportChartAsSVG(options.chartId, exportService.generateFilename(options.chartName || 'Diagramm', stateManager.getCurrentKollektiv(), 'svg'));
+                    }
                     break;
                 case 'tableSinglePNG':
                     ui_helpers.showToast("Tabellen-PNG-Export wird generiert (Funktion noch nicht vollständig implementiert).", "info");
@@ -258,36 +294,36 @@
             ui_helpers.updateHeaderStatsUI(currentHeaderStats);
         }
         ui_helpers.updateKollektivButtonsUI(currentKollektiv);
-        ui_helpers.updateExportButtonStates(currentActiveTabId, bruteForceManager.getAllStoredResults() !== null, currentData && currentData.length > 0);
+        ui_helpers.updateExportButtonStates(currentActiveTabId, bruteForceManager.getAllStoredResults() !== null && Object.keys(bruteForceManager.getAllStoredResults()).length > 0, currentData && currentData.length > 0);
         ui_helpers.updateT2CriteriaControlsUI(currentT2Criteria, currentT2Logic);
         ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.areCriteriaUnsaved());
-        ui_helpers.updateBruteForceUI(bruteForceManager.isRunning() ? 'running' : 'idle', bruteForceManager.getResultsForKollektiv(currentKollektiv, stateManager.getBruteForceMetric()), bruteForceManager.isWorkerAvailable(), currentKollektiv);
+        ui_helpers.updateBruteForceUI(bruteForceManager.isRunning() ? 'progress' : 'idle', bruteForceManager.getResultsForKollektiv(currentKollektiv, stateManager.getBruteForceMetric()), bruteForceManager.isWorkerAvailable(), currentKollektiv);
         ui_helpers.updatePresentationViewSelectorUI(stateManager.getCurrentPresentationView());
         ui_helpers.updatePublikationUI(stateManager.getCurrentPublikationLang(), stateManager.getCurrentPublikationSection(), stateManager.getCurrentPublikationBruteForceMetric());
     }
 
     function _renderCurrentTab(forceStatRecalculation = false) {
         let activeTabId = stateManager.getActiveTabId();
-        // Fallback für ungültige oder alte Tab-IDs aus dem Local Storage
         const validTabIds = ['daten-tab-pane', 'auswertung-tab-pane', 'statistik-tab-pane', 'praesentation-tab-pane', 'publikation-tab-pane', 'export-tab-pane'];
         if (!validTabIds.includes(activeTabId)) {
-            console.warn(`Unbekannter oder ungültiger Tab-ID: ${activeTabId}. Setze auf Standard: ${APP_CONFIG.DEFAULT_SETTINGS.activeTabId}`);
             activeTabId = APP_CONFIG.DEFAULT_SETTINGS.activeTabId;
-            stateManager.setActiveTabId(activeTabId); // Korrigiere den Zustand im StateManager
+            stateManager.setActiveTabId(activeTabId);
         }
         currentActiveTabId = activeTabId; 
 
-        if (forceStatRecalculation) {
+        if (forceStatRecalculation || !currentData || !currentHeaderStats) {
             currentData = dataProcessor.getProcessedData(currentKollektiv);
+            currentT2Criteria = t2CriteriaManager.getAppliedCriteria();
+            currentT2Logic = t2CriteriaManager.getAppliedLogic();
             currentHeaderStats = dataProcessor.getHeaderStats(currentKollektiv, currentT2Criteria, currentT2Logic);
         }
 
         switch (activeTabId) {
             case 'daten-tab-pane':
-                dataTabLogic.refreshUI();
+                viewRenderer.renderDatenTab();
                 break;
             case 'auswertung-tab-pane':
-                auswertungTabLogic.refreshUI();
+                viewRenderer.renderAuswertungTab(currentData, bruteForceManager);
                 break;
             case 'statistik-tab-pane':
                 _renderStatistikTab(forceStatRecalculation);
@@ -303,12 +339,15 @@
                 break;
             default:
                 console.warn(`Unerwarteter aktiver Tab-ID: ${activeTabId}`);
+                viewRenderer.renderDatenTab(); // Fallback
         }
         _updateUI();
     }
 
     function _renderAllTabs(forceStatRecalculation = false) {
         currentData = dataProcessor.getProcessedData(currentKollektiv);
+        currentT2Criteria = t2CriteriaManager.getAppliedCriteria();
+        currentT2Logic = t2CriteriaManager.getAppliedLogic();
         currentHeaderStats = dataProcessor.getHeaderStats(currentKollektiv, currentT2Criteria, currentT2Logic);
 
         viewRenderer.renderDatenTab();
@@ -327,6 +366,8 @@
         const currentStatsLayout = stateManager.getCurrentStatsLayout();
         const kollektiv1 = stateManager.getStatsKollektiv1();
         const kollektiv2 = stateManager.getStatsKollektiv2();
+        const currentKollektivForTab = currentStatsLayout === 'einzel' ? stateManager.getCurrentKollektiv() : kollektiv1;
+
 
         if (forceStatRecalculation || !window.allKollektivStatsForStatistikTab) {
             window.allKollektivStatsForStatistikTab = statisticsService.calculateAllStatsForPublication(
@@ -338,14 +379,13 @@
         }
         
         if (currentStatsLayout === 'einzel') {
-            statsEinze = window.allKollektivStatsForStatistikTab[stateManager.getCurrentKollektiv()];
+            statsEinze = window.allKollektivStatsForStatistikTab[currentKollektivForTab];
         } else if (currentStatsLayout === 'vergleich') {
-            // Sicherstellen, dass die Kollektive für den Vergleich existieren, bevor darauf zugegriffen wird
             const statsKoll1 = window.allKollektivStatsForStatistikTab[kollektiv1];
             const statsKoll2 = window.allKollektivStatsForStatistikTab[kollektiv2];
 
             if (statsKoll1 && statsKoll2) {
-                statsVergleich = {
+                 statsVergleich = {
                     accuracyComparison: {
                         as: statisticsService.calculateComparisonStats(statsKoll1, kollektiv1, studyT2CriteriaManager.getAllStudyCriteriaSets(), bruteForceManager.getAllStoredResults())?.accuracyComparison?.as,
                         t2: statisticsService.calculateComparisonStats(statsKoll1, kollektiv1, studyT2CriteriaManager.getAllStudyCriteriaSets(), bruteForceManager.getAllStoredResults())?.accuracyComparison?.t2
@@ -355,12 +395,16 @@
                         t2: statisticsService.calculateComparisonStats(statsKoll1, kollektiv1, studyT2CriteriaManager.getAllStudyCriteriaSets(), bruteForceManager.getAllStoredResults())?.aucComparison?.t2
                     }
                 };
+                if (statsKoll1.deskriptiv && statsKoll2.deskriptiv) {
+                    statsVergleich.kollektiv1Data = statsKoll1.deskriptiv;
+                    statsVergleich.kollektiv2Data = statsKoll2.deskriptiv;
+                }
+
             } else {
-                console.warn(`Statistik-Tab: Daten für Vergleichskollektive '${kollektiv1}' oder '${kollektiv2}' nicht verfügbar.`);
                 statsVergleich = null;
             }
         }
-        viewRenderer.renderStatistikTab(statsEinze, statsVergleich, currentStatsLayout, kollektiv1, kollektiv2, currentKollektiv);
+        viewRenderer.renderStatistikTab(statsEinze, statsVergleich, currentStatsLayout, kollektiv1, kollektiv2, currentKollektivForTab);
     }
 
     function _renderPraesentationTab(forceStatRecalculation = false) {
@@ -405,7 +449,7 @@
                     displayShortName: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME,
                     criteria: t2CriteriaManager.getAppliedCriteria(),
                     logic: t2CriteriaManager.getAppliedLogic(),
-                    studyInfo: { reference: 'Benutzerdefiniert' }
+                    studyInfo: { reference: 'Benutzerdefiniert (aktuell im Auswertungstab eingestellt)' }
                 };
                 statsT2ForComparison = allStats[currentGlobalKollektiv]?.gueteT2_angewandt;
                 vergleichForComparison = allStats[currentGlobalKollektiv]?.vergleichASvsT2_angewandt;
@@ -427,7 +471,7 @@
             }
 
             presentationData = {
-                statsAS: allStats[currentGlobalKollektiv]?.gueteAS,
+                statsAS: allStats[kollektivForComparison]?.gueteAS,
                 statsT2: statsT2ForComparison,
                 vergleich: vergleichForComparison,
                 comparisonCriteriaSet: comparisonCriteriaSet,
@@ -449,30 +493,15 @@
                 bruteForceManager.getAllStoredResults()
             );
         }
+        
         publikationTabLogic.initializeData(
             dataProcessor.getRawData(),
             t2CriteriaManager.getAppliedCriteria(),
             t2CriteriaManager.getAppliedLogic(),
             bruteForceManager.getAllStoredResults()
         );
-        const currentPublikationSection = stateManager.getCurrentPublikationSection();
-        const currentPublikationLang = stateManager.getCurrentPublikationLang();
-        const currentKollektivForContext = stateManager.getCurrentKollektiv();
-        
-        const content = publikationTabLogic.getRenderedSectionContent(currentPublikationSection, currentPublikationLang, currentKollektivForContext);
-        // viewRenderer.renderTabContent muss hier aufgerufen werden, um den Header des Publikation-Tabs zu rendern
-        // und dann den Inhalt in den dafür vorgesehenen Bereich zu injizieren.
-        viewRenderer.renderTabContent('publikation-tab-pane', uiComponents.createPublikationTabHeader(), {
-            afterRender: () => {
-                const contentArea = document.getElementById('publikation-content-area');
-                if (contentArea) {
-                    ui_helpers.updateElementHTML(contentArea.id, content);
-                    publikationTabLogic.updateDynamicChartsForPublicationTab(currentPublikationSection, currentPublikationLang, currentKollektivForContext);
-                    ui_helpers.initializeTooltips(contentArea);
-                }
-                publikationEventHandlers.register();
-            }
-        });
+
+        viewRenderer.renderPublikationTab();
     }
 
 
@@ -485,19 +514,29 @@
             stateManager.initialize();
             
             currentKollektiv = stateManager.getCurrentKollektiv();
-            currentT2Criteria = stateManager.getAppliedT2Criteria();
-            currentT2Logic = stateManager.getAppliedT2Logic();
-            currentData = dataProcessor.getProcessedData(currentKollektiv);
+            currentT2Criteria = t2CriteriaManager.getAppliedCriteria();
+            currentT2Logic = t2CriteriaManager.getAppliedLogic();
+            
 
             dataProcessor.initializeData(patientData);
+            currentData = dataProcessor.getProcessedData(currentKollektiv);
             t2CriteriaManager.initialize(APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC, APP_CONFIG.DEFAULT_SETTINGS.APPLIED_CRITERIA);
             studyT2CriteriaManager.initialize();
             bruteForceManager.initialize();
+            bruteForceManager.updateData(currentData);
 
+
+            currentT2Criteria = t2CriteriaManager.getAppliedCriteria();
+            currentT2Logic = t2CriteriaManager.getAppliedLogic();
+            currentHeaderStats = dataProcessor.getHeaderStats(currentKollektiv, currentT2Criteria, currentT2Logic);
+
+            viewRenderer.initialize(currentData, currentKollektiv, currentT2Criteria, currentT2Logic, bruteForceManager);
+            dataTabLogic.initialize(currentData, currentKollektiv);
+            auswertungTabLogic.initialize(currentData, bruteForceManager);
+            
             _updateUI();
 
             const mainTabsElement = document.getElementById('mainTabs');
-
             if (mainTabsElement) {
                 const tabButtons = mainTabsElement.querySelectorAll('.nav-link');
                 tabButtons.forEach(button => {
@@ -508,6 +547,10 @@
                     });
                 });
             }
+            
+            generalEventHandlers.register();
+            exportEventHandlers.register();
+
 
             _renderCurrentTab(true); 
 
