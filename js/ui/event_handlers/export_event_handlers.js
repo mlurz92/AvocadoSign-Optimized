@@ -26,7 +26,7 @@ const exportEventHandlers = (() => {
 
 
     function _handleStandardExport(event) {
-        if (!mainAppInterface || typeof mainAppInterface.handleExportRequest !== 'function') {
+        if (typeof mainAppInterface === 'undefined' || typeof mainAppInterface.handleExportRequest !== 'function') {
             console.error("mainAppInterface.handleExportRequest ist nicht verfügbar.");
             ui_helpers.showToast("Exportfunktion ist nicht bereit.", "danger");
             return;
@@ -44,7 +44,7 @@ const exportEventHandlers = (() => {
     }
 
     function _handleDynamicExport(event) {
-        if (!mainAppInterface || typeof mainAppInterface.handleExportRequest !== 'function') {
+        if (typeof mainAppInterface === 'undefined' || typeof mainAppInterface.handleExportRequest !== 'function') {
             console.error("mainAppInterface.handleExportRequest ist nicht verfügbar.");
             ui_helpers.showToast("Exportfunktion ist nicht bereit.", "danger");
             return;
@@ -67,7 +67,7 @@ const exportEventHandlers = (() => {
     }
     
     function _handlePublicationExport(event) {
-        if (!mainAppInterface || typeof mainAppInterface.handleExportRequest !== 'function') {
+        if (typeof mainAppInterface === 'undefined' || typeof mainAppInterface.handleExportRequest !== 'function') {
             console.error("mainAppInterface.handleExportRequest ist nicht verfügbar.");
             ui_helpers.showToast("Exportfunktion ist nicht bereit.", "danger");
             return;
@@ -124,10 +124,7 @@ const exportEventHandlers = (() => {
                         button.addEventListener('click', _handlePublicationExport);
                     }
                 } else if (config.idPrefix) {
-                    // Für dynamisch generierte Buttons mit Präfix (z.B. pro Sektion)
-                    // Diese müssen entweder hier explizit gesucht werden oder besser:
-                    // ein delegierter Event-Listener wird auf publicationTabPane gesetzt.
-                    // Für jetzt gehen wir davon aus, dass die Buttons bei Bedarf neu registriert werden.
+                    
                 }
             });
         }
@@ -152,3 +149,5 @@ const exportEventHandlers = (() => {
         register
     };
 })();
+
+window.exportEventHandlers = exportEventHandlers;
