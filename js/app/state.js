@@ -26,7 +26,10 @@ const stateManager = (() => {
         const loadedState = {};
         let needsSave = false;
         for (const key in defaultState) {
-            const storageKey = APP_CONFIG.STORAGE_KEYS[key.toUpperCase()] || APP_CONFIG.STORAGE_KEYS[key];
+            // Sicherstellen, dass der Schlüssel im STORAGE_KEYS-Objekt existiert und korrekt referenziert wird
+            const storageKeyName = key.toUpperCase();
+            const storageKey = APP_CONFIG.STORAGE_KEYS[storageKeyName];
+            
             if (storageKey) {
                 const item = loadFromLocalStorage(storageKey);
                 if (item !== null) {
@@ -39,9 +42,10 @@ const stateManager = (() => {
                 }
             } else {
                 loadedState[key] = cloneDeep(defaultState[key]);
-                 if (key !== 'isFirstAppStart') {
+                // Diese Warnung nur ausgeben, wenn der Schlüssel wirklich nicht in STORAGE_KEYS definiert ist
+                if (key !== 'isFirstAppStart' && !APP_CONFIG.STORAGE_KEYS.hasOwnProperty(storageKeyName)) {
                     console.warn(`Kein Storage Key für State-Eigenschaft '${key}' definiert. Wird nicht persistent gespeichert.`);
-                 }
+                }
             }
         }
         
@@ -62,7 +66,8 @@ const stateManager = (() => {
     function _saveAllToLocalStorage() {
         for (const key in state) {
             if (key === 'isFirstAppStart') continue; 
-            const storageKey = APP_CONFIG.STORAGE_KEYS[key.toUpperCase()] || APP_CONFIG.STORAGE_KEYS[key];
+            const storageKeyName = key.toUpperCase();
+            const storageKey = APP_CONFIG.STORAGE_KEYS[storageKeyName];
             if (storageKey && defaultState.hasOwnProperty(key)) {
                 saveToLocalStorage(storageKey, state[key]);
             }
@@ -74,14 +79,15 @@ const stateManager = (() => {
         document.dispatchEvent(event);
     }
 
-    function _updateState(key, value, storageKeyName) {
+    function _updateState(key, value) {
         if (state[key] === undefined && !defaultState.hasOwnProperty(key)) {
             console.warn(`Versuch, unbekannten State-Key zu setzen: ${key}`);
             return;
         }
         if (JSON.stringify(state[key]) !== JSON.stringify(value)) {
             state[key] = cloneDeep(value);
-            const storageKey = APP_CONFIG.STORAGE_KEYS[storageKeyName] || APP_CONFIG.STORAGE_KEYS[key.toUpperCase()] || APP_CONFIG.STORAGE_KEYS[key];
+            const storageKeyName = key.toUpperCase();
+            const storageKey = APP_CONFIG.STORAGE_KEYS[storageKeyName];
             if (storageKey) {
                 saveToLocalStorage(storageKey, state[key]);
             }
@@ -90,55 +96,55 @@ const stateManager = (() => {
     }
 
     function getCurrentKollektiv() { return state.currentKollektiv || defaultState.currentKollektiv; }
-    function setCurrentKollektiv(kollektiv) { _updateState('currentKollektiv', kollektiv, 'CURRENT_KOLLEKTIV'); }
+    function setCurrentKollektiv(kollektiv) { _updateState('currentKollektiv', kollektiv); }
 
     function getAppliedT2Criteria() { return cloneDeep(state.appliedT2Criteria || defaultState.appliedT2Criteria); }
-    function setAppliedT2Criteria(criteria) { _updateState('appliedT2Criteria', criteria, 'APPLIED_CRITERIA'); }
+    function setAppliedT2Criteria(criteria) { _updateState('appliedT2Criteria', criteria); }
 
     function getAppliedT2Logic() { return state.appliedT2Logic || defaultState.appliedT2Logic; }
-    function setAppliedT2Logic(logic) { _updateState('appliedT2Logic', logic, 'APPLIED_LOGIC'); }
+    function setAppliedT2Logic(logic) { _updateState('appliedT2Logic', logic); }
 
     function getDatenTableSort() { return cloneDeep(state.datenTableSort || defaultState.datenTableSort); }
-    function setDatenTableSort(sortConfig) { _updateState('datenTableSort', sortConfig, 'DATEN_TABLE_SORT'); }
+    function setDatenTableSort(sortConfig) { _updateState('datenTableSort', sortConfig); }
 
     function getAuswertungTableSort() { return cloneDeep(state.auswertungTableSort || defaultState.auswertungTableSort); }
-    function setAuswertungTableSort(sortConfig) { _updateState('auswertungTableSort', sortConfig, 'AUSWERTUNG_TABLE_SORT'); }
+    function setAuswertungTableSort(sortConfig) { _updateState('auswertungTableSort', sortConfig); }
     
     function getActiveTabId() { return state.activeTabId || defaultState.activeTabId; }
-    function setActiveTabId(tabId) { _updateState('activeTabId', tabId, 'ACTIVE_TAB_ID'); }
+    function setActiveTabId(tabId) { _updateState('activeTabId', tabId); }
 
     function getCurrentStatsLayout() { return state.statistikLayout || defaultState.statistikLayout; }
-    function setCurrentStatsLayout(layout) { _updateState('statistikLayout', layout, 'STATS_LAYOUT'); }
+    function setCurrentStatsLayout(layout) { _updateState('statistikLayout', layout); }
     
     function getStatsKollektiv1() { return state.statistikKollektiv1 || defaultState.statistikKollektiv1; }
-    function setStatsKollektiv1(kollektiv) { _updateState('statistikKollektiv1', kollektiv, 'STATS_KOLLEKTIV1'); }
+    function setStatsKollektiv1(kollektiv) { _updateState('statistikKollektiv1', kollektiv); }
 
     function getStatsKollektiv2() { return state.statistikKollektiv2 || defaultState.statistikKollektiv2; }
-    function setStatsKollektiv2(kollektiv) { _updateState('statistikKollektiv2', kollektiv, 'STATS_KOLLEKTIV2'); }
+    function setStatsKollektiv2(kollektiv) { _updateState('statistikKollektiv2', kollektiv); }
 
     function getCurrentPresentationView() { return state.presentationView || defaultState.presentationView; }
-    function setCurrentPresentationView(view) { _updateState('presentationView', view, 'PRESENTATION_VIEW'); }
+    function setCurrentPresentationView(view) { _updateState('presentationView', view); }
 
     function getCurrentPresentationStudyId() { return state.presentationStudyId || defaultState.presentationStudyId; }
-    function setCurrentPresentationStudyId(studyId) { _updateState('presentationStudyId', studyId, 'PRESENTATION_STUDY_ID'); }
+    function setCurrentPresentationStudyId(studyId) { _updateState('presentationStudyId', studyId); }
 
     function getCurrentPublikationLang() { return state.publikationLang || defaultState.publikationLang; }
-    function setCurrentPublikationLang(lang) { _updateState('publikationLang', lang, 'PUBLIKATION_LANG'); }
+    function setCurrentPublikationLang(lang) { _updateState('publikationLang', lang); }
 
     function getCurrentPublikationSection() { return state.publikationSection || defaultState.publikationSection; }
-    function setCurrentPublikationSection(section) { _updateState('publikationSection', section, 'PUBLIKATION_SECTION'); }
+    function setCurrentPublikationSection(section) { _updateState('publikationSection', section); }
     
     function getCurrentPublikationBruteForceMetric() { return state.publikationBruteForceMetric || defaultState.publikationBruteForceMetric; }
-    function setCurrentPublikationBruteForceMetric(metric) { _updateState('publikationBruteForceMetric', metric, 'PUBLIKATION_BRUTE_FORCE_METRIC'); }
+    function setCurrentPublikationBruteForceMetric(metric) { _updateState('publikationBruteForceMetric', metric); }
 
     function getBruteForceMetric() { return state.bruteForceMetric || defaultState.bruteForceMetric; }
-    function setBruteForceMetric(metric) { _updateState('bruteForceMetric', metric, 'BRUTE_FORCE_METRIC'); }
+    function setBruteForceMetric(metric) { _updateState('bruteForceMetric', metric); }
     
     function getCriteriaComparisonSets() { return cloneDeep(state.criteriaComparisonSets || defaultState.criteriaComparisonSets); }
-    function setCriteriaComparisonSets(sets) { _updateState('criteriaComparisonSets', sets, 'CRITERIA_COMPARISON_SETS'); }
+    function setCriteriaComparisonSets(sets) { _updateState('criteriaComparisonSets', sets); }
 
     function getChartColorScheme() { return state.chartColorScheme || defaultState.chartColorScheme; }
-    function setChartColorScheme(scheme) { _updateState('chartColorScheme', scheme, 'CHART_COLOR_SCHEME'); }
+    function setChartColorScheme(scheme) { _updateState('chartColorScheme', scheme); }
 
     function isFirstAppStart() { return state.isFirstAppStart === true; } 
     function setFirstAppStart(value) { 
@@ -151,7 +157,8 @@ const stateManager = (() => {
         const keysToReset = Object.keys(defaultState).filter(k => k !== 'isFirstAppStart');
         keysToReset.forEach(key => {
             state[key] = cloneDeep(defaultState[key]);
-            const storageKey = APP_CONFIG.STORAGE_KEYS[key.toUpperCase()] || APP_CONFIG.STORAGE_KEYS[key];
+            const storageKeyName = key.toUpperCase();
+            const storageKey = APP_CONFIG.STORAGE_KEYS[storageKeyName];
             if (storageKey) {
                 saveToLocalStorage(storageKey, state[key]);
             }
