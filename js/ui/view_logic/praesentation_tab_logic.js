@@ -94,7 +94,7 @@ const praesentationTabLogic = (() => {
         return `<div class="row g-3"><div class="col-12"><h3 class="text-center mb-3">Diagnostische Güte - Avocado Sign</h3></div>${tableHTML}${chartHTML}</div>`;
     }
 
-    function _createPresentationView_ASvsT2_HTML(presentationData, selectedStudyId = null, currentGlobalKollektivForContext = 'Gesamt') {
+    function _createPresentationView_ASvsT2_HTML(presentationData, selectedStudyId = null, currentGlobalKollektiv = 'Gesamt') {
         const { statsAS, statsT2, vergleich, comparisonCriteriaSet, kollektivForComparison, patientCountForComparison, t2CriteriaLabelShort, t2CriteriaLabelFull } = presentationData || {};
         const displayKollektivForComparison = getKollektivDisplayName(kollektivForComparison);
         const isApplied = selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
@@ -156,7 +156,7 @@ const praesentationTabLogic = (() => {
             const testTableId = "praes-as-vs-t2-test-table";
             const infoCardId = "praes-t2-basis-info-card";
             const chartContainerId = "praes-comp-chart-container";
-            const chartBaseName = `AS_vs_${(comparisonCriteriaSet?.displayShortName || selectedStudyId || 'T2').replace(/\s+/g, '_')}_Koll_${displayKollektivForComparison.replace(/\s+/g, '_')}`;
+            const chartBaseName = `AS_vs_${(comparisonCriteriaSet?.id || selectedStudyId || 'T2').replace(/\s+/g, '_')}_Koll_${displayKollektivForComparison.replace(/\s+/g, '_')}`;
             const ttContextPerfTable = TOOLTIP_CONTENT.praesentation.asVsT2PerfTable || {};
 
             let comparisonTableHTML = `<div class="table-responsive"><table class="table table-sm table-striped small mb-0" id="${perfTableId}"><thead class="small"><tr><th data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${(ttContextPerfTable.metric || 'Diagnostische Metrik.')}">Metrik</th><th data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${(ttContextPerfTable.asValue || 'Wert für Avocado Sign (AS).')}">AS (Wert, 95% CI)</th><th data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${(ttContextPerfTable.t2Value || 'Wert für die ausgewählte T2-Basis.').replace('[T2_SHORT_NAME]', `<strong>${t2ShortNameEffective}</strong>`)}">${t2ShortNameEffective} (Wert, 95% CI)</th></tr></thead><tbody>`;
@@ -231,8 +231,8 @@ const praesentationTabLogic = (() => {
         } else {
             resultsHTML = `<div class="alert alert-info">Bitte wählen Sie oben eine Vergleichsbasis für das Kollektiv '<strong>${displayKollektivForComparison}</strong>'.</div>`;
         }
-        const displayGlobalKollektivForContext = getKollektivDisplayName(currentGlobalKollektivForContext);
-        const kollektivHinweis = (kollektivForComparison !== currentGlobalKollektivForContext)
+        const displayGlobalKollektivForContext = getKollektivDisplayName(currentGlobalKollektiv);
+        const kollektivHinweis = (kollektivForComparison !== currentGlobalKollektiv)
             ? `(Globales Kollektiv: <strong>${displayGlobalKollektivForContext}</strong>. T2-Vergleichsbasis evaluiert auf <strong>${displayKollektivForComparison}</strong>, N=${patientCountForComparison || '?'}).`
             : `(N=${patientCountForComparison || '?'})`;
 
@@ -270,3 +270,5 @@ const praesentationTabLogic = (() => {
     });
 
 })();
+
+window.praesentationTabLogic = praesentationTabLogic;
