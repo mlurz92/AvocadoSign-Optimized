@@ -33,7 +33,13 @@ const bruteForceManager = (() => {
             console.warn("BruteForceManager: Web Workers werden von diesem Browser nicht unterstützt.");
              ui_helpers.updateBruteForceUI('error', { message: 'Web Worker nicht unterstützt.'}, false, _currentKollektiv);
         }
-         _resultsByKollektivAndMetric = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS) || {};
+        const storageKey = APP_CONFIG.STORAGE_KEYS.bruteForceResults;
+        if (typeof storageKey === 'string' && storageKey.length > 0) {
+            _resultsByKollektivAndMetric = loadFromLocalStorage(storageKey) || {};
+        } else {
+            console.warn("BruteForceManager: Ungültiger Storage-Schlüssel für bruteForceResults. Ergebnisse werden nicht aus Local Storage geladen.");
+            _resultsByKollektivAndMetric = {};
+        }
     }
 
     function updateData(newData) {
@@ -132,7 +138,12 @@ const bruteForceManager = (() => {
                 nMinus: data.nMinus,
                 timestamp: new Date().toISOString()
             };
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS, _resultsByKollektivAndMetric);
+            const storageKey = APP_CONFIG.STORAGE_KEYS.bruteForceResults;
+            if (typeof storageKey === 'string' && storageKey.length > 0) {
+                saveToLocalStorage(storageKey, _resultsByKollektivAndMetric);
+            } else {
+                console.warn("BruteForceManager: Ungültiger Storage-Schlüssel für bruteForceResults. Ergebnisse werden nicht gespeichert.");
+            }
             ui_helpers.updateBruteForceUI('result', _resultsByKollektivAndMetric[_currentKollektiv][_currentTargetMetric], true, _currentKollektiv);
             
             const event = new CustomEvent('bruteForceResultsUpdated', { 
@@ -198,6 +209,7 @@ const bruteForceManager = (() => {
     
     function resetResults(kollektivId = null, metricName = null) {
         let message = "";
+        const storageKey = APP_CONFIG.STORAGE_KEYS.bruteForceResults;
         if (kollektivId && metricName) {
             if (_resultsByKollektivAndMetric[kollektivId] && _resultsByKollektivAndMetric[kollektivId][metricName]) {
                 delete _resultsByKollektivAndMetric[kollektivId][metricName];
@@ -216,7 +228,11 @@ const bruteForceManager = (() => {
             _resultsByKollektivAndMetric = {};
             message = "Alle Brute-Force-Ergebnisse wurden zurückgesetzt.";
         }
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS, _resultsByKollektivAndMetric);
+        if (typeof storageKey === 'string' && storageKey.length > 0) {
+            saveToLocalStorage(storageKey, _resultsByKollektivAndMetric);
+        } else {
+            console.warn("BruteForceManager: Ungültiger Storage-Schlüssel für bruteForceResults. Ergebnisse können nicht zurückgesetzt werden.");
+        }
         ui_helpers.showToast(message, "info");
         
         const currentDisplayKollektiv = _currentKollektiv || stateManager.getCurrentKollektiv();
