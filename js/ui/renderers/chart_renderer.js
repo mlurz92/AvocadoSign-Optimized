@@ -42,6 +42,7 @@ const chartRenderer = (() => {
     function _createTooltip(targetElementId) {
         const targetEl = document.getElementById(targetElementId);
         if (!targetEl) return null;
+        d3.select(targetEl).select(".chart-tooltip").remove(); 
         const tooltip = d3.select(targetEl)
             .append("div")
             .attr("class", "chart-tooltip bg-light border rounded shadow-sm p-2 small")
@@ -56,10 +57,10 @@ const chartRenderer = (() => {
     }
 
     function _addChartTitle(g, title, chartWidth, margin) {
-        if (title && g && typeof g.append === 'function') {
+        if (title && g && typeof g.append === 'function' && g.node()) {
             g.append("text")
                 .attr("x", chartWidth / 2)
-                .attr("y", 0 - margin.top / 2 - 5 ) 
+                .attr("y", 0 - (margin.top / 2)) 
                 .attr("text-anchor", "middle")
                 .style("font-size", "13px")
                 .style("font-weight", "600")
@@ -70,17 +71,17 @@ const chartRenderer = (() => {
 
     function _addAxisLabels(g, xLabel, yLabel, chartWidth, chartHeight, margin) {
         const chartSettings = safeGetChartSettings();
-        if (xLabel && g && typeof g.append === 'function') {
+        if (xLabel && g && typeof g.append === 'function' && g.node()) {
             g.append("text")
                 .attr("class", "axis-label x-axis-label")
                 .attr("text-anchor", "middle")
                 .attr("x", chartWidth / 2)
-                .attr("y", chartHeight + margin.bottom * 0.75)
+                .attr("y", chartHeight + margin.bottom * 0.85) 
                 .style("font-size", chartSettings.AXIS_LABEL_FONT_SIZE)
                 .style("fill", "var(--chart-label-color)")
                 .text(xLabel);
         }
-        if (yLabel && g && typeof g.append === 'function') {
+        if (yLabel && g && typeof g.append === 'function' && g.node()) {
             g.append("text")
                 .attr("class", "axis-label y-axis-label")
                 .attr("text-anchor", "middle")
@@ -94,15 +95,15 @@ const chartRenderer = (() => {
     }
 
     function _addLegend(g, legendData, chartWidth, margin, options = {}) {
-        if (!legendData || legendData.length === 0 || !g || typeof g.append !== 'function') return;
+        if (!legendData || legendData.length === 0 || !g || typeof g.append !== 'function' || !g.node()) return;
         const chartSettings = safeGetChartSettings();
         const legendFontSize = options.legendFontSize || chartSettings.LEGEND_FONT_SIZE;
         const itemHeight = parseInt(legendFontSize, 10) + 8;
         const symbolSize = parseInt(legendFontSize, 10);
         const legendPadding = 5;
         
-        const legendX = options.legendX !== undefined ? options.legendX : chartWidth - (options.legendWidth || 100) ; 
-        const legendY = options.legendY !== undefined ? options.legendY : 0 - margin.top + 10;
+        const legendX = options.legendX !== undefined ? options.legendX : 0; 
+        const legendY = options.legendY !== undefined ? options.legendY : 0 - margin.top +5;
 
 
         const legend = g.append("g")
@@ -142,7 +143,7 @@ const chartRenderer = (() => {
 
     function _addGridlines(g, xScale, yScale, chartWidth, chartHeight, xGrid, yGrid) {
         const chartSettings = safeGetChartSettings();
-        if (chartSettings.ENABLE_GRIDLINES && g && typeof g.append === 'function') {
+        if (chartSettings.ENABLE_GRIDLINES && g && typeof g.append === 'function' && g.node()) {
             if (yGrid && yScale.ticks) {
                 g.append("g")
                     .attr("class", "grid y-grid")
@@ -168,7 +169,7 @@ const chartRenderer = (() => {
     function renderBarChart(data, targetElementId, options = {}) {
         const targetEl = document.getElementById(targetElementId);
         if (!targetEl || targetEl.offsetWidth === 0 || targetEl.offsetHeight === 0) {
-            console.warn(`Chart-Container '${targetElementId}' nicht gefunden oder nicht sichtbar. Diagramm wird nicht gerendert.`);
+            ui_helpers.updateElementHTML(targetElementId, `<p class="text-muted small text-center p-3">Chart-Container '${targetElementId}' nicht bereit.</p>`);
             return;
         }
         d3.select(targetEl).select("svg").remove();
@@ -243,13 +244,15 @@ const chartRenderer = (() => {
     function renderPieChart(data, targetElementId, options = {}) {
         const targetEl = document.getElementById(targetElementId);
         if (!targetEl || targetEl.offsetWidth === 0 || targetEl.offsetHeight === 0) {
-            console.warn(`Chart-Container '${targetElementId}' nicht gefunden oder nicht sichtbar. Diagramm wird nicht gerendert.`);
+             ui_helpers.updateElementHTML(targetElementId, `<p class="text-muted small text-center p-3">Chart-Container '${targetElementId}' nicht bereit.</p>`);
             return;
         }
         d3.select(targetEl).select("svg").remove();
         const chartSettings = safeGetChartSettings();
         const { width = chartSettings.DEFAULT_WIDTH / 1.5, height = chartSettings.DEFAULT_HEIGHT / 1.5, margin = chartSettings.COMPACT_PIE_MARGIN, title = '', colorScheme = null, innerRadiusFactor = 0.4, legendBelow = false, legendItemCount = 2, fontSize = chartSettings.LEGEND_FONT_SIZE } = options;
-        const radius = Math.min(width - margin.left - margin.right, height - margin.top - margin.bottom - (legendBelow ? (legendItemCount * (parseInt(fontSize,10) + 8) + 10) : 0) ) / 2;
+        const chartWidth = width - margin.left - margin.right; 
+        const chartHeight = height - margin.top - margin.bottom - (legendBelow ? (legendItemCount * (parseInt(fontSize,10) + 8) + 10) : 0);
+        const radius = Math.min(chartWidth, chartHeight) / 2;
         const colors = _getColors(data.length, colorScheme);
 
         const svgRoot = d3.select(targetEl)
@@ -258,7 +261,7 @@ const chartRenderer = (() => {
             .attr("height", height);
 
         const g = svgRoot.append("g")
-            .attr("transform", `translate(${(width - margin.left - margin.right) / 2 + margin.left}, ${(height - margin.top - margin.bottom - (legendBelow ? (legendItemCount * (parseInt(fontSize,10) + 8) + 10) : 0)) / 2 + margin.top})`);
+            .attr("transform", `translate(${ (width - margin.left - margin.right) / 2 + margin.left}, ${ (height - margin.top - margin.bottom - (legendBelow ? (legendItemCount * (parseInt(fontSize,10) + 8) + 10) : 0)) / 2 + margin.top})`);
 
         const pie = d3.pie().value(d => d.value).sort(null);
         const arc = d3.arc().innerRadius(radius * innerRadiusFactor).outerRadius(radius);
@@ -291,14 +294,14 @@ const chartRenderer = (() => {
         _addChartTitle(g, title, chartWidth, margin); 
         if (legendBelow) {
             const legendData = data.map((d,i) => ({name: d.label, color: colors[i], tooltip: `${d.label}: ${formatNumber(d.value, 0)} (${total > 0 ? formatPercent(d.value / total, 1) : 'N/A'})` }));
-            _addLegend(svgRoot, legendData, width, { ...margin, top: height - margin.bottom - (legendItemCount * (parseInt(fontSize,10) + 8))}, {legendHorizontalOffset: width/2 - margin.left, legendItemWidth: width / legendData.length - 5, legendFontSize: fontSize });
+            _addLegend(svgRoot, legendData, width, { ...margin, top: height - margin.bottom - (legendItemCount * (parseInt(fontSize,10) + 8)) + 5}, {legendX: margin.left + 5, legendY: height - margin.bottom - (legendItemCount * (parseInt(fontSize,10)+2)) +5, legendItemWidth: (width - margin.left - margin.right) / legendData.length - 5, legendFontSize: fontSize });
         }
     }
     
     function renderHistogram(data, targetElementId, options = {}) {
         const targetEl = document.getElementById(targetElementId);
         if (!targetEl || targetEl.offsetWidth === 0 || targetEl.offsetHeight === 0) {
-            console.warn(`Chart-Container '${targetElementId}' nicht gefunden oder nicht sichtbar. Diagramm wird nicht gerendert.`);
+            ui_helpers.updateElementHTML(targetElementId, `<p class="text-muted small text-center p-3">Chart-Container '${targetElementId}' nicht bereit.</p>`);
             return;
         }
         d3.select(targetEl).select("svg").remove();
@@ -363,8 +366,8 @@ const chartRenderer = (() => {
 
     function renderROCCurve(rocDataSets, targetElementId, options = {}) {
         const targetEl = document.getElementById(targetElementId);
-        if (!targetEl || targetEl.offsetWidth === 0 || targetEl.offsetHeight === 0) {
-            console.warn(`Chart-Container '${targetElementId}' nicht gefunden oder nicht sichtbar. Diagramm wird nicht gerendert.`);
+         if (!targetEl || targetEl.offsetWidth === 0 || targetEl.offsetHeight === 0) {
+            ui_helpers.updateElementHTML(targetElementId, `<p class="text-muted small text-center p-3">Chart-Container '${targetElementId}' nicht bereit.</p>`);
             return;
         }
         d3.select(targetEl).select("svg").remove();
@@ -444,7 +447,7 @@ const chartRenderer = (() => {
                  g.append("text")
                     .attr("class", "auc-label")
                     .attr("x", chartWidth - 10)
-                    .attr("y", 0 + index * (parseInt(chartSettings.AXIS_LABEL_FONT_SIZE, 10) + 5)) // Adjusted Y position
+                    .attr("y", 0 + index * (parseInt(chartSettings.AXIS_LABEL_FONT_SIZE, 10) + 5)) 
                     .attr("text-anchor", "end")
                     .style("fill", colors[index])
                     .text(aucText);
@@ -461,7 +464,7 @@ const chartRenderer = (() => {
     function renderComparisonBarChart(data, targetElementId, options = {}, t2LabelOverride = "T2-optimiert") {
         const targetEl = document.getElementById(targetElementId);
         if (!targetEl || targetEl.offsetWidth === 0 || targetEl.offsetHeight === 0) {
-            console.warn(`Chart-Container '${targetElementId}' nicht gefunden oder nicht sichtbar. Diagramm wird nicht gerendert.`);
+            ui_helpers.updateElementHTML(targetElementId, `<p class="text-muted small text-center p-3">Chart-Container '${targetElementId}' nicht bereit.</p>`);
             return;
         }
         d3.select(targetEl).select("svg").remove();
@@ -532,7 +535,7 @@ const chartRenderer = (() => {
     function renderPerformanceComparisonPlot(data, targetElementId, options = {}) {
         const targetEl = document.getElementById(targetElementId);
         if (!targetEl || targetEl.offsetWidth === 0 || targetEl.offsetHeight === 0) {
-            console.warn(`Chart-Container '${targetElementId}' nicht gefunden oder nicht sichtbar. Diagramm wird nicht gerendert.`);
+            ui_helpers.updateElementHTML(targetElementId, `<p class="text-muted small text-center p-3">Chart-Container '${targetElementId}' nicht bereit.</p>`);
             return;
         }
         d3.select(targetEl).select("svg").remove();
@@ -639,7 +642,9 @@ const chartRenderer = (() => {
 
     function renderAgeDistributionChart(targetElementId, ageData, kollektivName, options = {}) {
         if (!ageData || ageData.length === 0) {
-            ui_helpers.updateElementHTML(targetElementId, `<p class="text-muted small text-center p-3">Keine Daten für Altersverteilung (${kollektivName}).</p>`);
+            if (typeof ui_helpers !== 'undefined' && ui_helpers.updateElementHTML) {
+                ui_helpers.updateElementHTML(targetElementId, `<p class="text-muted small text-center p-3">Keine Daten für Altersverteilung (${kollektivName}).</p>`);
+            }
             return;
         }
         const chartSettings = safeGetChartSettings();
@@ -651,7 +656,7 @@ const chartRenderer = (() => {
             numBins: 10,
             width: chartSettings.DEFAULT_WIDTH,
             height: chartSettings.DEFAULT_HEIGHT / 1.5,
-            margin: { top: 20, right: 20, bottom: 40, left: 45 }
+            margin: { top: 30, right: 20, bottom: 40, left: 45 }
         };
         renderHistogram(ageData, targetElementId, {...defaultOptions, ...options});
     }
@@ -665,7 +670,9 @@ const chartRenderer = (() => {
             data.push({ label: UI_TEXTS.legendLabels.unknownGender, value: genderData.unbekannt });
         }
         if (data.every(d => d.value === 0)) {
-            ui_helpers.updateElementHTML(targetElementId, `<p class="text-muted small text-center p-3">Keine Daten für Geschlechterverteilung (${kollektivName}).</p>`);
+            if (typeof ui_helpers !== 'undefined' && ui_helpers.updateElementHTML) {
+                ui_helpers.updateElementHTML(targetElementId, `<p class="text-muted small text-center p-3">Keine Daten für Geschlechterverteilung (${kollektivName}).</p>`);
+            }
             return;
         }
         const chartSettings = safeGetChartSettings();
@@ -685,7 +692,9 @@ const chartRenderer = (() => {
 
     function renderASPerformanceBarChart(targetElementId, stats, kollektivName) {
         if (!stats || !stats.matrix || (stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn) === 0) {
-            ui_helpers.updateElementHTML(targetElementId, `<p class="text-center text-muted p-3">Keine Daten für Chart (${kollektivName}).</p>`);
+            if (typeof ui_helpers !== 'undefined' && ui_helpers.updateElementHTML) {
+                ui_helpers.updateElementHTML(targetElementId, `<p class="text-center text-muted p-3">Keine Daten für Chart (${kollektivName}).</p>`);
+            }
             return;
         }
 
@@ -714,7 +723,9 @@ const chartRenderer = (() => {
 
     function renderASvsT2ComparisonBarChart(targetElementId, statsAS, statsT2, t2Label, kollektivName) {
         if (!statsAS || !statsT2 || !statsAS.matrix || !statsT2.matrix || (statsAS.matrix.rp + statsAS.matrix.fp + statsAS.matrix.fn + statsAS.matrix.rn) === 0 || (statsT2.matrix.rp + statsT2.matrix.fp + statsT2.matrix.fn + statsT2.matrix.rn) === 0) {
-            ui_helpers.updateElementHTML(targetElementId, `<p class="text-center text-muted p-3">Keine validen Vergleichsdaten für Chart (${kollektivName}).</p>`);
+            if (typeof ui_helpers !== 'undefined' && ui_helpers.updateElementHTML) {
+                ui_helpers.updateElementHTML(targetElementId, `<p class="text-center text-muted p-3">Keine validen Vergleichsdaten für Chart (${kollektivName}).</p>`);
+            }
             return;
         }
 
