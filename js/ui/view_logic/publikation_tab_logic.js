@@ -47,23 +47,13 @@ const publikationTabLogic = (() => {
             t2SizeMax: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max,
             bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
             significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
-            references: { // Diese könnten auch aus APP_CONFIG kommen, falls dort zentralisiert.
-                lurzSchaefer2025: "Lurz & Schäfer (2025) [DOI: 10.1007/s00330-025-11462-y]",
-                lurzSchaefer2025StudyPeriod: "Januar 2020 und November 2023",
-                lurzSchaefer2025MRISystem: "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers)",
-                lurzSchaefer2025ContrastAgent: "Gadoteridol (ProHance; Bracco)",
-                lurzSchaefer2025T2SliceThickness: "2-3 mm",
-                lurzSchaefer2025RadiologistExperience: ["29", "7", "19"],
-                koh2008: "Koh et al. (2008) [DOI: 10.1016/j.ijrobp.2007.10.016]",
-                barbaro2024: "Barbaro et al. (2024) [DOI: 10.1016/j.radonc.2024.110124]",
-                rutegard2025: "Rutegård et al. (2025) [DOI: 10.1007/s00330-025-11361-2]",
-                beetsTan2018ESGAR: "Beets-Tan et al. (2018, ESGAR Consensus) [DOI: 10.1007/s00330-017-5026-2]"
-            },
-            bruteForceMetricForPublication: state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication
+            references: APP_CONFIG.REFERENCES_FOR_PUBLICATION, // Direkter Zugriff auf globale Referenzen
+            bruteForceMetricForPublication: state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication,
+            rawData: rawGlobalDataInputForLogic // Übergabe der Rohdaten an den Renderer für Filterungen
         };
 
         const optionsForRenderer = {
-            currentKollektiv: currentKollektivId, // Der global gewählte Kollektiv für Kontext
+            currentKollektiv: currentKollektivId,
             bruteForceMetric: state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication
         };
 
@@ -87,16 +77,20 @@ const publikationTabLogic = (() => {
             if (subSectionId === 'ergebnisse_patientencharakteristika') {
                 const dataForGesamtKollektiv = allKollektivStats['Gesamt'];
                 if (dataForGesamtKollektiv?.deskriptiv) {
-                    const alterChartId = `pub-chart-alter-Gesamt`;
-                    const genderChartId = `pub-chart-gender-Gesamt`;
-                    const ageChartElement = document.getElementById(alterChartId);
-                    const genderChartElement = document.getElementById(genderChartId);
+                    const alterChartId = PUBLICATION_CONFIG.publicationElements.ergebnisse.alterVerteilungChart.id;
+                    const genderChartId = PUBLICATION_CONFIG.publicationElements.ergebnisse.geschlechtVerteilungChart.id;
+                    const ageChartElement = document.getElementById(`${alterChartId}-chart-area`);
+                    const genderChartElement = document.getElementById(`${genderChartId}-chart-area`);
+
+                    // Optionen für Chart-Renderer
+                    const histOpts = { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 45 } };
+                    const pieOpts = { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true };
 
                     if (ageChartElement) {
                         if (dataForGesamtKollektiv.deskriptiv.alterData && dataForGesamtKollektiv.deskriptiv.alterData.length > 0) {
-                            chartRenderer.renderAgeDistributionChart(dataForGesamtKollektiv.deskriptiv.alterData || [], alterChartId, { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 45 } });
+                            chartRenderer.renderAgeDistributionChart(dataForGesamtKollektiv.deskriptiv.alterData || [], alterChartId, histOpts);
                         } else {
-                            ui_helpers.updateElementHTML(alterChartId, `<p class="text-muted small text-center p-3">Keine Daten für Altersverteilung (Gesamtkollektiv).</p>`);
+                            ui_helpers.updateElementHTML(ageChartElement.id, `<p class="text-muted small text-center p-3">Keine Daten für Altersverteilung (Gesamtkollektiv).</p>`);
                         }
                     }
                     if (genderChartElement && dataForGesamtKollektiv.deskriptiv.geschlecht) {
@@ -108,33 +102,38 @@ const publikationTabLogic = (() => {
                             genderData.push({ label: UI_TEXTS.legendLabels.unknownGender, value: dataForGesamtKollektiv.deskriptiv.geschlecht.unbekannt });
                         }
                         if (genderData.some(d => d.value > 0)) {
-                            chartRenderer.renderPieChart(genderData, genderChartId, { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true, legendItemCount: genderData.length });
+                            chartRenderer.renderPieChart(genderData, genderChartId, {...pieOpts, legendItemCount: genderData.length});
                         } else {
-                            ui_helpers.updateElementHTML(genderChartId, `<p class="text-muted small text-center p-3">Keine Daten für Geschlechterverteilung (Gesamtkollektiv).</p>`);
+                            ui_helpers.updateElementHTML(genderChartElement.id, `<p class="text-muted small text-center p-3">Keine Daten für Geschlechterverteilung (Gesamtkollektiv).</p>`);
                         }
                     } else if (genderChartElement) {
-                        ui_helpers.updateElementHTML(genderChartId, `<p class="text-muted small text-center p-3">Keine Daten für Geschlechterverteilung (Gesamtkollektiv).</p>`);
+                        ui_helpers.updateElementHTML(genderChartElement.id, `<p class="text-muted small text-center p-3">Keine Daten für Geschlechterverteilung (Gesamtkollektiv).</p>`);
                     }
                 }
             } else if (subSectionId === 'ergebnisse_vergleich_performance') {
                 const kollektiveForCharts = ['Gesamt', 'direkt OP', 'nRCT'];
+                const bruteForceMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+
                 kollektiveForCharts.forEach(kolId => {
-                    const chartId = `pub-chart-vergleich-${kolId.replace(/\s+/g, '-')}`;
-                    const chartElement = document.getElementById(chartId);
+                    const chartConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse[`vergleichPerformanceChart${kolId.replace(/\s+/g, '')}`];
+                    const chartId = chartConfig.id;
+                    const chartElement = document.getElementById(`${chartId}-chart-area`);
+                    
+                    const dataForThisKollektivOriginal = dataProcessor.filterDataByKollektiv(rawGlobalDataInputForLogic, kolId);
                     const dataForThisKollektiv = allKollektivStats[kolId];
+
 
                     if (chartElement && dataForThisKollektiv) {
                         const asStats = dataForThisKollektiv.gueteAS;
-                        // Verwende die BF-Ergebnisse basierend auf der im State ausgewählten Metrik für die Publikationsansicht
+                        
                         const bfResultsForDisplay = bruteForceManager.getResultsForKollektiv(kolId);
                         let bfStatsForChart = null;
                         let bfDefForChart = null;
 
-                        if (bfResultsForDisplay && bfResultsForDisplay.metric === state.getCurrentPublikationBruteForceMetric() && bfResultsForDisplay.bestResult) {
-                             // Wenn die gespeicherten BF-Ergebnisse mit der aktuellen Auswahl übereinstimmen
+                        if (bfResultsForDisplay && bfResultsForDisplay.metric === bruteForceMetric && bfResultsForDisplay.bestResult) {
                              const bfCriteria = bfResultsForDisplay.bestResult.criteria;
                              const bfLogic = bfResultsForDisplay.bestResult.logic;
-                             const evaluatedDataBF = t2CriteriaManager.evaluateDataset(cloneDeep(dataProcessor.filterDataByKollektiv(rawGlobalDataInputForLogic, kolId)), bfCriteria, bfLogic);
+                             const evaluatedDataBF = t2CriteriaManager.evaluateDataset(cloneDeep(dataForThisKollektivOriginal), bfCriteria, bfLogic);
                              bfStatsForChart = statisticsService.calculateDiagnosticPerformance(evaluatedDataBF, 't2', 'n');
                              bfDefForChart = {
                                  criteria: bfCriteria,
@@ -143,7 +142,6 @@ const publikationTabLogic = (() => {
                                  metricValue: bfResultsForDisplay.bestResult.metricValue
                              };
                         } else if (dataForThisKollektiv.gueteT2_bruteforce && dataForThisKollektiv.bruteforce_definition) {
-                            // Fallback auf die Standard-BF-Metrik, die in allKollektivStats gespeichert ist
                             bfStatsForChart = dataForThisKollektiv.gueteT2_bruteforce;
                             bfDefForChart = dataForThisKollektiv.bruteforce_definition;
                         }
@@ -160,16 +158,16 @@ const publikationTabLogic = (() => {
                             ].filter(d => !isNaN(d.AS) && !isNaN(d.T2));
 
                             if (chartDataComp.length > 0) {
-                                const t2Label = `BF-T2 (${(bfDefForChart.metricName || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication).substring(0,6)}.)`;
+                                const t2Label = `BF-T2 (${(bfDefForChart.metricName || bruteForceMetric).substring(0,6)}.)`;
                                 chartRenderer.renderComparisonBarChart(chartDataComp, chartId, { height: 250, margin: { top: 20, right: 20, bottom: 50, left: 50 } }, t2Label);
                             } else {
-                                ui_helpers.updateElementHTML(chartId, `<p class="text-muted small text-center p-3">Keine validen Vergleichsdaten für Chart (${getKollektivDisplayName(kolId)}).</p>`);
+                                ui_helpers.updateElementHTML(chartElement.id, `<p class="text-muted small text-center p-3">Keine validen Vergleichsdaten für Chart (${getKollektivDisplayName(kolId)}).</p>`);
                             }
                         } else {
-                            ui_helpers.updateElementHTML(chartId, `<p class="text-muted small text-center p-3">Unvollständige Daten für Vergleichschart (${getKollektivDisplayName(kolId)}).</p>`);
+                            ui_helpers.updateElementHTML(chartElement.id, `<p class="text-muted small text-center p-3">Unvollständige Daten für Vergleichschart (${getKollektivDisplayName(kolId)}).</p>`);
                         }
                     } else if (chartElement) {
-                         ui_helpers.updateElementHTML(chartId, `<p class="text-muted small text-center p-3">Keine Daten für ${getKollektivDisplayName(kolId)}.</p>`);
+                         ui_helpers.updateElementHTML(chartElement.id, `<p class="text-muted small text-center p-3">Keine Daten für ${getKollektivDisplayName(kolId)}.</p>`);
                     }
                 });
             }
