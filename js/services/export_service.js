@@ -95,9 +95,9 @@ const exportService = (() => {
             if (!metricData || Object.keys(metricData).length === 0) return;
             const baseInfo = { Kollektiv: kollektivName, Methode: metricType };
             if (criteriaInfo) {
-                baseInfo.Kriterien: criteriaInfo.definition,
-                baseInfo.Logik: criteriaInfo.logic
-            };
+                baseInfo.Kriterien = criteriaInfo.definition; // Korrektur: Zuweisungsoperator
+                baseInfo.Logik = criteriaInfo.logic; // Korrektur: Zuweisungsoperator
+            }
             const metricsOrder = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'auc', 'f1', 'mcc'];
             metricsOrder.forEach(key => {
                 const m = metricData[key];
@@ -109,7 +109,7 @@ const exportService = (() => {
                         CI_lower: formatNumber(m.ci?.lower, 6, '', 'en'),
                         CI_upper: formatNumber(m.ci?.upper, 6, '', 'en'),
                         CI_Methode: m.method || '',
-                        N_Trials: m.n_trials || (m.matrix_components ? mc.total : '')
+                        N_Trials: m.n_trials || (m.matrix_components ? m.matrix_components.total : '') // Korrektur: m.matrix_components.total
                     });
                 }
             });
@@ -329,10 +329,10 @@ const exportService = (() => {
         } else if (tableKey === 'statistischerVergleichAST2Tabelle') {
             headers = ['Vergleich', 'Kollektiv', 'Methode 1', 'AUC M1', 'Methode 2', 'AUC M2', 'Diff. AUC (M1-M2)', 'DeLong p-Wert (AUC)', 'DeLong Z-Stat', 'McNemar p-Wert (Acc.)', 'McNemar Chi²'];
             kollektive.forEach(kolId => {
-                const asStats = allKollektivStats[kolId]?.gueteAS;
-                const litSetConf = PUBLICATION_CONFIG.literatureCriteriaSets.find(lc => {const s=studyT2CriteriaManager.getStudyCriteriaSetById(lc.id); return s && (s.applicableKollektiv===kolId || (s.applicableKollektiv==='Gesamt' && kolId==='Gesamt'));});
-                const litStats = litSetConf ? allKollektivStats[kolId]?.gueteT2_literatur?.[litSetConf.id] : null;
-                const bfStats = allKollektivStats[kolId]?.gueteT2_bruteforce;
+                const asStats = allKollektivStats[kollektivId]?.gueteAS;
+                const litSetConf = PUBLICATION_CONFIG.literatureCriteriaSets.find(lc => {const s=studyT2CriteriaManager.getStudyCriteriaSetById(lc.id); return s && (s.applicableKollektiv===kollektivId || (s.applicableKollektiv==='Gesamt' && kollektivId==='Gesamt'));});
+                const litStats = litSetConf ? allKollektivStats[kollektivId]?.gueteT2_literatur?.[litSetConf.id] : null;
+                const bfStats = allKollektivStats[kollektivId]?.gueteT2_bruteforce;
                 const bfDef = allKollektivStats[kollektivId]?.bruteforce_definition;
                 const vglASLit = litSetConf ? allKollektivStats[kollektivId]?.[`vergleichASvsT2_literatur_${litSetConf.id}`] : null;
                 const vglASBF = allKollektivStats[kollektivId]?.vergleichASvsT2_bruteforce;
@@ -347,7 +347,7 @@ const exportService = (() => {
                         'McNemar p-Wert (Acc.)': _formatPValueForExport(vglASLit.mcnemar?.pValue), 'McNemar Chi²': formatNumber(vglASLit.mcnemar?.chiSquared, 3, na, langForNum)
                     });
                 }
-                 if(asStats && bfStats && vglASBF && bfDef) {
+                 if(asStats && bfStats && bfDef && vglASBF) {
                     dataForTsv.push({
                         'Vergleich': `AS vs. BF-Opt. (${bfDef.metricName || bfZielMetric})`, 'Kollektiv': getKollektivDisplayName(kollektivId),
                         'Methode 1': 'AS', 'AUC M1': formatNumber(asStats.auc?.value, 4, na, langForNum),
