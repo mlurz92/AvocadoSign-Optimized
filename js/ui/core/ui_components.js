@@ -84,7 +84,8 @@ const uiComponents = (() => {
         const sizeMin = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min;
         const sizeMax = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max;
         const sizeStep = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step;
-        const formattedThreshold = formatNumber(sizeThreshold, 1, '5.0', true);
+        const formattedThresholdForInput = formatNumber(sizeThreshold, 1, '5.0', 'en'); 
+        const formattedThresholdForDisplay = formatNumber(sizeThreshold, 1);
         const lang = stateManager.getCurrentPublikationLang();
 
         const createButtonOptions = (key, isChecked, criterionLabel) => {
@@ -137,9 +138,9 @@ const uiComponents = (() => {
                         ${createCriteriaGroup('size', 'Größe', 't2Size', (key, isChecked) => `
                             <div class="d-flex align-items-center flex-wrap">
                                  <span class="me-1 small text-muted">≥</span>
-                                 <input type="range" class="form-range criteria-range flex-grow-1 me-2" id="range-size" min="${sizeMin}" max="${sizeMax}" step="${sizeStep}" value="${formattedThreshold}" ${isChecked ? '' : 'disabled'} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${TOOLTIP_CONTENT.t2Size.rangeSlider || 'Schwellenwert für Kurzachsendurchmesser (≥) einstellen.'}">
-                                 <span class="criteria-value-display text-end me-1 fw-bold" id="value-size">${formatNumber(sizeThreshold, 1)}</span><span class="me-2 small text-muted">mm</span>
-                                 <input type="number" class="form-control form-control-sm criteria-input-manual" id="input-size" min="${sizeMin}" max="${sizeMax}" step="${sizeStep}" value="${formattedThreshold}" ${isChecked ? '' : 'disabled'} style="width: 70px;" aria-label="Größe manuell eingeben" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${TOOLTIP_CONTENT.t2Size.manualInput || 'Schwellenwert manuell eingeben oder anpassen.'}">
+                                 <input type="range" class="form-range criteria-range flex-grow-1 me-2" id="range-size" min="${sizeMin}" max="${sizeMax}" step="${sizeStep}" value="${formattedThresholdForInput}" ${isChecked ? '' : 'disabled'} data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${TOOLTIP_CONTENT.t2Size.rangeSlider || 'Schwellenwert für Kurzachsendurchmesser (≥) einstellen.'}">
+                                 <span class="criteria-value-display text-end me-1 fw-bold" id="value-size">${formattedThresholdForDisplay}</span><span class="me-2 small text-muted">mm</span>
+                                 <input type="number" class="form-control form-control-sm criteria-input-manual" id="input-size" min="${sizeMin}" max="${sizeMax}" step="${sizeStep}" value="${formattedThresholdForInput}" ${isChecked ? '' : 'disabled'} style="width: 70px;" aria-label="Größe manuell eingeben" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${TOOLTIP_CONTENT.t2Size.manualInput || 'Schwellenwert manuell eingeben oder anpassen.'}">
                             </div>
                         `)}
                         ${createCriteriaGroup('form', 'Form', 't2Form', createButtonOptions)}
