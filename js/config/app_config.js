@@ -10,7 +10,7 @@ function getDefaultT2Criteria() {
 }
 
 const APP_CONFIG = Object.freeze({
-    APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
+    APP_NAME: "Lymphknoten T2 & Avocado Sign Analyse",
     APP_VERSION: "2.3.0",
 
     DEFAULT_SETTINGS: Object.freeze({
@@ -18,14 +18,14 @@ const APP_CONFIG = Object.freeze({
         T2_LOGIC: 'UND',
         DATEN_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
         AUSWERTUNG_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
-        activeTabId: 'daten-tab-pane', // Sicherstellen, dass dies auf '-pane' endet
+        activeTabId: 'daten-tab-pane',
         STATS_LAYOUT: 'einzel',
         STATS_KOLLEKTIV1: 'Gesamt',
         STATS_KOLLEKTIV2: 'nRCT',
         PRESENTATION_VIEW: 'as-pur',
         PRESENTATION_STUDY_ID: null,
         PUBLIKATION_LANG: 'de',
-        PUBLIKATION_SECTION: 'methoden_studienanlage', // Standard-Sektion auf eine gültige Untersektion setzen
+        PUBLIKATION_SECTION: 'methoden_studienanlage',
         PUBLIKATION_BRUTE_FORCE_METRIC: 'Balanced Accuracy',
         BRUTE_FORCE_METRIC: 'Balanced Accuracy',
         CRITERIA_COMPARISON_SETS: Object.freeze([
@@ -55,6 +55,7 @@ const APP_CONFIG = Object.freeze({
         publikationSection: 'currentPublikationSection_v4.2_detailed',
         publikationBruteForceMetric: 'currentPublikationBfMetric_v4.2_detailed',
         bruteForceMetric: 'bruteForceMetric_v4.2_detailed',
+        bruteForceResults: 'bruteForceResults_v4.2_detailed',
         criteriaComparisonSets: 'criteriaComparisonSets_v4.2_detailed',
         chartColorScheme: 'chartColorScheme_v4.2_detailed',
         isFirstAppStart: 'appFirstStart_v2.3'
@@ -244,4 +245,3 @@ const APP_CONFIG = Object.freeze({
 
 window.APP_CONFIG = APP_CONFIG;
 window.getDefaultT2Criteria = getDefaultT2Criteria;
-
