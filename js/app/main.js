@@ -105,7 +105,7 @@
                 bruteForceMetric: stateManager.getCurrentPublikationBruteForceMetric(),
                 appliedCriteria: t2CriteriaManager.getAppliedCriteria(),
                 appliedLogic: t2CriteriaManager.getAppliedLogic(),
-                publicationElements: PUBLICATION_CONFIG.publicationElements
+                publicationElements: PUBLICATION_CONFIG.publicationElements 
             };
             
             const content = publicationRenderer.renderSectionContent(currentPublikationSection, currentPublikationLang, window.allKollektivStatsForPublikationTab, commonData, publicationOptions);
@@ -161,12 +161,10 @@
                      exportService.exportPublikationSectionMarkdown('statistik', 'deskriptiv', stateManager.getCurrentPublikationLang(), allStats, commonData, publicationOptions);
                     break;
                 case 'datenMD':
-                    // Need to get data from dataTabLogic or dataProcessor directly for export
                     const dataForDatenMD = dataProcessor.getProcessedData(stateManager.getCurrentKollektiv());
                     exportService.exportPublikationSectionMarkdown('daten', 'datenliste', stateManager.getCurrentPublikationLang(), allStats, commonData, { ...publicationOptions, data: dataForDatenMD });
                     break;
                 case 'auswertungMD':
-                    // Need to get data from auswertungTabLogic or dataProcessor directly for export
                     const dataForAuswertungMD = dataProcessor.getProcessedData(stateManager.getCurrentKollektiv());
                     exportService.exportPublikationSectionMarkdown('auswertung', 'auswertungstabelle', stateManager.getCurrentPublikationLang(), allStats, commonData, { ...publicationOptions, data: dataForAuswertungMD });
                     break;
@@ -340,14 +338,13 @@
                 break;
             case 'export-tab-pane':
                 viewRenderer.renderExportTab(currentKollektiv);
-                // Register export event handlers after the tab content is rendered
                 if (typeof exportEventHandlers !== 'undefined' && exportEventHandlers.register) {
                     exportEventHandlers.register();
                 }
                 break;
             default:
                 console.warn(`Unerwarteter aktiver Tab-ID: ${activeTabId}`);
-                viewRenderer.renderDatenTab(); // Fallback
+                viewRenderer.renderDatenTab();
         }
         _updateUI();
     }
@@ -364,7 +361,6 @@
         _renderPraesentationTab(forceStatRecalculation);
         _renderPublikationTab(forceStatRecalculation);
         viewRenderer.renderExportTab(currentKollektiv);
-        // Register export event handlers after the tab content is rendered
         if (typeof exportEventHandlers !== 'undefined' && exportEventHandlers.register) {
             exportEventHandlers.register();
         }
@@ -526,16 +522,14 @@
             stateManager.initialize();
             
             currentKollektiv = stateManager.getCurrentKollektiv();
-            currentT2Criteria = t2CriteriaManager.getAppliedCriteria();
-            currentT2Logic = t2CriteriaManager.getAppliedLogic();
             
-
             dataProcessor.initializeData(patientData);
             currentData = dataProcessor.getProcessedData(currentKollektiv);
             t2CriteriaManager.initialize(APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC, APP_CONFIG.DEFAULT_SETTINGS.APPLIED_CRITERIA);
             studyT2CriteriaManager.initialize();
             bruteForceManager.initialize();
             bruteForceManager.updateData(currentData);
+            bruteForceManager.updateKollektiv(currentKollektiv);
 
 
             currentT2Criteria = t2CriteriaManager.getAppliedCriteria();
@@ -561,13 +555,18 @@
             }
             
             generalEventHandlers.register();
-            // exportEventHandlers.register(); // This is now called within renderExportTab's afterRender
 
             _renderCurrentTab(true); 
 
             if (stateManager.isFirstAppStart()) {
-                ui_helpers.showKurzanleitung();
-                stateManager.setFirstAppStart(false);
+                ui_helpers.showKurzanleitung(); 
+                stateManager.setFirstAppStart(false); 
+            } else {
+                setTimeout(() => {
+                    if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
+                        mainAppInterface.refreshCurrentTab(false); 
+                    }
+                }, 100);
             }
 
             console.log("Avocado Sign Analyse Anwendung erfolgreich initialisiert und alle Module geladen.");
