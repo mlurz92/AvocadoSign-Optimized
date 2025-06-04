@@ -66,7 +66,7 @@ const viewRenderer = (() => {
         
         const tableHTML = dataTabLogic.createDatenTableHTML(filteredData, sortState);
         const toggleButtonId = 'daten-toggle-details';
-        const currentLang = stateManager.getCurrentPublikationLang() || 'de';
+        const currentLang = stateManager.getCurrentPublikationLang();
         const toggleButtonText = UI_TEXTS.datenTab.toggleDetailsButton.expand || (currentLang === 'de' ? 'Alle Details Anzeigen' : 'Expand All Details');
         const toggleButtonTooltip = TOOLTIP_CONTENT.datenTable.expandAll || (currentLang === 'de' ? 'Alle Details ein-/ausblenden' : 'Expand/collapse all details');
 
@@ -101,11 +101,11 @@ const viewRenderer = (() => {
         const bruteForceHTML = uiComponents.createBruteForceCard(currentKollektiv, bruteForceManagerInstanceParam && bruteForceManagerInstanceParam.isWorkerAvailable());
         
         const filteredData = auswertungTabLogic.getFilteredData ? auswertungTabLogic.getFilteredData(currentKollektiv) : initialData.filter(p => currentKollektiv === 'Gesamt' || p.therapie === currentKollektiv);
-        const sortState = stateManager.getAuswertungTableSort() || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
+        const sortState = stateManager.getAuswertungTableSort();
         
         const tableHTML = uiComponents.createAuswertungTableHTML(filteredData, sortState, currentAppliedCriteria, currentAppliedLogic);
         const toggleButtonId = 'auswertung-toggle-details';
-        const currentLang = stateManager.getCurrentPublikationLang() || 'de';
+        const currentLang = stateManager.getCurrentPublikationLang();
         const toggleButtonText = UI_TEXTS.auswertungTab.toggleDetailsButton.expand || (currentLang === 'de' ? 'Alle Details Anzeigen' : 'Expand All Details');
         const toggleButtonTooltip = TOOLTIP_CONTENT.auswertungTable.expandAll || (currentLang === 'de' ? 'Alle Details ein-/ausblenden' : 'Expand/collapse all details');
 
@@ -133,8 +133,17 @@ const viewRenderer = (() => {
             </div>`;
         renderTabContent('auswertung-tab-pane', content, {
             afterRender: () => {
+                // Initialisiere die Logik für den Auswertungstab
+                if (typeof auswertungTabLogic !== 'undefined' && typeof auswertungTabLogic.initialize === 'function') {
+                    auswertungTabLogic.initialize(initialData, bruteForceManagerInstanceParam);
+                }
+                // Registriere Event-Handler
                 if (typeof auswertungEventHandlers !== 'undefined' && auswertungEventHandlers.register) {
                     auswertungEventHandlers.register(bruteForceManagerInstanceParam);
+                }
+                // Aktualisiere die UI des Auswertungstabs, um die Tabelle zu rendern
+                if (typeof auswertungTabLogic !== 'undefined' && typeof auswertungTabLogic.refreshUI === 'function') {
+                    auswertungTabLogic.refreshUI();
                 }
                 const tableBodyElement = document.getElementById('auswertung-table-body');
                 if (tableBodyElement) {
@@ -146,9 +155,9 @@ const viewRenderer = (() => {
     }
 
     function renderStatistikTab(statsEinze, statsVergleich, layout, kollektiv1, kollektiv2, currentKollektivForContext) {
-        const currentKollektiv = currentKollektivForContext || stateManager.getCurrentKollektiv() || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
+        const currentKollektiv = currentKollektivForContext || stateManager.getCurrentKollektiv();
         const layoutIsVergleich = layout === 'vergleich';
-        const currentLang = stateManager.getCurrentPublikationLang() || 'de';
+        const currentLang = stateManager.getCurrentPublikationLang();
         const buttonText = layoutIsVergleich ? (UI_TEXTS.statistikTab.layoutSwitchLabel.vergleich || 'Vergleich Aktiv') : (UI_TEXTS.statistikTab.layoutSwitchLabel.einzel || 'Einzelansicht Aktiv');
         const tooltipTextKey = layoutIsVergleich ? 'vergleich' : 'einzel';
         const tooltipText = (TOOLTIP_CONTENT.statistikLayoutSwitch?.[tooltipTextKey] || (currentLang === 'de' ? 'Layout umschalten.' : 'Toggle layout.'));
@@ -212,7 +221,7 @@ const viewRenderer = (() => {
 
     function _buildStatistikContent(statsEinze, statsVergleich, layout, kollektiv1, kollektiv2, currentKollektivForContext) {
         let statistikHTML = '';
-        const currentKollektiv = currentKollektivForContext || stateManager.getCurrentKollektiv() || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
+        const currentKollektiv = currentKollektivForContext || stateManager.getCurrentKollektiv();
         const t2Criteria = t2CriteriaManager.getAppliedCriteria();
         const t2Logic = t2CriteriaManager.getAppliedLogic();
         const t2ShortName = studyT2CriteriaManager.formatCriteriaForDisplay(t2Criteria, t2Logic, true);
@@ -280,7 +289,7 @@ const viewRenderer = (() => {
                         dataProcessor.getRawData(),
                         t2CriteriaManager.getAppliedCriteria(),
                         t2CriteriaManager.getAppliedLogic(),
-                        bruteForceManagerInstance.getAllStoredResults()
+                        bruteForceManager.getAllStoredResults()
                     );
                 }
                 if (typeof publikationEventHandlers !== 'undefined' && typeof publikationEventHandlers.register === 'function') {
@@ -295,7 +304,7 @@ const viewRenderer = (() => {
     }
 
     function renderExportTab(currentKollektivForContext) {
-        const currentKollektivToUse = currentKollektivForContext || stateManager.getCurrentKollektiv() || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
+        const currentKollektivToUse = currentKollektivForContext || stateManager.getCurrentKollektiv();
         const content = uiComponents.createExportOptions(currentKollektivToUse);
         renderTabContent('export-tab-pane', content, {
             afterRender: () => {
