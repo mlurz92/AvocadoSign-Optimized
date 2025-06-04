@@ -24,7 +24,6 @@ const auswertungTabLogic = (() => {
         currentKollektiv = stateManager.getCurrentKollektiv();
         currentSortState = stateManager.getAuswertungTableSort();
         _updateAppliedCriteriaDisplay();
-        // _renderTable(); // Entfernt: refreshUI() wird direkt danach aufgerufen und rendert die Tabelle
     }
 
     function updateData(newData) {
@@ -66,7 +65,7 @@ const auswertungTabLogic = (() => {
         const toggleDetailsButtonId = 'auswertung-toggle-details';
         
         if (!tableContainer) {
-            console.error("AuswertungTabLogic: Tabellencontainer nicht gefunden.");
+            console.error("AuswertungTabLogic: Tabellencontainer 'auswertung-table-container' nicht gefunden.");
             return;
         }
 
@@ -85,7 +84,13 @@ const auswertungTabLogic = (() => {
         }
         ui_helpers.initializeTooltips(tableContainer);
         ui_helpers.updateSortIcons('auswertung-table-header', currentSortState);
-        ui_helpers.attachRowCollapseListeners(document.getElementById('auswertung-table-body'));
+        
+        const tableBodyElement = document.getElementById('auswertung-table-body');
+        if (tableBodyElement) {
+             ui_helpers.attachRowCollapseListeners(tableBodyElement);
+        } else {
+            console.warn("AuswertungTabLogic: Tabellenkörper 'auswertung-table-body' nicht im DOM gefunden nach dem Rendern der Tabelle.");
+        }
     }
 
     function handleSortChange(newSortKey, newSubKey = null) {
