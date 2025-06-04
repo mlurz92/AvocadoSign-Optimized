@@ -106,12 +106,25 @@ const dataProcessor = (() => {
         return cloneDeep(rawData);
     }
 
+    function getAvailableTherapies() {
+        const therapies = new Set();
+        rawData.forEach(p => {
+            if (p.therapie) {
+                therapies.add(p.therapie);
+            }
+        });
+        return Array.from(therapies).sort();
+    }
+
     return Object.freeze({
         initializeData,
         getProcessedData,
         getPatientById,
         getHeaderStats,
         getRawData,
-        calculateAge 
+        calculateAge,
+        getAvailableTherapies
     });
 })();
+
+window.dataProcessor = dataProcessor;
