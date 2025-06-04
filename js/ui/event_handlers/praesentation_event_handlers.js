@@ -65,12 +65,14 @@ const praesentationEventHandlers = (() => {
             console.warn("PraesentationEventHandlers: Ansicht-Radio-Buttons ('praesentationAnsicht') nicht gefunden.");
         }
 
-        const studySelect = praesentationTabPane.querySelector('#praes-study-select');
-        if (studySelect) {
-            studySelect.removeEventListener('change', _handleStudySelectChange);
-            studySelect.addEventListener('change', _handleStudySelectChange);
-        } else {
-            console.warn("PraesentationEventHandlers: Studien-Select ('praes-study-select') nicht gefunden.");
+        if (typeof stateManager !== 'undefined' && stateManager.getCurrentPresentationView() === 'as-vs-t2') {
+            const studySelect = praesentationTabPane.querySelector('#praes-study-select');
+            if (studySelect) {
+                studySelect.removeEventListener('change', _handleStudySelectChange);
+                studySelect.addEventListener('change', _handleStudySelectChange);
+            } else {
+                console.warn("PraesentationEventHandlers: Studien-Select ('praes-study-select') nicht gefunden, obwohl 'as-vs-t2' Ansicht aktiv ist.");
+            }
         }
         
         const criteriaComparisonCheckboxes = praesentationTabPane.querySelectorAll('.criteria-comparison-set-checkbox');
@@ -79,8 +81,6 @@ const praesentationEventHandlers = (() => {
                 checkbox.removeEventListener('change', _handleCriteriaComparisonSetChange);
                 checkbox.addEventListener('change', _handleCriteriaComparisonSetChange);
             });
-        } else {
-            
         }
 
         const contentArea = praesentationTabPane.querySelector('#praesentation-content-area');
