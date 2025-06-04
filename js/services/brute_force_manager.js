@@ -48,7 +48,7 @@ const bruteForceManager = (() => {
     function updateKollektiv(newKollektiv) {
         if (_currentKollektiv !== newKollektiv && !_isRunning) {
             _currentKollektiv = newKollektiv;
-             const results = getResultsForKollektiv(_currentKollektiv, _currentTargetMetric || state.getBruteForceMetric());
+             const results = getResultsForKollektiv(_currentKollektiv, _currentTargetMetric || stateManager.getBruteForceMetric());
              if (results && results.bestResult) {
                   ui_helpers.updateBruteForceUI('result', results, isWorkerAvailable(), _currentKollektiv);
              } else {
@@ -165,7 +165,7 @@ const bruteForceManager = (() => {
         if (_worker) {
             _worker.terminate();
             _worker = null;
-            initialize(); // Versuche, den Worker neu zu initialisieren für zukünftige Läufe
+            initialize(); 
         }
     }
 
@@ -219,8 +219,8 @@ const bruteForceManager = (() => {
         saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS, _resultsByKollektivAndMetric);
         ui_helpers.showToast(message, "info");
         
-        const currentDisplayKollektiv = _currentKollektiv || state.getCurrentKollektiv();
-        const currentDisplayMetric = _currentTargetMetric || state.getBruteForceMetric();
+        const currentDisplayKollektiv = _currentKollektiv || stateManager.getCurrentKollektiv();
+        const currentDisplayMetric = _currentTargetMetric || stateManager.getBruteForceMetric();
         const resultsForDisplay = getResultsForKollektiv(currentDisplayKollektiv, currentDisplayMetric);
         
         if (resultsForDisplay && resultsForDisplay.bestResult) {
@@ -253,3 +253,5 @@ const bruteForceManager = (() => {
         resetResults
     });
 })();
+
+window.bruteForceManager = bruteForceManager;
