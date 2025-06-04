@@ -209,9 +209,17 @@
 
         CORE_MODULE_DEFINITIONS.forEach(moduleDef => {
             const moduleObject = window[moduleDef.name];
+            let typeCheckPassed = false;
+
+            if (moduleDef.expectedType === 'array') {
+                typeCheckPassed = Array.isArray(moduleObject);
+            } else {
+                typeCheckPassed = (typeof moduleObject === moduleDef.expectedType);
+            }
+
             if (typeof moduleObject === 'undefined') {
                 missingModules.push(`${moduleDef.name} (erwartet aus ${moduleDef.path})`);
-            } else if (typeof moduleObject !== moduleDef.expectedType) {
+            } else if (!typeCheckPassed) {
                 improperlyTypedModules.push(`${moduleDef.name} (erwartet Typ: ${moduleDef.expectedType}, gefunden: ${typeof moduleObject} aus ${moduleDef.path})`);
             }
         });
@@ -436,7 +444,7 @@
         const currentKollektivForContext = stateManager.getCurrentKollektiv();
         
         const content = publikationTabLogic.getRenderedSectionContent(currentPublikationSection, currentPublikationLang, currentKollektivForContext);
-        viewRenderer.renderTabContent('publikation-tab-pane', uiComponents.createPublikationTabHeader(), {
+        renderTabContent('publikation-tab-pane', uiComponents.createPublikationTabHeader(), {
             afterRender: () => {
                 const contentArea = document.getElementById('publikation-content-area');
                 if (contentArea) {
