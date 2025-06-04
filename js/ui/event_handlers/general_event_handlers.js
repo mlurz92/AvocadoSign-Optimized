@@ -28,33 +28,55 @@ const generalEventHandlers = (() => {
     }
     
     function _handleResetStateClick() {
-        if (confirm(UI_TEXTS.general.confirmResetState || "Möchten Sie wirklich alle Einstellungen (Kriterien, Sortierungen, Auswahlen) auf die Standardwerte zurücksetzen? Gespeicherte Brute-Force-Ergebnisse bleiben erhalten.")) {
-            if (typeof stateManager !== 'undefined' && typeof stateManager.resetStateToDefaults === 'function') {
-                stateManager.resetStateToDefaults();
-                 if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshAllTabs === 'function') {
-                    mainAppInterface.refreshAllTabs(true); 
-                }
-                 if (typeof t2CriteriaManager !== 'undefined' && typeof t2CriteriaManager.resetToDefaults === 'function' && typeof t2CriteriaManager.saveAll === 'function' ) {
-                    t2CriteriaManager.resetToDefaults(); 
-                    t2CriteriaManager.saveAll(); 
-                }
+        // Ersetze confirm() durch eine zukünftige, benutzerdefinierte Modal-Funktion
+        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showConfirmModal === 'function') {
+            ui_helpers.showConfirmModal(
+                UI_TEXTS.general.confirmResetState || "Möchten Sie wirklich alle Einstellungen (Kriterien, Sortierungen, Auswahlen) auf die Standardwerte zurücksetzen? Gespeicherte Brute-Force-Ergebnisse bleiben erhalten.",
+                () => { // Callback für Bestätigung
+                    if (typeof stateManager !== 'undefined' && typeof stateManager.resetStateToDefaults === 'function') {
+                        stateManager.resetStateToDefaults();
+                        if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshAllTabs === 'function') {
+                            mainAppInterface.refreshAllTabs(true); 
+                        }
+                        if (typeof t2CriteriaManager !== 'undefined' && typeof t2CriteriaManager.resetToDefaults === 'function' && typeof t2CriteriaManager.saveAll === 'function' ) {
+                            t2CriteriaManager.resetToDefaults(); 
+                            t2CriteriaManager.saveAll(); 
+                        }
 
-                if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.updateAllUIComponents === 'function'){
-                    mainAppInterface.updateAllUIComponents();
-                } else if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
-                     mainAppInterface.refreshCurrentTab();
-                }
-                
-                ui_helpers.showToast("Alle Einstellungen wurden auf Standard zurückgesetzt.", "success");
-            }
+                        if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.updateAllUIComponents === 'function'){
+                            mainAppInterface.updateAllUIComponents();
+                        } else if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
+                            mainAppInterface.refreshCurrentTab();
+                        }
+                        
+                        ui_helpers.showToast("Alle Einstellungen wurden auf Standard zurückgesetzt.", "success");
+                    }
+                },
+                UI_TEXTS.general.reset || "Zurücksetzen", // Bestätigungsbutton Text
+                UI_TEXTS.general.cancel || "Abbrechen" // Abbruchbutton Text
+            );
+        } else {
+            console.error("ui_helpers.showConfirmModal ist nicht verfügbar. Kann Einstellungen nicht zurücksetzen.");
+            ui_helpers.showToast("Funktion zum Zurücksetzen nicht verfügbar.", "danger");
         }
     }
     
     function _handleResetBruteForceClick() {
-         if (confirm(UI_TEXTS.general.confirmResetBruteForce || "Möchten Sie wirklich ALLE gespeicherten Brute-Force-Optimierungsergebnisse für ALLE Kollektive und Metriken löschen?")) {
-            if (typeof bruteForceManager !== 'undefined' && typeof bruteForceManager.resetResults === 'function') {
-                bruteForceManager.resetResults(); 
-            }
+        // Ersetze confirm() durch eine zukünftige, benutzerdefinierte Modal-Funktion
+        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showConfirmModal === 'function') {
+            ui_helpers.showConfirmModal(
+                UI_TEXTS.general.confirmResetBruteForce || "Möchten Sie wirklich ALLE gespeicherten Brute-Force-Optimierungsergebnisse für ALLE Kollektive und Metriken löschen?",
+                () => { // Callback für Bestätigung
+                    if (typeof bruteForceManager !== 'undefined' && typeof bruteForceManager.resetResults === 'function') {
+                        bruteForceManager.resetResults(); 
+                    }
+                },
+                UI_TEXTS.general.reset || "Zurücksetzen", // Bestätigungsbutton Text
+                UI_TEXTS.general.cancel || "Abbrechen" // Abbruchbutton Text
+            );
+        } else {
+            console.error("ui_helpers.showConfirmModal ist nicht verfügbar. Kann Brute-Force-Ergebnisse nicht löschen.");
+            ui_helpers.showToast("Funktion zum Löschen der Brute-Force-Ergebnisse nicht verfügbar.", "danger");
         }
     }
 
