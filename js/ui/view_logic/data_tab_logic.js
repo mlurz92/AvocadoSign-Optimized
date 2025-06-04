@@ -83,9 +83,116 @@ const dataTabLogic = (() => {
         return headerHTML;
     }
 
+    let dataView = [];
+    let currentSortState = cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT);
+    let tableRendererInstance = null;
+    let currentKollektiv = APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
+
+    function initialize(data, initialKollektiv) {
+        if (!Array.isArray(data)) {
+            console.error("DataTabLogic: Ungültige Daten für Initialisierung empfangen.");
+            dataView = [];
+        } else {
+            dataView = data;
+        }
+        currentKollektiv = initialKollektiv;
+        currentSortState = stateManager.getDatenTableSort() || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT);
+        _renderTable();
+    }
+
+    function updateData(newData) {
+        if (!Array.isArray(newData)) {
+            console.error("DataTabLogic: Ungültige Daten für Update empfangen.");
+            return;
+        }
+        dataView = newData;
+        currentKollektiv = stateManager.getCurrentKollektiv();
+        _renderTable();
+    }
+
+    function getFilteredData(kollektivId) {
+        if (!dataView || dataView.length === 0) return [];
+        if (kollektivId === 'Gesamt') {
+            return dataView;
+        }
+        return dataView.filter(p => p.therapie === kollektivId);
+    }
+
+    function _renderTable() {
+        const tableContainer = document.getElementById('daten-tab-pane');
+        const toggleDetailsButtonId = 'daten-toggle-details';
+        
+        if (!tableContainer) {
+            console.error("DataTabLogic: Tabellencontainer nicht gefunden.");
+            return;
+        }
+
+        const filteredData = getFilteredData(currentKollektiv);
+        const sortedData = [...filteredData].sort(getSortFunction(currentSortState.key, currentSortState.direction, currentSortState.subKey));
+        const tableHTML = createDatenTableHTML(sortedData, currentSortState);
+        
+        ui_helpers.updateElementHTML(tableContainer.id, `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h4 mb-0">Patientenliste (${getKollektivDisplayName(currentKollektiv)}, N=${filteredData.length})</h2>
+                <button class="btn btn-sm btn-outline-secondary" id="${toggleDetailsButtonId}" data-action="expand" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${TOOLTIP_CONTENT.datenTable.expandAll}">
+                    ${UI_TEXTS.datenTab.toggleDetailsButton.expand} <i class="fas fa-chevron-down ms-1"></i>
+                </button>
+            </div>
+            <div class="table-responsive">
+                ${tableHTML}
+            </div>
+        `);
+
+        if (typeof dataTabEventHandlers !== 'undefined' && dataTabEventHandlers.register) {
+            dataTabEventHandlers.register();
+        }
+        ui_helpers.initializeTooltips(tableContainer);
+        ui_helpers.updateSortIcons('daten-table-header', currentSortState);
+        ui_helpers.attachRowCollapseListeners(document.getElementById('daten-table-body'));
+    }
+
+    function handleSortChange(newSortKey, newSubKey = null) {
+        if (currentSortState.key === newSortKey && currentSortState.subKey === newSubKey) {
+            currentSortState.direction = currentSortState.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSortState.key = newSortKey;
+            currentSortState.subKey = newSubKey;
+            currentSortState.direction = 'asc';
+        }
+        stateManager.setDatenTableSort(cloneDeep(currentSortState));
+        _renderTable();
+    }
+
+    function handleRowClick(patientId, rowIndex, event) {
+        if (event.target.closest('.no-row-click, .form-check-input, button, a')) {
+            return;
+        }
+        
+        const detailsRowId = `daten-detail-${patientId}`;
+        const detailsRow = document.getElementById(detailsRowId);
+
+        if (detailsRow && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+            const bsCollapse = bootstrap.Collapse.getOrCreateInstance(detailsRow);
+            bsCollapse.toggle();
+        }
+    }
+
+    function refreshUI() {
+        currentKollektiv = stateManager.getCurrentKollektiv();
+        currentSortState = stateManager.getDatenTableSort() || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT);
+        _renderTable();
+    }
 
     return Object.freeze({
-        createDatenTableHTML
+        initialize,
+        updateData,
+        getFilteredData,
+        createDatenTableHTML,
+        handleSortChange,
+        handleRowClick,
+        refreshUI
     });
 
 })();
+
+window.dataTabLogic = dataTabLogic;
