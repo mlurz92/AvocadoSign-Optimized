@@ -209,3 +209,5 @@ const tableRenderer = (() => {
     });
 
 })();
+
+window.tableRenderer = tableRenderer;
