@@ -58,7 +58,7 @@ const uiComponents = (() => {
             tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.t2Status?.description || title;
         }
 
-        const currentKollektivName = typeof stateManager !== 'undefined' ? getKollektivDisplayName(stateManager.getCurrentKollektiv()) : 'dem aktuellen Kollektiv';
+        const currentKollektivName = stateManager.getCurrentKollektiv() ? getKollektivDisplayName(stateManager.getCurrentKollektiv()) : 'dem aktuellen Kollektiv';
         const finalTooltipContent = tooltipContent.replace('[KOLLEKTIV]', `<strong>${currentKollektivName}</strong>`);
 
         return `
@@ -85,7 +85,7 @@ const uiComponents = (() => {
         const sizeMax = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max;
         const sizeStep = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step;
         const formattedThreshold = formatNumber(sizeThreshold, 1, '5.0', true);
-        const lang = typeof stateManager !== 'undefined' ? stateManager.getCurrentPublikationLang() || 'de' : 'de';
+        const lang = stateManager.getCurrentPublikationLang();
 
         const createButtonOptions = (key, isChecked, criterionLabel) => {
             const valuesKey = key.toUpperCase() + '_VALUES';
@@ -250,7 +250,7 @@ const uiComponents = (() => {
     function createStatistikCard(id, title, content = '', addPadding = true, tooltipKey = null, downloadButtons = [], tableId = null) {
         let cardTooltipText = title;
         if (tooltipKey && TOOLTIP_CONTENT[tooltipKey]?.cardTitle) {
-            const currentKollektivName = typeof stateManager !== 'undefined' ? getKollektivDisplayName(stateManager.getCurrentKollektiv()) : '[KOLLEKTIV_PLACEHOLDER]';
+            const currentKollektivName = stateManager.getCurrentKollektiv() ? getKollektivDisplayName(stateManager.getCurrentKollektiv()) : '[KOLLEKTIV_PLACEHOLDER]';
             cardTooltipText = TOOLTIP_CONTENT[tooltipKey].cardTitle.replace('[KOLLEKTIV]', `<strong>${currentKollektivName}</strong>`);
         }
         const cardTooltipHtml = `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${cardTooltipText}"`;
@@ -285,7 +285,7 @@ const uiComponents = (() => {
         const dateStr = getCurrentDateString(APP_CONFIG.EXPORT_SETTINGS.DATE_FORMAT);
         const safeKollektiv = getKollektivDisplayName(currentKollektiv).replace(/[^a-z0-9_-]/gi, '_').replace(/_+/g, '_');
         const fileNameTemplate = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TEMPLATE;
-        const lang = typeof stateManager !== 'undefined' ? stateManager.getCurrentPublikationLang() : 'de';
+        const lang = stateManager.getCurrentPublikationLang();
 
         const generateButtonHTML = (idSuffix, iconClass, text, tooltipKey, disabled = false, experimental = false) => {
             const config = TOOLTIP_CONTENT.exportTab[tooltipKey]; 
@@ -370,7 +370,7 @@ const uiComponents = (() => {
         const metrics = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'f1', 'auc'];
         const metricDisplayNames = { sens: 'Sens', spez: 'Spez', ppv: 'PPV', npv: 'NPV', acc: 'Acc', balAcc: 'BalAcc', f1: 'F1', auc: 'AUC' };
         const na = '--';
-        const currentLang = typeof stateManager !== 'undefined' ? stateManager.getCurrentPublikationLang() || 'de' : 'de';
+        const currentLang = stateManager.getCurrentPublikationLang();
 
         let contentHTML = '<div class="d-flex flex-wrap justify-content-around small text-center">';
 
@@ -403,7 +403,7 @@ const uiComponents = (() => {
         
         const kollektivName = getKollektivNameFunc(kollektiv);
         const metricDisplayName = metric === 'PPV' ? 'PPV' : metric === 'NPV' ? 'NPV' : metric;
-        const lang = typeof stateManager !== 'undefined' ? stateManager.getCurrentPublikationLang() || 'de' : 'de';
+        const lang = stateManager.getCurrentPublikationLang();
         const resultContainerTooltip = (TOOLTIP_CONTENT.bruteForceResult.description || 'Ergebnis der Optimierung.')
                                       .replace('[N_GESAMT]', formatNumber(nGesamt,0,'?', lang === 'en'))
                                       .replace('[N_PLUS]', formatNumber(nPlus,0,'?', lang === 'en'))
@@ -418,7 +418,7 @@ const uiComponents = (() => {
                     <li><strong>Kriterien:</strong> ${formatCriteriaFunc(bestResult.criteria, bestResult.logic, false)}</li>
                 </ul>
                 <p class="mb-1 text-muted"><small>Dauer: ${formatNumber((duration || 0) / 1000, 1, '--', lang === 'en')}s | Getestet: ${formatNumber(totalTested, 0, '--', lang === 'en')}</small></p>
-                <p class="mb-0 text-muted" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${TOOLTIP_CONTENT.bruteForceResult.kollektivStats || 'Statistik des für diese Optimierung verwendeten Kollektivs.'}"><small>Kollektiv N=${formatNumber(nGesamt,0,'N/A', lang === 'en')} (N+: ${formatNumber(nPlus,0,'N/A', lang === 'en')}, N-: ${formatNumber(nMinus,0,'N/A', lang === 'en')})</small></p>
+                <p class="mb-0 small text-muted" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${TOOLTIP_CONTENT.bruteForceResult.kollektivStats || 'Statistik des für diese Optimierung verwendeten Kollektivs.'}"><small>Kollektiv N=${formatNumber(nGesamt,0,'N/A', lang === 'en')} (N+: ${formatNumber(nPlus,0,'N/A', lang === 'en')}, N-: ${formatNumber(nMinus,0,'N/A', lang === 'en')})</small></p>
             </div>
             <h6 class="mb-2">Top Ergebnisse (inkl. identischer Werte):</h6>
             <div class="table-responsive">
@@ -482,8 +482,8 @@ const uiComponents = (() => {
     }
 
     function createPublikationTabHeader() {
-        const currentLang = typeof stateManager !== 'undefined' ? stateManager.getCurrentPublikationLang() || PUBLICATION_CONFIG.defaultLanguage : PUBLICATION_CONFIG.defaultLanguage;
-        const currentBfMetric = typeof stateManager !== 'undefined' ? stateManager.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication : PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+        const currentLang = stateManager.getCurrentPublikationLang();
+        const currentBfMetric = stateManager.getCurrentPublikationBruteForceMetric();
 
         const sectionNavItems = PUBLICATION_CONFIG.sections.map(mainSection => {
             const sectionTooltip = TOOLTIP_CONTENT.publikationTabTooltips[mainSection.id]?.description || UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey;
