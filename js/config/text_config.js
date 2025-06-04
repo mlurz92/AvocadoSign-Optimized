@@ -25,7 +25,10 @@ const UI_TEXTS = Object.freeze({
         hide: "Verbergen",
         download: "Download",
         export: "Exportieren",
-        unknown: "Unbekannt"
+        unknown: "Unbekannt",
+        confirmResetState: "Möchten Sie wirklich alle Einstellungen (Kriterien, Sortierungen, Auswahlen) auf die Standardwerte zurücksetzen? Gespeicherte Brute-Force-Ergebnisse bleiben erhalten.",
+        confirmResetCriteria: "Möchten Sie die T2-Kriterien auf die Standardwerte zurücksetzen? Ungespeicherte Änderungen gehen verloren.",
+        confirmResetBruteForce: "Möchten Sie wirklich ALLE gespeicherten Brute-Force-Optimierungsergebnisse für ALLE Kollektive und Metriken löschen?"
     },
     kollektivDisplayNames: {
         'Gesamt': 'Gesamtkollektiv',
@@ -73,7 +76,7 @@ const UI_TEXTS = Object.freeze({
         assoziationMerkmalCardTitle: "Assoziation: [MERKMAL] vs. N-Status",
         filterMerkmalLabel: "Merkmal für Assoziationsanalyse:",
         t2KriterienSetLabel: "Vergleichs-T2-Set:",
-        filterMerkmalLabelMapping: { // Für die Formatierung in study_criteria_manager
+        filterMerkmalLabelMapping: {
             size: 'Größe',
             form: 'Form',
             kontur: 'Kontur',
@@ -205,8 +208,8 @@ const TOOLTIP_CONTENT = Object.freeze({
     datenTable: {
         filterInput: "Patientenliste nach ID, Name oder anderen Merkmalen filtern.",
         expandAll: "Alle Patientendetails (Lymphknoten) ein-/ausblenden.",
-        patNr: "Patienten-ID.",
-        patName: "Pseudonymisierter Patientenname.",
+        nr: "Patienten-ID.",
+        name: "Pseudonymisierter Patientenname.",
         vorname: "Vorname des Patienten.",
         geschlecht: "Geschlecht des Patienten.",
         alter: "Alter des Patienten zum Untersuchungszeitpunkt.",
@@ -215,7 +218,7 @@ const TOOLTIP_CONTENT = Object.freeze({
         bemerkung: "Zusätzliche klinische oder radiologische Bemerkungen.",
         expandRow: "Details anzeigen/ausblenden."
     },
-    auswertungTable: { 
+    auswertungTable: {
         expandAll: "Alle Patientendetails (Lymphknoten) ein-/ausblenden.",
         nr: "Patienten-ID.",
         name: "Pseudonymisierter Patientenname.",
@@ -452,10 +455,10 @@ const TOOLTIP_CONTENT = Object.freeze({
         filteredDataCSV: { description: "Exportiert die aktuell im 'Daten'-Tab angezeigten (gefilterten) Rohdaten als CSV-Datei.", type: "FILTERED_DATA_CSV", ext: "csv" },
         comprehensiveReportHTML: { description: "Generiert einen umfassenden HTML-Bericht mit allen wichtigen Ergebnissen, Tabellen und Diagrammen.", type: "COMPREHENSIVE_REPORT_HTML", ext: "html" },
         pngZIP: { description: "Exportiert alle aktuell im Statistik-, Auswertungs- und Publikationstab sichtbaren Diagramme und Tabellen als PNG-Bilder in einem ZIP-Archiv.", type: "PNG_ZIP", ext: "zip" },
-        svgZIP: { description: "Exportiert alle aktuell im Statistik-, Auswertungs- und Publikationstab sichtbaren Diagramme als SVG-Dateien (Vektorgrafik) in einem ZIP-Archiv.", type: "SVG_ZIP", ext: "zip" },
+        svgZIP: { description: "Exportiert alle aktuell im Statistik-, Auswertungs- und Publikationstab sichtbaren Diagramme als SVG-Dateien (Vektorgrafik) in einem ZIP-Archiv.", type: "SVG_ZIP", ext: "svg" },
         allZIP: { description: "Exportiert alle verfügbaren Einzeldateien (Statistik-CSV, Brute-Force-TXT, alle Markdown-Dateien inkl. Publikationstexten, gefilterte Rohdaten-CSV, HTML-Bericht, Publikations-Tabellen als TSV) in einem ZIP-Archiv.", type: "ALL_ZIP", ext: "zip" },
         csvZIP: { description: "Exportiert alle relevanten CSV-Dateien (Statistik, gefilterte Rohdaten) in einem ZIP-Archiv.", type: "CSV_ZIP", ext: "zip" },
-        mdZIP: { description: "Exportiert alle Markdown-Dateien (Deskriptive Statistik, Datenliste, Auswertungstabelle, Publikationsabschnitte) in einem ZIP-Archiv.", type: "MD_ZIP", ext: "zip" },
+        mdZIP: { description: "Exportiert alle Markdown-Dateien (Deskriptive Statistik, Datenliste, Auswertungstabelle, Publikationsabschnitte) in einem ZIP-Archiv.", type: "MD_ZIP", ext: "md" },
         chartSinglePNG: { description: "Diagramm '{ChartName}' als PNG-Bild herunterladen.", type: "CHART_SINGLE_PNG", ext: "png" },
         chartSingleSVG: { description: "Diagramm '{ChartName}' als SVG-Vektorgrafik herunterladen.", type: "CHART_SINGLE_SVG", ext: "svg" },
         tableSinglePNG: { description: "Tabelle '{TableName}' als PNG-Bild herunterladen.", type: "TABLE_PNG_EXPORT", ext: "png"},
@@ -526,7 +529,7 @@ const TOOLTIP_CONTENT = Object.freeze({
             description: "Fisher's Exact Test: Statistischer Test zur Prüfung der Unabhängigkeit zweier kategorialer Variablen in einer Kontingenztafel. Wird oft bei kleinen Stichproben verwendet, wenn die Voraussetzungen für den Chi-Quadrat-Test nicht erfüllt sind.",
             interpretation: "Der Fisher's Exact Test für die Assoziation von [MERKMAL] und dem N-Status im Kollektiv [KOLLEKTIV] ergab einen p-Wert von [P_WERT]. Dies ist [SIGNIFIKANZ_TEXT]."
         },
-        mannwhitney: { 
+        mannwhitney: {
             description: "Mann-Whitney-U-Test (auch Wilcoxon-Rangsummentest): Nichtparametrischer Test zum Vergleich der Verteilungen zweier unabhängiger Stichproben. Prüft, ob die Werte in einer Gruppe tendenziell höher oder niedriger sind als in der anderen.",
             interpretation: "Der Mann-Whitney-U-Test zum Vergleich von [VARIABLE] zwischen den Gruppen (N+ vs. N0) im Kollektiv [KOLLEKTIV] ergab: U=[U_WERT], Z=[Z_WERT], p=[P_WERT]. Dies ist [SIGNIFIKANZ_TEXT]."
         },
@@ -549,6 +552,5 @@ const TOOLTIP_CONTENT = Object.freeze({
     }
 });
 
-// Exportiere UI_TEXTS und TOOLTIP_CONTENT global
 window.UI_TEXTS = UI_TEXTS;
 window.TOOLTIP_CONTENT = TOOLTIP_CONTENT;
