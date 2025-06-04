@@ -107,7 +107,7 @@ const exportEventHandlers = (() => {
                     button.removeEventListener('click', _handleStandardExport); 
                     button.addEventListener('click', _handleStandardExport);
                 } else {
-                    console.warn(`Export-Button mit ID '${id}' nicht im DOM gefunden.`);
+                    // console.warn(`Export-Button mit ID '${id}' nicht im DOM gefunden.`); // Diese Warnung wird jetzt erwartet, wenn der Tab nicht aktiv ist.
                 }
             });
         } else {
@@ -124,7 +124,7 @@ const exportEventHandlers = (() => {
                         button.addEventListener('click', _handlePublicationExport);
                     }
                 } else if (config.idPrefix) {
-                    
+                    // Delegierte Handler für Publikations-Export-Buttons werden im Publikations-Tab-Logik registriert
                 }
             });
         }
