@@ -1,9 +1,9 @@
+// js/config/text_config.js
 const UI_TEXTS = Object.freeze({
     appName: "Lymphknoten T2 & Avocado Sign Analyse",
     general: {
         loading: "Lade Daten...",
         error: "Ein Fehler ist aufgetreten.",
-        noData: "Keine Daten verfügbar.",
         confirm: "Bestätigen",
         cancel: "Abbrechen",
         close: "Schließen",
@@ -448,3 +448,7 @@ const TOOLTIP_CONTENT = Object.freeze({
         }
     }
 });
+
+// Exportiere UI_TEXTS und TOOLTIP_CONTENT global
+window.UI_TEXTS = UI_TEXTS;
+window.TOOLTIP_CONTENT = TOOLTIP_CONTENT;
