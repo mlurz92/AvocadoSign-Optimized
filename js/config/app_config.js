@@ -57,7 +57,25 @@ const APP_CONFIG = Object.freeze({
         CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
         CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
         BRUTE_FORCE_RESULTS: 'bruteForceResults_v4.2_detailed',
-        FIRST_APP_START: 'appFirstStart_v2.3'
+        FIRST_APP_START: 'appFirstStart_v2.3',
+        // Hinzugefügte Schlüssel für die Persistenz der State-Eigenschaften
+        CURRENT_KOLLEKTIV: 'currentKollektiv_v4.2_detailed',
+        APPLIED_CRITERIA: 'appliedT2Criteria_v4.2_detailed',
+        APPLIED_LOGIC: 'appliedT2Logic_v4.2_detailed',
+        DATEN_TABLE_SORT: 'datenTableSort_v4.2_detailed',
+        AUSWERTUNG_TABLE_SORT: 'auswertungTableSort_v4.2_detailed',
+        ACTIVE_TAB_ID: 'activeTabId_v4.2_detailed',
+        STATISTIK_LAYOUT: 'statistikLayout_v4.2_detailed',
+        STATISTIK_KOLLEKTIV1: 'statistikKollektiv1_v4.2_detailed',
+        STATISTIK_KOLLEKTIV2: 'statistikKollektiv2_v4.2_detailed',
+        PRESENTATION_VIEW: 'presentationView_v4.2_detailed',
+        PRESENTATION_STUDY_ID: 'presentationStudyId_v4.2_detailed',
+        PUBLIKATION_LANG: 'publikationLang_v4.2_detailed',
+        PUBLIKATION_SECTION: 'publikationSection_v4.2_detailed',
+        PUBLIKATION_BRUTE_FORCE_METRIC: 'publikationBruteForceMetric_v4.2_detailed',
+        BRUTE_FORCE_METRIC: 'bruteForceMetric_v4.2_detailed',
+        CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
+        CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed'
     }),
 
     PATHS: Object.freeze({
