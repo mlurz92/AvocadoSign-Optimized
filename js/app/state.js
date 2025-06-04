@@ -47,7 +47,7 @@ const stateManager = (() => {
         
         if (loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START) === null) {
             loadedState.isFirstAppStart = true;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, false); // Nach dem ersten Start auf false setzen
+            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, false); 
         } else {
             loadedState.isFirstAppStart = false;
         }
@@ -140,9 +140,9 @@ const stateManager = (() => {
     function getChartColorScheme() { return state.chartColorScheme || defaultState.chartColorScheme; }
     function setChartColorScheme(scheme) { _updateState('chartColorScheme', scheme, 'CHART_COLOR_SCHEME'); }
 
-    function isFirstAppStart() { return state.isFirstAppStart === true; } // Explizit true prüfen
+    function isFirstAppStart() { return state.isFirstAppStart === true; } 
     function setFirstAppStart(value) { 
-        state.isFirstAppStart = !!value; // Erzwinge boolean
+        state.isFirstAppStart = !!value; 
         saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, state.isFirstAppStart);
         _dispatchStateChangedEvent(['isFirstAppStart']);
     }
@@ -202,3 +202,5 @@ const stateManager = (() => {
         resetStateToDefaults
     });
 })();
+
+window.stateManager = stateManager;
