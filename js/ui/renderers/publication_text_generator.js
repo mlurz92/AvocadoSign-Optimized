@@ -8,7 +8,7 @@ const publicationTextGenerator = (() => {
             let numStrToFormat = val;
             let formattedNum;
             if (isP) {
-                formattedNum = formatPercent(numStrToFormat, d, 'N/A');
+                formattedNum = formatPercent(numStrToFormat, d, 'N/A', lang);
             } else {
                 formattedNum = formatNumber(numStrToFormat, d, 'N/A', lang === 'en');
             }
@@ -19,8 +19,8 @@ const publicationTextGenerator = (() => {
         if (valStr === 'N/A') return valStr;
 
         if (metric.ci && metric.ci.lower !== null && metric.ci.upper !== null && !isNaN(metric.ci.lower) && !isNaN(metric.ci.upper) && isFinite(metric.ci.lower) && isFinite(metric.ci.upper)) {
-            const lowerStr = formatSingleValue(metric.ci.lower, digits, isPercent);
-            const upperStr = formatSingleValue(metric.ci.upper, digits, isPercent);
+            const lowerStr = formatSingleValue(metric.ci.lower, digits, 'N/A');
+            const upperStr = formatSingleValue(metric.ci.upper, digits, 'N/A');
             if (lowerStr === 'N/A' || upperStr === 'N/A') return valStr;
             
             const ciLabelKey = lang === 'de' ? 'KI' : 'CI';
@@ -56,8 +56,8 @@ const publicationTextGenerator = (() => {
         if (current && current.referenceLabel) return current.referenceLabel;
         if (current && lang === 'de' && current.referenceLabelDe) return current.referenceLabelDe;
         if (current && lang === 'en' && current.referenceLabelEn) return current.referenceLabelEn;
-        if (current && current.titleDe && lang === 'de') return current.titleDe.split(':')[0]; // Fallback: "Tabelle 1"
-        if (current && current.titleEn && lang === 'en') return current.titleEn.split(':')[0]; // Fallback: "Table 1"
+        if (current && current.titleDe && lang === 'de') return current.titleDe.split(':')[0]; 
+        if (current && current.titleEn && lang === 'en') return current.titleEn.split(':')[0]; 
         
         return `${elementType === 'table' ? (lang === 'de' ? 'Tabelle' : 'Table') : (lang === 'de' ? 'Abbildung' : 'Figure')} [${elementKey}]`;
     }
@@ -89,7 +89,7 @@ const publicationTextGenerator = (() => {
             try {
                 const enrichedCommonData = {
                     ...commonData,
-                    references: { // Ensure all expected references are available
+                    references: { 
                         ...(APP_CONFIG.REFERENCES_FOR_PUBLICATION || {}),
                         ...(commonData.references || {})
                     },
@@ -97,7 +97,7 @@ const publicationTextGenerator = (() => {
                     getSafeLink: _getSafeLink,
                     fCI: (metric, digits, isPercent) => fCI(metric, digits, isPercent, lang),
                     formatNumber: (num, digits, placeholder, useStd) => formatNumber(num, digits, placeholder, lang === 'en' || useStd),
-                    formatPercent: (num, digits, placeholder) => formatPercent(num, digits, placeholder),
+                    formatPercent: (num, digits, placeholder) => formatPercent(num, digits, placeholder, lang),
                     getPValueText: (pValue) => getPValueText(pValue, lang),
                     getKollektivDisplayName: getKollektivDisplayName,
                     getStatisticalSignificanceSymbol: getStatisticalSignificanceSymbol
@@ -125,13 +125,13 @@ const publicationTextGenerator = (() => {
         const htmlContent = getSectionText(sectionId, lang, allKollektivStats, commonData, options);
 
         if (htmlContent.includes('<p class="text-danger">') || htmlContent.includes('<p class="text-warning">')) {
-            return htmlContent.replace(/<p[^>]*>/g, '').replace(/<\/p>/g, ''); // Return error message as is
+            return htmlContent.replace(/<p[^>]*>/g, '').replace(/<\/p>/g, ''); 
         }
 
         let markdown = htmlContent
             .replace(/<p>(.*?)<\/p>/gs, '$1\n\n')
-            .replace(/<h3>(.*?)<\/h3>/gs, (match, p1) => `### ${p1.replace(/<a.*?>(.*?)<\/a>/gs, '$1')}\n`) // Remove links from h3 for MD
-            .replace(/<h4>(.*?)<\/h4>/gs, (match, p1) => `#### ${p1.replace(/<a.*?>(.*?)<\/a>/gs, '$1')}\n`) // Remove links from h4 for MD
+            .replace(/<h3>(.*?)<\/h3>/gs, (match, p1) => `### ${p1.replace(/<a.*?>(.*?)<\/a>/gs, '$1')}\n`) 
+            .replace(/<h4>(.*?)<\/h4>/gs, (match, p1) => `#### ${p1.replace(/<a.*?>(.*?)<\/a>/gs, '$1')}\n`) 
             .replace(/<strong>(.*?)<\/strong>/gs, '**$1**')
             .replace(/<em>(.*?)<\/em>/gs, '*$1*')
             .replace(/<i>(.*?)<\/i>/gs, '*$1*')
@@ -153,7 +153,7 @@ const publicationTextGenerator = (() => {
             .replace(/\n\s*\n\s*\n+/g, '\n\n')
             .trim();
 
-        if (sectionId === 'referenzen') {
+        if (sectionId === 'referenzen_liste') {
             let counter = 1;
             markdown = markdown.replace(/\n\* /g, () => `\n${counter++}. `);
         }
@@ -172,3 +172,5 @@ const publicationTextGenerator = (() => {
     });
 
 })();
+
+window.publicationTextGenerator = publicationTextGenerator;
