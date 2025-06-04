@@ -196,7 +196,7 @@ const publicationRenderer = (() => {
                     const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(conf.id);
                     if(studySet){
                         const targetKollektivForStudy = studySet.applicableKollektiv || 'Gesamt';
-                        addRows(studySet.name, targetKollektivForStudy, allKollektivStats?.[targetKollektivForStudy]?.gueteT2_literatur?.[conf.id]);
+                        tableHTML += renderSingleKollektivTableRows(studySet.name, targetKollektivForStudy, allKollektivStats?.[targetKollektivForStudy]?.gueteT2_literatur?.[conf.id]);
                     }
                 });
                 tableHTML += `</tbody></table></div>`;
