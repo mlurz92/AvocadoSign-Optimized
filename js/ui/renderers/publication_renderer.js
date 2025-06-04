@@ -86,7 +86,7 @@ const publicationRenderer = (() => {
             </thead><tbody>`;
 
         const fVal = (val, dig = 1, placeholder = 'N/A', useStd = (lang === 'en')) => formatNumber(val, dig, placeholder, useStd);
-        const fPerc = (count, total, dig = 1) => (total > 0 && count !== undefined && count !== null && !isNaN(count)) ? formatPercent(count / total, dig) : 'N/A';
+        const fPerc = (count, total, dig = 1) => (total > 0 && count !== undefined && count !== null && !isNaN(count)) ? formatPercent(count / total, dig, 'N/A', lang) : 'N/A';
 
         const addRow = (labelDe, labelEn, getterGesamt, getterDirektOP, getterNRCT) => {
             const pGesamt = allKollektivStats.Gesamt?.deskriptiv;
@@ -147,7 +147,7 @@ const publicationRenderer = (() => {
                 } else {
                      rows += `<tr>
                                 <td>${methodName}</td>
-                                <td>${getKollektivDisplayName(kolId)} (N=${nPat})</td>
+                                <td>${getKollektivDisplayName(kolId)} (N=${nPat > 0 ? nPat : '?'})</td>
                                 <td colspan="6" class="text-center text-muted small"><em>${lang === 'de' ? 'Keine validen Daten' : 'No valid data'}</em></td>
                               </tr>`;
                 }
@@ -196,8 +196,7 @@ const publicationRenderer = (() => {
                     const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(conf.id);
                     if(studySet){
                         const targetKollektivForStudy = studySet.applicableKollektiv || 'Gesamt';
-                        const stats = allKollektivStats?.[targetKollektivForStudy]?.gueteT2_literatur?.[conf.id];
-                        tableHTML += renderSingleKollektivTableRows(studySet.name, targetKollektivForStudy, stats);
+                        addRows(studySet.name, targetKollektivForStudy, allKollektivStats?.[targetKollektivForStudy]?.gueteT2_literatur?.[conf.id]);
                     }
                 });
                 tableHTML += `</tbody></table></div>`;
@@ -278,8 +277,8 @@ const publicationRenderer = (() => {
             ...commonDataFromLogic,
             currentKollektivName: getKollektivDisplayName(currentKollektiv),
             bruteForceMetricForPublication: bruteForceMetric || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication,
-            references: { // Ensure all expected references are available
-                ...(APP_CONFIG.REFERENCES_FOR_PUBLICATION || {}), // Will be defined later
+            references: { 
+                ...(APP_CONFIG.REFERENCES_FOR_PUBLICATION || {}), 
                 ...(commonDataFromLogic.references || {})
             }
         };
@@ -342,3 +341,5 @@ const publicationRenderer = (() => {
     });
 
 })();
+
+window.publicationRenderer = publicationRenderer;
