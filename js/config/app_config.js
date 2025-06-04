@@ -18,14 +18,16 @@ const APP_CONFIG = Object.freeze({
         T2_LOGIC: 'UND',
         DATEN_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
         AUSWERTUNG_TABLE_SORT: Object.freeze({ key: 'nr', direction: 'asc', subKey: null }),
+        activeTabId: 'daten-tab-pane', // Sicherstellen, dass dies auf '-pane' endet
         STATS_LAYOUT: 'einzel',
         STATS_KOLLEKTIV1: 'Gesamt',
         STATS_KOLLEKTIV2: 'nRCT',
         PRESENTATION_VIEW: 'as-pur',
         PRESENTATION_STUDY_ID: null,
         PUBLIKATION_LANG: 'de',
-        PUBLIKATION_SECTION: 'methoden',
+        PUBLIKATION_SECTION: 'methoden_studienanlage', // Standard-Sektion auf eine gültige Untersektion setzen
         PUBLIKATION_BRUTE_FORCE_METRIC: 'Balanced Accuracy',
+        BRUTE_FORCE_METRIC: 'Balanced Accuracy',
         CRITERIA_COMPARISON_SETS: Object.freeze([
             'avocado_sign',
             'applied_criteria',
@@ -34,7 +36,6 @@ const APP_CONFIG = Object.freeze({
             'barbaro_2024_restaging'
         ]),
         CHART_COLOR_SCHEME: 'default',
-        BRUTE_FORCE_METRIC: 'Balanced Accuracy',
         APPLIED_CRITERIA: getDefaultT2Criteria()
     }),
 
@@ -243,3 +244,4 @@ const APP_CONFIG = Object.freeze({
 
 window.APP_CONFIG = APP_CONFIG;
 window.getDefaultT2Criteria = getDefaultT2Criteria;
+
