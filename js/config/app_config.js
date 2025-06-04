@@ -39,43 +39,24 @@ const APP_CONFIG = Object.freeze({
     }),
 
     STORAGE_KEYS: Object.freeze({
-        APPLIED_CRITERIA: 'appliedT2Criteria_v4.2_detailed',
-        APPLIED_LOGIC: 'appliedT2Logic_v4.2_detailed',
-        CURRENT_KOLLEKTIV: 'currentKollektiv_v4.2_detailed',
-        DATEN_TABLE_SORT: 'datenTableSort_v4.2_detailed',
-        AUSWERTUNG_TABLE_SORT: 'auswertungTableSort_v4.2_detailed',
-        ACTIVE_TAB_ID: 'activeTabId_v4.2_detailed',
-        STATS_LAYOUT: 'currentStatsLayout_v4.2_detailed',
-        STATS_KOLLEKTIV1: 'currentStatsKollektiv1_v4.2_detailed',
-        STATS_KOLLEKTIV2: 'currentStatsKollektiv2_v4.2_detailed',
-        PRESENTATION_VIEW: 'currentPresentationView_v4.2_detailed',
-        PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
-        PUBLIKATION_LANG: 'currentPublikationLang_v4.2_detailed',
-        PUBLIKATION_SECTION: 'currentPublikationSection_v4.2_detailed',
-        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v4.2_detailed',
-        BRUTE_FORCE_METRIC: 'bruteForceMetric_v4.2_detailed',
-        CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
-        CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
-        BRUTE_FORCE_RESULTS: 'bruteForceResults_v4.2_detailed',
-        FIRST_APP_START: 'appFirstStart_v2.3',
-        // Hinzugefügte Schlüssel für die Persistenz der State-Eigenschaften
-        CURRENT_KOLLEKTIV: 'currentKollektiv_v4.2_detailed',
-        APPLIED_CRITERIA: 'appliedT2Criteria_v4.2_detailed',
-        APPLIED_LOGIC: 'appliedT2Logic_v4.2_detailed',
-        DATEN_TABLE_SORT: 'datenTableSort_v4.2_detailed',
-        AUSWERTUNG_TABLE_SORT: 'auswertungTableSort_v4.2_detailed',
-        ACTIVE_TAB_ID: 'activeTabId_v4.2_detailed',
-        STATISTIK_LAYOUT: 'statistikLayout_v4.2_detailed',
-        STATISTIK_KOLLEKTIV1: 'statistikKollektiv1_v4.2_detailed',
-        STATISTIK_KOLLEKTIV2: 'statistikKollektiv2_v4.2_detailed',
-        PRESENTATION_VIEW: 'presentationView_v4.2_detailed',
-        PRESENTATION_STUDY_ID: 'presentationStudyId_v4.2_detailed',
-        PUBLIKATION_LANG: 'publikationLang_v4.2_detailed',
-        PUBLIKATION_SECTION: 'publikationSection_v4.2_detailed',
-        PUBLIKATION_BRUTE_FORCE_METRIC: 'publikationBruteForceMetric_v4.2_detailed',
-        BRUTE_FORCE_METRIC: 'bruteForceMetric_v4.2_detailed',
-        CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
-        CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed'
+        currentKollektiv: 'currentKollektiv_v4.2_detailed',
+        appliedT2Criteria: 'appliedT2Criteria_v4.2_detailed',
+        appliedT2Logic: 'appliedT2Logic_v4.2_detailed',
+        datenTableSort: 'datenTableSort_v4.2_detailed',
+        auswertungTableSort: 'auswertungTableSort_v4.2_detailed',
+        activeTabId: 'activeTabId_v4.2_detailed',
+        statistikLayout: 'currentStatsLayout_v4.2_detailed',
+        statistikKollektiv1: 'currentStatsKollektiv1_v4.2_detailed',
+        statistikKollektiv2: 'currentStatsKollektiv2_v4.2_detailed',
+        presentationView: 'currentPresentationView_v4.2_detailed',
+        presentationStudyId: 'currentPresentationStudyId_v4.2_detailed',
+        publikationLang: 'currentPublikationLang_v4.2_detailed',
+        publikationSection: 'currentPublikationSection_v4.2_detailed',
+        publikationBruteForceMetric: 'currentPublikationBfMetric_v4.2_detailed',
+        bruteForceMetric: 'bruteForceMetric_v4.2_detailed',
+        criteriaComparisonSets: 'criteriaComparisonSets_v4.2_detailed',
+        chartColorScheme: 'chartColorScheme_v4.2_detailed',
+        isFirstAppStart: 'appFirstStart_v2.3'
     }),
 
     PATHS: Object.freeze({
@@ -260,6 +241,5 @@ const APP_CONFIG = Object.freeze({
     })
 });
 
-// Exportiere APP_CONFIG und getDefaultT2Criteria global
 window.APP_CONFIG = APP_CONFIG;
 window.getDefaultT2Criteria = getDefaultT2Criteria;
