@@ -5,9 +5,7 @@ const publikationEventHandlers = (() => {
         const sectionId = event.currentTarget.dataset.sectionId;
         if (sectionId && typeof stateManager !== 'undefined' && typeof stateManager.setCurrentPublikationSection === 'function') {
             stateManager.setCurrentPublikationSection(sectionId);
-            // Das UI-Update (aktiver Link und Inhaltsänderung) wird durch das 'stateChanged'-Event
-            // in main.js ausgelöst, welches mainAppInterface.updateAllUIComponents/handlePublikationSettingsChange aufruft.
-            if (mainAppInterface && typeof mainAppInterface.handlePublikationSettingsChange === 'function') {
+            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.handlePublikationSettingsChange === 'function') {
                 mainAppInterface.handlePublikationSettingsChange();
             }
         } else {
@@ -19,7 +17,7 @@ const publikationEventHandlers = (() => {
         const newLang = event.target.checked ? 'en' : 'de';
         if (typeof stateManager !== 'undefined' && typeof stateManager.setCurrentPublikationLang === 'function') {
             stateManager.setCurrentPublikationLang(newLang);
-            if (mainAppInterface && typeof mainAppInterface.handlePublikationSettingsChange === 'function') {
+            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.handlePublikationSettingsChange === 'function') {
                 mainAppInterface.handlePublikationSettingsChange();
             }
         } else {
@@ -31,7 +29,7 @@ const publikationEventHandlers = (() => {
         const newMetric = event.target.value;
         if (typeof stateManager !== 'undefined' && typeof stateManager.setCurrentPublikationBruteForceMetric === 'function') {
             stateManager.setCurrentPublikationBruteForceMetric(newMetric);
-            if (mainAppInterface && typeof mainAppInterface.handlePublikationSettingsChange === 'function') {
+            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.handlePublikationSettingsChange === 'function') {
                 mainAppInterface.handlePublikationSettingsChange(); 
             }
         } else {
@@ -41,17 +39,17 @@ const publikationEventHandlers = (() => {
     
     function _handlePublicationActionClick(event) {
         const button = event.target.closest('button[data-action]');
-        if (!button || !mainAppInterface || typeof mainAppInterface.handleExportRequest !== 'function') return;
+        if (!button || typeof mainAppInterface === 'undefined' || typeof mainAppInterface.handleExportRequest !== 'function') return;
 
         const action = button.dataset.action;
-        const sectionName = button.dataset.sectionName; // z.B. methoden_studienanlage
-        const tableKey = button.dataset.tableKey; // z.B. patientenCharakteristikaTabelle
+        const sectionName = button.dataset.sectionName; 
+        const tableKey = button.dataset.tableKey; 
         
         let exportType = '';
         let options = {};
 
         if (action === 'export-md' && sectionName) {
-            const mainSectionType = sectionName.split('_')[0]; // 'methoden' oder 'ergebnisse' oder 'referenzen'
+            const mainSectionType = sectionName.split('_')[0]; 
             if (mainSectionType === 'methoden') exportType = 'publikationMethodenMD';
             else if (mainSectionType === 'ergebnisse') exportType = 'publikationErgebnisseMD';
             else if (mainSectionType === 'referenzen' && sectionName === 'referenzen_liste') exportType = 'publikationReferenzenMD';
@@ -80,7 +78,7 @@ const publikationEventHandlers = (() => {
 
         const sectionNav = publikationTabPane.querySelector('#publikation-sections-nav');
         if (sectionNav) {
-            sectionNav.removeEventListener('click', _handleSectionLinkDelegated); // Ensure no double listeners
+            sectionNav.removeEventListener('click', _handleSectionLinkDelegated); 
             sectionNav.addEventListener('click', _handleSectionLinkDelegated);
         } else {
             console.warn("PublikationEventHandlers: Sektionsnavigation ('#publikation-sections-nav') nicht gefunden.");
@@ -129,3 +127,5 @@ const publikationEventHandlers = (() => {
         register
     });
 })();
+
+window.publikationEventHandlers = publikationEventHandlers;
