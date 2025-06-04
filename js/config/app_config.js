@@ -44,7 +44,11 @@ const APP_CONFIG = Object.freeze({
     }),
 
     PATHS: Object.freeze({
-        BRUTE_FORCE_WORKER: 'workers/brute_force_worker.js'
+        BRUTE_FORCE_WORKER: 'workers/brute_force_worker.js',
+        PUBLICATION_TEXT_GENERATOR: 'js/ui/renderers/publication/publication_text_generator.js',
+        PUBLICATION_RENDERER: 'js/ui/renderers/publication/publication_renderer.js',
+        PUBLICATION_TABLES: 'js/ui/renderers/publication/publication_tables.js',
+        PUBLICATION_FIGURES: 'js/ui/renderers/publication/publication_figures.js'
     }),
 
     PERFORMANCE_SETTINGS: Object.freeze({
@@ -176,7 +180,38 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
         REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.3.0"}`,
-        REPORT_LOGO_ALT_TEXT: 'Institutslogo'
+        REPORT_LOGO_ALT_TEXT: 'Institutslogo',
+        INCLUDE_KEY_RESULTS: true,
+        INCLUDE_SUMMARY_STATEMENT: true
+    }),
+
+    PUBLICATION_JOURNAL_REQUIREMENTS: Object.freeze({
+        WORD_COUNT_MAIN_TEXT_MAX: 3000,
+        WORD_COUNT_ABSTRACT_MAX: 300,
+        REFERENCE_LIMIT: 35,
+        FIGURE_LIMIT: 6,
+        TABLE_LIMIT: 4,
+        KEY_RESULTS_WORD_LIMIT: 75,
+        SUMMARY_STATEMENT_WORD_LIMIT: 30
+    }),
+
+    REFERENCES_FOR_PUBLICATION: Object.freeze({
+        LURZ_SCHAEFER_AS_2025: "Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11462-y",
+        KOH_2008_MORPHOLOGY: "Koh DM, Chau I, Tait D, Wotherspoon A, Cunningham D, Brown G. Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. Int J Radiat Oncol Biol Phys. 2008;71(2):456-461.",
+        BARBARO_2024_RESTAGING: "Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: A single center experience. Radiother Oncol. 2024;193:110124.",
+        RUTEGARD_2025_ESGAR_VALIDATION: "Rutegård MK, Båtsman M, Blomqvist L, et al. Evaluation of MRI characterisation of histopathologically matched lymph nodes and other mesorectal nodal structures in rectal cancer. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11361-2",
+        BEETS_TAN_2018_ESGAR_CONSENSUS: "Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for clinical management of rectal cancer: Updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. Eur Radiol. 2018;28(4):1465-1475.",
+        BROWN_2003_MORPHOLOGY: "Brown G, Richards CJ, Bourne MW, et al. Morphologic predictors of lymph node status in rectal cancer with use of high-spatial-resolution MR imaging with histopathologic comparison. Radiology. 2003;227(2):371-377.",
+        KAUR_2012_MRI_PRACTICAL: "Kaur H, Choi H, You NY, et al. MR Imaging for Preoperative Evaluation of Primary Rectal Cancer: Practical Considerations. RadioGraphics. 2012;32(2):389-409.",
+        HORVAT_2019_MRI_RECTAL_CANCER: "Horvat N, Carlos Tavares Rocha C, Clemente Oliveira B, Petkovska I, Gollub MJ. MRI of Rectal Cancer: Tumor Staging, Imaging Techniques, and Management. RadioGraphics. 2019;39(2):e1-e24.",
+        BEETS_TAN_2009_USPIO_RESTAGING: "Lahaye MJ, Beets GL, Engelen SME, et al. Locally Advanced Rectal Cancer: MR Imaging for Restaging after Neoadjuvant Radiation Therapy with Concomitant Chemotherapy Part II. What Are the Criteria to Predict Involved Lymph Nodes?. Radiology. 2009;252(1):81-91.",
+        BEETS_TAN_2004_GADOLINIUM: "Vliegen RFA, Beets GL, von Meyenfeldt MF, et al. Rectal Cancer: MR Imaging in Local Staging—Is Gadolinium-based Contrast Material Helpful?. Radiology. 2005;234(1):179-188.",
+        BARBARO_2010_RESTAGING: "Barbaro B, Vitale R, Leccisotti L, et al. Restaging Locally Advanced Rectal Cancer with MR Imaging after Chemoradiation Therapy. Radiographics. 2010;30(3):699-721.",
+        ETHICS_VOTE_LEIPZIG: "Ethikvotum Nr. 2023-101, Ethikkommission der Landesärztekammer Sachsen",
+        STUDY_PERIOD_2020_2023: "Januar 2020 und November 2023",
+        MRI_SYSTEM_SIEMENS_3T: "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers)",
+        CONTRAST_AGENT_PROHANCE: "Gadoteridol (ProHance; Bracco)",
+        RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER: ["29", "7", "19"]
     }),
 
     SPECIAL_IDS: Object.freeze({
