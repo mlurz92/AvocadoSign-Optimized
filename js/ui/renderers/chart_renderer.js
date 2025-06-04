@@ -40,7 +40,9 @@ const chartRenderer = (() => {
     }
 
     function _createTooltip(targetElementId) {
-        const tooltip = d3.select(`#${targetElementId}`)
+        const targetEl = document.getElementById(targetElementId);
+        if (!targetEl) return null;
+        const tooltip = d3.select(targetEl)
             .append("div")
             .attr("class", "chart-tooltip bg-light border rounded shadow-sm p-2 small")
             .style("position", "absolute")
@@ -53,11 +55,11 @@ const chartRenderer = (() => {
         return tooltip;
     }
 
-    function _addChartTitle(svg, title, width, margin) {
-        if (title) {
-            svg.append("text")
-                .attr("x", width / 2)
-                .attr("y", margin.top / 2 + 5)
+    function _addChartTitle(g, title, chartWidth, margin) {
+        if (title && g && typeof g.append === 'function') {
+            g.append("text")
+                .attr("x", chartWidth / 2)
+                .attr("y", 0 - margin.top / 2 - 5 ) 
                 .attr("text-anchor", "middle")
                 .style("font-size", "13px")
                 .style("font-weight", "600")
@@ -66,43 +68,44 @@ const chartRenderer = (() => {
         }
     }
 
-    function _addAxisLabels(svg, xLabel, yLabel, width, height, margin) {
+    function _addAxisLabels(g, xLabel, yLabel, chartWidth, chartHeight, margin) {
         const chartSettings = safeGetChartSettings();
-        if (xLabel) {
-            svg.append("text")
+        if (xLabel && g && typeof g.append === 'function') {
+            g.append("text")
                 .attr("class", "axis-label x-axis-label")
                 .attr("text-anchor", "middle")
-                .attr("x", width / 2)
-                .attr("y", height + margin.top + margin.bottom - (margin.bottom / 4) )
+                .attr("x", chartWidth / 2)
+                .attr("y", chartHeight + margin.bottom * 0.75)
                 .style("font-size", chartSettings.AXIS_LABEL_FONT_SIZE)
                 .style("fill", "var(--chart-label-color)")
                 .text(xLabel);
         }
-        if (yLabel) {
-            svg.append("text")
+        if (yLabel && g && typeof g.append === 'function') {
+            g.append("text")
                 .attr("class", "axis-label y-axis-label")
                 .attr("text-anchor", "middle")
                 .attr("transform", "rotate(-90)")
-                .attr("y", 0 - margin.left + (margin.left / 3))
-                .attr("x", 0 - (height / 2) - margin.top)
+                .attr("y", 0 - margin.left + 15) 
+                .attr("x", 0 - chartHeight / 2)
                 .style("font-size", chartSettings.AXIS_LABEL_FONT_SIZE)
                 .style("fill", "var(--chart-label-color)")
                 .text(yLabel);
         }
     }
 
-    function _addLegend(svg, legendData, width, margin, options = {}) {
-        if (!legendData || legendData.length === 0) return;
+    function _addLegend(g, legendData, chartWidth, margin, options = {}) {
+        if (!legendData || legendData.length === 0 || !g || typeof g.append !== 'function') return;
         const chartSettings = safeGetChartSettings();
         const legendFontSize = options.legendFontSize || chartSettings.LEGEND_FONT_SIZE;
         const itemHeight = parseInt(legendFontSize, 10) + 8;
-        const itemWidth = options.legendItemWidth || 120;
         const symbolSize = parseInt(legendFontSize, 10);
         const legendPadding = 5;
-        const legendX = width + margin.right / 2 - (options.legendHorizontalOffset || 0);
-        const legendY = margin.top + (options.legendVerticalOffset || 0);
+        
+        const legendX = options.legendX !== undefined ? options.legendX : chartWidth - (options.legendWidth || 100) ; 
+        const legendY = options.legendY !== undefined ? options.legendY : 0 - margin.top + 10;
 
-        const legend = svg.append("g")
+
+        const legend = g.append("g")
             .attr("class", "legend")
             .attr("transform", `translate(${legendX}, ${legendY})`);
 
@@ -137,25 +140,25 @@ const chartRenderer = (() => {
         }
     }
 
-    function _addGridlines(svg, xScale, yScale, width, height, xGrid, yGrid) {
+    function _addGridlines(g, xScale, yScale, chartWidth, chartHeight, xGrid, yGrid) {
         const chartSettings = safeGetChartSettings();
-        if (chartSettings.ENABLE_GRIDLINES) {
+        if (chartSettings.ENABLE_GRIDLINES && g && typeof g.append === 'function') {
             if (yGrid && yScale.ticks) {
-                svg.append("g")
+                g.append("g")
                     .attr("class", "grid y-grid")
                     .call(d3.axisLeft(yScale)
                         .ticks(5)
-                        .tickSize(-width)
+                        .tickSize(-chartWidth)
                         .tickFormat("")
                     );
             }
             if (xGrid && xScale.ticks) {
-                 svg.append("g")
+                 g.append("g")
                     .attr("class", "grid x-grid")
-                    .attr("transform", `translate(0,${height})`)
+                    .attr("transform", `translate(0,${chartHeight})`)
                     .call(d3.axisBottom(xScale)
                         .ticks(5)
-                        .tickSize(-height)
+                        .tickSize(-chartHeight)
                         .tickFormat("")
                     );
             }
@@ -163,18 +166,24 @@ const chartRenderer = (() => {
     }
 
     function renderBarChart(data, targetElementId, options = {}) {
-        d3.select(`#${targetElementId}`).select("svg").remove();
+        const targetEl = document.getElementById(targetElementId);
+        if (!targetEl || targetEl.offsetWidth === 0 || targetEl.offsetHeight === 0) {
+            console.warn(`Chart-Container '${targetElementId}' nicht gefunden oder nicht sichtbar. Diagramm wird nicht gerendert.`);
+            return;
+        }
+        d3.select(targetEl).select("svg").remove();
         const chartSettings = safeGetChartSettings();
         const { width = chartSettings.DEFAULT_WIDTH, height = chartSettings.DEFAULT_HEIGHT, margin = defaultMargin(), xLabel = '', yLabel = '', title = '', colorScheme = null, barLabel = false, yAxisMin = 0 } = options;
         const chartWidth = width - margin.left - margin.right;
         const chartHeight = height - margin.top - margin.bottom;
         const colors = _getColors(data.length, colorScheme);
 
-        const svg = d3.select(`#${targetElementId}`)
+        const svgRoot = d3.select(targetEl)
             .append("svg")
             .attr("width", width)
-            .attr("height", height)
-            .append("g")
+            .attr("height", height);
+        
+        const g = svgRoot.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
         const x = d3.scaleBand().range([0, chartWidth]).padding(0.2);
@@ -184,11 +193,10 @@ const chartRenderer = (() => {
         const yMax = d3.max(data, d => d.value);
         y.domain([yAxisMin, yMax > 0 ? yMax * 1.05 : 10]);
         
-        _addGridlines(svg, x, y, chartWidth, chartHeight, false, true);
-
+        _addGridlines(g, x, y, chartWidth, chartHeight, false, true);
         const tooltip = _createTooltip(targetElementId);
 
-        svg.selectAll(".bar")
+        g.selectAll(".bar")
             .data(data)
             .enter().append("rect")
             .attr("class", "bar")
@@ -198,21 +206,21 @@ const chartRenderer = (() => {
             .attr("height", d => chartHeight - y(d.value))
             .attr("fill", (d, i) => colors[i])
             .on("mouseover", (event, d) => {
-                tooltip.style("visibility", "visible").style("opacity", 1);
+                if(tooltip) tooltip.style("visibility", "visible").style("opacity", 1);
                 d3.select(event.currentTarget).style("filter", "brightness(0.9)");
             })
             .on("mousemove", (event, d) => {
-                tooltip.html(`<strong>${d.label}</strong><br>${formatNumber(d.value, d.value < 1 && d.value !==0 ? 2 : 0, 'N/A')}${d.unit || ''}`)
+                if(tooltip) tooltip.html(`<strong>${d.label}</strong><br>${formatNumber(d.value, d.value < 1 && d.value !==0 ? 2 : 0, 'N/A')}${d.unit || ''}`)
                     .style("top", (event.pageY - 10) + "px")
                     .style("left", (event.pageX + 10) + "px");
             })
             .on("mouseout", (event, d) => {
-                tooltip.style("visibility", "hidden").style("opacity", 0);
+                if(tooltip) tooltip.style("visibility", "hidden").style("opacity", 0);
                 d3.select(event.currentTarget).style("filter", "none");
             });
 
         if (barLabel) {
-            svg.selectAll(".bar-label")
+            g.selectAll(".bar-label")
                 .data(data)
                 .enter().append("text")
                 .attr("class", "bar-label")
@@ -224,26 +232,32 @@ const chartRenderer = (() => {
                 .text(d => formatNumber(d.value, d.value < 1 && d.value !==0 ? 2 : 0, ''));
         }
 
-        svg.append("g").attr("class", "axis x-axis").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(x).tickSizeOuter(0));
-        svg.append("g").attr("class", "axis y-axis").call(d3.axisLeft(y).ticks(5).tickSizeOuter(0));
+        g.append("g").attr("class", "axis x-axis").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(x).tickSizeOuter(0));
+        g.append("g").attr("class", "axis y-axis").call(d3.axisLeft(y).ticks(5).tickSizeOuter(0));
         
-        _addChartTitle(svg.node().parentNode, title, width, margin);
-        _addAxisLabels(svg, xLabel, yLabel, chartWidth, chartHeight, margin);
-        if (typeof ui_helpers !== 'undefined' && ui_helpers.initializeTooltips) ui_helpers.initializeTooltips(d3.select(`#${targetElementId}`).node());
+        _addChartTitle(g, title, chartWidth, margin);
+        _addAxisLabels(g, xLabel, yLabel, chartWidth, chartHeight, margin);
+        if (typeof ui_helpers !== 'undefined' && ui_helpers.initializeTooltips) ui_helpers.initializeTooltips(targetEl);
     }
 
     function renderPieChart(data, targetElementId, options = {}) {
-        d3.select(`#${targetElementId}`).select("svg").remove();
+        const targetEl = document.getElementById(targetElementId);
+        if (!targetEl || targetEl.offsetWidth === 0 || targetEl.offsetHeight === 0) {
+            console.warn(`Chart-Container '${targetElementId}' nicht gefunden oder nicht sichtbar. Diagramm wird nicht gerendert.`);
+            return;
+        }
+        d3.select(targetEl).select("svg").remove();
         const chartSettings = safeGetChartSettings();
         const { width = chartSettings.DEFAULT_WIDTH / 1.5, height = chartSettings.DEFAULT_HEIGHT / 1.5, margin = chartSettings.COMPACT_PIE_MARGIN, title = '', colorScheme = null, innerRadiusFactor = 0.4, legendBelow = false, legendItemCount = 2, fontSize = chartSettings.LEGEND_FONT_SIZE } = options;
         const radius = Math.min(width - margin.left - margin.right, height - margin.top - margin.bottom - (legendBelow ? (legendItemCount * (parseInt(fontSize,10) + 8) + 10) : 0) ) / 2;
         const colors = _getColors(data.length, colorScheme);
 
-        const svg = d3.select(`#${targetElementId}`)
+        const svgRoot = d3.select(targetEl)
             .append("svg")
             .attr("width", width)
-            .attr("height", height)
-            .append("g")
+            .attr("height", height);
+
+        const g = svgRoot.append("g")
             .attr("transform", `translate(${(width - margin.left - margin.right) / 2 + margin.left}, ${(height - margin.top - margin.bottom - (legendBelow ? (legendItemCount * (parseInt(fontSize,10) + 8) + 10) : 0)) / 2 + margin.top})`);
 
         const pie = d3.pie().value(d => d.value).sort(null);
@@ -252,7 +266,7 @@ const chartRenderer = (() => {
 
         const tooltip = _createTooltip(targetElementId);
 
-        svg.selectAll("path")
+        g.selectAll("path")
             .data(pie(data))
             .enter().append("path")
             .attr("d", arc)
@@ -260,39 +274,45 @@ const chartRenderer = (() => {
             .attr("stroke", "var(--bg-white)")
             .style("stroke-width", "1px")
             .on("mouseover", (event, d) => {
-                tooltip.style("visibility", "visible").style("opacity", 1);
+                if(tooltip) tooltip.style("visibility", "visible").style("opacity", 1);
                 d3.select(event.currentTarget).style("filter", "brightness(0.9)");
             })
             .on("mousemove", (event, d) => {
                 const percent = total > 0 ? formatPercent(d.data.value / total, 1) : 'N/A';
-                tooltip.html(`<strong>${d.data.label}</strong><br>${formatNumber(d.data.value, 0)} (${percent})`)
+                if(tooltip) tooltip.html(`<strong>${d.data.label}</strong><br>${formatNumber(d.data.value, 0)} (${percent})`)
                     .style("top", (event.pageY - 10) + "px")
                     .style("left", (event.pageX + 10) + "px");
             })
             .on("mouseout", (event, d) => {
-                tooltip.style("visibility", "hidden").style("opacity", 0);
+                if(tooltip) tooltip.style("visibility", "hidden").style("opacity", 0);
                 d3.select(event.currentTarget).style("filter", "none");
             });
         
-        _addChartTitle(svg.node().parentNode.parentNode, title, width, margin);
+        _addChartTitle(g, title, chartWidth, margin); 
         if (legendBelow) {
             const legendData = data.map((d,i) => ({name: d.label, color: colors[i], tooltip: `${d.label}: ${formatNumber(d.value, 0)} (${total > 0 ? formatPercent(d.value / total, 1) : 'N/A'})` }));
-            _addLegend(d3.select(svg.node().parentNode), legendData, width, { ...margin, top: height - margin.bottom - (legendItemCount * (parseInt(fontSize,10) + 8))}, {legendHorizontalOffset: width/2 - margin.left, legendItemWidth: width / legendData.length - 5, legendFontSize: fontSize });
+            _addLegend(svgRoot, legendData, width, { ...margin, top: height - margin.bottom - (legendItemCount * (parseInt(fontSize,10) + 8))}, {legendHorizontalOffset: width/2 - margin.left, legendItemWidth: width / legendData.length - 5, legendFontSize: fontSize });
         }
     }
     
     function renderHistogram(data, targetElementId, options = {}) {
-        d3.select(`#${targetElementId}`).select("svg").remove();
+        const targetEl = document.getElementById(targetElementId);
+        if (!targetEl || targetEl.offsetWidth === 0 || targetEl.offsetHeight === 0) {
+            console.warn(`Chart-Container '${targetElementId}' nicht gefunden oder nicht sichtbar. Diagramm wird nicht gerendert.`);
+            return;
+        }
+        d3.select(targetEl).select("svg").remove();
         const chartSettings = safeGetChartSettings();
         const { width = chartSettings.DEFAULT_WIDTH, height = chartSettings.DEFAULT_HEIGHT, margin = defaultMargin(), xLabel = '', yLabel = '', title = '', color = chartSettings.NEW_PRIMARY_COLOR_BLUE, numBins = 10 } = options;
         const chartWidth = width - margin.left - margin.right;
         const chartHeight = height - margin.top - margin.bottom;
 
-        const svg = d3.select(`#${targetElementId}`)
+        const svgRoot = d3.select(targetEl)
             .append("svg")
             .attr("width", width)
-            .attr("height", height)
-            .append("g")
+            .attr("height", height);
+        
+        const g = svgRoot.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
         const xMin = d3.min(data);
@@ -308,11 +328,10 @@ const chartRenderer = (() => {
         const y = d3.scaleLinear().range([chartHeight, 0]);
         y.domain([0, d3.max(bins, d => d.length) * 1.05]);
         
-        _addGridlines(svg, x, y, chartWidth, chartHeight, false, true);
-
+        _addGridlines(g, x, y, chartWidth, chartHeight, false, true);
         const tooltip = _createTooltip(targetElementId);
 
-        svg.selectAll("rect")
+        g.selectAll("rect")
             .data(bins)
             .enter().append("rect")
             .attr("x", d => x(d.x0) + 1)
@@ -321,50 +340,56 @@ const chartRenderer = (() => {
             .attr("height", d => chartHeight - y(d.length))
             .style("fill", color)
             .on("mouseover", (event, d) => {
-                tooltip.style("visibility", "visible").style("opacity", 1);
+                if(tooltip) tooltip.style("visibility", "visible").style("opacity", 1);
                 d3.select(event.currentTarget).style("filter", "brightness(0.9)");
             })
             .on("mousemove", (event, d) => {
-                tooltip.html(`Range: ${formatNumber(d.x0,1)}–${formatNumber(d.x1,1)}<br>Anzahl: ${d.length}`)
+                if(tooltip) tooltip.html(`Range: ${formatNumber(d.x0,1)}–${formatNumber(d.x1,1)}<br>Anzahl: ${d.length}`)
                     .style("top", (event.pageY - 10) + "px")
                     .style("left", (event.pageX + 10) + "px");
             })
             .on("mouseout", (event, d) => {
-                tooltip.style("visibility", "hidden").style("opacity", 0);
+                if(tooltip) tooltip.style("visibility", "hidden").style("opacity", 0);
                 d3.select(event.currentTarget).style("filter", "none");
             });
 
-        svg.append("g").attr("class", "axis x-axis").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(x).ticks(Math.min(numBins, 10)).tickFormat(d3.format(".1f")).tickSizeOuter(0));
-        svg.append("g").attr("class", "axis y-axis").call(d3.axisLeft(y).ticks(5).tickSizeOuter(0));
+        g.append("g").attr("class", "axis x-axis").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(x).ticks(Math.min(numBins, 10)).tickFormat(d3.format(".1f")).tickSizeOuter(0));
+        g.append("g").attr("class", "axis y-axis").call(d3.axisLeft(y).ticks(5).tickSizeOuter(0));
 
-        _addChartTitle(svg.node().parentNode, title, width, margin);
-        _addAxisLabels(svg, xLabel, yLabel, chartWidth, chartHeight, margin);
-        if (typeof ui_helpers !== 'undefined' && ui_helpers.initializeTooltips) ui_helpers.initializeTooltips(d3.select(`#${targetElementId}`).node());
+        _addChartTitle(g, title, chartWidth, margin);
+        _addAxisLabels(g, xLabel, yLabel, chartWidth, chartHeight, margin);
+        if (typeof ui_helpers !== 'undefined' && ui_helpers.initializeTooltips) ui_helpers.initializeTooltips(targetEl);
     }
 
     function renderROCCurve(rocDataSets, targetElementId, options = {}) {
-        d3.select(`#${targetElementId}`).select("svg").remove();
+        const targetEl = document.getElementById(targetElementId);
+        if (!targetEl || targetEl.offsetWidth === 0 || targetEl.offsetHeight === 0) {
+            console.warn(`Chart-Container '${targetElementId}' nicht gefunden oder nicht sichtbar. Diagramm wird nicht gerendert.`);
+            return;
+        }
+        d3.select(targetEl).select("svg").remove();
         const chartSettings = safeGetChartSettings();
         const { width = chartSettings.DEFAULT_WIDTH, height = chartSettings.DEFAULT_HEIGHT, margin = defaultMargin(), title = "ROC-Kurve(n)", xLabel = "1 - Spezifität", yLabel = "Sensitivität", colorScheme = null } = options;
         const chartWidth = width - margin.left - margin.right;
         const chartHeight = height - margin.top - margin.bottom;
         const colors = _getColors(rocDataSets.length, colorScheme);
 
-        const svg = d3.select(`#${targetElementId}`)
+        const svgRoot = d3.select(targetEl)
             .append("svg")
             .attr("width", width)
-            .attr("height", height)
-            .append("g")
+            .attr("height", height);
+
+        const g = svgRoot.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
         const x = d3.scaleLinear().domain([0, 1]).range([0, chartWidth]);
         const y = d3.scaleLinear().domain([0, 1]).range([chartHeight, 0]);
 
-        svg.append("g").attr("class", "axis x-axis").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(x).ticks(5).tickFormat(d3.format(".1f")).tickSizeOuter(0));
-        svg.append("g").attr("class", "axis y-axis").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".1f")).tickSizeOuter(0));
-        _addGridlines(svg, x, y, chartWidth, chartHeight, true, true);
+        g.append("g").attr("class", "axis x-axis").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(x).ticks(5).tickFormat(d3.format(".1f")).tickSizeOuter(0));
+        g.append("g").attr("class", "axis y-axis").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".1f")).tickSizeOuter(0));
+        _addGridlines(g, x, y, chartWidth, chartHeight, true, true);
 
-        svg.append("line")
+        g.append("line")
             .attr("class", "reference-line")
             .attr("x1", 0).attr("y1", chartHeight)
             .attr("x2", chartWidth).attr("y2", 0);
@@ -379,7 +404,7 @@ const chartRenderer = (() => {
                 .y(d => y(d.tpr))
                 .curve(d3.curveLinear);
 
-            svg.append("path")
+            g.append("path")
                 .datum(dataSet.points)
                 .attr("class", "roc-curve")
                 .attr("fill", "none")
@@ -387,7 +412,7 @@ const chartRenderer = (() => {
                 .attr("stroke-width", chartSettings.LINE_STROKE_WIDTH)
                 .attr("d", line);
 
-            svg.selectAll(`.dot-${index}`)
+            g.selectAll(`.dot-${index}`)
                 .data(dataSet.points.filter(p => p.threshold !== undefined)) 
                 .enter().append("circle")
                 .attr("class", `roc-point dot-${index}`)
@@ -396,18 +421,18 @@ const chartRenderer = (() => {
                 .attr("r", chartSettings.POINT_RADIUS / 1.5)
                 .attr("fill", colors[index])
                 .on("mouseover", (event, d) => {
-                    tooltip.style("visibility", "visible").style("opacity", 1);
+                    if(tooltip) tooltip.style("visibility", "visible").style("opacity", 1);
                     d3.select(event.currentTarget).attr("r", chartSettings.POINT_RADIUS * 1.2);
                 })
                 .on("mousemove", (event, d) => {
                     let tooltipText = `<strong>${dataSet.name}</strong><br>1-Spez: ${formatNumber(d.fpr, 3, 'N/A', 'en')}<br>Sens: ${formatNumber(d.tpr, 3, 'N/A', 'en')}`;
                     if (d.threshold !== undefined) tooltipText += `<br>Schwelle: ${formatNumber(d.threshold, 2, 'N/A', 'en')}`;
-                    tooltip.html(tooltipText)
+                    if(tooltip) tooltip.html(tooltipText)
                         .style("top", (event.pageY - 10) + "px")
                         .style("left", (event.pageX + 10) + "px");
                 })
                 .on("mouseout", (event, d) => {
-                    tooltip.style("visibility", "hidden").style("opacity", 0);
+                    if(tooltip) tooltip.style("visibility", "hidden").style("opacity", 0);
                     d3.select(event.currentTarget).attr("r", chartSettings.POINT_RADIUS / 1.5);
                 });
 
@@ -416,26 +441,30 @@ const chartRenderer = (() => {
                  if (dataSet.auc.ci && dataSet.auc.ci.lower !== undefined) {
                      aucText += ` (95% CI: ${formatNumber(dataSet.auc.ci.lower, 3, 'N/A', 'en')} – ${formatNumber(dataSet.auc.ci.upper, 3, 'N/A', 'en')})`;
                  }
-                 svg.append("text")
+                 g.append("text")
                     .attr("class", "auc-label")
                     .attr("x", chartWidth - 10)
-                    .attr("y", margin.top + index * (parseInt(chartSettings.AXIS_LABEL_FONT_SIZE, 10) + 5))
+                    .attr("y", 0 + index * (parseInt(chartSettings.AXIS_LABEL_FONT_SIZE, 10) + 5)) // Adjusted Y position
                     .attr("text-anchor", "end")
                     .style("fill", colors[index])
                     .text(aucText);
             }
         });
         
-        _addChartTitle(svg.node().parentNode, title, width, margin);
-        _addAxisLabels(svg, xLabel, yLabel, chartWidth, chartHeight, margin);
+        _addChartTitle(g, title, chartWidth, margin);
+        _addAxisLabels(g, xLabel, yLabel, chartWidth, chartHeight, margin);
         
         const legendData = rocDataSets.map((d,i) => ({ name: d.name, color: colors[i], tooltip: d.name }));
-        _addLegend(svg, legendData, chartWidth - margin.right, margin, { legendHorizontalOffset: 0, legendVerticalOffset: 0, legendFontSize: '9px' });
-
+        _addLegend(g, legendData, chartWidth, margin, { legendX: 5, legendY: 5, legendFontSize: '9px' });
     }
 
     function renderComparisonBarChart(data, targetElementId, options = {}, t2LabelOverride = "T2-optimiert") {
-        d3.select(`#${targetElementId}`).select("svg").remove();
+        const targetEl = document.getElementById(targetElementId);
+        if (!targetEl || targetEl.offsetWidth === 0 || targetEl.offsetHeight === 0) {
+            console.warn(`Chart-Container '${targetElementId}' nicht gefunden oder nicht sichtbar. Diagramm wird nicht gerendert.`);
+            return;
+        }
+        d3.select(targetEl).select("svg").remove();
         const chartSettings = safeGetChartSettings();
         const { width = chartSettings.DEFAULT_WIDTH / 1.2, height = chartSettings.DEFAULT_HEIGHT / 1.3, margin = {top:30, right: 20, bottom:50, left:50}, title = "", yLabel = "Wert", colorScheme = null, axisLabelFontSize = '10px', tickLabelFontSize = '9px', legendFontSize = '9px' } = options;
 
@@ -445,23 +474,22 @@ const chartRenderer = (() => {
         const subgroups = ["AS", "T2"]; 
         const colors = _getColors(subgroups.length, colorScheme === 'default_comparison' ? 'primary' : colorScheme);
 
-
-        const svg = d3.select(`#${targetElementId}`)
+        const svgRoot = d3.select(targetEl)
             .append("svg")
             .attr("width", width)
-            .attr("height", height)
-            .append("g")
+            .attr("height", height);
+
+        const g = svgRoot.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
         const x0 = d3.scaleBand().domain(groups).rangeRound([0, chartWidth]).paddingInner(0.2);
         const x1 = d3.scaleBand().domain(subgroups).rangeRound([0, x0.bandwidth()]).padding(0.05);
         const y = d3.scaleLinear().domain([0, 1]).rangeRound([chartHeight, 0]);
 
-        _addGridlines(svg, x0, y, chartWidth, chartHeight, false, true);
-
+        _addGridlines(g, x0, y, chartWidth, chartHeight, false, true);
         const tooltip = _createTooltip(targetElementId);
 
-        svg.append("g")
+        g.append("g")
             .selectAll("g")
             .data(data)
             .join("g")
@@ -475,34 +503,39 @@ const chartRenderer = (() => {
             .attr("height", d => chartHeight - y(isNaN(parseFloat(d.value)) ? 0 : parseFloat(d.value)))
             .attr("fill", d => d.key === "AS" ? colors[0] : colors[1])
             .on("mouseover", (event, d) => {
-                tooltip.style("visibility", "visible").style("opacity", 1);
+                if(tooltip) tooltip.style("visibility", "visible").style("opacity", 1);
                 d3.select(event.currentTarget).style("filter", "brightness(0.9)");
             })
             .on("mousemove", (event, d) => {
-                tooltip.html(`<strong>${d.metric} (${d.key === "T2" ? t2LabelOverride : d.key})</strong><br>Wert: ${formatPercent(d.value, d.metric === 'AUC' ? 3 : 1)}`)
+                if(tooltip) tooltip.html(`<strong>${d.metric} (${d.key === "T2" ? t2LabelOverride : d.key})</strong><br>Wert: ${formatPercent(d.value, d.metric === 'AUC' ? 3 : 1)}`)
                     .style("top", (event.pageY - 10) + "px")
                     .style("left", (event.pageX + 10) + "px");
             })
             .on("mouseout", (event,d)=>{
-                tooltip.style("visibility", "hidden").style("opacity", 0);
+                if(tooltip) tooltip.style("visibility", "hidden").style("opacity", 0);
                 d3.select(event.currentTarget).style("filter", "none");
             });
 
-        svg.append("g").attr("class", "axis x-axis").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(x0).tickSizeOuter(0)).selectAll("text").style("font-size", tickLabelFontSize);
-        svg.append("g").attr("class", "axis y-axis").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".1f")).tickSizeOuter(0)).selectAll("text").style("font-size", tickLabelFontSize);
+        g.append("g").attr("class", "axis x-axis").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(x0).tickSizeOuter(0)).selectAll("text").style("font-size", tickLabelFontSize);
+        g.append("g").attr("class", "axis y-axis").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".1f")).tickSizeOuter(0)).selectAll("text").style("font-size", tickLabelFontSize);
         
-        _addChartTitle(svg.node().parentNode, title, width, margin);
-        _addAxisLabels(svg, "", yLabel, chartWidth, chartHeight, { ...margin, bottom: margin.bottom -10});
+        _addChartTitle(g, title, chartWidth, margin);
+        _addAxisLabels(g, "", yLabel, chartWidth, chartHeight, { ...margin, bottom: margin.bottom -10});
 
         const legendData = [
             { name: "AS", color: colors[0] },
             { name: t2LabelOverride, color: colors[1] }
         ];
-        _addLegend(svg, legendData, chartWidth, {top: -margin.top/1.5 , right: margin.right, bottom: margin.bottom, left:margin.left}, {legendHorizontalOffset: -chartWidth +5, legendItemWidth: 80, legendFontSize: legendFontSize});
+        _addLegend(g, legendData, chartWidth, margin, { legendX: 5, legendY: 0 - margin.top + 5, legendFontSize: legendFontSize});
     }
     
     function renderPerformanceComparisonPlot(data, targetElementId, options = {}) {
-        d3.select(`#${targetElementId}`).select("svg").remove();
+        const targetEl = document.getElementById(targetElementId);
+        if (!targetEl || targetEl.offsetWidth === 0 || targetEl.offsetHeight === 0) {
+            console.warn(`Chart-Container '${targetElementId}' nicht gefunden oder nicht sichtbar. Diagramm wird nicht gerendert.`);
+            return;
+        }
+        d3.select(targetEl).select("svg").remove();
         const chartSettings = safeGetChartSettings();
         const { width = chartSettings.DEFAULT_WIDTH * 1.2, height = chartSettings.DEFAULT_HEIGHT * 0.8, margin = { top: 30, right: 30, bottom: 50, left: 200 }, title = "Performance Vergleich", xLabel = "AUC (95% CI)", colorScheme = null, valueDomain = [0.4, 1.0] } = options;
 
@@ -510,11 +543,12 @@ const chartRenderer = (() => {
         const chartHeight = height - margin.top - margin.bottom;
         const colors = _getColors(data.length, colorScheme);
 
-        const svg = d3.select(`#${targetElementId}`)
+        const svgRoot = d3.select(targetEl)
             .append("svg")
             .attr("width", width)
-            .attr("height", height)
-            .append("g")
+            .attr("height", height);
+        
+        const g = svgRoot.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
         const y = d3.scaleBand()
@@ -526,9 +560,9 @@ const chartRenderer = (() => {
             .domain(valueDomain)
             .range([0, chartWidth]);
 
-        _addGridlines(svg, x, y, chartWidth, chartHeight, true, false);
+        _addGridlines(g, x, y, chartWidth, chartHeight, true, false);
         
-        svg.append("line") 
+        g.append("line") 
             .attr("x1", x(0.5))
             .attr("x2", x(0.5))
             .attr("y1", 0)
@@ -536,10 +570,9 @@ const chartRenderer = (() => {
             .attr("stroke", "var(--chart-grid-color)")
             .attr("stroke-dasharray", "3,3");
 
-
         const tooltip = _createTooltip(targetElementId);
 
-        svg.selectAll(".error-bar")
+        g.selectAll(".error-bar")
             .data(data)
             .enter()
             .append("line")
@@ -550,15 +583,15 @@ const chartRenderer = (() => {
             .attr("y2", d => y(d.name) + y.bandwidth() / 2)
             .attr("stroke", (d,i) => colors[i])
             .attr("stroke-width", 1.5)
-            .on("mouseover", (event, d) => tooltip.style("visibility", "visible").style("opacity", 1))
+            .on("mouseover", (event, d) => { if(tooltip) tooltip.style("visibility", "visible").style("opacity", 1);})
             .on("mousemove", (event, d) => {
-                tooltip.html(`<strong>${d.name}</strong><br>${xLabel.split('(')[0].trim()}: ${formatNumber(d.value, 3, 'N/A', 'en')}<br>95% CI: ${formatNumber(d.ci_low, 3, 'N/A', 'en')} – ${formatNumber(d.ci_up, 3, 'N/A', 'en')}`)
+                if(tooltip) tooltip.html(`<strong>${d.name}</strong><br>${xLabel.split('(')[0].trim()}: ${formatNumber(d.value, 3, 'N/A', 'en')}<br>95% CI: ${formatNumber(d.ci_low, 3, 'N/A', 'en')} – ${formatNumber(d.ci_up, 3, 'N/A', 'en')}`)
                     .style("top", (event.pageY - 10) + "px")
                     .style("left", (event.pageX + 10) + "px");
             })
-            .on("mouseout", () => tooltip.style("visibility", "hidden").style("opacity", 0));
+            .on("mouseout", () => {if(tooltip) tooltip.style("visibility", "hidden").style("opacity", 0);});
             
-        svg.selectAll(".ci-cap-low")
+        g.selectAll(".ci-cap-low")
             .data(data)
             .enter()
             .append("line")
@@ -569,7 +602,7 @@ const chartRenderer = (() => {
             .attr("stroke", (d,i) => colors[i])
             .attr("stroke-width", 1.5);
             
-        svg.selectAll(".ci-cap-high")
+        g.selectAll(".ci-cap-high")
             .data(data)
             .enter()
             .append("line")
@@ -580,7 +613,7 @@ const chartRenderer = (() => {
             .attr("stroke", (d,i) => colors[i])
             .attr("stroke-width", 1.5);
 
-        svg.selectAll(".dot-estimate")
+        g.selectAll(".dot-estimate")
             .data(data)
             .enter()
             .append("circle")
@@ -589,28 +622,28 @@ const chartRenderer = (() => {
             .attr("cy", d => y(d.name) + y.bandwidth() / 2)
             .attr("r", chartSettings.POINT_RADIUS)
             .attr("fill", (d,i) => colors[i])
-            .on("mouseover", (event, d) => tooltip.style("visibility", "visible").style("opacity", 1))
+            .on("mouseover", (event, d) => {if(tooltip) tooltip.style("visibility", "visible").style("opacity", 1);})
             .on("mousemove", (event, d) => {
-                 tooltip.html(`<strong>${d.name}</strong><br>${xLabel.split('(')[0].trim()}: ${formatNumber(d.value, 3, 'N/A', 'en')}<br>95% CI: ${formatNumber(d.ci_low, 3, 'N/A', 'en')} – ${formatNumber(d.ci_up, 3, 'N/A', 'en')}`)
+                 if(tooltip) tooltip.html(`<strong>${d.name}</strong><br>${xLabel.split('(')[0].trim()}: ${formatNumber(d.value, 3, 'N/A', 'en')}<br>95% CI: ${formatNumber(d.ci_low, 3, 'N/A', 'en')} – ${formatNumber(d.ci_up, 3, 'N/A', 'en')}`)
                     .style("top", (event.pageY - 10) + "px")
                     .style("left", (event.pageX + 10) + "px");
             })
-            .on("mouseout", () => tooltip.style("visibility", "hidden").style("opacity", 0));
+            .on("mouseout", () => {if(tooltip) tooltip.style("visibility", "hidden").style("opacity", 0);});
 
-        svg.append("g").attr("class", "axis x-axis").attr("transform", `translate(0, ${chartHeight})`).call(d3.axisBottom(x).ticks(5).tickFormat(d3.format(".2f")).tickSizeOuter(0));
-        svg.append("g").attr("class", "axis y-axis").call(d3.axisLeft(y).tickSizeOuter(0));
+        g.append("g").attr("class", "axis x-axis").attr("transform", `translate(0, ${chartHeight})`).call(d3.axisBottom(x).ticks(5).tickFormat(d3.format(".2f")).tickSizeOuter(0));
+        g.append("g").attr("class", "axis y-axis").call(d3.axisLeft(y).tickSizeOuter(0));
 
-        _addChartTitle(svg.node().parentNode, title, width, margin);
-        _addAxisLabels(svg, xLabel, "", chartWidth, chartHeight, margin);
+        _addChartTitle(g, title, chartWidth, margin);
+        _addAxisLabels(g, xLabel, "", chartWidth, chartHeight, margin);
     }
 
-    function renderAgeDistributionChart(targetElementId, ageData, kollektivName) {
+    function renderAgeDistributionChart(targetElementId, ageData, kollektivName, options = {}) {
         if (!ageData || ageData.length === 0) {
             ui_helpers.updateElementHTML(targetElementId, `<p class="text-muted small text-center p-3">Keine Daten für Altersverteilung (${kollektivName}).</p>`);
             return;
         }
         const chartSettings = safeGetChartSettings();
-        const options = {
+        const defaultOptions = {
             title: `Altersverteilung (${kollektivName})`,
             xLabel: 'Alter (Jahre)',
             yLabel: 'Anzahl Patienten',
@@ -620,10 +653,10 @@ const chartRenderer = (() => {
             height: chartSettings.DEFAULT_HEIGHT / 1.5,
             margin: { top: 20, right: 20, bottom: 40, left: 45 }
         };
-        renderHistogram(ageData, targetElementId, options);
+        renderHistogram(ageData, targetElementId, {...defaultOptions, ...options});
     }
 
-    function renderGenderDistributionChart(targetElementId, genderData, kollektivName) {
+    function renderGenderDistributionChart(targetElementId, genderData, kollektivName, options = {}) {
         const data = [
             { label: UI_TEXTS.legendLabels.male, value: genderData.m ?? 0 },
             { label: UI_TEXTS.legendLabels.female, value: genderData.f ?? 0 }
@@ -636,7 +669,7 @@ const chartRenderer = (() => {
             return;
         }
         const chartSettings = safeGetChartSettings();
-        const options = {
+        const defaultOptions = {
             title: `Geschlechterverteilung (${kollektivName})`,
             colorScheme: 'default', 
             width: chartSettings.DEFAULT_WIDTH,
@@ -647,7 +680,7 @@ const chartRenderer = (() => {
             legendItemCount: data.length,
             fontSize: chartSettings.LEGEND_FONT_SIZE
         };
-        renderPieChart(data, targetElementId, options);
+        renderPieChart(data, targetElementId, {...defaultOptions, ...options});
     }
 
     function renderASPerformanceBarChart(targetElementId, stats, kollektivName) {
