@@ -357,8 +357,8 @@ const ui_helpers = (() => {
                     const input = document.getElementById('input-size');
                     const valueDisplay = document.getElementById('value-size');
                     const thresholdValue = criterion.threshold ?? getDefaultT2Criteria().size.threshold;
-                    if (range) range.value = formatNumber(thresholdValue, 1, '', true);
-                    if (input) input.value = formatNumber(thresholdValue, 1, '', true);
+                    if (range) range.value = formatNumber(thresholdValue, 1, '', 'en');
+                    if (input) input.value = formatNumber(thresholdValue, 1, '', 'en');
                     if (valueDisplay) valueDisplay.textContent = formatNumber(thresholdValue, 1);
                 }
             }
@@ -901,7 +901,7 @@ const ui_helpers = (() => {
         if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
             console.error("Bootstrap Modal ist nicht verfügbar. Bestätigungsmodal kann nicht angezeigt werden.");
             showToast("Bestätigungsfunktion nicht verfügbar.", "danger");
-            if (confirmCallback) confirmCallback(); // Führe Callback im Fehlerfall aus, um Blockade zu vermeiden
+            if (confirmCallback) confirmCallback(); 
             return;
         }
 
@@ -945,10 +945,10 @@ const ui_helpers = (() => {
             okButton.removeEventListener('click', onConfirm);
             cancelButton.removeEventListener('click', onCancel);
             modalElement.removeEventListener('hidden.bs.modal', cleanUp);
-            // Optional: Remove modal from DOM after hiding to prevent multiple instances/listeners
             if (modalElement.parentNode) {
                 modalElement.parentNode.removeChild(modalElement);
             }
+            confirmModalInstance = null; 
         };
 
         const onConfirm = () => {
