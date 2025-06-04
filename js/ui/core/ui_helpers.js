@@ -2,6 +2,7 @@ const ui_helpers = (() => {
 
     let collapseEventListenersAttached = new Set();
     let kurzanleitungModalInstance = null;
+    let confirmModalInstance = null;
     let initialTabRenderFixed = false;
 
     function escapeMarkdown(text) {
@@ -404,7 +405,7 @@ const ui_helpers = (() => {
         const select1 = document.getElementById('statistik-kollektiv-select-1');
         const select2 = document.getElementById('statistik-kollektiv-select-2');
         const isVergleich = layout === 'vergleich';
-        const currentLang = typeof stateManager !== 'undefined' && typeof stateManager.getCurrentPublikationLang === 'function' ? stateManager.getCurrentPublikationLang() : 'de';
+        const currentLang = stateManager.getCurrentPublikationLang();
 
 
         if (toggleBtn) {
@@ -429,10 +430,10 @@ const ui_helpers = (() => {
         if (einzelSelectContainer) einzelSelectContainer.classList.toggle('d-none', isVergleich);
 
         const einzelSelect = document.getElementById('statistik-kollektiv-select-einzel');
-        if(einzelSelect && typeof stateManager !== 'undefined') einzelSelect.value = stateManager.getCurrentKollektiv() || APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
+        if(einzelSelect) einzelSelect.value = stateManager.getCurrentKollektiv();
 
-        if (select1) select1.value = kollektiv1 || APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1;
-        if (select2) select2.value = kollektiv2 || APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2;
+        if (select1) select1.value = kollektiv1;
+        if (select2) select2.value = kollektiv2;
     }
 
     function updatePresentationViewSelectorUI(currentView) {
@@ -688,7 +689,7 @@ const ui_helpers = (() => {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
         const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: null, n_trials: null, matrix_components: null };
         const na = '--';
-        const currentLang = typeof stateManager !== 'undefined' && typeof stateManager.getCurrentPublikationLang === 'function' ? stateManager.getCurrentPublikationLang() : 'de';
+        const currentLang = stateManager.getCurrentPublikationLang();
         const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
         const isPercent = !(key === 'f1' || key === 'auc');
         const valueStr = formatNumber(data?.value, digits, na, currentLang === 'en');
@@ -745,7 +746,7 @@ const ui_helpers = (() => {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
          if (!testData) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
-        const currentLang = typeof stateManager !== 'undefined' && typeof stateManager.getCurrentPublikationLang === 'function' ? stateManager.getCurrentPublikationLang() : 'de';
+        const currentLang = stateManager.getCurrentPublikationLang();
         const pValue = testData?.pValue;
         const pStr = (pValue !== null && !isNaN(pValue)) ? (pValue < 0.001 ? (currentLang === 'de' ? '&lt;0,001' : '&lt;0.001') : formatNumber(pValue, 3, na, currentLang === 'en')) : na;
         const sigSymbol = getStatisticalSignificanceSymbol(pValue);
@@ -764,7 +765,7 @@ const ui_helpers = (() => {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
         if (!assocObj) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
-        const currentLang = typeof stateManager !== 'undefined' && typeof stateManager.getCurrentPublikationLang === 'function' ? stateManager.getCurrentPublikationLang() : 'de';
+        const currentLang = stateManager.getCurrentPublikationLang();
         let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '', pVal = NaN, ciWarning = '';
         const assozPValue = assocObj?.pValue;
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
@@ -826,7 +827,6 @@ const ui_helpers = (() => {
             .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.HOEHER : (assocObj?.rd?.value < 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.NIEDRIGER : UI_TEXTS.statMetrics.rdRichtungTexte.GLEICH))
             .replace(/\[STAERKE\]/g, `<strong>${bewertungStr}</strong>`)
             .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
-            .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/<hr.*?>.*$/, '');
 
          if (key === 'or' || key === 'rd') {
@@ -897,6 +897,76 @@ const ui_helpers = (() => {
         }
     }
 
+    function showConfirmModal(message, confirmCallback, confirmButtonText = 'OK', cancelButtonText = 'Abbrechen') {
+        if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+            console.error("Bootstrap Modal ist nicht verfügbar. Bestätigungsmodal kann nicht angezeigt werden.");
+            showToast("Bestätigungsfunktion nicht verfügbar.", "danger");
+            if (confirmCallback) confirmCallback(); // Führe Callback im Fehlerfall aus, um Blockade zu vermeiden
+            return;
+        }
+
+        let modalElement = document.getElementById('confirm-modal');
+        if (!modalElement) {
+            modalElement = document.createElement('div');
+            modalElement.id = 'confirm-modal';
+            modalElement.className = 'modal fade';
+            modalElement.setAttribute('tabindex', '-1');
+            modalElement.setAttribute('aria-labelledby', 'confirmModalLabel');
+            modalElement.setAttribute('aria-hidden', 'true');
+            modalElement.innerHTML = `
+                <div class="modal-dialog modal-sm modal-dialog-centered">
+                    <div class="modal-content modal-glass">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="confirmModalLabel">${UI_TEXTS.general.confirm || "Bestätigen"}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+                        </div>
+                        <div class="modal-body" id="confirmModalBody"></div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" id="confirmCancelButton"></button>
+                            <button type="button" class="btn btn-primary btn-sm" id="confirmOkButton"></button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modalElement);
+            confirmModalInstance = new bootstrap.Modal(modalElement, { backdrop: 'static', keyboard: false });
+        } else if (!confirmModalInstance) {
+            confirmModalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+        }
+
+        document.getElementById('confirmModalBody').innerHTML = escapeMarkdown(message);
+        const okButton = document.getElementById('confirmOkButton');
+        const cancelButton = document.getElementById('confirmCancelButton');
+
+        okButton.textContent = confirmButtonText;
+        cancelButton.textContent = cancelButtonText;
+
+        const cleanUp = () => {
+            okButton.removeEventListener('click', onConfirm);
+            cancelButton.removeEventListener('click', onCancel);
+            modalElement.removeEventListener('hidden.bs.modal', cleanUp);
+            // Optional: Remove modal from DOM after hiding to prevent multiple instances/listeners
+            if (modalElement.parentNode) {
+                modalElement.parentNode.removeChild(modalElement);
+            }
+        };
+
+        const onConfirm = () => {
+            if (confirmCallback) confirmCallback();
+            confirmModalInstance.hide();
+        };
+
+        const onCancel = () => {
+            confirmModalInstance.hide();
+        };
+
+        okButton.addEventListener('click', onConfirm);
+        cancelButton.addEventListener('click', onCancel);
+        modalElement.addEventListener('hidden.bs.modal', cleanUp, { once: true });
+
+        confirmModalInstance.show();
+    }
+
 
     return Object.freeze({
         escapeMarkdown,
@@ -926,7 +996,8 @@ const ui_helpers = (() => {
         getTestDescriptionHTML,
         getTestInterpretationHTML,
         getAssociationInterpretationHTML,
-        showKurzanleitung
+        showKurzanleitung,
+        showConfirmModal
     });
 
 })();
