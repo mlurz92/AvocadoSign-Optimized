@@ -26,9 +26,7 @@ const stateManager = (() => {
         const loadedState = {};
         let needsSave = false;
         for (const key in defaultState) {
-            // Sicherstellen, dass der Schlüssel im STORAGE_KEYS-Objekt existiert und korrekt referenziert wird
-            const storageKeyName = key.toUpperCase();
-            const storageKey = APP_CONFIG.STORAGE_KEYS[storageKeyName];
+            const storageKey = APP_CONFIG.STORAGE_KEYS[key];
             
             if (storageKey) {
                 const item = loadFromLocalStorage(storageKey);
@@ -42,16 +40,15 @@ const stateManager = (() => {
                 }
             } else {
                 loadedState[key] = cloneDeep(defaultState[key]);
-                // Diese Warnung nur ausgeben, wenn der Schlüssel wirklich nicht in STORAGE_KEYS definiert ist
-                if (key !== 'isFirstAppStart' && !APP_CONFIG.STORAGE_KEYS.hasOwnProperty(storageKeyName)) {
+                if (key !== 'isFirstAppStart') {
                     console.warn(`Kein Storage Key für State-Eigenschaft '${key}' definiert. Wird nicht persistent gespeichert.`);
                 }
             }
         }
         
-        if (loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START) === null) {
+        if (loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.isFirstAppStart) === null) {
             loadedState.isFirstAppStart = true;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, false); 
+            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.isFirstAppStart, false); 
         } else {
             loadedState.isFirstAppStart = false;
         }
@@ -66,8 +63,7 @@ const stateManager = (() => {
     function _saveAllToLocalStorage() {
         for (const key in state) {
             if (key === 'isFirstAppStart') continue; 
-            const storageKeyName = key.toUpperCase();
-            const storageKey = APP_CONFIG.STORAGE_KEYS[storageKeyName];
+            const storageKey = APP_CONFIG.STORAGE_KEYS[key];
             if (storageKey && defaultState.hasOwnProperty(key)) {
                 saveToLocalStorage(storageKey, state[key]);
             }
@@ -86,8 +82,7 @@ const stateManager = (() => {
         }
         if (JSON.stringify(state[key]) !== JSON.stringify(value)) {
             state[key] = cloneDeep(value);
-            const storageKeyName = key.toUpperCase();
-            const storageKey = APP_CONFIG.STORAGE_KEYS[storageKeyName];
+            const storageKey = APP_CONFIG.STORAGE_KEYS[key];
             if (storageKey) {
                 saveToLocalStorage(storageKey, state[key]);
             }
@@ -149,7 +144,7 @@ const stateManager = (() => {
     function isFirstAppStart() { return state.isFirstAppStart === true; } 
     function setFirstAppStart(value) { 
         state.isFirstAppStart = !!value; 
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, state.isFirstAppStart);
+        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.isFirstAppStart, state.isFirstAppStart);
         _dispatchStateChangedEvent(['isFirstAppStart']);
     }
     
@@ -157,8 +152,7 @@ const stateManager = (() => {
         const keysToReset = Object.keys(defaultState).filter(k => k !== 'isFirstAppStart');
         keysToReset.forEach(key => {
             state[key] = cloneDeep(defaultState[key]);
-            const storageKeyName = key.toUpperCase();
-            const storageKey = APP_CONFIG.STORAGE_KEYS[storageKeyName];
+            const storageKey = APP_CONFIG.STORAGE_KEYS[key];
             if (storageKey) {
                 saveToLocalStorage(storageKey, state[key]);
             }
