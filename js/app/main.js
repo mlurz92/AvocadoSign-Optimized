@@ -63,6 +63,7 @@
     let currentT2Logic = null;
     let currentData = null;
     let currentHeaderStats = null;
+    let initialTabRenderComplete = false;
 
     const mainAppInterface = {
         handleKollektivChange: (newKollektiv) => {
@@ -347,6 +348,7 @@
                 viewRenderer.renderDatenTab();
         }
         _updateUI();
+        initialTabRenderComplete = true;
     }
 
     function _renderAllTabs(forceStatRecalculation = false) {
@@ -552,21 +554,36 @@
                         _renderCurrentTab(true); 
                     });
                 });
+
+                const initialActiveTabButton = mainTabsElement.querySelector(`.nav-link[data-bs-target="#${stateManager.getActiveTabId()}"]`);
+                if (initialActiveTabButton) {
+                    if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                        const tab = new bootstrap.Tab(initialActiveTabButton);
+                        tab.show();
+                    } else {
+                        console.warn("Bootstrap Tab-Komponente nicht verfügbar für initialen Tab-Wechsel.");
+                         initialActiveTabButton.classList.add('active');
+                         const targetPane = document.getElementById(stateManager.getActiveTabId());
+                         if(targetPane) targetPane.classList.add('show', 'active');
+                    }
+                }
             }
             
             generalEventHandlers.register();
 
             _renderCurrentTab(true); 
+            initialTabRenderComplete = false; 
+
 
             if (stateManager.isFirstAppStart()) {
                 ui_helpers.showKurzanleitung(); 
                 stateManager.setFirstAppStart(false); 
             } else {
                 setTimeout(() => {
-                    if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
+                    if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function' && !initialTabRenderComplete) {
                         mainAppInterface.refreshCurrentTab(false); 
                     }
-                }, 100);
+                }, 250); 
             }
 
             console.log("Avocado Sign Analyse Anwendung erfolgreich initialisiert und alle Module geladen.");
