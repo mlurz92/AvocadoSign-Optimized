@@ -195,3 +195,5 @@ const t2CriteriaManager = (() => {
         criteriaKeys
     });
 })();
+
+window.t2CriteriaManager = t2CriteriaManager;
