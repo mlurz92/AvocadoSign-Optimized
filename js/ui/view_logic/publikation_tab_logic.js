@@ -50,12 +50,12 @@ const publikationTabLogic = (() => {
             bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
             significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
             references: APP_CONFIG.REFERENCES_FOR_PUBLICATION || {},
-            bruteForceMetricForPublication: state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication
+            bruteForceMetricForPublication: stateManager.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication
         };
 
         const optionsForRenderer = {
             currentKollektiv: currentKollektivId,
-            bruteForceMetric: state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication,
+            bruteForceMetric: stateManager.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication,
             appliedCriteria: appliedCriteriaForLogic,
             appliedLogic: appliedLogicForLogic,
             publicationElements: PUBLICATION_CONFIG.publicationElements 
@@ -98,7 +98,7 @@ const publikationTabLogic = (() => {
 
                     if (alterChartElement) {
                         if (dataForGesamtKollektiv.deskriptiv.alterData && dataForGesamtKollektiv.deskriptiv.alterData.length > 0) {
-                            chartRenderer.renderAgeDistributionChart(dataForGesamtKollektiv.deskriptiv.alterData || [], alterChartConfig.id, { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 45 }, axisLabelFontSize: '10px', tickLabelFontSize: '9px' });
+                            chartRenderer.renderAgeDistributionChart(alterChartConfig.id, dataForGesamtKollektiv.deskriptiv.alterData || [], getKollektivDisplayName('Gesamt'), { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 45 }, axisLabelFontSize: '10px', tickLabelFontSize: '9px' });
                         } else {
                             ui_helpers.updateElementHTML(alterChartConfig.id, `<p class="text-muted small text-center p-3">Keine Daten für Altersverteilung (Gesamtkollektiv).</p>`);
                         }
@@ -172,3 +172,5 @@ const publikationTabLogic = (() => {
     });
 
 })();
+
+window.publikationTabLogic = publikationTabLogic;
