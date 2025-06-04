@@ -334,7 +334,7 @@ const statisticsService = (() => {
         return { uValue: U, pValue: pValue, zValue: z, method: 'Mann-Whitney U Test (Normal-Approximation mit Tie-Korrektur)' };
     }
 
-    function calculateDescriptiveStats(dataArray, key, kollektivId) {
+    function calculateDescriptiveStats(dataArray, key, currentKollektivId) {
         if (!Array.isArray(dataArray) || dataArray.length === 0) {
             return { anzahlPatienten: 0 };
         }
@@ -413,24 +413,24 @@ const statisticsService = (() => {
         return stats;
     }
     
-    function calculateSingleKollektivStats(data, kollektivId, appliedT2Criteria, appliedT2Logic, studyT2Sets, bfResultsForThisKollektiv) {
+    function calculateSingleKollektivStats(data, currentKollektivId, appliedT2Criteria, appliedT2Logic, studyT2Sets, bfResultsForThisKollektiv) {
         let patientData = data;
-        if (kollektivId !== 'Gesamt') {
-            patientData = data.filter(p => p.therapie === kollektivId);
+        if (currentKollektivId !== 'Gesamt') {
+            patientData = data.filter(p => p.therapie === currentKollektivId);
         }
-        if (patientData.length === 0) return { deskriptiv: { anzahlPatienten: 0, kollektivId: kollektivId }, gueteAS: {}, gueteT2_angewandt: {}, gueteT2_literatur: {}, gueteT2_bruteforce: {} };
+        if (patientData.length === 0) return { deskriptiv: { anzahlPatienten: 0, kollektivId: currentKollektivId }, gueteAS: {}, gueteT2_angewandt: {}, gueteT2_literatur: {}, gueteT2_bruteforce: {} };
 
         let results = { deskriptiv: {}, gueteAS: {}, gueteT2_angewandt: {}, gueteT2_literatur: {}, gueteT2_bruteforce: {}};
         results.deskriptiv = {
             anzahlPatienten: patientData.length,
-            kollektivId: kollektivId,
-            ...calculateDescriptiveStats(patientData, 'alter', kollektivId),
-            ...calculateDescriptiveStats(patientData, 'geschlecht', kollektivId),
-            ...calculateDescriptiveStats(patientData, 'therapie', kollektivId),
-            ...calculateDescriptiveStats(patientData, 'nStatus', kollektivId),
-            ...calculateDescriptiveStats(patientData, 'asStatus', kollektivId),
-            ...calculateDescriptiveStats(patientData, 't2Status', kollektivId),
-            ...calculateDescriptiveStats(patientData, 'lkAnzahlen', kollektivId)
+            kollektivId: currentKollektivId,
+            ...calculateDescriptiveStats(patientData, 'alter', currentKollektivId),
+            ...calculateDescriptiveStats(patientData, 'geschlecht', currentKollektivId),
+            ...calculateDescriptiveStats(patientData, 'therapie', currentKollektivId),
+            ...calculateDescriptiveStats(patientData, 'nStatus', currentKollektivId),
+            ...calculateDescriptiveStats(patientData, 'asStatus', currentKollektivId),
+            ...calculateDescriptiveStats(patientData, 't2Status', currentKollektivId),
+            ...calculateDescriptiveStats(patientData, 'lkAnzahlen', currentKollektivId)
         };
 
         const dataForAS = patientData.map(p => ({ ...p, test_as: p.as }));
@@ -445,15 +445,15 @@ const statisticsService = (() => {
 
         results.gueteT2_literatur = {};
         studyT2Sets.forEach(set => {
-            if(set.applicableKollektiv && set.applicableKollektiv !== 'Gesamt' && set.applicableKollektiv !== kollektivId) return;
+            if(set.applicableKollektiv && set.applicableKollektiv !== 'Gesamt' && set.applicableKollektiv !== currentKollektivId) return;
             let dataForEvaluation = patientData;
             if (set.isESGAR2016) {
                 dataForEvaluation = patientData.filter(p => p.therapie === 'direkt OP');
-                if (kollektivId === 'Gesamt' && dataForEvaluation.length === 0) return; 
+                if (currentKollektivId === 'Gesamt' && dataForEvaluation.length === 0) return; 
             }
             if (set.id === 'barbaro_2024_restaging') {
                 dataForEvaluation = patientData.filter(p => p.therapie === 'nRCT');
-                 if (kollektivId === 'Gesamt' && dataForEvaluation.length === 0) return; 
+                 if (currentKollektivId === 'Gesamt' && dataForEvaluation.length === 0) return; 
             }
 
 
@@ -493,8 +493,8 @@ const statisticsService = (() => {
         return results;
     }
 
-    function calculateComparisonStats(statsKollektiv, kollektivId, studyT2Sets, bfResultsForThisKollektiv) {
-        const dataForKollektiv = dataProcessor.getProcessedData(kollektivId);
+    function calculateComparisonStats(statsKollektiv, currentKollektivId, studyT2Sets, bfResultsForThisKollektiv) {
+        const dataForKollektiv = dataProcessor.getProcessedData(currentKollektivId);
         if (!dataForKollektiv || dataForKollektiv.length === 0) return {};
         
         let comparisonResults = {};
@@ -508,15 +508,15 @@ const statisticsService = (() => {
         const scoresAS = dataForKollektiv.map(p => p.as === '+' ? 1 : 0);
         
         studyT2Sets.forEach(set => {
-            if(set.applicableKollektiv && set.applicableKollektiv !== 'Gesamt' && set.applicableKollektiv !== kollektivId) return;
+            if(set.applicableKollektiv && set.applicableKollektiv !== 'Gesamt' && set.applicableKollektiv !== currentKollektivId) return;
             let evaluatedPatientsForComparison = dataForKollektiv;
             if (set.isESGAR2016) {
                 evaluatedPatientsForComparison = dataForKollektiv.filter(p => p.therapie === 'direkt OP');
-                if (kollektivId === 'Gesamt' && evaluatedPatientsForComparison.length === 0) return; 
+                if (currentKollektivId === 'Gesamt' && evaluatedPatientsForComparison.length === 0) return; 
             }
             if (set.id === 'barbaro_2024_restaging') {
                 evaluatedPatientsForComparison = dataForKollektiv.filter(p => p.therapie === 'nRCT');
-                if (kollektivId === 'Gesamt' && evaluatedPatientsForComparison.length === 0) return; 
+                if (currentKollektivId === 'Gesamt' && evaluatedPatientsForComparison.length === 0) return; 
             }
 
             const scoresT2Lit = evaluatedPatientsForComparison.map(p => {
@@ -593,7 +593,6 @@ const statisticsService = (() => {
         const kollektivIds = ['Gesamt', 'direkt OP', 'nRCT'];
         const allStats = {};
         const studySetsForEval = studyT2CriteriaManager.getAllStudyCriteriaSets();
-        // Korrekter Zugriff auf stateManager
         const currentPublikationBfMetric = stateManager.getCurrentPublikationBruteForceMetric();
 
         kollektivIds.forEach(kolId => {
@@ -611,7 +610,7 @@ const statisticsService = (() => {
             const comparisonStats = calculateComparisonStats(allStats[kolId], kolId, studySetsForEval, bfResultsForThisKollektivAndMetric);
             allStats[kolId] = deepMerge(allStats[kolId], comparisonStats);
 
-            const allPatientsInKollektiv = dataProcessor.getProcessedData(kollektivId);
+            const allPatientsInKollektiv = dataProcessor.getProcessedData(kolId);
             const nPlusPatients = allPatientsInKollektiv.filter(p => p.n === '+');
             const nMinusPatients = allPatientsInKollektiv.filter(p => p.n === '-');
 
@@ -626,6 +625,7 @@ const statisticsService = (() => {
                         fn: allPatientsInKollektiv.filter(p => p.geschlecht === 'f' && p.n === '+').length,
                         rn: allPatientsInKollektiv.filter(p => p.geschlecht === 'f' && p.n === '-').length
                     };
+                    matrix.total = matrix.rp + matrix.fp + matrix.fn + matrix.rn;
                     if (matrix.total > 0) {
                         associations[featureKey] = {
                             featureName: UI_TEXTS.statistikTab.filterMerkmalLabelMapping[featureKey] || featureKey,
@@ -640,11 +640,12 @@ const statisticsService = (() => {
                 } else if (values && values.length > 0) {
                     values.forEach(value => {
                         const matrix = {
-                            rp: allPatientsInKollektiv.filter(p => p.lymphknoten_t2.some(lk => lk[featureKey] === value) && p.n === '+').length,
-                            fp: allPatientsInKollektiv.filter(p => p.lymphknoten_t2.some(lk => lk[featureKey] === value) && p.n === '-').length,
-                            fn: allPatientsInKollektiv.filter(p => !p.lymphknoten_t2.some(lk => lk[featureKey] === value) && p.n === '+').length,
-                            rn: allPatientsInKollektiv.filter(p => !p.lymphknoten_t2.some(lk => lk[featureKey] === value) && p.n === '-').length
+                            rp: allPatientsInKollektiv.filter(p => (p.lymphknoten_t2 || []).some(lk => lk[featureKey] === value) && p.n === '+').length,
+                            fp: allPatientsInKollektiv.filter(p => (p.lymphknoten_t2 || []).some(lk => lk[featureKey] === value) && p.n === '-').length,
+                            fn: allPatientsInKollektiv.filter(p => !(p.lymphknoten_t2 || []).some(lk => lk[featureKey] === value) && p.n === '+').length,
+                            rn: allPatientsInKollektiv.filter(p => !(p.lymphknoten_t2 || []).some(lk => lk[featureKey] === value) && p.n === '-').length
                         };
+                        matrix.total = matrix.rp + matrix.fp + matrix.fn + matrix.rn;
                         if (matrix.total > 0) {
                             associations[`${featureKey}_${value}`] = {
                                 featureName: `${UI_TEXTS.statistikTab.filterMerkmalLabelMapping[featureKey] || featureKey}: ${value}`,
@@ -666,6 +667,7 @@ const statisticsService = (() => {
                 fn: allPatientsInKollektiv.filter(p => p.as === '-' && p.n === '+').length,
                 rn: allPatientsInKollektiv.filter(p => p.as === '-' && p.n === '-').length
             };
+            asMatrix.total = asMatrix.rp + asMatrix.fp + asMatrix.fn + asMatrix.rn;
             if (asMatrix.total > 0) {
                 associations.as = {
                     featureName: 'Avocado Sign',
@@ -705,7 +707,7 @@ const statisticsService = (() => {
                 acc: allStats[kolId].gueteAS.acc?.value,
                 auc: allStats[kolId].gueteAS.auc?.value,
                 globalN: allStats[kolId].deskriptiv.anzahlPatienten,
-                specificKollektivName: kollektivId,
+                specificKollektivName: kolId,
                 specificKollektivN: allStats[kolId].deskriptiv.anzahlPatienten
             });
 
@@ -713,29 +715,29 @@ const statisticsService = (() => {
                 id: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID,
                 name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME,
                 sens: allStats[kolId].gueteT2_angewandt.sens?.value,
-                spez: allStats[kollektivId].gueteT2_angewandt.spez?.value,
-                ppv: allStats[kollektivId].gueteT2_angewandt.ppv?.value,
-                npv: allStats[kollektivId].gueteT2_angewandt.npv?.value,
-                acc: allStats[kollektivId].gueteT2_angewandt.acc?.value,
-                auc: allStats[kollektivId].gueteT2_angewandt.auc?.value,
-                globalN: allStats[kollektivId].deskriptiv.anzahlPatienten,
-                specificKollektivName: kollektivId,
-                specificKollektivN: allStats[kollektivId].deskriptiv.anzahlPatienten
+                spez: allStats[kolId].gueteT2_angewandt.spez?.value,
+                ppv: allStats[kolId].gueteT2_angewandt.ppv?.value,
+                npv: allStats[kolId].gueteT2_angewandt.npv?.value,
+                acc: allStats[kolId].gueteT2_angewandt.acc?.value,
+                auc: allStats[kolId].gueteT2_angewandt.auc?.value,
+                globalN: allStats[kolId].deskriptiv.anzahlPatienten,
+                specificKollektivName: kolId,
+                specificKollektivN: allStats[kolId].deskriptiv.anzahlPatienten
             });
 
             allStudySets.forEach(set => {
                 const applicableKollektiv = set.applicableKollektiv || 'Gesamt';
-                let statsForSet = allStats[kollektivId].gueteT2_literatur[set.id];
-                let evaluatedN = allStats[kollektivId].deskriptiv.anzahlPatienten;
+                let statsForSet = allStats[kolId].gueteT2_literatur[set.id];
+                let evaluatedN = allStats[kolId].deskriptiv.anzahlPatienten;
 
                 if (set.isESGAR2016 && applicableKollektiv === 'direkt OP') {
                     evaluatedN = allStats['direkt OP']?.deskriptiv?.anzahlPatienten || 0;
-                    if (kollektivId !== 'direkt OP') {
+                    if (kolId !== 'direkt OP') {
                          statsForSet = allStats['direkt OP']?.gueteT2_literatur[set.id];
                     }
                 } else if (set.id === 'barbaro_2024_restaging' && applicableKollektiv === 'nRCT') {
                     evaluatedN = allStats['nRCT']?.deskriptiv?.anzahlPatienten || 0;
-                    if (kollektivId !== 'nRCT') {
+                    if (kolId !== 'nRCT') {
                         statsForSet = allStats['nRCT']?.gueteT2_literatur[set.id];
                     }
                 }
@@ -750,13 +752,13 @@ const statisticsService = (() => {
                         npv: statsForSet.npv?.value,
                         acc: statsForSet.acc?.value,
                         auc: statsForSet.auc?.value,
-                        globalN: allStats[kollektivId].deskriptiv.anzahlPatienten,
+                        globalN: allStats[kolId].deskriptiv.anzahlPatienten,
                         specificKollektivName: applicableKollektiv,
                         specificKollektivN: evaluatedN
                     });
                 }
             });
-            allStats[kollektivId].kriterienVergleich = criteriaComparisonResults;
+            allStats[kolId].kriterienVergleich = criteriaComparisonResults;
         });
         return allStats;
     }
