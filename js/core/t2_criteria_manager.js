@@ -44,16 +44,26 @@ const t2CriteriaManager = (() => {
     }
 
     function saveCriteria() {
-        if (appliedCriteria) {
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA, appliedCriteria);
-            unsavedChanges = false; 
+        const storageKey = APP_CONFIG.STORAGE_KEYS.appliedT2Criteria;
+        if (typeof storageKey === 'string' && storageKey.length > 0) {
+            if (appliedCriteria) {
+                saveToLocalStorage(storageKey, appliedCriteria);
+                unsavedChanges = false; 
+            }
+        } else {
+            console.warn("T2CriteriaManager: Ungültiger Storage-Schlüssel für appliedT2Criteria. Speichern nicht möglich.");
         }
     }
     
     function saveLogic() {
-         if (appliedLogic) {
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC, appliedLogic);
-            unsavedChanges = false; 
+        const storageKey = APP_CONFIG.STORAGE_KEYS.appliedT2Logic;
+        if (typeof storageKey === 'string' && storageKey.length > 0) {
+            if (appliedLogic) {
+                saveToLocalStorage(storageKey, appliedLogic);
+                unsavedChanges = false; 
+            }
+        } else {
+            console.warn("T2CriteriaManager: Ungültiger Storage-Schlüssel für appliedT2Logic. Speichern nicht möglich.");
         }
     }
     
@@ -68,13 +78,23 @@ const t2CriteriaManager = (() => {
     }
 
     function loadCriteria() {
-        const loaded = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA);
-        return loaded || null;
+        const storageKey = APP_CONFIG.STORAGE_KEYS.appliedT2Criteria;
+        if (typeof storageKey === 'string' && storageKey.length > 0) {
+            return loadFromLocalStorage(storageKey);
+        } else {
+            console.warn("T2CriteriaManager: Ungültiger Storage-Schlüssel für appliedT2Criteria. Laden nicht möglich.");
+            return null;
+        }
     }
     
     function loadLogic() {
-        const loaded = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC);
-        return loaded || null;
+        const storageKey = APP_CONFIG.STORAGE_KEYS.appliedT2Logic;
+        if (typeof storageKey === 'string' && storageKey.length > 0) {
+            return loadFromLocalStorage(storageKey);
+        } else {
+            console.warn("T2CriteriaManager: Ungültiger Storage-Schlüssel für appliedT2Logic. Laden nicht möglich.");
+            return null;
+        }
     }
     
     function resetToDefaults() {
