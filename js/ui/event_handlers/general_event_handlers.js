@@ -2,7 +2,7 @@ const generalEventHandlers = (() => {
 
     function _handleKollektivButtonClick(event) {
         const newKollektiv = event.currentTarget.dataset.kollektiv;
-        if (mainAppInterface && typeof mainAppInterface.handleKollektivChange === 'function') {
+        if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.handleKollektivChange === 'function') {
             mainAppInterface.handleKollektivChange(newKollektiv);
         } else {
             console.error("mainAppInterface.handleKollektivChange ist nicht verfügbar.");
@@ -21,8 +21,8 @@ const generalEventHandlers = (() => {
         const newScheme = event.target.value;
         if (typeof stateManager !== 'undefined' && typeof stateManager.setChartColorScheme === 'function') {
             stateManager.setChartColorScheme(newScheme);
-            if (mainAppInterface && typeof mainAppInterface.refreshCurrentTab === 'function') {
-                mainAppInterface.refreshCurrentTab(); // Um Charts neu zu rendern
+            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
+                mainAppInterface.refreshCurrentTab(); 
             }
         }
     }
@@ -31,17 +31,17 @@ const generalEventHandlers = (() => {
         if (confirm(UI_TEXTS.general.confirmResetState || "Möchten Sie wirklich alle Einstellungen (Kriterien, Sortierungen, Auswahlen) auf die Standardwerte zurücksetzen? Gespeicherte Brute-Force-Ergebnisse bleiben erhalten.")) {
             if (typeof stateManager !== 'undefined' && typeof stateManager.resetStateToDefaults === 'function') {
                 stateManager.resetStateToDefaults();
-                 if (mainAppInterface && typeof mainAppInterface.refreshAllTabs === 'function') {
+                 if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshAllTabs === 'function') {
                     mainAppInterface.refreshAllTabs(true); 
                 }
                  if (typeof t2CriteriaManager !== 'undefined' && typeof t2CriteriaManager.resetToDefaults === 'function' && typeof t2CriteriaManager.saveAll === 'function' ) {
-                    t2CriteriaManager.resetToDefaults(); // Reset criteria in manager
-                    t2CriteriaManager.saveAll(); // Save defaults and update state
+                    t2CriteriaManager.resetToDefaults(); 
+                    t2CriteriaManager.saveAll(); 
                 }
 
-                if (mainAppInterface && typeof mainAppInterface.updateAllUIComponents === 'function'){
+                if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.updateAllUIComponents === 'function'){
                     mainAppInterface.updateAllUIComponents();
-                } else if (mainAppInterface && typeof mainAppInterface.refreshCurrentTab === 'function') {
+                } else if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
                      mainAppInterface.refreshCurrentTab();
                 }
                 
@@ -111,3 +111,5 @@ const generalEventHandlers = (() => {
         register
     });
 })();
+
+window.generalEventHandlers = generalEventHandlers;
