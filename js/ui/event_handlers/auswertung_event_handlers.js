@@ -2,7 +2,6 @@ const auswertungEventHandlers = (() => {
     let bruteForceManagerInstance = null;
     let currentCriteria = {};
     let currentLogic = APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC;
-    let tableInstanceAuswertung = null;
 
 
     function _updateLocalCriteriaStateFromUI() {
@@ -19,7 +18,7 @@ const auswertungEventHandlers = (() => {
                     const activeButton = document.querySelector(`.criteria-options-container button.t2-criteria-button[data-criterion="${key}"].active`);
                     newCriteria[key].value = activeButton?.dataset.value || (getDefaultT2Criteria()[key] ? getDefaultT2Criteria()[key].value : null);
                 }
-            } else { // Ensure inactive criteria have default/null values if needed for consistency
+            } else { 
                  if (key === 'size') {
                     newCriteria[key].threshold = getDefaultT2Criteria().size.threshold;
                     newCriteria[key].condition = '>=';
@@ -33,7 +32,7 @@ const auswertungEventHandlers = (() => {
 
     function _handleCriteriaInputChange() {
         _updateLocalCriteriaStateFromUI();
-        if (mainAppInterface && typeof mainAppInterface.handleT2CriteriaChange === 'function') {
+        if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.handleT2CriteriaChange === 'function') {
             mainAppInterface.handleT2CriteriaChange(currentCriteria, currentLogic);
         }
          ui_helpers.markCriteriaSavedIndicator(true); 
@@ -71,7 +70,29 @@ const auswertungEventHandlers = (() => {
 
         const debouncedCriteriaChange = debounce(_handleCriteriaInputChange, APP_CONFIG.PERFORMANCE_SETTINGS.DEBOUNCE_DELAY_MS);
 
-        auswertungTabPane.addEventListener('change', (event) => {
+        auswertungTabPane.removeEventListener('change', _handlePaneChange);
+        auswertungTabPane.addEventListener('change', _handlePaneChange);
+        
+        auswertungTabPane.removeEventListener('click', _handlePaneClick);
+        auswertungTabPane.addEventListener('click', _handlePaneClick);
+        
+        const tableHeader = auswertungTabPane.querySelector('#auswertung-table-header');
+        if (tableHeader) {
+            tableHeader.removeEventListener('click', _handleTableHeaderClick);
+            tableHeader.addEventListener('click', _handleTableHeaderClick);
+        } else {
+            console.warn("AuswertungEventHandlers: Tabellenkopf 'auswertung-table-header' nicht gefunden.");
+        }
+        
+        const tableBody = auswertungTabPane.querySelector('#auswertung-table-body');
+        if(tableBody) {
+            tableBody.removeEventListener('click', _handleTableBodyClick);
+            tableBody.addEventListener('click', _handleTableBodyClick);
+        } else {
+            console.warn("AuswertungEventHandlers: Tabellenkörper 'auswertung-table-body' nicht gefunden.");
+        }
+
+        function _handlePaneChange(event) {
             const target = event.target;
             if (target.matches('.criteria-checkbox') || target.id === 't2-logic-switch') {
                 _updateLocalCriteriaStateFromUI(); 
@@ -94,9 +115,9 @@ const auswertungEventHandlers = (() => {
             } else if (target.id === 'brute-force-metric') {
                 if(typeof stateManager !== 'undefined') stateManager.setBruteForceMetric(target.value);
             }
-        });
-        
-        auswertungTabPane.addEventListener('click', (event) => {
+        }
+
+        function _handlePaneClick(event) {
             const target = event.target.closest('button');
             if (!target) return;
 
@@ -114,7 +135,7 @@ const auswertungEventHandlers = (() => {
                 t2CriteriaManager.setCriteria(currentCriteria, currentLogic);
                 t2CriteriaManager.saveAll();
                 ui_helpers.markCriteriaSavedIndicator(false);
-                if (mainAppInterface && typeof mainAppInterface.refreshAllTabs === 'function') {
+                if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshAllTabs === 'function') {
                     mainAppInterface.refreshAllTabs(true);
                 }
                 ui_helpers.showToast("T2-Kriterien angewendet und gespeichert.", "success");
@@ -136,7 +157,7 @@ const auswertungEventHandlers = (() => {
                     currentLogic = results.bestResult.logic;
                     t2CriteriaManager.setCriteria(currentCriteria, currentLogic);
                     ui_helpers.updateT2CriteriaControlsUI(currentCriteria, currentLogic);
-                    _handleCriteriaInputChange(); // Mark as unsaved until "Apply & Save" on main criteria card is hit
+                    _handleCriteriaInputChange(); 
                     ui_helpers.showToast("Beste Brute-Force Kriterien in Definition geladen. Bitte 'Anwenden & Speichern'.", "info");
                     if(bootstrap.Modal.getInstance(document.getElementById('brute-force-modal'))) {
                          bootstrap.Modal.getInstance(document.getElementById('brute-force-modal')).hide();
@@ -145,42 +166,31 @@ const auswertungEventHandlers = (() => {
                     ui_helpers.showToast("Keine Brute-Force Ergebnisse zum Anwenden vorhanden.", "warning");
                 }
             }
-        });
-        
-        const tableHeader = document.getElementById('auswertung-table-header');
-        if (tableHeader) {
-            tableHeader.addEventListener('click', (event) => {
-                const headerCell = event.target.closest('th[data-sort-key]');
-                if (headerCell) {
-                    const sortKey = headerCell.dataset.sortKey;
-                    let subKey = null;
-                    if (event.target.closest('.sortable-sub-header')) {
-                        subKey = event.target.closest('.sortable-sub-header').dataset.subKey;
-                    }
-                     if (typeof auswertungTabLogic !== 'undefined' && typeof auswertungTabLogic.handleSortChange === 'function') {
-                         auswertungTabLogic.handleSortChange(sortKey, subKey);
-                    } else {
-                        console.error("Sortierfunktion in auswertungTabLogic nicht gefunden.");
-                    }
+        }
+
+        function _handleTableHeaderClick(event) {
+            const headerCell = event.target.closest('th[data-sort-key]');
+            if (headerCell) {
+                const sortKey = headerCell.dataset.sortKey;
+                let subKey = null;
+                if (event.target.closest('.sortable-sub-header')) {
+                    subKey = event.target.closest('.sortable-sub-header').dataset.subKey;
                 }
-            });
-        } else {
-            console.warn("AuswertungEventHandlers: Tabellenkopf 'auswertung-table-header' nicht gefunden.");
+                 if (typeof auswertungTabLogic !== 'undefined' && typeof auswertungTabLogic.handleSortChange === 'function') {
+                     auswertungTabLogic.handleSortChange(sortKey, subKey);
+                } else {
+                    console.error("Sortierfunktion in auswertungTabLogic nicht gefunden.");
+                }
+            }
         }
         
-        const tableBody = document.getElementById('auswertung-table-body');
-        if(tableBody) {
-            ui_helpers.attachRowCollapseListeners(tableBody);
-            tableBody.addEventListener('click', (event) => {
-                 const row = event.target.closest('tr[data-patient-id]');
-                 if (row && row.dataset.patientId) {
-                     if (typeof auswertungTabLogic !== 'undefined' && typeof auswertungTabLogic.handleRowClick === 'function') {
-                         auswertungTabLogic.handleRowClick(row.dataset.patientId, Array.from(row.parentNode.children).indexOf(row), event);
-                     }
-                 }
-            });
-        } else {
-            console.warn("AuswertungEventHandlers: Tabellenkörper 'auswertung-table-body' nicht gefunden.");
+        function _handleTableBodyClick(event) {
+            const row = event.target.closest('tr[data-patient-id]');
+            if (row && row.dataset.patientId) {
+                if (typeof auswertungTabLogic !== 'undefined' && typeof auswertungTabLogic.handleRowClick === 'function') {
+                    auswertungTabLogic.handleRowClick(row.dataset.patientId, Array.from(row.parentNode.children).indexOf(row), event);
+                }
+            }
         }
     }
 
@@ -188,3 +198,5 @@ const auswertungEventHandlers = (() => {
         register
     });
 })();
+
+window.auswertungEventHandlers = auswertungEventHandlers;
