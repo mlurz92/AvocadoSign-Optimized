@@ -124,12 +124,22 @@ const auswertungEventHandlers = (() => {
             if (target.matches('.t2-criteria-button')) {
                 _handleT2CriteriaButtonClick({currentTarget: target});
             } else if (target.id === 'btn-reset-criteria') {
-                if (confirm(UI_TEXTS.general.confirmResetCriteria || "Möchten Sie die T2-Kriterien auf die Standardwerte zurücksetzen? Ungespeicherte Änderungen gehen verloren.")) {
-                    t2CriteriaManager.resetToDefaults();
-                    _updateLocalCriteriaStateFromUI(); 
-                    ui_helpers.updateT2CriteriaControlsUI(currentCriteria, currentLogic);
-                    _handleCriteriaInputChange(); 
-                    ui_helpers.showToast("T2-Kriterien auf Standard zurückgesetzt.", "info");
+                if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showConfirmModal === 'function') {
+                    ui_helpers.showConfirmModal(
+                        UI_TEXTS.general.confirmResetCriteria || "Möchten Sie die T2-Kriterien auf die Standardwerte zurücksetzen? Ungespeicherte Änderungen gehen verloren.",
+                        () => { // Callback für Bestätigung
+                            t2CriteriaManager.resetToDefaults();
+                            _updateLocalCriteriaStateFromUI(); 
+                            ui_helpers.updateT2CriteriaControlsUI(currentCriteria, currentLogic);
+                            _handleCriteriaInputChange(); 
+                            ui_helpers.showToast("T2-Kriterien auf Standard zurückgesetzt.", "info");
+                        },
+                        UI_TEXTS.general.reset || "Zurücksetzen", // Bestätigungsbutton Text
+                        UI_TEXTS.general.cancel || "Abbrechen" // Abbruchbutton Text
+                    );
+                } else {
+                    console.error("ui_helpers.showConfirmModal ist nicht verfügbar. Kann T2-Kriterien nicht zurücksetzen.");
+                    ui_helpers.showToast("Funktion zum Zurücksetzen der T2-Kriterien nicht verfügbar.", "danger");
                 }
             } else if (target.id === 'btn-apply-criteria') {
                 t2CriteriaManager.setCriteria(currentCriteria, currentLogic);
