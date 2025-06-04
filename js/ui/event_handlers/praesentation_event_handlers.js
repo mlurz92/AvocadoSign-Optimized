@@ -4,11 +4,8 @@ const praesentationEventHandlers = (() => {
         const newView = event.target.value;
         if (typeof stateManager !== 'undefined' && typeof stateManager.setCurrentPresentationView === 'function') {
             stateManager.setCurrentPresentationView(newView);
-            // Das UI-Update (Ein-/Ausblenden des Study-Selectors und Neurendern des Inhalts)
-            // wird durch das 'stateChanged'-Event in main.js ausgelöst, welches updateAllUIComponents/refreshCurrentTab aufruft.
-            // Alternativ könnte man es hier direkt auslösen, falls mainAppInterface verfügbar ist.
-            if (mainAppInterface && typeof mainAppInterface.refreshCurrentTab === 'function') {
-                 mainAppInterface.refreshCurrentTab(true); // true to force stat recalculation as view change implies different data needs
+            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
+                 mainAppInterface.refreshCurrentTab(true); 
             }
         } else {
             console.error("stateManager.setCurrentPresentationView ist nicht verfügbar.");
@@ -19,8 +16,8 @@ const praesentationEventHandlers = (() => {
         const newStudyId = event.target.value;
         if (typeof stateManager !== 'undefined' && typeof stateManager.setCurrentPresentationStudyId === 'function') {
             stateManager.setCurrentPresentationStudyId(newStudyId);
-             if (mainAppInterface && typeof mainAppInterface.refreshCurrentTab === 'function') {
-                 mainAppInterface.refreshCurrentTab(true); // true to force stat recalculation
+             if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
+                 mainAppInterface.refreshCurrentTab(true); 
             }
         } else {
             console.error("stateManager.setCurrentPresentationStudyId ist nicht verfügbar.");
@@ -42,7 +39,7 @@ const praesentationEventHandlers = (() => {
                 currentSets = currentSets.filter(id => id !== setId);
             }
             stateManager.setCriteriaComparisonSets(currentSets);
-             if (mainAppInterface && typeof mainAppInterface.refreshCurrentTab === 'function') {
+             if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
                  mainAppInterface.refreshCurrentTab(true);
             }
         } else {
@@ -58,7 +55,6 @@ const praesentationEventHandlers = (() => {
             return;
         }
 
-        // Event Listener für Radio-Buttons der Ansichtsauswahl
         const viewRadios = praesentationTabPane.querySelectorAll('input[name="praesentationAnsicht"]');
         if (viewRadios && viewRadios.length > 0) {
             viewRadios.forEach(radio => {
@@ -69,7 +65,6 @@ const praesentationEventHandlers = (() => {
             console.warn("PraesentationEventHandlers: Ansicht-Radio-Buttons ('praesentationAnsicht') nicht gefunden.");
         }
 
-        // Event Listener für Dropdown der Studienauswahl
         const studySelect = praesentationTabPane.querySelector('#praes-study-select');
         if (studySelect) {
             studySelect.removeEventListener('change', _handleStudySelectChange);
@@ -78,7 +73,6 @@ const praesentationEventHandlers = (() => {
             console.warn("PraesentationEventHandlers: Studien-Select ('praes-study-select') nicht gefunden.");
         }
         
-        // Event Listener für Checkboxen der Kriterienvergleichs-Sets (falls implementiert)
         const criteriaComparisonCheckboxes = praesentationTabPane.querySelectorAll('.criteria-comparison-set-checkbox');
         if (criteriaComparisonCheckboxes && criteriaComparisonCheckboxes.length > 0) {
             criteriaComparisonCheckboxes.forEach(checkbox => {
@@ -86,8 +80,60 @@ const praesentationEventHandlers = (() => {
                 checkbox.addEventListener('change', _handleCriteriaComparisonSetChange);
             });
         } else {
-            // Optional, da diese UI-Elemente noch nicht explizit definiert wurden
-            // console.warn("PraesentationEventHandlers: Kriterienvergleich-Checkboxes ('.criteria-comparison-set-checkbox') nicht gefunden.");
+            
+        }
+
+        const contentArea = praesentationTabPane.querySelector('#praesentation-content-area');
+        if (contentArea) {
+            contentArea.removeEventListener('click', _handleDownloadDelegated);
+            contentArea.addEventListener('click', _handleDownloadDelegated);
+        } else {
+            console.warn("PraesentationEventHandlers: Inhaltsbereich ('#praesentation-content-area') für delegierte Download-Handler nicht gefunden.");
+        }
+    }
+
+    function _handleDownloadDelegated(event) {
+        const chartDownloadBtn = event.target.closest('.chart-download-btn');
+        const tableDownloadPngBtn = event.target.closest('.table-download-png-btn');
+        const downloadPerformanceAsPurCsv = event.target.closest('#download-performance-as-pur-csv');
+        const downloadPerformanceAsPurMd = event.target.closest('#download-performance-as-pur-md');
+        const downloadPerformanceAsVsT2Csv = event.target.closest('#download-performance-as-vs-t2-csv');
+        const downloadCompTableAsVsT2Md = event.target.closest('#download-comp-table-as-vs-t2-md');
+        const downloadTestsAsVsT2Md = event.target.closest('#download-tests-as-vs-t2-md');
+
+        if (chartDownloadBtn) {
+            const chartId = chartDownloadBtn.dataset.chartId;
+            const format = chartDownloadBtn.dataset.format;
+            const chartName = chartDownloadBtn.dataset.chartName;
+            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.handleExportRequest === 'function') {
+                mainAppInterface.handleExportRequest(format === 'png' ? 'chartSinglePNG' : 'chartSingleSVG', { chartId: chartId, chartName: chartName, format: format });
+            }
+        } else if (tableDownloadPngBtn) {
+            const tableId = tableDownloadPngBtn.dataset.tableId;
+            const tableName = tableDownloadPngBtn.dataset.tableName;
+            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.handleExportRequest === 'function') {
+                mainAppInterface.handleExportRequest('tableSinglePNG', { tableId: tableId, tableName: tableName, format: 'png' });
+            }
+        } else if (downloadPerformanceAsPurCsv) {
+            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.handleExportRequest === 'function') {
+                mainAppInterface.handleExportRequest('praesentationPerformanceASPurCSV');
+            }
+        } else if (downloadPerformanceAsPurMd) {
+            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.handleExportRequest === 'function') {
+                mainAppInterface.handleExportRequest('praesentationPerformanceASPurMD');
+            }
+        } else if (downloadPerformanceAsVsT2Csv) {
+            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.handleExportRequest === 'function') {
+                mainAppInterface.handleExportRequest('praesentationPerformanceASvsT2CSV');
+            }
+        } else if (downloadCompTableAsVsT2Md) {
+            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.handleExportRequest === 'function') {
+                mainAppInterface.handleExportRequest('praesentationCompTableASvsT2MD');
+            }
+        } else if (downloadTestsAsVsT2Md) {
+            if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.handleExportRequest === 'function') {
+                mainAppInterface.handleExportRequest('praesentationTestsASvsT2MD');
+            }
         }
     }
 
@@ -95,3 +141,5 @@ const praesentationEventHandlers = (() => {
         register
     });
 })();
+
+window.praesentationEventHandlers = praesentationEventHandlers;
