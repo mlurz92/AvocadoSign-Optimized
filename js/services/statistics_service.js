@@ -78,7 +78,7 @@ const statisticsService = (() => {
 
     function calculateWilsonScoreInterval(successes, trials, confidence = 0.95) {
         if (trials === 0) return { lower: NaN, upper: NaN };
-        const z = 1.96; // Z-score for 95% confidence
+        const z = 1.96; 
         const p_hat = successes / trials;
         const term1 = p_hat + (z * z) / (2 * trials);
         const term2 = z * Math.sqrt((p_hat * (1 - p_hat) / trials) + (z * z) / (4 * trials * trials));
@@ -137,7 +137,7 @@ const statisticsService = (() => {
 
     function calculateOddsRatio(matrix) {
         const { rp, fp, fn, rn } = matrix;
-        if (fp === 0 || fn === 0 || rn === 0 || rp === 0) { // Ensure no division by zero for OR and SE
+        if (fp === 0 || fn === 0 || rn === 0 || rp === 0) { 
             return { value: NaN, ci: { lower: NaN, upper: NaN }, pValue: NaN, method: 'OR (N/A)' };
         }
         const or = (rp * rn) / (fp * fn);
@@ -147,23 +147,20 @@ const statisticsService = (() => {
         const ciLower = Math.exp(logOr - z * seLogOr);
         const upper = Math.exp(logOr + z * seLogOr);
         const zStatP = logOr / seLogOr;
-        const pValue = 2 * (1 - মায়েরCDF(Math.abs(zStatP))); // Assuming standard normal CDF
+        const pValue = 2 * (1 - normalCDF(Math.abs(zStatP))); 
 
         return { value: or, ci: { lower: ciLower, upper: upper }, pValue: pValue, method: 'Logit (Woolf)', matrix_components: { ...matrix, total: rp+fp+fn+rn } };
     }
 
     function calculateRiskDifference(matrix) {
         const { rp, fp, fn, rn } = matrix;
-        const n1 = rp + fp; // Exposed
-        const n0 = fn + rn; // Unexposed
+        const n1 = rp + fp; 
+        const n0 = fn + rn; 
         if (n1 === 0 || n0 === 0) {
             return { value: NaN, ci: { lower: NaN, upper: NaN }, method: 'RD (N/A)' };
         }
-        const p1 = rp / n1; // Risk in exposed
-        const p0 = fn / n0; // Risk in unexposed (should be for the outcome, so fn/(fn+rn) vs rp/(rp+fp) if rows are outcome)
-        // Assuming rows are test results (exposed to test+) and columns are true disease (outcome)
-        // Risk of disease if test positive = rp / (rp+fp)
-        // Risk of disease if test negative = fn / (fn+rn)
+        const p1 = rp / n1; 
+        const p0 = fn / n0; 
         const risk_test_pos = (rp + fp) > 0 ? rp / (rp + fp) : 0;
         const risk_test_neg = (fn + rn) > 0 ? fn / (fn + rn) : 0;
         const rd = risk_test_pos - risk_test_neg;
@@ -184,10 +181,10 @@ const statisticsService = (() => {
     }
 
     function performMcNemarTest(matrix) {
-        const { fp, fn } = matrix; // Discordant pairs
+        const { fp, fn } = matrix; 
         if ((fp + fn) === 0) return { pValue: 1.0, chiSquared: 0, df: 1, testStat: 'N/A', method: 'McNemar (keine diskordanten Paare)'};
         
-        const chiSquared = Math.pow(Math.abs(fp - fn) -1 , 2) / (fp + fn); // With continuity correction
+        const chiSquared = Math.pow(Math.abs(fp - fn) -1 , 2) / (fp + fn); 
         const pValue = 1 - chiSquareCDF(chiSquared, 1);
         return { pValue: pValue, chiSquared: chiSquared, df: 1, testStat: `χ²=${formatNumber(chiSquared,2,'N/A',true)}`, method: 'McNemar Test (mit Kontinuitätskorrektur)'};
     }
@@ -239,36 +236,32 @@ const statisticsService = (() => {
             return V_values;
         };
         
-        const V10_1 = V(trueLabels, scores1, 1); // V_hat_10(X_i)
-        const V01_1 = V(trueLabels, scores1, 0); // V_hat_01(Y_j)
-        const V10_2 = V(trueLabels, scores2, 1); // V_hat_10(X_i) for scores2
-        const V01_2 = V(trueLabels, scores2, 0); // V_hat_01(Y_j) for scores2
+        const V10_1 = V(trueLabels, scores1, 1); 
+        const V01_1 = V(trueLabels, scores1, 0); 
+        const V10_2 = V(trueLabels, scores2, 1); 
+        const V01_2 = V(trueLabels, scores2, 0); 
 
         const S10 = V10_1.map((v,i) => v - V10_2[i]).reduce((s,v,i) => s + Math.pow(v - (auc1 - auc2),2) * (trueLabels[i]===1?1:0), 0) / (n_pos -1);
         const S01 = V01_1.map((v,i) => v - V01_2[i]).reduce((s,v,i) => s + Math.pow(v - (auc1 - auc2),2) * (trueLabels[i]===0?1:0), 0) / (n_neg -1);
 
         const varDiff = S10/n_pos + S01/n_neg;
-        if (varDiff <= 0) { // Avoid division by zero or sqrt of negative
+        if (varDiff <= 0) { 
             return { pValue: NaN, diffAUC: diffAUC, auc1: auc1, auc2: auc2, zStat: NaN, method: 'DeLong (Varianz nicht positiv)'};
         }
 
         const zStat = diffAUC / Math.sqrt(varDiff);
-        const pValue = 2 * (1 - মায়েরCDF(Math.abs(zStat)));
+        const pValue = 2 * (1 - normalCDF(Math.abs(zStat)));
 
         return { pValue: pValue, diffAUC: diffAUC, auc1: auc1, auc2: auc2, zStat: zStat, method: 'DeLong Test'};
     }
     
     function chiSquareCDF(x, df) {
         if (x < 0 || df < 1) return 0;
-        // Simple approximation using incomplete gamma function (lower regularized) P(X,a)
-        // This is a placeholder. For accurate results, a proper math library for gamma functions would be needed.
-        // For df=1 (McNemar), a normal approximation is better if chiSquared is large, or exact binomial for small counts.
-        // Using a very rough approximation based on normal for df=1 for now.
-        if (df === 1) return 2 * (1 - মায়েরCDF(Math.sqrt(x))) -1; // Not quite right, as chiSq(1) = Z^2
-        return 1 - Math.exp(-x/2); // Very rough for higher df, only for illustration
+        if (df === 1) return normalCDF(Math.sqrt(x)); 
+        return 1 - Math.exp(-x/2); 
     }
     
-    function মায়েরCDF(z) { // Standard Normal CDF Approximation (Hastings)
+    function normalCDF(z) { 
         const t = 1 / (1 + 0.2316419 * Math.abs(z));
         const d = 0.3989423 * Math.exp(-z * z / 2);
         const prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
@@ -279,16 +272,8 @@ const statisticsService = (() => {
     function performFisherExactTest(matrix) {
         const { rp, fp, fn, rn } = matrix;
         const n = rp + fp + fn + rn;
-        // Calculation is complex, often uses hypergeometric distribution.
-        // Placeholder for actual implementation, using a simplified approach or assuming an external library if available.
-        // For now, returns NaN or a fixed value.
-        // A proper implementation would sum probabilities from the hypergeometric distribution.
-        // This is a simplified version for small numbers (like p-value from online calculator for rp,fp,fn,rn)
-        // Example: for a specific 2x2, the p-value might be calculated.
-        // This is NOT a general Fisher's Exact Test implementation.
         if (n === 0) return { pValue: NaN, method: 'Fisher (N=0)' };
-        // For a more accurate version, one would need a factorial function and to sum tail probabilities.
-        // Using a very rough chi-square approximation if Fisher threshold is not met by McNemar
+        
         const chiSquared = Math.pow((rp*rn - fp*fn), 2) * n / ((rp+fp)*(fn+rn)*(rp+fn)*(fp+rn));
         const pApprox = 1 - chiSquareCDF(chiSquared, 1);
 
@@ -323,7 +308,7 @@ const statisticsService = (() => {
         const U = Math.min(U1, U2);
 
         const meanU = (n1 * n2) / 2;
-        const sigmaU = Math.sqrt((n1 * n2 * (n1 + n2 + 1)) / 12); // Needs correction for ties
+        let sigmaU = Math.sqrt((n1 * n2 * (n1 + n2 + 1)) / 12); 
         
         let tieCorrection = 0;
         let i = 0;
@@ -334,15 +319,17 @@ const statisticsService = (() => {
             }
             const tieCount = j - i;
             if (tieCount > 1) {
-                tieCorrection += (Math.pow(tieCount, 3) - tieCount) / (12 * (n1 + n2) * (n1 + n2 - 1));
+                tieCorrection += (Math.pow(tieCount, 3) - tieCount);
             }
             i = j;
         }
-        const correctedSigmaU = Math.sqrt(((n1 * n2) / (12 * (n1 + n2) * (n1 + n2 -1))) * ((Math.pow(n1+n2,3))-(n1+n2) - tieCorrection));
+        if (tieCorrection > 0) {
+            sigmaU = Math.sqrt((n1 * n2 / 12) * (((n1 + n2 + 1) - (tieCorrection / ((n1 + n2) * (n1 + n2 - 1))))));
+        }
 
 
-        const z = (U - meanU) / (correctedSigmaU || sigmaU); // Use corrected if available
-        const pValue = 2 * (1 - মায়েরCDF(Math.abs(z)));
+        const z = (U - meanU) / sigmaU; 
+        const pValue = 2 * (1 - normalCDF(Math.abs(z)));
 
         return { uValue: U, pValue: pValue, zValue: z, method: 'Mann-Whitney U Test (Normal-Approximation mit Tie-Korrektur)' };
     }
@@ -352,7 +339,7 @@ const statisticsService = (() => {
             return { anzahlPatienten: 0 };
         }
         const values = dataArray.map(p => p[key]).filter(v => v !== null && v !== undefined && !isNaN(parseFloat(v)));
-        if (values.length === 0 && key !== 'geschlecht' && key !== 'nStatus') { // For specific categorical, allow N=0
+        if (values.length === 0 && key !== 'geschlecht' && key !== 'nStatus' && key !== 'therapie') { 
             return {
                 anzahlPatienten: dataArray.length,
                 [key]: { n: 0, mean: NaN, median: NaN, stdDev: NaN, min: NaN, max: NaN, range: NaN }
@@ -367,12 +354,12 @@ const statisticsService = (() => {
             stats[key].n = values.length;
             stats[key].mean = values.length > 0 ? sum / values.length : NaN;
             stats[key].median = values.length > 0 ? (values.length % 2 === 1 ? values[Math.floor(values.length / 2)] : (values[values.length / 2 - 1] + values[values.length / 2]) / 2) : NaN;
-            const variance = values.length > 0 ? values.reduce((acc, val) => acc + Math.pow(val - stats[key].mean, 2), 0) / (values.length -1) : NaN;
-            stats[key].stdDev = Math.sqrt(variance);
+            const variance = values.length > 1 ? values.reduce((acc, val) => acc + Math.pow(val - stats[key].mean, 2), 0) / (values.length -1) : NaN;
+            stats[key].sd = Math.sqrt(variance);
             stats[key].min = values.length > 0 ? values[0] : NaN;
             stats[key].max = values.length > 0 ? values[values.length - 1] : NaN;
             stats[key].range = stats[key].max - stats[key].min;
-            stats.alterData = values; // For histogram
+            stats.alterData = values; 
         } else if (key === 'geschlecht') {
             stats[key].m = dataArray.filter(p => p.geschlecht === 'm').length;
             stats[key].f = dataArray.filter(p => p.geschlecht === 'f').length;
@@ -380,6 +367,48 @@ const statisticsService = (() => {
         } else if (key === 'nStatus') {
             stats[key].plus = dataArray.filter(p => p.n === '+').length;
             stats[key].minus = dataArray.filter(p => p.n === '-').length;
+        } else if (key === 'asStatus') {
+            stats[key].plus = dataArray.filter(p => p.as === '+').length;
+            stats[key].minus = dataArray.filter(p => p.as === '-').length;
+        } else if (key === 't2Status') {
+            stats[key].plus = dataArray.filter(p => p.t2 === '+').length;
+            stats[key].minus = dataArray.filter(p => p.t2 === '-').length;
+        } else if (key === 'therapie') {
+            stats[key]['direkt OP'] = dataArray.filter(p => p.therapie === 'direkt OP').length;
+            stats[key]['nRCT'] = dataArray.filter(p => p.therapie === 'nRCT').length;
+        } else if (key.startsWith('lkAnzahlen')) {
+            const lkCounts = {
+                n: { total: [], plus: [] },
+                as: { total: [], plus: [] },
+                t2: { total: [], plus: [] }
+            };
+
+            dataArray.forEach(p => {
+                if (p.anzahl_patho_lk !== null) lkCounts.n.total.push(p.anzahl_patho_lk);
+                if (p.anzahl_patho_n_plus_lk !== null && p.n === '+') lkCounts.n.plus.push(p.anzahl_patho_n_plus_lk);
+                
+                if (p.anzahl_as_lk !== null) lkCounts.as.total.push(p.anzahl_as_lk);
+                if (p.anzahl_as_plus_lk !== null && p.as === '+') lkCounts.as.plus.push(p.anzahl_as_plus_lk);
+
+                if (p.anzahl_t2_lk !== null) lkCounts.t2.total.push(p.anzahl_t2_lk);
+                if (p.anzahl_t2_plus_lk !== null && p.t2 === '+') lkCounts.t2.plus.push(p.anzahl_t2_plus_lk);
+            });
+
+            const calculateArrayStats = (arr) => {
+                if (arr.length === 0) return { median: NaN, min: NaN, max: NaN, mean: NaN, sd: NaN };
+                arr.sort((a, b) => a - b);
+                const sum = arr.reduce((a, b) => a + b, 0);
+                const mean = sum / arr.length;
+                const median = arr.length % 2 === 1 ? arr[Math.floor(arr.length / 2)] : (arr[arr.length / 2 - 1] + arr[arr.length / 2]) / 2;
+                const variance = arr.length > 1 ? arr.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / (arr.length - 1) : NaN;
+                const sd = Math.sqrt(variance);
+                return { median, min: arr[0], max: arr[arr.length - 1], mean, sd };
+            };
+            stats.lkAnzahlen = {
+                n: { total: calculateArrayStats(lkCounts.n.total), plus: calculateArrayStats(lkCounts.n.plus) },
+                as: { total: calculateArrayStats(lkCounts.as.total), plus: calculateArrayStats(lkCounts.as.plus) },
+                t2: { total: calculateArrayStats(lkCounts.t2.total), plus: calculateArrayStats(lkCounts.t2.plus) }
+            };
         }
         return stats;
     }
@@ -393,31 +422,58 @@ const statisticsService = (() => {
 
         let results = { deskriptiv: {}, gueteAS: {}, gueteT2_angewandt: {}, gueteT2_literatur: {}, gueteT2_bruteforce: {}};
         results.deskriptiv = {
+            anzahlPatienten: patientData.length,
+            kollektivId: kollektivId,
             ...calculateDescriptiveStats(patientData, 'alter', kollektivId),
             ...calculateDescriptiveStats(patientData, 'geschlecht', kollektivId),
+            ...calculateDescriptiveStats(patientData, 'therapie', kollektivId),
             ...calculateDescriptiveStats(patientData, 'nStatus', kollektivId),
-            kollektivId: kollektivId,
-            anzahlPatienten: patientData.length
+            ...calculateDescriptiveStats(patientData, 'asStatus', kollektivId),
+            ...calculateDescriptiveStats(patientData, 't2Status', kollektivId),
+            ...calculateDescriptiveStats(patientData, 'lkAnzahlen', kollektivId)
         };
 
         const dataForAS = patientData.map(p => ({ ...p, test_as: p.as }));
         const matrixAS = calculateConfusionMatrix(dataForAS, 'n', 'test_as');
         results.gueteAS = calculateDiagnosticMetricsFromMatrix(matrixAS);
 
-        const dataWithT2Applied = t2CriteriaManager.evaluateCriteriaForAllPatients(patientData, appliedT2Criteria, appliedT2Logic, 'test_t2_angewandt');
-        const matrixT2Applied = calculateConfusionMatrix(dataWithT2Applied, 'n', 'test_t2_angewandt');
+        const dataWithT2Applied = t2CriteriaManager.evaluateCriteriaForAllPatients(patientData, appliedT2Criteria, appliedT2Logic, 't2');
+        const matrixT2Applied = calculateConfusionMatrix(dataWithT2Applied, 'n', 't2');
         results.gueteT2_angewandt = calculateDiagnosticMetricsFromMatrix(matrixT2Applied);
         results.gueteT2_angewandt.criteria = cloneDeep(appliedT2Criteria);
         results.gueteT2_angewandt.logic = appliedT2Logic;
 
+        results.gueteT2_literatur = {};
         studyT2Sets.forEach(set => {
             if(set.applicableKollektiv && set.applicableKollektiv !== 'Gesamt' && set.applicableKollektiv !== kollektivId) return;
-            const dataWithT2Lit = t2CriteriaManager.evaluateCriteriaForAllPatients(patientData, set.criteria, set.logic, `test_t2_lit_${set.id}`);
-            const matrixT2Lit = calculateConfusionMatrix(dataWithT2Lit, 'n', `test_t2_lit_${set.id}`);
+            let dataForEvaluation = patientData;
+            if (set.isESGAR2016) {
+                dataForEvaluation = patientData.filter(p => p.therapie === 'direkt OP');
+                if (kollektivId === 'Gesamt' && dataForEvaluation.length === 0) return; 
+            }
+            if (set.id === 'barbaro_2024_restaging') {
+                dataForEvaluation = patientData.filter(p => p.therapie === 'nRCT');
+                 if (kollektivId === 'Gesamt' && dataForEvaluation.length === 0) return; 
+            }
+
+
+            const evaluatedPatients = dataForEvaluation.map(p => {
+                let t2StatusLit;
+                if (set.isESGAR2016) {
+                    t2StatusLit = studyT2CriteriaManager.evaluatePatientForESGAR(p, set);
+                } else {
+                    t2StatusLit = t2CriteriaManager.evaluatePatient(p, set.criteria, set.logic);
+                }
+                return { ...p, [`test_t2_lit_${set.id}`]: t2StatusLit };
+            });
+
+            const matrixT2Lit = calculateConfusionMatrix(evaluatedPatients, 'n', `test_t2_lit_${set.id}`);
             results.gueteT2_literatur[set.id] = calculateDiagnosticMetricsFromMatrix(matrixT2Lit);
             results.gueteT2_literatur[set.id].criteria = cloneDeep(set.criteria);
             results.gueteT2_literatur[set.id].logic = set.logic;
             results.gueteT2_literatur[set.id].studyInfo = cloneDeep(set);
+            results.gueteT2_literatur[set.id].applicableKollektiv = set.applicableKollektiv;
+            results.gueteT2_literatur[set.id].totalPatientsEvaluated = evaluatedPatients.length;
         });
 
         if (bfResultsForThisKollektiv && bfResultsForThisKollektiv.bestResult && bfResultsForThisKollektiv.bestResult.criteria) {
@@ -453,20 +509,36 @@ const statisticsService = (() => {
         
         studyT2Sets.forEach(set => {
             if(set.applicableKollektiv && set.applicableKollektiv !== 'Gesamt' && set.applicableKollektiv !== kollektivId) return;
-            const scoresT2Lit = getScores(dataForKollektiv, set.criteria, set.logic, `test_t2_lit_${set.id}`);
+            let evaluatedPatientsForComparison = dataForKollektiv;
+            if (set.isESGAR2016) {
+                evaluatedPatientsForComparison = dataForKollektiv.filter(p => p.therapie === 'direkt OP');
+                if (kollektivId === 'Gesamt' && evaluatedPatientsForComparison.length === 0) return; 
+            }
+            if (set.id === 'barbaro_2024_restaging') {
+                evaluatedPatientsForComparison = dataForKollektiv.filter(p => p.therapie === 'nRCT');
+                if (kollektivId === 'Gesamt' && evaluatedPatientsForComparison.length === 0) return; 
+            }
+
+            const scoresT2Lit = evaluatedPatientsForComparison.map(p => {
+                if (set.isESGAR2016) {
+                    return studyT2CriteriaManager.evaluatePatientForESGAR(p, set) === '+' ? 1 : 0;
+                } else {
+                    return t2CriteriaManager.evaluatePatient(p, set.criteria, set.logic) === '+' ? 1 : 0;
+                }
+            });
+            const trueLabelsForComparison = evaluatedPatientsForComparison.map(p => p.n === '+' ? 1 : 0);
+
             const matrixAS = statsKollektiv.gueteAS.matrix_components;
             const matrixT2Lit = statsKollektiv.gueteT2_literatur[set.id]?.matrix_components;
             
-            if (matrixAS && matrixT2Lit) {
-                const mcnemarMatrix = { // McNemar needs a specific 2x2 table of disagreements
-                    a: dataForKollektiv.filter(p => p.as === '+' && p[`test_t2_lit_${set.id}`] === '+').length, // Both positive
-                    b: dataForKollektiv.filter(p => p.as === '+' && p[`test_t2_lit_${set.id}`] === '-').length, // AS+, T2- (fp for AS relative to T2 if T2 is ref, or b in McNemar)
-                    c: dataForKollektiv.filter(p => p.as === '-' && p[`test_t2_lit_${set.id}`] === '+').length, // AS-, T2+ (fn for AS relative to T2, or c in McNemar)
-                    d: dataForKollektiv.filter(p => p.as === '-' && p[`test_t2_lit_${set.id}`] === '-').length  // Both negative
+            if (matrixAS && matrixT2Lit && trueLabelsForComparison.length > 0) {
+                const mcnemarMatrix = { 
+                    b: evaluatedPatientsForComparison.filter(p => p.as === '+' && ((set.isESGAR2016 ? studyT2CriteriaManager.evaluatePatientForESGAR(p, set) : t2CriteriaManager.evaluatePatient(p, set.criteria, set.logic)) === '-')).length, 
+                    c: evaluatedPatientsForComparison.filter(p => p.as === '-' && ((set.isESGAR2016 ? studyT2CriteriaManager.evaluatePatientForESGAR(p, set) : t2CriteriaManager.evaluatePatient(p, set.criteria, set.logic)) === '+')).length 
                 };
                  comparisonResults[`vergleichASvsT2_literatur_${set.id}`] = {
-                    mcnemar: performMcNemarTest({ rp:0, fp: mcnemarMatrix.b, fn: mcnemarMatrix.c, rn:0 }), // fp=b, fn=c
-                    delong: performDeLongTest(trueLabels, scoresAS, scoresT2Lit)
+                    mcnemar: performMcNemarTest({ rp:0, fp: mcnemarMatrix.b, fn: mcnemarMatrix.c, rn:0 }), 
+                    delong: performDeLongTest(trueLabelsForComparison, scoresAS.filter((s,idx) => evaluatedPatientsForComparison.includes(dataForKollektiv[idx])), scoresT2Lit)
                  };
             }
         });
@@ -488,6 +560,31 @@ const statisticsService = (() => {
                  };
             }
         }
+
+        const asPatients = dataForKollektiv.filter(p => p.as === '+' || p.as === '-');
+        const asTrueLabels = asPatients.map(p => p.n === '+' ? 1 : 0);
+        const asScores = asPatients.map(p => p.as === '+' ? 1 : 0);
+
+        const t2Patients = dataForKollektiv.filter(p => p.t2 === '+' || p.t2 === '-');
+        const t2TrueLabels = t2Patients.map(p => p.n === '+' ? 1 : 0);
+        const t2Scores = t2Patients.map(p => p.t2 === '+' ? 1 : 0);
+
+        comparisonResults.accuracyComparison = {
+            as: {
+                pValue: performMcNemarTest({ rp:0, fp: dataForKollektiv.filter(p => p.as === '+' && p.n === '-').length, fn: dataForKollektiv.filter(p => p.as === '-' && p.n === '+').length, rn:0 }).pValue,
+                testName: 'McNemar Test'
+            },
+            t2: {
+                pValue: performMcNemarTest({ rp:0, fp: dataForKollektiv.filter(p => p.t2 === '+' && p.n === '-').length, fn: dataForKollektiv.filter(p => p.t2 === '-' && p.n === '+').length, rn:0 }).pValue,
+                testName: 'McNemar Test'
+            }
+        };
+
+        comparisonResults.aucComparison = {
+            as: performDeLongTest(asTrueLabels, asScores, asScores), 
+            t2: performDeLongTest(t2TrueLabels, t2Scores, t2Scores) 
+        };
+
         return comparisonResults;
     }
 
@@ -512,6 +609,153 @@ const statisticsService = (() => {
             );
             const comparisonStats = calculateComparisonStats(allStats[kolId], kolId, studySetsForEval, bfResultsForThisKollektivAndMetric);
             allStats[kolId] = deepMerge(allStats[kolId], comparisonStats);
+
+            const allPatientsInKollektiv = dataProcessor.getProcessedData(kollektivId);
+            const nPlusPatients = allPatientsInKollektiv.filter(p => p.n === '+');
+            const nMinusPatients = allPatientsInKollektiv.filter(p => p.n === '-');
+
+            const associations = {};
+            const binaryFeatures = ['geschlecht', 'form', 'kontur', 'homogenitaet', 'signal']; 
+            binaryFeatures.forEach(featureKey => {
+                const values = APP_CONFIG.T2_CRITERIA_SETTINGS[`${featureKey.toUpperCase()}_VALUES`];
+                if (featureKey === 'geschlecht') {
+                    const matrix = {
+                        rp: allPatientsInKollektiv.filter(p => p.geschlecht === 'm' && p.n === '+').length,
+                        fp: allPatientsInKollektiv.filter(p => p.geschlecht === 'm' && p.n === '-').length,
+                        fn: allPatientsInKollektiv.filter(p => p.geschlecht === 'f' && p.n === '+').length,
+                        rn: allPatientsInKollektiv.filter(p => p.geschlecht === 'f' && p.n === '-').length
+                    };
+                    if (matrix.total > 0) {
+                        associations[featureKey] = {
+                            featureName: UI_TEXTS.statistikTab.filterMerkmalLabelMapping[featureKey] || featureKey,
+                            or: calculateOddsRatio(matrix),
+                            rd: calculateRiskDifference(matrix),
+                            phi: calculatePhiCoefficient(matrix),
+                            pValue: performFisherExactTest(matrix).pValue,
+                            testName: 'Fisher\'s Exact Test',
+                            matrix: matrix
+                        };
+                    }
+                } else if (values && values.length > 0) {
+                    values.forEach(value => {
+                        const matrix = {
+                            rp: allPatientsInKollektiv.filter(p => p.lymphknoten_t2.some(lk => lk[featureKey] === value) && p.n === '+').length,
+                            fp: allPatientsInKollektiv.filter(p => p.lymphknoten_t2.some(lk => lk[featureKey] === value) && p.n === '-').length,
+                            fn: allPatientsInKollektiv.filter(p => !p.lymphknoten_t2.some(lk => lk[featureKey] === value) && p.n === '+').length,
+                            rn: allPatientsInKollektiv.filter(p => !p.lymphknoten_t2.some(lk => lk[featureKey] === value) && p.n === '-').length
+                        };
+                        if (matrix.total > 0) {
+                            associations[`${featureKey}_${value}`] = {
+                                featureName: `${UI_TEXTS.statistikTab.filterMerkmalLabelMapping[featureKey] || featureKey}: ${value}`,
+                                or: calculateOddsRatio(matrix),
+                                rd: calculateRiskDifference(matrix),
+                                phi: calculatePhiCoefficient(matrix),
+                                pValue: performFisherExactTest(matrix).pValue,
+                                testName: 'Fisher\'s Exact Test',
+                                matrix: matrix
+                            };
+                        }
+                    });
+                }
+            });
+
+            const asMatrix = {
+                rp: allPatientsInKollektiv.filter(p => p.as === '+' && p.n === '+').length,
+                fp: allPatientsInKollektiv.filter(p => p.as === '+' && p.n === '-').length,
+                fn: allPatientsInKollektiv.filter(p => p.as === '-' && p.n === '+').length,
+                rn: allPatientsInKollektiv.filter(p => p.as === '-' && p.n === '-').length
+            };
+            if (asMatrix.total > 0) {
+                associations.as = {
+                    featureName: 'Avocado Sign',
+                    or: calculateOddsRatio(asMatrix),
+                    rd: calculateRiskDifference(asMatrix),
+                    phi: calculatePhiCoefficient(asMatrix),
+                    pValue: performFisherExactTest(asMatrix).pValue,
+                    testName: 'Fisher\'s Exact Test',
+                    matrix: asMatrix
+                };
+            }
+
+            const sizeNPlus = nPlusPatients.flatMap(p => (p.lymphknoten_t2 || []).map(lk => lk.groesse)).filter(s => s !== null && !isNaN(s));
+            const sizeNMinus = nMinusPatients.flatMap(p => (p.lymphknoten_t2 || []).map(lk => lk.groesse)).filter(s => s !== null && !isNaN(s));
+            if (sizeNPlus.length > 0 && sizeNMinus.length > 0) {
+                associations.size_mwu = {
+                    featureName: 'LK Größe',
+                    pValue: performMannWhitneyUTest(sizeNPlus, sizeNMinus).pValue,
+                    testName: performMannWhitneyUTest(sizeNPlus, sizeNMinus).method,
+                    uValue: performMannWhitneyUTest(sizeNPlus, sizeNMinus).uValue,
+                    zValue: performMannWhitneyUTest(sizeNPlus, sizeNMinus).zValue
+                };
+            }
+
+            allStats[kolId].assoziationen = associations;
+
+            const criteriaComparisonResults = [];
+            const allStudySets = studyT2CriteriaManager.getAllStudyCriteriaSets();
+            
+            criteriaComparisonResults.push({
+                id: APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID,
+                name: APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_DISPLAY_NAME,
+                sens: allStats[kolId].gueteAS.sens?.value,
+                spez: allStats[kolId].gueteAS.spez?.value,
+                ppv: allStats[kolId].gueteAS.ppv?.value,
+                npv: allStats[kolId].gueteAS.npv?.value,
+                acc: allStats[kolId].gueteAS.acc?.value,
+                auc: allStats[kolId].gueteAS.auc?.value,
+                globalN: allStats[kolId].deskriptiv.anzahlPatienten,
+                specificKollektivName: kollektivId,
+                specificKollektivN: allStats[kolId].deskriptiv.anzahlPatienten
+            });
+
+            criteriaComparisonResults.push({
+                id: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID,
+                name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME,
+                sens: allStats[kolId].gueteT2_angewandt.sens?.value,
+                spez: allStats[kolId].gueteT2_angewandt.spez?.value,
+                ppv: allStats[kolId].gueteT2_angewandt.ppv?.value,
+                npv: allStats[kolId].gueteT2_angewandt.npv?.value,
+                acc: allStats[kolId].gueteT2_angewandt.acc?.value,
+                auc: allStats[kolId].gueteT2_angewandt.auc?.value,
+                globalN: allStats[kolId].deskriptiv.anzahlPatienten,
+                specificKollektivName: kollektivId,
+                specificKollektivN: allStats[kolId].deskriptiv.anzahlPatienten
+            });
+
+            allStudySets.forEach(set => {
+                const applicableKollektiv = set.applicableKollektiv || 'Gesamt';
+                let statsForSet = allStats[kolId].gueteT2_literatur[set.id];
+                let evaluatedN = allStats[kolId].deskriptiv.anzahlPatienten;
+
+                if (set.isESGAR2016 && applicableKollektiv === 'direkt OP') {
+                    evaluatedN = allStats['direkt OP']?.deskriptiv?.anzahlPatienten || 0;
+                    if (kollektivId !== 'direkt OP') {
+                         statsForSet = allStats['direkt OP']?.gueteT2_literatur[set.id];
+                    }
+                } else if (set.id === 'barbaro_2024_restaging' && applicableKollektiv === 'nRCT') {
+                    evaluatedN = allStats['nRCT']?.deskriptiv?.anzahlPatienten || 0;
+                    if (kollektivId !== 'nRCT') {
+                        statsForSet = allStats['nRCT']?.gueteT2_literatur[set.id];
+                    }
+                }
+
+                if (statsForSet) {
+                    criteriaComparisonResults.push({
+                        id: set.id,
+                        name: set.name,
+                        sens: statsForSet.sens?.value,
+                        spez: statsForSet.spez?.value,
+                        ppv: statsForSet.ppv?.value,
+                        npv: statsForSet.npv?.value,
+                        acc: statsForSet.acc?.value,
+                        auc: statsForSet.auc?.value,
+                        globalN: allStats[kolId].deskriptiv.anzahlPatienten,
+                        specificKollektivName: applicableKollektiv,
+                        specificKollektivN: evaluatedN
+                    });
+                }
+            });
+            allStats[kolId].kriterienVergleich = criteriaComparisonResults;
         });
         return allStats;
     }
@@ -535,3 +779,5 @@ const statisticsService = (() => {
     });
 
 })();
+
+window.statisticsService = statisticsService;
