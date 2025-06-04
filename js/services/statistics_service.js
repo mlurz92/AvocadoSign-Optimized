@@ -488,7 +488,7 @@ const statisticsService = (() => {
                 metricValue: bfBest.metricValue
             };
         } else {
-             results.bruteforce_definition = { metricName: bfResultsForThisKollektiv?.metric || state.getCurrentPublikationBruteForceMetric(), metricValue: NaN };
+             results.bruteforce_definition = { metricName: bfResultsForThisKollektiv?.metric || stateManager.getCurrentPublikationBruteForceMetric(), metricValue: NaN };
         }
         return results;
     }
@@ -593,7 +593,8 @@ const statisticsService = (() => {
         const kollektivIds = ['Gesamt', 'direkt OP', 'nRCT'];
         const allStats = {};
         const studySetsForEval = studyT2CriteriaManager.getAllStudyCriteriaSets();
-        const currentPublikationBfMetric = state.getCurrentPublikationBruteForceMetric();
+        // Korrekter Zugriff auf stateManager
+        const currentPublikationBfMetric = stateManager.getCurrentPublikationBruteForceMetric();
 
         kollektivIds.forEach(kolId => {
             const bfResultsForThisKollektivAndMetric = bfResultsPerKollektiv[kolId]?.[currentPublikationBfMetric] || 
@@ -712,20 +713,20 @@ const statisticsService = (() => {
                 id: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID,
                 name: APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME,
                 sens: allStats[kolId].gueteT2_angewandt.sens?.value,
-                spez: allStats[kolId].gueteT2_angewandt.spez?.value,
-                ppv: allStats[kolId].gueteT2_angewandt.ppv?.value,
-                npv: allStats[kolId].gueteT2_angewandt.npv?.value,
-                acc: allStats[kolId].gueteT2_angewandt.acc?.value,
-                auc: allStats[kolId].gueteT2_angewandt.auc?.value,
-                globalN: allStats[kolId].deskriptiv.anzahlPatienten,
+                spez: allStats[kollektivId].gueteT2_angewandt.spez?.value,
+                ppv: allStats[kollektivId].gueteT2_angewandt.ppv?.value,
+                npv: allStats[kollektivId].gueteT2_angewandt.npv?.value,
+                acc: allStats[kollektivId].gueteT2_angewandt.acc?.value,
+                auc: allStats[kollektivId].gueteT2_angewandt.auc?.value,
+                globalN: allStats[kollektivId].deskriptiv.anzahlPatienten,
                 specificKollektivName: kollektivId,
-                specificKollektivN: allStats[kolId].deskriptiv.anzahlPatienten
+                specificKollektivN: allStats[kollektivId].deskriptiv.anzahlPatienten
             });
 
             allStudySets.forEach(set => {
                 const applicableKollektiv = set.applicableKollektiv || 'Gesamt';
-                let statsForSet = allStats[kolId].gueteT2_literatur[set.id];
-                let evaluatedN = allStats[kolId].deskriptiv.anzahlPatienten;
+                let statsForSet = allStats[kollektivId].gueteT2_literatur[set.id];
+                let evaluatedN = allStats[kollektivId].deskriptiv.anzahlPatienten;
 
                 if (set.isESGAR2016 && applicableKollektiv === 'direkt OP') {
                     evaluatedN = allStats['direkt OP']?.deskriptiv?.anzahlPatienten || 0;
@@ -749,13 +750,13 @@ const statisticsService = (() => {
                         npv: statsForSet.npv?.value,
                         acc: statsForSet.acc?.value,
                         auc: statsForSet.auc?.value,
-                        globalN: allStats[kolId].deskriptiv.anzahlPatienten,
+                        globalN: allStats[kollektivId].deskriptiv.anzahlPatienten,
                         specificKollektivName: applicableKollektiv,
                         specificKollektivN: evaluatedN
                     });
                 }
             });
-            allStats[kolId].kriterienVergleich = criteriaComparisonResults;
+            allStats[kollektivId].kriterienVergleich = criteriaComparisonResults;
         });
         return allStats;
     }
