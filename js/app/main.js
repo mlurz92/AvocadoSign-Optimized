@@ -108,7 +108,7 @@
                 publicationElements: PUBLICATION_CONFIG.publicationElements
             };
             
-            const content = publikationTabLogic.getRenderedSectionContent(currentPublikationSection, currentPublikationLang, window.allKollektivStatsForPublikationTab, commonData, publicationOptions);
+            const content = publicationRenderer.renderSectionContent(currentPublikationSection, currentPublikationLang, window.allKollektivStatsForPublikationTab, commonData, publicationOptions);
             const contentArea = document.getElementById('publikation-content-area');
             if (contentArea) {
                 ui_helpers.updateElementHTML(contentArea.id, content);
@@ -161,10 +161,14 @@
                      exportService.exportPublikationSectionMarkdown('statistik', 'deskriptiv', stateManager.getCurrentPublikationLang(), allStats, commonData, publicationOptions);
                     break;
                 case 'datenMD':
-                    exportService.exportPublikationSectionMarkdown('daten', 'datenliste', stateManager.getCurrentPublikationLang(), allStats, commonData, publicationOptions);
+                    // Need to get data from dataTabLogic or dataProcessor directly for export
+                    const dataForDatenMD = dataProcessor.getProcessedData(stateManager.getCurrentKollektiv());
+                    exportService.exportPublikationSectionMarkdown('daten', 'datenliste', stateManager.getCurrentPublikationLang(), allStats, commonData, { ...publicationOptions, data: dataForDatenMD });
                     break;
                 case 'auswertungMD':
-                    exportService.exportPublikationSectionMarkdown('auswertung', 'auswertungstabelle', stateManager.getCurrentPublikationLang(), allStats, commonData, publicationOptions);
+                    // Need to get data from auswertungTabLogic or dataProcessor directly for export
+                    const dataForAuswertungMD = dataProcessor.getProcessedData(stateManager.getCurrentKollektiv());
+                    exportService.exportPublikationSectionMarkdown('auswertung', 'auswertungstabelle', stateManager.getCurrentPublikationLang(), allStats, commonData, { ...publicationOptions, data: dataForAuswertungMD });
                     break;
                 case 'filteredDataCSV':
                     exportService.exportStatistikCSV(allStats, stateManager.getCurrentKollektiv(), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
@@ -336,6 +340,10 @@
                 break;
             case 'export-tab-pane':
                 viewRenderer.renderExportTab(currentKollektiv);
+                // Register export event handlers after the tab content is rendered
+                if (typeof exportEventHandlers !== 'undefined' && exportEventHandlers.register) {
+                    exportEventHandlers.register();
+                }
                 break;
             default:
                 console.warn(`Unerwarteter aktiver Tab-ID: ${activeTabId}`);
@@ -356,6 +364,10 @@
         _renderPraesentationTab(forceStatRecalculation);
         _renderPublikationTab(forceStatRecalculation);
         viewRenderer.renderExportTab(currentKollektiv);
+        // Register export event handlers after the tab content is rendered
+        if (typeof exportEventHandlers !== 'undefined' && exportEventHandlers.register) {
+            exportEventHandlers.register();
+        }
 
         _updateUI();
     }
@@ -549,8 +561,7 @@
             }
             
             generalEventHandlers.register();
-            exportEventHandlers.register();
-
+            // exportEventHandlers.register(); // This is now called within renderExportTab's afterRender
 
             _renderCurrentTab(true); 
 
