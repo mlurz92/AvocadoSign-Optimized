@@ -49,20 +49,21 @@ const viewRenderer = (() => {
             console.error(`renderTabContent: Tab-Container mit ID '${tabId}' nicht gefunden.`);
             return;
         }
-        ui_helpers.updateElementHTML(tabId, content);
+        ui_helpers.updateElementHTML(tabPaneContentContainer.id, content);
 
         if (options.afterRender && typeof options.afterRender === 'function') {
             options.afterRender();
         }
         ui_helpers.initializeTooltips(tabPaneContentContainer);
-        if (typeof generalEventHandlers !== 'undefined' && typeof generalEventHandlers.attachCommonEventListeners === 'function') {
-            generalEventHandlers.attachCommonEventListeners(tabPaneContentContainer);
+        if (typeof generalEventHandlers !== 'undefined' && typeof generalEventHandlers.register === 'function') {
+            generalEventHandlers.register();
         }
     }
 
     function renderDatenTab() {
-        const filteredData = dataTabLogic.getFilteredData ? dataTabLogic.getFilteredData(currentKollektiv, currentData) : currentData.filter(p => currentKollektiv === 'Gesamt' || p.therapie === currentKollektiv);
+        const filteredData = dataTabLogic.getFilteredData ? dataTabLogic.getFilteredData(currentKollektiv) : currentData.filter(p => currentKollektiv === 'Gesamt' || p.therapie === currentKollektiv);
         const sortState = stateManager.getDatenTableSort() || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT);
+        
         const tableHTML = dataTabLogic.createDatenTableHTML(filteredData, sortState);
         const toggleButtonId = 'daten-toggle-details';
         const currentLang = stateManager.getCurrentPublikationLang() || 'de';
@@ -81,8 +82,8 @@ const viewRenderer = (() => {
             </div>`;
         renderTabContent('daten-tab-pane', content, {
             afterRender: () => {
-                if (typeof dataTabEventHandlers !== 'undefined' && dataTabEventHandlers.attachDatenTableEventListeners) {
-                    dataTabEventHandlers.attachDatenTableEventListeners(filteredData, sortState);
+                if (typeof dataTabEventHandlers !== 'undefined' && dataTabEventHandlers.register) {
+                    dataTabEventHandlers.register();
                 }
                 const tableBodyElement = document.getElementById('daten-table-body');
                 if (tableBodyElement) {
@@ -93,19 +94,16 @@ const viewRenderer = (() => {
         });
     }
 
-    function renderAuswertungTab(initialData, bruteForceManagerInstance) {
+    function renderAuswertungTab(initialData, bruteForceManagerInstanceParam) {
         const currentAppliedCriteria = t2CriteriaManager.getAppliedCriteria();
         const currentAppliedLogic = t2CriteriaManager.getAppliedLogic();
         const controlsHTML = uiComponents.createT2CriteriaControls(currentAppliedCriteria, currentAppliedLogic);
-        const bruteForceHTML = uiComponents.createBruteForceCard(currentKollektiv, bruteForceManagerInstance && bruteForceManagerInstance.isWorkerAvailable());
+        const bruteForceHTML = uiComponents.createBruteForceCard(currentKollektiv, bruteForceManagerInstanceParam && bruteForceManagerInstanceParam.isWorkerAvailable());
         
-        const filteredData = auswertungTabLogic.getFilteredData ? auswertungTabLogic.getFilteredData(currentKollektiv, initialData) : initialData.filter(p => currentKollektiv === 'Gesamt' || p.therapie === currentKollektiv);
+        const filteredData = auswertungTabLogic.getFilteredData ? auswertungTabLogic.getFilteredData(currentKollektiv) : initialData.filter(p => currentKollektiv === 'Gesamt' || p.therapie === currentKollektiv);
         const sortState = stateManager.getAuswertungTableSort() || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT);
         
-        if (!window.auswertungTableConfig && typeof initializeAuswertungTableConfig === "function") {
-             initializeAuswertungTableConfig();
-        }
-        const tableHTML = auswertungTableConfig.createTableHTML(filteredData, sortState, currentAppliedCriteria, currentAppliedLogic);
+        const tableHTML = uiComponents.createAuswertungTableHTML(filteredData, sortState, currentAppliedCriteria, currentAppliedLogic);
         const toggleButtonId = 'auswertung-toggle-details';
         const currentLang = stateManager.getCurrentPublikationLang() || 'de';
         const toggleButtonText = UI_TEXTS.auswertungTab.toggleDetailsButton.expand || (currentLang === 'de' ? 'Alle Details Anzeigen' : 'Expand All Details');
@@ -135,8 +133,8 @@ const viewRenderer = (() => {
             </div>`;
         renderTabContent('auswertung-tab-pane', content, {
             afterRender: () => {
-                if (typeof auswertungEventHandlers !== 'undefined' && auswertungEventHandlers.attachAuswertungEventListeners) {
-                    auswertungEventHandlers.attachAuswertungEventListeners(initialData, bruteForceManagerInstance);
+                if (typeof auswertungEventHandlers !== 'undefined' && auswertungEventHandlers.register) {
+                    auswertungEventHandlers.register(bruteForceManagerInstanceParam);
                 }
                 const tableBodyElement = document.getElementById('auswertung-table-body');
                 if (tableBodyElement) {
@@ -168,7 +166,7 @@ const viewRenderer = (() => {
                 <div class="col-auto ${layoutIsVergleich ? 'd-none' : ''}" id="statistik-kollektiv-select-einzel-container">
                     <div class="input-group input-group-sm">
                         <label class="input-group-text" for="statistik-kollektiv-select-einzel">${UI_TEXTS.statistikTab.kollektivSelectLabel}</label>
-                        <select class="form-select" id="statistik-kollektiv-select-einzel" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${TOOLTIP_CONTENT.statistikTab.kollektivSelectEinzel.description}">
+                        <select class="form-select" id="statistik-kollektiv-select-einzel" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${TOOLTIP_CONTENT.statistikKollektivSelect.einzel}">
                             ${allOptions}
                         </select>
                     </div>
@@ -176,7 +174,7 @@ const viewRenderer = (() => {
                 <div class="col-auto ${layoutIsVergleich ? '' : 'd-none'}" id="statistik-kollektiv-select-1-container">
                      <div class="input-group input-group-sm">
                         <label class="input-group-text" for="statistik-kollektiv-select-1">${UI_TEXTS.statistikTab.kollektivSelectLabel1}</label>
-                        <select class="form-select" id="statistik-kollektiv-select-1" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${TOOLTIP_CONTENT.statistikTab.kollektivSelect1.description}">
+                        <select class="form-select" id="statistik-kollektiv-select-1" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${TOOLTIP_CONTENT.statistikKollektivSelect.kollektiv1}">
                              ${allOptions}
                         </select>
                     </div>
@@ -184,7 +182,7 @@ const viewRenderer = (() => {
                 <div class="col-auto ${layoutIsVergleich ? '' : 'd-none'}" id="statistik-kollektiv-select-2-container">
                      <div class="input-group input-group-sm">
                         <label class="input-group-text" for="statistik-kollektiv-select-2">${UI_TEXTS.statistikTab.kollektivSelectLabel2}</label>
-                        <select class="form-select" id="statistik-kollektiv-select-2" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${TOOLTIP_CONTENT.statistikTab.kollektivSelect2.description}">
+                        <select class="form-select" id="statistik-kollektiv-select-2" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${TOOLTIP_CONTENT.statistikKollektivSelect.kollektiv2}">
                             ${allOptions}
                         </select>
                     </div>
@@ -195,16 +193,16 @@ const viewRenderer = (() => {
         renderTabContent('statistik-tab-pane', content, {
             afterRender: () => {
                 ui_helpers.updateStatistikSelectorsUI(layout, kollektiv1, kollektiv2);
-                if (typeof statistikEventHandlers !== 'undefined' && statistikEventHandlers.attachStatistikEventListeners) {
-                    statistikEventHandlers.attachStatistikEventListeners(statsEinze, statsVergleich);
+                if (typeof statistikEventHandlers !== 'undefined' && statistikEventHandlers.register) {
+                    statistikEventHandlers.register();
                 }
                 const statsContentArea = document.getElementById('statistik-content-area');
                 if (statsContentArea) {
                     ui_helpers.updateElementHTML('statistik-content-area', _buildStatistikContent(statsEinze, statsVergleich, layout, kollektiv1, kollektiv2, currentKollektiv));
                     ui_helpers.initializeTooltips(statsContentArea);
-                    if(layout === 'einzel' && statsEinze?.deskriptiv?.alter?.verteilung && statsEinze?.deskriptiv?.geschlecht?.verteilung) {
-                        chartRenderer.renderAgeDistributionChart(`chart-stat-age-0`, statsEinze.deskriptiv.alter.verteilung, getKollektivDisplayName(currentKollektiv));
-                        chartRenderer.renderGenderDistributionChart(`chart-stat-gender-0`, statsEinze.deskriptiv.geschlecht.verteilung, getKollektivDisplayName(currentKollektiv));
+                    if(layout === 'einzel' && statsEinze?.deskriptiv?.alter?.alterData && statsEinze?.deskriptiv?.geschlecht) {
+                        chartRenderer.renderAgeDistributionChart(`chart-stat-age-0`, statsEinze.deskriptiv.alter.alterData, getKollektivDisplayName(currentKollektiv));
+                        chartRenderer.renderGenderDistributionChart(`chart-stat-gender-0`, statsEinze.deskriptiv.geschlecht, getKollektivDisplayName(currentKollektiv));
                     }
                 }
                 _updateAllDynamicCounts(currentData);
@@ -220,7 +218,7 @@ const viewRenderer = (() => {
         const t2ShortName = studyT2CriteriaManager.formatCriteriaForDisplay(t2Criteria, t2Logic, true);
 
         if (layout === 'einzel' && statsEinze) {
-            const dlButtonsDeskriptiv = [{ id: 'export-deskriptiv-stats-md', icon: 'fab fa-markdown', tooltip: (TOOLTIP_CONTENT.exportTab.deskriptivMD?.descriptionStatsTab || 'Deskriptive Statistik als MD'), format: 'md' }];
+            const dlButtonsDeskriptiv = [{ id: 'export-deskriptiv-stats-md', icon: 'fab fa-markdown', tooltip: (TOOLTIP_CONTENT.exportTab.deskriptivMD?.description || 'Deskriptive Statistik als MD'), format: 'md' }];
             const dlButtonsGueteAS = [{ id: 'export-guete-as-md', icon: 'fab fa-markdown', tooltip: (TOOLTIP_CONTENT.exportTab.gueteASMD?.description || 'Güte (AS) als MD'), format: 'md' }];
             const dlButtonsGueteT2 = [{ id: 'export-guete-t2-md', icon: 'fab fa-markdown', tooltip: (TOOLTIP_CONTENT.exportTab.gueteT2MD?.description || 'Güte (T2) als MD').replace('[T2_SHORT_NAME]',t2ShortName), format: 'md' }];
             const dlButtonsVergleich = [{ id: 'export-vergleich-as-t2-md', icon: 'fab fa-markdown', tooltip: (TOOLTIP_CONTENT.exportTab.vergleichMD?.description || 'Vergleich AS vs. T2 als MD').replace('[T2_SHORT_NAME]',t2ShortName), format: 'md' }];
@@ -228,19 +226,19 @@ const viewRenderer = (() => {
             const dlButtonsKriterienVergleich = [{ id: 'export-kriterien-vergleich-md', icon: 'fab fa-markdown', tooltip: (TOOLTIP_CONTENT.exportTab.criteriaComparisonMD?.description || 'Kriterienvergleich als MD'), format: 'md' }];
             
             const deskriptivHTML = statistikTabLogic.createDeskriptiveStatistikContentHTML(statsEinze, '0', currentKollektiv);
-            const gueteASHTML = statistikTabLogic.createGueteContentHTML(statsEinze.as, 'AS', currentKollektiv);
-            const gueteT2HTML = statistikTabLogic.createGueteContentHTML(statsEinze.t2, t2ShortName, currentKollektiv);
-            const vergleichHTML = statistikTabLogic.createVergleichContentHTML(statsEinze.vergleich_as_t2, currentKollektiv, t2ShortName);
+            const gueteASHTML = statistikTabLogic.createGueteContentHTML(statsEinze.gueteAS, 'AS', currentKollektiv);
+            const gueteT2HTML = statistikTabLogic.createGueteContentHTML(statsEinze.gueteT2_angewandt, t2ShortName, currentKollektiv);
+            const vergleichHTML = statistikTabLogic.createVergleichContentHTML(statsEinze.vergleichASvsT2_angewandt, currentKollektiv, t2ShortName);
             const assoziationHTML = statistikTabLogic.createAssoziationContentHTML(statsEinze.assoziationen, currentKollektiv, t2Criteria);
             const kriterienVergleichHTML = statistikTabLogic.createCriteriaComparisonTableHTML(statsEinze.kriterienVergleich, currentKollektiv);
 
             statistikHTML += `<div class="row g-3">
                 ${uiComponents.createStatistikCard('deskriptiv', 'Deskriptive Statistik', deskriptivHTML, true, 'deskriptiveStatistik', dlButtonsDeskriptiv, `table-deskriptiv-demographie-0`)}
-                ${uiComponents.createStatistikCard('guete-as', 'Diagnostische Güte (AS vs. N)', gueteASHTML, false, 'guetekriterien.as', dlButtonsGueteAS, `table-guete-metrics-AS-${currentKollektiv.replace(/\s+/g, '_')}`)}
-                ${uiComponents.createStatistikCard('guete-t2', `Diagnostische Güte (${t2ShortName} vs. N)`, gueteT2HTML, false, 'guetekriterien.t2', dlButtonsGueteT2, `table-guete-metrics-${t2ShortName.replace(/\s+/g, '_')}-${currentKollektiv.replace(/\s+/g, '_')}`)}
-                ${uiComponents.createStatistikCard('vergleich-as-t2', `Statistischer Vergleich (AS vs. ${t2ShortName})`, vergleichHTML, false, 'vergleichTests', dlButtonsVergleich, `table-vergleich-as-vs-t2-${currentKollektiv.replace(/\s+/g, '_')}`)}
-                ${uiComponents.createStatistikCard('assoziation', 'Assoziationsanalyse (Merkmale vs. N)', assoziationHTML, false, 'assoziationsanalyse', dlButtonsAsso, `table-assoziation-${currentKollektiv.replace(/\s+/g, '_')}`)}
-                ${uiComponents.createStatistikCard('kriterien-vergleich', 'Vergleich Kriteriensätze', kriterienVergleichHTML, false, 'criteriaComparisonTable.cardTitle', dlButtonsKriterienVergleich, 'table-kriterien-vergleich')}
+                ${uiComponents.createStatistikCard('guete-as', 'Diagnostische Güte (AS vs. N)', gueteASHTML, false, 'diagnostischeGuete.cardTitleAS', dlButtonsGueteAS, `table-guete-metrics-AS-${currentKollektiv.replace(/\s+/g, '_')}`)}
+                ${uiComponents.createStatistikCard('guete-t2', `Diagnostische Güte (${t2ShortName} vs. N)`, gueteT2HTML, false, 'diagnostischeGuete.cardTitleT2Angewandt', dlButtonsGueteT2, `table-guete-metrics-${t2ShortName.replace(/\s+/g, '_')}-${currentKollektiv.replace(/\s+/g, '_')}`)}
+                ${uiComponents.createStatistikCard('vergleich-as-t2', `Statistischer Vergleich (AS vs. ${t2ShortName})`, vergleichHTML, false, 'vergleichASvsT2.cardTitle', dlButtonsVergleich, `table-vergleich-as-vs-t2-${currentKollektiv.replace(/\s+/g, '_')}`)}
+                ${uiComponents.createStatistikCard('assoziation', 'Assoziationsanalyse (Merkmale vs. N)', assoziationHTML, false, 'assoziationMerkmal.cardTitle', dlButtonsAsso, `table-assoziation-${currentKollektiv.replace(/\s+/g, '_')}`)}
+                ${uiComponents.createStatistikCard('kriterien-vergleich', 'Vergleich Kriteriensätze', kriterienVergleichHTML, false, 'criteriaComparisonTable', dlButtonsKriterienVergleich, 'table-kriterien-vergleich')}
              </div>`;
         } else if (layout === 'vergleich' && statsVergleich && kollektiv1 && kollektiv2) {
             const vergleichKollektiveHTML = statistikTabLogic.createVergleichKollektiveContentHTML(statsVergleich, kollektiv1, kollektiv2);
@@ -260,8 +258,8 @@ const viewRenderer = (() => {
         const contentHTML = praesentationTabLogic.createPresentationTabContent(view, presentationData, selectedStudyId, currentGlobalKollektiv);
         renderTabContent('praesentation-tab-pane', contentHTML, {
             afterRender: () => {
-                if (typeof praesentationEventHandlers !== 'undefined' && praesentationEventHandlers.attachPraesentationEventListeners) {
-                    praesentationEventHandlers.attachPraesentationEventListeners(presentationData);
+                if (typeof praesentationEventHandlers !== 'undefined' && praesentationEventHandlers.register) {
+                    praesentationEventHandlers.register();
                 }
                 if (view === 'as-pur' && presentationData?.statsCurrentKollektiv?.matrix && (presentationData.patientCount > 0 || (presentationData.statsCurrentKollektiv.matrix.rp + presentationData.statsCurrentKollektiv.matrix.fp + presentationData.statsCurrentKollektiv.matrix.fn + presentationData.statsCurrentKollektiv.matrix.rn) > 0)) {
                      chartRenderer.renderASPerformanceBarChart('praes-as-pur-perf-chart', presentationData.statsCurrentKollektiv, getKollektivDisplayName(presentationData.kollektiv));
@@ -277,11 +275,19 @@ const viewRenderer = (() => {
         const content = uiComponents.createPublikationTabHeader();
         renderTabContent('publikation-tab-pane', content, {
              afterRender: () => {
-                if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.initialize === 'function') {
-                    publikationTabLogic.initialize(currentData);
+                if (typeof publikationTabLogic !== 'undefined' && typeof publikationTabLogic.initializeData === 'function') {
+                    publikationTabLogic.initializeData(
+                        dataProcessor.getRawData(),
+                        t2CriteriaManager.getAppliedCriteria(),
+                        t2CriteriaManager.getAppliedLogic(),
+                        bruteForceManagerInstance.getAllStoredResults()
+                    );
                 }
-                if (typeof publikationEventHandlers !== 'undefined' && typeof publikationEventHandlers.attachPublikationEventListeners === 'function') {
-                    publikationEventHandlers.attachPublikationEventListeners();
+                if (typeof publikationEventHandlers !== 'undefined' && typeof publikationEventHandlers.register === 'function') {
+                    publikationEventHandlers.register();
+                }
+                if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.handlePublikationSettingsChange === 'function') {
+                    mainAppInterface.handlePublikationSettingsChange();
                 }
                  _updateAllDynamicCounts(currentData);
             }
@@ -293,8 +299,8 @@ const viewRenderer = (() => {
         const content = uiComponents.createExportOptions(currentKollektivToUse);
         renderTabContent('export-tab-pane', content, {
             afterRender: () => {
-                if (typeof exportEventHandlers !== 'undefined' && exportEventHandlers.attachExportEventListeners) {
-                    exportEventHandlers.attachExportEventListeners();
+                if (typeof exportEventHandlers !== 'undefined' && exportEventHandlers.register) {
+                    exportEventHandlers.register();
                 }
                 _updateAllDynamicCounts(currentData);
             }
@@ -331,3 +337,5 @@ const viewRenderer = (() => {
         renderTabContent 
     });
 })();
+
+window.viewRenderer = viewRenderer;
