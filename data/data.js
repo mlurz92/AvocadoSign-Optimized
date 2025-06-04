@@ -5837,3 +5837,5 @@ const patientData = [
     alter: 64,
   },
 ];
+
+window.patientData = patientData;
