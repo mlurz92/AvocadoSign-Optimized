@@ -39,13 +39,21 @@ const UI_TEXTS = Object.freeze({
     dataTab: {
         title: "Datentabelle",
         toggleDetails: "Alle Details Ein-/Ausblenden",
-        filterPlaceholder: "Patienten filtern (ID, Name...)"
+        filterPlaceholder: "Patienten filtern (ID, Name...)",
+        toggleDetailsButton: {
+            expand: "Alle Details Anzeigen",
+            collapse: "Alle Details Ausblenden"
+        }
     },
     auswertungTab: {
         title: "Auswertung & Kriterien",
         t2CriteriaCardTitle: "T2 Malignitäts-Kriterien Definieren",
         bruteForceCardTitle: "Kriterien-Optimierung (Brute-Force)",
-        metricsOverviewCardTitle: "Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)"
+        metricsOverviewCardTitle: "Kurzübersicht Diagnostische Güte (T2 vs. N - angew. Kriterien)",
+        toggleDetailsButton: {
+            expand: "Alle Details Anzeigen",
+            collapse: "Alle Details Ausblenden"
+        }
     },
     statistikTab: {
         title: "Statistik",
@@ -53,6 +61,9 @@ const UI_TEXTS = Object.freeze({
             einzel: '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv',
             vergleich: '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv'
         },
+        kollektivSelectLabel: "Kollektiv wählen:",
+        kollektivSelectLabel1: "Kollektiv 1:",
+        kollektivSelectLabel2: "Kollektiv 2:",
         deskriptivCardTitle: "Deskriptive Statistik",
         gueteASCardTitle: "Diagnostische Güte: Avocado Sign",
         gueteT2AngewandtCardTitle: "Diagnostische Güte: T2 (angewandte Kriterien)",
@@ -61,14 +72,21 @@ const UI_TEXTS = Object.freeze({
         vergleichASvsT2CardTitle: "Vergleich: Avocado Sign vs. T2 Kriterien",
         assoziationMerkmalCardTitle: "Assoziation: [MERKMAL] vs. N-Status",
         filterMerkmalLabel: "Merkmal für Assoziationsanalyse:",
-        t2KriterienSetLabel: "Vergleichs-T2-Set:"
+        t2KriterienSetLabel: "Vergleichs-T2-Set:",
+        filterMerkmalLabelMapping: { // Für die Formatierung in study_criteria_manager
+            size: 'Größe',
+            form: 'Form',
+            kontur: 'Kontur',
+            homogenitaet: 'Homogenität',
+            signal: 'Signal'
+        }
     },
     praesentationTab: {
         title: "Präsentation",
         viewSelectLabel: "Ansicht wählen:",
         viewOptions: {
             asPur: "Avocado Sign (AS) Performance",
-            asVsT2: "AS vs. T2 (Literatur-Kriterium)"
+            asVsT2: "AS vs. T2 (Vergleich)"
         },
         studySelectLabel: "T2-Literatur-Kriterium wählen:",
         performanceCardTitle: "Performance: [METHOD_NAME]",
@@ -189,23 +207,27 @@ const TOOLTIP_CONTENT = Object.freeze({
         expandAll: "Alle Patientendetails (Lymphknoten) ein-/ausblenden.",
         patNr: "Patienten-ID.",
         patName: "Pseudonymisierter Patientenname.",
-        geburtsdatum: "Geburtsdatum des Patienten.",
-        alter: "Alter des Patienten zum Untersuchungszeitpunkt.",
+        vorname: "Vorname des Patienten.",
         geschlecht: "Geschlecht des Patienten.",
+        alter: "Alter des Patienten zum Untersuchungszeitpunkt.",
         therapie: "Art der Therapie (Direkt-OP oder nRCT).",
-        untersuchungsdatum: "Datum der MRT-Untersuchung.",
-        asStatus: "Avocado Sign Status des Patienten (+: positiv, -: negativ).",
-        anzahlAS: "Anzahl der Avocado Sign positiven Lymphknoten beim Patienten.",
-        t2Status: "T2-basierter Status des Patienten gemäß aktuell angewandten Kriterien (+: positiv, -: negativ).",
-        anzahlT2: "Anzahl der T2-positiven Lymphknoten beim Patienten gemäß aktuell angewandten Kriterien.",
-        nStatus: "Pathologischer N-Status des Patienten (+: Lymphknotenmetastasen vorhanden, -: keine Lymphknotenmetastasen).",
-        anzahlPathoNplus: "Anzahl der histopathologisch positiven Lymphknoten.",
-        anzahlPathoLymphknoten: "Gesamtzahl der untersuchten Lymphknoten (histopathologisch)."
+        n_as_t2: "Status: Pathologie (N), Avocado Sign (AS), T2 (aktuelle Kriterien).",
+        bemerkung: "Zusätzliche klinische oder radiologische Bemerkungen.",
+        expandRow: "Details anzeigen/ausblenden."
     },
     auswertungTable: { 
-        expandAll: "Alle Patientendetails (Lymphknoten) ein-/ausblenden."
+        expandAll: "Alle Patientendetails (Lymphknoten) ein-/ausblenden.",
+        nr: "Patienten-ID.",
+        name: "Pseudonymisierter Patientenname.",
+        therapie: "Angewandte Therapie vor der Operation.",
+        n_as_t2: "Status: Pathologie (N), Avocado Sign (AS), T2 (aktuelle Kriterien).",
+        n_counts: "Anzahl pathologisch positiver Lymphknoten / Gesamtzahl pathologisch untersuchter Lymphknoten.",
+        as_counts: "Anzahl Avocado Sign positiver Lymphknoten / Gesamtzahl im T1KM bewerteter Lymphknoten.",
+        t2_counts: "Anzahl T2-positiver Lymphknoten (gemäß aktuell eingestellter Kriterien) / Gesamtzahl T2-bewerteter Lymphknoten.",
+        expandRow: "Details zur T2-Bewertung anzeigen/ausblenden."
     },
     t2CriteriaCard: {
+        description: "Definition der T2-Malignitätskriterien für Lymphknoten.",
         unsavedIndicator: "Ungespeicherte Änderungen an den T2-Kriterien vorhanden. Klicken Sie auf 'Anwenden & Speichern'.",
         appliedDisplay: "Aktuell auf den Datensatz angewendete und im Local Storage gespeicherte T2-Kriterien und Logik. Diese Einstellungen beeinflussen alle Tabellen und Statistiken."
     },
@@ -313,11 +335,45 @@ const TOOLTIP_CONTENT = Object.freeze({
     },
     deskriptiveStatistik: {
         cardTitle: "Deskriptive Statistik für Kollektiv [KOLLEKTIV].",
-        chartAge: "Altersverteilung im Kollektiv [KOLLEKTIV].",
-        chartGender: "Geschlechterverteilung im Kollektiv [KOLLEKTIV].",
-        nStatus: "Verteilung des pathologischen N-Status im Kollektiv [KOLLEKTIV].",
-        asStatus: "Verteilung des Avocado Sign Status im Kollektiv [KOLLEKTIV].",
-        t2Status: "Verteilung des T2-basierten Status (angewandte Kriterien) im Kollektiv [KOLLEKTIV]."
+        chartAge: {
+            description: "Altersverteilung der Patienten im Kollektiv [KOLLEKTIV]."
+        },
+        chartGender: {
+            description: "Geschlechterverteilung der Patienten im Kollektiv [KOLLEKTIV]."
+        },
+        alterMedian: {
+            description: "Median, Minimum und Maximum sowie Mittelwert und Standardabweichung des Alters der Patienten im Kollektiv."
+        },
+        geschlecht: {
+            description: "Anzahl und prozentuale Verteilung der Geschlechter (männlich/weiblich) im Kollektiv."
+        },
+        nStatus: {
+            description: "Anzahl und prozentuale Verteilung des pathologischen N-Status (N+/N-) im Kollektiv."
+        },
+        asStatus: {
+            description: "Anzahl und prozentuale Verteilung des Avocado Sign Status (AS+/AS-) im Kollektiv."
+        },
+        t2Status: {
+            description: "Anzahl und prozentuale Verteilung des T2-basierten Status (T2+/T2-) gemäß den aktuell angewandten Kriterien im Kollektiv."
+        },
+        lkAnzahlPatho: {
+            description: "Median, Min-Max, Mittelwert und Standardabweichung der Gesamtzahl histopathologisch untersuchter Lymphknoten pro Patient im Kollektiv."
+        },
+        lkAnzahlPathoPlus: {
+            description: "Median, Min-Max, Mittelwert und Standardabweichung der Anzahl pathologisch positiver (N+) Lymphknoten pro Patient, nur bei Patienten mit N+ Status."
+        },
+        lkAnzahlAS: {
+            description: "Median, Min-Max, Mittelwert und Standardabweichung der Gesamtzahl im T1KM-MRT sichtbarer und bewerteter Lymphknoten pro Patient im Kollektiv."
+        },
+        lkAnzahlASPlus: {
+            description: "Median, Min-Max, Mittelwert und Standardabweichung der Anzahl Avocado Sign positiver (AS+) Lymphknoten pro Patient, nur bei Patienten mit AS+ Status."
+        },
+        lkAnzahlT2: {
+            description: "Median, Min-Max, Mittelwert und Standardabweichung der Gesamtzahl im T2-MRT sichtbarer und für die Kriterienbewertung herangezogener Lymphknoten pro Patient im Kollektiv."
+        },
+        lkAnzahlT2Plus: {
+            description: "Median, Min-Max, Mittelwert und Standardabweichung der Anzahl T2-positiver Lymphknoten (gemäß aktueller Kriterien) pro Patient, nur bei Patienten mit T2+ Status."
+        }
     },
     diagnostischeGuete: {
         cardTitleAS: "Diagnostische Güte des Avocado Signs für Kollektiv [KOLLEKTIV].",
@@ -333,11 +389,47 @@ const TOOLTIP_CONTENT = Object.freeze({
         cardTitle: "Analyse der Assoziation zwischen dem Merkmal '[MERKMAL]' und dem pathologischen N-Status für Kollektiv [KOLLEKTIV]."
     },
     praesentationTabTooltips: {
-        viewSelect: "Wählen Sie die Art der Präsentationsansicht.",
-        studySelect: "Wählen Sie ein Literatur-basiertes T2-Kriterienset für den Vergleich mit dem Avocado Sign."
+        viewSelect: {
+            description: "Wählen Sie die Art der Präsentationsansicht."
+        },
+        studySelect: {
+            description: "Wählen Sie ein Literatur-basiertes T2-Kriterienset für den Vergleich mit dem Avocado Sign."
+        },
+        t2BasisInfoCard: {
+            description: "Zeigt Details zur ausgewählten T2-Vergleichsbasis und dem aktuellen Vergleichskollektiv.",
+            title: "Details zur T2-Vergleichsbasis",
+            reference: "Quelle/Publikation der Kriterien.",
+            patientCohort: "Ursprüngliche Studienkohorte bzw. aktuelles Vergleichskollektiv.",
+            investigationType: "Art der Untersuchung in der Originalstudie (z.B. Primärstaging).",
+            focus: "Hauptfokus der Originalstudie bzgl. dieser Kriterien.",
+            keyCriteriaSummary: "Zusammenfassung der angewendeten T2-Kriterien und deren Logik."
+        },
+        asPurPerfTable: {
+            kollektiv: "Patientenkollektiv und dessen Größe (N).",
+            sens: "Sensitivität (Richtig-Positiv-Rate) des Avocado Signs.",
+            spez: "Spezifität (Richtig-Negativ-Rate) des Avocado Signs.",
+            ppv: "Positiver Prädiktiver Wert des Avocado Signs.",
+            npv: "Negativer Prädiktiver Wert des Avocado Signs.",
+            acc: "Genauigkeit (Accuracy) des Avocado Signs.",
+            auc: "Area Under Curve (ROC) des Avocado Signs (entspricht Balanced Accuracy)."
+        },
+        asVsT2PerfTable: {
+            metric: "Diagnostische Metrik.",
+            asValue: "Wert für Avocado Sign (AS).",
+            t2Value: "Wert für die ausgewählte T2-Basis. ([T2_SHORT_NAME])"
+        },
+        downloadPerformanceCSV: { description: "Exportiert die Performance-Tabelle als CSV-Datei.", type: "STATS_CSV", ext: "csv" },
+        downloadPerformanceMD: { description: "Exportiert die Performance-Tabelle als Markdown-formatierte Datei.", type: "DESKRIPTIV_MD", ext: "md" },
+        downloadCompTableMD: { description: "Exportiert die Vergleichs-Metrik-Tabelle als Markdown-formatierte Datei.", type: "DESKRIPTIV_MD", ext: "md" },
+        downloadCompTestsMD: { description: "Exportiert die Tabelle der statistischen Vergleichstests als Markdown-formatierte Datei.", type: "DESKRIPTIV_MD", ext: "md" },
+        downloadCompChartPNG: { description: "Exportiert das Vergleichs-Balkendiagramm als PNG-Bild.", type: "CHART_SINGLE_PNG", ext: "png" },
+        downloadCompChartSVG: { description: "Exportiert das Vergleichs-Balkendiagramm als SVG-Vektorgrafik.", type: "CHART_SINGLE_SVG", ext: "svg" },
+        downloadTablePNG: { description: "Exportiert die Tabelle als PNG-Bild.", type: "TABLE_PNG_EXPORT", ext: "png" },
     },
     publikationTabTooltips: {
-        sectionSelect: "Wählen Sie einen Abschnitt der Publikation zur Ansicht und Bearbeitung aus.",
+        sectionSelect: {
+            description: "Wählen Sie einen Abschnitt der Publikation zur Ansicht und Bearbeitung aus."
+        },
         spracheSwitch: {
             description: "Schaltet die Sprache der generierten Publikationstexte zwischen Deutsch und Englisch um."
         },
@@ -445,6 +537,14 @@ const TOOLTIP_CONTENT = Object.freeze({
         defaultP: {
              description: "P-Wert eines statistischen Tests.",
              interpretation: "Der Test für [MERKMAL] im Kollektiv [KOLLEKTIV] ergab einen p-Wert von [P_WERT]. Dies ist [SIGNIFIKANZ_TEXT]."
+        },
+        accComp: {
+            description: "Vergleich der Accuracy der Methode [METHODE] zwischen zwei Kollektiven.",
+            interpretation: "Der Vergleich der Accuracy von Methode [METHODE] zwischen Kollektiv [KOLLEKTIV1] und Kollektiv [KOLLEKTIV2] ergab einen p-Wert von [P_WERT]. Dies ist [SIGNIFIKANZ_TEXT]."
+        },
+        aucComp: {
+            description: "Vergleich der AUC der Methode [METHODE] zwischen zwei Kollektiven.",
+            interpretation: "Der Vergleich der AUC von Methode [METHODE] zwischen Kollektiv [KOLLEKTIV1] und Kollektiv [KOLLEKTIV2] ergab einen p-Wert von [P_WERT]. Die Differenz der AUCs betrug [DIFF_AUC]. Dies ist [SIGNIFIKANZ_TEXT]."
         }
     }
 });
