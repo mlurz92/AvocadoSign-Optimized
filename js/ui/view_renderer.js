@@ -265,7 +265,7 @@ const viewRenderer = (() => {
 
 
     function renderPraesentationTab(view, presentationData, selectedStudyId = null, currentGlobalKollektiv = 'Gesamt') {
-        const ttContextViewSelect = TOOLTIP_CONTENT.praesentationTabTooltips.viewSelect || {}; // Corrected path
+        const ttContextViewSelect = TOOLTIP_CONTENT.praesentation.viewSelect || {};
         let viewSelectorHTML = `
             <div class="row mb-4">
                 <div class="col-12 d-flex justify-content-center">
@@ -286,7 +286,7 @@ const viewRenderer = (() => {
         } else {
             contentHTML = '<div class="alert alert-warning">Unbekannte Ansicht ausgewählt.</div>';
         }
-        renderTabContent('praesentation-tab-pane', contentHTML, {
+        renderTabContent('praesentation-tab-pane', viewSelectorHTML + `<div id="praesentation-content-area">${contentHTML}</div>`, {
             afterRender: () => {
                 if (typeof praesentationEventHandlers !== 'undefined' && praesentationEventHandlers.register) {
                     praesentationEventHandlers.register();
@@ -437,7 +437,7 @@ const viewRenderer = (() => {
         const na = '--';
         const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image':'fa-download';
         const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download';
-        const ttContextStudySelect = TOOLTIP_CONTENT.praesentationTabTooltips.studySelect || {}; // Corrected path
+        const ttContextStudySelect = TOOLTIP_CONTENT.praesentation.studySelect || {};
 
         if (canDisplayResults) {
             const fPVal = (r,d=3) => { const p = r?.pValue; return (p !== null && !isNaN(p)) ? (p < 0.001 ? '&lt;0.001' : formatNumber(p, d, na)) : na; };
@@ -445,10 +445,11 @@ const viewRenderer = (() => {
             const compTableMD = TOOLTIP_CONTENT.praesentation.downloadCompTableMD?.description || "Vergleichs-Metriken als Markdown";
             const testsMD = TOOLTIP_CONTENT.praesentation.downloadCompTestsMD?.description || "Statistische Vergleichstests als Markdown";
 
-            const chartPNG = TOOLTIP_CONTENT.praesentation.downloadCompChartPNG?.description || `Chart (AS vs. ${t2ShortNameEffective}) als PNG`;
-            const chartSVG = TOOLTIP_CONTENT.praesentation.downloadCompChartSVG?.description || `Chart (AS vs. ${t2ShortNameEffective}) als SVG`;
+            const chartPNG = (TOOLTIP_CONTENT.praesentation.downloadCompChartPNG?.description || `Chart (AS vs. ${t2ShortNameEffective}) als PNG`).replace('[T2_SHORT_NAME]', t2ShortNameEffective);
+            const chartSVG = (TOOLTIP_CONTENT.praesentation.downloadCompChartSVG?.description || `Chart (AS vs. ${t2ShortNameEffective}) als SVG`).replace('[T2_SHORT_NAME]', t2ShortNameEffective);
             const tablePNG = TOOLTIP_CONTENT.praesentation.downloadTablePNG?.description || "Tabelle als PNG";
-            const compTablePNG = TOOLTIP_CONTENT.praesentation.downloadCompTablePNG?.description || `Vergleichs-Metrik-Tabelle (AS vs. ${t2ShortNameEffective}) als PNG`;
+            const compTablePNG = (TOOLTIP_CONTENT.praesentation.downloadCompTablePNG?.description || `Vergleichs-Metrik-Tabelle (AS vs. ${t2ShortNameEffective}) als PNG`).replace('[T2_SHORT_NAME]', t2ShortNameEffective);
+
 
             const compTitle = `Stat. Vergleich (AS vs. ${t2ShortNameEffective})`;
             const perfTitle = `Vergleich Metriken (AS vs. ${t2ShortNameEffective})`;
@@ -458,7 +459,7 @@ const viewRenderer = (() => {
             const infoCardId = "praes-t2-basis-info-card";
             const chartContainerId = "praes-comp-chart-container";
             const chartBaseName = `AS_vs_${(comparisonCriteriaSet?.id || selectedStudyId || 'T2').replace(/\s+/g, '_')}_Koll_${displayKollektivForComparison.replace(/\s+/g, '_')}`;
-            const ttContextStudySelect = TOOLTIP_CONTENT.praesentationTabTooltips.studySelect || {};
+            const ttContextPerfTable = TOOLTIP_CONTENT.praesentation.asVsT2PerfTable || {};
 
             let comparisonTableHTML = `<div class="table-responsive"><table class="table table-sm table-striped small mb-0" id="${perfTableId}"><thead class="small"><tr><th data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${(ttContextPerfTable.metric || 'Diagnostische Metrik.')}">Metrik</th><th data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${(ttContextPerfTable.asValue || 'Wert für Avocado Sign (AS).')}">AS (Wert, 95% CI)</th><th data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${(ttContextPerfTable.t2Value || 'Wert für die ausgewählte T2-Basis.').replace('[T2_SHORT_NAME]', `<strong>${t2ShortNameEffective}</strong>`)}">${t2ShortNameEffective} (Wert, 95% CI)</th></tr></thead><tbody>`;
             const metrics = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'f1', 'auc'];
