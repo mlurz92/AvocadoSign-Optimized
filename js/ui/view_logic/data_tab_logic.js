@@ -1,5 +1,9 @@
 const dataTabLogic = (() => {
 
+    let dataView = [];
+    let currentSortState = cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT);
+    let currentKollektiv = APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
+
     function createDatenTableHTML(data, sortState) {
         if (!Array.isArray(data)) {
             console.error("createDatenTableHTML: Ungültige Daten für Tabelle, Array erwartet.");
@@ -69,7 +73,7 @@ const dataTabLogic = (() => {
              }).join(' / ') : '';
             
             const mainTooltip = col.subKeys ? `${baseTooltipContent} Klicken Sie auf N, AS oder T2 für Sub-Sortierung.` : (col.key === 'details' ? (TOOLTIP_CONTENT.datenTable.expandRow || 'Details ein-/ausblenden') : `Sortieren nach ${col.label}. ${baseTooltipContent}`);
-            const sortAttributes = `data-sort-key="${col.key}" ${col.subKeys || col.key === 'details' ? '' : 'style="cursor: pointer;"'}`;
+            const sortAttributes = `data-sort-key="${col.key}" ${col.key === 'details' ? '' : 'style="cursor: pointer;"'}`;
             const thClass = mainHeaderClass;
             const tooltipAttributes = `data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${mainTooltip}"`;
 
@@ -83,11 +87,6 @@ const dataTabLogic = (() => {
         return headerHTML;
     }
 
-    let dataView = [];
-    let currentSortState = cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT);
-    let tableRendererInstance = null;
-    let currentKollektiv = APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV;
-
     function initialize(data, initialKollektiv) {
         if (!Array.isArray(data)) {
             console.error("DataTabLogic: Ungültige Daten für Initialisierung empfangen.");
@@ -97,7 +96,6 @@ const dataTabLogic = (() => {
         }
         currentKollektiv = initialKollektiv;
         currentSortState = stateManager.getDatenTableSort() || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT);
-        _renderTable();
     }
 
     function updateData(newData) {
@@ -107,7 +105,6 @@ const dataTabLogic = (() => {
         }
         dataView = newData;
         currentKollektiv = stateManager.getCurrentKollektiv();
-        _renderTable();
     }
 
     function getFilteredData(kollektivId) {
@@ -118,38 +115,26 @@ const dataTabLogic = (() => {
         return dataView.filter(p => p.therapie === kollektivId);
     }
 
-    function _renderTable() {
-        const tableContainer = document.getElementById('daten-tab-pane');
-        const toggleDetailsButtonId = 'daten-toggle-details';
-        
-        if (!tableContainer) {
-            console.error("DataTabLogic: Tabellencontainer nicht gefunden.");
+    function renderTableBody(data, sortState) {
+        const tableBodyElement = document.getElementById('daten-table-body');
+        if (!tableBodyElement) {
+            console.error("DataTabLogic: Tabellenkörper 'daten-table-body' nicht gefunden.");
             return;
         }
-
-        const filteredData = getFilteredData(currentKollektiv);
-        const sortedData = [...filteredData].sort(getSortFunction(currentSortState.key, currentSortState.direction, currentSortState.subKey));
-        const tableHTML = createDatenTableHTML(sortedData, currentSortState);
-        
-        ui_helpers.updateElementHTML(tableContainer.id, `
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 class="h4 mb-0">Patientenliste (${getKollektivDisplayName(currentKollektiv)}, N=${filteredData.length})</h2>
-                <button class="btn btn-sm btn-outline-secondary" id="${toggleDetailsButtonId}" data-action="expand" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-bs-title="${TOOLTIP_CONTENT.datenTable.expandAll}">
-                    ${UI_TEXTS.datenTab.toggleDetailsButton.expand} <i class="fas fa-chevron-down ms-1"></i>
-                </button>
-            </div>
-            <div class="table-responsive">
-                ${tableHTML}
-            </div>
-        `);
-
-        if (typeof dataTabEventHandlers !== 'undefined' && dataTabEventHandlers.register) {
-            dataTabEventHandlers.register();
+        let bodyHTML = '';
+        if (data.length === 0) {
+            const numColumns = document.getElementById('daten-table')?.querySelector('thead tr')?.children.length || 9; // Fallback to 9 columns
+            bodyHTML = `<tr><td colspan="${numColumns}" class="text-center text-muted">Keine Daten im ausgewählten Kollektiv gefunden.</td></tr>`;
+        } else {
+            data.forEach(patient => {
+                bodyHTML += tableRenderer.createDatenTableRow(patient);
+            });
         }
-        ui_helpers.initializeTooltips(tableContainer);
-        ui_helpers.updateSortIcons('daten-table-header', currentSortState);
-        ui_helpers.attachRowCollapseListeners(document.getElementById('daten-table-body'));
+        tableBodyElement.innerHTML = bodyHTML;
+        ui_helpers.attachRowCollapseListeners(tableBodyElement);
+        ui_helpers.initializeTooltips(tableBodyElement);
     }
+
 
     function handleSortChange(newSortKey, newSubKey = null) {
         if (currentSortState.key === newSortKey && currentSortState.subKey === newSubKey) {
@@ -160,7 +145,7 @@ const dataTabLogic = (() => {
             currentSortState.direction = 'asc';
         }
         stateManager.setDatenTableSort(cloneDeep(currentSortState));
-        _renderTable();
+        refreshUI();
     }
 
     function handleRowClick(patientId, rowIndex, event) {
@@ -180,7 +165,12 @@ const dataTabLogic = (() => {
     function refreshUI() {
         currentKollektiv = stateManager.getCurrentKollektiv();
         currentSortState = stateManager.getDatenTableSort() || cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT);
-        _renderTable();
+        
+        const filteredData = getFilteredData(currentKollektiv);
+        const sortedData = [...filteredData].sort(getSortFunction(currentSortState.key, currentSortState.direction, currentSortState.subKey));
+        
+        renderTableBody(sortedData, currentSortState);
+        ui_helpers.updateSortIcons('daten-table-header', currentSortState);
     }
 
     return Object.freeze({
@@ -190,7 +180,8 @@ const dataTabLogic = (() => {
         createDatenTableHTML,
         handleSortChange,
         handleRowClick,
-        refreshUI
+        refreshUI,
+        renderTableBody
     });
 
 })();
