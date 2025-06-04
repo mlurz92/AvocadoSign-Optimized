@@ -111,10 +111,10 @@ const UI_TEXTS = Object.freeze({
             ergebnisse_patientencharakteristika: "Patientencharakteristika",
             ergebnisse_as_performance: "Diagnostische Güte: Avocado Sign",
             ergebnisse_literatur_t2_performance: "Diagnostische Güte: Literatur-T2-Kriterien",
-            ergebnisse_optimierte_t2_performance: "Diagnostische Güte: Optimierte T2-Kriterien",
+            ergebnisse_optimierte_t2_performance: "Diagnostische Güte: Optimierte T2-Kriterien (Brute-Force)",
             ergebnisse_vergleich_performance: "Vergleich: AS vs. T2-Kriterien",
-            referenzen: "Referenzen",
-            referenzen_liste: "Referenzliste"
+            referenzen: "Referenzen", // Beibehalten für den Haupt-Tab-Titel
+            referenzen_liste: "Referenzliste" // Spezifischer für den Inhalt
         },
         spracheSwitchLabel: {
             de: "Deutsch",
@@ -193,9 +193,9 @@ const TOOLTIP_CONTENT = Object.freeze({
         appName: UI_TEXTS.appName,
         kollektivSelect: "Globales Patientenkollektiv für die Analyse auswählen.",
         patientCount: "Anzahl der Patienten im aktuellen Kollektiv.",
-        nStatusInfo: "Pathologischer N-Status im aktuellen Kollektiv (N+/N-Gesamt).",
-        asStatusInfo: "Avocado Sign Status im aktuellen Kollektiv (AS+/AS-Gesamt).",
-        t2StatusInfo: "T2-basierter Status (gemäß aktuell angewandten Kriterien) im aktuellen Kollektiv (T2+/T2-Gesamt)."
+        nStatusInfo: "Pathologischer N-Status im aktuellen Kollektiv (N+/Gesamt).",
+        asStatusInfo: "Avocado Sign Status im aktuellen Kollektiv (AS+/Gesamt).",
+        t2StatusInfo: "T2-basierter Status (gemäß aktuell angewandten Kriterien) im aktuellen Kollektiv (T2+/Gesamt)."
     },
     navigation: {
         datenTab: "Patientenrohdaten anzeigen und filtern.",
@@ -391,21 +391,17 @@ const TOOLTIP_CONTENT = Object.freeze({
     assoziationMerkmal: {
         cardTitle: "Analyse der Assoziation zwischen dem Merkmal '[MERKMAL]' und dem pathologischen N-Status für Kollektiv [KOLLEKTIV]."
     },
-    praesentationTabTooltips: {
-        viewSelect: {
-            description: "Wählen Sie die Art der Präsentationsansicht."
-        },
-        studySelect: {
-            description: "Wählen Sie ein Literatur-basiertes T2-Kriterienset für den Vergleich mit dem Avocado Sign."
-        },
+    praesentation: { // Beibehaltung der Struktur, die von praesentation_tab_logic.js erwartet wird
+        viewSelect: { description: "Wählen Sie die Art der Präsentationsansicht." },
+        studySelect: { description: "Wählen Sie ein T2-Kriterienset für den Vergleich." },
         t2BasisInfoCard: {
-            description: "Zeigt Details zur ausgewählten T2-Vergleichsbasis und dem aktuellen Vergleichskollektiv.",
-            title: "Details zur T2-Vergleichsbasis",
-            reference: "Quelle/Publikation der Kriterien.",
-            patientCohort: "Ursprüngliche Studienkohorte bzw. aktuelles Vergleichskollektiv.",
-            investigationType: "Art der Untersuchung in der Originalstudie (z.B. Primärstaging).",
-            focus: "Hauptfokus der Originalstudie bzgl. dieser Kriterien.",
-            keyCriteriaSummary: "Zusammenfassung der angewendeten T2-Kriterien und deren Logik."
+            description: 'Details zur ausgewählten T2-Vergleichsbasis und dem aktuellen Vergleichskollektiv.',
+            title: 'Details zur T2-Vergleichsbasis',
+            reference: 'Quelle/Publikation der Kriterien.',
+            patientCohort: 'Ursprüngliche Studienkohorte bzw. aktuelles Vergleichskollektiv.',
+            investigationType: 'Art der Untersuchung in der Originalstudie (z.B. Primärstaging).',
+            focus: 'Hauptfokus der Originalstudie bzgl. dieser Kriterien.',
+            keyCriteriaSummary: 'Zusammenfassung der angewendeten T2-Kriterien und deren Logik.'
         },
         asPurPerfTable: {
             kollektiv: "Patientenkollektiv und dessen Größe (N).",
@@ -419,7 +415,7 @@ const TOOLTIP_CONTENT = Object.freeze({
         asVsT2PerfTable: {
             metric: "Diagnostische Metrik.",
             asValue: "Wert für Avocado Sign (AS).",
-            t2Value: "Wert für die ausgewählte T2-Basis. ([T2_SHORT_NAME])"
+            t2Value: "Wert für die ausgewählte T2-Basis ([T2_SHORT_NAME])."
         },
         downloadPerformanceCSV: { description: "Exportiert die Performance-Tabelle als CSV-Datei.", type: "STATS_CSV", ext: "csv" },
         downloadPerformanceMD: { description: "Exportiert die Performance-Tabelle als Markdown-formatierte Datei.", type: "DESKRIPTIV_MD", ext: "md" },
@@ -428,6 +424,11 @@ const TOOLTIP_CONTENT = Object.freeze({
         downloadCompChartPNG: { description: "Exportiert das Vergleichs-Balkendiagramm als PNG-Bild.", type: "CHART_SINGLE_PNG", ext: "png" },
         downloadCompChartSVG: { description: "Exportiert das Vergleichs-Balkendiagramm als SVG-Vektorgrafik.", type: "CHART_SINGLE_SVG", ext: "svg" },
         downloadTablePNG: { description: "Exportiert die Tabelle als PNG-Bild.", type: "TABLE_PNG_EXPORT", ext: "png" },
+        downloadCompTablePNG: { description: "Exportiert die Vergleichs-Metrik-Tabelle ([T2_SHORT_NAME]) als PNG-Bild.", type: "TABLE_PNG_EXPORT", ext: "png" }
+    },
+    praesentationTabTooltips: { // Beibehalten für Konsistenz mit der "Corrected path" Anmerkung, falls es doch noch genutzt wird
+         viewSelect: { description: 'Wählen Sie die Präsentationsansicht.' },
+         studySelect: { description: 'Wählen Sie ein T2-Kriterienset für den Vergleich.' }
     },
     publikationTabTooltips: {
         sectionSelect: {
