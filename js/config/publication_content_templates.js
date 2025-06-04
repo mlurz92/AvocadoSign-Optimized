@@ -60,11 +60,13 @@ const PUBLICATION_CONTENT_TEMPLATES = (() => {
                     const kohRefFull = commonData.references?.koh2008?.fullCitation || kohRefShort;
                     const kohDOI = commonData.references?.koh2008?.doi;
                     const kohDesc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology')?.studyInfo?.keyCriteriaSummary || "Irreguläre Kontur ODER heterogenes Signal" : "Irreguläre Kontur ODER heterogenes Signal";
+                    const kohFullDescription = `${kohRefShort} (<a href="${kohDOI || '#'}" target="_blank" rel="noopener noreferrer"><i>Int J Radiat Oncol Biol Phys</i> 2008</a>): Definiert als "${kohDesc}". Dieses Set wurde in unserer Analyse sowohl auf das Gesamtkollektiv als auch auf die Direkt-OP- und nRCT-Subgruppen angewendet, um die Generalisierbarkeit zu prüfen.`;
 
                     const barbaroRefShort = commonData.references?.barbaro2024?.short || "Barbaro et al. (2024)";
                     const barbaroRefFull = commonData.references?.barbaro2024?.fullCitation || barbaroRefShort;
                     const barbaroDOI = commonData.references?.barbaro2024?.doi;
-                    const barbaroDesc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging')?.studyInfo?.keyCriteriaSummary || "Kurzachse ≥ 2,3mm" : "Kurzachse ≥ 2,3mm";
+                    const barbaroDesc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging')?.studyInfo?.keyCriteriaSummary || "Kurzachse ≥ 2,2mm" : "Kurzachse ≥ 2,2mm";
+                    const barbaroFullDescription = `${barbaroRefShort} (<a href="${barbaroDOI || '#'}" target="_blank" rel="noopener noreferrer"><i>Radiother Oncol</i> 2024</a>): Definiert als "${barbaroDesc}". Dieses Set wurde spezifisch für das Kollektiv der Patienten nach nRCT (Restaging) evaluiert.`;
                     
                     const esgarRefShort = commonData.references?.beetsTan2018ESGAR?.short || "Beets-Tan et al. (2018)";
                     const esgarRefFull = commonData.references?.beetsTan2018ESGAR?.fullCitation || esgarRefShort;
@@ -73,6 +75,7 @@ const PUBLICATION_CONTENT_TEMPLATES = (() => {
                     const rutegardRefFull = commonData.references?.rutegard2025?.fullCitation || rutegardRefShort;
                     const rutegardDOI = commonData.references?.rutegard2025?.doi;
                     const esgarDesc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.getStudyCriteriaSetById('rutegard_et_al_esgar')?.studyInfo?.keyCriteriaSummary || "Größe ≥9mm ODER (5-8mm UND ≥2 Kriterien) ODER (<5mm UND 3 Kriterien)" : "Größe ≥9mm ODER (5-8mm UND ≥2 Kriterien) ODER (<5mm UND 3 Kriterien)";
+                    const esgarFullDescription = `${esgarRefShort} (<a href="${esgarDOI || '#'}" target="_blank" rel="noopener noreferrer"><i>Eur Radiol</i> 2018</a>), validiert durch ${rutegardRefShort} (<a href="${rutegardDOI || '#'}" target="_blank" rel="noopener noreferrer"><i>Eur Radiol</i> 2025</a>): Definiert als "${esgarDesc}". Dieses Set wurde primär auf das Kollektiv der Patienten vor Therapie (Direkt-OP-Gruppe, Primärstaging) angewendet.`;
 
                     return `
                         <p>Die morphologischen T2-gewichteten Kriterien (Größe [Kurzachsendurchmesser in mm], Form ['rund', 'oval'], Kontur ['scharf', 'irregulär'], Homogenität des Binnensignals ['homogen', 'heterogen'] und Signalintensität relativ zum umgebenden Fettgewebe ['signalarm', 'intermediär', 'signalreich']) wurden für jeden im hochauflösenden T2w-MRT sichtbaren mesorektalen Lymphknoten von denselben zwei Radiologen erfasst, die auch das Avocado Sign bewerteten. Die Bewertung erfolgte konsensbasiert und verblindet gegenüber dem pathologischen N-Status und dem Avocado-Sign-Status. Für Patienten der nRCT-Gruppe wurden diese Merkmale auf den Restaging-MRT-Bildern beurteilt.</p>
@@ -80,9 +83,9 @@ const PUBLICATION_CONTENT_TEMPLATES = (() => {
                         <ol>
                             <li><strong>Literatur-basierte T2-Kriteriensets:</strong> Eine Auswahl etablierter Kriterien aus der Fachliteratur wurde implementiert und auf die entsprechenden Subgruppen bzw. das Gesamtkollektiv unseres Datensatzes angewendet (Details siehe <a href="${commonData.getSafeLink('methoden.literaturT2KriterienTabelle')}" class="internal-link">${commonData.getPubElementReferenceLabel('methoden.literaturT2KriterienTabelle', 'table')}</a>):
                                 <ul>
-                                    <li>Kriterien nach ${kohRefShort} (<a href="${kohDOI || '#'}" target="_blank" rel="noopener noreferrer"><i>Int J Radiat Oncol Biol Phys</i> 2008</a>): Definiert als "${kohDesc}". Dieses Set wurde in unserer Analyse sowohl auf das Gesamtkollektiv als auch auf die Direkt-OP- und nRCT-Subgruppen angewendet, um die Generalisierbarkeit zu prüfen.</li>
-                                    <li>Kriterien nach ${barbaroRefShort} (<a href="${barbaroDOI || '#'}" target="_blank" rel="noopener noreferrer"><i>Radiother Oncol</i> 2024</a>): Definiert als "${barbaroDesc}". Dieses Set wurde spezifisch für das Kollektiv der Patienten nach nRCT (Restaging) evaluiert.</li>
-                                    <li>ESGAR Konsensus Kriterien (<a href="${esgarDOI || '#'}" target="_blank" rel="noopener noreferrer">${esgarRefShort}</a>), validiert durch ${rutegardRefShort} (<a href="${rutegardDOI || '#'}" target="_blank" rel="noopener noreferrer"><i>Eur Radiol</i> 2025</a>): Definiert als "${esgarDesc}". Dieses Set wurde primär auf das Kollektiv der Patienten vor Therapie (Direkt-OP-Gruppe, Primärstaging) angewendet.</li>
+                                    <li>${kohFullDescription}</li>
+                                    <li>${barbaroFullDescription}</li>
+                                    <li>${esgarFullDescription}</li>
                                 </ul>
                             </li>
                             <li><strong>Brute-Force optimierte T2-Kriterien:</strong> Mittels eines im Analyse-Tool implementierten Brute-Force-Algorithmus wurden für jedes der drei Hauptkollektive (Gesamt, Direkt OP, nRCT) diejenigen Kombinationen aus den fünf T2-Merkmalen und einer UND/ODER-Logik identifiziert, welche die primäre Zielmetrik dieser Studie – die <strong>${bfZielMetric}</strong> – maximieren. Die resultierenden, für jedes Kollektiv spezifisch optimierten Kriteriensets waren:
@@ -166,7 +169,7 @@ const PUBLICATION_CONTENT_TEMPLATES = (() => {
                     let text = `<p>Die diagnostische Güte der evaluierten Literatur-basierten T2-Kriteriensets ist in <a href="${commonData.getSafeLink('ergebnisse.diagnostischeGueteLiteraturT2Tabelle')}" class="internal-link">${commonData.getPubElementReferenceLabel('ergebnisse.diagnostischeGueteLiteraturT2Tabelle', 'table')}</a> zusammengefasst. `;
                     text += `Für das Kriterienset nach ${kohRefShort}, angewendet auf das Gesamtkollektiv (N=${nGesamt}), ergab sich eine Sensitivität von ${commonData.fCI(kohData?.sens, 1, true)} und eine Spezifität von ${commonData.fCI(kohData?.spez, 1, true)} (AUC ${commonData.fCI(kohData?.auc, 3, false)}). `;
                     text += `Die Kriterien nach ${barbaroRefShort}, spezifisch für das nRCT-Kollektiv (N=${nNRCT}), zeigten eine Sensitivität von ${commonData.fCI(barbaroData?.sens, 1, true)} und eine Spezifität von ${commonData.fCI(barbaroData?.spez, 1, true)} (AUC ${commonData.fCI(barbaroData?.auc, 3, false)}). `;
-                    text += `Die ${esgarRefShort}-Kriterien (evaluiert durch ${rutegardRefShort}), angewendet auf das Direkt-OP-Kollektiv (N=${nDirektOP}), erreichten eine Sensitivität von ${commonData.fCI(esgarData?.sens, 1, true)} und eine Spezifität von ${commonData.fCI(esgarData?.spez, 1, true)} (AUC ${commonData.fCI(esgarData?.auc, 3, false)}).</p>`;
+                    text += `Die ${esgarRefShort}-Kriterien (evaluiert durch ${rutegardRefShort}), angewendet auf das Direkt-OP-Kollektiv (N=${nDirektOP}), erreichten eine Sensitivität von ${commonData.fCI(esgarData?.sens, 1, true)} und eine Spezifität von ${commonData.fCI(esgarData?.spez, 1, true)} (AUC ${commonData.fCI(esgarData?.auc, 3, false)}). </p>`;
                     return text;
                 }
             },
@@ -257,7 +260,7 @@ const PUBLICATION_CONTENT_TEMPLATES = (() => {
             methoden_patientenkollektiv: {
                 title: "Patient Cohort",
                 content: (commonData, allKollektivStats, options) => `
-                    <p>The study cohort comprised ${commonData.nGesamt || 'N/A'} consecutive patients with histologically confirmed rectal cancer who were treated at ${commonData.references?.lurzSchaefer2025?.institution || "University Hospital Cityname"} between ${commonData.references?.lurzSchaefer2025?.studyPeriod || "January YYYY and December YYYY"} and included in the initial Avocado Sign study. Of these, ${commonData.nNRCT || 'N/A'} patients received neoadjuvant chemoradiotherapy (nRCT group), while ${commonData.nDirektOP || 'N/A'} patients underwent upfront surgery (upfront surgery group). The median age in the overall cohort was ${commonData.fCI(allKollektivStats?.Gesamt?.deskriptiv?.alter?.median, 1, false, 'en')} years (range: ${commonData.fCI(allKollektivStats?.Gesamt?.deskriptiv?.alter?.min, 0, false, 'en')}–${commonData.fCI(allKollektivStats?.Gesamt?.deskriptiv?.alter?.max, 0, false, 'en')} years). Males constituted ${commonData.formatPercent((allKollektivStats?.Gesamt?.deskriptiv?.geschlecht?.m || 0) / (allKollektivStats?.Gesamt?.deskriptiv?.anzahlPatienten || 1), 1, 'en')} (${allKollektivStats?.Gesamt?.deskriptiv?.geschlecht?.m || 0}/${allKollektivStats?.Gesamt?.deskriptiv?.anzahlPatienten || 'N/A'}) of the cohort. Detailed patient characteristics, stratified by treatment group, are presented in <a href="${commonData.getSafeLink('ergebnisse.patientenCharakteristikaTabelle')}" class="internal-link">${commonData.getPubElementReferenceLabel('ergebnisse.patientenCharakteristikaTabelle', 'table', 'en')}</a>.</p>
+                    <p>The study cohort comprised ${commonData.nGesamt || 'N/A'} consecutive patients with histologically confirmed rectal cancer who were treated at ${commonData.references?.lurzSchaefer2025?.institution || "University Hospital Cityname"} between ${commonData.references?.lurzSchaefer2025?.studyPeriod || "January 2020 and December 2023"} and included in the initial Avocado Sign study. Of these, ${commonData.nNRCT || 'N/A'} patients received neoadjuvant chemoradiotherapy (nRCT group), while ${commonData.nDirektOP || 'N/A'} patients underwent upfront surgery (upfront surgery group). The median age in the overall cohort was ${commonData.fCI(allKollektivStats?.Gesamt?.deskriptiv?.alter?.median, 1, false, 'en')} years (range: ${commonData.fCI(allKollektivStats?.Gesamt?.deskriptiv?.alter?.min, 0, false, 'en')}–${commonData.fCI(allKollektivStats?.Gesamt?.deskriptiv?.alter?.max, 0, false, 'en')} years). Males constituted ${commonData.formatPercent((allKollektivStats?.Gesamt?.deskriptiv?.geschlecht?.m || 0) / (allKollektivStats?.Gesamt?.deskriptiv?.anzahlPatienten || 1), 1, 'en')} (${allKollektivStats?.Gesamt?.deskriptiv?.geschlecht?.m || 0}/${allKollektivStats?.Gesamt?.deskriptiv?.anzahlPatienten || 'N/A'}) of the cohort. Detailed patient characteristics, stratified by treatment group, are presented in <a href="${commonData.getSafeLink('ergebnisse.patientenCharakteristikaTabelle')}" class="internal-link">${commonData.getPubElementReferenceLabel('ergebnisse.patientenCharakteristikaTabelle', 'table', 'en')}</a>.</p>
                     <p>Inclusion criteria for the primary study were age of at least 18 years and histologically confirmed adenocarcinoma of the rectum. Exclusion criteria included the presence of distant metastases at initial diagnosis (M1 status), unresectable tumors (cT4b with infiltration of adjacent organs precluding R0 resection), prior pelvic surgery or radiotherapy, and general contraindications to MRI (e.g., non-MRI-compatible implants, severe claustrophobia). For the present extended analysis, all patients from the primary study with complete datasets regarding T1-weighted contrast-enhanced and T2-weighted lymph node characteristics, as well as histopathological N-status, were included.</p>
                 `
             },
@@ -305,16 +308,19 @@ const PUBLICATION_CONTENT_TEMPLATES = (() => {
                     const kohRefShort = commonData.references?.koh2008?.short || "Koh et al. (2008)";
                     const kohDOI = commonData.references?.koh2008?.doi;
                     const kohDesc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.getStudyCriteriaSetById('koh_2008_morphology')?.studyInfo?.keyCriteriaSummary || "Irregular border OR heterogeneous signal" : "Irregular border OR heterogeneous signal";
+                    const kohFullDescription = `${kohRefShort} (<a href="${kohDOI || '#'}" target="_blank" rel="noopener noreferrer"><i>Int J Radiat Oncol Biol Phys</i> 2008</a>): Defined as "${kohDesc}". This set was applied to the overall cohort as well as the upfront surgery and nRCT subgroups to assess generalizability.`;
 
                     const barbaroRefShort = commonData.references?.barbaro2024?.short || "Barbaro et al. (2024)";
                     const barbaroDOI = commonData.references?.barbaro2024?.doi;
-                    const barbaroDesc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging')?.studyInfo?.keyCriteriaSummary || "Short-axis diameter ≥ 2.3mm" : "Short-axis diameter ≥ 2.3mm";
+                    const barbaroDesc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.getStudyCriteriaSetById('barbaro_2024_restaging')?.studyInfo?.keyCriteriaSummary || "Short-axis diameter ≥ 2.2mm" : "Short-axis diameter ≥ 2.2mm";
+                    const barbaroFullDescription = `${barbaroRefShort} (<a href="${barbaroDOI || '#'}" target="_blank" rel="noopener noreferrer"><i>Radiother Oncol</i> 2024</a>): Defined as "${barbaroDesc}". This set was specifically evaluated for the nRCT cohort (restaging).`;
                     
                     const esgarRefShort = commonData.references?.beetsTan2018ESGAR?.short || "Beets-Tan et al. (2018)";
                     const esgarDOI = commonData.references?.beetsTan2018ESGAR?.doi;
                     const rutegardRefShort = commonData.references?.rutegard2025?.short || "Rutegård et al. (2025)";
                     const rutegardDOI = commonData.references?.rutegard2025?.doi;
                     const esgarDesc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.getStudyCriteriaSetById('rutegard_et_al_esgar')?.studyInfo?.keyCriteriaSummary || "Size ≥9mm OR (5-8mm AND ≥2 criteria) OR (<5mm AND 3 criteria)" : "Size ≥9mm OR (5-8mm AND ≥2 criteria) OR (<5mm AND 3 criteria)";
+                    const esgarFullDescription = `${esgarRefShort} (<a href="${esgarDOI || '#'}" target="_blank" rel="noopener noreferrer"><i>Eur Radiol</i> 2018</a>), as evaluated by ${rutegardRefShort} (<a href="${rutegardDOI || '#'}" target="_blank" rel="noopener noreferrer"><i>Eur Radiol</i> 2025</a>): Defined as "${esgarDesc}". This set was primarily applied to the cohort of patients before therapy (upfront surgery group, primary staging).`;
 
 
                     return `
@@ -323,9 +329,9 @@ const PUBLICATION_CONTENT_TEMPLATES = (() => {
                         <ol>
                             <li><strong>Literature-based T2 criteria sets:</strong> A selection of established criteria from the literature was implemented and applied to the respective subgroups or the entire cohort of our dataset (details see <a href="${commonData.getSafeLink('methoden.literaturT2KriterienTabelle')}" class="internal-link">${commonData.getPubElementReferenceLabel('methoden.literaturT2KriterienTabelle', 'table', 'en')}</a>):
                                 <ul>
-                                    <li>Criteria by ${kohRefShort} (<a href="${kohDOI || '#'}" target="_blank" rel="noopener noreferrer"><i>Int J Radiat Oncol Biol Phys</i> 2008</a>): Defined as "${kohDesc}". In our analysis, this set was applied to the overall cohort as well as the upfront surgery and nRCT subgroups to assess generalizability.</li>
-                                    <li>Criteria by ${barbaroRefShort} (<a href="${barbaroDOI || '#'}" target="_blank" rel="noopener noreferrer"><i>Radiother Oncol</i> 2024</a>): Defined as "${barbaroDesc}". This set was specifically evaluated for the nRCT cohort (restaging).</li>
-                                    <li>ESGAR Consensus Criteria (<a href="${esgarDOI || '#'}" target="_blank" rel="noopener noreferrer">${esgarRefShort}</a>), as evaluated by ${rutegardRefShort} (<a href="${rutegardDOI || '#'}" target="_blank" rel="noopener noreferrer"><i>Eur Radiol</i> 2025</a>): Defined as "${esgarDesc}". This set was primarily applied to the cohort of patients before therapy (upfront surgery group, primary staging).</li>
+                                    <li>${kohFullDescription}</li>
+                                    <li>${barbaroFullDescription}</li>
+                                    <li>${esgarFullDescription}</li>
                                 </ul>
                             </li>
                             <li><strong>Brute-force optimized T2 criteria:</strong> Using a brute-force algorithm implemented in the analysis tool, combinations of the five T2 features and AND/OR logic that maximize the primary endpoint of this study – <strong>${bfZielMetric}</strong> – were identified for each of the three main cohorts (Overall, Upfront Surgery, nRCT). The resulting cohort-specific optimized criteria sets were:
@@ -409,7 +415,7 @@ const PUBLICATION_CONTENT_TEMPLATES = (() => {
                     let text = `<p>The diagnostic performance of the evaluated literature-based T2 criteria sets is summarized in <a href="${commonData.getSafeLink('ergebnisse.diagnostischeGueteLiteraturT2Tabelle')}" class="internal-link">${commonData.getPubElementReferenceLabel('ergebnisse.diagnostischeGueteLiteraturT2Tabelle', 'table', 'en')}</a>. `;
                     text += `For the criteria set according to ${kohRefShort}, applied to the overall cohort (N=${nGesamt}), a sensitivity of ${commonData.fCI(kohData?.sens, 1, true, 'en')} and a specificity of ${commonData.fCI(kohData?.spez, 1, true, 'en')} (AUC ${commonData.fCI(kohData?.auc, 3, false, 'en')}) were observed. `;
                     text += `The criteria by ${barbaroRefShort}, specific for the nRCT cohort (N=${nNRCT}), showed a sensitivity of ${commonData.fCI(barbaroData?.sens, 1, true, 'en')} and a specificity of ${commonData.fCI(barbaroData?.spez, 1, true, 'en')} (AUC ${commonData.fCI(barbaroData?.auc, 3, false, 'en')}). `;
-                    text += `The ${esgarRefShort} criteria (evaluated by ${rutegardRefShort}), applied to the upfront surgery cohort (N=${nDirektOP}), achieved a sensitivity of ${commonData.fCI(esgarData?.sens, 1, true, 'en')} and a specificity of ${commonData.fCI(esgarData?.spez, 1, true, 'en')} (AUC ${commonData.fCI(esgarData?.auc, 3, false, 'en')}).</p>`;
+                    text += `The ${esgarRefShort} criteria (evaluated by ${rutegardRefShort}), applied to the upfront surgery cohort (N=${nDirektOP}), achieved a sensitivity of ${commonData.fCI(esgarData?.sens, 1, true, 'en')} and a specificity of ${commonData.fCI(esgarData?.spez, 1, true, 'en')} (AUC ${commonData.fCI(esgarData?.auc, 3, false, 'en')}). </p>`;
                     return text;
                 }
             },
@@ -503,3 +509,6 @@ const PUBLICATION_CONTENT_TEMPLATES = (() => {
         }
     });
 })();
+
+// Exportiere PUBLICATION_CONTENT_TEMPLATES global
+window.PUBLICATION_CONTENT_TEMPLATES = PUBLICATION_CONTENT_TEMPLATES;
