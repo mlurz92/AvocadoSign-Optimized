@@ -123,7 +123,7 @@ const dataTabLogic = (() => {
         }
         let bodyHTML = '';
         if (data.length === 0) {
-            const numColumns = document.getElementById('daten-table')?.querySelector('thead tr')?.children.length || 9; // Fallback to 9 columns
+            const numColumns = document.getElementById('daten-table')?.querySelector('thead tr')?.children.length || 9;
             bodyHTML = `<tr><td colspan="${numColumns}" class="text-center text-muted">Keine Daten im ausgewählten Kollektiv gefunden.</td></tr>`;
         } else {
             data.forEach(patient => {
