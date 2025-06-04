@@ -95,9 +95,9 @@ const exportService = (() => {
             if (!metricData || Object.keys(metricData).length === 0) return;
             const baseInfo = { Kollektiv: kollektivName, Methode: metricType };
             if (criteriaInfo) {
-                baseInfo.Kriterien = criteriaInfo.definition;
-                baseInfo.Logik = criteriaInfo.logic;
-            }
+                baseInfo.Kriterien: criteriaInfo.definition,
+                baseInfo.Logik: criteriaInfo.logic
+            };
             const metricsOrder = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'auc', 'f1', 'mcc'];
             metricsOrder.forEach(key => {
                 const m = metricData[key];
@@ -333,13 +333,13 @@ const exportService = (() => {
                 const litSetConf = PUBLICATION_CONFIG.literatureCriteriaSets.find(lc => {const s=studyT2CriteriaManager.getStudyCriteriaSetById(lc.id); return s && (s.applicableKollektiv===kolId || (s.applicableKollektiv==='Gesamt' && kolId==='Gesamt'));});
                 const litStats = litSetConf ? allKollektivStats[kolId]?.gueteT2_literatur?.[litSetConf.id] : null;
                 const bfStats = allKollektivStats[kolId]?.gueteT2_bruteforce;
-                const bfDef = allKollektivStats[kolId]?.bruteforce_definition;
-                const vglASLit = litSetConf ? allKollektivStats[kolId]?.[`vergleichASvsT2_literatur_${litSetConf.id}`] : null;
-                const vglASBF = allKollektivStats[kolId]?.vergleichASvsT2_bruteforce;
+                const bfDef = allKollektivStats[kollektivId]?.bruteforce_definition;
+                const vglASLit = litSetConf ? allKollektivStats[kollektivId]?.[`vergleichASvsT2_literatur_${litSetConf.id}`] : null;
+                const vglASBF = allKollektivStats[kollektivId]?.vergleichASvsT2_bruteforce;
 
                 if(asStats && litStats && vglASLit) {
                     dataForTsv.push({
-                        'Vergleich': `AS vs. Lit. (${studyT2CriteriaManager.getStudyCriteriaSetById(litSetConf.id)?.displayShortName || litSetConf.id})`, 'Kollektiv': getKollektivDisplayName(kolId),
+                        'Vergleich': `AS vs. Lit. (${studyT2CriteriaManager.getStudyCriteriaSetById(litSetConf.id)?.displayShortName || litSetConf.id})`, 'Kollektiv': getKollektivDisplayName(kollektivId),
                         'Methode 1': 'AS', 'AUC M1': formatNumber(asStats.auc?.value, 4, na, langForNum),
                         'Methode 2': `Lit. (${studyT2CriteriaManager.getStudyCriteriaSetById(litSetConf.id)?.displayShortName || litSetConf.id})`, 'AUC M2': formatNumber(litStats.auc?.value, 4, na, langForNum),
                         'Diff. AUC (M1-M2)': formatNumber(vglASLit.delong?.diffAUC, 4, na, langForNum),
@@ -349,7 +349,7 @@ const exportService = (() => {
                 }
                  if(asStats && bfStats && vglASBF && bfDef) {
                     dataForTsv.push({
-                        'Vergleich': `AS vs. BF-Opt. (${bfDef.metricName || bfZielMetric})`, 'Kollektiv': getKollektivDisplayName(kolId),
+                        'Vergleich': `AS vs. BF-Opt. (${bfDef.metricName || bfZielMetric})`, 'Kollektiv': getKollektivDisplayName(kollektivId),
                         'Methode 1': 'AS', 'AUC M1': formatNumber(asStats.auc?.value, 4, na, langForNum),
                         'Methode 2': `BF-Opt. (${bfDef.metricName || bfZielMetric})`, 'AUC M2': formatNumber(bfStats.auc?.value, 4, na, langForNum),
                         'Diff. AUC (M1-M2)': formatNumber(vglASBF.delong?.diffAUC, 4, na, langForNum),
