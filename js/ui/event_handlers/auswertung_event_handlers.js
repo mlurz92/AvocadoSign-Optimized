@@ -12,7 +12,7 @@ const auswertungEventHandlers = (() => {
             newCriteria[key] = { active: checkbox?.checked || false };
             if (newCriteria[key].active) {
                 if (key === 'size') {
-                    newCriteria[key].threshold = parseFloat(document.getElementById('input-size')?.value) || getDefaultT2Criteria().size.threshold;
+                    newCriteria[key].threshold = parseFloat(document.getElementById('input-size')?.value.replace(',', '.')) || getDefaultT2Criteria().size.threshold;
                     newCriteria[key].condition = '>=';
                 } else {
                     const activeButton = document.querySelector(`.criteria-options-container button.t2-criteria-button[data-criterion="${key}"].active`);
@@ -100,15 +100,15 @@ const auswertungEventHandlers = (() => {
                 _handleCriteriaInputChange(); 
             } else if (target.matches('#range-size, #input-size')) {
                  if (document.getElementById('check-size')?.checked) {
-                    const value = parseFloat(target.value);
+                    const value = parseFloat(target.value.replace(',', '.'));
                     const sizeInput = document.getElementById('input-size');
                     const sizeRange = document.getElementById('range-size');
                     const sizeValueDisplay = document.getElementById('value-size');
                     if (sizeInput && sizeRange && sizeValueDisplay) {
                         const clampedValue = clampNumber(value, parseFloat(sizeRange.min), parseFloat(sizeRange.max));
-                        sizeInput.value = formatNumber(clampedValue, 1, '', true);
-                        sizeRange.value = formatNumber(clampedValue, 1, '', true);
-                        sizeValueDisplay.textContent = formatNumber(clampedValue, 1);
+                        sizeInput.value = formatNumber(clampedValue, 1, '', 'en');
+                        sizeRange.value = formatNumber(clampedValue, 1, '', 'en');
+                        sizeValueDisplay.textContent = formatNumber(clampedValue, 1); 
                     }
                     debouncedCriteriaChange();
                  }
@@ -127,15 +127,15 @@ const auswertungEventHandlers = (() => {
                 if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showConfirmModal === 'function') {
                     ui_helpers.showConfirmModal(
                         UI_TEXTS.general.confirmResetCriteria || "Möchten Sie die T2-Kriterien auf die Standardwerte zurücksetzen? Ungespeicherte Änderungen gehen verloren.",
-                        () => { // Callback für Bestätigung
+                        () => { 
                             t2CriteriaManager.resetToDefaults();
                             _updateLocalCriteriaStateFromUI(); 
                             ui_helpers.updateT2CriteriaControlsUI(currentCriteria, currentLogic);
                             _handleCriteriaInputChange(); 
                             ui_helpers.showToast("T2-Kriterien auf Standard zurückgesetzt.", "info");
                         },
-                        UI_TEXTS.general.reset || "Zurücksetzen", // Bestätigungsbutton Text
-                        UI_TEXTS.general.cancel || "Abbrechen" // Abbruchbutton Text
+                        UI_TEXTS.general.reset || "Zurücksetzen", 
+                        UI_TEXTS.general.cancel || "Abbrechen" 
                     );
                 } else {
                     console.error("ui_helpers.showConfirmModal ist nicht verfügbar. Kann T2-Kriterien nicht zurücksetzen.");
