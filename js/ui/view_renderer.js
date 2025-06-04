@@ -66,7 +66,7 @@ const viewRenderer = (() => {
         
         const tableHTML = dataTabLogic.createDatenTableHTML(filteredData, sortState);
         const toggleButtonId = 'daten-toggle-details';
-        const currentLang = stateManager.getCurrentPublikationLang();
+        const currentLang = (typeof stateManager !== 'undefined' && typeof stateManager.getCurrentPublikationLang === 'function') ? stateManager.getCurrentPublikationLang() : 'de';
         const toggleButtonText = UI_TEXTS.datenTab.toggleDetailsButton.expand || (currentLang === 'de' ? 'Alle Details Anzeigen' : 'Expand All Details');
         const toggleButtonTooltip = TOOLTIP_CONTENT.datenTable.expandAll || (currentLang === 'de' ? 'Alle Details ein-/ausblenden' : 'Expand/collapse all details');
 
@@ -105,7 +105,7 @@ const viewRenderer = (() => {
         
         const tableHTML = uiComponents.createAuswertungTableHTML(filteredData, sortState, currentAppliedCriteria, currentAppliedLogic);
         const toggleButtonId = 'auswertung-toggle-details';
-        const currentLang = stateManager.getCurrentPublikationLang();
+        const currentLang = (typeof stateManager !== 'undefined' && typeof stateManager.getCurrentPublikationLang === 'function') ? stateManager.getCurrentPublikationLang() : 'de';
         const toggleButtonText = UI_TEXTS.auswertungTab.toggleDetailsButton.expand || (currentLang === 'de' ? 'Alle Details Anzeigen' : 'Expand All Details');
         const toggleButtonTooltip = TOOLTIP_CONTENT.auswertungTable.expandAll || (currentLang === 'de' ? 'Alle Details ein-/ausblenden' : 'Expand/collapse all details');
 
