@@ -26,7 +26,7 @@ const chartRenderer = (() => {
 
     function _getColors(numColors, schemeName = null) {
         const chartSettings = safeGetChartSettings();
-        const currentSchemeName = schemeName || (typeof stateManager !== 'undefined' ? stateManager.getChartColorScheme() : 'default');
+        const currentSchemeName = schemeName || (typeof stateManager !== 'undefined' && typeof stateManager.getChartColorScheme === 'function' ? stateManager.getChartColorScheme() : 'default');
         const schemes = {
             default: chartSettings.DEFAULT_COLORS,
             primary: [chartSettings.NEW_PRIMARY_COLOR_BLUE, chartSettings.NEW_SECONDARY_COLOR_YELLOW_GREEN, '#76b7b2', '#e15759', '#59a14f', '#edc949'],
