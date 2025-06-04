@@ -108,6 +108,22 @@ const APP_CONFIG = Object.freeze({
         STICKY_HEADER_OFFSET: '111px'
     }),
 
+    CHART_SETTINGS: Object.freeze({
+        DEFAULT_WIDTH: 450,
+        DEFAULT_HEIGHT: 300,
+        DEFAULT_MARGIN: Object.freeze({ top: 20, right: 20, bottom: 40, left: 45 }),
+        COMPACT_PIE_MARGIN: Object.freeze({ top: 10, right: 10, bottom: 40, left: 10 }),
+        NEW_PRIMARY_COLOR_BLUE: '#4472C4',
+        NEW_SECONDARY_COLOR_YELLOW_GREEN: '#A9D18E', 
+        DEFAULT_COLORS: Object.freeze(['#4e79a7', '#f28e2c', '#e15759', '#76b7b2', '#59a14f', '#edc949', '#af7aa1', '#ff9da7', '#9c755f', '#bab0ab']),
+        AXIS_LABEL_FONT_SIZE: '11px',
+        TICK_LABEL_FONT_SIZE: '10px',
+        LEGEND_FONT_SIZE: '10px',
+        POINT_RADIUS: 4,
+        LINE_STROKE_WIDTH: 2,
+        ENABLE_GRIDLINES: true
+    }),
+
     EXPORT_SETTINGS: Object.freeze({
         DATE_FORMAT: 'YYYYMMDD',
         FILENAME_TEMPLATE: 'AvocadoSignT2_{TYPE}_{KOLLEKTIV}_{DATE}.{EXT}',
