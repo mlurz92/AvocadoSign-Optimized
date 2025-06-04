@@ -539,3 +539,5 @@ const uiComponents = (() => {
     });
 
 })();
+
+window.uiComponents = uiComponents;
