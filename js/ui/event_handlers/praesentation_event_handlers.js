@@ -6,9 +6,9 @@ const praesentationEventHandlers = (() => {
             return;
         }
 
-        if (state.setCurrentPresentationView(view)) { // setCurrentPresentationView already handles resetting studyId or setting default
+        if (stateManager.updateUserSettings({ praesentationView: view })) { // setCurrentPresentationView already handles resetting studyId or setting default
             mainAppInterface.updateGlobalUIState();
-            if (state.getActiveTabId() === 'praesentation-tab') {
+            if (stateManager.getActiveTabId() === 'praesentation-tab') {
                 mainAppInterface.refreshCurrentTab();
             }
         }
@@ -19,7 +19,7 @@ const praesentationEventHandlers = (() => {
             console.error("praesentationEventHandlers.handlePresentationStudySelectChange: Ungültige Parameter.");
             return;
         }
-        if(state.getCurrentPresentationStudyId() === studyId) return;
+        if(stateManager.getCurrentPresentationStudyId() === studyId) return;
 
         const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studyId);
         let kollektivChanged = false;
@@ -27,20 +27,20 @@ const praesentationEventHandlers = (() => {
 
         if (studySet?.applicableKollektiv) {
             const targetKollektiv = studySet.applicableKollektiv;
-            if (state.getCurrentKollektiv() !== targetKollektiv && mainAppInterface.handleGlobalKollektivChange) {
+            if (stateManager.getCurrentKollektiv() !== targetKollektiv && mainAppInterface.handleGlobalKollektivChange) {
                 kollektivChanged = mainAppInterface.handleGlobalKollektivChange(targetKollektiv, "auto_praesentation");
                 refreshNeeded = kollektivChanged;
             }
         }
 
-        const studyIdChanged = state.setCurrentPresentationStudyId(studyId);
+        const studyIdChanged = stateManager.updateUserSettings({ praesentationStudyId: studyId });
         if (studyIdChanged && !refreshNeeded) {
             refreshNeeded = true;
         }
 
         if (refreshNeeded) {
             mainAppInterface.updateGlobalUIState();
-            if (state.getActiveTabId() === 'praesentation-tab') {
+            if (stateManager.getActiveTabId() === 'praesentation-tab') {
                 mainAppInterface.refreshCurrentTab();
             }
         }
@@ -53,7 +53,7 @@ const praesentationEventHandlers = (() => {
             return;
         }
         const actionId = button.id;
-        const currentGlobalKollektiv = state.getCurrentKollektiv();
+        const currentGlobalKollektiv = stateManager.getCurrentKollektiv();
         const processedDataFull = mainAppInterface.getProcessedData(); // Annahme: gibt alle prozessierten Daten zurück, nicht nur die aktuell gefilterten
         
         let presentationData = {};
@@ -62,7 +62,7 @@ const praesentationEventHandlers = (() => {
         presentationData.kollektiv = currentGlobalKollektiv;
         presentationData.patientCount = globalKollektivDaten?.length ?? 0;
 
-        const currentView = state.getCurrentPresentationView();
+        const currentView = stateManager.getCurrentPresentationView();
 
         if (currentView === 'as-pur') {
             presentationData.statsGesamt = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'Gesamt'), 'as', 'n');
@@ -70,7 +70,7 @@ const praesentationEventHandlers = (() => {
             presentationData.statsNRCT = statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedDataFull, 'nRCT'), 'as', 'n');
             presentationData.statsCurrentKollektiv = statisticsService.calculateDiagnosticPerformance(globalKollektivDaten, 'as', 'n');
         } else if (currentView === 'as-vs-t2') {
-            const selectedStudyId = state.getCurrentPresentationStudyId();
+            const selectedStudyId = stateManager.getCurrentPresentationStudyId();
             let comparisonCohortData = globalKollektivDaten;
             let comparisonKollektivName = currentGlobalKollektiv;
 
