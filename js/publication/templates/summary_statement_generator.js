@@ -33,7 +33,7 @@ const summaryStatementGenerator = (() => {
             }
 
             const tempStatementDe = `Avocado Sign (MRT) erreicht hohe Genauigkeit (AUC ${aucAS}) beim N-Staging des Rektumkarzinoms, vergleichbar mit optimierten T2-Kriterien (AUC ${aucBF}${pValueVergleich ? ", " + pValueVergleich : ""}).`;
-            const tempStatementEn = `Avocado Sign (MRI) achieves high accuracy (AUC ${aucAS}) in rectal cancer N-staging, comparable to optimized T2-weighted criteria (AUC ${aucBF}${pValueVergleich ? ", " + pValueVergleich : ""}).`;
+            const tempStatementEn = `Avocado Sign (MRI) achieves high accuracy (AUC ${aucAS}) in rectal cancer N-staging, comparable to optimized T2-weighted criteria (AUC ${aucBF}${pValueVerstellung ? ", " + pValueVergleich : ""}).`;
             
             // Crude word count for example (splitting by space)
             if (tempStatementDe.split(' ').length <= 30 && tempStatementEn.split(' ').length <= 30) {
