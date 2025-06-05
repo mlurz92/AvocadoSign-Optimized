@@ -3,7 +3,7 @@ const ui_helpers = (() => {
     let globalTippyInstances = [];
     let collapseEventListenersAttached = new Set();
     let kurzanleitungModalInstance = null;
-    let initialTabRenderFixed = false; // Flag, um sicherzustellen, dass der Fix nur einmal angewendet wird
+    let initialTabRenderFixed = false;
 
     function escapeMarkdown(text) {
         if (typeof text !== 'string' || text === null) return text === null ? '' : String(text);
@@ -95,7 +95,7 @@ const ui_helpers = (() => {
         const element = document.getElementById(elementId);
         if (element) {
             element.classList.remove(highlightClass);
-            void element.offsetWidth; 
+            void element.offsetWidth;
             element.classList.add(highlightClass);
             setTimeout(() => {
                 if (element) element.classList.remove(highlightClass);
@@ -652,7 +652,7 @@ const ui_helpers = (() => {
              interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
         }
         interpretation = interpretation.replace(/, p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
-        interpretation = interpretation.replace(/<hr.*?>.*$/, ''); 
+        interpretation = interpretation.replace(/<hr.*?>.*$/, '');
         interpretation += ciWarning;
         return interpretation;
     }
@@ -758,8 +758,10 @@ const ui_helpers = (() => {
     }
 
     function showKurzanleitung() {
-        const modalElement = document.getElementById('kurzanleitung-modal');
-        
+        let modalElement = document.getElementById('kurzanleitung-modal');
+        const modalBody = modalElement ? modalElement.querySelector('.modal-body') : null;
+        const modalTitle = modalElement ? modalElement.querySelector('.modal-title') : null;
+    
         if (!modalElement) {
             const modalHTML = `
                 <div class="modal fade" id="kurzanleitung-modal" tabindex="-1" aria-labelledby="kurzanleitungModalLabel" aria-hidden="true">
@@ -779,18 +781,26 @@ const ui_helpers = (() => {
                   </div>
                 </div>`;
             document.body.insertAdjacentHTML('beforeend', modalHTML);
-            const newModalElement = document.getElementById('kurzanleitung-modal');
-            kurzanleitungModalInstance = new bootstrap.Modal(newModalElement);
-        } else if (!kurzanleitungModalInstance) {
-             kurzanleitungModalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+            modalElement = document.getElementById('kurzanleitung-modal');
+            kurzanleitungModalInstance = new bootstrap.Modal(modalElement);
+        } else {
+            if (modalTitle && UI_TEXTS.kurzanleitung.title) {
+                 modalTitle.innerHTML = UI_TEXTS.kurzanleitung.title;
+            }
+            if (modalBody && UI_TEXTS.kurzanleitung.content) {
+                modalBody.innerHTML = UI_TEXTS.kurzanleitung.content;
+            }
+            if (!kurzanleitungModalInstance) {
+                kurzanleitungModalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+            }
         }
-
+    
         if (kurzanleitungModalInstance && modalElement && !modalElement.classList.contains('show')) {
             if (!initialTabRenderFixed) {
                 modalElement.addEventListener('hidden.bs.modal', () => {
                     if (!initialTabRenderFixed && typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
                         const defaultInitialTabId = 'publikation-tab'; 
-                        if (state.getActiveTabId() === defaultInitialTabId) {
+                        if (typeof state !== 'undefined' && state.getActiveTabId() === defaultInitialTabId) {
                             console.log("Kurzanleitung Modal geschlossen, aktiver Tab ist Publikation. Erzwinge Refresh.");
                             mainAppInterface.refreshCurrentTab();
                         }
