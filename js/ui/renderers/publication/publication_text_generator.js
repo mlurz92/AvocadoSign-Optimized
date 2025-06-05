@@ -148,7 +148,7 @@ const publicationTextGenerator = (() => {
     function getMethodenMRTProtokollText(lang, commonData) {
         const mrtSystem = APP_CONFIG.REFERENCES_FOR_PUBLICATION.MRI_SYSTEM_SIEMENS_3T || "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers)";
         const kontrastmittel = APP_CONFIG.REFERENCES_FOR_PUBLICATION.CONTRAST_AGENT_PROHANCE || "Gadoteridol (ProHance; Bracco)";
-        const lurzSchaeferT2SliceThickness = "2-3 mm"; // Dies ist aus der PDF, nicht direkt in APP_CONFIG.REFERENCES_FOR_PUBLICATION
+        const lurzSchaeferT2SliceThickness = "2-3 mm"; 
         const kaur2012Reference = APP_CONFIG.REFERENCES_FOR_PUBLICATION.KAUR_2012_MRI_PRACTICAL || "Kaur et al. (2012)";
         const horvat2019Reference = APP_CONFIG.REFERENCES_FOR_PUBLICATION.HORVAT_2019_MRI_RECTAL_CANCER || "Horvat et al. (2019)";
         const beetsTan2004Reference = APP_CONFIG.REFERENCES_FOR_PUBLICATION.BEETS_TAN_2004_GADOLINIUM || "Beets-Tan et al. (2004)";
@@ -255,17 +255,17 @@ const publicationTextGenerator = (() => {
                 <p>The morphological T2-weighted criteria (size [short-axis diameter in mm], shape ['round', 'oval'], border ['smooth', 'irregular'], homogeneity ['homogeneous', 'heterogeneous'], and signal intensity ['low', 'intermediate', 'high']) were assessed for every mesorectal lymph node visible on high-resolution T2w-MRI by the same two radiologists who evaluated the Avocado Sign. The assessment was performed by consensus and blinded to the pathological N-status and the Avocado Sign status.</p>
                 <p>For the comparison of diagnostic performance, the following T2 criteria sets were utilized:</p>
                 <ol>
-                    <li><strong>Literature-based T2 criteria sets:</strong> A selection of established criteria from the literature was implemented and applied to the respective subgroups or the entire cohort of our dataset (details see <a href="${_getSafeLink(table2Id)}">Table 2</a>):
+                    <li>**Literature-based T2 criteria sets:</strong> A selection of established criteria from the literature was implemented and applied to the respective subgroups or the entire cohort of our dataset (details see <a href="${_getSafeLink(table2Id)}">Table 2</a>):
                         <ul>
                             <li>Koh et al. (${kohRef}): Defined as "${kohDesc}". In our analysis, this set was applied to the '${kohApplicable}' cohort.</li>
                             <li>Barbaro et al. (${barbaroRef}): Defined as "${barbaroDesc}". This set was specifically evaluated for the '${barbaroApplicable}' cohort (restaging).</li>
                             <li>ESGAR Consensus Criteria (${esgarRefPrimary}), as evaluated by Rutegård et al. (${esgarRefValidation}): Defined as "${esgarDesc}". This set was primarily applied to the '${esgarApplicable}' cohort (primary staging).</li>
                         </ul>
                     </li>
-                    <li><strong>Brute-force optimized T2 criteria:</strong> Using a brute-force algorithm implemented in the analysis tool, combinations of the five T2 features and AND/OR logic that maximize the primary endpoint of this study – <strong>${bfZielMetric}</strong> – were identified for each of the three main cohorts (Overall, Upfront Surgery, nRCT). The resulting cohort-specific optimized criteria sets were:
+                    <li>**Brute-force optimized T2 criteria:</strong> Using a brute-force algorithm implemented in the analysis tool, combinations of the five T2 features and AND/OR logic that maximize the primary endpoint of this study – <strong>${bfZielMetric}</strong> – were identified for each of the three main cohorts (Overall, Upfront Surgery, nRCT). The resulting cohort-specific optimized criteria sets were:
                         ${bfCriteriaText}
                     </li>
-                    <li><strong>Currently set T2 criteria in the analysis tool:</strong> For exploratory purposes, user-defined criteria can be configured. For the present publication, the criteria mentioned under points 1 and 2 are authoritative. The criteria currently set in the tool at the time of final analysis were: ${formattedAppliedCriteria}.</li>
+                    <li>**Currently set T2 criteria in the analysis tool:</strong> For exploratory purposes, user-defined criteria can be configured. For the present publication, the criteria mentioned under points 1 and 2 are authoritative. The criteria currently set in the tool at the time of final analysis were: ${formattedAppliedCriteria}.</li>
                 </ol>
                 <p>A lymph node was considered T2-positive for a given criteria set if it met the specific conditions of that set. A patient was considered T2-positive if at least one lymph node was rated positive according to the respective criteria set. The diagnostic accuracy of T2 criteria is described as limited in literature.</p>
             `;
@@ -579,7 +579,6 @@ const publicationTextGenerator = (() => {
             .replace(/<h5[^>]*>(.*?)<\/h5>/g, (match, p1) => `\n##### ${p1}\n`)
             .replace(/<h6[^>]*>(.*?)<\/h6>/g, (match, p1) => `\n###### ${p1}\n`)
             .replace(/<cite>(.*?)<\/cite>/g, '[$1]')
-            .replace(/\/g, (match, p1) => ``) // Fix: Ensure citation format is preserved after HTML tags removed
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
             .replace(/&amp;/g, '&')
