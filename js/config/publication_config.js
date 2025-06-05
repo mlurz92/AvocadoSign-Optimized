@@ -1,10 +1,10 @@
 const PUBLICATION_CONFIG = Object.freeze({
     defaultLanguage: 'de',
-    defaultSection: 'abstract',
+    defaultSection: 'abstract', // Initialer Abschnitt, der beim Öffnen des Tabs angezeigt wird
     sections: Object.freeze([
         Object.freeze({
             id: 'abstract',
-            labelKey: 'abstract',
+            labelKey: 'abstract', // Label für den Hauptabschnitt
             subSections: Object.freeze([
                 Object.freeze({ id: 'abstract_main', label: 'Abstract & Key Results' })
             ])
@@ -44,18 +44,23 @@ const PUBLICATION_CONFIG = Object.freeze({
             id: 'discussion',
             labelKey: 'discussion',
             subSections: Object.freeze([
-                Object.freeze({ id: 'discussion_main', label: 'Diskussion der Ergebnisse und Limitationen' })
+                Object.freeze({ id: 'discussion_main', label: 'Diskussion' })
             ])
         }),
         Object.freeze({
             id: 'references',
             labelKey: 'references',
             subSections: Object.freeze([
-                Object.freeze({ id: 'references_main', label: 'Literaturverzeichnis' })
+                Object.freeze({ id: 'references_main', label: 'Referenzen' })
             ])
         })
     ]),
+    // Liste der Literatur-Kriteriensets, die in der Publikation erwähnt/verglichen werden
     literatureCriteriaSets: Object.freeze([
+        Object.freeze({
+            id: 'rutegard_et_al_esgar',
+            labelKey: 'Rutegård et al. (2025) / ESGAR 2016' // Name, der im Publikationstext/Tabellen verwendet wird
+        }),
         Object.freeze({
             id: 'koh_2008_morphology',
             labelKey: 'Koh et al. (2008)'
@@ -63,12 +68,9 @@ const PUBLICATION_CONFIG = Object.freeze({
         Object.freeze({
             id: 'barbaro_2024_restaging',
             labelKey: 'Barbaro et al. (2024)'
-        }),
-        Object.freeze({
-            id: 'rutegard_et_al_esgar',
-            labelKey: 'Rutegård et al. (2025) / ESGAR 2016'
         })
     ]),
+    // Verfügbare Brute-Force-Metriken für die Auswahl im Publikationstab
     bruteForceMetricsForPublication: Object.freeze([
         { value: 'Balanced Accuracy', label: 'Balanced Accuracy' },
         { value: 'Accuracy', label: 'Accuracy' },
@@ -76,7 +78,9 @@ const PUBLICATION_CONFIG = Object.freeze({
         { value: 'PPV', label: 'Positiver Prädiktiver Wert (PPV)' },
         { value: 'NPV', label: 'Negativer Prädiktiver Wert (NPV)' }
     ]),
-    defaultBruteForceMetricForPublication: 'Balanced Accuracy',
+    defaultBruteForceMetricForPublication: 'Balanced Accuracy', // Standard-Metrik für die Publikationstexte
+
+    // IDs und Titel von Elementen (Tabellen, Figuren), die im Publikationstab referenziert werden
     publicationElements: Object.freeze({
         methoden: Object.freeze({
             literaturT2KriterienTabelle: {
@@ -117,12 +121,12 @@ const PUBLICATION_CONFIG = Object.freeze({
                 titleEn: 'Statistical Comparison of Diagnostic Performance: Avocado Sign vs. T2 Criteria (Literature and Optimized)'
             },
             alterVerteilungChart: {
-                id: 'pub-chart-alter-Gesamt',
+                id: 'pub-chart-alter-Gesamt', // Eindeutige ID für Chart-Container
                 titleDe: 'Altersverteilung im Gesamtkollektiv',
                 titleEn: 'Age Distribution in the Overall Cohort'
             },
             geschlechtVerteilungChart: {
-                id: 'pub-chart-gender-Gesamt',
+                id: 'pub-chart-gender-Gesamt', // Eindeutige ID für Chart-Container
                 titleDe: 'Geschlechterverteilung im Gesamtkollektiv',
                 titleEn: 'Gender Distribution in the Overall Cohort'
             },
@@ -131,7 +135,7 @@ const PUBLICATION_CONFIG = Object.freeze({
                 titleDe: 'Vergleichsmetriken für das Gesamtkollektiv: AS vs. optimierte T2-Kriterien',
                 titleEn: 'Comparative Metrics for the Overall Cohort: AS vs. Optimized T2 Criteria'
             },
-            vergleichPerformanceChartdirektOP: { // Schlüssel korrigiert (war vorher vergleichPerformanceChartDirektOP)
+            vergleichPerformanceChartdirektOP: {
                 id: 'pub-chart-vergleich-direkt-OP',
                 titleDe: 'Vergleichsmetriken für das Direkt-OP Kollektiv: AS vs. optimierte T2-Kriterien',
                 titleEn: 'Comparative Metrics for the Upfront Surgery Cohort: AS vs. Optimized T2 Criteria'
@@ -142,38 +146,8 @@ const PUBLICATION_CONFIG = Object.freeze({
                 titleEn: 'Comparative Metrics for the nRCT Cohort: AS vs. Optimized T2 Criteria'
             }
         })
-    }),
-    DEFAULT_ABSTRACT_TEXT_DE: `
-        **Ziele:** Das "Avocado Sign" (AS), ein neuer kontrastmittel-basierter MRT-Marker, wurde zur Prädiktion des mesorektalen Lymphknotenbefalls beim Rektumkarzinom evaluiert und mit T2-gewichteten Kriterien verglichen.
-        **Methoden:** Diese retrospektive Studie umfasste 106 Patienten mit Rektumkarzinom. Das Avocado Sign (hypointenser Kern in homogen hyperintensem Lymphknoten auf kontrastverstärkten T1-gewichteten Bildern) wurde beurteilt. Zusätzlich wurden T2-gewichtete morphologische Kriterien (Literatur-basiert und datengetrieben optimiert) analysiert. 77 Patienten erhielten neoadjuvante Radiochemotherapie. Der histopathologische Befund diente als Referenzstandard. Diagnostische Metriken wurden berechnet und verglichen.
-        **Ergebnisse:** Das Avocado Sign zeigte eine hohe diagnostische Genauigkeit (Sensitivität 88,7%, Spezifität 84,9%, Accuracy 86,8%, AUC 0,87). Seine Leistung war robust in der Primärchirurgie- (Sensitivität 100%, Spezifität 83,3%, AUC 0,92) und der nRCT-Gruppe (Sensitivität 84,2%, Spezifität 85,4%, AUC 0,85). Literatur-basierte T2-Kriterien zeigten variable Ergebnisse. Für das Gesamtkollektiv optimierte T2-Kriterien erreichten eine AUC von [PLATZHALTER_AUC_T2_OPTIMIERT_GESAMT]. Im direkten Vergleich zeigte das AS [eine überlegene/vergleichbare/unterlegene] Performance gegenüber optimierten T2-Kriterien (p=[PLATZHALTER_P_WERT_VERGLEICH]).
-        **Fazit:** Das Avocado Sign ist ein vielversprechender Prädiktor für den mesorektalen Lymphknotenstatus. Seine einfache Anwendung und hohe diagnostische Genauigkeit unterstreichen sein Potenzial, das MRT-Staging zu verfeinern. Weitere Validierung ist erforderlich.
-        `,
-    DEFAULT_ABSTRACT_TEXT_EN: `
-        **Objectives:** The "Avocado Sign" (AS), a novel contrast-enhanced MRI marker, was evaluated for predicting mesorectal lymph node involvement in rectal cancer and compared with T2-weighted criteria.
-        **Methods:** This retrospective study included 106 patients with rectal cancer. The Avocado Sign (hypointense core within a homogeneously hyperintense lymph node on contrast-enhanced T1-weighted images) was assessed. Additionally, T2-weighted morphological criteria (literature-based and data-driven optimized) were analyzed. Seventy-seven patients received neoadjuvant chemoradiotherapy. Histopathology served as the reference standard. Diagnostic metrics were calculated and compared.
-        **Results:** The Avocado Sign demonstrated high diagnostic accuracy (sensitivity 88.7%, specificity 84.9%, accuracy 86.8%, AUC 0.87). Its performance was robust in the upfront surgery (sensitivity 100%, specificity 83.3%, AUC 0.92) and nRCT groups (sensitivity 84.2%, specificity 85.4%, AUC 0.85). Literature-based T2 criteria showed variable results. T2 criteria optimized for the overall cohort achieved an AUC of [PLACEHOLDER_AUC_T2_OPTIMIZED_OVERALL]. In direct comparison, the AS showed [superior/comparable/inferior] performance to optimized T2 criteria (p=[PLACEHOLDER_P_VALUE_COMPARISON]).
-        **Conclusion:** The Avocado Sign is a promising predictor for mesorectal lymph node status. Its straightforward application and high diagnostic accuracy underscore its potential to refine MRI staging. Further validation is warranted.
-        `,
-    DEFAULT_KEY_RESULTS_TEXT_DE: `
-        Das Avocado Sign zeigte eine hohe diagnostische Genauigkeit (AUC 0,87) für den Lymphknotenbefall beim Rektumkarzinom.
-        Die Leistung des Avocado Signs war robust sowohl bei primär operierten Patienten als auch nach neoadjuvanter Therapie.
-        Im Vergleich zu optimierten T2-gewichteten Kriterien zeigte das Avocado Sign eine [ÜBERLEGENE/VERGLEICHBARE/UNTERLEGENE] diagnostische Güte.
-        `,
-    DEFAULT_KEY_RESULTS_TEXT_EN: `
-        The Avocado Sign demonstrated high diagnostic accuracy (AUC 0.87) for lymph node involvement in rectal cancer.
-        The performance of the Avocado Sign was robust in both upfront surgery patients and after neoadjuvant therapy.
-        Compared to optimized T2-weighted criteria, the Avocado Sign showed [SUPERIOR/COMPARABLE/INFERIOR] diagnostic performance.
-        `
+    })
 });
 
-function getDefaultT2Criteria() {
-    return Object.freeze({
-        logic: APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC,
-        size: { active: true, threshold: 5.0, condition: '>=' },
-        form: { active: false, value: 'rund' },
-        kontur: { active: false, value: 'irregulär' },
-        homogenitaet: { active: false, value: 'heterogen' },
-        signal: { active: false, value: 'signalreich' }
-    });
-}
+// Die getDefaultT2Criteria Funktion wird nicht in dieser Datei definiert,
+// da sie in app_config.js liegt und global verfügbar ist.
