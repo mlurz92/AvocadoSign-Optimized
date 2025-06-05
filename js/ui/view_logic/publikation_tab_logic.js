@@ -114,7 +114,13 @@ const publikationTabLogic = (() => {
                 const bruteForceMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
                 kollektiveForCharts.forEach(kolId => {
-                    const chartConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse[`vergleichPerformanceChart${kolId.replace(/\s+/g, '')}`];
+                    const chartConfigKey = `vergleichPerformanceChart${kolId.replace(/\s+/g, '')}`;
+                    const chartConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse[chartConfigKey];
+                    
+                    if (!chartConfig || !chartConfig.id) {
+                        console.warn(`Konfiguration für Chart-ID '${chartConfigKey}' nicht gefunden in PUBLICATION_CONFIG.`);
+                        return; 
+                    }
                     const chartId = chartConfig.id;
                     const chartElement = document.getElementById(`${chartId}-chart-area`);
                     
