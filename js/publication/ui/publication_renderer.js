@@ -16,7 +16,10 @@ const publicationRenderer = (() => {
         }
 
         if (htmlContent === null || htmlContent === undefined) {
-            const errorMsg = lang === 'de' ? 'Fehler: Kein Inhalt zum Anzeigen für diesen Publikationsabschnitt vorhanden.' : 'Error: No content available to display for this publication section.';
+            const errorMsg = (lang === 'de' ? 
+                (UI_TEXTS?.publikationTab?.publicationContentNotAvailable?.de || 'Fehler: Kein Inhalt zum Anzeigen für diesen Publikationsabschnitt vorhanden.') : 
+                (UI_TEXTS?.publikationTab?.publicationContentNotAvailable?.en || 'Error: No content available to display for this publication section.')
+            );
             ui_helpers.updateElementHTML(targetElementId, `<p class="text-warning p-3">${errorMsg}</p>`);
             return;
         }
@@ -25,17 +28,25 @@ const publicationRenderer = (() => {
 
         if (typeof publicationTabLogic !== 'undefined' && typeof publicationTabLogic.renderDynamicContentForSection === 'function') {
             try {
-                publicationTabLogic.renderDynamicContentForSection(sectionId, lang);
+                // Delay slightly to ensure DOM is fully updated
+                setTimeout(() => {
+                    publicationTabLogic.renderDynamicContentForSection(sectionId, lang);
+                    if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.initializeTooltips === 'function') {
+                        ui_helpers.initializeTooltips(targetElement);
+                    }
+                }, 50); // 50ms delay, adjust if necessary
             } catch (error) {
                 console.error(`PublicationRenderer: Fehler beim Rendern dynamischer Inhalte für Sektion '${sectionId}':`, error);
-                 ui_helpers.showToast(lang === 'de' ? `Fehler beim Laden dynamischer Diagramme für Sektion '${sectionId}'.` : `Error loading dynamic charts for section '${sectionId}'.`, 'danger');
+                const errorToastMsg = lang === 'de' ? `Fehler beim Laden dynamischer Diagramme für Sektion '${sectionId}'.` : `Error loading dynamic charts for section '${sectionId}'.`;
+                if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showToast === 'function') {
+                    ui_helpers.showToast(errorToastMsg, 'danger');
+                }
             }
         } else {
             console.warn("PublicationRenderer: publicationTabLogic.renderDynamicContentForSection ist nicht verfügbar.");
-        }
-
-        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.initializeTooltips === 'function') {
-            ui_helpers.initializeTooltips(targetElement);
+             if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.initializeTooltips === 'function') {
+                ui_helpers.initializeTooltips(targetElement);
+            }
         }
     }
 
