@@ -57,7 +57,7 @@ const publicationTabLogic = (() => {
                         chartRenderer.renderAgeDistributionChart(
                             currentAggregatedPublicationData.allKollektivStats.Gesamt.deskriptiv.alterData,
                             ageChartConfig.id,
-                            { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 45 } }
+                            { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 45 }, lang: lang }
                         );
                     } else {
                         ui_helpers.updateElementHTML(`${ageChartConfig.id}-chart-area`, `<p class="text-muted small text-center p-3">${lang === 'de' ? 'Keine Daten für Altersverteilung.' : 'No data for age distribution.'}</p>`);
@@ -78,7 +78,7 @@ const publicationTabLogic = (() => {
                              chartRenderer.renderPieChart(
                                 genderDataForChart,
                                 genderChartConfig.id,
-                                { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true, legendItemCount: genderDataForChart.length }
+                                { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true, legendItemCount: genderDataForChart.length, lang: lang }
                             );
                         } else {
                              ui_helpers.updateElementHTML(`${genderChartConfig.id}-chart-area`, `<p class="text-muted small text-center p-3">${lang === 'de' ? 'Keine Daten für Geschlechterverteilung.' : 'No data for gender distribution.'}</p>`);
@@ -131,7 +131,7 @@ const publicationTabLogic = (() => {
                             chartRenderer.renderComparisonBarChart(
                                 chartDataComp,
                                 chartConfig.id,
-                                { height: 250, margin: { top: 20, right: 20, bottom: 50, left: 50 } },
+                                { height: 250, margin: { top: 20, right: 20, bottom: 50, left: 50 }, lang: lang },
                                 t2LabelForChart
                             );
                         } else {
