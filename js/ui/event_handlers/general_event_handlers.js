@@ -8,22 +8,19 @@ const generalEventHandlers = (() => {
         }
     }
 
-    function handleTabShownEvent(event, mainAppInterface) {
-        if (event.target && event.target.id && mainAppInterface && typeof mainAppInterface.processTabChange === 'function') {
-            mainAppInterface.processTabChange(event.target.id);
-        } else {
-             console.error("generalEventHandlers.handleTabShownEvent: Event-Ziel oder mainAppInterface.processTabChange ist nicht definiert.");
-        }
-    }
+    function handleSortClick(clickedElement, subClickedElement, mainAppInterface) {
+        const sortHeader = clickedElement.closest('[data-sort-key]');
+        const sortSubHeader = subClickedElement || null;
+        
+        const key = sortSubHeader?.dataset.subKey || sortHeader?.dataset.sortKey;
+        const subKey = sortSubHeader?.dataset.subKey || null;
 
-    function handleSortClick(sortHeader, sortSubHeader, mainAppInterface) {
-        const key = sortHeader?.dataset.sortKey;
         if (!key || !mainAppInterface || typeof mainAppInterface.handleSortRequest !== 'function') {
             if(!key) console.warn("Sort Key nicht gefunden im Header-Element.");
             if(!mainAppInterface || typeof mainAppInterface.handleSortRequest !== 'function') console.error("mainAppInterface.handleSortRequest ist nicht definiert.");
             return;
         }
-        const subKey = sortSubHeader?.dataset.subKey || null;
+        
         const tableBody = sortHeader.closest('table')?.querySelector('tbody');
         let tableContext = null;
         if (tableBody?.id === 'daten-table-body') {
@@ -43,10 +40,10 @@ const generalEventHandlers = (() => {
         const chartId = button.dataset.chartId;
         const format = button.dataset.format;
         const chartName = button.dataset.chartName || button.dataset.defaultName || chartId.replace(/^chart-/, '').replace(/-container$/, '').replace(/-content$/, '').replace(/-[0-9]+$/, '');
-        const currentKollektiv = state.getCurrentKollektiv();
+        const currentKollektiv = stateManager.getCurrentKollektiv();
 
         if (chartId && (format === 'png' || format === 'svg')) {
-            exportService.exportSingleChart(chartId, format, currentKollektiv, { chartName: chartName });
+            exportService.exportChart(chartId, chartName, format, currentKollektiv, APP_CONFIG.EXPORT_SETTINGS.TABLE_PNG_EXPORT_SCALE);
         } else {
             ui_helpers.showToast("Fehler beim Chart-Download: Ungültige Parameter.", "danger");
             console.error("handleSingleChartDownload: Ungültige Parameter", {chartId, format});
@@ -56,10 +53,10 @@ const generalEventHandlers = (() => {
     function handleSingleTableDownload(button) {
         const tableId = button.dataset.tableId;
         const tableName = button.dataset.tableName || button.dataset.defaultName || 'Tabelle';
-        const currentKollektiv = state.getCurrentKollektiv();
+        const currentKollektiv = stateManager.getCurrentKollektiv();
 
         if (tableId && APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT) {
-            exportService.exportTablePNG(tableId, currentKollektiv, 'TABLE_PNG_EXPORT', tableName);
+            exportService.exportTableAsPng(tableId, tableName, currentKollektiv, APP_CONFIG.EXPORT_SETTINGS.TABLE_PNG_EXPORT_SCALE);
         } else if (!tableId) {
             ui_helpers.showToast(`Fehler: Tabellen-ID für PNG-Export nicht gefunden für '${tableName}'.`, "danger");
         } else if (!APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT) {
@@ -76,7 +73,7 @@ const generalEventHandlers = (() => {
     }
 
     function handleModalExportBruteForceClick() {
-        const currentKollektiv = state.getCurrentKollektiv();
+        const currentKollektiv = stateManager.getCurrentKollektiv();
         const resultsData = bruteForceManager.getResultsForKollektiv(currentKollektiv);
         if (resultsData && resultsData.results && resultsData.results.length > 0) {
             exportService.exportBruteForceReport(resultsData);
@@ -87,7 +84,6 @@ const generalEventHandlers = (() => {
 
     return Object.freeze({
         handleKollektivChange,
-        handleTabShownEvent,
         handleSortClick,
         handleSingleChartDownload,
         handleSingleTableDownload,
