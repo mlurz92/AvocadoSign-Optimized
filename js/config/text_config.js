@@ -55,7 +55,6 @@ const UI_TEXTS = {
         LANGUAGE_SWITCH_LABEL: { de: 'Deutsch / Englisch', en: 'German / English'},
         EXPORT_SECTION_BTN: { de: 'Akt. Abschnitt als MD exportieren', en: 'Export Current Section as MD'},
         LOADING_CONTENT: { de: 'Lade Inhalt...', en: 'Loading content...'}
-
     },
     STATISTIK_TAB: {
         TITLE: 'Statistik',
@@ -254,36 +253,12 @@ const UI_TEXTS = {
         tableHeaderAcc: { de: "Acc.", en: "Acc." },
         tableHeaderAUC: { de: "AUC/BalAcc", en: "AUC/BalAcc" }
     },
-    statMetrics: {
-        signifikanzTexte: {
-            SIGNIFIKANT: { de: "statistisch signifikant", en: "statistically significant" },
-            NICHT_SIGNIFIKANT: { de: "statistisch nicht signifikant", en: "not statistically significant" }
-        },
-        orFaktorTexte: {
-            ERHOEHT: { de: "erhöht", en: "increased" },
-            VERRINGERT: { de: "verringert", en: "decreased" },
-            UNVERAENDERT: { de: "unverändert", en: "unchanged" }
-        },
-        rdRichtungTexte: {
-            HOEHER: { de: "höher", en: "higher" },
-            NIEDRIGER: { de: "niedriger", en: "lower" },
-            GLEICH: { de: "gleich", en: "equal" }
-        },
-        assoziationStaerkeTexte: {
-            stark: { de: "stark", en: "strong" },
-            moderat: { de: "moderat", en: "moderate" },
-            schwach: { de: "schwach", en: "weak" },
-            sehr_schwach: { de: "sehr schwach", en: "very weak" },
-            nicht_bestimmbar: { de: "nicht bestimmbar", en: "not determinable" }
-        },
-        // Detaillierte Tooltips für statistische Metriken werden jetzt unter TOOLTIP_CONTENT.statMetrics definiert
-    },
     kurzanleitung: {
         title: {
             de: "Kurzanleitung & Wichtige Hinweise",
             en: "Quick Guide & Important Notes"
         },
-        content: { // Dynamic content injection happens in ui_helpers
+        content: { 
             de: `
                 <p>Willkommen zum <strong>Lymphknoten T2 - Avocado Sign Analyse Tool v[APP_VERSION]</strong>.</p>
                 <p>Diese Anwendung dient der explorativen Analyse und dem wissenschaftlichen Vergleich der diagnostischen Leistung des "Avocado Signs" gegenüber T2-gewichteten morphologischen Kriterien zur Prädiktion des mesorektalen Lymphknotenstatus (N-Status) bei Patienten mit Rektumkarzinom. Sie basiert auf einem Patientenkollektiv von 106 Fällen.</p>
@@ -332,7 +307,6 @@ const UI_TEXTS = {
     }
 };
 
-// TOOLTIP_CONTENT is now a top-level constant.
 const TOOLTIP_CONTENT = {
     kurzanleitungButton: {
         de: { description: "Zeigt eine Kurzanleitung und wichtige Hinweise zur Bedienung der Anwendung." },
@@ -357,7 +331,7 @@ const TOOLTIP_CONTENT = {
         publikation: { de: { description: "Textvorschläge und Materialien für Publikationen generieren." }, en: { description: "Generate text suggestions and materials for publications." } },
         export: { de: { description: "Daten und Analyseergebnisse exportieren." }, en: { description: "Export data and analysis results." } }
     },
-    datenTable: { // Assuming these are keys used in getTooltipHTML, structure them for dynamic content if needed.
+    datenTable: {
         nr: { de: { description: "Fortlaufende Nummer des Patienten." }, en: { description: "Patient's serial number." } },
         name: { de: { description: "Nachname des Patienten (anonymisiert/kodiert)." }, en: { description: "Patient's last name (anonymized/coded)." } },
         vorname: { de: { description: "Vorname des Patienten (anonymisiert/kodiert)." }, en: { description: "Patient's first name (anonymized/coded)." } },
@@ -422,14 +396,15 @@ const TOOLTIP_CONTENT = {
     },
     t2MetricsOverview: {
         cardTitle: { de: { description: "Kurzübersicht der diagnostischen Güte für die aktuell angewendeten und gespeicherten T2-Kriterien im Vergleich zum histopathologischen N-Status für das gewählte Kollektiv: <strong>[KOLLEKTIV]</strong>. Alle Konfidenzintervalle (CI) sind 95%-CIs." }, en: { description: "Summary of diagnostic performance for the currently applied and saved T2 criteria versus histopathological N-status for the selected cohort: <strong>[KOLLEKTIV]</strong>. All confidence intervals (CI) are 95% CIs." } },
-        sens: { de: { name: "Sensitivität", description: "Sensitivität (T2 vs. N)", formula: "RP / (RP + FN)" }, en: { name: "Sensitivity", description: "Sensitivity (T2 vs. N)", formula: "TP / (TP + FN)" } },
-        spez: { de: { name: "Spezifität", description: "Spezifität (T2 vs. N)", formula: "RN / (RN + FP)" }, en: { name: "Specificity", description: "Specificity (T2 vs. N)", formula: "TN / (TN + FP)" } },
-        ppv: { de: { name: "PPV", description: "Positiver Prädiktiver Wert (PPV, T2 vs. N)", formula: "RP / (RP + FP)" }, en: { name: "PPV", description: "Positive Predictive Value (PPV, T2 vs. N)", formula: "TP / (TP + FP)" } },
-        npv: { de: { name: "NPV", description: "Negativer Prädiktiver Wert (NPV, T2 vs. N)", formula: "RN / (RN + FN)" }, en: { name: "NPV", description: "Negative Predictive Value (NPV, T2 vs. N)", formula: "TN / (TN + FN)" } },
-        acc: { de: { name: "Accuracy", description: "Accuracy (T2 vs. N)", formula: "(RP + RN) / (RP + RN + FP + FN)" }, en: { name: "Accuracy", description: "Accuracy (T2 vs. N)", formula: "(TP + TN) / (TP + TN + FP + FN)" } },
-        balAcc: { de: { name: "Balanced Acc.", description: "Balanced Accuracy (T2 vs. N)", formula: "(Sensitivität + Spezifität) / 2" }, en: { name: "Balanced Acc.", description: "Balanced Accuracy (T2 vs. N)", formula: "(Sensitivity + Specificity) / 2" } },
-        f1: { de: { name: "F1-Score", description: "F1-Score (T2 vs. N)", formula: "2 * (PPV * Sensitivität) / (PPV + Sensitivität)" }, en: { name: "F1-Score", description: "F1-Score (T2 vs. N)", formula: "2 * (PPV * Sensitivity) / (PPV + Sensitivity)" } },
-        auc: { de: { name: "AUC", description: "Fläche unter der ROC-Kurve (T2 vs. N)" }, en: { name: "AUC", description: "Area Under the ROC Curve (T2 vs. N)" } }
+        // Die 'name', 'formula' etc. sind hier Teil des TOOLTIP_CONTENT.statMetrics weiter unten
+        sens: { de: { name: "Sensitivität" }, en: { name: "Sensitivity"} },
+        spez: { de: { name: "Spezifität" }, en: { name: "Specificity"} },
+        ppv: { de: { name: "PPV" }, en: { name: "PPV"} },
+        npv: { de: { name: "NPV" }, en: { name: "NPV"} },
+        acc: { de: { name: "Accuracy" }, en: { name: "Accuracy"} },
+        balAcc: { de: { name: "Balanced Acc." }, en: { name: "Balanced Acc."} },
+        f1: { de: { name: "F1-Score" }, en: { name: "F1-Score"} },
+        auc: { de: { name: "AUC" }, en: { name: "AUC"} }
     },
      bruteForceMetric: {
         de: { description: "Wählen Sie die Zielmetrik für die Brute-Force-Optimierung.<br><strong>Accuracy:</strong> Anteil korrekt klassifizierter Fälle.<br><strong>Balanced Accuracy:</strong> (Sens+Spez)/2; gut bei ungleichen Klassengrößen.<br><strong>F1-Score:</strong> Harmonisches Mittel aus PPV & Sensitivität.<br><strong>PPV:</strong> Präzision bei positiver Vorhersage.<br><strong>NPV:</strong> Präzision bei negativer Vorhersage." },
@@ -554,28 +529,13 @@ const TOOLTIP_CONTENT = {
             method: { de: { description: "Name des verwendeten statistischen Tests." }, en: { description: "Name of the statistical test used." } }
         }
     },
-    exportTab: {
-        singleExports: { de: { description: "Einzelexporte" }, en: { description: "Single Exports" } },
-        exportPackages: { de: { description: "Export-Pakete (.zip)" }, en: { description: "Export Packages (.zip)" } },
-        description: { de: { description: "Ermöglicht den Export von Analyseergebnissen, Tabellen und Diagrammen basierend auf dem aktuell gewählten globalen Kollektiv (<strong>[KOLLEKTIV]</strong>) und den aktuell angewendeten T2-Kriterien." }, en: { description: "Allows exporting analysis results, tables, and diagrams based on the currently selected global cohort (<strong>[KOLLEKTIV]</strong>) and the currently applied T2 criteria." } },
-        statsCSV: { de: { description: "Detaillierte Tabelle aller berechneten statistischen Metriken (deskriptiv, Güte AS & T2, Vergleiche, Assoziationen) aus dem Statistik-Tab als CSV-Datei." }, en: { description: "Detailed table of all calculated statistical metrics (descriptive, AS & T2 performance, comparisons, associations) from the Statistics tab as a CSV file." } },
-        bruteForceTXT: { de: { description: "Detaillierter Bericht der letzten Brute-Force-Optimierung für das aktuelle Kollektiv (Top 10 Ergebnisse, Konfiguration) als Textdatei (.txt), falls durchgeführt." }, en: { description: "Detailed report of the last brute-force optimization for the current cohort (Top 10 results, configuration) as a text file (.txt), if performed." } },
-        deskriptivMD: { de: { description: "Tabelle der deskriptiven Statistik (Statistik-Tab) als Markdown (.md)." }, en: { description: "Table of descriptive statistics (Statistics tab) as Markdown (.md)." } },
-        datenMD: { de: { description: "Aktuelle Datenliste (Daten-Tab) als Markdown-Tabelle (.md)." }, en: { description: "Current data list (Data tab) as a Markdown table (.md)." } },
-        auswertungMD: { de: { description: "Aktuelle Auswertungstabelle (Auswertung-Tab, inkl. T2-Ergebnisse) als Markdown (.md)." }, en: { description: "Current evaluation table (Evaluation tab, incl. T2 results) as Markdown (.md)." } },
-        filteredDataCSV: { de: { description: "Rohdaten des aktuell ausgewählten Kollektivs (inkl. T2-Bewertung) als CSV-Datei (.csv)." }, en: { description: "Raw data of the currently selected cohort (incl. T2 evaluation) as a CSV file (.csv)." } },
-        comprehensiveReportHTML: { de: { description: "Umfassender Analysebericht als HTML-Datei (Statistiken, Konfigurationen, Diagramme), druckbar." }, en: { description: "Comprehensive analysis report as an HTML file (statistics, configurations, diagrams), printable." } },
-        chartsPNG: { de: { description: "Alle aktuell sichtbaren Diagramme (Statistik, Auswertung, Präsentation) und ausgewählte Tabellen als einzelne PNG-Dateien (ZIP-Archiv)." }, en: { description: "All currently visible diagrams (Statistics, Evaluation, Presentation) and selected tables as individual PNG files (ZIP archive)." } },
-        chartsSVG: { de: { description: "Alle aktuell sichtbaren Diagramme (Statistik, Auswertung, Präsentation) als einzelne SVG-Dateien (ZIP-Archiv)." }, en: { description: "All currently visible diagrams (Statistics, Evaluation, Presentation) as individual SVG files (ZIP archive)." } },
-        chartSinglePNG: { de: { description: "Ausgewähltes Diagramm '{ChartName}' als PNG-Datei." }, en: { description: "Selected chart '{ChartName}' as a PNG file." } },
-        chartSingleSVG: { de: { description: "Ausgewähltes Diagramm '{ChartName}' als SVG-Datei (Vektorformat)." }, en: { description: "Selected chart '{ChartName}' as an SVG file (vector format)." } },
-        tableSinglePNG: { de: { description: "Ausgewählte Tabelle '{TableName}' als PNG-Bilddatei." }, en: { description: "Selected table '{TableName}' as a PNG image file." } },
-        allZIP: { de: { description: "Alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT, alle MDs, Rohdaten-CSV, HTML-Report) in einem ZIP-Archiv." }, en: { description: "All available single files (Statistics CSV, BruteForce TXT, all MDs, Raw Data CSV, HTML Report) in one ZIP archive." } },
-        csvZIP: { de: { description: "Alle verfügbaren CSV-Dateien (Statistik, Rohdaten) in einem ZIP-Archiv." }, en: { description: "All available CSV files (Statistics, Raw Data) in one ZIP archive." } },
-        mdZIP: { de: { description: "Alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikationstexte) in einem ZIP-Archiv." }, en: { description: "All available Markdown files (Descriptive, Data, Evaluation, Publication Texts) in one ZIP archive." } },
-        xlsxZIP: { de: { description: "Alle verfügbaren Excel-Dateien in einem ZIP-Archiv." }, en: { description: "All available Excel files in one ZIP archive." } },
-        noDataToExport: { de: { description: "Keine Daten zum Exportieren."}, en: { description: "No data to export."}}, // Duplikat von UI_TEXTS.EXPORT_TAB.noDataToExport
-        exportError: { de: { description: "Export fehlgeschlagen."}, en: { description: "Export failed."}} // Duplikat von UI_TEXTS.EXPORT_TAB.exportError
+    exportTab: { // Tooltips for export buttons
+        statsCSV: { de: { description: "Detaillierte Tabelle aller berechneten statistischen Metriken als CSV-Datei." }, en: { description: "Detailed table of all calculated statistical metrics as CSV file." } },
+        bruteForceTXT: { de: { description: "Detaillierter Bericht der letzten Brute-Force-Optimierung als Textdatei (.txt)." }, en: { description: "Detailed report of the last brute-force optimization as text file (.txt)." } },
+        // ... (andere Export-Button-Tooltips, falls spezifische Beschreibungen benötigt werden)
+        // UI_TEXTS.EXPORT_TAB enthält bereits viele Titel, diese hier wären für spezifische Hover-Infos.
+        noDataToExport: {de: {description: "Keine Daten zum Exportieren verfügbar."}, en: {description: "No data available for export."}},
+        exportError: {de: {description: "Beim Export ist ein Fehler aufgetreten."}, en: {description: "An error occurred during export."}}
     },
     publikationTabTooltips: {
         spracheSwitch: { de: { description: "Wechselt die Sprache der generierten Texte und einiger Beschriftungen im Publikation-Tab zwischen Deutsch und Englisch." }, en: { description: "Switches the language of the generated texts and some labels in the Publication tab between German and English." } },
@@ -598,7 +558,7 @@ const TOOLTIP_CONTENT = {
         discussion_main: { de: { description: "Generiert einen Textvorschlag für die Diskussion der Ergebnisse und Limitationen." }, en: { description: "Generates a text suggestion for the Discussion of results and limitations." } },
         references_main: { de: { description: "Generiert das Literaturverzeichnis." }, en: { description: "Generates the list of References." } }
     },
-    statMetrics: { // Detaillierte Definitionen für jede Metrik
+    statMetrics: { 
         sens: { 
             name: {de: "Sensitivität", en: "Sensitivity"}, 
             description: {de: "Anteil der korrekt als positiv klassifizierten Patienten unter allen tatsächlich positiven Patienten.", en: "Proportion of correctly classified positive patients among all actual positive patients."},
@@ -696,23 +656,6 @@ const TOOLTIP_CONTENT = {
     }
 };
 
-// Ensure UI_TEXTS and TOOLTIP_CONTENT are globally available if other modules expect them directly.
-// This structure assumes that TOOLTIP_CONTENT is a distinct global object, 
-// and UI_TEXTS contains other text elements.
-// The error "Identifier 'TOOLTIP_CONTENT' has already been declared" suggests
-// that TOOLTIP_CONTENT was defined twice. This structure ensures it's defined once.
-
-// To be absolutely safe and ensure compatibility with ui_helpers_js_v2's expectation of a global TOOLTIP_CONTENT,
-// while also resolving the "already declared" error, we should make sure that TOOLTIP_CONTENT is the *only*
-// top-level declaration for tooltip data.
-// However, the provided `ui_helpers_js_v2` actually accesses `TOOLTIP_CONTENT.statMetrics`, implying `TOOLTIP_CONTENT`
-// is an object containing `statMetrics`.
-// The most robust way to fix the "already declared" is to remove any prior or duplicate `const TOOLTIP_CONTENT = ...`
-// and ensure only one definition exists. The current structure above *should* work if this file is the sole source for these constants.
-// The error at "text_config.js:507" must be a line *in the user's version* of text_config.js.
-// My generated text_config.js files do not reach 507 lines typically.
-// The fix is to ensure TOOLTIP_CONTENT is declared only once.
-
 function deepFreeze(obj) {
     if (obj === null || typeof obj !== 'object') {
         return obj;
@@ -727,4 +670,3 @@ function deepFreeze(obj) {
 }
 deepFreeze(UI_TEXTS);
 deepFreeze(TOOLTIP_CONTENT);
-
