@@ -142,10 +142,59 @@ const dataProcessor = (() => {
          };
     }
 
+    function flattenPatientDataForExport(patient) {
+        if (!patient || typeof patient !== 'object') {
+            return {};
+        }
+
+        const flatData = {
+            nr: patient.nr,
+            name: patient.name,
+            vorname: patient.vorname,
+            geschlecht: patient.geschlecht,
+            alter: patient.alter,
+            therapie: patient.therapie,
+            n_status_patho: patient.n,
+            as_status: patient.as,
+            t2_status_applied: patient.t2,
+            anzahl_patho_lk_gesamt: patient.anzahl_patho_lk,
+            anzahl_patho_lk_n_plus: patient.anzahl_patho_n_plus_lk,
+            anzahl_as_lk_gesamt: patient.anzahl_as_lk,
+            anzahl_as_lk_plus: patient.anzahl_as_plus_lk,
+            anzahl_t2_lk_gesamt: patient.anzahl_t2_lk,
+            anzahl_t2_lk_plus: patient.anzahl_t2_plus_lk,
+            bemerkung: patient.bemerkung
+        };
+
+        // Add flattened lymph node data if available
+        if (Array.isArray(patient.lymphknoten_t2_bewertet)) {
+            patient.lymphknoten_t2_bewertet.forEach((lk, index) => {
+                if (lk) {
+                    flatData[`lk_${index + 1}_groesse`] = lk.groesse;
+                    flatData[`lk_${index + 1}_form`] = lk.form;
+                    flatData[`lk_${index + 1}_kontur`] = lk.kontur;
+                    flatData[`lk_${index + 1}_homogenitaet`] = lk.homogenitaet;
+                    flatData[`lk_${index + 1}_signal`] = lk.signal;
+                    flatData[`lk_${index + 1}_t2_positive`] = lk.isPositive ? '+' : '-';
+                    // Add individual criterion check results
+                    if (lk.checkResult) {
+                        flatData[`lk_${index + 1}_check_size`] = lk.checkResult.size;
+                        flatData[`lk_${index + 1}_check_form`] = lk.checkResult.form;
+                        flatData[`lk_${index + 1}_check_kontur`] = lk.checkResult.kontur;
+                        flatData[`lk_${index + 1}_check_homogenitaet`] = lk.checkResult.homogenitaet;
+                        flatData[`lk_${index + 1}_check_signal`] = lk.checkResult.signal;
+                    }
+                }
+            });
+        }
+        return flatData;
+    }
+
     return Object.freeze({
         processPatientData,
         filterDataByKollektiv,
-        calculateHeaderStats
+        calculateHeaderStats,
+        flattenPatientDataForExport
     });
 
 })();
