@@ -19,10 +19,11 @@ const publikationEventHandlers = (() => {
     }
 
     function handleExportSectionMarkdown() {
-        const currentSectionId = राज्य.userSettings.publikationSection;
-        const currentLang = राज्य.userSettings.publikationLang;
-        const currentKollektiv = राज्य.currentKollektiv;
+        const currentSectionId = stateManager.getUserSettings().publikationSection;
+        const currentLang = stateManager.getUserSettings().publikationLang;
+        const currentKollektiv = stateManager.getCurrentKollektiv();
 
+        // Access the aggregated data via publicationTabLogic if it has been prepared
         if (!publicationTabLogic || !publicationTabLogic.currentAggregatedPublicationData) {
             const errorMsg = currentLang === 'de' ? 
                 (UI_TEXTS?.TOOLTIP_CONTENT?.exportTab?.noDataToExport?.de || 'Export nicht möglich: Publikationsdaten nicht geladen.') : 
@@ -45,16 +46,24 @@ const publikationEventHandlers = (() => {
             return;
         }
         
-        const sectionHtmlContent = publicationMainController.getFullPublicationSectionHTML(publicationTabLogic.currentAggregatedPublicationData, currentSectionId, currentLang);
+        // Get the full HTML for the section, including dynamically rendered charts
+        const sectionHtmlContent = publicationMainController.getFullPublicationSectionHTML(
+            publicationTabLogic.currentAggregatedPublicationData, 
+            currentSectionId, 
+            currentLang
+        );
         
+        // Create a temporary DOM element to parse and manipulate the HTML
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = sectionHtmlContent;
         
+        // Replace figures with placeholders for Markdown export
         tempDiv.querySelectorAll('.figure-content').forEach(el => {
             const figurePlaceholderContainer = el.querySelector('.figure-placeholder');
             const figurePlaceholderText = figurePlaceholderContainer ? figurePlaceholderContainer.textContent : (currentLang === 'de' ? '[Abbildung an dieser Stelle]' : '[Figure at this position]');
             el.innerHTML = `<p><em>${figurePlaceholderText}</em></p>`;
         });
+        // Remove interactive and UI-specific elements for Markdown export
         tempDiv.querySelectorAll('button, .btn, [data-bs-toggle="tooltip"], .tooltip, style, script, .publication-subsection-title, h1.display-6, h2.publication-subsection-title').forEach(el => el.remove());
         
         // Attempt to clean up excessive newlines from markdown conversion of block elements
@@ -88,13 +97,13 @@ const publikationEventHandlers = (() => {
             langSwitch.addEventListener('change', handleLanguageChange);
         }
 
-        const sectionNavElement = document.getElementById('publikation-section-nav');
+        const sectionNavElement = document.getElementById('publikation-sections-nav');
         if (sectionNavElement) {
             sectionNavElement.removeEventListener('click', handleSectionChangeDelegated);
             sectionNavElement.addEventListener('click', handleSectionChangeDelegated);
         }
         
-        const bfMetricSelect = document.getElementById('publikation-brute-force-metric-select');
+        const bfMetricSelect = document.getElementById('publikation-bf-metric-select');
         if (bfMetricSelect) {
             bfMetricSelect.removeEventListener('change', handleBruteForceMetricChange);
             bfMetricSelect.addEventListener('change', handleBruteForceMetricChange);
