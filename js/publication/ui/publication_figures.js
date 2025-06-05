@@ -56,7 +56,6 @@ const publicationFigures = (() => {
         const nDirektOP = aggregatedData?.common?.nDirektOP || 0;
         const nNRCT = aggregatedData?.common?.nNRCT || 0;
         
-        // Simplified SVG for placeholder - actual complex SVG should be a separate component or file
         const svgFlowchart = `
             <svg width="100%" viewBox="0 0 500 400" xmlns="http://www.w3.org/2000/svg" style="display: block; max-width: 500px; margin: auto;">
                 <style>
