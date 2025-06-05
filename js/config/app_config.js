@@ -1,6 +1,6 @@
 const APP_CONFIG = Object.freeze({
     APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
-    APP_VERSION: "2.3.0",
+    APP_VERSION: "2.5.0",
 
     DEFAULT_SETTINGS: Object.freeze({
         KOLLEKTIV: 'Gesamt',
@@ -13,7 +13,7 @@ const APP_CONFIG = Object.freeze({
         PRESENTATION_VIEW: 'as-pur',
         PRESENTATION_STUDY_ID: null,
         PUBLIKATION_LANG: 'de',
-        PUBLIKATION_SECTION: 'methoden',
+        PUBLIKATION_SECTION: 'abstract', // Geändert zu Abstract als Default
         PUBLIKATION_BRUTE_FORCE_METRIC: 'Balanced Accuracy',
         CRITERIA_COMPARISON_SETS: Object.freeze([
             'avocado_sign',
@@ -45,10 +45,17 @@ const APP_CONFIG = Object.freeze({
 
     PATHS: Object.freeze({
         BRUTE_FORCE_WORKER: 'workers/brute_force_worker.js',
-        PUBLICATION_TEXT_GENERATOR: 'js/ui/renderers/publication/publication_text_generator.js',
+        PUBLICATION_TEXT_GENERATOR: 'js/ui/renderers/publication/publication_text_generator.js', // bleibt als Orchestrator
         PUBLICATION_RENDERER: 'js/ui/renderers/publication/publication_renderer.js',
         PUBLICATION_TABLES: 'js/ui/renderers/publication/publication_tables.js',
-        PUBLICATION_FIGURES: 'js/ui/renderers/publication/publication_figures.js'
+        PUBLICATION_FIGURES: 'js/ui/renderers/publication/publication_figures.js',
+        // NEU: Pfade zu den modularisierten Textinhalten
+        PUBLICATION_CONTENT_ABSTRACT: 'js/ui/renderers/publication/content/abstract_content.js',
+        PUBLICATION_CONTENT_INTRODUCTION: 'js/ui/renderers/publication/content/introduction_content.js',
+        PUBLICATION_CONTENT_METHODS: 'js/ui/renderers/publication/content/methods_content.js',
+        PUBLICATION_CONTENT_RESULTS: 'js/ui/renderers/publication/content/results_content.js',
+        PUBLICATION_CONTENT_DISCUSSION: 'js/ui/renderers/publication/content/discussion_content.js',
+        PUBLICATION_CONTENT_REFERENCES: 'js/ui/renderers/publication/content/references_content.js'
     }),
 
     PERFORMANCE_SETTINGS: Object.freeze({
@@ -68,7 +75,8 @@ const APP_CONFIG = Object.freeze({
         ]),
         DEFAULT_CI_METHOD_PROPORTION: 'Wilson Score',
         DEFAULT_CI_METHOD_EFFECTSIZE: 'Bootstrap Percentile',
-        FISHER_EXACT_THRESHOLD: 5
+        FISHER_EXACT_THRESHOLD: 5,
+        CI_WARNING_SAMPLE_SIZE_THRESHOLD: 10 // NEU: Warnschwelle für CI-Unsicherheit bei kleiner Fallzahl
     }),
 
     T2_CRITERIA_SETTINGS: Object.freeze({
@@ -155,8 +163,12 @@ const APP_CONFIG = Object.freeze({
             PRAES_AS_VS_T2_CHART_SVG: 'PraesChartASvsT2_{StudyID}_SVG',
             TABLE_PNG_EXPORT: '{TableName}_PNG',
             CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
-            PUBLIKATION_METHODEN_MD: 'Publikation_{SectionName}_MD',
-            PUBLIKATION_ERGEBNISSE_MD: 'Publikation_{SectionName}_MD'
+            PUBLIKATION_ABSTRACT_MD: 'Publikation_{SectionName}_MD', // NEU
+            PUBLIKATION_INTRODUCTION_MD: 'Publikation_{SectionName}_MD', // NEU
+            PUBLIKATION_METHODS_MD: 'Publikation_{SectionName}_MD', // NEU
+            PUBLIKATION_RESULTS_MD: 'Publikation_{SectionName}_MD', // NEU
+            PUBLIKATION_DISCUSSION_MD: 'Publikation_{SectionName}_MD', // NEU
+            PUBLIKATION_REFERENCES_MD: 'Publikation_{SectionName}_MD' // NEU
         }),
         EXCEL_SHEET_NAME_DATEN: 'Datenliste',
         EXCEL_SHEET_NAME_AUSWERTUNG: 'Auswertung',
@@ -179,7 +191,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.3.0"}`,
+        REPORT_AUTHOR: `Generiert durch Analyse-Tool v2.5.0`, // Aktualisierte Version
         REPORT_LOGO_ALT_TEXT: 'Institutslogo',
         INCLUDE_KEY_RESULTS: true,
         INCLUDE_SUMMARY_STATEMENT: true
@@ -197,21 +209,27 @@ const APP_CONFIG = Object.freeze({
 
     REFERENCES_FOR_PUBLICATION: Object.freeze({
         LURZ_SCHAEFER_AS_2025: "Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11462-y",
+        SIEGEL_2023_CANCER_STATS: "Siegel RL, Miller KD, Wagle NS, Jemal A. Cancer statistics, 2023. CA Cancer J Clin. 2023;73(1):17-48. doi:10.3322/caac.21763",
+        SAUER_2004_CHEMORADIOTHERAPY: "Sauer R, Becker H, Hohenberger W, et al. Preoperative versus postoperative chemoradiotherapy for rectal cancer. N Engl J Med. 2004;351(17):1731-1740. doi:10.1056/NEJMoa040694",
+        BEETS_TAN_2018_ESGAR_CONSENSUS: "Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for clinical management of rectal cancer: Updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. Eur Radiol. 2018;28(4):1465-1475. doi:10.1007/s00330-017-5026-2",
+        AL_SUKHNI_2012_MRI_ACCURACY: "Al-Sukhni E, Milot L, Fruitman M, et al. Diagnostic accuracy of MRI for assessment of T category, lymph node metastases, and circumferential resection margin involvement in patients with rectal cancer: a systematic review and meta-analysis. Ann Surg Oncol. 2012;19(7):2212-2223. doi:10.1245/s10434-011-2183-1",
+        TAYLOR_2011_MRI_PREDICTIVE_VALUE: "Taylor FG, Quirke P, Heald RJ, et al. Preoperative high-resolution magnetic resonance imaging can identify good prognosis stage I, II, and III rectal cancer best managed by surgery alone: a prospective, multicenter, European study. Ann Surg. 2011;253(4):711-719. doi:10.1097/SLA.0b013e31820b8d52",
+        GARCIA_AGUILAR_2022_ORGAN_PRESERVATION: "Garcia-Aguilar J, Patil S, Gollub MJ, et al. Organ Preservation in Patients With Rectal Adenocarcinoma Treated With Total Neoadjuvant Therapy. J Clin Oncol. 2022;40(23):2546-2556. doi:10.1200/JCO.21.02621",
+        SCHRAG_2023_PREOPERATIVE_TREATMENT: "Schrag D, Shi Q, Weiser MR, et al. Preoperative Treatment of Locally Advanced Rectal Cancer. N Engl J Med. 2023;389(4):322-334. doi:10.1056/NEJMoa2303269",
         KOH_2008_MORPHOLOGY: "Koh DM, Chau I, Tait D, Wotherspoon A, Cunningham D, Brown G. Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. Int J Radiat Oncol Biol Phys. 2008;71(2):456-461.",
         BARBARO_2024_RESTAGING: "Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: A single center experience. Radiother Oncol. 2024;193:110124.",
         RUTEGARD_2025_ESGAR_VALIDATION: "Rutegård MK, Båtsman M, Blomqvist L, et al. Evaluation of MRI characterisation of histopathologically matched lymph nodes and other mesorectal nodal structures in rectal cancer. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11361-2",
-        BEETS_TAN_2018_ESGAR_CONSENSUS: "Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for clinical management of rectal cancer: Updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. Eur Radiol. 2018;28(4):1465-1475.",
         BROWN_2003_MORPHOLOGY: "Brown G, Richards CJ, Bourne MW, et al. Morphologic predictors of lymph node status in rectal cancer with use of high-spatial-resolution MR imaging with histopathologic comparison. Radiology. 2003;227(2):371-377.",
         KAUR_2012_MRI_PRACTICAL: "Kaur H, Choi H, You NY, et al. MR Imaging for Preoperative Evaluation of Primary Rectal Cancer: Practical Considerations. RadioGraphics. 2012;32(2):389-409.",
         HORVAT_2019_MRI_RECTAL_CANCER: "Horvat N, Carlos Tavares Rocha C, Clemente Oliveira B, Petkovska I, Gollub MJ. MRI of Rectal Cancer: Tumor Staging, Imaging Techniques, and Management. RadioGraphics. 2019;39(2):e1-e24.",
         BEETS_TAN_2009_USPIO_RESTAGING: "Lahaye MJ, Beets GL, Engelen SME, et al. Locally Advanced Rectal Cancer: MR Imaging for Restaging after Neoadjuvant Radiation Therapy with Concomitant Chemotherapy Part II. What Are the Criteria to Predict Involved Lymph Nodes?. Radiology. 2009;252(1):81-91.",
         BEETS_TAN_2004_GADOLINIUM: "Vliegen RFA, Beets GL, von Meyenfeldt MF, et al. Rectal Cancer: MR Imaging in Local Staging—Is Gadolinium-based Contrast Material Helpful?. Radiology. 2005;234(1):179-188.",
         BARBARO_2010_RESTAGING: "Barbaro B, Vitale R, Leccisotti L, et al. Restaging Locally Advanced Rectal Cancer with MR Imaging after Chemoradiation Therapy. Radiographics. 2010;30(3):699-721.",
-        ETHICS_VOTE_LEIPZIG: "Ethikvotum Nr. 2023-101, Ethikkommission der Landesärztekammer Sachsen",
-        STUDY_PERIOD_2020_2023: "Januar 2020 und November 2023",
-        MRI_SYSTEM_SIEMENS_3T: "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers)",
-        CONTRAST_AGENT_PROHANCE: "Gadoteridol (ProHance; Bracco)",
-        RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER: ["29", "7", "19"]
+        ETHICS_VOTE_LEIPZIG: "Ethikvotum Nr. 2023-101, Ethikkommission der Medizinischen Fakultät der Universität Leipzig",
+        STUDY_PERIOD_2020_2023: "January 2020 and November 2023", // Angabe im Style Guide für Englisch
+        MRI_SYSTEM_SIEMENS_3T: "3.0-T Magnetom Prisma Fit (Siemens Healthineers, Erlangen, Germany)",
+        CONTRAST_AGENT_PROHANCE: "Gadoteridol (ProHance, Bracco Imaging, Konstanz, Germany)",
+        RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER: ["29", "7", "19"] // aus Lurz_Schaefer_AvocadoSign_2025.pdf
     }),
 
     SPECIAL_IDS: Object.freeze({
