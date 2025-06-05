@@ -58,33 +58,43 @@ const publicationTextGenerator = (() => {
         let aucASGesamt = asGesamt?.auc?.value !== undefined ? formatNumber(asGesamt.auc.value, 2, 'N/A', lang === 'en') : 'N/A';
         let sensASGesamt = asGesamt?.sens?.value !== undefined ? formatPercent(asGesamt.sens.value, 1, 'N/A') : 'N/A';
         let spezASGesamt = asGesamt?.spez?.value !== undefined ? formatPercent(asGesamt.spez.value, 1, 'N/A') : 'N/A';
+        let accASGesamt = asGesamt?.acc?.value !== undefined ? formatPercent(asGesamt.acc.value, 1, 'N/A') : 'N/A';
+
         let aucAsDirektOP = allKollektivStats?.['direkt OP']?.gueteAS?.auc?.value !== undefined ? formatNumber(allKollektivStats['direkt OP'].gueteAS.auc.value, 2, 'N/A', lang === 'en') : 'N/A';
+        let sensAsDirektOP = allKollektivStats?.['direkt OP']?.gueteAS?.sens?.value !== undefined ? formatPercent(allKollektivStats['direkt OP'].gueteAS.sens.value, 1, 'N/A') : 'N/A';
+        let spezAsDirektOP = allKollektivStats?.['direkt OP']?.gueteAS?.spez?.value !== undefined ? formatPercent(allKollektivStats['direkt OP'].gueteAS.spez.value, 1, 'N/A') : 'N/A';
+
         let aucAsNRCT = allKollektivStats?.nRCT?.gueteAS?.auc?.value !== undefined ? formatNumber(allKollektivStats.nRCT.gueteAS.auc.value, 2, 'N/A', lang === 'en') : 'N/A';
+        let sensAsNRCT = allKollektivStats?.nRCT?.gueteAS?.sens?.value !== undefined ? formatPercent(allKollektivStats.nRCT.gueteAS.sens.value, 1, 'N/A') : 'N/A';
+        let spezAsNRCT = allKollektivStats?.nRCT?.gueteAS?.spez?.value !== undefined ? formatPercent(allKollektivStats.nRCT.gueteAS.spez.value, 1, 'N/A') : 'N/A';
+
 
         let aucT2OptimiertGesamt = bfGesamtStats?.auc?.value !== undefined ? formatNumber(bfGesamtStats.auc.value, 2, 'N/A', lang === 'en') : 'N/A';
         let pWertVergleich = vergleichASvsBFGesamt?.delong?.pValue !== undefined ? getPValueText(vergleichASvsBFGesamt.delong.pValue, lang) : 'N/A';
-        let vergleichPerformanceTextDe = "vergleichbare";
+        let vergleichPerformanceTextDe = "eine vergleichbare";
         let vergleichPerformanceTextEn = "comparable";
 
         if (vergleichASvsBFGesamt?.delong?.pValue !== undefined && statsAS?.auc?.value !== undefined && bfGesamtStats?.auc?.value !== undefined) {
             if (vergleichASvsBFGesamt.delong.pValue < (commonData.significanceLevel || 0.05)) {
                 if (statsAS.auc.value > bfGesamtStats.auc.value) {
-                    vergleichPerformanceTextDe = "eine überlegene";
-                    vergleichPerformanceTextEn = "superior";
+                    vergleichPerformanceTextDe = "eine signifikant überlegene";
+                    vergleichPerformanceTextEn = "significantly superior";
                 } else if (statsAS.auc.value < bfGesamtStats.auc.value) {
-                    vergleichPerformanceTextDe = "eine unterlegene";
-                    vergleichPerformanceTextEn = "inferior";
+                    vergleichPerformanceTextDe = "eine signifikant unterlegene";
+                    vergleichPerformanceTextEn = "significantly inferior";
                 }
             }
         }
 
-
         const mainAbstractTextDe = (PUBLICATION_CONFIG.DEFAULT_ABSTRACT_TEXT_DE || "")
             .replace('88,7%', sensASGesamt)
             .replace('84,9%', spezASGesamt)
+            .replace('86,8%', accASGesamt)
             .replace('0,87', aucASGesamt)
-            .replace('0,92', aucAsDirektOP)
-            .replace('0,85', aucAsNRCT)
+            .replace('100%', sensAsDirektOP)
+            .replace('83,3%', spezAsDirektOP)
+            .replace('84,2%', sensAsNRCT)
+            .replace('85,4%', spezAsNRCT)
             .replace('[PLATZHALTER_AUC_T2_OPTIMIERT_GESAMT]', aucT2OptimiertGesamt)
             .replace('[eine überlegene/vergleichbare/unterlegene]', vergleichPerformanceTextDe)
             .replace('p=[PLATZHALTER_P_WERT_VERGLEICH]', pWertVergleich);
@@ -92,9 +102,12 @@ const publicationTextGenerator = (() => {
         const mainAbstractTextEn = (PUBLICATION_CONFIG.DEFAULT_ABSTRACT_TEXT_EN || "")
             .replace('88.7%', sensASGesamt)
             .replace('84.9%', spezASGesamt)
+            .replace('86.8%', accASGesamt)
             .replace('0.87', aucASGesamt)
-            .replace('0.92', aucAsDirektOP)
-            .replace('0.85', aucAsNRCT)
+            .replace('100%', sensAsDirektOP)
+            .replace('83.3%', spezAsDirektOP)
+            .replace('84.2%', sensAsNRCT)
+            .replace('85.4%', spezAsNRCT)
             .replace('[PLACEHOLDER_AUC_T2_OPTIMIZED_OVERALL]', aucT2OptimiertGesamt)
             .replace('[superior/comparable/inferior]', vergleichPerformanceTextEn)
             .replace('p=[PLACEHOLDER_P_VALUE_COMPARISON]', pWertVergleich);
@@ -178,13 +191,13 @@ const publicationTextGenerator = (() => {
         if (lang === 'de') {
             return `
                 <h3 id="methoden-patientenkohorte-title">Patientenkohorte und Einschlusskriterien</h3>
-                <p>In diese Studie wurden konsekutiv ${anzahlGesamt} Patienten eingeschlossen, bei denen zwischen ${studienzeitraum} ein Rektumkarzinom diagnostiziert und die primäre Staging-MRT-Untersuchung sowie die anschließende Therapie und Operation am Klinikum St. Georg, Leipzig, erfolgten. Das mittlere Alter der Patienten betrug ${alterMedian} Jahre (Spannweite: ${alterMin}–${alterMax} Jahre); ${anteilMaennerProzent} der Kohorte (${anzahlMaenner}/${anzahlPatientenChar}) waren männlich. ${anzahlNRCT} Patienten (${formatPercent(anzahlNRCT/anzahlGesamt,0)}) erhielten eine neoadjuvante Radiochemotherapie (nRCT), während ${anzahlDirektOP} Patienten (${formatPercent(anzahlDirektOP/anzahlGesamt,0)}) primär chirurgisch versorgt wurden. Die detaillierten demographischen und klinischen Charakteristika sind in <a href="${_getSafeLink(table1Id)}">Tabelle 1</a> aufgeführt. Das Flussdiagramm zur Patientenrekrutierung ist in <a href="${_getSafeLink(flowDiagramId)}">Abbildung 1</a> dargestellt.</p>
+                <p>In diese Studie wurden konsekutiv ${anzahlGesamt} Patienten eingeschlossen, bei denen zwischen ${studienzeitraum} ein Rektumkarzinom diagnostiziert und die primäre Staging-MRT-Untersuchung sowie die anschließende Therapie und Operation am Klinikum St. Georg, Leipzig, erfolgten. Das mittlere Alter der Patienten betrug ${alterMedian} Jahre (Spannweite: ${alterMin}–${alterMax} Jahre); ${anteilMaennerProzent} der Kohorte (${anzahlMaenner}/${anzahlPatientenChar}) waren männlich. ${anzahlNRCT} Patienten (${formatPercent(anzahlNRCT/anzahlGesamt,0)}) erhielten eine neoadjuvante Radiochemotherapie (nRCT), während ${anzahlDirektOP} Patienten (${formatPercent(anzahlDirektOP/anzahlGesamt,0)}) primär chirurgisch versorgt wurden. Die detaillierten demographischen und klinischen Charakteristika sind in <a href="${_getSafeLink(table1Id)}">Tabelle 1</a> aufgeführt. Das Flussdiagramm zur Patientenrekrutierung ist in <a href="${_getSafeLink(flowDiagramId)}">Abbildung Methoden 1</a> dargestellt.</p>
                 <p>Einschlusskriterien waren ein Alter $\geq 18$ Jahre und ein histologisch gesichertes Adenokarzinom des Rektums. Ausschlusskriterien umfassten Kontraindikationen gegen eine MRT-Untersuchung oder die Gabe von Gadolinium-basiertem Kontrastmittel sowie bereits extern erfolgte Vorbehandlungen, die eine standardisierte Bildgebung und Therapie im eigenen Zentrum verhinderten. Alle Patienten gaben ihr schriftliches Einverständnis zur Studienteilnahme und zur wissenschaftlichen Auswertung ihrer pseudonymisierten Daten.</p>
             `;
         } else {
             return `
                 <h3 id="methoden-patientenkohorte-title">Patient Cohort and Inclusion Criteria</h3>
-                <p>This study included ${anzahlGesamt} consecutive patients diagnosed with rectal cancer between ${studienzeitraum}, who underwent primary staging MRI, subsequent therapy, and surgery at the Klinikum St. Georg, Leipzig. The mean age of the patients was ${alterMedian} years (range: ${alterMin}–${alterMax} years); ${anteilMaennerProzent} of the cohort (${anzahlMaenner}/${anzahlPatientenChar}) were male. ${anzahlNRCT} patients (${formatPercent(anzahlNRCT/anzahlGesamt,0)}) received neoadjuvant chemoradiotherapy (nRCT), while ${anzahlDirektOP} patients (${formatPercent(anzahlDirektOP/anzahlGesamt,0)}) underwent upfront surgery. Detailed demographic and clinical characteristics are presented in <a href="${_getSafeLink(table1Id)}">Table 1</a>. The patient recruitment flowchart is depicted in <a href="${_getSafeLink(flowDiagramId)}">Figure 1</a>.</p>
+                <p>This study included ${anzahlGesamt} consecutive patients diagnosed with rectal cancer between ${studienzeitraum}, who underwent primary staging MRI, subsequent therapy, and surgery at the Klinikum St. Georg, Leipzig. The mean age of the patients was ${alterMedian} years (range: ${alterMin}–${alterMax} years); ${anteilMaennerProzent} of the cohort (${anzahlMaenner}/${anzahlPatientenChar}) were male. ${anzahlNRCT} patients (${formatPercent(anzahlNRCT/anzahlGesamt,0)}) received neoadjuvant chemoradiotherapy (nRCT), while ${anzahlDirektOP} patients (${formatPercent(anzahlDirektOP/anzahlGesamt,0)}) underwent upfront surgery. Detailed demographic and clinical characteristics are presented in <a href="${_getSafeLink(table1Id)}">Table 1</a>. The patient recruitment flowchart is depicted in <a href="${_getSafeLink(flowDiagramId)}">Methods Figure 1</a>.</p>
                 <p>Inclusion criteria were age $\geq 18$ years and histologically confirmed adenocarcinoma of the rectum. Exclusion criteria comprised contraindications to MRI or administration of gadolinium-based contrast agents, as well as prior treatments performed externally that precluded standardized imaging and therapy at our institution. All patients provided written informed consent for study participation and scientific evaluation of their pseudonymized data.</p>
             `;
         }
@@ -214,13 +227,13 @@ const publicationTextGenerator = (() => {
     function getMethodenBildanalyseAvocadoSignText(lang, commonData) {
         const studyReferenceAS = commonData.references?.LURZ_SCHAEFER_AS_2025 || "Lurz & Schäfer (2025)";
         const radiologistExperience = commonData.references?.RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER || ["29", "7", "19"];
-        const fig2Link = `<a href="${_getSafeLink('pub-figure-avocado-sign-examples')}">${lang === 'de' ? 'Abbildung 2' : 'Figure 2'}</a>`;
+        const fig2Link = `<a href="${_getSafeLink('pub-figure-avocado-sign-examples')}">${lang === 'de' ? 'Abbildung 2 der Originalpublikation' : 'Figure 2 of the original publication'}</a>`;
 
 
         if (lang === 'de') {
             return `
                 <h3 id="methoden-bildanalyse-avocado-sign-title">Bildanalyse: Avocado Sign</h3>
-                <p>Die Auswertung der kontrastmittelverstärkten T1-gewichteten VIBE-Sequenzen hinsichtlich des Avocado Signs erfolgte durch zwei unabhängige Radiologen (Erfahrung in der abdominellen MRT: ${radiologistExperience[0]} bzw. ${radiologistExperience[1]} Jahre) in Anlehnung an die Methodik der Originalstudie (${studyReferenceAS}). Die Untersucher waren gegenüber den histopathologischen Befunden und den Ergebnissen der T2w-Lymphknotenanalyse verblindet. Das Avocado Sign wurde als ein umschriebener, zentral oder exzentrisch gelegener hypointenser Kern innerhalb eines ansonsten homogen signalangehobenen (hyperintensen) mesorektalen Lymphknotens definiert (siehe ${fig2Link}). Morphologische Kriterien wie Größe oder Form des Lymphknotens spielten für die Definition des Avocado Signs keine Rolle. Ein Patient wurde als AS-positiv klassifiziert, wenn mindestens ein mesorektaler Lymphknoten das Avocado Sign zeigte. Bei diskordanten Befunden erfolgte eine Konsensusfindung unter Hinzunahme eines dritten, ebenfalls erfahrenen Radiologen (Erfahrung: ${radiologistExperience[2]} Jahre).</p>
+                <p>Die Auswertung der kontrastmittelverstärkten T1-gewichteten VIBE-Sequenzen hinsichtlich des Avocado Signs erfolgte durch zwei unabhängige Radiologen (Erfahrung in der abdominellen MRT: ${radiologistExperience[0]} bzw. ${radiologistExperience[1]} Jahre) in Anlehnung an die Methodik der Originalstudie (${studyReferenceAS}). Die Untersucher waren gegenüber den histopathologischen Befunden und den Ergebnissen der T2w-Lymphknotenanalyse verblindet. Das Avocado Sign wurde als ein umschriebener, zentral oder exzentrisch gelegener hypointenser Kern innerhalb eines ansonsten homogen signalangehobenen (hyperintensen) mesorektalen Lymphknotens definiert, unabhängig von dessen Größe oder Form (siehe ${fig2Link}). Ein Patient wurde als AS-positiv klassifiziert, wenn mindestens ein mesorektaler Lymphknoten das Avocado Sign zeigte. Bei diskordanten Befunden erfolgte eine Konsensusfindung unter Hinzunahme eines dritten, ebenfalls erfahrenen Radiologen (Erfahrung: ${radiologistExperience[2]} Jahre).</p>
                 <p>Die Bildbeurteilung erfolgte auf einer Standard-PACS-Workstation (Picture Archiving and Communication System). Für Patienten, die eine nRCT erhielten, wurden die Restaging-MRT-Aufnahmen für die AS-Beurteilung herangezogen, um eine direkte Korrelation mit dem posttherapeutischen histopathologischen Befund zu ermöglichen. Eine minimale Größenschwelle für die zu bewertenden Lymphknoten wurde nicht definiert, um auch kleine metastatische Herde erfassen zu können. Extramesorektale Lymphknoten und Tumordepots waren nicht Gegenstand dieser spezifischen AS-Evaluation.</p>
             `;
         } else {
@@ -235,44 +248,44 @@ const publicationTextGenerator = (() => {
     function getMethodenBildanalyseT2KriterienText(lang, commonData, allKollektivStats) {
         const radiologistExperience = commonData.references?.RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER || ["29", "7", "19"];
         const bfZielMetric = commonData.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
-        const kohRef = commonData.references?.KOH_2008_MORPHOLOGY || "Koh et al. (2008)";
-        const barbaroRef = commonData.references?.BARBARO_2024_RESTAGING || "Barbaro et al. (2024)";
-        const esgarRef = `${commonData.references?.BEETS_TAN_2018_ESGAR_CONSENSUS || "ESGAR Consensus (2018)"} / ${commonData.references?.RUTEGARD_2025_ESGAR_VALIDATION || "Rutegård et al. (2025)"}`;
         const tableLiterarturKriterienId = PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle.id;
+        const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l, s) => 'N/A';
 
         let bfCriteriaText = '';
         const kollektiveBF = ['Gesamt', 'direkt OP', 'nRCT'];
+        let bfCriteriaFound = false;
         kollektiveBF.forEach(kolId => {
             const bfDef = allKollektivStats?.[kolId]?.bruteforce_definition;
             if (bfDef && bfDef.criteria) {
+                bfCriteriaFound = true;
                 const displayName = getKollektivDisplayName(kolId);
-                const formattedCriteria = studyT2CriteriaManager.formatCriteriaForDisplay(bfDef.criteria, bfDef.logic, true);
-                bfCriteriaText += `<li><strong>${displayName}</strong> (${lang === 'de' ? 'optimiert für' : 'optimized for'} ${bfDef.metricName || bfZielMetric}): ${formattedCriteria}</li>`;
+                const formattedCriteria = formatCriteriaFunc(bfDef.criteria, bfDef.logic, false);
+                const metricValueStr = formatNumber(bfDef.metricValue, 4, 'N/A', lang === 'en');
+                const metricNameDisplay = bfDef.metricName || bfZielMetric;
+                bfCriteriaText += `<li><strong>${displayName}</strong> (${lang === 'de' ? 'optimiert für' : 'optimized for'} ${metricNameDisplay}, ${lang === 'de' ? 'Wert' : 'value'}: ${metricValueStr}): ${formattedCriteria}</li>`;
             }
         });
+
         if (bfCriteriaText) {
             bfCriteriaText = `<ul>${bfCriteriaText}</ul>`;
         } else {
-            bfCriteriaText = lang === 'de' ? "Keine spezifischen Brute-Force-Optimierungsergebnisse für die gewählte Metrik verfügbar oder nicht berechnet für alle Kollektive." : "No specific brute-force optimization results available or not calculated for all cohorts for the selected metric.";
+            bfCriteriaText = lang === 'de' ? `<p>Für die gewählte Zielmetrik "${bfZielMetric}" konnten keine spezifischen Brute-Force-Optimierungsergebnisse für die Darstellung der Kriterien generiert werden oder die Ergebnisse waren nicht für alle Kollektive verfügbar.</p>` : `<p>For the selected target metric "${bfZielMetric}", no specific brute-force optimization results for criteria display could be generated, or results were not available for all cohorts.</p>`;
         }
+
+        const kohRef = commonData.references?.KOH_2008_MORPHOLOGY || "Koh et al. (2008)";
+        const barbaroRef = commonData.references?.BARBARO_2024_RESTAGING || "Barbaro et al. (2024)";
+        const esgarRef = `${commonData.references?.BEETS_TAN_2018_ESGAR_CONSENSUS || "ESGAR Consensus (2018)"} / ${commonData.references?.RUTEGARD_2025_ESGAR_VALIDATION || "Rutegård et al. (2025)"}`;
 
         if (lang === 'de') {
             return `
                 <h3 id="methoden-bildanalyse-t2-kriterien-title">Bildanalyse: T2-gewichtete Kriterien</h3>
-                <p>Die morphologischen Charakteristika der mesorektalen Lymphknoten (Größe [Kurzachsendurchmesser], Form, Kontur, Binnensignalhomogenität, Signalintensität) wurden auf den hochauflösenden T2-gewichteten MRT-Sequenzen durch dieselben zwei Radiologen (Erfahrung ${radiologistExperience[0]} bzw. ${radiologistExperience[1]} Jahre) im Konsens erfasst. Diese Erfassung erfolgte verblindet gegenüber dem pathologischen N-Status und dem Avocado-Sign-Status.</p>
+                <p>Die morphologischen Charakteristika der mesorektalen Lymphknoten (Kurzachsendurchmesser [mm], Form ['rund', 'oval'], Kontur ['scharf', 'irregulär'], Binnensignalhomogenität ['homogen', 'heterogen'] und Signalintensität ['signalarm', 'intermediär', 'signalreich']) wurden auf den hochauflösenden T2-gewichteten MRT-Sequenzen durch dieselben zwei Radiologen (Erfahrung ${radiologistExperience[0]} bzw. ${radiologistExperience[1]} Jahre) im Konsens erfasst. Diese Erfassung erfolgte verblindet gegenüber dem pathologischen N-Status und dem Avocado-Sign-Status.</p>
                 <p>Zur vergleichenden Analyse der diagnostischen Güte wurden folgende Sätze von T2w-Kriterien herangezogen und auf den Datensatz angewendet:</p>
                 <ol>
-                    <li><strong>Literatur-basierte Kriteriensets:</strong>
-                        <ul>
-                            <li>Kriterien nach Koh et al. (${kohRef}): Typischerweise Irregularität der Kontur oder heterogenes Signal.</li>
-                            <li>Kriterien nach Barbaro et al. (${barbaroRef}): Primär größenbasiert für das Restaging nach nRCT (z.B. Kurzachse &ge;2,3 mm).</li>
-                            <li>ESGAR Konsensus Kriterien (${esgarRef}): Kombinierte Größen- und Morphologiekriterien.</li>
-                        </ul>
-                        Eine detaillierte Auflistung der spezifischen Definitionen dieser Literatur-Kriteriensets findet sich in <a href="${_getSafeLink(tableLiterarturKriterienId)}">Tabelle 2</a>. Diese Kriterien wurden jeweils auf das in der Originalliteratur beschriebene bzw. auf das am besten passende Subkollektiv unserer Studie angewendet.
-                    </li>
-                    <li><strong>Brute-Force optimierte T2-Kriteriensets:</strong>
-                        Unter Verwendung des integrierten Analyse-Tools wurde für jedes Hauptkollektiv (Gesamt, Direkt OP, nRCT) eine datengetriebene Optimierung durchgeführt. Dabei wurde jene Kombination aus den fünf T2-Merkmalen und einer logischen Verknüpfung (UND/ODER) identifiziert, die die Zielmetrik '${bfZielMetric}' maximierte. Die resultierenden Kriterien waren:
+                    <li><strong>Literatur-basierte Kriteriensets:</strong> Eine Auswahl etablierter Kriterien aus der Fachliteratur (${kohRef}; ${barbaroRef}; ${esgarRef}) wurde implementiert. Die spezifischen Definitionen und ihre Anwendung auf die entsprechenden Subgruppen unserer Studienpopulation sind in <a href="${_getSafeLink(tableLiterarturKriterienId)}">Tabelle Methoden 1</a> detailliert beschrieben.</li>
+                    <li><strong>Brute-Force optimierte T2-Kriteriensets:</strong> Für jedes Hauptkollektiv (Gesamt, Direkt OP, nRCT) wurde mittels eines Algorithmus diejenige Kombination aus den fünf T2-Merkmalen und einer logischen Verknüpfung (UND/ODER) identifiziert, welche die Zielmetrik "${bfZielMetric}" maximierte. Die resultierenden Kriteriendefinitionen waren:
                         ${bfCriteriaText}
+                        <p class="small text-muted">Hinweis: Diese datengetrieben optimierten Kriterien sind spezifisch für die jeweilige Kohorte und die gewählte Zielmetrik und stellen keine allgemeingültige Empfehlung dar, sondern dienen dem bestmöglichen Vergleich innerhalb dieser Studie.</p>
                     </li>
                 </ol>
                 <p>Ein Lymphknoten wurde als T2-positiv gewertet, wenn er die Bedingungen des jeweiligen Kriteriensets erfüllte. Ein Patient galt als T2-positiv, wenn mindestens ein Lymphknoten als T2-positiv eingestuft wurde.</p>
@@ -280,20 +293,13 @@ const publicationTextGenerator = (() => {
         } else {
             return `
                 <h3 id="methoden-bildanalyse-t2-kriterien-title">Image Analysis: T2-weighted Criteria</h3>
-                <p>The morphological characteristics of mesorectal lymph nodes (size [short-axis diameter], shape, border, internal signal homogeneity, signal intensity) were assessed on high-resolution T2-weighted MRI sequences by the same two radiologists (experience ${radiologistExperience[0]} and ${radiologistExperience[1]} years, respectively) by consensus. This assessment was performed blinded to the pathological N-status and the Avocado Sign status.</p>
+                <p>The morphological characteristics of mesorectal lymph nodes (short-axis diameter [mm], shape ['round', 'oval'], border ['smooth', 'irregular'], internal signal homogeneity ['homogeneous', 'heterogeneous'], and signal intensity ['low', 'intermediate', 'high']) were assessed on high-resolution T2-weighted MRI sequences by the same two radiologists (experience ${radiologistExperience[0]} and ${radiologistExperience[1]} years, respectively) by consensus. This assessment was performed blinded to the pathological N-status and the Avocado Sign status.</p>
                 <p>For the comparative analysis of diagnostic performance, the following sets of T2w criteria were utilized and applied to the dataset:</p>
                 <ol>
-                    <li><strong>Literature-based criteria sets:</strong>
-                        <ul>
-                            <li>Criteria according to Koh et al. (${kohRef}): Typically defined by irregular borders or heterogeneous signal.</li>
-                            <li>Criteria according to Barbaro et al. (${barbaroRef}): Primarily size-based for restaging after nRCT (e.g., short-axis diameter &ge;2.3 mm).</li>
-                            <li>ESGAR Consensus Criteria (${esgarRef}): Combined size and morphological criteria.</li>
-                        </ul>
-                        A detailed listing of the specific definitions of these literature-based criteria sets is provided in <a href="${_getSafeLink(tableLiterarturKriterienId)}">Table 2</a>. These criteria were applied to the cohort described in the original literature or to the most appropriate sub-cohort in our study.
-                    </li>
-                    <li><strong>Brute-force optimized T2 criteria sets:</strong>
-                        Using the integrated analysis tool, a data-driven optimization was performed for each main cohort (Overall, Upfront Surgery, nRCT). The combination of the five T2 features and a logical operator (AND/OR) that maximized the target metric '${bfZielMetric}' was identified. The resulting criteria were:
+                    <li><strong>Literature-based criteria sets:</strong> A selection of established criteria from the literature (${kohRef}; ${barbaroRef}; ${esgarRef}) was implemented. The specific definitions and their application to the respective subgroups of our study population are detailed in <a href="${_getSafeLink(tableLiterarturKriterienId)}">Methods Table 1</a>.</li>
+                    <li><strong>Brute-force optimized T2 criteria sets:</strong> For each main cohort (Overall, Upfront Surgery, nRCT), an algorithm was used to identify the combination of the five T2 features and a logical operator (AND/OR) that maximized the target metric "${bfZielMetric}". The resulting criteria definitions were:
                         ${bfCriteriaText}
+                        <p class="small text-muted">Note: These data-driven optimized criteria are specific to the respective cohort and the chosen target metric and do not represent a general recommendation but serve for the best possible comparison within this study.</p>
                     </li>
                 </ol>
                 <p>A lymph node was considered T2-positive if it fulfilled the conditions of the respective criteria set. A patient was considered T2-positive if at least one lymph node was classified as T2-positive.</p>
@@ -318,23 +324,21 @@ const publicationTextGenerator = (() => {
         const alphaLevel = commonData.significanceLevel || 0.05;
         const alphaText = formatNumber(alphaLevel, 2, '0.05', true).replace('.', lang === 'de' ? ',' : '.');
         const bootstrapN = commonData.bootstrapReplications || 1000;
+        const appNameAndVersion = `${commonData.appName || "Analyse-Tool"} v${commonData.appVersion || APP_CONFIG.APP_VERSION}`;
         const ciMethodProportion = APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_PROPORTION || "Wilson Score";
         const ciMethodEffectSize = APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE || "Bootstrap Percentile";
-        const appNameAndVersion = `${commonData.appName || "Analyse-Tool"} v${commonData.appVersion || APP_CONFIG.APP_VERSION}`;
 
         if (lang === 'de') {
             return `
                 <h3 id="methoden-statistische-analyse-methoden-title">Statistische Analyse</h3>
-                <p>Die deskriptive Statistik umfasste Mediane und Interquartilsabstände (IQR) für kontinuierliche Variablen sowie absolute und relative Häufigkeiten für kategoriale Daten. Die diagnostische Güte (Sensitivität, Spezifität, positiver prädiktiver Wert [PPV], negativer prädiktiver Wert [NPV], Accuracy, Balanced Accuracy und Fläche unter der Receiver Operating Characteristic-Kurve [AUC]) wurde für das Avocado Sign und die verschiedenen T2-Kriteriensets berechnet. Für alle Gütemaße wurden 95%-Konfidenzintervalle (KI) bestimmt; für Proportionen mittels der ${ciMethodProportion}-Methode, für AUC/Balanced Accuracy und F1-Score mittels der ${ciMethodEffectSize}-Methode (${bootstrapN} Replikationen).</p>
-                <p>Der McNemar-Test diente dem Vergleich der Accuracy zwischen gepaarten diagnostischen Tests (z.B. AS vs. ein spezifisches T2-Set am selben Patienten). Der DeLong-Test wurde für den Vergleich von AUC-Werten bei gepaarten Daten verwendet. Unterschiede in der diagnostischen Güte zwischen unabhängigen Subgruppen (z.B. Direkt-OP vs. nRCT) wurden mittels Fisher's Exact Test (für Raten) oder Z-Test (für AUCs, basierend auf Bootstrap-Standardfehlern) untersucht. Die Interobserver-Reliabilität für das Avocado Sign wurde mittels Cohen's Kappa ($\kappa$) evaluiert.</p>
-                <p>Ein p-Wert < ${alphaText} (zweiseitig) wurde als statistisch signifikant erachtet. Alle Analysen wurden mit der Software ${appNameAndVersion} durchgeführt, die auf etablierten statistischen Algorithmen basiert.</p>
+                <p>Die deskriptive Statistik umfasste Mediane und Interquartilsabstände (IQR) für kontinuierliche Variablen sowie absolute und relative Häufigkeiten für kategoriale Daten. Die diagnostische Güte des Avocado Signs sowie der verschiedenen T2-Kriteriensets (Literatur-basiert und Brute-Force-optimiert) wurde anhand von Sensitivität, Spezifität, positivem prädiktiven Wert [PPV], negativem prädiktiven Wert [NPV], Accuracy (ACC), Balanced Accuracy (BalAcc) und der Fläche unter der Receiver Operating Characteristic-Kurve [AUC] – bei binären Tests äquivalent zur BalAcc – evaluiert. Für diese Metriken wurden zweiseitige 95%-Konfidenzintervalle (KI) berechnet. Für Proportionen (Sensitivität, Spezifität, PPV, NPV, Accuracy) wurde die ${ciMethodProportion}-Methode verwendet. Für BalAcc (AUC) und den F1-Score wurde die ${ciMethodEffectSize}-Methode mit ${bootstrapN} Replikationen angewendet.</p>
+                <p>Der statistische Vergleich der diagnostischen Leistung (Accuracy, AUC) zwischen dem Avocado Sign und den jeweiligen T2-Kriteriensets innerhalb derselben Patientengruppe (gepaarte Daten) erfolgte mittels des McNemar-Tests für gepaarte nominale Daten bzw. des DeLong-Tests für den Vergleich von AUC-Werten. Der Vergleich von Performance-Metriken zwischen unabhängigen Kollektiven (z.B. Direkt-OP vs. nRCT-Gruppe) erfolgte mittels Fisher's Exact Test für Raten (wie Accuracy) und mittels Z-Test für den Vergleich von AUC-Werten basierend auf deren Bootstrap-Standardfehlern. Odds Ratios (OR) und Risk Differences (RD) wurden zur Quantifizierung von Assoziationen berechnet, ebenfalls mit 95%-KI. Der Phi-Koeffizient (φ) wurde als Maß für die Stärke des Zusammenhangs zwischen binären Merkmalen herangezogen. Für den Vergleich von Verteilungen kontinuierlicher Variablen zwischen zwei unabhängigen Gruppen wurde der Mann-Whitney-U-Test verwendet. Ein p-Wert < ${alphaText} (zweiseitig) wurde als statistisch signifikant erachtet. Alle Analysen wurden mit der Software ${appNameAndVersion} durchgeführt, die auf etablierten statistischen Algorithmen basiert.</p>
             `;
         } else {
             return `
                 <h3 id="methoden-statistische-analyse-methoden-title">Statistical Analysis</h3>
-                <p>Descriptive statistics included medians and interquartile ranges (IQR) for continuous variables, and absolute and relative frequencies for categorical data. Diagnostic performance (sensitivity, specificity, positive predictive value [PPV], negative predictive value [NPV], accuracy, balanced accuracy, and area under the Receiver Operating Characteristic curve [AUC]) was calculated for the Avocado Sign and the various T2 criteria sets. For all performance metrics, 95% confidence intervals (CI) were determined; using the ${ciMethodProportion} method for proportions, and the ${ciMethodEffectSize} method (${bootstrapN} replications) for AUC/balanced accuracy and F1-score.</p>
-                <p>McNemar's test was used to compare accuracy between paired diagnostic tests (e.g., AS vs. a specific T2 set on the same patient). DeLong's test was employed for comparing AUC values in paired data. Differences in diagnostic performance between independent subgroups (e.g., upfront surgery vs. nRCT) were assessed using Fisher's exact test (for rates) or a Z-test (for AUCs, based on bootstrap standard errors). Interobserver reliability for the Avocado Sign was evaluated using Cohen's kappa ($\kappa$).</p>
-                <p>A two-sided p-value < ${alphaText} was considered statistically significant. All analyses were performed using the ${appNameAndVersion} software, which is based on established statistical algorithms.</p>
+                <p>Descriptive statistics included medians and interquartile ranges (IQR) for continuous variables, and absolute and relative frequencies for categorical data. The diagnostic performance of the Avocado Sign and the various T2 criteria sets (literature-based and brute-force optimized) was evaluated using sensitivity, specificity, positive predictive value [PPV], negative predictive value [NPV], accuracy (ACC), balanced accuracy (BalAcc), and the area under the Receiver Operating Characteristic curve [AUC]—equivalent to BalAcc for binary tests. Two-sided 95% confidence intervals (CI) were calculated for these metrics. The ${ciMethodProportion} method was used for proportions (sensitivity, specificity, PPV, NPV, accuracy). For BalAcc (AUC) and F1-score, the ${ciMethodEffectSize} method (${bootstrapN} replications) was applied.</p>
+                <p>Statistical comparison of diagnostic performance (accuracy, AUC) between the Avocado Sign and the respective T2 criteria sets within the same patient group (paired data) was performed using McNemar's test for paired nominal data and DeLong's test for AUC comparison. Comparison of performance metrics between independent cohorts (e.g., upfront surgery vs. nRCT group) was conducted using Fisher's exact test for rates (such as accuracy) and a Z-test for AUC comparison based on their bootstrap standard errors. Odds Ratios (OR) and Risk Differences (RD) were calculated to quantify associations, also with 95% CIs. The Phi coefficient (φ) was used as a measure of the strength of association between binary features. For comparing distributions of continuous variables between two independent groups, the Mann-Whitney U test was used. A p-value < ${alphaText} (two-sided) was considered statistically significant. All analyses were performed using the ${appNameAndVersion} software, which is based on established statistical algorithms.</p>
             `;
         }
     }
@@ -355,12 +359,12 @@ const publicationTextGenerator = (() => {
         if (lang === 'de') {
             return `
                 <h3 id="ergebnisse-patientencharakteristika-title">Patientencharakteristika und Datenfluss</h3>
-                <p>Die demographischen und klinischen Basisdaten der ${anzahlGesamt} Patienten sind in <a href="${_getSafeLink(table1Id)}">Tabelle 1</a> dargestellt. Das Gesamtkollektiv setzte sich aus ${anzahlDirektOP} Patienten mit primärer Operation und ${anzahlNRCT} Patienten nach neoadjuvanter Radiochemotherapie zusammen. Der mediane Alter betrug ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', false)} Jahre (Spannweite: ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', false)}–${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', false)} Jahre). Männer stellten ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} der Kohorte dar. Ein histopathologisch positiver Lymphknotenstatus (N+) wurde bei ${pCharGesamt?.nStatus?.plus || 'N/A'} (${anteilNplusGesamt}) Patienten des Gesamtkollektivs nachgewiesen. Die Alters- und Geschlechtsverteilung ist in <a href="${_getSafeLink(fig1aId)}">Abbildung 1a</a> bzw. <a href="${_getSafeLink(fig1bId)}">1b</a> illustriert. Das Patientenflussdiagramm findet sich in <a href="${_getSafeLink(flowDiagramId)}">Abbildung Methoden 1</a>.</p>
+                <p>Die demographischen und klinischen Basisdaten der ${anzahlGesamt} Patienten sind in <a href="${_getSafeLink(table1Id)}">Tabelle 1</a> dargestellt. Das Gesamtkollektiv setzte sich aus ${anzahlDirektOP} Patienten mit primärer Operation und ${anzahlNRCT} Patienten nach neoadjuvanter Radiochemotherapie zusammen. Der mediane Alter betrug ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', false)} Jahre (Spannweite: ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', false)}–${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', false)} Jahre). Männer stellten ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} der Kohorte dar. Ein histopathologisch positiver Lymphknotenstatus (N+) wurde bei ${pCharGesamt?.nStatus?.plus || 'N/A'} (${anteilNplusGesamt}) Patienten des Gesamtkollektivs nachgewiesen. Die Alters- und Geschlechtsverteilung ist in <a href="${_getSafeLink(fig1aId)}">Abbildung Ergebnisse 1a</a> bzw. <a href="${_getSafeLink(fig1bId)}">Abbildung Ergebnisse 1b</a> illustriert. Das Patientenflussdiagramm findet sich in <a href="${_getSafeLink(flowDiagramId)}">Abbildung Methoden 1</a>.</p>
             `;
         } else {
             return `
                 <h3 id="ergebnisse-patientencharakteristika-title">Patient Characteristics and Data Flow</h3>
-                <p>The demographic and baseline clinical data of the ${anzahlGesamt} patients are presented in <a href="${_getSafeLink(table1Id)}">Table 1</a>. The overall cohort comprised ${anzahlDirektOP} patients undergoing upfront surgery and ${anzahlNRCT} patients after neoadjuvant chemoradiotherapy. The median age was ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', true)} years (range: ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', true)}–${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', true)} years). Males constituted ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} of the cohort. Histopathologically confirmed positive lymph node status (N+) was identified in ${pCharGesamt?.nStatus?.plus || 'N/A'} (${anteilNplusGesamt}) patients of the total cohort. Age and gender distributions are illustrated in <a href="${_getSafeLink(fig1aId)}">Figure 1a</a> and <a href="${_getSafeLink(fig1bId)}">1b</a>, respectively. The patient flow diagram is provided in <a href="${_getSafeLink(flowDiagramId)}">Methods Figure 1</a>.</p>
+                <p>The demographic and baseline clinical data of the ${anzahlGesamt} patients are presented in <a href="${_getSafeLink(table1Id)}">Table 1</a>. The overall cohort comprised ${anzahlDirektOP} patients undergoing upfront surgery and ${anzahlNRCT} patients after neoadjuvant chemoradiotherapy. The median age was ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', true)} years (range: ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', true)}–${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', true)} years). Males constituted ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} of the cohort. Histopathologically confirmed positive lymph node status (N+) was identified in ${pCharGesamt?.nStatus?.plus || 'N/A'} (${anteilNplusGesamt}) patients of the total cohort. Age and gender distributions are illustrated in <a href="${_getSafeLink(fig1aId)}">Results Figure 1a</a> and <a href="${_getSafeLink(fig1bId)}">Results Figure 1b</a>, respectively. The patient flow diagram is provided in <a href="${_getSafeLink(flowDiagramId)}">Methods Figure 1</a>.</p>
             `;
         }
     }
@@ -377,13 +381,13 @@ const publicationTextGenerator = (() => {
 
         if (lang === 'de') {
             return `
-                <h3 id="ergebnisse-as-performance-title">Diagnostische Güte des Avocado Signs</h3>
+                <h3 id="ergebnisse-as-diagnostische-guete-title">Diagnostische Güte des Avocado Signs</h3>
                 <p>Die diagnostische Leistung des Avocado Signs (AS) zur Prädiktion des pathologischen N-Status ist in <a href="${_getSafeLink(tableId)}">Tabelle 3</a> für das Gesamtkollektiv sowie für die Subgruppen mit primärer Operation und nach nRCT detailliert dargestellt. Im Gesamtkollektiv (${getKollektivText('Gesamt', nGesamt, lang)}) wies das AS eine Sensitivität von ${fCI(asGesamt?.sens, 1, true, 'de')}, eine Spezifität von ${fCI(asGesamt?.spez, 1, true, 'de')} und eine AUC von ${fCI(asGesamt?.auc, 3, false, 'de')} auf.</p>
                 <p>Bei Patienten der Direkt-OP-Gruppe (${getKollektivText('direkt OP', nDirektOP, lang)}) erreichte das AS eine Sensitivität von ${fCI(asDirektOP?.sens, 1, true, 'de')} bei einer Spezifität von ${fCI(asDirektOP?.spez, 1, true, 'de')} (AUC: ${fCI(asDirektOP?.auc, 3, false, 'de')}). In der nRCT-Gruppe (${getKollektivText('nRCT', nNRCT, lang)}) betrug die Sensitivität ${fCI(asNRCT?.sens, 1, true, 'de')} und die Spezifität ${fCI(asNRCT?.spez, 1, true, 'de')} (AUC: ${fCI(asNRCT?.auc, 3, false, 'de')}).</p>
             `;
         } else {
             return `
-                <h3 id="ergebnisse-as-performance-title">Diagnostic Performance of the Avocado Sign</h3>
+                <h3 id="ergebnisse-as-diagnostische-guete-title">Diagnostic Performance of the Avocado Sign</h3>
                 <p>The diagnostic performance of the Avocado Sign (AS) for predicting pathological N-status is detailed in <a href="${_getSafeLink(tableId)}">Table 3</a> for the overall cohort and for subgroups undergoing upfront surgery and after nRCT. In the overall cohort (${getKollektivText('Gesamt', nGesamt, lang)}), the AS achieved a sensitivity of ${fCI(asGesamt?.sens, 1, true, 'en')}, a specificity of ${fCI(asGesamt?.spez, 1, true, 'en')}, and an AUC of ${fCI(asGesamt?.auc, 3, false, 'en')}.</p>
                 <p>In patients undergoing upfront surgery (${getKollektivText('direkt OP', nDirektOP, lang)}), the AS demonstrated a sensitivity of ${fCI(asDirektOP?.sens, 1, true, 'en')} and a specificity of ${fCI(asDirektOP?.spez, 1, true, 'en')} (AUC: ${fCI(asDirektOP?.auc, 3, false, 'en')}). In the nRCT group (${getKollektivText('nRCT', nNRCT, lang)}), sensitivity was ${fCI(asNRCT?.sens, 1, true, 'en')} and specificity was ${fCI(asNRCT?.spez, 1, true, 'en')} (AUC: ${fCI(asNRCT?.auc, 3, false, 'en')}).</p>
             `;
@@ -394,9 +398,9 @@ const publicationTextGenerator = (() => {
         const tableId = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteLiteraturT2Tabelle.id;
         let text = '';
         if (lang === 'de') {
-            text = `<h3 id="ergebnisse-literatur-t2-performance-title">Diagnostische Güte der Literatur-basierten T2-Kriterien</h3><p>Die Performance der etablierten T2-Kriteriensets aus der Literatur, angewendet auf die entsprechenden (Sub-)Kollektive unserer Studienpopulation, ist in <a href="${_getSafeLink(tableId)}">Tabelle 4</a> dargestellt. Die Ergebnisse variierten je nach Kriterienset und zugrundeliegender Patientengruppe.</p><ul>`;
+            text = `<h3 id="ergebnisse-t2-literatur-diagnostische-guete-title">Diagnostische Güte der Literatur-basierten T2-Kriterien</h3><p>Die Performance der etablierten T2-Kriteriensets aus der Literatur, angewendet auf die entsprechenden (Sub-)Kollektive unserer Studienpopulation, ist in <a href="${_getSafeLink(tableId)}">Tabelle 4</a> dargestellt. Die Ergebnisse variierten je nach Kriterienset und zugrundeliegender Patientengruppe.</p><ul>`;
         } else {
-            text = `<h3 id="ergebnisse-literatur-t2-performance-title">Diagnostic Performance of Literature-Based T2 Criteria</h3><p>The performance of established T2 criteria sets from the literature, applied to the respective (sub-)cohorts of our study population, is presented in <a href="${_getSafeLink(tableId)}">Table 4</a>. Results varied depending on the specific criteria set and the patient subgroup.</p><ul>`;
+            text = `<h3 id="ergebnisse-t2-literatur-diagnostische-guete-title">Diagnostic Performance of Literature-Based T2 Criteria</h3><p>The performance of established T2 criteria sets from the literature, applied to the respective (sub-)cohorts of our study population, is presented in <a href="${_getSafeLink(tableId)}">Table 4</a>. Results varied depending on the specific criteria set and the patient subgroup.</p><ul>`;
         }
 
         PUBLICATION_CONFIG.literatureCriteriaSets.forEach(conf => {
@@ -421,12 +425,13 @@ const publicationTextGenerator = (() => {
     function getErgebnisseOptimierteT2PerformanceText(lang, allKollektivStats, commonData) {
         const bfZielMetric = commonData.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
         const tableId = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.id;
+        const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l, s) => 'N/A';
         let text = '';
 
         if (lang === 'de') {
-            text += `<h3 id="ergebnisse-optimierte-t2-performance-title">Diagnostische Güte der Brute-Force optimierten T2-Kriterien</h3><p>Die mittels Brute-Force-Algorithmus für die Zielmetrik "${bfZielMetric}" optimierten T2-Kriteriensets zeigten die in <a href="${_getSafeLink(tableId)}">Tabelle 5</a> dargestellte diagnostische Güte für die jeweiligen Kollektive:</p><ul>`;
+            text += `<h3 id="ergebnisse-t2-optimiert-diagnostische-guete-title">Diagnostische Güte der Brute-Force optimierten T2-Kriterien</h3><p>Mittels eines Brute-Force-Algorithmus wurden für jedes der drei Kollektive spezifische T2-Kriteriensets identifiziert, welche die <strong>${bfZielMetric}</strong> maximieren. Die Definition dieser optimierten Kriteriensets ist im Methodenteil (Abschnitt Methoden > Bildanalyse: T2-gewichtete Kriterien) detaillierter beschrieben. Die diagnostische Güte dieser optimierten Sets ist in <a href="${_getSafeLink(tableId)}">Tabelle 5</a> dargestellt.</p><p>Die für die jeweilige Kohorte optimierten Kriterien waren:</p><ul>`;
         } else {
-            text += `<h3 id="ergebnisse-optimierte-t2-performance-title">Diagnostic Performance of Brute-Force Optimized T2 Criteria</h3><p>The T2 criteria sets optimized for the target metric "${bfZielMetric}" using a brute-force algorithm demonstrated the diagnostic performance detailed in <a href="${_getSafeLink(tableId)}">Table 5</a> for the respective cohorts:</p><ul>`;
+            text += `<h3 id="ergebnisse-t2-optimiert-diagnostische-guete-title">Diagnostic Performance of Brute-Force Optimized T2 Criteria</h3><p>Using a brute-force algorithm, specific T2 criteria sets maximizing <strong>${bfZielMetric}</strong> were identified for each of the three cohorts. The definition of these optimized criteria sets is detailed in the Methods section (Section Methods > Image Analysis: T2-weighted Criteria). The diagnostic performance of these optimized sets is presented in <a href="${_getSafeLink(tableId)}">Table 5</a>.</p><p>The criteria optimized for each cohort were:</p><ul>`;
         }
 
         const kollektive = [
@@ -439,16 +444,16 @@ const publicationTextGenerator = (() => {
             const bfStats = allKollektivStats?.[k.id]?.gueteT2_bruteforce;
             const nPat = k.n || 'N/A';
             const bfDef = allKollektivStats?.[k.id]?.bruteforce_definition;
-            const criteriaDesc = bfDef ? studyT2CriteriaManager.formatCriteriaForDisplay(bfDef.criteria, bfDef.logic, true) : (lang === 'de' ? 'nicht verfügbar' : 'unavailable');
-
+            const criteriaDesc = bfDef ? formatCriteriaFunc(bfDef.criteria, bfDef.logic, false) : (lang === 'de' ? 'nicht verfügbar' : 'unavailable');
+            const kollektivDisplayName = getKollektivDisplayName(k.id);
 
             if (bfStats && bfStats.matrix) {
-                text += `<li>${getKollektivText(k.id, nPat, lang)} (Kriterien: ${criteriaDesc}): Sensitivität ${fCI(bfStats.sens, 1, true, lang)}, Spezifität ${fCI(bfStats.spez, 1, true, lang)}, AUC ${fCI(bfStats.auc, 3, false, lang)}.</li>`;
+                text += `<li>Für das ${getKollektivText(k.id, nPat, lang)} (optimierte Kriterien: ${criteriaDesc}) erreichten diese eine Sensitivität von ${fCI(bfStats.sens, 1, true, lang)}, eine Spezifität von ${fCI(bfStats.spez, 1, true, lang)} und eine AUC von ${fCI(bfStats.auc, 3, false, lang)}.</li>`;
             } else {
-                text += `<li>${getKollektivText(k.id, nPat, lang)}: Keine validen optimierten Kriterien für Zielmetrik '${bfZielMetric}' oder Performance nicht berechenbar.</li>`;
+                text += `<li>Für das ${getKollektivText(k.id, nPat, lang)} konnten keine validen optimierten Kriterien für die Zielmetrik '${bfZielMetric}' ermittelt oder deren Performance berechnet werden.</li>`;
             }
         });
-        text += `</ul>`;
+        text += `</ul><p class="small text-muted">${lang === 'de' ? 'Hinweis: Diese datengetrieben optimierten Kriterien sind spezifisch für die jeweilige Kohorte und die gewählte Zielmetrik und stellen keine allgemeingültige Empfehlung dar, sondern dienen dem bestmöglichen Vergleich innerhalb dieser Studie.' : 'Note: These data-driven optimized criteria are specific to the respective cohort and the chosen target metric and do not represent a general recommendation but serve for the best possible comparison within this study.'}</p>`;
         return text;
     }
 
@@ -461,9 +466,9 @@ const publicationTextGenerator = (() => {
         const fig2cId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartNRCT.id;
 
         if (lang === 'de') {
-            text += `<h3 id="ergebnisse-vergleich-as-vs-t2-title">Vergleichsanalysen: Avocado Sign vs. T2-Kriterien</h3><p>Die statistischen Vergleiche der diagnostischen Leistung zwischen dem Avocado Sign (AS) und den T2-Kriteriensets (sowohl Literatur-basiert als auch Brute-Force-optimiert für die Zielmetrik ${bfZielMetric}) sind detailliert in <a href="${_getSafeLink(tableId)}">Tabelle 6</a> aufgeführt. Visuelle Vergleiche der Schlüsselmetriken für das Gesamtkollektiv, die Direkt-OP-Gruppe und die nRCT-Gruppe sind in <a href="${_getSafeLink(fig2aId)}">Abbildung 2a</a>, <a href="${_getSafeLink(fig2bId)}">2b</a> und <a href="${_getSafeLink(fig2cId)}">2c</a> dargestellt.</p>`;
+            text += `<h3 id="ergebnisse-vergleich-as-vs-t2-title">Vergleichsanalysen: Avocado Sign vs. T2-Kriterien</h3><p>Die statistischen Vergleiche der diagnostischen Leistung zwischen dem Avocado Sign (AS) und den T2-Kriteriensets (sowohl Literatur-basiert als auch Brute-Force-optimiert für die Zielmetrik ${bfZielMetric}) sind detailliert in <a href="${_getSafeLink(tableId)}">Tabelle 6</a> aufgeführt. Visuelle Vergleiche der Schlüsselmetriken für das Gesamtkollektiv, die Direkt-OP-Gruppe und die nRCT-Gruppe sind in <a href="${_getSafeLink(fig2aId)}">Abbildung Ergebnisse 2a</a>, <a href="${_getSafeLink(fig2bId)}">Abbildung Ergebnisse 2b</a> und <a href="${_getSafeLink(fig2cId)}">Abbildung Ergebnisse 2c</a> dargestellt.</p>`;
         } else {
-            text += `<h3 id="ergebnisse-vergleich-as-vs-t2-title">Comparative Analyses: Avocado Sign vs. T2 Criteria</h3><p>Statistical comparisons of the diagnostic performance between the Avocado Sign (AS) and the T2 criteria sets (both literature-based and brute-force optimized for the target metric ${bfZielMetric}) are detailed in <a href="${_getSafeLink(tableId)}">Table 6</a>. Visual comparisons of key metrics for the overall cohort, upfront surgery group, and nRCT group are presented in <a href="${_getSafeLink(fig2aId)}">Figure 2a</a>, <a href="${_getSafeLink(fig2bId)}">2b</a>, and <a href="${_getSafeLink(fig2cId)}">2c</a>, respectively.</p>`;
+            text += `<h3 id="ergebnisse-vergleich-as-vs-t2-title">Comparative Analyses: Avocado Sign vs. T2 Criteria</h3><p>Statistical comparisons of the diagnostic performance between the Avocado Sign (AS) and the T2 criteria sets (both literature-based and brute-force optimized for the target metric ${bfZielMetric}) are detailed in <a href="${_getSafeLink(tableId)}">Table 6</a>. Visual comparisons of key metrics for the overall cohort, upfront surgery group, and nRCT group are presented in <a href="${_getSafeLink(fig2aId)}">Results Figure 2a</a>, <a href="${_getSafeLink(fig2bId)}">Results Figure 2b</a>, and <a href="${_getSafeLink(fig2cId)}">Results Figure 2c</a>, respectively.</p>`;
         }
 
         const kollektive = [
