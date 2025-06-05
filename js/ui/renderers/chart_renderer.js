@@ -123,13 +123,16 @@ const chartRenderer = (() => {
             const legendGroup = svg.append("g").attr("class", "legend pie-legend").attr("transform", `translate(${margin.left}, ${margin.top + plottingHeight + 15})`).attr("font-family", "sans-serif").attr("font-size", LEGEND_FONT_SIZE).attr("text-anchor", "start");
             let currentX = 0; let currentY = 0; const legendPadding = 15;
             const legendItems = legendGroup.selectAll("g.legend-item").data(validData).join("g").attr("class", "legend-item").attr("data-label", d => d.label);
+            legendItems.append("rect").attr("x", 0).attr("y", 0).attr("width", 10).attr("height", 10).attr("fill", color);
+            legendItems.append("text").attr("x", 14).attr("y", 5).attr("dy", "0.35em").text(d => `${d.label} (${formatNumber(d.value, 0, '', true)})`).each(function() {
+                // Adjust text position to be vertically centered on the rect
+                d3.select(this).attr("y", 5 + d3.select(this).node().getBBox().height / 2);
+            });
+            
             legendItems.each(function(d, i) {
-                const item = d3.select(this);
-                item.append("rect").attr("x", 0).attr("y", 0).attr("width", 10).attr("height", 10).attr("fill", color(d.label));
-                item.append("text").attr("x", 14).attr("y", 5).attr("dy", "0.35em").text(`${d.label} (${formatNumber(d.value, 0, '', true)})`);
                 const itemWidth = this.getBBox().width + legendPadding;
                 if (i > 0 && (currentX + itemWidth > legendMaxWidth && legendMaxWidth > 0) ) { currentX = 0; currentY += legendItemHeight; }
-                item.attr("transform", `translate(${currentX}, ${currentY})`);
+                d3.select(this).attr("transform", `translate(${currentX}, ${currentY})`);
                 currentX += itemWidth;
             });
         }
@@ -175,7 +178,7 @@ const chartRenderer = (() => {
         chartArea.append("g").attr("class", "x-axis axis").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x).tickSizeOuter(0)).selectAll(".tick text").style("text-anchor", "middle").style("font-size", TICK_LABEL_FONT_SIZE);
         if (ENABLE_GRIDLINES) { chartArea.append("g").attr("class", "grid y-grid").call(d3.axisLeft(y).ticks(tickCountY).tickSize(-innerWidth).tickFormat("")); }
         chartArea.selectAll(".bar").data(chartData).join("rect").attr("class", "bar").attr("x", d => x(d.metric)).attr("y", y(0)).attr("width", x.bandwidth()).attr("height", 0).attr("fill", APP_CONFIG.CHART_SETTINGS.AS_COLOR || NEW_PRIMARY_COLOR_BLUE).style("opacity", 0.9).attr("rx", 1).attr("ry", 1)
-           .on("mouseover", function(event, d) { tooltip.transition().duration(50).style("opacity", .95); const digits = (d.metric === 'AUC' || d.metric === 'F1') ? 3 : 0; const isPercent = !(d.metric === 'AUC' || d.metric === 'F1'); const formattedValue = isPercent ? formatPercent(d.value, digits, '', 'en') : formatNumber(d.value, digits, '', true); const metricName = (TOOLTIP_CONTENT.statMetrics[d.metric.toLowerCase()]?.name || d.metric); tooltip.html(`<strong>${metricName}:</strong> ${formattedValue}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px"); d3.select(this).style("opacity", 1).style("stroke", "#333").style("stroke-width", 1); })
+           .on("mouseover", function(event, d) { tooltip.transition().duration(50).style("opacity", .95); const digits = (d.metric === 'AUC' || d.metric === 'F1') ? 3 : 0; const isPercent = !(d.metric === 'AUC' || d.metric === 'F1'); const formattedValue = isPercent ? formatPercent(d.value, digits, '', 'en') : formatNumber(d.value, digits, '', true); const metricName = (TOOLTIP_CONTENT.statMetrics[d.metric.toLowerCase()]?.name?.[lang] || d.metric); tooltip.html(`<strong>${metricName}:</strong> ${formattedValue}`).style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 15) + "px"); d3.select(this).style("opacity", 1).style("stroke", "#333").style("stroke-width", 1); })
            .on("mouseout", function(event, d) { tooltip.transition().duration(200).style("opacity", 0); d3.select(this).style("opacity", 0.9).style("stroke", "none"); })
            .transition().duration(ANIMATION_DURATION_MS).ease(d3.easeCubicOut).attr("y", d_1 => y(d_1.value ?? 0)).attr("height", d_2 => Math.max(0, innerHeight - y(d_2.value ?? 0)));
     }
