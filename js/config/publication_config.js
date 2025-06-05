@@ -1,61 +1,77 @@
 const PUBLICATION_CONFIG = Object.freeze({
     defaultLanguage: 'de',
-    defaultSection: 'abstract',
+    defaultSection: 'abstract_key_results_summary',
+    defaultBruteForceMetricForPublication: 'Balanced Accuracy',
+
     sections: Object.freeze([
         Object.freeze({
-            id: 'abstract',
-            labelKey: 'abstract',
+            id: 'abstract_key_results_summary',
+            labelKey: 'abstract', // Uses 'abstract' label from UI_TEXTS
+            wordLimit: APP_CONFIG.PUBLICATION_JOURNAL_REQUIREMENTS.MANUSCRIPT_TYPE_ORIGINAL_RESEARCH.ABSTRACT_WORD_LIMIT, // Combined, individual parts have their own
             subSections: Object.freeze([
-                Object.freeze({ id: 'abstract_main', label: 'Abstract & Key Results' })
+                Object.freeze({ id: 'summary_statement_main', labelKey: 'publication_summary_statement', wordLimit: APP_CONFIG.PUBLICATION_JOURNAL_REQUIREMENTS.MANUSCRIPT_TYPE_ORIGINAL_RESEARCH.SUMMARY_STATEMENT_WORD_LIMIT }),
+                Object.freeze({ id: 'abstract_main', labelKey: 'publication_abstract_proper', wordLimit: APP_CONFIG.PUBLICATION_JOURNAL_REQUIREMENTS.MANUSCRIPT_TYPE_ORIGINAL_RESEARCH.ABSTRACT_WORD_LIMIT }),
+                Object.freeze({ id: 'key_results_main', labelKey: 'publication_key_results', wordLimit: APP_CONFIG.PUBLICATION_JOURNAL_REQUIREMENTS.MANUSCRIPT_TYPE_ORIGINAL_RESEARCH.KEY_RESULTS_WORD_LIMIT })
             ])
         }),
         Object.freeze({
             id: 'introduction',
             labelKey: 'introduction',
+            wordLimit: APP_CONFIG.PUBLICATION_JOURNAL_REQUIREMENTS.MANUSCRIPT_TYPE_ORIGINAL_RESEARCH.INTRODUCTION_WORD_LIMIT,
             subSections: Object.freeze([
-                Object.freeze({ id: 'introduction_main', label: 'Einleitung' })
+                Object.freeze({ id: 'introduction_main', labelKey: 'publication_introduction_content' })
             ])
         }),
         Object.freeze({
-            id: 'methoden',
-            labelKey: 'methoden',
+            id: 'materials_methods',
+            labelKey: 'methoden', // Maps to "Material & Methoden"
+            wordLimit: APP_CONFIG.PUBLICATION_JOURNAL_REQUIREMENTS.MANUSCRIPT_TYPE_ORIGINAL_RESEARCH.MATERIALS_METHODS_WORD_LIMIT,
             subSections: Object.freeze([
-                Object.freeze({ id: 'methoden_studienanlage_ethik', label: 'Studiendesign und Ethikvotum' }),
-                Object.freeze({ id: 'methoden_patientenkohorte', label: 'Patientenkohorte und Einschlusskriterien' }),
-                Object.freeze({ id: 'methoden_mrt_protokoll_akquisition', label: 'MRT-Protokoll und Bildakquisition' }),
-                Object.freeze({ id: 'methoden_bildanalyse_avocado_sign', label: 'Bildanalyse: Avocado Sign' }),
-                Object.freeze({ id: 'methoden_bildanalyse_t2_kriterien', label: 'Bildanalyse: T2-gewichtete Kriterien' }),
-                Object.freeze({ id: 'methoden_referenzstandard_histopathologie', label: 'Referenzstandard: Histopathologie' }),
-                Object.freeze({ id: 'methoden_statistische_analyse_methoden', label: 'Statistische Analyse' })
+                Object.freeze({ id: 'methoden_studienanlage_ethik', labelKey: 'publication_methods_study_design_ethics' }),
+                Object.freeze({ id: 'methoden_patientenkohorte', labelKey: 'publication_methods_patient_cohort' }),
+                Object.freeze({ id: 'methoden_mrt_protokoll_akquisition', labelKey: 'publication_methods_mri_protocol' }),
+                Object.freeze({ id: 'methoden_bildanalyse_avocado_sign', labelKey: 'publication_methods_image_analysis_as' }),
+                Object.freeze({ id: 'methoden_bildanalyse_t2_kriterien', labelKey: 'publication_methods_image_analysis_t2' }),
+                Object.freeze({ id: 'methoden_referenzstandard_histopathologie', labelKey: 'publication_methods_reference_standard' }),
+                Object.freeze({ id: 'methoden_statistische_analyse_methoden', labelKey: 'publication_methods_statistical_analysis' })
             ])
         }),
         Object.freeze({
-            id: 'ergebnisse',
+            id: 'results',
             labelKey: 'ergebnisse',
+            wordLimit: APP_CONFIG.PUBLICATION_JOURNAL_REQUIREMENTS.MANUSCRIPT_TYPE_ORIGINAL_RESEARCH.RESULTS_WORD_LIMIT,
             subSections: Object.freeze([
-                Object.freeze({ id: 'ergebnisse_patientencharakteristika', label: 'Patientencharakteristika und Datenfluss' }),
-                Object.freeze({ id: 'ergebnisse_as_diagnostische_guete', label: 'Diagnostische Güte: Avocado Sign' }),
-                Object.freeze({ id: 'ergebnisse_t2_literatur_diagnostische_guete', label: 'Diagnostische Güte: T2-Kriterien (Literatur)' }),
-                Object.freeze({ id: 'ergebnisse_t2_optimiert_diagnostische_guete', label: 'Diagnostische Güte: T2-Kriterien (Brute-Force optimiert)' }),
-                Object.freeze({ id: 'ergebnisse_vergleich_as_vs_t2', label: 'Vergleichsanalysen: Avocado Sign vs. T2-Kriterien' })
+                Object.freeze({ id: 'ergebnisse_patientencharakteristika', labelKey: 'publication_results_patient_characteristics' }),
+                Object.freeze({ id: 'ergebnisse_as_diagnostische_guete', labelKey: 'publication_results_as_performance' }),
+                Object.freeze({ id: 'ergebnisse_t2_literatur_diagnostische_guete', labelKey: 'publication_results_t2_literature_performance' }),
+                Object.freeze({ id: 'ergebnisse_t2_optimiert_diagnostische_guete', labelKey: 'publication_results_t2_optimized_performance' }),
+                Object.freeze({ id: 'ergebnisse_vergleich_as_vs_t2', labelKey: 'publication_results_comparison_as_t2' })
             ])
         }),
         Object.freeze({
             id: 'discussion',
             labelKey: 'discussion',
+            wordLimit: APP_CONFIG.PUBLICATION_JOURNAL_REQUIREMENTS.MANUSCRIPT_TYPE_ORIGINAL_RESEARCH.DISCUSSION_WORD_LIMIT,
             subSections: Object.freeze([
-                Object.freeze({ id: 'discussion_main', label: 'Diskussion der Ergebnisse und Limitationen' })
+                Object.freeze({ id: 'discussion_main', labelKey: 'publication_discussion_content' })
             ])
         }),
         Object.freeze({
             id: 'references',
             labelKey: 'references',
+            wordLimit: null, // No specific word limit, but a count limit
+            referenceLimit: APP_CONFIG.PUBLICATION_JOURNAL_REQUIREMENTS.MANUSCRIPT_TYPE_ORIGINAL_RESEARCH.REFERENCE_LIMIT,
             subSections: Object.freeze([
-                Object.freeze({ id: 'references_main', label: 'Literaturverzeichnis' })
+                Object.freeze({ id: 'references_main', labelKey: 'publication_references_list' })
             ])
         })
     ]),
-    literatureCriteriaSets: Object.freeze([
+
+    literatureCriteriaSets: Object.freeze([ // Used for results display and potentially methods description
+        Object.freeze({
+            id: 'rutegard_et_al_esgar', // Matches study_criteria_manager.js
+            labelKey: 'Rutegård et al. (2025) / ESGAR 2016' // For display in UI if needed
+        }),
         Object.freeze({
             id: 'koh_2008_morphology',
             labelKey: 'Koh et al. (2008)'
@@ -63,117 +79,126 @@ const PUBLICATION_CONFIG = Object.freeze({
         Object.freeze({
             id: 'barbaro_2024_restaging',
             labelKey: 'Barbaro et al. (2024)'
-        }),
-        Object.freeze({
-            id: 'rutegard_et_al_esgar',
-            labelKey: 'Rutegård et al. (2025) / ESGAR 2016'
         })
     ]),
-    bruteForceMetricsForPublication: Object.freeze([
-        { value: 'Balanced Accuracy', label: 'Balanced Accuracy' },
-        { value: 'Accuracy', label: 'Accuracy' },
-        { value: 'F1-Score', label: 'F1-Score' },
-        { value: 'PPV', label: 'Positiver Prädiktiver Wert (PPV)' },
-        { value: 'NPV', label: 'Negativer Prädiktiver Wert (NPV)' }
+
+    bruteForceMetricsForPublication: Object.freeze([ // Options for the dropdown in publication tab
+        Object.freeze({ value: 'Balanced Accuracy', labelDe: 'Balanced Accuracy', labelEn: 'Balanced Accuracy' }),
+        Object.freeze({ value: 'Accuracy', labelDe: 'Accuracy', labelEn: 'Accuracy' }),
+        Object.freeze({ value: 'F1-Score', labelDe: 'F1-Score', labelEn: 'F1-Score' }),
+        Object.freeze({ value: 'PPV', labelDe: 'Positiver Prädiktiver Wert (PPV)', labelEn: 'Positive Predictive Value (PPV)' }),
+        Object.freeze({ value: 'NPV', labelDe: 'Negativer Prädiktiver Wert (NPV)', labelEn: 'Negative Predictive Value (NPV)' })
     ]),
-    defaultBruteForceMetricForPublication: 'Balanced Accuracy',
-    publicationElements: Object.freeze({
+
+    publicationElements: Object.freeze({ // IDs and titles for tables/figures to be generated/referenced
         methoden: Object.freeze({
-            literaturT2KriterienTabelle: {
-                id: 'pub-table-literatur-t2-kriterien',
-                titleDe: 'Übersicht der evaluierten Literatur-basierten T2-Kriteriensets',
-                titleEn: 'Overview of Evaluated Literature-Based T2 Criteria Sets'
-            },
-            flowDiagram: {
-                id: 'pub-figure-flow-diagram',
+            flowDiagram: Object.freeze({ // Radiology Figure 1: Flow Diagram
+                id: 'pub-fig-flow-diagram',
+                radiologyLabel: 'Figure 1',
                 titleDe: 'Flussdiagramm der Patientenrekrutierung und -analyse',
-                titleEn: 'Patient Recruitment and Analysis Flowchart'
-            }
+                titleEn: 'Patient Recruitment and Analysis Flowchart',
+                legendDe: 'Flussdiagramm der Patientenrekrutierung, das die Anzahl der initial eingeschlossenen Teilnehmer und der aus verschiedenen Gründen ausgeschlossenen Patienten zeigt, bis hin zur finalen Studienpopulation.',
+                legendEn: 'Patient recruitment flowchart showing the number of participants initially enrolled and those excluded for various reasons, leading to the final study population.'
+            }),
+            literaturT2KriterienTabelle: Object.freeze({
+                id: 'pub-table-literatur-t2-kriterien',
+                radiologyLabel: 'Methods Table 1', // Example, adjust as needed
+                titleDe: 'Übersicht der evaluierten Literatur-basierten T2-Kriteriensets',
+                titleEn: 'Overview of Evaluated Literature-Based T2 Criteria Sets',
+                footnoteDe: 'Abkürzungen: ESGAR, European Society of Gastrointestinal and Abdominal Radiology.',
+                footnoteEn: 'Abbreviations: ESGAR, European Society of Gastrointestinal and Abdominal Radiology.'
+            })
         }),
         ergebnisse: Object.freeze({
-            patientenCharakteristikaTabelle: {
+            patientenCharakteristikaTabelle: Object.freeze({ // Radiology Table 1: Demographics
                 id: 'pub-table-patienten-charakteristika',
+                radiologyLabel: 'Table 1',
                 titleDe: 'Baseline Patientencharakteristika und klinische Daten',
-                titleEn: 'Baseline Patient Characteristics and Clinical Data'
-            },
-            diagnostischeGueteASTabelle: {
+                titleEn: 'Baseline Patient Characteristics and Clinical Data',
+                footnoteDe: 'Daten sind als Median (Interquartilsabstand) oder n (%) dargestellt. Abkürzungen: nCRT, neoadjuvante Radiochemotherapie; AS, Avocado Sign.',
+                footnoteEn: 'Data are presented as median (interquartile range) or n (%). Abbreviations: nCRT, neoadjuvant chemoradiotherapy; AS, Avocado Sign.'
+            }),
+            diagnostischeGueteASTabelle: Object.freeze({
                 id: 'pub-table-diagnostische-guete-as',
+                radiologyLabel: 'Table 2', // Example
                 titleDe: 'Diagnostische Güte des Avocado Signs für die Prädiktion des N-Status',
-                titleEn: 'Diagnostic Performance of the Avocado Sign for N-Status Prediction'
-            },
-            diagnostischeGueteLiteraturT2Tabelle: {
+                titleEn: 'Diagnostic Performance of the Avocado Sign for N-Status Prediction',
+                footnoteDe: 'Alle Konfidenzintervalle (KI) sind 95%-KIs. Abkürzungen: PPV, positiver prädiktiver Wert; NPV, negativer prädiktiver Wert; AUC, Fläche unter der ROC-Kurve.',
+                footnoteEn: 'All confidence intervals (CI) are 95% CIs. Abbreviations: PPV, positive predictive value; NPV, negative predictive value; AUC, area under the ROC curve.'
+            }),
+            diagnostischeGueteLiteraturT2Tabelle: Object.freeze({
                 id: 'pub-table-diagnostische-guete-literatur-t2',
+                radiologyLabel: 'Table 3', // Example
                 titleDe: 'Diagnostische Güte der Literatur-basierten T2-Kriterien für die Prädiktion des N-Status',
-                titleEn: 'Diagnostic Performance of Literature-Based T2 Criteria for N-Status Prediction'
-            },
-            diagnostischeGueteOptimierteT2Tabelle: {
+                titleEn: 'Diagnostic Performance of Literature-Based T2 Criteria for N-Status Prediction',
+                footnoteDe: 'Die Kriterien wurden jeweils auf das in der Originalliteratur definierte oder das am besten passende Subkollektiv angewendet. Alle KI sind 95%-KIs.',
+                footnoteEn: 'Criteria were applied to the subgroup defined in the original literature or the best matching subcohort. All CIs are 95% CIs.'
+            }),
+            diagnostischeGueteOptimierteT2Tabelle: Object.freeze({
                 id: 'pub-table-diagnostische-guete-optimierte-t2',
-                titleDe: 'Diagnostische Güte der Brute-Force optimierten T2-Kriterien (Ziel: {BF_METRIC}) für die Prädiktion des N-Status',
-                titleEn: 'Diagnostic Performance of Brute-Force Optimized T2 Criteria (Target: {BF_METRIC}) for N-Status Prediction'
-            },
-            statistischerVergleichAST2Tabelle: {
+                radiologyLabel: 'Table 4', // Example
+                titleDe: 'Diagnostische Güte der für die Zielmetrik {BF_METRIC_NAME} optimierten T2-Kriterien',
+                titleEn: 'Diagnostic Performance of T2 Criteria Optimized for the Target Metric {BF_METRIC_NAME}',
+                footnoteDe: 'Optimierung erfolgte spezifisch für jedes gelistete Kollektiv. Alle KI sind 95%-KIs.',
+                footnoteEn: 'Optimization was performed specifically for each listed cohort. All CIs are 95% CIs.'
+            }),
+            statistischerVergleichAST2Tabelle: Object.freeze({ // This might be a new table, or results integrated into other tables/text
                 id: 'pub-table-statistischer-vergleich-as-t2',
+                radiologyLabel: 'Table X', // Needs final numbering
                 titleDe: 'Statistischer Vergleich der diagnostischen Güte: Avocado Sign vs. T2-Kriterien (Literatur und Optimiert)',
-                titleEn: 'Statistical Comparison of Diagnostic Performance: Avocado Sign vs. T2 Criteria (Literature and Optimized)'
-            },
-            alterVerteilungChart: {
-                id: 'pub-chart-alter-Gesamt',
+                titleEn: 'Statistical Comparison of Diagnostic Performance: Avocado Sign vs. T2 Criteria (Literature and Optimized)',
+                footnoteDe: 'P-Werte vom DeLong-Test für AUCs und McNemar-Test für Accuracy. Signifikanzniveau P < .05.',
+                footnoteEn: 'P-values from DeLong test for AUCs and McNemar test for accuracy. Significance level P < .05.'
+            }),
+            alterVerteilungChart: Object.freeze({ // Radiology Figure (e.g., Figure 2A or part of composite Figure 2)
+                id: 'pub-chart-alter-verteilung',
+                radiologyLabel: 'Figure 2A',
                 titleDe: 'Altersverteilung im Gesamtkollektiv',
-                titleEn: 'Age Distribution in the Overall Cohort'
-            },
-            geschlechtVerteilungChart: {
-                id: 'pub-chart-gender-Gesamt',
+                titleEn: 'Age Distribution in the Overall Cohort',
+                legendDe: 'Histogramm der Altersverteilung der 106 Patienten. Die Y-Achse zeigt die Anzahl der Patienten, die X-Achse das Alter in Jahren.',
+                legendEn: 'Histogram of age distribution of the 106 patients. Y-axis shows number of patients, X-axis shows age in years.'
+            }),
+            geschlechtVerteilungChart: Object.freeze({ // Radiology Figure (e.g., Figure 2B)
+                id: 'pub-chart-geschlecht-verteilung',
+                radiologyLabel: 'Figure 2B',
                 titleDe: 'Geschlechterverteilung im Gesamtkollektiv',
-                titleEn: 'Gender Distribution in the Overall Cohort'
-            },
-            vergleichPerformanceChartGesamt: {
-                id: 'pub-chart-vergleich-Gesamt',
-                titleDe: 'Vergleichsmetriken für das Gesamtkollektiv: AS vs. optimierte T2-Kriterien',
-                titleEn: 'Comparative Metrics for the Overall Cohort: AS vs. Optimized T2 Criteria'
-            },
-            vergleichPerformanceChartdirektOP: { // Schlüssel korrigiert (war vorher vergleichPerformanceChartDirektOP)
-                id: 'pub-chart-vergleich-direkt-OP',
-                titleDe: 'Vergleichsmetriken für das Direkt-OP Kollektiv: AS vs. optimierte T2-Kriterien',
-                titleEn: 'Comparative Metrics for the Upfront Surgery Cohort: AS vs. Optimized T2 Criteria'
-            },
-            vergleichPerformanceChartnRCT: {
-                id: 'pub-chart-vergleich-nRCT',
-                titleDe: 'Vergleichsmetriken für das nRCT Kollektiv: AS vs. optimierte T2-Kriterien',
-                titleEn: 'Comparative Metrics for the nRCT Cohort: AS vs. Optimized T2 Criteria'
-            }
+                titleEn: 'Gender Distribution in the Overall Cohort',
+                legendDe: 'Tortendiagramm der Geschlechterverteilung der 106 Patienten.',
+                legendEn: 'Pie chart of gender distribution of the 106 patients.'
+            }),
+            vergleichPerformanceChartGesamt: Object.freeze({ // Radiology Figure (e.g., Figure 3A)
+                id: 'pub-chart-vergleich-gesamt',
+                radiologyLabel: 'Figure 3A',
+                titleDe: 'Vergleichsmetriken (Gesamtkollektiv): AS vs. optimierte T2 ({BF_METRIC_NAME})',
+                titleEn: 'Comparative Metrics (Overall Cohort): AS vs. Optimized T2 ({BF_METRIC_NAME})',
+                legendDe: 'Balkendiagramm der Sensitivität, Spezifität, PPV, NPV, Accuracy und AUC für Avocado Sign (AS) und für die Zielmetrik {BF_METRIC_NAME} optimierte T2-Kriterien im Gesamtkollektiv (N=106).',
+                legendEn: 'Bar chart of sensitivity, specificity, PPV, NPV, accuracy, and AUC for Avocado Sign (AS) and T2 criteria optimized for the target metric {BF_METRIC_NAME} in the overall cohort (N=106).'
+            }),
+            vergleichPerformanceChartdirektOP: Object.freeze({ // Radiology Figure (e.g., Figure 3B)
+                id: 'pub-chart-vergleich-direkt-op',
+                radiologyLabel: 'Figure 3B',
+                titleDe: 'Vergleichsmetriken (Direkt OP): AS vs. optimierte T2 ({BF_METRIC_NAME})',
+                titleEn: 'Comparative Metrics (Upfront Surgery): AS vs. Optimized T2 ({BF_METRIC_NAME})',
+                legendDe: 'Balkendiagramm der Sensitivität, Spezifität, PPV, NPV, Accuracy und AUC für Avocado Sign (AS) und für die Zielmetrik {BF_METRIC_NAME} optimierte T2-Kriterien im Direkt-OP-Kollektiv.',
+                legendEn: 'Bar chart of sensitivity, specificity, PPV, NPV, accuracy, and AUC for Avocado Sign (AS) and T2 criteria optimized for the target metric {BF_METRIC_NAME} in the upfront surgery cohort.'
+            }),
+            vergleichPerformanceChartnRCT: Object.freeze({ // Radiology Figure (e.g., Figure 3C)
+                id: 'pub-chart-vergleich-nrct',
+                radiologyLabel: 'Figure 3C',
+                titleDe: 'Vergleichsmetriken (nRCT): AS vs. optimierte T2 ({BF_METRIC_NAME})',
+                titleEn: 'Comparative Metrics (nCRT): AS vs. Optimized T2 ({BF_METRIC_NAME})',
+                legendDe: 'Balkendiagramm der Sensitivität, Spezifität, PPV, NPV, Accuracy und AUC für Avocado Sign (AS) und für die Zielmetrik {BF_METRIC_NAME} optimierte T2-Kriterien im nRCT-Kollektiv.',
+                legendEn: 'Bar chart of sensitivity, specificity, PPV, NPV, accuracy, and AUC for Avocado Sign (AS) and T2 criteria optimized for the target metric {BF_METRIC_NAME} in the nCRT cohort.'
+            })
         })
     }),
-    DEFAULT_ABSTRACT_TEXT_DE: `
-        **Ziele:** Das "Avocado Sign" (AS), ein neuer kontrastmittel-basierter MRT-Marker, wurde zur Prädiktion des mesorektalen Lymphknotenbefalls beim Rektumkarzinom evaluiert und mit T2-gewichteten Kriterien verglichen.
-        **Methoden:** Diese retrospektive Studie umfasste 106 Patienten mit Rektumkarzinom. Das Avocado Sign (hypointenser Kern in homogen hyperintensem Lymphknoten auf kontrastverstärkten T1-gewichteten Bildern) wurde beurteilt. Zusätzlich wurden T2-gewichtete morphologische Kriterien (Literatur-basiert und datengetrieben optimiert) analysiert. 77 Patienten erhielten neoadjuvante Radiochemotherapie. Der histopathologische Befund diente als Referenzstandard. Diagnostische Metriken wurden berechnet und verglichen.
-        **Ergebnisse:** Das Avocado Sign zeigte eine hohe diagnostische Genauigkeit (Sensitivität 88,7%, Spezifität 84,9%, Accuracy 86,8%, AUC 0,87). Seine Leistung war robust in der Primärchirurgie- (Sensitivität 100%, Spezifität 83,3%, AUC 0,92) und der nRCT-Gruppe (Sensitivität 84,2%, Spezifität 85,4%, AUC 0,85). Literatur-basierte T2-Kriterien zeigten variable Ergebnisse. Für das Gesamtkollektiv optimierte T2-Kriterien erreichten eine AUC von [PLATZHALTER_AUC_T2_OPTIMIERT_GESAMT]. Im direkten Vergleich zeigte das AS [eine überlegene/vergleichbare/unterlegene] Performance gegenüber optimierten T2-Kriterien (p=[PLATZHALTER_P_WERT_VERGLEICH]).
-        **Fazit:** Das Avocado Sign ist ein vielversprechender Prädiktor für den mesorektalen Lymphknotenstatus. Seine einfache Anwendung und hohe diagnostische Genauigkeit unterstreichen sein Potenzial, das MRT-Staging zu verfeinern. Weitere Validierung ist erforderlich.
-        `,
-    DEFAULT_ABSTRACT_TEXT_EN: `
-        **Objectives:** The "Avocado Sign" (AS), a novel contrast-enhanced MRI marker, was evaluated for predicting mesorectal lymph node involvement in rectal cancer and compared with T2-weighted criteria.
-        **Methods:** This retrospective study included 106 patients with rectal cancer. The Avocado Sign (hypointense core within a homogeneously hyperintense lymph node on contrast-enhanced T1-weighted images) was assessed. Additionally, T2-weighted morphological criteria (literature-based and data-driven optimized) were analyzed. Seventy-seven patients received neoadjuvant chemoradiotherapy. Histopathology served as the reference standard. Diagnostic metrics were calculated and compared.
-        **Results:** The Avocado Sign demonstrated high diagnostic accuracy (sensitivity 88.7%, specificity 84.9%, accuracy 86.8%, AUC 0.87). Its performance was robust in the upfront surgery (sensitivity 100%, specificity 83.3%, AUC 0.92) and nRCT groups (sensitivity 84.2%, specificity 85.4%, AUC 0.85). Literature-based T2 criteria showed variable results. T2 criteria optimized for the overall cohort achieved an AUC of [PLACEHOLDER_AUC_T2_OPTIMIZED_OVERALL]. In direct comparison, the AS showed [superior/comparable/inferior] performance to optimized T2 criteria (p=[PLACEHOLDER_P_VALUE_COMPARISON]).
-        **Conclusion:** The Avocado Sign is a promising predictor for mesorectal lymph node status. Its straightforward application and high diagnostic accuracy underscore its potential to refine MRI staging. Further validation is warranted.
-        `,
-    DEFAULT_KEY_RESULTS_TEXT_DE: `
-        Das Avocado Sign zeigte eine hohe diagnostische Genauigkeit (AUC 0,87) für den Lymphknotenbefall beim Rektumkarzinom.
-        Die Leistung des Avocado Signs war robust sowohl bei primär operierten Patienten als auch nach neoadjuvanter Therapie.
-        Im Vergleich zu optimierten T2-gewichteten Kriterien zeigte das Avocado Sign eine [ÜBERLEGENE/VERGLEICHBARE/UNTERLEGENE] diagnostische Güte.
-        `,
-    DEFAULT_KEY_RESULTS_TEXT_EN: `
-        The Avocado Sign demonstrated high diagnostic accuracy (AUC 0.87) for lymph node involvement in rectal cancer.
-        The performance of the Avocado Sign was robust in both upfront surgery patients and after neoadjuvant therapy.
-        Compared to optimized T2-weighted criteria, the Avocado Sign showed [SUPERIOR/COMPARABLE/INFERIOR] diagnostic performance.
-        `
+    // Used by radiology_formatter.js and text generators to manage abbreviations.
+    // The list itself will be dynamically populated based on usage in the text.
+    // Max 10 abbreviations, each used at least 10 times in main text.
+    // Common imaging modalities (CT, MRI, US, PET, SPECT) are not abbreviated in the list.
+    managedAbbreviations: Object.freeze({
+        // Example: 'AS': { fullText: 'Avocado Sign', abstractDefined: false, mainTextDefined: false, count: 0 }
+        // This will be populated dynamically.
+    })
 });
 
-function getDefaultT2Criteria() {
-    return Object.freeze({
-        logic: APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC,
-        size: { active: true, threshold: 5.0, condition: '>=' },
-        form: { active: false, value: 'rund' },
-        kontur: { active: false, value: 'irregulär' },
-        homogenitaet: { active: false, value: 'heterogen' },
-        signal: { active: false, value: 'signalreich' }
-    });
-}
