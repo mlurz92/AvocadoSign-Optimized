@@ -1,68 +1,78 @@
 function getKollektivDisplayName(kollektivId) {
-    const displayName = UI_TEXTS?.kollektivDisplayNames?.[kollektivId] || kollektivId || 'Unbekannt';
+    const displayName = (typeof UI_TEXTS !== 'undefined' && UI_TEXTS?.kollektivDisplayNames?.[kollektivId]) || kollektivId || 'Unbekannt';
     return displayName;
 }
 
-function formatNumber(num, digits = 1, placeholder = '--', useStandardFormat = false) {
+function formatNumber(num, digits = 1, placeholder = '--', useStandardFormatOrLang = false) {
     const number = parseFloat(num);
     if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
         return placeholder;
     }
-    if (useStandardFormat) {
+    if (useStandardFormatOrLang === true || useStandardFormatOrLang === 'en') {
         return number.toFixed(digits);
     }
+    if (useStandardFormatOrLang === 'de') {
+        try {
+            return number.toLocaleString('de-DE', {
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits
+            });
+        } catch (e) {
+            return number.toFixed(digits).replace('.', ',');
+        }
+    }
+    // Default to 'de-DE' if useStandardFormatOrLang is false or not specified
     try {
         return number.toLocaleString('de-DE', {
             minimumFractionDigits: digits,
             maximumFractionDigits: digits
         });
     } catch (e) {
-        console.error("Fehler bei formatNumber mit de-DE Locale:", e);
-        return number.toFixed(digits);
+        return number.toFixed(digits).replace('.', ',');
     }
 }
 
-function formatPercent(num, digits = 1, placeholder = '--%') {
+function formatPercent(num, digits = 1, placeholder = '--%', lang = 'de') {
     const number = parseFloat(num);
     if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
         return placeholder;
     }
+    const locale = lang === 'de' ? 'de-DE' : 'en-US';
     try {
-        return new Intl.NumberFormat('de-DE', {
+        return new Intl.NumberFormat(locale, {
             style: 'percent',
             minimumFractionDigits: digits,
             maximumFractionDigits: digits
         }).format(number);
     } catch (e) {
-        console.error("Fehler bei formatPercent mit de-DE Locale:", e);
-        return (number * 100).toFixed(digits) + '%';
+        const numStr = (number * 100).toFixed(digits);
+        return lang === 'de' ? numStr.replace('.', ',') + '%' : numStr + '%';
     }
 }
 
-function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeholder = '--') {
-    const formatFn = isPercent ? formatPercent : formatNumber;
-    const formattedValue = formatFn(value, digits, placeholder, !isPercent); // Use standard format for non-percent numbers in CI
+function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeholder = '--', lang = 'de') {
+    const formatFn = isPercent ? (val, dig, ph) => formatPercent(val, dig, ph, lang) : (val, dig, ph) => formatNumber(val, dig, ph, lang);
+    const formattedValue = formatFn(value, digits, placeholder);
 
-    if (formattedValue === placeholder && !(value === 0 && placeholder === '--')) { // Allow 0 to be formatted
+    if (formattedValue === placeholder && !(value === 0 && placeholder === '--')) {
         return placeholder;
     }
-    
+
     let valueToDisplay = formattedValue;
     if (isPercent && formattedValue !== placeholder) {
-         valueToDisplay = formattedValue.replace('%','');
+         valueToDisplay = String(valueToDisplay).replace('%','');
     }
 
+    const formattedLower = formatFn(ciLower, digits, null);
+    const formattedUpper = formatFn(ciUpper, digits, null);
 
-    const formattedLower = formatFn(ciLower, digits, null, !isPercent);
-    const formattedUpper = formatFn(ciUpper, digits, null, !isPercent);
-
-    if (formattedLower !== null && formattedUpper !== null) {
-        const lowerStr = isPercent ? String(formattedLower).replace('%','') : String(formattedLower);
-        const upperStr = isPercent ? String(formattedUpper).replace('%','') : String(formattedUpper);
-        const ciStr = `(${lowerStr}\u00A0-\u00A0${upperStr})`; // Non-breaking space
+    if (formattedLower !== null && formattedUpper !== null && formattedLower !== placeholder && formattedUpper !== placeholder) {
+        let lowerStr = isPercent ? String(formattedLower).replace('%','') : String(formattedLower);
+        let upperStr = isPercent ? String(formattedUpper).replace('%','') : String(formattedUpper);
+        const ciStr = `(${lowerStr}\u00A0–\u00A0${upperStr})`;
         return `${valueToDisplay} ${ciStr}${isPercent ? '%' : ''}`;
     } else {
-        return formattedValue; // Return value with % if applicable and CI is not available
+        return formattedValue;
     }
 }
 
@@ -83,13 +93,11 @@ function getCurrentDateString(format = 'YYYY-MM-DD') {
 
 function saveToLocalStorage(key, value) {
     if (typeof key !== 'string' || key.length === 0) {
-        console.error("saveToLocalStorage: Ungültiger Schlüssel angegeben.");
         return;
     }
     try {
         localStorage.setItem(key, JSON.stringify(value));
     } catch (e) {
-        console.error(`Fehler beim Speichern im Local Storage (Schlüssel: ${key}):`, e);
         if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showToast === 'function') {
             ui_helpers.showToast(`Speichern der Einstellung '${key}' fehlgeschlagen.`, 'warning');
         }
@@ -98,19 +106,16 @@ function saveToLocalStorage(key, value) {
 
 function loadFromLocalStorage(key) {
     if (typeof key !== 'string' || key.length === 0) {
-        console.error("loadFromLocalStorage: Ungültiger Schlüssel angegeben.");
         return null;
     }
     try {
         const item = localStorage.getItem(key);
         return (item !== null && item !== undefined) ? JSON.parse(item) : null;
     } catch (e) {
-        console.warn(`Fehler beim Laden aus dem Local Storage (Schlüssel: ${key}): ${e.message}. Lösche ggf. Eintrag.`);
         try {
             localStorage.removeItem(key);
-            console.log(`Fehlerhafter Eintrag für Schlüssel '${key}' aus Local Storage entfernt.`);
         } catch (removeError) {
-             console.error(`Fehler beim Entfernen des fehlerhaften Eintrags (Schlüssel: ${key}):`, removeError);
+            // Log or handle removal error if necessary
         }
         return null;
     }
@@ -144,7 +149,6 @@ function cloneDeep(obj) {
             return JSON.parse(JSON.stringify(obj));
          }
     } catch (e) {
-        console.warn("Fehler beim Deep Cloning via structuredClone/JSON, versuche Fallback:", e);
         if (Array.isArray(obj)) {
              const arrCopy = [];
              for(let i = 0; i < obj.length; i++){
@@ -197,19 +201,15 @@ function getObjectValueByPath(obj, path) {
     try {
         return path.split('.').reduce((acc, part) => acc && acc[part], obj);
     } catch (e) {
-        console.warn(`Fehler beim Zugriff auf Pfad '${path}':`, e);
         return undefined;
     }
 }
 
 function getSortFunction(key, direction = 'asc', subKey = null) {
     const dirModifier = direction === 'asc' ? 1 : -1;
-
     return (a, b) => {
         if (!a || !b) return 0;
-
         let valA, valB;
-
         try {
             if (key === 'status' && subKey) {
                 const getSubStatusValue = (p, sk) => {
@@ -256,14 +256,11 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
                  valA = getObjectValueByPath(a, key);
                  valB = getObjectValueByPath(b, key);
              }
-
              const isInvalidA = valA === null || valA === undefined || (typeof valA === 'number' && isNaN(valA));
              const isInvalidB = valB === null || valB === undefined || (typeof valB === 'number' && isNaN(valB));
-
              if (isInvalidA && isInvalidB) return 0;
              if (isInvalidA) return 1 * dirModifier;
              if (isInvalidB) return -1 * dirModifier;
-
              if (typeof valA === 'string' && typeof valB === 'string') {
                  return valA.localeCompare(valB, 'de-DE', { sensitivity: 'base', numeric: true }) * dirModifier;
              }
@@ -273,18 +270,14 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
              if (typeof valA === 'boolean' && typeof valB === 'boolean') {
                  return (valA === valB ? 0 : (valA ? 1 : -1)) * dirModifier;
              }
-
              try {
                  return String(valA).localeCompare(String(valB), 'de-DE', { sensitivity: 'base', numeric: true }) * dirModifier;
              } catch (e) {
-                  console.warn("Fallback string comparison failed:", e);
                   if (valA < valB) return -1 * dirModifier;
                   if (valA > valB) return 1 * dirModifier;
                   return 0;
              }
-
         } catch (error) {
-             console.error("Fehler während der Sortierung:", error, "Key:", key, "SubKey:", subKey, "A:", a, "B:", b);
              return 0;
         }
     };
@@ -292,47 +285,63 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
 
 function getStatisticalSignificanceSymbol(pValue) {
     if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return '';
-    const significanceLevels = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS; // Bereits absteigend sortiert
+    const significanceLevels = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS;
     const overallSignificanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL;
-
     for (const level of significanceLevels) {
         if (pValue < level.threshold) {
             return level.symbol;
         }
     }
-    if (pValue < overallSignificanceLevel) { // Falls kein Symbol in der Liste passt, aber unter dem allgemeinen Niveau
-        return significanceLevels[significanceLevels.length - 1]?.symbol || '*'; // Fallback zum geringsten definierten Symbol
+    if (pValue < overallSignificanceLevel) {
+        return significanceLevels[significanceLevels.length - 1]?.symbol || '*';
     }
-    return 'ns'; // not significant
+    return 'ns';
 }
 
-function getStatisticalSignificanceText(pValue, significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL) {
+function getStatisticalSignificanceText(pValue, lang = 'de', significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL) {
      if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return '';
      const level = significanceLevel;
-     return pValue < level
-         ? UI_TEXTS.statMetrics.signifikanzTexte.SIGNIFIKANT || 'statistisch signifikant'
-         : UI_TEXTS.statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT || 'statistisch nicht signifikant';
+     const isSignificant = pValue < level;
+     if (lang === 'de') {
+         return isSignificant
+             ? (UI_TEXTS.statMetrics.signifikanzTexte.SIGNIFIKANT.de || 'statistisch signifikant')
+             : (UI_TEXTS.statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT.de || 'statistisch nicht signifikant');
+     } else {
+         return isSignificant
+             ? (UI_TEXTS.statMetrics.signifikanzTexte.SIGNIFIKANT.en || 'statistically significant')
+             : (UI_TEXTS.statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT.en || 'not statistically significant');
+     }
 }
 
-function getPValueText(pValue, lang = 'de') {
+function getPValueText(pValue, lang = 'de', forRadiology = false) {
     if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return 'N/A';
 
-    const pLessThanThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS[0]?.threshold || 0.001; // kleinster Schwellenwert für 'p < ...'
+    const pLessThanThreshold = forRadiology ? 0.001 : (APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS[0]?.threshold || 0.001);
+    const pPrefix = forRadiology ? 'P' : 'p';
+    const pMaxThreshold = forRadiology ? 0.99 : 1.0;
+
     if (pValue < pLessThanThreshold) {
-        const thresholdStr = String(pLessThanThreshold).replace('.', lang === 'de' ? ',' : '.');
-        return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','.')}`;
+        const thresholdStr = formatNumber(pLessThanThreshold, pLessThanThreshold.toString().split('.')[1]?.length || 3, 'N/A', lang === 'en' || forRadiology);
+        return `${pPrefix} < ${thresholdStr}`;
+    }
+    if (forRadiology && pValue > pMaxThreshold) {
+        const thresholdStr = formatNumber(pMaxThreshold, 2, 'N/A', true);
+        return `${pPrefix} > ${thresholdStr}`;
     }
 
-    let pFormatted = formatNumber(pValue, 3, 'N/A', true); // useStandardFormat = true
-    if (pFormatted === '0.000' && pLessThanThreshold === 0.001) { // Spezifischer Fall, wenn p sehr klein, aber nicht <0.001 laut Formatierung
-         const thresholdStr = String(pLessThanThreshold).replace('.', lang === 'de' ? ',' : '.');
-         return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','.')}`;
+    let digits = 3;
+    if (forRadiology) {
+        if (pValue < 0.01) digits = 3;
+        else if (Math.abs(pValue - 0.05) < 0.01 && pValue.toString().split('.')[1]?.length > 2) digits = 3; // Near .05, use 3 if available
+        else digits = 2;
     }
 
-    if (lang === 'de' && pFormatted !== 'N/A') {
-        pFormatted = pFormatted.replace('.', ',');
+    let pFormatted = formatNumber(pValue, digits, 'N/A', lang === 'en' || forRadiology);
+    if (forRadiology && pFormatted !== 'N/A' && pFormatted.startsWith('0.')) {
+        pFormatted = pFormatted.substring(1); // Remove leading zero "0." -> "."
     }
-    return `p = ${pFormatted}`;
+
+    return `${pPrefix} = ${pFormatted}`;
 }
 
 function generateUUID() {
@@ -360,7 +369,6 @@ function clampNumber(num, min, max) {
     const minVal = parseFloat(min);
     const maxVal = parseFloat(max);
     if(isNaN(number) || isNaN(minVal) || isNaN(maxVal)) {
-        console.warn(`Ungültige Eingabe für clampNumber: num=${num}, min=${min}, max=${max}`);
         return NaN;
     };
     return Math.min(Math.max(number, minVal), maxVal);
@@ -375,23 +383,30 @@ function arraysAreEqual(arr1, arr2) {
     return true;
 }
 
-function getAUCBewertung(aucValue) {
+function getAUCBewertung(aucValue, lang = 'de') {
     const value = parseFloat(aucValue);
-    if (isNaN(value) || value < 0 || value > 1) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_bestimmbar || 'N/A';
-    if (value >= 0.9) return 'exzellent';
-    if (value >= 0.8) return 'gut';
-    if (value >= 0.7) return 'moderat';
-    if (value > 0.5) return 'schwach';
-    return 'nicht informativ';
+    const uiTextStaerke = UI_TEXTS.statMetrics.assoziationStaerkeTexte;
+    const defaultBewertung = lang === 'de' ? (uiTextStaerke.nicht_bestimmbar?.de || 'N/A') : (uiTextStaerke.nicht_bestimmbar?.en || 'N/A');
+
+    if (isNaN(value) || value < 0 || value > 1) return defaultBewertung;
+
+    if (value >= 0.9) return lang === 'de' ? 'exzellent' : 'excellent';
+    if (value >= 0.8) return lang === 'de' ? 'gut' : 'good';
+    if (value >= 0.7) return lang === 'de' ? 'moderat' : 'fair'; // Radiology uses 'fair'
+    if (value > 0.5) return lang === 'de' ? 'schwach' : 'poor'; // Radiology uses 'poor'
+    return lang === 'de' ? 'nicht informativ' : 'non-informative'; // Or 'fail' as per some scales
 }
 
-function getPhiBewertung(phiValue) {
+function getPhiBewertung(phiValue, lang = 'de') {
     const value = parseFloat(phiValue);
-    if (isNaN(value)) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_bestimmbar || 'N/A';
+    const uiTextStaerke = UI_TEXTS.statMetrics.assoziationStaerkeTexte;
+    const defaultBewertung = lang === 'de' ? (uiTextStaerke.nicht_bestimmbar?.de || 'N/A') : (uiTextStaerke.nicht_bestimmbar?.en || 'N/A');
+
+    if (isNaN(value)) return defaultBewertung;
     const absPhi = Math.abs(value);
-    const texts = UI_TEXTS.statMetrics.assoziationStaerkeTexte || {};
-    if (absPhi >= 0.5) return texts.stark || 'stark';
-    if (absPhi >= 0.3) return texts.moderat || 'moderat';
-    if (absPhi >= 0.1) return texts.schwach || 'schwach';
-    return texts.sehr_schwach || 'sehr schwach';
+
+    if (absPhi >= 0.5) return lang === 'de' ? (uiTextStaerke.stark?.de || 'stark') : (uiTextStaerke.stark?.en || 'strong');
+    if (absPhi >= 0.3) return lang === 'de' ? (uiTextStaerke.moderat?.de || 'moderat') : (uiTextStaerke.moderat?.en || 'moderate');
+    if (absPhi >= 0.1) return lang === 'de' ? (uiTextStaerke.schwach?.de || 'schwach') : (uiTextStaerke.schwach?.en || 'weak');
+    return lang === 'de' ? (uiTextStaerke.sehr_schwach?.de || 'sehr schwach') : (uiTextStaerke.sehr_schwach?.en || 'very weak');
 }
