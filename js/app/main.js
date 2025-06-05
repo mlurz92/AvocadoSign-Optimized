@@ -2,20 +2,24 @@ const mainAppInterface = (() => {
     const PATIENT_RAW_DATA = window.PATIENT_RAW_DATA || [];
 
     function loadInitialDataAndSettings() {
+        if (typeof stateManager === 'undefined') {
+            console.error("CRITICAL: stateManager ist nicht verfügbar in loadInitialDataAndSettings. Ladereihenfolge prüfen!");
+            return;
+        }
         stateManager.loadAppliedT2Criteria();
         stateManager.loadAppliedT2Logic();
         stateManager.loadCurrentKollektiv();
-        stateManager.loadCurrentBruteForceResult();
+        stateManager.getAllBruteForceResultsFromStorage(); // Load all previously stored BF results
 
         const initialUserSettings = {
-            datenTableSort: APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT,
-            auswertungTableSort: APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT,
+            datenTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT),
+            auswertungTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT),
             statsLayout: APP_CONFIG.DEFAULT_SETTINGS.STATS_LAYOUT,
             statsKollektiv1: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV1,
             statsKollektiv2: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2,
             praesentationView: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW,
             praesentationStudyId: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID,
-            praesentationLang: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG, // Use same default as pub
+            praesentationLang: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG,
             publikationLang: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG,
             publikationSection: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION,
             publikationBruteForceMetric: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC,
@@ -24,13 +28,14 @@ const mainAppInterface = (() => {
         };
 
         Object.keys(initialUserSettings).forEach(key => {
-            const storageKey = APP_CONFIG.STORAGE_KEYS[key.toUpperCase()] || APP_CONFIG.STORAGE_KEYS[key] || `userSetting_${key}`;
+            const storageKeyInConfig = Object.keys(APP_CONFIG.STORAGE_KEYS).find(k => k.toLowerCase() === key.toLowerCase());
+            const storageKey = storageKeyInConfig ? APP_CONFIG.STORAGE_KEYS[storageKeyInConfig] : `userSetting_${key}`;
             const storedValue = loadFromLocalStorage(storageKey);
             if (storedValue !== null) {
                 initialUserSettings[key] = storedValue;
             }
         });
-        stateManager.updateUserSettings(initialUserSettings, false); // false to not save again immediately
+        stateManager.updateUserSettings(initialUserSettings, false); 
     }
 
     function initializeEventHandlers() {
@@ -39,22 +44,31 @@ const mainAppInterface = (() => {
         statistikEventHandlers.init();
         praesentationEventHandlers.init();
         publikationEventHandlers.init();
-        exportEventHandlers.init();
+        exportEventHandlers.init(); // Sicherstellen, dass dies aufgerufen wird
 
         document.querySelectorAll('#main-nav .nav-link').forEach(tabLink => {
+            tabLink.removeEventListener('click', handleTabChange); // Vorsorglich entfernen
             tabLink.addEventListener('click', handleTabChange);
         });
     }
 
     function refreshCurrentTab(forceReloadData = false) {
+        if (typeof stateManager === 'undefined' || typeof viewRenderer === 'undefined' || typeof ui_helpers === 'undefined' || typeof dataProcessor === 'undefined' || typeof statisticsService === 'undefined' || typeof publicationDataAggregator === 'undefined') {
+            console.error("CRITICAL: Eines der Kernmodule (stateManager, viewRenderer, etc.) ist nicht verfügbar in refreshCurrentTab.");
+            const el = document.getElementById(stateManager?.getActiveTabId() + "-tab-pane");
+            if (el) ui_helpers.updateElementHTML(el.id, `<p class="text-danger p-3">Kritischer Fehler: Kernkomponenten der Anwendung fehlen. Bitte Seite neu laden.</p>`);
+            return;
+        }
+
         const activeTabId = stateManager.getActiveTabId();
         const targetElementId = `${activeTabId}-tab-pane`;
-        const currentKollektiv = राज्य.currentKollektiv;
-        const appliedT2Criteria = राज्य.appliedT2Criteria;
-        const t2Logic = राज्य.appliedT2Logic;
-        const userSettings = राज्य.userSettings;
+        const currentKollektiv = stateManager.getCurrentKollektiv();
+        const appliedT2Criteria = stateManager.getAppliedT2Criteria();
+        const t2Logic = stateManager.getAppliedT2Logic();
+        const userSettings = stateManager.getUserSettings();
+        const allBruteForceResults = stateManager.getAllBruteForceResults();
 
-        ui_helpers.showLoadingOverlay(true, activeTabId);
+        ui_helpers.showLoadingOverlay(true, null, activeTabId);
 
         try {
             switch (activeTabId) {
@@ -73,7 +87,7 @@ const mainAppInterface = (() => {
                         kollektiv1: userSettings.statsKollektiv1,
                         kollektiv2: userSettings.statsKollektiv2,
                     };
-                    const aggregatedStats = statisticsService.getAggregatedStats(PATIENT_RAW_DATA, appliedT2Criteria, t2Logic, राज्य.bruteForceResults, userSettings.publikationBruteForceMetric);
+                    const aggregatedStats = statisticsService.getAggregatedStats(PATIENT_RAW_DATA, appliedT2Criteria, t2Logic, allBruteForceResults, userSettings.publikationBruteForceMetric);
                     viewRenderer.renderStatistikTab(targetElementId, statsSettings, aggregatedStats);
                     break;
                 case 'praesentation':
@@ -86,7 +100,7 @@ const mainAppInterface = (() => {
                         PATIENT_RAW_DATA,
                         appliedT2Criteria,
                         t2Logic,
-                        राज्य.bruteForceResults,
+                        allBruteForceResults,
                         userSettings.publikationBruteForceMetric
                     );
                     viewRenderer.renderPraesentationTab(targetElementId, praesSettings, praesAggregatedData);
@@ -103,10 +117,12 @@ const mainAppInterface = (() => {
             }
         } catch (error) {
             console.error(`Fehler beim Rendern von Tab '${activeTabId}':`, error);
-            ui_helpers.updateElementHTML(targetElementId, `<p class="text-danger">Fehler beim Laden des Tabs. Details siehe Konsole.</p>`);
-            ui_helpers.showToast(`Fehler beim Laden von Tab '${activeTabId}'.`, 'danger');
+            ui_helpers.updateElementHTML(targetElementId, `<p class="text-danger p-3">Fehler beim Laden des Tabs. Details siehe Konsole.</p>`);
+            if (typeof ui_helpers.showToast === 'function') {
+                ui_helpers.showToast(`Fehler beim Laden von Tab '${activeTabId}'.`, 'danger');
+            }
         } finally {
-            ui_helpers.showLoadingOverlay(false);
+            ui_helpers.showLoadingOverlay(false, null, activeTabId);
         }
         viewRenderer.updateHeaderStats();
         viewRenderer.updateActiveTabInUI(activeTabId);
@@ -114,8 +130,9 @@ const mainAppInterface = (() => {
 
 
     function handleTabChange(event) {
+        if (!event || !event.currentTarget) return;
         event.preventDefault();
-        if (!event.currentTarget || !event.currentTarget.dataset.bsTarget) return;
+        if (!event.currentTarget.dataset || !event.currentTarget.dataset.bsTarget) return;
 
         const newTabId = event.currentTarget.dataset.bsTarget.substring(1).replace('-tab-pane', '');
         const oldTabId = stateManager.getActiveTabId();
@@ -127,61 +144,76 @@ const mainAppInterface = (() => {
     }
     
     function handleBruteForceUpdate(event) {
+        if (!event || !event.detail) return;
         const { status, progress, result, error, kollektiv } = event.detail;
         const activeTabId = stateManager.getActiveTabId();
-        const currentKollektiv = राज्य.currentKollektiv;
+        const currentKollektivState = stateManager.getCurrentKollektiv();
 
         if (error) {
-            ui_helpers.showToast(`Brute-Force Fehler: ${error}`, 'danger', 8000);
+            if (typeof ui_helpers.showToast === 'function') {
+                 ui_helpers.showToast(`Brute-Force Fehler: ${error}`, 'danger', 8000);
+            } else {
+                console.error(`Brute-Force Fehler: ${error}`);
+            }
         }
 
         if (result && kollektiv) {
             stateManager.setBruteForceResultForKollektiv(kollektiv, result);
         }
         
-        if (activeTabId === 'auswertung' && kollektiv === currentKollektiv) {
+        if (activeTabId === 'auswertung' && kollektiv === currentKollektivState) {
             refreshCurrentTab();
-        } else if (activeTabId === 'auswertung' && status === 'completed' && kollektiv !== currentKollektiv) {
-            // If on auswertung tab, but for a different kollektiv, still show a success message
-             ui_helpers.showToast(`Brute-Force für Kollektiv '${getKollektivDisplayName(kollektiv)}' abgeschlossen.`, 'success');
+        } else if (activeTabId === 'auswertung' && status === 'completed' && kollektiv !== currentKollektivState) {
+            if (typeof ui_helpers.showToast === 'function') {
+                ui_helpers.showToast(`Brute-Force für Kollektiv '${getKollektivDisplayName(kollektiv)}' abgeschlossen.`, 'success');
+            }
         }
 
-        if (activeTabId === 'statistik' || activeTabId === 'publikation' || activeTabId === 'praesentation') {
-             if (status === 'completed' && result) {
-                 refreshCurrentTab(true); // Force data reload for these tabs
-             }
+        if (status === 'completed' && (activeTabId === 'statistik' || activeTabId === 'publikation' || activeTabId === 'praesentation')) {
+            refreshCurrentTab(true); 
         }
-        viewRenderer.updateHeaderStats(); // Update T2 header stats if BF result changed applied criteria if user applies it
+        if (typeof viewRenderer !== 'undefined' && typeof viewRenderer.updateHeaderStats === 'function') {
+             viewRenderer.updateHeaderStats();
+        }
     }
 
 
     function initApp() {
         if (typeof d3 === 'undefined') {
-            console.error("D3.js nicht geladen. Diagramme können nicht gerendert werden.");
-            document.body.innerHTML = "<p class='text-danger p-5 text-center'>Fehler: D3.js konnte nicht geladen werden. Bitte überprüfen Sie die Internetverbindung und versuchen Sie es erneut.</p>";
+            console.error("CRITICAL: D3.js nicht geladen. Diagramme können nicht gerendert werden.");
+            document.body.innerHTML = "<p class='text-danger p-5 text-center'>Fehler: D3.js konnte nicht geladen werden. Bitte Internetverbindung prüfen und Seite neu laden.</p>";
             return;
         }
         if (typeof Papa === 'undefined' || typeof JSZip === 'undefined' || typeof saveAs === 'undefined' || typeof ExcelJS === 'undefined' || typeof html2canvas === 'undefined') {
-            console.warn("Eine oder mehrere Exportbibliotheken (PapaParse, JSZip, FileSaver, ExcelJS, html2canvas) nicht geladen. Exportfunktionalität ist eingeschränkt.");
+            console.warn("WARNUNG: Eine oder mehrere Exportbibliotheken (PapaParse, JSZip, FileSaver, ExcelJS, html2canvas) nicht geladen. Exportfunktionalität ist eingeschränkt.");
         }
-
+        if (typeof stateManager === 'undefined') {
+            console.error("CRITICAL: stateManager nicht initialisiert. Anwendung kann nicht starten.");
+            document.body.innerHTML = "<p class='text-danger p-5 text-center'>Kritischer Fehler: stateManager konnte nicht initialisiert werden. App-Start abgebrochen.</p>";
+            return;
+        }
 
         document.dispatchEvent(new CustomEvent('appStateLoading', { detail: { message: 'Lade Einstellungen...' }}));
         loadInitialDataAndSettings();
         document.dispatchEvent(new CustomEvent('appStateLoaded', { detail: { message: 'Einstellungen geladen.' }}));
 
         document.dispatchEvent(new CustomEvent('appUILoading', { detail: { message: 'Initialisiere UI Komponenten...' }}));
-        ui_components.initDynamicUIElements(PATIENT_RAW_DATA.length > 0);
+        if (typeof ui_components !== 'undefined' && typeof ui_components.initDynamicUIElements === 'function') {
+            ui_components.initDynamicUIElements(PATIENT_RAW_DATA && PATIENT_RAW_DATA.length > 0);
+        }
         initializeEventHandlers();
         document.dispatchEvent(new CustomEvent('appUILoaded', { detail: { message: 'UI Komponenten initialisiert.' }}));
         
+        document.removeEventListener('bruteForceUpdate', handleBruteForceUpdate); // Remove before adding
         document.addEventListener('bruteForceUpdate', handleBruteForceUpdate);
 
-        const firstTabId = stateManager.getActiveTabId() || 'daten';
-        stateManager.setActiveTabId(firstTabId);
+        const firstTabId = stateManager.getActiveTabId(); // getActiveTabId already has default
+        stateManager.setActiveTabId(firstTabId); // Ensure it's set in state before first refresh
         refreshCurrentTab();
         
-        ui_helpers.checkFirstAppStart();
+        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.checkFirstAppStart === 'function') {
+             ui_helpers.checkFirstAppStart();
+        }
     }
 
     return Object.freeze({
@@ -189,7 +221,7 @@ const mainAppInterface = (() => {
         refreshCurrentTab,
         handleTabChange,
         getRawData: () => PATIENT_RAW_DATA,
-        getAggregatedDataForPublikation: () => publicationTabLogic.currentAggregatedPublicationData // Expose for potential direct access if needed
+        // getAggregatedDataForPublikation: ist jetzt besser über stateManager.getAllBruteForceResults() + publicationDataAggregator zugänglich
     });
 
 })();
