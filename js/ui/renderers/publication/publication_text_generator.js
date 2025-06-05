@@ -47,6 +47,7 @@ const publicationTextGenerator = (() => {
     }
 
     function _getSafeLink(elementId){
+        if (!elementId) return '#';
         return `#${elementId}`;
     }
 
@@ -54,6 +55,8 @@ const publicationTextGenerator = (() => {
         const asGesamt = allKollektivStats?.Gesamt?.gueteAS;
         const bfGesamtStats = allKollektivStats?.Gesamt?.gueteT2_bruteforce;
         const vergleichASvsBFGesamt = allKollektivStats?.Gesamt?.vergleichASvsT2_bruteforce;
+        const statsAS = allKollektivStats?.Gesamt?.gueteAS;
+
 
         let aucASGesamt = asGesamt?.auc?.value !== undefined ? formatNumber(asGesamt.auc.value, 2, 'N/A', lang === 'en') : 'N/A';
         let sensASGesamt = asGesamt?.sens?.value !== undefined ? formatPercent(asGesamt.sens.value, 1, 'N/A') : 'N/A';
@@ -70,7 +73,7 @@ const publicationTextGenerator = (() => {
 
 
         let aucT2OptimiertGesamt = bfGesamtStats?.auc?.value !== undefined ? formatNumber(bfGesamtStats.auc.value, 2, 'N/A', lang === 'en') : 'N/A';
-        let pWertVergleich = vergleichASvsBFGesamt?.delong?.pValue !== undefined ? getPValueText(vergleichASvsBFGesamt.delong.pValue, lang) : 'N/A';
+        let pWertVergleich = vergleichASvsBFGesamt?.delong?.pValue !== undefined ? getPValueText(vergleichASvsBFGesamt.delong.pValue, lang, true) : 'N/A';
         let vergleichPerformanceTextDe = "eine vergleichbare";
         let vergleichPerformanceTextEn = "comparable";
 
@@ -93,8 +96,10 @@ const publicationTextGenerator = (() => {
             .replace('0,87', aucASGesamt)
             .replace('100%', sensAsDirektOP)
             .replace('83,3%', spezAsDirektOP)
+            .replace('0,92', aucAsDirektOP)
             .replace('84,2%', sensAsNRCT)
             .replace('85,4%', spezAsNRCT)
+            .replace('0,85', aucAsNRCT)
             .replace('[PLATZHALTER_AUC_T2_OPTIMIERT_GESAMT]', aucT2OptimiertGesamt)
             .replace('[eine überlegene/vergleichbare/unterlegene]', vergleichPerformanceTextDe)
             .replace('p=[PLATZHALTER_P_WERT_VERGLEICH]', pWertVergleich);
@@ -106,8 +111,10 @@ const publicationTextGenerator = (() => {
             .replace('0.87', aucASGesamt)
             .replace('100%', sensAsDirektOP)
             .replace('83.3%', spezAsDirektOP)
+            .replace('0.92', aucAsDirektOP)
             .replace('84.2%', sensAsNRCT)
             .replace('85.4%', spezAsNRCT)
+            .replace('0.85', aucAsNRCT)
             .replace('[PLACEHOLDER_AUC_T2_OPTIMIZED_OVERALL]', aucT2OptimiertGesamt)
             .replace('[superior/comparable/inferior]', vergleichPerformanceTextEn)
             .replace('p=[PLACEHOLDER_P_VALUE_COMPARISON]', pWertVergleich);
@@ -133,7 +140,7 @@ const publicationTextGenerator = (() => {
 
     function getIntroductionText(lang, commonData) {
         const lurzSchaeferRef = commonData.references?.LURZ_SCHAEFER_AS_2025 || "Lurz & Schäfer (2025)";
-        const anzahlGesamt = commonData.nGesamt || 'N/A';
+        const anzahlGesamt = commonData.nGesamt ? formatNumber(commonData.nGesamt, 0) : 'N/A';
 
         if (lang === 'de') {
             return `
@@ -382,13 +389,13 @@ const publicationTextGenerator = (() => {
         if (lang === 'de') {
             return `
                 <h3 id="ergebnisse-as-diagnostische-guete-title">Diagnostische Güte des Avocado Signs</h3>
-                <p>Die diagnostische Leistung des Avocado Signs (AS) zur Prädiktion des pathologischen N-Status ist in <a href="${_getSafeLink(tableId)}">Tabelle 3</a> für das Gesamtkollektiv sowie für die Subgruppen mit primärer Operation und nach nRCT detailliert dargestellt. Im Gesamtkollektiv (${getKollektivText('Gesamt', nGesamt, lang)}) wies das AS eine Sensitivität von ${fCI(asGesamt?.sens, 1, true, 'de')}, eine Spezifität von ${fCI(asGesamt?.spez, 1, true, 'de')} und eine AUC von ${fCI(asGesamt?.auc, 3, false, 'de')} auf.</p>
+                <p>Die diagnostische Leistung des Avocado Signs (AS) zur Prädiktion des pathologischen N-Status ist in <a href="${_getSafeLink(tableId)}">Tabelle Ergebnisse 1</a> für das Gesamtkollektiv sowie für die Subgruppen mit primärer Operation und nach nRCT detailliert dargestellt. Im Gesamtkollektiv (${getKollektivText('Gesamt', nGesamt, lang)}) wies das AS eine Sensitivität von ${fCI(asGesamt?.sens, 1, true, 'de')}, eine Spezifität von ${fCI(asGesamt?.spez, 1, true, 'de')} und eine AUC von ${fCI(asGesamt?.auc, 3, false, 'de')} auf.</p>
                 <p>Bei Patienten der Direkt-OP-Gruppe (${getKollektivText('direkt OP', nDirektOP, lang)}) erreichte das AS eine Sensitivität von ${fCI(asDirektOP?.sens, 1, true, 'de')} bei einer Spezifität von ${fCI(asDirektOP?.spez, 1, true, 'de')} (AUC: ${fCI(asDirektOP?.auc, 3, false, 'de')}). In der nRCT-Gruppe (${getKollektivText('nRCT', nNRCT, lang)}) betrug die Sensitivität ${fCI(asNRCT?.sens, 1, true, 'de')} und die Spezifität ${fCI(asNRCT?.spez, 1, true, 'de')} (AUC: ${fCI(asNRCT?.auc, 3, false, 'de')}).</p>
             `;
         } else {
             return `
                 <h3 id="ergebnisse-as-diagnostische-guete-title">Diagnostic Performance of the Avocado Sign</h3>
-                <p>The diagnostic performance of the Avocado Sign (AS) for predicting pathological N-status is detailed in <a href="${_getSafeLink(tableId)}">Table 3</a> for the overall cohort and for subgroups undergoing upfront surgery and after nRCT. In the overall cohort (${getKollektivText('Gesamt', nGesamt, lang)}), the AS achieved a sensitivity of ${fCI(asGesamt?.sens, 1, true, 'en')}, a specificity of ${fCI(asGesamt?.spez, 1, true, 'en')}, and an AUC of ${fCI(asGesamt?.auc, 3, false, 'en')}.</p>
+                <p>The diagnostic performance of the Avocado Sign (AS) for predicting pathological N-status is detailed in <a href="${_getSafeLink(tableId)}">Results Table 1</a> for the overall cohort and for subgroups undergoing upfront surgery and after nRCT. In the overall cohort (${getKollektivText('Gesamt', nGesamt, lang)}), the AS achieved a sensitivity of ${fCI(asGesamt?.sens, 1, true, 'en')}, a specificity of ${fCI(asGesamt?.spez, 1, true, 'en')}, and an AUC of ${fCI(asGesamt?.auc, 3, false, 'en')}.</p>
                 <p>In patients undergoing upfront surgery (${getKollektivText('direkt OP', nDirektOP, lang)}), the AS demonstrated a sensitivity of ${fCI(asDirektOP?.sens, 1, true, 'en')} and a specificity of ${fCI(asDirektOP?.spez, 1, true, 'en')} (AUC: ${fCI(asDirektOP?.auc, 3, false, 'en')}). In the nRCT group (${getKollektivText('nRCT', nNRCT, lang)}), sensitivity was ${fCI(asNRCT?.sens, 1, true, 'en')} and specificity was ${fCI(asNRCT?.spez, 1, true, 'en')} (AUC: ${fCI(asNRCT?.auc, 3, false, 'en')}).</p>
             `;
         }
@@ -398,9 +405,9 @@ const publicationTextGenerator = (() => {
         const tableId = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteLiteraturT2Tabelle.id;
         let text = '';
         if (lang === 'de') {
-            text = `<h3 id="ergebnisse-t2-literatur-diagnostische-guete-title">Diagnostische Güte der Literatur-basierten T2-Kriterien</h3><p>Die Performance der etablierten T2-Kriteriensets aus der Literatur, angewendet auf die entsprechenden (Sub-)Kollektive unserer Studienpopulation, ist in <a href="${_getSafeLink(tableId)}">Tabelle 4</a> dargestellt. Die Ergebnisse variierten je nach Kriterienset und zugrundeliegender Patientengruppe.</p><ul>`;
+            text = `<h3 id="ergebnisse-t2-literatur-diagnostische-guete-title">Diagnostische Güte der Literatur-basierten T2-Kriterien</h3><p>Die Performance der etablierten T2-Kriteriensets aus der Literatur, angewendet auf die entsprechenden (Sub-)Kollektive unserer Studienpopulation, ist in <a href="${_getSafeLink(tableId)}">Tabelle Ergebnisse 2</a> dargestellt. Die Ergebnisse variierten je nach Kriterienset und zugrundeliegender Patientengruppe.</p><ul>`;
         } else {
-            text = `<h3 id="ergebnisse-t2-literatur-diagnostische-guete-title">Diagnostic Performance of Literature-Based T2 Criteria</h3><p>The performance of established T2 criteria sets from the literature, applied to the respective (sub-)cohorts of our study population, is presented in <a href="${_getSafeLink(tableId)}">Table 4</a>. Results varied depending on the specific criteria set and the patient subgroup.</p><ul>`;
+            text = `<h3 id="ergebnisse-t2-literatur-diagnostische-guete-title">Diagnostic Performance of Literature-Based T2 Criteria</h3><p>The performance of established T2 criteria sets from the literature, applied to the respective (sub-)cohorts of our study population, is presented in <a href="${_getSafeLink(tableId)}">Results Table 2</a>. Results varied depending on the specific criteria set and the patient subgroup.</p><ul>`;
         }
 
         PUBLICATION_CONFIG.literatureCriteriaSets.forEach(conf => {
@@ -429,9 +436,9 @@ const publicationTextGenerator = (() => {
         let text = '';
 
         if (lang === 'de') {
-            text += `<h3 id="ergebnisse-t2-optimiert-diagnostische-guete-title">Diagnostische Güte der Brute-Force optimierten T2-Kriterien</h3><p>Mittels eines Brute-Force-Algorithmus wurden für jedes der drei Kollektive spezifische T2-Kriteriensets identifiziert, welche die <strong>${bfZielMetric}</strong> maximieren. Die Definition dieser optimierten Kriteriensets ist im Methodenteil (Abschnitt Methoden > Bildanalyse: T2-gewichtete Kriterien) detaillierter beschrieben. Die diagnostische Güte dieser optimierten Sets ist in <a href="${_getSafeLink(tableId)}">Tabelle 5</a> dargestellt.</p><p>Die für die jeweilige Kohorte optimierten Kriterien waren:</p><ul>`;
+            text += `<h3 id="ergebnisse-t2-optimiert-diagnostische-guete-title">Diagnostische Güte der Brute-Force optimierten T2-Kriterien</h3><p>Mittels eines Brute-Force-Algorithmus wurden für jedes der drei Kollektive spezifische T2-Kriteriensets identifiziert, welche die <strong>${bfZielMetric}</strong> maximieren. Die Definition dieser optimierten Kriteriensets ist im Methodenteil (Abschnitt Methoden > Bildanalyse: T2-gewichtete Kriterien) detaillierter beschrieben. Die diagnostische Güte dieser optimierten Sets ist in <a href="${_getSafeLink(tableId)}">Tabelle Ergebnisse 3</a> dargestellt.</p><p>Die für die jeweilige Kohorte optimierten Kriterien waren:</p><ul>`;
         } else {
-            text += `<h3 id="ergebnisse-t2-optimiert-diagnostische-guete-title">Diagnostic Performance of Brute-Force Optimized T2 Criteria</h3><p>Using a brute-force algorithm, specific T2 criteria sets maximizing <strong>${bfZielMetric}</strong> were identified for each of the three cohorts. The definition of these optimized criteria sets is detailed in the Methods section (Section Methods > Image Analysis: T2-weighted Criteria). The diagnostic performance of these optimized sets is presented in <a href="${_getSafeLink(tableId)}">Table 5</a>.</p><p>The criteria optimized for each cohort were:</p><ul>`;
+            text += `<h3 id="ergebnisse-t2-optimiert-diagnostische-guete-title">Diagnostic Performance of Brute-Force Optimized T2 Criteria</h3><p>Using a brute-force algorithm, specific T2 criteria sets maximizing <strong>${bfZielMetric}</strong> were identified for each of the three cohorts. The definition of these optimized criteria sets is detailed in the Methods section (Section Methods > Image Analysis: T2-weighted Criteria). The diagnostic performance of these optimized sets is presented in <a href="${_getSafeLink(tableId)}">Results Table 3</a>.</p><p>The criteria optimized for each cohort were:</p><ul>`;
         }
 
         const kollektive = [
@@ -445,15 +452,14 @@ const publicationTextGenerator = (() => {
             const nPat = k.n || 'N/A';
             const bfDef = allKollektivStats?.[k.id]?.bruteforce_definition;
             const criteriaDesc = bfDef ? formatCriteriaFunc(bfDef.criteria, bfDef.logic, false) : (lang === 'de' ? 'nicht verfügbar' : 'unavailable');
-            const kollektivDisplayName = getKollektivDisplayName(k.id);
 
-            if (bfStats && bfStats.matrix) {
-                text += `<li>Für das ${getKollektivText(k.id, nPat, lang)} (optimierte Kriterien: ${criteriaDesc}) erreichten diese eine Sensitivität von ${fCI(bfStats.sens, 1, true, lang)}, eine Spezifität von ${fCI(bfStats.spez, 1, true, lang)} und eine AUC von ${fCI(bfStats.auc, 3, false, lang)}.</li>`;
+            if (bfStats && bfStats.matrix && bfDef) {
+                 text += `<li><strong>${getKollektivDisplayName(k.id)}</strong> (${getKollektivText(k.id, nPat, lang).split('(')[1]}: Die Optimierung (Zielmetrik: ${bfDef.metricName || bfZielMetric}, erreicht: ${formatNumber(bfDef.metricValue, 4, 'N/A', lang === 'en')}) ergab folgende Kriterien: <em>${criteriaDesc}</em>. Dies führte zu einer Sensitivität von ${fCI(bfStats.sens, 1, true, lang)}, Spezifität von ${fCI(bfStats.spez, 1, true, lang)} und AUC von ${fCI(bfStats.auc, 3, false, lang)}.</li>`;
             } else {
-                text += `<li>Für das ${getKollektivText(k.id, nPat, lang)} konnten keine validen optimierten Kriterien für die Zielmetrik '${bfZielMetric}' ermittelt oder deren Performance berechnet werden.</li>`;
+                text += `<li>Für das ${getKollektivText(k.id, nPat, lang)} konnten keine validen optimierten Kriterien für die Zielmetrik '${bfZielMetric}' ermittelt oder deren Performance nicht berechnet werden.</li>`;
             }
         });
-        text += `</ul><p class="small text-muted">${lang === 'de' ? 'Hinweis: Diese datengetrieben optimierten Kriterien sind spezifisch für die jeweilige Kohorte und die gewählte Zielmetrik und stellen keine allgemeingültige Empfehlung dar, sondern dienen dem bestmöglichen Vergleich innerhalb dieser Studie.' : 'Note: These data-driven optimized criteria are specific to the respective cohort and the chosen target metric and do not represent a general recommendation but serve for the best possible comparison within this study.'}</p>`;
+        text += `</ul><p class="small text-muted">${lang === 'de' ? 'Es ist zu beachten, dass diese datengetriebenen optimierten Kriterien spezifisch für die jeweilige Studienkohorte und die gewählte Zielmetrik sind. Sie stellen keine allgemeingültige Empfehlung für die klinische Praxis dar, sondern dienen primär dem bestmöglichen Vergleich der diagnostischen Aussagekraft verschiedener Ansätze innerhalb dieser spezifischen Untersuchung.' : 'It should be noted that these data-driven optimized criteria are specific to the respective study cohort and the chosen target metric. They do not represent a general recommendation for clinical practice but primarily serve for the best possible comparison of the diagnostic performance of different approaches within this specific investigation.'}</p>`;
         return text;
     }
 
@@ -462,13 +468,13 @@ const publicationTextGenerator = (() => {
         const bfZielMetric = commonData.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
         const tableId = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.id;
         const fig2aId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartGesamt.id;
-        const fig2bId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartDirektOP.id;
-        const fig2cId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartNRCT.id;
+        const fig2bId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartdirektOP.id;
+        const fig2cId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartnRCT.id;
 
         if (lang === 'de') {
-            text += `<h3 id="ergebnisse-vergleich-as-vs-t2-title">Vergleichsanalysen: Avocado Sign vs. T2-Kriterien</h3><p>Die statistischen Vergleiche der diagnostischen Leistung zwischen dem Avocado Sign (AS) und den T2-Kriteriensets (sowohl Literatur-basiert als auch Brute-Force-optimiert für die Zielmetrik ${bfZielMetric}) sind detailliert in <a href="${_getSafeLink(tableId)}">Tabelle 6</a> aufgeführt. Visuelle Vergleiche der Schlüsselmetriken für das Gesamtkollektiv, die Direkt-OP-Gruppe und die nRCT-Gruppe sind in <a href="${_getSafeLink(fig2aId)}">Abbildung Ergebnisse 2a</a>, <a href="${_getSafeLink(fig2bId)}">Abbildung Ergebnisse 2b</a> und <a href="${_getSafeLink(fig2cId)}">Abbildung Ergebnisse 2c</a> dargestellt.</p>`;
+            text += `<h3 id="ergebnisse-vergleich-as-vs-t2-title">Vergleichsanalysen: Avocado Sign vs. T2-Kriterien</h3><p>Die statistischen Vergleiche der diagnostischen Leistung zwischen dem Avocado Sign (AS) und den T2-Kriteriensets (sowohl Literatur-basiert als auch Brute-Force-optimiert für die Zielmetrik ${bfZielMetric}) sind detailliert in <a href="${_getSafeLink(tableId)}">Tabelle Ergebnisse 4</a> aufgeführt. Visuelle Vergleiche der Schlüsselmetriken für das Gesamtkollektiv, die Direkt-OP-Gruppe und die nRCT-Gruppe sind in <a href="${_getSafeLink(fig2aId)}">Abbildung Ergebnisse 2a</a>, <a href="${_getSafeLink(fig2bId)}">Abbildung Ergebnisse 2b</a> und <a href="${_getSafeLink(fig2cId)}">Abbildung Ergebnisse 2c</a> dargestellt.</p>`;
         } else {
-            text += `<h3 id="ergebnisse-vergleich-as-vs-t2-title">Comparative Analyses: Avocado Sign vs. T2 Criteria</h3><p>Statistical comparisons of the diagnostic performance between the Avocado Sign (AS) and the T2 criteria sets (both literature-based and brute-force optimized for the target metric ${bfZielMetric}) are detailed in <a href="${_getSafeLink(tableId)}">Table 6</a>. Visual comparisons of key metrics for the overall cohort, upfront surgery group, and nRCT group are presented in <a href="${_getSafeLink(fig2aId)}">Results Figure 2a</a>, <a href="${_getSafeLink(fig2bId)}">Results Figure 2b</a>, and <a href="${_getSafeLink(fig2cId)}">Results Figure 2c</a>, respectively.</p>`;
+            text += `<h3 id="ergebnisse-vergleich-as-vs-t2-title">Comparative Analyses: Avocado Sign vs. T2 Criteria</h3><p>Statistical comparisons of the diagnostic performance between the Avocado Sign (AS) and the T2 criteria sets (both literature-based and brute-force optimized for the target metric ${bfZielMetric}) are detailed in <a href="${_getSafeLink(tableId)}">Results Table 4</a>. Visual comparisons of key metrics for the overall cohort, upfront surgery group, and nRCT group are presented in <a href="${_getSafeLink(fig2aId)}">Results Figure 2a</a>, <a href="${_getSafeLink(fig2bId)}">Results Figure 2b</a>, and <a href="${_getSafeLink(fig2cId)}">Results Figure 2c</a>, respectively.</p>`;
         }
 
         const kollektive = [
@@ -493,18 +499,18 @@ const publicationTextGenerator = (() => {
             if (lang === 'de') {
                 text += `<h4>${name}</h4>`;
                 if (statsAS && statsLit && vergleichASvsLit) {
-                    text += `<p>Vergleich AS (AUC ${fCI(statsAS.auc, 3, false, 'de')}) vs. ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'de')}): McNemar p-Wert (Accuracy) ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'de')} ${getStatisticalSignificanceSymbol(vergleichASvsLit.mcnemar?.pValue)}; DeLong p-Wert (AUC) ${getPValueText(vergleichASvsLit.delong?.pValue, 'de')} ${getStatisticalSignificanceSymbol(vergleichASvsLit.delong?.pValue)}; AUC-Differenz ${diffAucLitStr}.</p>`;
+                    text += `<p>Vergleich AS (AUC ${fCI(statsAS.auc, 3, false, 'de')}) vs. ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'de')}): McNemar p-Wert (Accuracy) ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'de', true)} ${getStatisticalSignificanceSymbol(vergleichASvsLit.mcnemar?.pValue)}; DeLong p-Wert (AUC) ${getPValueText(vergleichASvsLit.delong?.pValue, 'de', true)} ${getStatisticalSignificanceSymbol(vergleichASvsLit.delong?.pValue)}; AUC-Differenz ${diffAucLitStr}.</p>`;
                 }
                 if (statsAS && statsBF && vergleichASvsBF && bfDef) {
-                    text += `<p>Vergleich AS vs. Brute-Force T2 (optimiert für ${bfDef.metricName || bfZielMetric}, AUC ${fCI(statsBF.auc, 3, false, 'de')}): McNemar p-Wert (Accuracy) ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'de')} ${getStatisticalSignificanceSymbol(vergleichASvsBF.mcnemar?.pValue)}; DeLong p-Wert (AUC) ${getPValueText(vergleichASvsBF.delong?.pValue, 'de')} ${getStatisticalSignificanceSymbol(vergleichASvsBF.delong?.pValue)}; AUC-Differenz ${diffAucBfStr}.</p>`;
+                    text += `<p>Vergleich AS vs. Brute-Force T2 (optimiert für ${bfDef.metricName || bfZielMetric}, AUC ${fCI(statsBF.auc, 3, false, 'de')}): McNemar p-Wert (Accuracy) ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'de', true)} ${getStatisticalSignificanceSymbol(vergleichASvsBF.mcnemar?.pValue)}; DeLong p-Wert (AUC) ${getPValueText(vergleichASvsBF.delong?.pValue, 'de', true)} ${getStatisticalSignificanceSymbol(vergleichASvsBF.delong?.pValue)}; AUC-Differenz ${diffAucBfStr}.</p>`;
                 }
             } else {
                 text += `<h4>${name}</h4>`;
                 if (statsAS && statsLit && vergleichASvsLit) {
-                    text += `<p>Comparison AS (AUC ${fCI(statsAS.auc, 3, false, 'en')}) vs. ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'en')}): McNemar p-value (Accuracy) ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'en')} ${getStatisticalSignificanceSymbol(vergleichASvsLit.mcnemar?.pValue)}; DeLong p-value (AUC) ${getPValueText(vergleichASvsLit.delong?.pValue, 'en')} ${getStatisticalSignificanceSymbol(vergleichASvsLit.delong?.pValue)}; AUC difference ${diffAucLitStr}.</p>`;
+                    text += `<p>Comparison AS (AUC ${fCI(statsAS.auc, 3, false, 'en')}) vs. ${k.litSetName} (AUC ${fCI(statsLit.auc, 3, false, 'en')}): McNemar p-value (Accuracy) ${getPValueText(vergleichASvsLit.mcnemar?.pValue, 'en', true)} ${getStatisticalSignificanceSymbol(vergleichASvsLit.mcnemar?.pValue)}; DeLong p-value (AUC) ${getPValueText(vergleichASvsLit.delong?.pValue, 'en', true)} ${getStatisticalSignificanceSymbol(vergleichASvsLit.delong?.pValue)}; AUC difference ${diffAucLitStr}.</p>`;
                 }
                 if (statsAS && statsBF && vergleichASvsBF && bfDef) {
-                    text += `<p>Comparison AS vs. Brute-Force T2 (optimized for ${bfDef.metricName || bfZielMetric}, AUC ${fCI(statsBF.auc, 3, false, 'en')}): McNemar p-value (Accuracy) ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'en')} ${getStatisticalSignificanceSymbol(vergleichASvsBF.mcnemar?.pValue)}; DeLong p-value (AUC) ${getPValueText(vergleichASvsBF.delong?.pValue, 'en')} ${getStatisticalSignificanceSymbol(vergleichASvsBF.delong?.pValue)}; AUC difference ${diffAucBfStr}.</p>`;
+                    text += `<p>Comparison AS vs. Brute-Force T2 (optimized for ${bfDef.metricName || bfZielMetric}, AUC ${fCI(statsBF.auc, 3, false, 'en')}): McNemar p-value (Accuracy) ${getPValueText(vergleichASvsBF.mcnemar?.pValue, 'en', true)} ${getStatisticalSignificanceSymbol(vergleichASvsBF.mcnemar?.pValue)}; DeLong p-value (AUC) ${getPValueText(vergleichASvsBF.delong?.pValue, 'en', true)} ${getStatisticalSignificanceSymbol(vergleichASvsBF.delong?.pValue)}; AUC difference ${diffAucBfStr}.</p>`;
                 }
             }
         });
