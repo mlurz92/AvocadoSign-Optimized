@@ -88,7 +88,7 @@ const publicationTextGenerator = (() => {
             <p><strong>Material und Methoden:</strong> Diese retrospektive, von der Ethikkommission genehmigte Monozenterstudie analysierte Daten von Patienten mit histologisch gesichertem Rektumkarzinom, die zwischen ${studyPeriod.replace(" and ", " und ")} konsekutiv eingeschlossen wurden. Zwei verblindete Radiologen evaluierten das AS (hypointenser Kern in hyperintensem Lymphknoten auf T1w-KM-Sequenzen) und morphologische T2w-Kriterien. Die histopathologische Untersuchung der Operationspräparate diente als Referenzstandard. Sensitivität, Spezifität, Genauigkeit (Accuracy, ACC) und die Fläche unter der Receiver-Operating-Characteristic-Kurve (AUC) wurden mit 95%-Konfidenzintervallen (KI) berechnet und die AUC-Werte mittels DeLong-Test verglichen.</p>
             <p><strong>Ergebnisse:</strong> Es wurden ${formatNumber(nGesamt,0)} Patienten (medianes Alter, ${ageRangeText}; ${sexText}) analysiert. Das AS zeigte eine Sensitivität von ${sensASGesamt} (95%-KI: ${sensCI}), eine Spezifität von ${spezASGesamt} (95%-KI: ${spezCI}), eine ACC von ${accASGesamt} und eine AUC von ${aucASGesamt} (95%-KI: ${aucCI}). Für die optimierten T2w-Kriterien betrug die AUC ${aucT2OptimiertGesamt}. Der Unterschied der AUC zwischen AS und optimierten T2w-Kriterien war statistisch nicht signifikant (P = ${pWertVergleich}).</p>
             <p><strong>Fazit:</strong> Das Avocado Sign ist ein vielversprechender MRT-Marker zur Prädiktion des Lymphknotenstatus beim Rektumkarzinom mit hoher diagnostischer Güte, vergleichbar mit kohortenspezifisch optimierten T2w-Kriterien, und besitzt das Potenzial, das präoperative Staging zu verbessern.</p>
-            <p class="small text-muted mt-2">${lang === 'de' ? 'Abkürzungen: ACC = Accuracy, AS = Avocado Sign, AUC = Fläche unter der Kurve, KI = Konfidenzintervall, KM = Kontrastmittel, MRT = Magnetresonanztomographie, N-Status = Nodalstatus, T2w = T2-gewichtet.' : 'Abbreviations: ACC = Accuracy, AS = Avocado Sign, AUC = Area Under the Curve, CI = Confidence Interval, CE = Contrast-Enhanced, MRI = Magnetic Resonance Imaging, N-status = Nodal status, T2w = T2-weighted.'}</p>
+            <p class="small text-muted mt-2">${lang === 'de' ? 'Abkürzungen: ACC = Accuracy, AS = Avocado Sign, AUC = Fläche unter der Kurve, KI = Konfidenzintervall, KM = Kontrastmittel, MRT = Magnetresonanztomographie, N-Status = Nodalstatus, T2w = T2-gewichtet.' : 'Abbreviations: ACC = Accuracy, AS = Avocado Sign, AUC = Area Under the Curve, CE = Contrast-Enhanced, CI = Confidence Interval, MRI = Magnetic Resonance Imaging, N-status = Nodal status, T2w = T2-weighted.'}</p>
         `;
          const abstractEn = `
             <p><strong>Background:</strong> Accurate pretherapeutic determination of mesorectal lymph node status (N-status) is crucial for treatment decisions in rectal cancer. Standard magnetic resonance imaging (MRI) criteria have limitations.</p>
@@ -98,6 +98,20 @@ const publicationTextGenerator = (() => {
             <p><strong>Conclusion:</strong> The Avocado Sign is a promising MRI marker for predicting lymph node status in rectal cancer, demonstrating high diagnostic performance comparable to cohort-optimized T2w criteria, with potential to improve preoperative staging.</p>
              <p class="small text-muted mt-2">Abbreviations: ACC = Accuracy, AS = Avocado Sign, AUC = Area Under the Curve, CE = Contrast-Enhanced, CI = Confidence Interval, MRI = Magnetic Resonance Imaging, N-status = Nodal status, T2w = T2-weighted.</p>
         `;
+        
+        let vergleichPerformanceTextDe = "eine vergleichbare";
+        let vergleichPerformanceTextEn = "comparable";
+        if (vergleichASvsBFGesamt?.delong?.pValue !== undefined && asGesamt?.auc?.value !== undefined && bfGesamtStats?.auc?.value !== undefined) {
+            if (vergleichASvsBFGesamt.delong.pValue < (commonData.significanceLevel || 0.05)) {
+                if (asGesamt.auc.value > bfGesamtStats.auc.value) {
+                    vergleichPerformanceTextDe = "eine signifikant überlegene";
+                    vergleichPerformanceTextEn = "significantly superior";
+                } else if (asGesamt.auc.value < bfGesamtStats.auc.value) {
+                    vergleichPerformanceTextDe = "eine signifikant unterlegene";
+                    vergleichPerformanceTextEn = "significantly inferior";
+                }
+            }
+        }
 
         const keyResultsDe = `
             <li>In dieser retrospektiven Studie mit ${formatNumber(nGesamt,0)} Patienten mit Rektumkarzinom zeigte das Avocado Sign (AS) eine Sensitivität von ${sensASGesamt} und eine Spezifität von ${spezASGesamt} zur Prädiktion des Lymphknotenbefalls.</li>
@@ -205,7 +219,7 @@ const publicationTextGenerator = (() => {
 
     function getMethodenBildanalyseAvocadoSignText(lang, commonData) {
         const studyReferenceAS = commonData.references?.LURZ_SCHAEFER_AS_2025 || "Lurz & Schäfer (2025)";
-        const radiologistExperience = commonData.references?.RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER || ["XX", "YY", "ZZ"]; // Platzhalter für Erfahrung
+        const radiologistExperience = commonData.references?.RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER || ["XX", "YY", "ZZ"]; 
         const fig2LinkText = lang === 'de' ? 'Abbildung 2 der Originalpublikation' : 'Figure 2 of the original publication';
 
 
@@ -256,7 +270,7 @@ const publicationTextGenerator = (() => {
         if (lang === 'de') {
             return `
                 <h3 id="methoden-bildanalyse-t2-kriterien-title">Bildanalyse: T2-gewichtete Kriterien</h3>
-                <p>Die morphologischen Charakteristika der mesorektalen Lymphknoten (Kurzachsendurchmesser [mm], Form, Kontur, Binnensignalhomogenität und Signalintensität) wurden auf den hochauflösenden T2w-Sequenzen durch dieselben zwei Radiologen (M.L., F.K.S.) im Konsens erfasst. Diese Erfassung erfolgte verblindet gegenüber dem pathologischen N-Status und dem AS-Status.</p>
+                <p>Die morphologischen Charakteristika der mesorektalen Lymphknoten (Kurzachsendurchmesser [mm], Form ['rund', 'oval'], Kontur ['scharf', 'irregulär'], Binnensignalhomogenität ['homogen', 'heterogen'] und Signalintensität ['signalarm', 'intermediär', 'signalreich']) wurden auf den hochauflösenden T2w-Sequenzen durch dieselben zwei Radiologen (M.L., F.K.S.) im Konsens erfasst. Diese Erfassung erfolgte verblindet gegenüber dem pathologischen N-Status und dem AS-Status.</p>
                 <p>Zur vergleichenden Analyse der diagnostischen Güte wurden folgende Sätze von T2w-Kriterien herangezogen:</p>
                 <ol>
                     <li><strong>Literatur-basierte Kriteriensets:</strong> Eine Auswahl etablierter Kriterien aus der Fachliteratur (${kohRef}; ${barbaroRef}; ${esgarRef}) wurde implementiert. Die spezifischen Definitionen und ihre Anwendung auf die entsprechenden Subgruppen unserer Studienpopulation sind in <a href="${_getSafeLink(tableLiterarturKriterienId)}">Tabelle Methoden 1</a> detailliert beschrieben.</li>
@@ -270,7 +284,7 @@ const publicationTextGenerator = (() => {
         } else {
             return `
                 <h3 id="methoden-bildanalyse-t2-kriterien-title">Image Analysis: T2-weighted Criteria</h3>
-                <p>The morphological characteristics of mesorectal lymph nodes (short-axis diameter [mm], shape, border, internal signal homogeneity, and signal intensity) were assessed on high-resolution T2w sequences by the same two radiologists (M.L., F.K.S.) by consensus. This assessment was performed blinded to the pathological N-status and AS status.</p>
+                <p>The morphological characteristics of mesorectal lymph nodes (short-axis diameter [mm], shape ['round', 'oval'], border ['smooth', 'irregular'], internal signal homogeneity ['homogeneous', 'heterogeneous'], and signal intensity ['low', 'intermediate', 'high']) were assessed on high-resolution T2w sequences by the same two radiologists (M.L., F.K.S.) by consensus. This assessment was performed blinded to the pathological N-status and AS status.</p>
                 <p>For the comparative analysis of diagnostic performance, the following sets of T2w criteria were utilized:</p>
                 <ol>
                     <li><strong>Literature-based criteria sets:</strong> A selection of established criteria from the literature (${kohRef}; ${barbaroRef}; ${esgarRef}) was implemented. The specific definitions and their application to the respective subgroups of our study population are detailed in <a href="${_getSafeLink(tableLiterarturKriterienId)}">Methods Table 1</a>.</li>
@@ -347,12 +361,12 @@ const publicationTextGenerator = (() => {
         if (lang === 'de') {
             return `
                 <h3 id="ergebnisse-patientencharakteristika-title">Patientencharakteristika und Datenfluss</h3>
-                <p>Von den initial gescreenten Patienten wurden ${formatNumber(anzahlGesamt,0)} in die finale Analyse eingeschlossen (<a href="${_getSafeLink(flowDiagramId)}">Abbildung Methoden 1</a>). Die Studienkohorte bestand aus ${formatNumber(anzahlMaenner,0)} (${formatPercent(anzahlMaenner/anzahlGesamt, 0)}) Männern und ${formatNumber(anzahlGesamt - anzahlMaenner,0)} (${formatPercent((anzahlGesamt - anzahlMaenner)/anzahlGesamt, 0)}) Frauen mit einem medianen Alter von ${ageRangeText} Jahren. ${formatNumber(anzahlNRCT,0)} (${formatPercent(anzahlNRCT/anzahlGesamt,0)}) Patienten erhielten eine neoadjuvante Radiochemotherapie (nRCT), während ${formatNumber(anzahlDirektOP,0)} (${formatPercent(anzahlDirektOP/anzahlGesamt,0)}) primär operiert wurden. Ein histopathologisch gesicherter Lymphknotenbefall (N+) lag bei ${nPlusAnzahl} (${nPlusProzent}) Patienten vor. Weitere demographische und klinische Daten sind in <a href="${_getSafeLink(table1Id)}">Tabelle Ergebnisse 1</a> zusammengefasst. Die Alters- und Geschlechtsverteilung ist in <a href="${_getSafeLink(fig1aId)}">Abbildung Ergebnisse 1a</a> und <a href="${_getSafeLink(fig1bId)}">1b</a> dargestellt.</p>
+                <p>Insgesamt wurden ${formatNumber(anzahlGesamt,0)} Patienten (medianes Alter ${ageRangeText} Jahre; ${formatNumber(anzahlMaenner,0)} [${formatPercent(anzahlMaenner/anzahlGesamt, 0)}] Männer) in die finale Analyse eingeschlossen. Das Patientenflussdiagramm ist in <a href="${_getSafeLink(flowDiagramId)}">Abbildung Methoden 1</a> dargestellt. Davon erhielten ${formatNumber(anzahlNRCT,0)} (${formatPercent(anzahlNRCT/anzahlGesamt,0)}) eine neoadjuvante Radiochemotherapie (nRCT), während ${formatNumber(anzahlDirektOP,0)} (${formatPercent(anzahlDirektOP/anzahlGesamt,0)}) primär operiert wurden. Ein histopathologisch gesicherter Lymphknotenbefall (N+) lag bei ${nPlusAnzahl} (${nPlusProzent}) Patienten vor. Detaillierte Patientencharakteristika sind in <a href="${_getSafeLink(table1Id)}">Tabelle Ergebnisse 1</a> zusammengefasst. Die Alters- und Geschlechtsverteilung der Studienkohorte ist in <a href="${_getSafeLink(fig1aId)}">Abbildung Ergebnisse 1a</a> und <a href="${_getSafeLink(fig1bId)}">1b</a> dargestellt.</p>
             `;
         } else {
             return `
                 <h3 id="ergebnisse-patientencharakteristika-title">Patient Characteristics and Data Flow</h3>
-                <p>Of the initially screened patients, ${formatNumber(anzahlGesamt,0)} were included in the final analysis (<a href="${_getSafeLink(flowDiagramId)}">Methods Figure 1</a>). The study cohort consisted of ${formatNumber(anzahlMaenner,0)} (${formatPercent(anzahlMaenner/anzahlGesamt, 0)}) men and ${formatNumber(anzahlGesamt - anzahlMaenner,0)} (${formatPercent((anzahlGesamt - anzahlMaenner)/anzahlGesamt, 0)}) women, with a median age of ${ageRangeText} years. ${formatNumber(anzahlNRCT,0)} (${formatPercent(anzahlNRCT/anzahlGesamt,0)}) patients received neoadjuvant chemoradiotherapy (nRCT), while ${formatNumber(anzahlDirektOP,0)} (${formatPercent(anzahlDirektOP/anzahlGesamt,0)}) underwent upfront surgery. Histopathologically confirmed lymph node involvement (N+) was present in ${nPlusAnzahl} (${nPlusProzent}) patients. Further demographic and clinical data are summarized in <a href="${_getSafeLink(table1Id)}">Results Table 1</a>. The age and gender distribution is illustrated in <a href="${_getSafeLink(fig1aId)}">Results Figure 1a</a> and <a href="${_getSafeLink(fig1bId)}">1b</a>.</p>
+                <p>A total of ${formatNumber(anzahlGesamt,0)} patients (median age, ${ageRangeText} years; ${formatNumber(anzahlMaenner,0)} [${formatPercent(anzahlMaenner/anzahlGesamt, 0)}] men) were included in the final analysis. The patient flowchart is shown in <a href="${_getSafeLink(flowDiagramId)}">Methods Figure 1</a>. Of these, ${formatNumber(anzahlNRCT,0)} (${formatPercent(anzahlNRCT/anzahlGesamt,0)}) patients received neoadjuvant chemoradiotherapy (nRCT), while ${formatNumber(anzahlDirektOP,0)} (${formatPercent(anzahlDirektOP/anzahlGesamt,0)}) underwent upfront surgery. Histopathologically confirmed lymph node involvement (N+) was present in ${nPlusAnzahl} (${nPlusProzent}) patients. Detailed patient characteristics are summarized in <a href="${_getSafeLink(table1Id)}">Results Table 1</a>. The age and gender distribution of the study cohort is illustrated in <a href="${_getSafeLink(fig1aId)}">Results Figure 1a</a> and <a href="${_getSafeLink(fig1bId)}">1b</a>.</p>
             `;
         }
     }
@@ -530,19 +544,19 @@ const publicationTextGenerator = (() => {
             return `
                 <h2 id="discussion-title">Diskussion</h2>
                 <p>In dieser retrospektiven Studie an ${nGesamt} Patienten mit Rektumkarzinom wurde die diagnostische Leistung des kontrastmittelbasierten Avocado Signs (AS) für die Prädiktion des mesorektalen Lymphknotenstatus untersucht und mit etablierten sowie datengetriebenen T2-gewichteten (T2w) Kriterien verglichen. Das AS zeigte eine hohe diagnostische Genauigkeit (Fläche unter der Kurve [AUC], ${aucASGesamt} im Gesamtkollektiv), die über verschiedene Behandlungssubgruppen hinweg robust blieb. Im direkten statistischen Vergleich mit den für diese Kohorte optimierten T2w-Kriterien ${vergleichTextDe} (P = ${pWertDiskussion} für AUC-Vergleich).</p>
-                <p>Die Ergebnisse unterstreichen das Potenzial des AS als wertvollen und möglicherweise einfacher anzuwendenden Marker im Vergleich zu komplexen morphologischen T2w-Kriterien, deren Limitationen in der Literatur bekannt sind [1-3]. Unsere Analyse der Literatur-basierten T2w-Kriterien bestätigte deren variable Performance in unserer Kohorte. Die explorative Optimierung von T2w-Kriterien mittels eines Brute-Force-Algorithmus führte zwar zu einer Maximierung der Zielmetrik für die spezifischen Kollektive dieser Studie, jedoch ist die Generalisierbarkeit solcher rein datengetriebenen Ansätze kritisch zu bewerten, da ein Risiko der Überanpassung an den Trainingsdatensatz besteht. Die klare Definition des AS könnte hier Vorteile bieten.</p>
+                <p>Die Ergebnisse unterstreichen das Potenzial des AS als wertvollen und möglicherweise einfacher anzuwendenden Marker im Vergleich zu komplexen morphologischen T2w-Kriterien, deren Limitationen in der Literatur bekannt sind [1-3]. Unsere Analyse der Literatur-basierten T2w-Kriterien bestätigte deren variable Performance in unserer Kohorte. Die explorative Optimierung von T2w-Kriterien mittels eines Brute-Force-Algorithmus führte zwar zu einer Maximierung der Zielmetrik für die spezifischen Kollektive dieser Studie, jedoch unterstreicht dies auch die Kohortenspezifität und das Risiko der Überanpassung solcher rein datengetriebenen Ansätze. Die klare Definition des AS könnte hier Vorteile bieten.</p>
                 <p>Die in der Primärstudie berichtete hohe Interobserver-Übereinstimmung für das AS (${commonData.references?.LURZ_SCHAEFER_AS_2025 || "Lurz & Schäfer (2025)"}) ist ein wichtiger Aspekt für die klinische Anwendbarkeit. Eine verbesserte Genauigkeit des präoperativen N-Stagings durch Integration des AS könnte insbesondere im Kontext individualisierter Therapiekonzepte, wie der Selektion von Patienten für organerhaltende Strategien [6,7], von Bedeutung sein.</p>
                 <p>Unsere Studie weist mehrere Limitationen auf. Erstens handelt es sich um eine retrospektive Analyse an einem einzelnen Zentrum, was die Generalisierbarkeit der Ergebnisse einschränken kann. Zweitens war die Fallzahl, obwohl für eine monozentrische Studie adäquat, möglicherweise nicht ausreichend, um subtile Unterschiede zwischen den diagnostischen Methoden in allen Subgruppen mit hoher statistischer Power nachzuweisen. Drittens wurden die T2w-Kriterien im Konsens gelesen, was die Interobserver-Variabilität möglicherweise unterschätzt. Viertens erfolgte keine systematische Erfassung oder Analyse von Faktoren, die die Bildqualität oder die Interpretation des AS beeinflussen könnten (z.B. Ausmaß der Fettunterdrückung, KM-Timing). Prospektive, multizentrische Studien sind erforderlich, um diese Ergebnisse zu validieren und den klinischen Nutzen des AS, auch im Vergleich zu anderen funktionellen MRT-Parametern (z.B. DWI), weiter zu untersuchen.</p>
-                <p>Zusammenfassend ist das Avocado Sign ein vielversprechender, einfach zu beurteilender und reproduzierbarer MRT-Marker mit hoher diagnostischer Genauigkeit für die Prädiktion des mesorektalen Lymphknotenstatus beim Rektumkarzinom. Es hat das Potenzial, das präoperative Staging zu verbessern und die Therapieplanung für Patienten mit Rektumkarzinom zu personalisieren. Weitere Studien sind notwendig, um seinen Stellenwert im klinischen Algorithmus endgültig zu definieren.</p>
+                <p>Zusammenfassend ist das Avocado Sign ein vielversprechender und reproduzierbarer MRT-Marker mit hoher diagnostischer Genauigkeit für die Prädiktion des mesorektalen Lymphknotenstatus beim Rektumkarzinom. Es stellt eine wertvolle Ergänzung zu den etablierten Staging-Methoden dar und hat das Potenzial, die Therapieplanung für Patienten mit Rektumkarzinom zu verfeinern und zu personalisieren. Weitere Studien sind notwendig, um seinen Stellenwert im klinischen Algorithmus endgültig zu definieren.</p>
             `;
         } else {
             return `
                 <h2 id="discussion-title">Discussion</h2>
                 <p>This retrospective study in ${nGesamt} patients with rectal cancer evaluated the diagnostic performance of the contrast-enhanced Avocado Sign (AS) for predicting mesorectal lymph node status and compared it with established and data-driven T2-weighted (T2w) criteria. Our findings indicate that the AS demonstrates high diagnostic accuracy (area under the curve [AUC], ${aucASGesamt} in the overall cohort), which remained robust across different treatment subgroups. In direct statistical comparison with T2w criteria optimized for this cohort, the AS ${vergleichTextEn} (P = ${pWertDiskussion} for AUC comparison).</p>
-                <p>The results underscore the potential of AS as a valuable and possibly more straightforward marker compared to complex morphological T2w criteria, whose limitations are well-documented in the literature [1-3]. Our analysis of literature-based T2w criteria confirmed their variable performance in our cohort. Although exploratory optimization of T2w criteria using a brute-force algorithm maximized the target metric for the specific cohorts of this study, the generalizability of such purely data-driven approaches must be critically assessed due to the risk of overfitting to the training dataset. The clear definition of the AS might offer advantages in this regard.</p>
-                <p>The high interobserver agreement for the AS reported in the primary study (${commonData.references?.LURZ_SCHAEFER_AS_2025 || "Lurz & Schäfer (2025)"}) is an important aspect for clinical applicability. Improved accuracy of preoperative N-staging through integration of the AS could be particularly relevant in the context of individualized treatment concepts, such as selecting patients for organ-preserving strategies [6,7].</p>
+                <p>The results underscore the potential of AS as a valuable and possibly more straightforward marker compared to complex morphological T2w criteria, whose limitations are well-documented in the literature [1-3]. Our analysis of literature-based T2w criteria confirmed their variable performance in our cohort. Although exploratory optimization of T2w criteria using a brute-force algorithm maximized the target metric for the specific cohorts of this study, this also highlights the cohort specificity and risk of overfitting with such purely data-driven approaches. The clear definition and simple visual assessability of the Avocado Sign may offer advantages in terms of generalizability and user-friendliness.</p>
+                <p>A crucial aspect for the clinical implementation of a new imaging marker is its reproducibility. The high interobserver agreement reported for the Avocado Sign in the primary study (${commonData.references?.LURZ_SCHAEFER_AS_2025 || "Lurz & Schäfer (2025)"}) suggests good applicability in daily clinical practice. The results of this extended analysis suggest that the integration of contrast-enhanced T1w sequences and the specific assessment of the Avocado Sign could enhance the diagnostic certainty of MRI staging. This is of potentially high value, particularly in the context of individualized treatment decisions, such as selecting patients for organ-preserving strategies [4,5] or de-/escalating neoadjuvant therapies.</p>
                 <p>Our study has several limitations. First, it is a retrospective, single-center analysis, which may limit the generalizability of the findings. Second, although the sample size was adequate for a single-center study, it may not have been sufficient to detect subtle differences between diagnostic methods in all subgroups with high statistical power. Third, T2w criteria were read by consensus, which might underestimate interobserver variability. Fourth, factors potentially influencing image quality or AS interpretation (e.g., degree of fat suppression, contrast timing) were not systematically recorded or analyzed. Prospective, multicenter studies are necessary to validate these results and to further investigate the clinical utility of the AS, including comparison with other functional MRI parameters (e.g., DWI).</p>
-                <p>In conclusion, the Avocado Sign is a promising, easily assessable, and reproducible MRI marker with high diagnostic accuracy for predicting mesorectal lymph node status in rectal cancer. It has the potential to improve preoperative staging and personalize treatment planning for patients with rectal cancer. Further studies are needed to definitively establish its role in the clinical algorithm.</p>
+                <p>In conclusion, the Avocado Sign is a promising and reproducible MRI marker with high diagnostic accuracy for predicting mesorectal lymph node status in rectal cancer. It represents a valuable addition to established staging methods and has the potential to refine and personalize treatment planning for patients with rectal cancer. Further studies are needed to definitively establish its role in the clinical algorithm.</p>
             `;
         }
     }
@@ -574,13 +588,13 @@ const publicationTextGenerator = (() => {
         let autoCounter = 1;
         const usedNumberedRefs = new Set();
 
-        const getRefNumberAndClean = (refStr) => {
-            const match = refStr.match(/^\[(\d+)\]\s*/);
+        const getRefNumberAndClean = (currentRefString) => { // Parameter umbenannt
+            const match = currentRefString.match(/^\[(\d+)\]\s*/);
             if (match) {
                 usedNumberedRefs.add(parseInt(match[1]));
-                return { num: parseInt(match[1]), text: refStr.substring(match[0].length) };
+                return { num: parseInt(match[1]), text: currentRefString.substring(match[0].length) };
             }
-            return { num: null, text: refString };
+            return { num: null, text: currentRefString }; // currentRefString statt refString
         };
         
         const getNextAutoCounter = () => {
@@ -593,10 +607,10 @@ const publicationTextGenerator = (() => {
             return current;
         };
 
-        text += referenceOrder.map(refString => {
-            if (refString && !displayedRefs.has(refString)) {
-                displayedRefs.add(refString);
-                const { num, text: cleanRefText } = getRefNumberAndClean(refString);
+        text += referenceOrder.map(currentRefString => { // Parameter umbenannt
+            if (currentRefString && !displayedRefs.has(currentRefString)) {
+                displayedRefs.add(currentRefString);
+                const { num, text: cleanRefText } = getRefNumberAndClean(currentRefString); // Korrekter Aufruf
                 const displayNum = num !== null ? num : getNextAutoCounter();
                 return `<li>[${displayNum}] ${cleanRefText}</li>`;
             }
@@ -666,7 +680,8 @@ const publicationTextGenerator = (() => {
             const symbols = { '&ge;': '≥', '&le;': '≤', '&lt;': '<', '&gt;': '>' };
             return symbols[entity] || match;
         });
-        markdown = markdown.replace(/\$([^$]+)\$/g, '$1'); // Remove remaining single $ if any were used for symbols
+        markdown = markdown.replace(/\$([^$]+)\$/g, '$1'); 
+
 
         if (sectionId === 'references_main' && markdown.includes('\n* ')) {
             let autoCounterMd = 1;
