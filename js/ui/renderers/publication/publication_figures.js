@@ -6,9 +6,11 @@ const publicationFigures = (() => {
 
     function _findConfigById(id) {
         for (const sectionKey in PUBLICATION_CONFIG.publicationElements) {
-            for (const elementKey in PUBLICATION_CONFIG.publicationElements[sectionKey]) {
-                if (PUBLICATION_CONFIG.publicationElements[sectionKey][elementKey].id === id) {
-                    return PUBLICATION_CONFIG.publicationElements[sectionKey][elementKey];
+            if (PUBLICATION_CONFIG.publicationElements.hasOwnProperty(sectionKey)) {
+                for (const elementKey in PUBLICATION_CONFIG.publicationElements[sectionKey]) {
+                    if (PUBLICATION_CONFIG.publicationElements[sectionKey].hasOwnProperty(elementKey) && PUBLICATION_CONFIG.publicationElements[sectionKey][elementKey].id === id) {
+                        return PUBLICATION_CONFIG.publicationElements[sectionKey][elementKey];
+                    }
                 }
             }
         }
@@ -96,7 +98,7 @@ const publicationFigures = (() => {
             <div class="chart-container border rounded p-2" id="${targetElementId}">
                 <h5 class="text-center small mb-1">${chartTitle}</h5>
                 <div id="${targetElementId}-chart-area" style="min-height: 220px;"></div>
-                <p class="text-muted small text-center p-1">${figRef}</p>
+                <p class="text-muted small text-center p-1">${figRef}. ${lang === 'de' ? `Histogramm der Altersverteilung im Gesamtkollektiv (N=${ageData?.length || 0}).` : `Histogram of age distribution in the overall cohort (n=${ageData?.length || 0}).`}</p>
             </div>
         `;
         return chartHtml;
@@ -106,12 +108,13 @@ const publicationFigures = (() => {
         const figureConfig = _findConfigById(targetElementId);
         const chartTitle = figureConfig ? (lang === 'de' ? figureConfig.titleDe : figureConfig.titleEn) : (lang === 'de' ? 'Geschlechterverteilung' : 'Gender Distribution');
         const figRef = lang === 'de' ? `Abbildung Ergebnisse 1b` : `Results Figure 1b`;
+        const totalGenderData = (genderData?.m || 0) + (genderData?.f || 0) + (genderData?.unbekannt || 0);
 
         const chartHtml = `
             <div class="chart-container border rounded p-2" id="${targetElementId}">
                 <h5 class="text-center small mb-1">${chartTitle}</h5>
                 <div id="${targetElementId}-chart-area" style="min-height: 220px;"></div>
-                <p class="text-muted small text-center p-1">${figRef}</p>
+                <p class="text-muted small text-center p-1">${figRef}. ${lang === 'de' ? `Tortendiagramm der Geschlechterverteilung im Gesamtkollektiv (N=${totalGenderData}).` : `Pie chart of gender distribution in the overall cohort (n=${totalGenderData}).`}</p>
             </div>
         `;
         return chartHtml;
@@ -128,12 +131,13 @@ const publicationFigures = (() => {
         };
         const chartLetter = chartLetterMap[kolId] || '';
         const figRef = lang === 'de' ? `Abbildung Ergebnisse 2${chartLetter}` : `Results Figure 2${chartLetter}`;
+        const patientCount = commonData?.nGesamt || 0; // Annahme, dass commonData hier verfügbar ist oder übergeben wird
 
         const chartHtml = `
             <div class="chart-container border rounded p-2" id="${targetElementId}">
                 <h5 class="text-center small mb-1">${chartTitle}</h5>
                 <div id="${targetElementId}-chart-area" style="min-height: 250px;"></div>
-                <p class="text-muted small text-center p-1">${figRef}</p>
+                <p class="text-muted small text-center p-1">${figRef}. ${lang === 'de' ? `Balkendiagramm: Vergleich der diagnostischen Gütekriterien (AS vs. ${t2Label}) für das ${getKollektivDisplayName(kolId)} (N=${patientCount}).` : `Bar chart: Comparison of diagnostic performance metrics (AS vs. ${t2Label}) for the ${getKollektivDisplayName(kolId)} (n=${patientCount}).`}</p>
             </div>
         `;
         return chartHtml;
