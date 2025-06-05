@@ -125,9 +125,17 @@ const abstractGenerator = (() => {
         html += _generateResults(aggregatedData, lang);
         html += _generateConclusion(aggregatedData, lang);
         
-        const abbreviations = APP_CONFIG.PUBLICATION_JOURNAL_REQUIREMENTS.MANUSCRIPT_TYPE_ORIGINAL_RESEARCH.ABBREVIATION_LIST_MAX_COUNT > 0 ? 
-            (lang === 'de' ? ` N-Status, Nodalstatus; MRT, Magnetresonanztomographie; AS, Avocado Sign; T2w, T2-gewichtet; ACC, Accuracy; AUC, Fläche unter der Kurve; KI, Konfidenzintervall; KM, Kontrastmittel.` : ` N-status, Nodal status; MRI, Magnetic Resonance Imaging; AS, Avocado Sign; T2w, T2-weighted; ACC, Accuracy; AUC, Area Under the Curve; CI, Confidence Interval; CE, Contrast-Enhanced.`)
-            : "";
+        const abbreviationListMaxCount = APP_CONFIG.PUBLICATION_JOURNAL_REQUIREMENTS.MANUSCRIPT_TYPE_ORIGINAL_RESEARCH.ABBREVIATION_LIST_MAX_COUNT || 0;
+        let abbreviations = '';
+
+        if (abbreviationListMaxCount > 0) {
+            if (lang === 'de') {
+                 abbreviations = ` N-Status, Nodalstatus; MRT, Magnetresonanztomographie; AS, Avocado Sign; T2w, T2-gewichtet; ACC, Accuracy; AUC, Fläche unter der Kurve; KI, Konfidenzintervall; KM, Kontrastmittel.`;
+            } else {
+                 abbreviations = ` N-status, Nodal status; MRI, Magnetic Resonance Imaging; AS, Avocado Sign; T2w, T2-weighted; ACC, Accuracy; AUC, Area Under the Curve; CI, Confidence Interval; CE, Contrast-Enhanced.`;
+            }
+        }
+        
         if (abbreviations) {
              html += `<p class="small text-muted mt-2">${lang === 'de' ? 'Abkürzungen:' : 'Abbreviations:'}${abbreviations}</p>`;
         }
