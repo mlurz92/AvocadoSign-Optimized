@@ -39,7 +39,7 @@ const uiComponents = (() => {
     }
 
     function createDashboardCard(title, content, chartId = null, cardClasses = '', headerClasses = '', bodyClasses = '', downloadButtons = []) {
-        const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, chartId || title.replace(/[^a-z0-9]/gi, '_'), title);
+        const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, chartId || title.replace(/[^a-zA-Z0-9]/gi, '_'), title);
         const tooltipKey = chartId ? chartId.replace(/^chart-dash-/, '') : title.toLowerCase().replace(/\s+/g, '');
         let tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik[tooltipKey]?.description || title || '';
         if(tooltipKey === 'ageDistribution' || tooltipKey === 'alter') tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik.chartAge?.description || title;
@@ -327,7 +327,7 @@ const uiComponents = (() => {
             const metricData = stats[key];
             const metricDescription = (TOOLTIP_CONTENT.t2MetricsOverview?.[key] || TOOLTIP_CONTENT.statMetrics[key]?.description || key).replace(/\[METHODE\]/g, '<strong>T2 (angewandt)</strong>');
             const interpretationHTML = ui_helpers.getMetricInterpretationHTML(key, metricData, 'T2 (angewandt)', displayKollektivName);
-            const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
+            const digits = (key === 'f1' || key === 'auc') ? 2 : 0; // AUC und F1 haben 2 bzw 3 Nachkommastellen (numerisch), Sens, Spez etc. %
             const isPercent = !(key === 'f1' || key === 'auc');
             const formattedValue = formatCI(metricData?.value, metricData?.ci?.lower, metricData?.ci?.upper, digits, isPercent, na);
 
@@ -386,17 +386,18 @@ const uiComponents = (() => {
                     <tbody>`;
 
         let rank = 1, displayedCount = 0, lastMetricValue = -Infinity;
-        const precision = 8;
+        const precision = 8; // Für den Vergleich von Gleitkommazahlen
 
         for (let i = 0; i < results.length; i++) {
             const result = results[i];
             if (!result || typeof result.metricValue !== 'number' || !isFinite(result.metricValue)) continue;
 
+            // Runden für den Vergleich, um Gleitkommaungenauigkeiten zu vermeiden
             const currentMetricValueRounded = parseFloat(result.metricValue.toFixed(precision));
             const lastMetricValueRounded = parseFloat(lastMetricValue.toFixed(precision));
             let currentRank = rank;
 
-            const isNewRank = Math.abs(currentMetricValueRounded - lastMetricValueRounded) > 1e-8;
+            const isNewRank = Math.abs(currentMetricValueRounded - lastMetricValueRounded) > 1e-8; // Toleranz für Gleichheit
 
             if (i > 0 && isNewRank) {
                 rank = displayedCount + 1;
@@ -405,7 +406,10 @@ const uiComponents = (() => {
                 currentRank = rank;
             }
 
-            if (rank > 10 && isNewRank && i >=10 ) break; // Ensure at least 10 distinct ranks or more items if scores are tied
+            // Sicherstellen, dass mindestens 10 Ränge oder mehr, falls Werte gleich sind
+            if (currentRank > 10 && isNewRank) break; 
+            if (displayedCount >= 10 && !isNewRank && i > 0 && Math.abs(currentMetricValueRounded - results[displayedCount-1].metricValue.toFixed(precision)) > 1e-8) break; // If we already displayed 10 unique ranks and the current one is different from last displayed.
+
 
             tableHTML += `
                 <tr>
@@ -434,9 +438,14 @@ const uiComponents = (() => {
 
         const sectionNavItems = PUBLICATION_CONFIG.sections.map(mainSection => {
             const sectionTooltip = TOOLTIP_CONTENT.publikationTabTooltips[mainSection.id]?.description || UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey;
+            // Bestimme, ob der Nav-Link als "disabled" (sprich: Überschrift) gerendert werden soll
+            const isDisabled = mainSection.subSections.length === 1 && mainSection.subSections[0].id === `${mainSection.id}_main`;
+            const navLinkClass = isDisabled ? 'nav-link disabled' : 'nav-link publikation-section-link';
+            const dataSectionIdAttr = isDisabled ? '' : `data-section-id="${mainSection.id}"`;
+
             return `
                 <li class="nav-item">
-                    <a class="nav-link py-2 publikation-section-link" href="#" data-section-id="${mainSection.id}" data-tippy-content="${sectionTooltip}">
+                    <a class="${navLinkClass}" href="#" ${dataSectionIdAttr} data-tippy-content="${sectionTooltip}">
                         ${UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}
                     </a>
                 </li>`;
