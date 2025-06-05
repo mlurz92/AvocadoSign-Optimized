@@ -4,7 +4,6 @@ const viewRenderer = (() => {
         const containerId = `${tabId}-pane`;
         const container = document.getElementById(containerId);
         if (!container) {
-            console.error(`Container #${containerId} nicht gefunden für Tab ${tabId}.`);
             return;
         }
         ui_helpers.updateElementHTML(containerId, '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade Inhalt...</span></div></div>');
@@ -13,7 +12,6 @@ const viewRenderer = (() => {
             ui_helpers.updateElementHTML(containerId, contentHTML || '<p class="text-muted p-3">Kein Inhalt generiert.</p>');
             ui_helpers.initializeTooltips(container);
         } catch (error) {
-            console.error(`Fehler beim Rendern von Tab ${tabId}:`, error);
             const errorMessage = `<div class="alert alert-danger m-3">Fehler beim Laden des Tabs: ${error.message}</div>`;
             ui_helpers.updateElementHTML(containerId, errorMessage);
             ui_helpers.showToast(`Fehler beim Laden des Tabs '${tabId}'.`, 'danger');
@@ -59,7 +57,7 @@ const viewRenderer = (() => {
             chartRenderer.renderPieChart([{label: UI_TEXTS.legendLabels.asPositive, value: stats.asStatus?.plus ?? 0}, {label: UI_TEXTS.legendLabels.asNegative, value: stats.asStatus?.minus ?? 0}], ids[4], {...pieOpts, legendItemCount: 2});
             chartRenderer.renderPieChart([{label: UI_TEXTS.legendLabels.t2Positive, value: stats.t2Status?.plus ?? 0}, {label: UI_TEXTS.legendLabels.t2Negative, value: stats.t2Status?.minus ?? 0}], ids[5], {...pieOpts, legendItemCount: 2});
         }
-        catch(error) { console.error("Fehler bei Chart-Rendering im Dashboard:", error); ids.forEach(id => ui_helpers.updateElementHTML(id, '<p class="text-danger small text-center p-2">Chart Fehler</p>')); }
+        catch(error) { ids.forEach(id => ui_helpers.updateElementHTML(id, '<p class="text-danger small text-center p-2">Chart Fehler</p>')); }
     }
 
      function _renderCriteriaComparisonTable(containerId, processedDataFull, globalKollektiv) {
@@ -112,7 +110,7 @@ const viewRenderer = (() => {
                         perf = null;
                     }
                 }
-            } catch (error) { console.error(`Fehler bei Berechnung für Vergleichsset ${setId}:`, error); perf = null; }
+            } catch (error) { perf = null; }
 
             results.push({
                 id: setIdUsed,
@@ -205,14 +203,14 @@ const viewRenderer = (() => {
                              `;
                               _renderAuswertungDashboardCharts(stats);
                          }
-                     } catch (error) { console.error("Fehler _renderAuswertungDashboard:", error); ui_helpers.updateElementHTML(dashboardContainerId, '<div class="col-12"><div class="alert alert-danger">Dashboard Fehler.</div></div>'); }
+                     } catch (error) { ui_helpers.updateElementHTML(dashboardContainerId, '<div class="col-12"><div class="alert alert-danger">Dashboard Fehler.</div></div>'); }
                  }
 
                  if (metricsOverviewContainer) {
                      try {
                         const statsT2 = statisticsService.calculateDiagnosticPerformance(data, 't2', 'n');
                         ui_helpers.updateElementHTML(metricsOverviewContainer.id, uiComponents.createT2MetricsOverview(statsT2, getKollektivDisplayName(currentKollektiv)));
-                     } catch (error) { console.error("Fehler beim Rendern der T2 Metrikübersicht:", error); ui_helpers.updateElementHTML(metricsOverviewContainer.id, '<div class="alert alert-warning p-2 small">Fehler T2-Metriken.</div>'); }
+                     } catch (error) { ui_helpers.updateElementHTML(metricsOverviewContainer.id, '<div class="alert alert-warning p-2 small">Fehler T2-Metriken.</div>'); }
                  }
 
                  if(tableContainer) {
@@ -224,7 +222,7 @@ const viewRenderer = (() => {
 
                  ui_helpers.updateT2CriteriaControlsUI(currentCriteria, currentLogic);
                  ui_helpers.markCriteriaSavedIndicator(t2CriteriaManager.isUnsaved());
-                 ui_helpers.updateBruteForceUI('idle', {}, bfWorkerAvailable, currentKollektiv);
+                 ui_helpers.updateBruteForceUI('idle', {}, bruteForceManager.isWorkerAvailable(), currentKollektiv);
                  ui_helpers.initializeTooltips(document.getElementById('auswertung-tab-pane'));
              }, 10);
 
@@ -240,7 +238,7 @@ const viewRenderer = (() => {
              let baseEvaluatedData = [];
              try {
                   baseEvaluatedData = t2CriteriaManager.evaluateDataset(cloneDeep(processedDataFull), appliedCriteria, appliedLogic);
-             } catch(e) { console.error("Fehler bei der T2 Evaluierung für Statistik:", e); }
+             } catch(e) { }
 
              if (layout === 'einzel') { const singleData = dataProcessor.filterDataByKollektiv(baseEvaluatedData, currentGlobalKollektiv); datasets.push(singleData); kollektivNames.push(currentGlobalKollektiv); kollektivDisplayNames.push(getKollektivDisplayName(currentGlobalKollektiv)); }
              else { const data1 = dataProcessor.filterDataByKollektiv(baseEvaluatedData, kollektiv1); const data2 = dataProcessor.filterDataByKollektiv(baseEvaluatedData, kollektiv2); datasets.push(data1); datasets.push(data2); kollektivNames.push(kollektiv1); kollektivNames.push(kollektiv2); kollektivDisplayNames.push(getKollektivDisplayName(kollektiv1)); kollektivDisplayNames.push(getKollektivDisplayName(kollektiv2)); }
@@ -267,7 +265,7 @@ const viewRenderer = (() => {
                              vergleichASvsT2: statisticsService.compareDiagnosticMethods(data, 'as', 't2', 'n'),
                              assoziation: statisticsService.calculateAssociations(data, appliedCriteria)
                          };
-                     } catch(e) { console.error(`Statistikfehler für Kollektiv ${i}:`, e); }
+                     } catch(e) { }
 
                      if (!stats) { innerContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">Fehler bei Statistikberechnung.</div></div>'; return; }
                      const descCardId=`deskriptiveStatistik-${i}`; const gueteASCardId=`diagnostischeGueteAS-${i}`; const gueteT2CardId=`diagnostischeGueteT2-${i}`; const vergleichASvsT2CardId=`statistischerVergleichASvsT2-${i}`; const assoziationCardId=`assoziationEinzelkriterien-${i}`;
@@ -460,66 +458,64 @@ const viewRenderer = (() => {
 
     function renderPublikationTab(currentLang, currentSection, currentKollektiv, globalProcessedData, bruteForceResults) {
         _renderTabContent('publikation-tab', () => {
+            // Initialisiere Daten für den Publikationstab (umfasst alle Kollektive und Berechnungen)
             publikationTabLogic.initializeData(
-                globalProcessedData,
-                t2CriteriaManager.getAppliedCriteria(),
-                t2CriteriaManager.getAppliedLogic(),
-                bruteForceResults
+                globalProcessedData, // rawGlobalDataInputForLogic
+                t2CriteriaManager.getAppliedCriteria(), // appliedCriteriaForLogic
+                t2CriteriaManager.getAppliedLogic(), // appliedLogicForLogic
+                bruteForceResults // bfResultsPerKollektivForLogic
             );
 
+            // Header-Bereich des Publikationstabs (Sprachauswahl, Sektionsnavigation, BF-Metrik-Auswahl)
             const headerHTML = uiComponents.createPublikationTabHeader();
+            
+            // Initialer Inhalt für den Hauptanzeigebereich (Text, Tabellen, Charts)
             const initialContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv);
             
+            // Erstelle einen Container für den Publikationstab-Inhalt und fülle ihn
             const container = document.createElement('div');
-            container.innerHTML = headerHTML;
-            const contentAreaDiv = document.createElement('div');
-            contentAreaDiv.id = 'publikation-content-area'; // Ensure this matches the ID used in ui_helpers
-            contentAreaDiv.className = 'bg-white p-3 border rounded'; // Apply styles as in createPublikationTabHeader
-            contentAreaDiv.style.minHeight = '400px';
-            contentAreaDiv.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)'; // Match styles
-            contentAreaDiv.style.overflowY = 'auto';
-            contentAreaDiv.innerHTML = initialContentHTML;
-            
-            const mainCol = container.querySelector('.col-md-9'); // Target specific column if headerHTML has this structure
-            if (mainCol) {
-                const existingContentArea = mainCol.querySelector('#publikation-content-area');
-                if (existingContentArea) {
-                    existingContentArea.innerHTML = initialContentHTML;
-                } else {
-                     const controlDiv = mainCol.querySelector('.d-flex.justify-content-end.align-items-center.mb-2');
-                     if(controlDiv) {
-                         controlDiv.insertAdjacentElement('afterend', contentAreaDiv);
-                     } else {
-                         mainCol.appendChild(contentAreaDiv);
-                     }
+            container.innerHTML = headerHTML; // HeaderHTML enthält bereits die Struktur mit .col-md-3 und .col-md-9
+
+            // Finden des richtigen Platzes für den contentAreaDiv innerhalb des gerenderten headerHTML
+            const mainContentCol = container.querySelector('.col-md-9'); // Dies ist die Spalte, in die der Inhalt gerendert wird
+            if (mainContentCol) {
+                // Erstelle das Element für den Inhaltsbereich oder finde es, falls es schon existiert
+                let contentAreaDiv = mainContentCol.querySelector('#publikation-content-area');
+                if (!contentAreaDiv) {
+                    contentAreaDiv = document.createElement('div');
+                    contentAreaDiv.id = 'publikation-content-area';
+                    contentAreaDiv.className = 'bg-white p-3 border rounded'; // Stilklassen
+                    contentAreaDiv.style.minHeight = '400px';
+                    contentAreaDiv.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)'; // Höhe anpassen
+                    contentAreaDiv.style.overflowY = 'auto'; // Scrollbar bei Bedarf
+                    
+                    const controlDiv = mainContentCol.querySelector('.d-flex.justify-content-end.align-items-center.mb-2');
+                    if(controlDiv) {
+                        // Füge den contentAreaDiv nach dem controlDiv ein
+                        controlDiv.insertAdjacentElement('afterend', contentAreaDiv);
+                    } else {
+                        // Fallback: Füge ihn einfach am Ende der Hauptspalte an
+                        mainContentCol.appendChild(contentAreaDiv);
+                    }
                 }
+                contentAreaDiv.innerHTML = initialContentHTML; // Inhalt setzen
             } else {
-                 console.warn("Hauptspalte für Publikationsinhalt nicht im Header-HTML gefunden. Inhalt wird möglicherweise nicht korrekt platziert.");
+                 // Fallback, falls die erwartete Struktur nicht gefunden wird (sollte nicht passieren)
                  const fallbackContainer = container.querySelector('#publikation-content-area') || container;
                  fallbackContainer.innerHTML = initialContentHTML;
             }
 
 
             setTimeout(() => {
-                const contentArea = document.getElementById('publikation-content-area');
-                if (!contentArea) { // Double check if it was not found or created above
-                     const mainContentCol = document.querySelector('#publikation-tab-pane .col-md-9');
-                     if (mainContentCol) {
-                          const newContentArea = document.createElement('div');
-                          newContentArea.id = 'publikation-content-area';
-                          newContentArea.className = 'bg-white p-3 border rounded';
-                          newContentArea.style.minHeight = '400px';
-                          newContentArea.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)';
-                          newContentArea.style.overflowY = 'auto';
-                          newContentArea.innerHTML = initialContentHTML;
-                          mainContentCol.appendChild(newContentArea);
-                     }
-                }
+                // Aktualisiere dynamische Charts NACHDEM der HTML-Inhalt im DOM ist
                 publikationTabLogic.updateDynamicChartsForPublicationTab(currentSection, currentLang, currentKollektiv);
+                // Aktualisiere den UI-Zustand des Publikationstabs (z.B. aktive Sektion, BF-Metrik)
                 ui_helpers.updatePublikationUI(currentLang, currentSection, state.getCurrentPublikationBruteForceMetric());
+                // Initialisiere Tooltips für den gesamten Publikationstab
                 ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
             }, 10);
 
+            // Rückgabe des outerHTML des erstellten Containers, um ihn in den DOM zu rendern
             return container.innerHTML;
         });
     }
