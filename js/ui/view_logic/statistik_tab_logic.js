@@ -119,13 +119,13 @@ const statistikTabLogic = (() => {
                 pTooltipKey = 'mannwhitney';
              }
              const merkmalName = assocObj?.featureName || key;
-             const descriptionTemplate = TOOLTIP_CONTENT.statMetrics[pTooltipKey]?.description || TOOLTIP_CONTENT.statMetrics.defaultP.description || 'Testbeschreibung nicht verfügbar.';
+             const descriptionTemplate = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statMetrics && TOOLTIP_CONTENT.statMetrics[pTooltipKey]) ? TOOLTIP_CONTENT.statMetrics[pTooltipKey].description : ( (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statMetrics && TOOLTIP_CONTENT.statMetrics.defaultP) ? TOOLTIP_CONTENT.statMetrics.defaultP.description : 'Testbeschreibung nicht verfügbar.');
              return descriptionTemplate.replace(/\[MERKMAL\]/g, `<strong>'${merkmalName}'</strong>`).replace(/\[VARIABLE\]/g, `<strong>'${merkmalName}'</strong>`);
         };
 
         const getMerkmalDescriptionHTMLAssoc = (key, assocObj) => {
-             const baseName = TOOLTIP_CONTENT.statMetrics[key]?.name || assocObj?.featureName || key;
-             const tooltipDescription = TOOLTIP_CONTENT.statMetrics[key]?.description || `Dieses Merkmal ('${baseName}') wird auf Assoziation mit dem N-Status getestet.`;
+             const baseName = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statMetrics && TOOLTIP_CONTENT.statMetrics[key]) ? TOOLTIP_CONTENT.statMetrics[key].name : (assocObj?.featureName || key);
+             const tooltipDescription = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statMetrics && TOOLTIP_CONTENT.statMetrics[key]) ? TOOLTIP_CONTENT.statMetrics[key].description : `Dieses Merkmal ('${baseName}') wird auf Assoziation mit dem N-Status getestet.`;
              return tooltipDescription.replace(/\[MERKMAL\]/g, `<strong>'${baseName}'</strong>`).replace(/\[METHODE\]/g, `<strong>'${baseName}'</strong>`);
         };
 
@@ -160,7 +160,7 @@ const statistikTabLogic = (() => {
             const pStr = fP(mwuObj.pValue);
             const sigSymbol = getStatisticalSignificanceSymbol(mwuObj.pValue);
             const pTooltip = getPValueInterpretationAssoc('size_mwu', mwuObj);
-            const descTooltip = TOOLTIP_CONTENT.statMetrics.size_mwu.description || "Vergleich der medianen Lymphknotengröße zwischen N+ und N- Patienten mittels Mann-Whitney-U-Test.";
+            const descTooltip = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statMetrics && TOOLTIP_CONTENT.statMetrics.size_mwu) ? TOOLTIP_CONTENT.statMetrics.size_mwu.description : "Vergleich der medianen Lymphknotengröße zwischen N+ und N- Patienten mittels Mann-Whitney-U-Test.";
             const testDescTooltip = getTestDescriptionAssoc(mwuObj, 'size_mwu');
             tableHTML += `<tr>
                 <td data-tippy-content="${descTooltip}">${mwuObj.featureName || 'LK Größe (Median Vgl.)'}</td>
@@ -188,7 +188,7 @@ const statistikTabLogic = (() => {
         const aucAS = stats.aucComparison?.as; const aucT2 = stats.aucComparison?.t2;
 
         const getPValueInterpretationComp = (pValue, testKey, methode) => {
-             const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[testKey]?.interpretation || 'Keine Interpretation verfügbar.';
+             const interpretationTemplate = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statMetrics && TOOLTIP_CONTENT.statMetrics[testKey]) ? TOOLTIP_CONTENT.statMetrics[testKey].interpretation : 'Keine Interpretation verfügbar.';
              const pStr = (pValue !== null && !isNaN(pValue)) ? (pValue < 0.001 ? '&lt;0.001' : formatNumber(pValue, 3, na, true)) : na;
              const sigText = getStatisticalSignificanceText(pValue);
              return interpretationTemplate
@@ -198,12 +198,15 @@ const statistikTabLogic = (() => {
                  .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
                  .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`);
         };
+        const accCompDescription = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statMetrics && TOOLTIP_CONTENT.statMetrics.accComp) ? TOOLTIP_CONTENT.statMetrics.accComp.description : 'Vergleich Accuracy der Methode [METHODE] zwischen zwei Kollektiven.';
+        const aucCompDescription = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statMetrics && TOOLTIP_CONTENT.statMetrics.aucComp) ? TOOLTIP_CONTENT.statMetrics.aucComp.description : 'Vergleich AUC der Methode [METHODE] zwischen zwei Kollektiven.';
+
 
         let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped small mb-0" id="table-vergleich-kollektive-${kollektiv1Name.replace(/\s+/g, '_')}-vs-${kollektiv2Name.replace(/\s+/g, '_')}"><caption>Vergleich der diagnostischen Leistung zwischen den Kollektiven ${kollektiv1Display} und ${kollektiv2Display}</caption><thead><tr><th>Vergleich</th><th>Methode</th><th>p-Wert</th><th>Test</th></tr></thead><tbody>`;
-        tableHTML += `<tr><td>Accuracy</td><td>AS</td><td data-tippy-content="${getPValueInterpretationComp(accAS?.pValue, 'accComp', 'AS')}">${fP(accAS?.pValue)} ${getStatisticalSignificanceSymbol(accAS?.pValue)}</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.accComp?.description || 'Vergleich Accuracy der Methode [METHODE] zwischen zwei Kollektiven.').replace('[METHODE]','AS')}">${accAS?.testName || na}</td></tr>`;
-        tableHTML += `<tr><td>Accuracy</td><td>T2</td><td data-tippy-content="${getPValueInterpretationComp(accT2?.pValue, 'accComp', 'T2')}">${fP(accT2?.pValue)} ${getStatisticalSignificanceSymbol(accT2?.pValue)}</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.accComp?.description || 'Vergleich Accuracy der Methode [METHODE] zwischen zwei Kollektiven.').replace('[METHODE]','T2')}">${accT2?.testName || na}</td></tr>`;
-        tableHTML += `<tr><td>AUC</td><td>AS</td><td data-tippy-content="${getPValueInterpretationComp(aucAS?.pValue, 'aucComp', 'AS')}">${fP(aucAS?.pValue)} ${getStatisticalSignificanceSymbol(aucAS?.pValue)} (Diff: ${formatNumber(aucAS?.diffAUC, 3, na, true)}, Z=${formatNumber(aucAS?.Z, 2, na, true)})</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.aucComp?.description || 'Vergleich AUC der Methode [METHODE] zwischen zwei Kollektiven.').replace('[METHODE]','AS')}">${aucAS?.method || na}</td></tr>`;
-        tableHTML += `<tr><td>AUC</td><td>T2</td><td data-tippy-content="${getPValueInterpretationComp(aucT2?.pValue, 'aucComp', 'T2')}">${fP(aucT2?.pValue)} ${getStatisticalSignificanceSymbol(aucT2?.pValue)} (Diff: ${formatNumber(aucT2?.diffAUC, 3, na, true)}, Z=${formatNumber(aucT2?.Z, 2, na, true)})</td><td data-tippy-content="${(TOOLTIP_CONTENT.statMetrics.aucComp?.description || 'Vergleich AUC der Methode [METHODE] zwischen zwei Kollektiven.').replace('[METHODE]','T2')}">${aucT2?.method || na}</td></tr>`;
+        tableHTML += `<tr><td>Accuracy</td><td>AS</td><td data-tippy-content="${getPValueInterpretationComp(accAS?.pValue, 'accComp', 'AS')}">${fP(accAS?.pValue)} ${getStatisticalSignificanceSymbol(accAS?.pValue)}</td><td data-tippy-content="${accCompDescription.replace('[METHODE]','AS')}">${accAS?.testName || na}</td></tr>`;
+        tableHTML += `<tr><td>Accuracy</td><td>T2</td><td data-tippy-content="${getPValueInterpretationComp(accT2?.pValue, 'accComp', 'T2')}">${fP(accT2?.pValue)} ${getStatisticalSignificanceSymbol(accT2?.pValue)}</td><td data-tippy-content="${accCompDescription.replace('[METHODE]','T2')}">${accT2?.testName || na}</td></tr>`;
+        tableHTML += `<tr><td>AUC</td><td>AS</td><td data-tippy-content="${getPValueInterpretationComp(aucAS?.pValue, 'aucComp', 'AS')}">${fP(aucAS?.pValue)} ${getStatisticalSignificanceSymbol(aucAS?.pValue)} (Diff: ${formatNumber(aucAS?.diffAUC, 3, na, true)}, Z=${formatNumber(aucAS?.Z, 2, na, true)})</td><td data-tippy-content="${aucCompDescription.replace('[METHODE]','AS')}">${aucAS?.method || na}</td></tr>`;
+        tableHTML += `<tr><td>AUC</td><td>T2</td><td data-tippy-content="${getPValueInterpretationComp(aucT2?.pValue, 'aucComp', 'T2')}">${fP(aucT2?.pValue)} ${getStatisticalSignificanceSymbol(aucT2?.pValue)} (Diff: ${formatNumber(aucT2?.diffAUC, 3, na, true)}, Z=${formatNumber(aucT2?.Z, 2, na, true)})</td><td data-tippy-content="${aucCompDescription.replace('[METHODE]','T2')}">${aucT2?.method || na}</td></tr>`;
         tableHTML += `</tbody></table></div>`;
         return tableHTML;
     }
@@ -252,20 +255,15 @@ const statistikTabLogic = (() => {
              } else if ((isApplied || isAS) && patientCountForInterpretation !== undefined) {
                  nameSuffix = ` <small class="text-muted fst-italic">(N=${patientCountForInterpretation || '?'})</small>`;
              }
-             const metricForTooltipAS = { value: result.sens, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} };
-             const metricForTooltipSpez = { value: result.spez, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} };
-             const metricForTooltipPPV = { value: result.ppv, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} };
-             const metricForTooltipNPV = { value: result.npv, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} };
-             const metricForTooltipAcc = { value: result.acc, n_trials: patientCountForInterpretation, matrix_components: {total: patientCountForInterpretation} };
-             const metricForTooltipAUC = { value: result.auc, matrix_components: {total: patientCountForInterpretation} };
 
+             const nTrialsForTooltip = patientCountForInterpretation || 0;
+             const tooltipSens = ui_helpers.getMetricInterpretationHTML('sens', { value: result.sens, n_trials: nTrialsForTooltip }, nameDisplay, displayKollektivForInterpretation);
+             const tooltipSpez = ui_helpers.getMetricInterpretationHTML('spez', { value: result.spez, n_trials: nTrialsForTooltip }, nameDisplay, displayKollektivForInterpretation);
+             const tooltipPPV = ui_helpers.getMetricInterpretationHTML('ppv', { value: result.ppv, n_trials: nTrialsForTooltip }, nameDisplay, displayKollektivForInterpretation);
+             const tooltipNPV = ui_helpers.getMetricInterpretationHTML('npv', { value: result.npv, n_trials: nTrialsForTooltip }, nameDisplay, displayKollektivForInterpretation);
+             const tooltipAcc = ui_helpers.getMetricInterpretationHTML('acc', { value: result.acc, n_trials: nTrialsForTooltip }, nameDisplay, displayKollektivForInterpretation);
+             const tooltipAUC = ui_helpers.getMetricInterpretationHTML('auc', { value: result.auc, n_trials: nTrialsForTooltip }, nameDisplay, displayKollektivForInterpretation);
 
-             const tooltipSens = ui_helpers.getMetricInterpretationHTML('sens', metricForTooltipAS, nameDisplay, displayKollektivForInterpretation);
-             const tooltipSpez = ui_helpers.getMetricInterpretationHTML('spez', metricForTooltipSpez, nameDisplay, displayKollektivForInterpretation);
-             const tooltipPPV = ui_helpers.getMetricInterpretationHTML('ppv', metricForTooltipPPV, nameDisplay, displayKollektivForInterpretation);
-             const tooltipNPV = ui_helpers.getMetricInterpretationHTML('npv', metricForTooltipNPV, nameDisplay, displayKollektivForInterpretation);
-             const tooltipAcc = ui_helpers.getMetricInterpretationHTML('acc', metricForTooltipAcc, nameDisplay, displayKollektivForInterpretation);
-             const tooltipAUC = ui_helpers.getMetricInterpretationHTML('auc', metricForTooltipAUC, nameDisplay, displayKollektivForInterpretation);
 
              tableHTML += `<tr class="${rowClass}">
                              <td class="fw-bold">${nameDisplay}${nameSuffix}</td>
