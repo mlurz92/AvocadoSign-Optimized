@@ -1,9 +1,9 @@
 const stateManager = (() => {
     const state = {
         currentKollektiv: APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV,
-        appliedT2Criteria: getDefaultT2Criteria(),
+        appliedT2Criteria: getDefaultT2Criteria(), // Uses function from app_config.js
         appliedT2Logic: APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC,
-        bruteForceResults: {}, // { kollektivId: { result, report, config } }
+        bruteForceResults: {}, // Format: { kollektivId: { result, report, config, timestamp, metricName, metricValue } }
         activeTabId: 'daten',
         userSettings: {
             datenTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT),
@@ -17,45 +17,58 @@ const stateManager = (() => {
             publikationLang: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG,
             publikationSection: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION,
             publikationBruteForceMetric: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC,
-            currentKollektivForBruteForce: APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV,
-            bruteForceActiveMetric: APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC
+            currentKollektivForBruteForce: APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV, // Kollektiv for which BF was last run/viewed
+            bruteForceActiveMetric: APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC // Target metric for running BF
         }
     };
 
     function updateState(newState) {
+        let hasChanged = false;
         Object.keys(newState).forEach(key => {
             if (Object.prototype.hasOwnProperty.call(state, key)) {
-                if (isObject(state[key]) && isObject(newState[key]) && key !== 'bruteForceResults') {
+                const oldValue = JSON.stringify(state[key]);
+                if (isObject(state[key]) && isObject(newState[key]) && key !== 'bruteForceResults' && !Array.isArray(state[key])) {
                     state[key] = deepMerge(state[key], newState[key]);
                 } else {
                     state[key] = cloneDeep(newState[key]);
                 }
+                if (JSON.stringify(state[key]) !== oldValue) {
+                    hasChanged = true;
+                }
             }
         });
-        document.dispatchEvent(new CustomEvent('appStateChanged', { detail: { updatedKeys: Object.keys(newState) } }));
+        if (hasChanged) {
+            document.dispatchEvent(new CustomEvent('appStateChanged', { detail: { updatedKeys: Object.keys(newState), newState: cloneDeep(state) } }));
+        }
     }
 
     function updateUserSettings(newSettings, persist = true) {
         const oldSettings = cloneDeep(state.userSettings);
         let changed = false;
+        const changedKeysList = [];
+
         Object.keys(newSettings).forEach(key => {
             if (Object.prototype.hasOwnProperty.call(state.userSettings, key)) {
                 if (JSON.stringify(state.userSettings[key]) !== JSON.stringify(newSettings[key])) {
                     state.userSettings[key] = cloneDeep(newSettings[key]);
                     if (persist) {
-                        const storageKey = APP_CONFIG.STORAGE_KEYS[key.toUpperCase()] || APP_CONFIG.STORAGE_KEYS[key] || `userSetting_${key}`;
+                        const storageKey = APP_CONFIG.STORAGE_KEYS[key.toUpperCase()] || 
+                                         Object.keys(APP_CONFIG.STORAGE_KEYS).find(k => k.toLowerCase() === key.toLowerCase()) || 
+                                         `userSetting_${key}`;
                         saveToLocalStorage(storageKey, state.userSettings[key]);
                     }
                     changed = true;
+                    changedKeysList.push(key);
                 }
             }
         });
+
         if (changed) {
             document.dispatchEvent(new CustomEvent('userSettingsChanged', { 
                 detail: { 
                     newSettings: cloneDeep(state.userSettings),
                     oldSettings: oldSettings,
-                    changedKeys: Object.keys(newSettings).filter(key => JSON.stringify(oldSettings[key]) !== JSON.stringify(state.userSettings[key]))
+                    changedKeys: changedKeysList
                 } 
             }));
         }
@@ -63,8 +76,29 @@ const stateManager = (() => {
 
     function loadAppliedT2Criteria() {
         const loadedCriteria = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA);
-        if (loadedCriteria) {
-            updateState({ appliedT2Criteria: loadedCriteria });
+        if (loadedCriteria && typeof loadedCriteria === 'object') {
+            // Basic validation to ensure it's not just an empty object or malformed
+            let isValid = true;
+            const defaultKeys = Object.keys(getDefaultT2Criteria());
+            for (const key of defaultKeys) {
+                if (!Object.prototype.hasOwnProperty.call(loadedCriteria, key)) {
+                    isValid = false;
+                    break;
+                }
+                if (typeof loadedCriteria[key] === 'object' && loadedCriteria[key] !== null) {
+                     if (typeof loadedCriteria[key].active !== 'boolean') isValid = false;
+                } else if (key === 'logic' && typeof loadedCriteria[key] !== 'string') {
+                    isValid = false;
+                }
+            }
+            if (isValid) {
+                updateState({ appliedT2Criteria: loadedCriteria });
+            } else {
+                 console.warn("Geladene T2-Kriterien aus LocalStorage sind ungültig, verwende Standard.");
+                 updateState({ appliedT2Criteria: getDefaultT2Criteria() });
+            }
+        } else {
+            updateState({ appliedT2Criteria: getDefaultT2Criteria() });
         }
     }
 
@@ -74,8 +108,10 @@ const stateManager = (() => {
 
     function loadAppliedT2Logic() {
         const loadedLogic = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC);
-        if (loadedLogic) {
+        if (loadedLogic && (loadedLogic === 'UND' || loadedLogic === 'ODER' || loadedLogic === 'KOMBINIERT')) {
             updateState({ appliedT2Logic: loadedLogic });
+        } else {
+             updateState({ appliedT2Logic: APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC });
         }
     }
 
@@ -85,8 +121,11 @@ const stateManager = (() => {
 
     function loadCurrentKollektiv() {
         const loadedKollektiv = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV);
-        if (loadedKollektiv) {
+        const validKollektive = ['Gesamt', 'direkt OP', 'nRCT'];
+        if (loadedKollektiv && validKollektive.includes(loadedKollektiv)) {
             updateState({ currentKollektiv: loadedKollektiv });
+        } else {
+            updateState({ currentKollektiv: APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV });
         }
     }
 
@@ -96,52 +135,62 @@ const stateManager = (() => {
     
     function setBruteForceResultForKollektiv(kollektivId, resultData) {
         const newBruteForceResults = cloneDeep(state.bruteForceResults);
-        newBruteForceResults[kollektivId] = resultData;
+        newBruteForceResults[kollektivId] = resultData; // resultData = { result (best), report, config, timestamp, metricName, metricValue }
         updateState({ bruteForceResults: newBruteForceResults });
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS_PREFIX + kollektivId, resultData);
+        if(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS_PREFIX){
+            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS_PREFIX + kollektivId, resultData);
+        }
     }
 
     function getBruteForceResultForKollektiv(kollektivId) {
         return state.bruteForceResults[kollektivId] || null;
     }
 
-    function loadCurrentBruteForceResult() { // For the globally selected brute force kollektiv
+    function loadCurrentBruteForceResult() { 
         const kollektivForBf = state.userSettings.currentKollektivForBruteForce || state.currentKollektiv;
-        const loadedResult = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS_PREFIX + kollektivForBf);
-        if (loadedResult) {
-            const newBruteForceResults = cloneDeep(state.bruteForceResults);
-            newBruteForceResults[kollektivForBf] = loadedResult;
-            updateState({ bruteForceResults: newBruteForceResults });
+        if(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS_PREFIX){
+            const loadedResult = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS_PREFIX + kollektivForBf);
+            if (loadedResult) {
+                const newBruteForceResults = cloneDeep(state.bruteForceResults);
+                newBruteForceResults[kollektivForBf] = loadedResult;
+                updateState({ bruteForceResults: newBruteForceResults });
+            }
         }
     }
     
     function getAllBruteForceResultsFromStorage() {
         const results = {};
-        const kollektive = ['Gesamt', 'direkt OP', 'nRCT']; // Oder dynamisch aus APP_CONFIG
-        kollektive.forEach(kolId => {
-            const stored = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS_PREFIX + kolId);
-            if (stored) {
-                results[kolId] = stored;
-            }
-        });
+        const kollektive = ['Gesamt', 'direkt OP', 'nRCT']; 
+        if(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS_PREFIX){
+            kollektive.forEach(kolId => {
+                const stored = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS_PREFIX + kolId);
+                if (stored) {
+                    results[kolId] = stored;
+                }
+            });
+        }
         updateState({ bruteForceResults: results });
         return results;
     }
 
-
     function setActiveTabId(tabId) {
-        if (state.activeTabId !== tabId) {
+        const validTabs = ['daten', 'auswertung', 'statistik', 'praesentation', 'publikation', 'export'];
+        if (validTabs.includes(tabId) && state.activeTabId !== tabId) {
             updateState({ activeTabId: tabId });
-            saveToLocalStorage('activeTabId', tabId); 
+            saveToLocalStorage('activeTabId_v2', tabId); 
         }
     }
     
     function getActiveTabId() {
-        const storedTabId = loadFromLocalStorage('activeTabId');
-        return storedTabId || state.activeTabId || 'daten';
+        const storedTabId = loadFromLocalStorage('activeTabId_v2');
+        const validTabs = ['daten', 'auswertung', 'statistik', 'praesentation', 'publikation', 'export'];
+        return (storedTabId && validTabs.includes(storedTabId)) ? storedTabId : (state.activeTabId || 'daten');
     }
 
     function getCurrentHeaderStats() {
+        if (typeof dataProcessor === 'undefined' || typeof window.PATIENT_RAW_DATA === 'undefined') {
+            return { kollektiv: state.currentKollektiv, anzahlPatienten: 0, nPathoPlus: 0, nPathoMinus: 0, nAsPlus: 0, nAsMinus: 0, nT2Plus: 0, nT2Minus: 0 };
+        }
         const currentData = dataProcessor.getProcessedDataForSelectedKollektiv(window.PATIENT_RAW_DATA, state.currentKollektiv, state.appliedT2Criteria, state.appliedT2Logic);
         let nPathoPlus = 0;
         let nPathoMinus = 0;
@@ -150,20 +199,22 @@ const stateManager = (() => {
         let nT2Plus = 0;
         let nT2Minus = 0;
 
-        currentData.forEach(p => {
-            if (p.n_patho_status === '+') nPathoPlus++;
-            else if (p.n_patho_status === '-') nPathoMinus++;
+        if (Array.isArray(currentData)) {
+            currentData.forEach(p => {
+                if (p.n_patho_status === '+') nPathoPlus++;
+                else if (p.n_patho_status === '-') nPathoMinus++;
 
-            if (p.n_as_status === '+') nAsPlus++;
-            else if (p.n_as_status === '-') nAsMinus++;
-            
-            if (p.n_t2_status === '+') nT2Plus++;
-            else if (p.n_t2_status === '-') nT2Minus++;
-        });
+                if (p.n_as_status === '+') nAsPlus++;
+                else if (p.n_as_status === '-') nAsMinus++;
+                
+                if (p.n_t2_status === '+') nT2Plus++;
+                else if (p.n_t2_status === '-') nT2Minus++;
+            });
+        }
         
         return {
             kollektiv: state.currentKollektiv,
-            anzahlPatienten: currentData.length,
+            anzahlPatienten: Array.isArray(currentData) ? currentData.length : 0,
             nPathoPlus: nPathoPlus,
             nPathoMinus: nPathoMinus,
             nAsPlus: nAsPlus,
@@ -173,20 +224,17 @@ const stateManager = (() => {
         };
     }
     
-    // Expose state for read-only access via a global variable (e.g., राज्य or APP_STATE)
-    // This is a common pattern but should be used judiciously.
-    // Direct modification of state should only happen via stateManager methods.
     if (typeof window.राज्य === 'undefined') {
         Object.defineProperty(window, 'राज्य', {
-            get: () => cloneDeep(state), // Return a deep clone to prevent direct modification
+            get: () => cloneDeep(state), 
             enumerable: true,
             configurable: false 
         });
     }
 
-
     return Object.freeze({
-        updateState,
+        // Kein direktes updateState mehr nach außen, nur über spezifische Setter
+        // updateState, 
         loadAppliedT2Criteria,
         saveAppliedT2Criteria,
         loadAppliedT2Logic,
@@ -201,12 +249,12 @@ const stateManager = (() => {
         setActiveTabId,
         getActiveTabId,
         getCurrentHeaderStats,
-        // Exposing a getter for the cloned state for read-only purposes might be useful
-        // but often, specific getters for parts of the state are preferred.
-        // For now, access via window.राज्य (if needed) or specific getters if added.
-        // Example of a specific getter:
-        // getUserSettings: () => cloneDeep(state.userSettings),
-        // getCurrentKollektiv: () => state.currentKollektiv 
-        // No direct state exposure here, use window.राज्य if direct read is truly needed.
+        // Direkter Zugriff auf State-Variablen über Getter, die Klone zurückgeben
+        getCurrentKollektiv: () => state.currentKollektiv,
+        getAppliedT2Criteria: () => cloneDeep(state.appliedT2Criteria),
+        getAppliedT2Logic: () => state.appliedT2Logic,
+        getUserSettings: () => cloneDeep(state.userSettings),
+        getAllBruteForceResults: () => cloneDeep(state.bruteForceResults)
+        // Zugriff auf kompletten State (read-only) über window.राज्य
     });
 })();
