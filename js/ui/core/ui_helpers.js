@@ -7,7 +7,7 @@ const ui_helpers = (() => {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = svgString;
             const svgElement = tempDiv.firstChild;
-            if (svgElement) {
+            if (svgElement && typeof svgElement.setAttribute === 'function') {
                 svgElement.setAttribute('width', size);
                 svgElement.setAttribute('height', size);
                 svgElement.setAttribute('stroke', color);
@@ -72,15 +72,14 @@ const ui_helpers = (() => {
     }
     
     function getTooltipHTML(tooltipKey, dynamicContent = null, lang = null) {
-        const currentLang = lang || राज्य?.userSettings?.publikationLang || 'de';
+        const currentLang = lang || (typeof राज्य !== 'undefined' && રાજ્ય.userSettings && રાજ્ય.userSettings.publikationLang) || 'de';
         let tooltipData = null;
-        // Use getObjectValueByPath from utils.js, assuming it's globally available via utils.js include
-        if (typeof getObjectValueByPath === 'function' && typeof TOOLTIP_CONTENT === 'object') {
+        
+        if (typeof getObjectValueByPath === 'function' && typeof TOOLTIP_CONTENT === 'object' && TOOLTIP_CONTENT !== null) {
              tooltipData = getObjectValueByPath(TOOLTIP_CONTENT, tooltipKey);
-        } else if (TOOLTIP_CONTENT && TOOLTIP_CONTENT[tooltipKey]) { // Fallback for direct keys
+        } else if (typeof TOOLTIP_CONTENT === 'object' && TOOLTIP_CONTENT !== null && TOOLTIP_CONTENT[tooltipKey]) { 
              tooltipData = TOOLTIP_CONTENT[tooltipKey];
         }
-
 
         if (tooltipData && tooltipData[currentLang] && typeof tooltipData[currentLang].description === 'string') {
             let description = tooltipData[currentLang].description;
@@ -88,7 +87,7 @@ const ui_helpers = (() => {
                 if (typeof dynamicContent === 'object') {
                     for (const key in dynamicContent) {
                          if (Object.prototype.hasOwnProperty.call(dynamicContent, key)) {
-                            description = description.replace(new RegExp(`\\[${key.toUpperCase()}\\]`, 'g'), String(dynamicContent[key]));
+                            description = description.replace(new RegExp(`\\[${key.toUpperCase().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\]`, 'g'), String(dynamicContent[key]));
                         }
                     }
                 } else {
@@ -97,8 +96,7 @@ const ui_helpers = (() => {
             }
             return `data-tippy-content="${description.replace(/"/g, '&quot;')}"`;
         }
-        // console.warn(`Tooltip für Schlüssel '${tooltipKey}' und Sprache '${currentLang}' nicht gefunden.`);
-        return `data-tippy-content="Info: ${tooltipKey.split('.').pop()}"`; // Basic fallback
+        return `data-tippy-content="Info: ${tooltipKey.split('.').pop()}"`; 
     }
 
     function initializeTooltips(parentElement = document.body) {
@@ -118,6 +116,7 @@ const ui_helpers = (() => {
                         if (!instance.props.content || String(instance.props.content).trim() === '' || String(instance.props.content).startsWith("Info: ")) {
                             return false;
                         }
+                        return true;
                     }
                 });
             }
@@ -157,14 +156,14 @@ const ui_helpers = (() => {
                 const infoModal = new bootstrap.Modal(infoModalElement);
                 const modalBody = document.getElementById('infoModalBody');
                 const modalTitle = document.getElementById('infoModalLabel');
-                if(modalBody && modalTitle && UI_TEXTS && UI_TEXTS.kurzanleitung) {
-                    const currentLang = राज्य?.userSettings?.publikationLang || 'de';
+                if(modalBody && modalTitle && typeof UI_TEXTS !== 'undefined' && UI_TEXTS.kurzanleitung) {
+                    const currentLang = (typeof राज्य !== 'undefined' && राज्य.userSettings && રાજ્ય.userSettings.publikationLang) || 'de';
                     modalTitle.textContent = UI_TEXTS.kurzanleitung.title[currentLang] || UI_TEXTS.kurzanleitung.title.de;
                     
                     let anleitungContent = UI_TEXTS.kurzanleitung.content[currentLang] || UI_TEXTS.kurzanleitung.content.de;
                     anleitungContent = anleitungContent.replace(/\[APP_VERSION\]/g, APP_CONFIG.APP_VERSION);
                     const sigLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL;
-                    const formattedSigLevel = typeof formatNumber === 'function' ? formatNumber(sigLevel, sigLevel >= 0.01 ? 2:3).replace('.',',') : String(sigLevel);
+                    const formattedSigLevel = (typeof formatNumber === 'function') ? formatNumber(sigLevel, (sigLevel >= 0.01 ? 2:3), '--', currentLang).replace('.',',') : String(sigLevel);
                     anleitungContent = anleitungContent.replace(/\[SIGNIFICANCE_LEVEL\]/g, formattedSigLevel);
 
                     modalBody.innerHTML = anleitungContent;
@@ -181,8 +180,8 @@ const ui_helpers = (() => {
         
         if (overlay && overlayTextElement) {
             if (show) {
-                const currentLang = રાજ્ય?.userSettings?.publikationLang || 'de';
-                const defaultText = UI_TEXTS.LADEN?.[currentLang] || (currentLang === 'de' ? 'Lade Daten...' : 'Loading data...');
+                const currentLang = (typeof राज्य !== 'undefined' && રાજ્ય.userSettings && રાજ્ય.userSettings.publikationLang) || 'de';
+                const defaultText = (typeof UI_TEXTS !== 'undefined' && UI_TEXTS.LADEN?.[currentLang]) || (currentLang === 'de' ? 'Lade Daten...' : 'Loading data...');
                 overlayTextElement.textContent = text || defaultText;
                 overlay.classList.remove('d-none');
                  if (targetTabPaneId) {
@@ -200,8 +199,14 @@ const ui_helpers = (() => {
     function getMetricInterpretationHTML(metricKey, metricData, lang = 'de', forRadiology = false) {
         if (!metricData || typeof metricData.value !== 'number' || isNaN(metricData.value)) return '';
         
-        const uiTextMetricBase = TOOLTIP_CONTENT.statMetrics?.[metricKey.toLowerCase()];
-        if (!uiTextMetricBase) return `${metricKey.toUpperCase()}: ${forRadiology ? radiologyFormatter.formatRadiologyNumber(metricData.value, 2, (metricKey.toLowerCase()==='auc'), true) : formatNumber(metricData.value, 3, '--', lang)}`;
+        const uiTextMetricBase = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.statMetrics) ? TOOLTIP_CONTENT.statMetrics[metricKey.toLowerCase()] : null;
+        
+        if (!uiTextMetricBase) {
+            const fallbackValue = (typeof radiologyFormatter !== 'undefined' && forRadiology) ? 
+                radiologyFormatter.formatRadiologyNumber(metricData.value, 2, (metricKey.toLowerCase()==='auc'), true) : 
+                ((typeof formatNumber === 'function') ? formatNumber(metricData.value, 3, '--', lang) : String(metricData.value));
+            return `${metricKey.toUpperCase()}: ${fallbackValue}`;
+        }
 
         const name = uiTextMetricBase.name?.[lang] || uiTextMetricBase.name?.de || metricKey.toUpperCase();
         let description = uiTextMetricBase.description?.[lang] || uiTextMetricBase.description?.de || '';
@@ -209,36 +214,42 @@ const ui_helpers = (() => {
         const interpretation = uiTextMetricBase.interpretation?.[lang] || uiTextMetricBase.interpretation?.de || '';
         const range = uiTextMetricBase.range?.[lang] || uiTextMetricBase.range?.de || '';
         
-        const isRate = !['f1', 'auc', 'phi', 'or', 'rd', 'phi', 'chisq', 'df', 'mcnemar_stat'].includes(metricKey.toLowerCase());
+        const isRate = !['f1', 'auc', 'phi', 'or', 'rd', 'chisq', 'df', 'mcnemar_stat'].includes(metricKey.toLowerCase());
         let digits;
         if (forRadiology) {
-            digits = (metricKey.toLowerCase() === 'auc' || metricKey.toLowerCase() === 'phi' || metricKey.toLowerCase() === 'or' || metricKey.toLowerCase() === 'rd') ? 2 : 0;
-             if (metricKey.toLowerCase() === 'chisq' || metricKey.toLowerCase() === 'mcnemar_stat') digits = 1;
-             if (metricKey.toLowerCase() === 'df') digits = 0;
+            const numRules = APP_CONFIG.PUBLICATION_JOURNAL_REQUIREMENTS.NUMBER_FORMAT_RULES;
+            if (metricKey.toLowerCase() === 'auc') digits = numRules.AUC.digits;
+            else if (isRate) digits = numRules.PERCENTAGES.general_digits;
+            else if (metricKey.toLowerCase() === 'or') digits = numRules.ODDS_RATIO.digits;
+            else if (metricKey.toLowerCase() === 'rd') digits = numRules.RISK_RATIO.digits; // Assuming Risk Ratio rules apply
+            else if (metricKey.toLowerCase() === 'phi') digits = numRules.KAPPA.digits; // Assuming Kappa rules for Phi
+            else if (metricKey.toLowerCase() === 'chisq' || metricKey.toLowerCase() === 'mcnemar_stat') digits = 1;
+            else if (metricKey.toLowerCase() === 'df') digits = 0;
+            else digits = 2;
         } else {
             digits = (metricKey.toLowerCase() === 'auc' || metricKey.toLowerCase() === 'phi' || metricKey.toLowerCase() === 'or' || metricKey.toLowerCase() === 'rd' || metricKey.toLowerCase() === 'chisq' || metricKey.toLowerCase() === 'mcnemar_stat') ? 3 : 1;
             if (metricKey.toLowerCase() === 'df') digits = 0;
         }
 
-
         let valueStr;
-        if (forRadiology) {
-            valueStr = radiologyFormatter.formatRadiologyNumber(metricData.value, digits, (metricKey.toLowerCase()==='auc'), !isRate || metricKey.toLowerCase() === 'auc');
-        } else {
-            valueStr = isRate ? formatPercent(metricData.value, digits, '--%', lang) : formatNumber(metricData.value, digits, '--', lang);
-        }
-        
-        let formattedCI = '';
-        if (metricData.ci && typeof metricData.ci.lower === 'number' && typeof metricData.ci.upper === 'number' && !isNaN(metricData.ci.lower) && !isNaN(metricData.ci.upper)) {
-            if (forRadiology) {
-                formattedCI = radiologyFormatter.formatRadiologyCI(metricData.value, metricData.ci.lower, metricData.ci.upper, digits, isRate, valueStr);
-                valueStr = formattedCI; // formatRadiologyCI returns the full string
+        let ciStrPart = '';
+
+        if (forRadiology && typeof radiologyFormatter !== 'undefined') {
+            if (metricData.ci && typeof metricData.ci.lower === 'number' && typeof metricData.ci.upper === 'number' && !isNaN(metricData.ci.lower) && !isNaN(metricData.ci.upper)) {
+                valueStr = radiologyFormatter.formatRadiologyCI(metricData.value, metricData.ci.lower, metricData.ci.upper, digits, isRate, false);
             } else {
+                valueStr = radiologyFormatter.formatRadiologyNumber(metricData.value, digits, (metricKey.toLowerCase() === 'auc'), !isRate || metricKey.toLowerCase() === 'auc');
+            }
+        } else if (typeof formatNumber === 'function' && typeof formatPercent === 'function') {
+            valueStr = isRate ? formatPercent(metricData.value, digits, '--%', lang) : formatNumber(metricData.value, digits, '--', lang);
+            if (metricData.ci && typeof metricData.ci.lower === 'number' && typeof metricData.ci.upper === 'number' && !isNaN(metricData.ci.lower) && !isNaN(metricData.ci.upper)) {
                 const lowerStr = isRate ? formatPercent(metricData.ci.lower, digits, '--', lang) : formatNumber(metricData.ci.lower, digits, '--', lang);
                 const upperStr = isRate ? formatPercent(metricData.ci.upper, digits, '--', lang) : formatNumber(metricData.ci.upper, digits, '--', lang);
-                formattedCI = ` (95% ${lang==='de'?'KI':'CI'}: ${lowerStr} – ${upperStr})`;
-                valueStr += formattedCI;
+                ciStrPart = ` (95% ${lang === 'de' ? 'KI' : 'CI'}: ${lowerStr} – ${upperStr})`;
             }
+            valueStr += ciStrPart;
+        } else {
+            valueStr = String(metricData.value); // Basic fallback
         }
         
         let html = `<strong>${name}: ${valueStr}</strong>`;
@@ -251,7 +262,7 @@ const ui_helpers = (() => {
             const bewertungFn = metricKey.toLowerCase() === 'phi' ? (typeof getPhiBewertung === 'function' ? getPhiBewertung : null) : (typeof getAUCBewertung === 'function' ? getAUCBewertung : null);
             if(bewertungFn) {
                 const bewertungText = bewertungFn(metricData.value, lang);
-                 if (bewertungText && bewertungText !== (lang==='de'?'N/A':'N/A') ) {
+                 if (bewertungText && bewertungText !== (lang==='de'?'N/A':'N/A') && bewertungText !== (lang==='de'?'nicht bestimmbar':'not determinable') ) {
                     html += `<p class="small mt-1 mb-0"><em>${lang==='de'?'Bewertung':'Assessment'}: ${bewertungText}</em></p>`;
                 }
             }
@@ -269,18 +280,18 @@ const ui_helpers = (() => {
              html += `<p class="small mt-1 mb-1">${lang === 'de' ? 'Optimierter Kriteriensatz' : 'Optimized Criteria Set'}</p>`;
         }
 
-        if (isBruteForceResult && criteriaSet.metricValue !== undefined && bfMetricName) {
-            const metricValStr = formatNumber(criteriaSet.metricValue, 3, '--', lang);
-            const kollektivName = targetKollektivForBF ? getKollektivDisplayName(targetKollektivForBF) : '';
+        if (isBruteForceResult && criteriaSet.metricValue !== undefined && !isNaN(criteriaSet.metricValue) && bfMetricName) {
+            const metricValStr = (typeof formatNumber === 'function') ? formatNumber(criteriaSet.metricValue, 3, '--', lang) : String(criteriaSet.metricValue);
+            const kollektivName = targetKollektivForBF ? ((typeof getKollektivDisplayName === 'function') ? getKollektivDisplayName(targetKollektivForBF) : targetKollektivForBF) : '';
             html += `<p class="small mb-1"><em>${bfMetricName}${kollektivName ? ` (${kollektivName})` : ''}: ${metricValStr}</em></p>`;
         }
         
-        if(criteriaSet.criteria && criteriaSet.logic) {
+        if(criteriaSet.criteria && criteriaSet.logic && typeof studyT2CriteriaManager !== 'undefined') {
             const formattedCriteria = studyT2CriteriaManager.formatCriteriaForDisplay(criteriaSet.criteria, criteriaSet.logic, false, lang);
             html += `<p class="small mb-1" style="white-space: normal;"><strong>${lang === 'de' ? 'Kriterien' : 'Criteria'}:</strong> ${formattedCriteria}</p>`;
         }
-        if (criteriaSet.applicableKollektiv && !isBruteForceResult) { // For BF, kollektiv is part of metric display
-            html += `<p class="small mb-1"><em>${lang === 'de' ? 'Eval. auf' : 'Eval. on'}: ${getKollektivDisplayName(criteriaSet.applicableKollektiv)}</em></p>`;
+        if (criteriaSet.applicableKollektiv && !isBruteForceResult) { 
+            html += `<p class="small mb-1"><em>${lang === 'de' ? 'Eval. auf' : 'Eval. on'}: ${typeof getKollektivDisplayName === 'function' ? getKollektivDisplayName(criteriaSet.applicableKollektiv) : criteriaSet.applicableKollektiv}</em></p>`;
         }
         if (criteriaSet.context) {
             html += `<p class="small mb-0"><em>${lang === 'de' ? 'Kontext' : 'Context'}: ${criteriaSet.context}</em></p>`;
@@ -326,7 +337,7 @@ const ui_helpers = (() => {
                         case 'p': 
                             const parentTagP = node.parentNode ? node.parentNode.tagName.toLowerCase() : '';
                             if (parentTagP === 'li' || parentTagP === 'blockquote') { 
-                                markdown = `${childrenMarkdown.trim().replace(/\n\n$/, '\n')}`; // Single newline after P in LI/BQ
+                                markdown = `${childrenMarkdown.trim().replace(/\n\n$/, '\n')}`;
                             } else {
                                 markdown = `${childrenMarkdown.trim()}\n\n`; 
                             }
@@ -349,7 +360,7 @@ const ui_helpers = (() => {
                             const href = node.getAttribute('href') || '';
                             const title = node.getAttribute('title') || '';
                             const linkText = childrenMarkdown.trim();
-                            if (href.startsWith('#') && (linkText.toLowerCase().includes('figure') || linkText.toLowerCase().includes('table'))) {
+                            if (href.startsWith('#') && (linkText.toLowerCase().includes('figure') || linkText.toLowerCase().includes('table') || linkText.toLowerCase().includes('abbildung') || linkText.toLowerCase().includes('tabelle') )) {
                                  markdown = linkText; 
                             } else {
                                 markdown = `[${linkText}](${href}${title ? ` "${title}"` : ''})`;
@@ -370,8 +381,7 @@ const ui_helpers = (() => {
                             const depth = getListDepth(node);
                             const indent = '    '.repeat(depth > 0 ? depth -1 : 0); 
                             let liContent = childrenMarkdown.trim();
-                            // Remove trailing newlines from paragraphs inside list items for tighter list
-                            liContent = liContent.replace(/(\n\n)$/, '\n');
+                            liContent = liContent.replace(/(\n\n|\n\s*\n)$/, '\n'); // Reduce multiple newlines at end of LI content to single
 
                             if (parentLiTag === 'ul') {
                                 markdown = `${indent}* ${liContent}\n`;
@@ -393,12 +403,12 @@ const ui_helpers = (() => {
                             const tBody = node.querySelector('tbody');
                             const headerRowsHtml = tHead ? Array.from(tHead.querySelectorAll('tr')) : [];
                             const bodyRowsHtml = tBody ? Array.from(tBody.querySelectorAll('tr')) : 
-                                                 (headerRowsHtml.length === 0 ? Array.from(node.querySelectorAll('tr')) : []); // Fallback if no tbody
+                                                 (headerRowsHtml.length === 0 ? Array.from(node.querySelectorAll('tr')) : []);
 
                             if (headerRowsHtml.length > 0 || bodyRowsHtml.length > 0) {
                                 const getCells = (rowNode) => Array.from(rowNode.children)
                                     .filter(cell => cell.tagName === 'TH' || cell.tagName === 'TD')
-                                    .map(cell => processNode(cell).trim().replace(/\|/g, '\\|').replace(/\n/g, ' ')); // Ensure cell content is single line and pipes escaped
+                                    .map(cell => processNode(cell).trim().replace(/\|/g, '\\|').replace(/\n/g, ' ')); 
 
                                 let numCols = 0;
                                 if(headerRowsHtml.length > 0) numCols = getCells(headerRowsHtml[0]).length;
@@ -410,7 +420,7 @@ const ui_helpers = (() => {
                                             tableMd += `| ${getCells(hr).join(' | ')} |\n`;
                                         });
                                         tableMd += `| ${Array(numCols).fill('---').join(' | ')} |\n`;
-                                    } else if (bodyRowsHtml.length > 0) { // Use first body row as header
+                                    } else if (bodyRowsHtml.length > 0) { 
                                         tableMd += `| ${getCells(bodyRowsHtml[0]).join(' | ')} |\n`;
                                         tableMd += `| ${Array(numCols).fill('---').join(' | ')} |\n`;
                                     }
@@ -421,7 +431,7 @@ const ui_helpers = (() => {
                                     });
                                     markdown = tableMd + '\n';
                                 } else {
-                                     markdown = childrenMarkdown; // Malformed table or empty
+                                     markdown = childrenMarkdown; 
                                 }
                             } else {
                                 markdown = childrenMarkdown; 
@@ -434,6 +444,7 @@ const ui_helpers = (() => {
                             markdown = ` ${childrenMarkdown.trim().replace(/\s+/g, ' ')} `; 
                             break;
                         case 'style': case 'script': case 'button': case 'select': case 'input': case 'textarea':
+                        case 'svg': // ignore SVG content for markdown
                             markdown = ''; 
                             break;
                         default:
@@ -457,7 +468,7 @@ const ui_helpers = (() => {
 
         let resultMarkdown = processNode(tempDiv);
         resultMarkdown = resultMarkdown.replace(/\n{3,}/g, '\n\n').trim();
-        resultMarkdown = resultMarkdown.replace(/(\n\s*){2,}\n/g, '\n\n'); // Another pass for multiple blank lines potentially created by nested block elements in lists
+        resultMarkdown = resultMarkdown.replace(/(\n\s*){2,}\n/g, '\n\n'); 
         return resultMarkdown;
     }
 
