@@ -47,9 +47,9 @@ const publikationTabLogic = (() => {
             t2SizeMax: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max,
             bootstrapReplications: APP_CONFIG.STATISTICAL_CONSTANTS.BOOTSTRAP_CI_REPLICATIONS,
             significanceLevel: APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,
-            references: APP_CONFIG.REFERENCES_FOR_PUBLICATION, // Direkter Zugriff auf globale Referenzen
+            references: APP_CONFIG.REFERENCES_FOR_PUBLICATION,
             bruteForceMetricForPublication: state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication,
-            rawData: rawGlobalDataInputForLogic // Übergabe der Rohdaten an den Renderer für Filterungen
+            rawData: rawGlobalDataInputForLogic
         };
 
         const optionsForRenderer = {
@@ -82,7 +82,6 @@ const publikationTabLogic = (() => {
                     const ageChartElement = document.getElementById(`${alterChartId}-chart-area`);
                     const genderChartElement = document.getElementById(`${genderChartId}-chart-area`);
 
-                    // Optionen für Chart-Renderer
                     const histOpts = { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 45 } };
                     const pieOpts = { height: 220, margin: { top: 10, right: 10, bottom: 40, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true };
 
@@ -110,7 +109,7 @@ const publikationTabLogic = (() => {
                         ui_helpers.updateElementHTML(genderChartElement.id, `<p class="text-muted small text-center p-3">Keine Daten für Geschlechterverteilung (Gesamtkollektiv).</p>`);
                     }
                 }
-            } else if (subSectionId === 'ergebnisse_vergleich_performance') {
+            } else if (subSectionId === 'ergebnisse_vergleich_as_vs_t2') {
                 const kollektiveForCharts = ['Gesamt', 'direkt OP', 'nRCT'];
                 const bruteForceMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
