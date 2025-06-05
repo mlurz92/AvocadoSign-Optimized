@@ -40,14 +40,12 @@ const APP_CONFIG = Object.freeze({
         PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
         CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
         CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
-        FIRST_APP_START: 'appFirstStart_v2.3'
+        FIRST_APP_START: 'appFirstStart_v2.3',
+        BRUTE_FORCE_RESULTS_PREFIX: 'bfResults_' // Prefix for BF results in local storage
     }),
 
     PATHS: Object.freeze({
         BRUTE_FORCE_WORKER: 'workers/brute_force_worker.js',
-        // Pfade für neue Publikationsmodule werden hier nicht zwingend benötigt,
-        // da sie per script-Tag in index.html geladen werden.
-        // Bei dynamischem Laden könnten sie hier ergänzt werden.
     }),
 
     PERFORMANCE_SETTINGS: Object.freeze({
@@ -251,7 +249,14 @@ const APP_CONFIG = Object.freeze({
         STUDY_PERIOD_2020_2023: "Januar 2020 und November 2023",
         MRI_SYSTEM_SIEMENS_3T: "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers, Erlangen, Deutschland)",
         CONTRAST_AGENT_PROHANCE: "Gadoteridol (ProHance; Bracco Imaging Deutschland GmbH, Konstanz, Deutschland)",
-        RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER: Object.freeze(["29", "7", "19"])
+        RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER: Object.freeze(["29", "7", "19"]),
+        // Neu hinzugefügte Referenzen für die Einleitung
+        SIEGEL_2023_CANCER_STATS: "Siegel RL, Miller KD, Wagle NS, Jemal A. Cancer Statistics, 2023. CA Cancer J Clin. 2023;73(1):17-48. DOI: 10.3322/caac.21763",
+        SAUER_2004_PREOP_VS_POSTOP_CRT: "Sauer R, Becker H, Hohenberger W, et al. Preoperative versus postoperative chemoradiotherapy for rectal cancer. N Engl J Med. 2004;351(17):1731-1740. DOI: 10.1056/NEJMoa040694",
+        AL_SUKHNI_2012_MRI_META_ANALYSIS: "Al-Sukhni E, Milot L, Fruitman M, et al. Diagnostic accuracy of MRI for assessment of T category, lymph node metastases, and circumferential resection margin involvement in patients with rectal cancer: a systematic review and meta-analysis. Ann Surg Oncol. 2012;19(7):2212-2223. DOI: 10.1245/s10434-011-2210-5",
+        TAYLOR_2011_MRI_PROGNOSIS: "Taylor FG, Swift RI, Blomqvist L, Brown G. Magnetic resonance imaging-detected tumor response for locally advanced rectal cancer predicts survival outcomes: MERCURY experience. J Clin Oncol. 2011;29(28):3753-3760. DOI: 10.1200/JCO.2011.35.3217",
+        GARCIA_AGUILAR_2022_ORGAN_PRESERVATION: "Garcia-Aguilar J, Patil S, Gollub MJ, et al. Organ preservation in patients with rectal adenocarcinoma treated with total neoadjuvant therapy. J Clin Oncol. 2022;40(23):2546-2556. DOI: 10.1200/JCO.22.00032",
+        SCHRAG_2023_PROSPECT_TRIAL: "Schrag D, Shi Q, Weiser MR, et al. Preoperative Treatment of Locally Advanced Rectal Cancer. N Engl J Med. 2023;389(4):322-334. DOI: 10.1056/NEJMoa2303269"
     }),
 
     SPECIAL_IDS: Object.freeze({
