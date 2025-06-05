@@ -13,7 +13,7 @@ const praesentationTabLogic = (() => {
             const na = '--';
             const fCI_p = (m, k) => { const d = (k === 'auc'||k==='f1') ? 3 : 1; const p = !(k === 'auc'||k==='f1'); return formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, d, p, na); };
             const getInterpretationTT = (mk, st) => { return ui_helpers.getMetricInterpretationHTML(mk, st, 'AS', kollektivDisplayName); };
-            const tt = TOOLTIP_CONTENT.praesentation.asPurPerfTable || {};
+            const tt = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.praesentation && TOOLTIP_CONTENT.praesentation.asPurPerfTable) ? TOOLTIP_CONTENT.praesentation.asPurPerfTable : {};
 
             if (!stats || typeof stats.matrix !== 'object') {
                 const nPatientsForThisKollektiv = (kollektivKey === 'Gesamt' ? presentationData.statsGesamt?.matrix : (kollektivKey === 'direkt OP' ? presentationData.statsDirektOP?.matrix : presentationData.statsNRCT?.matrix));
@@ -32,15 +32,16 @@ const praesentationTabLogic = (() => {
                     </tr>`;
         };
 
-        const perfCSVTooltip = TOOLTIP_CONTENT.praesentation.downloadPerformanceCSV?.description || "Performance-Tabelle als CSV";
-        const perfMDTooltip = TOOLTIP_CONTENT.praesentation.downloadPerformanceMD?.description || "Performance-Tabelle als Markdown";
-        const tablePNGTooltip = TOOLTIP_CONTENT.praesentation.downloadTablePNG?.description || "Tabelle als PNG";
-        const perfChartPNGTooltip = `Chart ('${currentKollektivName}') als PNG herunterladen.`;
-        const perfChartSVGTooltip = `Chart ('${currentKollektivName}') als SVG (Vektorgrafik) herunterladen.`;
+        const perfCSVTooltip = (TOOLTIP_CONTENT.praesentation.downloadPerformanceCSV?.description || "Performance-Tabelle als CSV").replace('[KOLLEKTIV_NAME_AKTUELL]', currentKollektivName);
+        const perfMDTooltip = (TOOLTIP_CONTENT.praesentation.downloadPerformanceMD?.description || "Performance-Tabelle als Markdown").replace('[KOLLEKTIV_NAME_AKTUELL]', currentKollektivName);
+        const tablePNGTooltip = (TOOLTIP_CONTENT.praesentation.downloadTablePNG?.description || "Tabelle als PNG").replace('{TableName}', `AS_Performance_Uebersicht`);
+        const perfChartPNGTooltip = (TOOLTIP_CONTENT.praesentation.downloadCompChartPNG?.description || "Chart als PNG").replace('{ChartName}', `AS_Performance_${currentKollektivName}`);
+        const perfChartSVGTooltip = (TOOLTIP_CONTENT.praesentation.downloadCompChartSVG?.description || "Chart als SVG").replace('{ChartName}', `AS_Performance_${currentKollektivName}`);
+
         const chartId = "praes-as-pur-perf-chart";
         const tableId = "praes-as-pur-perf-table";
-        const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image':'fa-download';
-        const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download';
+        const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'image':'download';
+        const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'file-code':'download';
 
         const tooltipKeys = ['kollektiv', 'sens', 'spez', 'ppv', 'npv', 'acc', 'auc'];
         let tableHTML = `
@@ -48,21 +49,21 @@ const praesentationTabLogic = (() => {
                 <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>AS Performance vs. N für alle Kollektive</span>
-                        <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="dl-${tableId}-png" data-table-id="${tableId}" data-table-name="Praes_AS_Perf_Uebersicht" data-tippy-content="${tablePNGTooltip}"><i class="fas fa-image"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="dl-${tableId}-png" data-table-id="${tableId}" data-table-name="Praes_AS_Perf_Uebersicht" data-tippy-content="${tablePNGTooltip}">${ui_helpers.getIcon('image')}</button>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-striped table-hover table-sm small mb-0" id="${tableId}">
                                 <thead class="small">
-                                    <tr>${tooltipKeys.map((key, index) => `<th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable?.[key] || ui_helpers.getMetricDescriptionHTML(key, 'AS') || ''}">${index === 0 ? 'Kollektiv' : (key.charAt(0).toUpperCase() + key.slice(1) + '. (95% CI)')}</th>`).join('')}</tr>
+                                    <tr>${tooltipKeys.map((key, index) => `<th data-tippy-content="${(TOOLTIP_CONTENT.praesentation.asPurPerfTable?.[key] || ui_helpers.getMetricDescriptionHTML(key, 'AS') || '')}">${index === 0 ? 'Kollektiv' : (key.charAt(0).toUpperCase() + key.slice(1) + '. (95% CI)')}</th>`).join('')}</tr>
                                 </thead>
                                 <tbody>${kollektives.map(k => createPerfTableRow(statsMap[k], k)).join('')}</tbody>
                             </table>
                         </div>
                     </div>
                     <div class="card-footer text-end p-1">
-                        <button class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-pur-csv" data-tippy-content="${perfCSVTooltip}"><i class="fas fa-file-csv me-1"></i>CSV</button>
-                        <button class="btn btn-sm btn-outline-secondary" id="download-performance-as-pur-md" data-tippy-content="${perfMDTooltip}"><i class="fab fa-markdown me-1"></i>MD</button>
+                        <button class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-pur-csv" data-tippy-content="${perfCSVTooltip}">${ui_helpers.getIcon('file-csv')} CSV</button>
+                        <button class="btn btn-sm btn-outline-secondary" id="download-performance-as-pur-md" data-tippy-content="${perfMDTooltip}">${ui_helpers.getIcon('file-text')} MD</button>
                     </div>
                 </div>
             </div>`;
@@ -73,8 +74,8 @@ const praesentationTabLogic = (() => {
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Visualisierung Güte (AS vs. N) - Kollektiv: ${currentKollektivName}</span>
                         <span class="card-header-buttons">
-                            <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="dl-${chartId}-png" data-chart-id="${chartId}" data-format="png" data-chart-name="AS_Performance_${currentKollektivName.replace(/\s+/g, '_')}" data-tippy-content="${perfChartPNGTooltip}"><i class="fas ${dlIconPNG}"></i></button>
-                            <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="dl-${chartId}-svg" data-chart-id="${chartId}" data-format="svg" data-chart-name="AS_Performance_${currentKollektivName.replace(/\s+/g, '_')}" data-tippy-content="${perfChartSVGTooltip}"><i class="fas ${dlIconSVG}"></i></button>
+                            <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-pur-perf-chart-png" data-chart-id="${chartId}" data-format="png" data-chart-name="AS_Performance_${currentKollektivName.replace(/\s+/g, '_')}" data-tippy-content="${perfChartPNGTooltip}">${ui_helpers.getIcon(dlIconPNG)}</button>
+                            <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-pur-perf-chart-svg" data-chart-id="${chartId}" data-format="svg" data-chart-name="AS_Performance_${currentKollektivName.replace(/\s+/g, '_')}" data-tippy-content="${perfChartSVGTooltip}">${ui_helpers.getIcon(dlIconSVG)}</button>
                         </span>
                     </div>
                     <div class="card-body p-1">
@@ -110,13 +111,15 @@ const praesentationTabLogic = (() => {
                  if (criteriaHTML === 'Keine aktiven Kriterien' && comparisonCriteriaSet.logic) criteriaHTML += ` (Logik: ${UI_TEXTS.t2LogicDisplayNames[comparisonCriteriaSet.logic] || comparisonCriteriaSet.logic})`;
                  else if (criteriaHTML !== 'Keine aktiven Kriterien' && comparisonCriteriaSet.logic && comparisonCriteriaSet.logic !== 'KOMBINIERT') criteriaHTML = `<strong>Logik:</strong> ${UI_TEXTS.t2LogicDisplayNames[comparisonCriteriaSet.logic] || comparisonCriteriaSet.logic}<br><strong>Regel(n):</strong> ${criteriaHTML}`;
             }
+            const ttPraes = TOOLTIP_CONTENT.praesentation || {};
+            const ttT2Basis = ttPraes.t2BasisInfoCard || {};
 
             comparisonInfoHTML = `<dl class="row small mb-0">
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.reference || 'Quelle/Publikation der Kriterien.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.reference ? 'Referenz:' : 'Referenz:'}</dt><dd class="col-sm-8">${studyInfo?.reference || (isApplied ? 'Benutzerdefiniert (aktuell im Auswertungstab eingestellt)' : 'N/A')}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.patientCohort || 'Ursprüngliche Studienkohorte bzw. aktuelles Vergleichskollektiv.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.patientCohort ? 'Orig.-Kohorte / Vergleichsbasis:' : 'Orig.-Kohorte / Vergleichsbasis:'}</dt><dd class="col-sm-8">${studyInfo?.patientCohort || `Aktuell: ${displayKollektivForComparison} (N=${patientCountForComparison || '?'})`}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.investigationType || 'Art der Untersuchung in der Originalstudie (z.B. Primärstaging).')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.investigationType ? 'Untersuchungstyp:' : 'Untersuchungstyp:'}</dt><dd class="col-sm-8">${studyInfo?.investigationType || 'N/A'}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.focus || 'Hauptfokus der Originalstudie bzgl. dieser Kriterien.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.focus ? 'Studienfokus:' : 'Studienfokus:'}</dt><dd class="col-sm-8">${studyInfo?.focus || 'N/A'}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.keyCriteriaSummary || 'Zusammenfassung der angewendeten T2-Kriterien und deren Logik.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.keyCriteriaSummary ? 'Kriterien:' : 'Kriterien:'}</dt><dd class="col-sm-8">${criteriaHTML}</dd>
+                                    <dt class="col-sm-4" data-tippy-content="${(ttT2Basis.reference || 'Quelle/Publikation der Kriterien.')}">${ttT2Basis.reference ? 'Referenz:' : 'Referenz:'}</dt><dd class="col-sm-8">${studyInfo?.reference || (isApplied ? 'Benutzerdefiniert (aktuell im Auswertungstab eingestellt)' : 'N/A')}</dd>
+                                    <dt class="col-sm-4" data-tippy-content="${(ttT2Basis.patientCohort || 'Ursprüngliche Studienkohorte bzw. aktuelles Vergleichskollektiv.')}">${ttT2Basis.patientCohort ? 'Orig.-Kohorte / Vergleichsbasis:' : 'Orig.-Kohorte / Vergleichsbasis:'}</dt><dd class="col-sm-8">${studyInfo?.patientCohort || `Aktuell: ${displayKollektivForComparison} (N=${patientCountForComparison || '?'})`}</dd>
+                                    <dt class="col-sm-4" data-tippy-content="${(ttT2Basis.investigationType || 'Art der Untersuchung in der Originalstudie (z.B. Primärstaging).')}">${ttT2Basis.investigationType ? 'Untersuchungstyp:' : 'Untersuchungstyp:'}</dt><dd class="col-sm-8">${studyInfo?.investigationType || 'N/A'}</dd>
+                                    <dt class="col-sm-4" data-tippy-content="${(ttT2Basis.focus || 'Hauptfokus der Originalstudie bzgl. dieser Kriterien.')}">${ttT2Basis.focus ? 'Studienfokus:' : 'Studienfokus:'}</dt><dd class="col-sm-8">${studyInfo?.focus || 'N/A'}</dd>
+                                    <dt class="col-sm-4" data-tippy-content="${(ttT2Basis.keyCriteriaSummary || 'Zusammenfassung der angewendeten T2-Kriterien und deren Logik.')}">${ttT2Basis.keyCriteriaSummary ? 'Kriterien:' : 'Kriterien:'}</dt><dd class="col-sm-8">${criteriaHTML}</dd>
                                 </dl>`;
         }
 
@@ -127,19 +130,22 @@ const praesentationTabLogic = (() => {
         let resultsHTML = '';
         const canDisplayResults = !!(selectedStudyId && presentationData && statsAS && statsT2 && vergleich && comparisonCriteriaSet && patientCountForComparison > 0);
         const na = '--';
-        const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image':'fa-download';
-        const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download';
+        const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'image':'download';
+        const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'file-code':'download';
+        const ttPraesDownload = TOOLTIP_CONTENT.praesentation || {};
+
 
         if (canDisplayResults) {
-            const fPVal = (r,d=3) => { const p = r?.pValue; return (p !== null && !isNaN(p)) ? (p < 0.001 ? '&lt;0.001' : formatNumber(p, d, na)) : na; };
-            const perfCSV = TOOLTIP_CONTENT.praesentation.downloadPerformanceCSV?.description || "Vergleichs-Performance-Tabelle als CSV";
-            const compTableMD = TOOLTIP_CONTENT.praesentation.downloadCompTableMD?.description || "Vergleichs-Metriken als Markdown";
-            const testsMD = TOOLTIP_CONTENT.praesentation.downloadCompTestsMD?.description || "Statistische Vergleichstests als Markdown";
+            const fPVal = (r,d=3) => { const p = r?.pValue; return (p !== null && !isNaN(p)) ? (p < 0.001 ? '&lt;0.001' : formatNumber(p, d, na, true)) : na; };
+            const perfCSV = (ttPraesDownload.downloadPerformanceCSV?.description || "Vergleichs-Performance-Tabelle als CSV").replace('[T2_SHORT_NAME]', t2ShortNameEffective).replace('[KOLLEKTIV_NAME_VERGLEICH]', displayKollektivForComparison);
+            const compTableMD = (ttPraesDownload.downloadCompTableMD?.description || "Vergleichs-Metriken als Markdown").replace('[T2_SHORT_NAME]', t2ShortNameEffective).replace('[KOLLEKTIV_NAME_VERGLEICH]', displayKollektivForComparison);
+            const testsMD = (ttPraesDownload.downloadCompTestsMD?.description || "Statistische Vergleichstests als Markdown").replace('[T2_SHORT_NAME]', t2ShortNameEffective).replace('[KOLLEKTIV_NAME_VERGLEICH]', displayKollektivForComparison);
 
-            const chartPNG = TOOLTIP_CONTENT.praesentation.downloadCompChartPNG?.description || `Chart (AS vs. ${t2ShortNameEffective}) als PNG`;
-            const chartSVG = TOOLTIP_CONTENT.praesentation.downloadCompChartSVG?.description || `Chart (AS vs. ${t2ShortNameEffective}) als SVG`;
-            const tablePNG = TOOLTIP_CONTENT.praesentation.downloadTablePNG?.description || "Tabelle als PNG";
-            const compTablePNG = TOOLTIP_CONTENT.praesentation.downloadCompTablePNG?.description || `Vergleichs-Metrik-Tabelle (AS vs. ${t2ShortNameEffective}) als PNG`;
+            const chartPNG = (ttPraesDownload.downloadCompChartPNG?.description || `Chart (AS vs. ${t2ShortNameEffective}) als PNG`).replace('{T2ShortName}', t2ShortNameEffective).replace('{KollektivName}', displayKollektivForComparison);
+            const chartSVG = (ttPraesDownload.downloadCompChartSVG?.description || `Chart (AS vs. ${t2ShortNameEffective}) als SVG`).replace('{T2ShortName}', t2ShortNameEffective).replace('{KollektivName}', displayKollektivForComparison);
+            const tablePNG = (ttPraesDownload.downloadTablePNG?.description || "Tabelle als PNG").replace('{TableName}', `Stat_Vergleich_ASvs${t2ShortNameEffective}`);
+            const compTablePNG = (ttPraesDownload.downloadCompTablePNG?.description || `Vergleichs-Metrik-Tabelle (AS vs. ${t2ShortNameEffective}) als PNG`).replace('{T2ShortName}', t2ShortNameEffective);
+
 
             const compTitle = `Stat. Vergleich (AS vs. ${t2ShortNameEffective})`;
             const perfTitle = `Vergleich Metriken (AS vs. ${t2ShortNameEffective})`;
@@ -149,12 +155,14 @@ const praesentationTabLogic = (() => {
             const infoCardId = "praes-t2-basis-info-card";
             const chartContainerId = "praes-comp-chart-container";
             const chartBaseName = `AS_vs_${(comparisonCriteriaSet?.displayShortName || selectedStudyId || 'T2').replace(/\s+/g, '_')}_Koll_${displayKollektivForComparison.replace(/\s+/g, '_')}`;
+            const ttPraesT2Perf = ttPraesDownload.asVsT2PerfTable || {};
 
-            let comparisonTableHTML = `<div class="table-responsive"><table class="table table-sm table-striped small mb-0" id="${perfTableId}"><thead class="small"><tr><th data-tippy-content="${(TOOLTIP_CONTENT.praesentation.asVsT2PerfTable?.metric || 'Diagnostische Metrik.')}">Metrik</th><th data-tippy-content="${(TOOLTIP_CONTENT.praesentation.asVsT2PerfTable?.asValue || 'Wert für Avocado Sign (AS).')}">AS (Wert, 95% CI)</th><th data-tippy-content="${(TOOLTIP_CONTENT.praesentation.asVsT2PerfTable?.t2Value || 'Wert für die ausgewählte T2-Basis.').replace('[T2_SHORT_NAME]', `<strong>${t2ShortNameEffective}</strong>`)}">${t2ShortNameEffective} (Wert, 95% CI)</th></tr></thead><tbody>`;
+
+            let comparisonTableHTML = `<div class="table-responsive"><table class="table table-sm table-striped small mb-0" id="${perfTableId}"><thead class="small"><tr><th data-tippy-content="${(ttPraesT2Perf.metric || 'Diagnostische Metrik.')}">Metrik</th><th data-tippy-content="${(ttPraesT2Perf.asValue || 'Wert für Avocado Sign (AS).')}">AS (Wert, 95% CI)</th><th data-tippy-content="${(ttPraesT2Perf.t2Value || 'Wert für die ausgewählte T2-Basis.').replace('[T2_SHORT_NAME]', `<strong>${t2ShortNameEffective}</strong>`)}">${t2ShortNameEffective} (Wert, 95% CI)</th></tr></thead><tbody>`;
             const metrics = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'f1', 'auc'];
             const metricNames = { sens: 'Sensitivität', spez: 'Spezifität', ppv: 'PPV', npv: 'NPV', acc: 'Accuracy', balAcc: 'Bal. Accuracy', f1: 'F1-Score', auc: 'AUC' };
             metrics.forEach(key => {
-                 const isRate = !(key === 'f1' || key === 'auc'); const digits = isRate ? 1 : 3;
+                 const isRate = !['f1', 'auc'].includes(key); const digits = isRate ? 1 : 3;
                  const valAS = formatCI(statsAS[key]?.value, statsAS[key]?.ci?.lower, statsAS[key]?.ci?.upper, digits, isRate, na);
                  const valT2 = formatCI(statsT2[key]?.value, statsT2[key]?.ci?.lower, statsT2[key]?.ci?.upper, digits, isRate, na);
                  const tooltipDesc = ui_helpers.getMetricDescriptionHTML(key, 'Wert');
@@ -163,18 +171,20 @@ const praesentationTabLogic = (() => {
                  comparisonTableHTML += `<tr><td data-tippy-content="${tooltipDesc}">${metricNames[key]}</td><td data-tippy-content="${tooltipAS}">${valAS}</td><td data-tippy-content="${tooltipT2}">${valT2}</td></tr>`;
             });
             comparisonTableHTML += `</tbody></table></div>`;
-            const compTableDownloadBtns = [ {id: `dl-${perfTableId}-png`, icon: 'fa-image', tooltip: compTablePNG, format: 'png', tableId: perfTableId, tableName: `Praes_ASvsT2_Metrics_${(comparisonCriteriaSet?.id || selectedStudyId || 'T2').replace(/\s+/g, '_')}`} ];
+            const compTableDownloadBtns = [ {id: `dl-${perfTableId}-png`, icon: 'image', tooltip: compTablePNG, format: 'png', tableId: perfTableId, tableName: `Praes_ASvsT2_Metrics_${(comparisonCriteriaSet?.id || selectedStudyId || 'T2').replace(/\s+/g, '_')}`} ];
             const comparisonTableCardHTML = uiComponents.createStatistikCard(perfTableId+'_card', perfTitle, comparisonTableHTML, false, 'praesentation.comparisonTableCard', compTableDownloadBtns, perfTableId);
 
+            const ttPraesT2Test = ttPraesDownload.asVsT2TestTable || {};
             let testsTableHTML = `<table class="table table-sm table-striped small mb-0" id="${testTableId}"><thead class="small visually-hidden"><tr><th>Test</th><th>Statistik</th><th>p-Wert</th><th>Methode</th></tr></thead><tbody>`;
             const mcNemarDesc = ui_helpers.getTestDescriptionHTML('mcnemar', t2ShortNameEffective);
             const mcNemarInterp = ui_helpers.getTestInterpretationHTML('mcnemar', vergleich?.mcnemar, displayKollektivForComparison, t2ShortNameEffective);
             const delongDesc = ui_helpers.getTestDescriptionHTML('delong', t2ShortNameEffective);
             const delongInterp = ui_helpers.getTestInterpretationHTML('delong', vergleich?.delong, displayKollektivForComparison, t2ShortNameEffective);
-            testsTableHTML += `<tr><td data-tippy-content="${mcNemarDesc}">McNemar (Acc)</td><td>${formatNumber(vergleich?.mcnemar?.statistic, 3, '--')} (df=${vergleich?.mcnemar?.df || '--'})</td><td data-tippy-content="${mcNemarInterp}"> ${fPVal(vergleich?.mcnemar)} ${getStatisticalSignificanceSymbol(vergleich?.mcnemar?.pValue)}</td><td class="text-muted">${vergleich?.mcnemar?.method || '--'}</td></tr>`;
-            testsTableHTML += `<tr><td data-tippy-content="${delongDesc}">DeLong (AUC)</td><td>Z=${formatNumber(vergleich?.delong?.Z, 3, '--')}</td><td data-tippy-content="${delongInterp}"> ${fPVal(vergleich?.delong)} ${getStatisticalSignificanceSymbol(vergleich?.delong?.pValue)}</td><td class="text-muted">${vergleich?.delong?.method || '--'}</td></tr>`;
+
+            testsTableHTML += `<tr><td data-tippy-content="${mcNemarDesc}">${ttPraesT2Test.test || 'McNemar (Acc)'}</td><td>${formatNumber(vergleich?.mcnemar?.statistic, 3, '--', true)} (df=${vergleich?.mcnemar?.df || '--'})</td><td data-tippy-content="${mcNemarInterp}"> ${fPVal(vergleich?.mcnemar)} ${getStatisticalSignificanceSymbol(vergleich?.mcnemar?.pValue)}</td><td data-tippy-content="${ttPraesT2Test.method || 'Methode'}" class="text-muted">${vergleich?.mcnemar?.method || '--'}</td></tr>`;
+            testsTableHTML += `<tr><td data-tippy-content="${delongDesc}">${ttPraesT2Test.test || 'DeLong (AUC)'}</td><td>Z=${formatNumber(vergleich?.delong?.Z, 3, '--', true)}</td><td data-tippy-content="${delongInterp}"> ${fPVal(vergleich?.delong)} ${getStatisticalSignificanceSymbol(vergleich?.delong?.pValue)}</td><td data-tippy-content="${ttPraesT2Test.method || 'Methode'}" class="text-muted">${vergleich?.delong?.method || '--'}</td></tr>`;
             testsTableHTML += `</tbody></table>`;
-            const testTableDownloadBtns = [ {id: `dl-${testTableId}-png`, icon: 'fa-image', tooltip: tablePNG, format: 'png', tableId: testTableId, tableName: `Praes_ASvsT2_Tests_${(comparisonCriteriaSet?.id || selectedStudyId || 'T2').replace(/\s+/g, '_')}`} ];
+            const testTableDownloadBtns = [ {id: `dl-${testTableId}-png`, icon: 'image', tooltip: tablePNG, format: 'png', tableId: testTableId, tableName: `Praes_ASvsT2_Tests_${(comparisonCriteriaSet?.id || selectedStudyId || 'T2').replace(/\s+/g, '_')}`} ];
             const testsCardHTML = uiComponents.createStatistikCard(testTableId+'_card', compTitle, testsTableHTML, false, null, testTableDownloadBtns, testTableId);
 
             resultsHTML = `
@@ -184,8 +194,8 @@ const praesentationTabLogic = (() => {
                              <div class="card-header d-flex justify-content-between align-items-center">
                                  <span>${chartTitle}</span>
                                  <span class="card-header-buttons">
-                                     <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-vs-t2-png" data-chart-id="${chartContainerId}" data-format="png" data-chart-name="${chartBaseName}" data-tippy-content="${chartPNG}"><i class="fas ${dlIconPNG}"></i></button>
-                                     <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-vs-t2-svg" data-chart-id="${chartContainerId}" data-format="svg" data-chart-name="${chartBaseName}" data-tippy-content="${chartSVG}"><i class="fas ${dlIconSVG}"></i></button>
+                                     <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-vs-t2-png" data-chart-id="${chartContainerId}" data-format="png" data-chart-name="${chartBaseName}" data-tippy-content="${chartPNG}">${ui_helpers.getIcon(dlIconPNG)}</button>
+                                     <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-vs-t2-svg" data-chart-id="${chartContainerId}" data-format="svg" data-chart-name="${chartBaseName}" data-tippy-content="${chartSVG}">${ui_helpers.getIcon(dlIconSVG)}</button>
                                  </span>
                              </div>
                             <div class="card-body p-1 d-flex align-items-center justify-content-center">
@@ -194,8 +204,8 @@ const praesentationTabLogic = (() => {
                                  </div>
                             </div>
                              <div class="card-footer text-end p-1">
-                                <button class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-vs-t2-csv" data-tippy-content="${perfCSV}"><i class="fas fa-file-csv me-1"></i>Tabelle (CSV)</button>
-                                <button class="btn btn-sm btn-outline-secondary" id="download-comp-table-as-vs-t2-md" data-tippy-content="${compTableMD}"><i class="fab fa-markdown me-1"></i>Metriken (MD)</button>
+                                <button class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-vs-t2-csv" data-tippy-content="${perfCSV}">${ui_helpers.getIcon('file-csv')} Tabelle (CSV)</button>
+                                <button class="btn btn-sm btn-outline-secondary" id="download-comp-table-as-vs-t2-md" data-tippy-content="${compTableMD}">${ui_helpers.getIcon('file-text')} Metriken (MD)</button>
                            </div>
                         </div>
                     </div>
@@ -210,7 +220,7 @@ const praesentationTabLogic = (() => {
                          <div class="card flex-grow-1">
                               ${testsCardHTML}
                              <div class="card-footer text-end p-1">
-                                <button class="btn btn-sm btn-outline-secondary" id="download-tests-as-vs-t2-md" data-tippy-content="${testsMD}"><i class="fab fa-markdown me-1"></i>Tests (MD)</button>
+                                <button class="btn btn-sm btn-outline-secondary" id="download-tests-as-vs-t2-md" data-tippy-content="${testsMD}">${ui_helpers.getIcon('file-text')} Tests (MD)</button>
                             </div>
                          </div>
                     </div>
@@ -237,9 +247,9 @@ const praesentationTabLogic = (() => {
                 <div class="col-12 d-flex justify-content-center">
                     <div class="btn-group btn-group-sm" role="group" aria-label="Präsentationsansicht Auswahl" data-tippy-content="${TOOLTIP_CONTENT.praesentation.viewSelect.description}">
                         <input type="radio" class="btn-check" name="praesentationAnsicht" id="ansicht-as-pur" autocomplete="off" value="as-pur" ${view === 'as-pur' ? 'checked' : ''}>
-                        <label class="btn btn-outline-primary praes-view-btn" for="ansicht-as-pur"><i class="fas fa-star me-1"></i> Avocado Sign (Performance)</label>
+                        <label class="btn btn-outline-primary praes-view-btn" for="ansicht-as-pur">${ui_helpers.getIcon('star')} Avocado Sign (Performance)</label>
                         <input type="radio" class="btn-check" name="praesentationAnsicht" id="ansicht-as-vs-t2" value="as-vs-t2" autocomplete="off" ${view === 'as-vs-t2' ? 'checked' : ''}>
-                        <label class="btn btn-outline-primary praes-view-btn" for="ansicht-as-vs-t2"><i class="fas fa-exchange-alt me-1"></i> AS vs. T2 (Vergleich)</label>
+                        <label class="btn btn-outline-primary praes-view-btn" for="ansicht-as-vs-t2">${ui_helpers.getIcon('git-compare')} AS vs. T2 (Vergleich)</label>
                     </div>
                 </div>
             </div>`;
