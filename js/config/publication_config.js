@@ -131,12 +131,12 @@ const PUBLICATION_CONFIG = Object.freeze({
                 titleDe: 'Vergleichsmetriken für das Gesamtkollektiv: AS vs. optimierte T2-Kriterien',
                 titleEn: 'Comparative Metrics for the Overall Cohort: AS vs. Optimized T2 Criteria'
             },
-            vergleichPerformanceChartDirektOP: {
+            vergleichPerformanceChartdirektOP: { // Schlüssel korrigiert (war vorher vergleichPerformanceChartDirektOP)
                 id: 'pub-chart-vergleich-direkt-OP',
                 titleDe: 'Vergleichsmetriken für das Direkt-OP Kollektiv: AS vs. optimierte T2-Kriterien',
                 titleEn: 'Comparative Metrics for the Upfront Surgery Cohort: AS vs. Optimized T2 Criteria'
             },
-            vergleichPerformanceChartNRCT: {
+            vergleichPerformanceChartnRCT: {
                 id: 'pub-chart-vergleich-nRCT',
                 titleDe: 'Vergleichsmetriken für das nRCT Kollektiv: AS vs. optimierte T2-Kriterien',
                 titleEn: 'Comparative Metrics for the nRCT Cohort: AS vs. Optimized T2 Criteria'
@@ -146,13 +146,13 @@ const PUBLICATION_CONFIG = Object.freeze({
     DEFAULT_ABSTRACT_TEXT_DE: `
         **Ziele:** Das "Avocado Sign" (AS), ein neuer kontrastmittel-basierter MRT-Marker, wurde zur Prädiktion des mesorektalen Lymphknotenbefalls beim Rektumkarzinom evaluiert und mit T2-gewichteten Kriterien verglichen.
         **Methoden:** Diese retrospektive Studie umfasste 106 Patienten mit Rektumkarzinom. Das Avocado Sign (hypointenser Kern in homogen hyperintensem Lymphknoten auf kontrastverstärkten T1-gewichteten Bildern) wurde beurteilt. Zusätzlich wurden T2-gewichtete morphologische Kriterien (Literatur-basiert und datengetrieben optimiert) analysiert. 77 Patienten erhielten neoadjuvante Radiochemotherapie. Der histopathologische Befund diente als Referenzstandard. Diagnostische Metriken wurden berechnet und verglichen.
-        **Ergebnisse:** Das Avocado Sign zeigte eine hohe diagnostische Genauigkeit (Sensitivität 88,7%, Spezifität 84,9%, AUC 0,87). Seine Leistung war robust in der Primärchirurgie- (AUC 0,92) und der nRCT-Gruppe (AUC 0,85). Literatur-basierte T2-Kriterien zeigten variable Ergebnisse. Für das Gesamtkollektiv optimierte T2-Kriterien erreichten eine AUC von [PLATZHALTER_AUC_T2_OPTIMIERT_GESAMT]. Im direkten Vergleich zeigte das AS [eine überlegene/vergleichbare/unterlegene] Performance gegenüber optimierten T2-Kriterien (p=[PLATZHALTER_P_WERT_VERGLEICH]).
+        **Ergebnisse:** Das Avocado Sign zeigte eine hohe diagnostische Genauigkeit (Sensitivität 88,7%, Spezifität 84,9%, Accuracy 86,8%, AUC 0,87). Seine Leistung war robust in der Primärchirurgie- (Sensitivität 100%, Spezifität 83,3%, AUC 0,92) und der nRCT-Gruppe (Sensitivität 84,2%, Spezifität 85,4%, AUC 0,85). Literatur-basierte T2-Kriterien zeigten variable Ergebnisse. Für das Gesamtkollektiv optimierte T2-Kriterien erreichten eine AUC von [PLATZHALTER_AUC_T2_OPTIMIERT_GESAMT]. Im direkten Vergleich zeigte das AS [eine überlegene/vergleichbare/unterlegene] Performance gegenüber optimierten T2-Kriterien (p=[PLATZHALTER_P_WERT_VERGLEICH]).
         **Fazit:** Das Avocado Sign ist ein vielversprechender Prädiktor für den mesorektalen Lymphknotenstatus. Seine einfache Anwendung und hohe diagnostische Genauigkeit unterstreichen sein Potenzial, das MRT-Staging zu verfeinern. Weitere Validierung ist erforderlich.
         `,
     DEFAULT_ABSTRACT_TEXT_EN: `
         **Objectives:** The "Avocado Sign" (AS), a novel contrast-enhanced MRI marker, was evaluated for predicting mesorectal lymph node involvement in rectal cancer and compared with T2-weighted criteria.
         **Methods:** This retrospective study included 106 patients with rectal cancer. The Avocado Sign (hypointense core within a homogeneously hyperintense lymph node on contrast-enhanced T1-weighted images) was assessed. Additionally, T2-weighted morphological criteria (literature-based and data-driven optimized) were analyzed. Seventy-seven patients received neoadjuvant chemoradiotherapy. Histopathology served as the reference standard. Diagnostic metrics were calculated and compared.
-        **Results:** The Avocado Sign demonstrated high diagnostic accuracy (sensitivity 88.7%, specificity 84.9%, AUC 0.87). Its performance was robust in the upfront surgery (AUC 0.92) and nRCT groups (AUC 0.85). Literature-based T2 criteria showed variable results. T2 criteria optimized for the overall cohort achieved an AUC of [PLACEHOLDER_AUC_T2_OPTIMIZED_OVERALL]. In direct comparison, the AS showed [superior/comparable/inferior] performance to optimized T2 criteria (p=[PLACEHOLDER_P_VALUE_COMPARISON]).
+        **Results:** The Avocado Sign demonstrated high diagnostic accuracy (sensitivity 88.7%, specificity 84.9%, accuracy 86.8%, AUC 0.87). Its performance was robust in the upfront surgery (sensitivity 100%, specificity 83.3%, AUC 0.92) and nRCT groups (sensitivity 84.2%, specificity 85.4%, AUC 0.85). Literature-based T2 criteria showed variable results. T2 criteria optimized for the overall cohort achieved an AUC of [PLACEHOLDER_AUC_T2_OPTIMIZED_OVERALL]. In direct comparison, the AS showed [superior/comparable/inferior] performance to optimized T2 criteria (p=[PLACEHOLDER_P_VALUE_COMPARISON]).
         **Conclusion:** The Avocado Sign is a promising predictor for mesorectal lymph node status. Its straightforward application and high diagnostic accuracy underscore its potential to refine MRI staging. Further validation is warranted.
         `,
     DEFAULT_KEY_RESULTS_TEXT_DE: `
