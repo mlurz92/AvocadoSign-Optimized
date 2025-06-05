@@ -3,7 +3,7 @@ const ui_helpers = (() => {
     let globalTippyInstances = [];
     let collapseEventListenersAttached = new Set();
     let kurzanleitungModalInstance = null;
-    let initialTabRenderFixed = false;
+    let kurzanleitungFirstShowDone = false;
 
     function escapeMarkdown(text) {
         if (typeof text !== 'string' || text === null) return text === null ? '' : String(text);
@@ -796,16 +796,15 @@ const ui_helpers = (() => {
         }
     
         if (kurzanleitungModalInstance && modalElement && !modalElement.classList.contains('show')) {
-            if (!initialTabRenderFixed) {
+            if (!kurzanleitungFirstShowDone) {
                 modalElement.addEventListener('hidden.bs.modal', () => {
-                    if (!initialTabRenderFixed && typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
+                    if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
                         const defaultInitialTabId = 'publikation-tab'; 
                         if (typeof state !== 'undefined' && state.getActiveTabId() === defaultInitialTabId) {
-                            console.log("Kurzanleitung Modal geschlossen, aktiver Tab ist Publikation. Erzwinge Refresh.");
                             mainAppInterface.refreshCurrentTab();
                         }
                     }
-                    initialTabRenderFixed = true; 
+                    kurzanleitungFirstShowDone = true; 
                 }, { once: true });
             }
             kurzanleitungModalInstance.show();
