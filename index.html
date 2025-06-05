@@ -79,12 +79,12 @@
         </ul>
 
         <div class="tab-content" id="main-tab-content">
-            <div class="tab-pane fade show active p-3" id="daten-tab-pane" role="tabpanel" aria-labelledby="daten-tab-link">Daten-Tab Inhalt</div>
-            <div class="tab-pane fade p-3" id="auswertung-tab-pane" role="tabpanel" aria-labelledby="auswertung-tab-link">Auswertungs-Tab Inhalt</div>
-            <div class="tab-pane fade p-3" id="statistik-tab-pane" role="tabpanel" aria-labelledby="statistik-tab-link">Statistik-Tab Inhalt</div>
-            <div class="tab-pane fade p-3" id="praesentation-tab-pane" role="tabpanel" aria-labelledby="praesentation-tab-link">Präsentations-Tab Inhalt</div>
-            <div class="tab-pane fade gx-0" id="publikation-tab-pane" role="tabpanel" aria-labelledby="publikation-tab-link">Publikations-Tab Inhalt</div>
-            <div class="tab-pane fade p-3" id="export-tab-pane" role="tabpanel" aria-labelledby="export-tab-link">Export-Tab Inhalt</div>
+            <div class="tab-pane fade show active p-3" id="daten-tab-pane" role="tabpanel" aria-labelledby="daten-tab-link"><!-- Daten-Tab Inhalt wird dynamisch geladen --></div>
+            <div class="tab-pane fade p-3" id="auswertung-tab-pane" role="tabpanel" aria-labelledby="auswertung-tab-link"><!-- Auswertungs-Tab Inhalt wird dynamisch geladen --></div>
+            <div class="tab-pane fade p-3" id="statistik-tab-pane" role="tabpanel" aria-labelledby="statistik-tab-link"><!-- Statistik-Tab Inhalt wird dynamisch geladen --></div>
+            <div class="tab-pane fade p-3" id="praesentation-tab-pane" role="tabpanel" aria-labelledby="praesentation-tab-link"><!-- Präsentations-Tab Inhalt wird dynamisch geladen --></div>
+            <div class="tab-pane fade gx-0" id="publikation-tab-pane" role="tabpanel" aria-labelledby="publikation-tab-link"><!-- Publikations-Tab Inhalt wird dynamisch geladen --></div>
+            <div class="tab-pane fade p-3" id="export-tab-pane" role="tabpanel" aria-labelledby="export-tab-link"><!-- Export-Tab Inhalt wird dynamisch geladen --></div>
         </div>
     </div>
 
@@ -128,6 +128,7 @@
     
     <script src="js/services/statistics_service.js"></script>
     <script src="js/services/brute_force_manager.js"></script>
+    <script src="js/services/export_service.js"></script> 
     
     <script src="js/publication/engine/radiology_formatter.js"></script>
     <script src="js/publication/engine/publication_data_aggregator.js"></script>
@@ -158,8 +159,6 @@
     <script src="js/ui/view_logic/statistik_tab_logic.js"></script>
     <script src="js/ui/view_logic/praesentation_tab_logic.js"></script>
     
-    <script src="js/services/export_service.js"></script> 
-    
     <script src="js/ui/view_renderer.js"></script> 
     
     <script src="js/ui/event_handlers/general_event_handlers.js"></script>
@@ -173,11 +172,17 @@
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        } else {
-            console.error("Lucide Icons script nicht geladen oder fehlgeschlagen.");
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+                try {
+                    lucide.createIcons();
+                } catch (e) {
+                    console.error("Fehler bei Lucide Icon Initialisierung:", e);
+                }
+            } else {
+                console.error("Lucide Icons Skript nicht geladen oder createIcons nicht verfügbar.");
+            }
+        });
     </script>
 </body>
 </html>
