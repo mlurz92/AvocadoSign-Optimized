@@ -28,13 +28,12 @@ const publicationRenderer = (() => {
 
         if (typeof publicationTabLogic !== 'undefined' && typeof publicationTabLogic.renderDynamicContentForSection === 'function') {
             try {
-                // Delay slightly to ensure DOM is fully updated
                 setTimeout(() => {
                     publicationTabLogic.renderDynamicContentForSection(sectionId, lang);
                     if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.initializeTooltips === 'function') {
                         ui_helpers.initializeTooltips(targetElement);
                     }
-                }, 50); // 50ms delay, adjust if necessary
+                }, 50);
             } catch (error) {
                 console.error(`PublicationRenderer: Fehler beim Rendern dynamischer Inhalte für Sektion '${sectionId}':`, error);
                 const errorToastMsg = lang === 'de' ? `Fehler beim Laden dynamischer Diagramme für Sektion '${sectionId}'.` : `Error loading dynamic charts for section '${sectionId}'.`;
