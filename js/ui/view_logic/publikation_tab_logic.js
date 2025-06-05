@@ -113,12 +113,20 @@ const publikationTabLogic = (() => {
                 const kollektiveForCharts = ['Gesamt', 'direkt OP', 'nRCT'];
                 const bruteForceMetric = state.getCurrentPublikationBruteForceMetric() || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
+                if (!PUBLICATION_CONFIG || 
+                    !PUBLICATION_CONFIG.publicationElements || 
+                    !PUBLICATION_CONFIG.publicationElements.ergebnisse ||
+                    typeof PUBLICATION_CONFIG.publicationElements.ergebnisse !== 'object') {
+                    console.error("PUBLICATION_CONFIG.publicationElements.ergebnisse ist nicht korrekt initialisiert oder nicht vorhanden beim Versuch, Vergleichs-Charts zu rendern.");
+                    return; 
+                }
+
                 kollektiveForCharts.forEach(kolId => {
                     const chartConfigKey = `vergleichPerformanceChart${kolId.replace(/\s+/g, '')}`;
                     const chartConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse[chartConfigKey];
                     
-                    if (!chartConfig || !chartConfig.id) {
-                        console.warn(`Konfiguration für Chart-ID '${chartConfigKey}' nicht gefunden in PUBLICATION_CONFIG.`);
+                    if (!chartConfig || typeof chartConfig !== 'object' || !chartConfig.id) {
+                        console.warn(`Konfiguration für Chart-Schlüssel '${chartConfigKey}' (Kollektiv: ${kolId}) nicht gefunden oder ungültig in PUBLICATION_CONFIG.publicationElements.ergebnisse.`);
                         return; 
                     }
                     const chartId = chartConfig.id;
@@ -126,7 +134,6 @@ const publikationTabLogic = (() => {
                     
                     const dataForThisKollektivOriginal = dataProcessor.filterDataByKollektiv(rawGlobalDataInputForLogic, kolId);
                     const dataForThisKollektiv = allKollektivStats[kolId];
-
 
                     if (chartElement && dataForThisKollektiv) {
                         const asStats = dataForThisKollektiv.gueteAS;
@@ -150,7 +157,6 @@ const publikationTabLogic = (() => {
                             bfStatsForChart = dataForThisKollektiv.gueteT2_bruteforce;
                             bfDefForChart = dataForThisKollektiv.bruteforce_definition;
                         }
-
 
                         if (asStats && bfStatsForChart && bfDefForChart) {
                             const chartDataComp = [
