@@ -26,7 +26,7 @@ const viewRenderer = (() => {
              const toggleButtonHTML = `
                  <div class="d-flex justify-content-end mb-3" id="daten-toggle-button-container">
                      <button id="daten-toggle-details" class="btn btn-sm btn-outline-secondary" data-action="expand" data-tippy-content="${TOOLTIP_CONTENT.datenTable.expandAll || 'Alle Details ein-/ausblenden'}">
-                        Alle Details Anzeigen <i class="fas fa-chevron-down ms-1"></i>
+                        Alle Details Anzeigen ${ui_helpers.getIcon('chevron-down', 16)}
                     </button>
                  </div>`;
             const tableHTML = dataTabLogic.createDatenTableHTML(data, sortState);
@@ -48,16 +48,16 @@ const viewRenderer = (() => {
         if (!stats || stats.anzahlPatienten === 0) { ids.forEach(id => ui_helpers.updateElementHTML(id, '<p class="text-muted small text-center p-2">N/A</p>')); return; };
         const histOpts = { height: 130, margin: { top: 5, right: 10, bottom: 25, left: 35 }, useCompactMargins: true };
         const pieOpts = { height: 130, margin: { top: 5, right: 5, bottom: 35, left: 5 }, innerRadiusFactor: 0.45, outerRadiusFactor: 0.95, fontSize: '8px', useCompactMargins: true, legendBelow: true };
-        const genderData = [{label: UI_TEXTS.legendLabels.male, value: stats.geschlecht?.m ?? 0}, {label: UI_TEXTS.legendLabels.female, value: stats.geschlecht?.f ?? 0}];
-        if(stats.geschlecht?.unbekannt > 0) genderData.push({label: UI_TEXTS.legendLabels.unknownGender, value: stats.geschlecht.unbekannt });
-        const therapyData = [{label: UI_TEXTS.legendLabels.direktOP, value: stats.therapie?.['direkt OP'] ?? 0}, {label: UI_TEXTS.legendLabels.nRCT, value: stats.therapie?.nRCT ?? 0}];
+        const genderData = [{label: UI_TEXTS.legendLabels.male.de, value: stats.geschlecht?.m ?? 0}, {label: UI_TEXTS.legendLabels.female.de, value: stats.geschlecht?.f ?? 0}];
+        if(stats.geschlecht?.unbekannt > 0) genderData.push({label: UI_TEXTS.legendLabels.unknownGender.de, value: stats.geschlecht.unbekannt });
+        const therapyData = [{label: UI_TEXTS.legendLabels.direktOP.de, value: stats.therapie?.['direkt OP'] ?? 0}, {label: UI_TEXTS.legendLabels.nRCT.de, value: stats.therapie?.nRCT ?? 0}];
         try {
             chartRenderer.renderAgeDistributionChart(stats.alterData || [], ids[0], histOpts);
             chartRenderer.renderPieChart(genderData, ids[1], {...pieOpts, legendItemCount: genderData.length});
             chartRenderer.renderPieChart(therapyData, ids[2], {...pieOpts, legendItemCount: therapyData.length});
-            chartRenderer.renderPieChart([{label: UI_TEXTS.legendLabels.nPositive, value: stats.nStatus?.plus ?? 0}, {label: UI_TEXTS.legendLabels.nNegative, value: stats.nStatus?.minus ?? 0}], ids[3], {...pieOpts, legendItemCount: 2});
-            chartRenderer.renderPieChart([{label: UI_TEXTS.legendLabels.asPositive, value: stats.asStatus?.plus ?? 0}, {label: UI_TEXTS.legendLabels.asNegative, value: stats.asStatus?.minus ?? 0}], ids[4], {...pieOpts, legendItemCount: 2});
-            chartRenderer.renderPieChart([{label: UI_TEXTS.legendLabels.t2Positive, value: stats.t2Status?.plus ?? 0}, {label: UI_TEXTS.legendLabels.t2Negative, value: stats.t2Status?.minus ?? 0}], ids[5], {...pieOpts, legendItemCount: 2});
+            chartRenderer.renderPieChart([{label: UI_TEXTS.legendLabels.nPositive.de, value: stats.nStatus?.plus ?? 0}, {label: UI_TEXTS.legendLabels.nNegative.de, value: stats.nStatus?.minus ?? 0}], ids[3], {...pieOpts, legendItemCount: 2});
+            chartRenderer.renderPieChart([{label: UI_TEXTS.legendLabels.asPositive.de, value: stats.asStatus?.plus ?? 0}, {label: UI_TEXTS.legendLabels.asNegative.de, value: stats.asStatus?.minus ?? 0}], ids[4], {...pieOpts, legendItemCount: 2});
+            chartRenderer.renderPieChart([{label: UI_TEXTS.legendLabels.t2Positive.de, value: stats.t2Status?.plus ?? 0}, {label: UI_TEXTS.legendLabels.t2Negative.de, value: stats.t2Status?.minus ?? 0}], ids[5], {...pieOpts, legendItemCount: 2});
         }
         catch(error) { console.error("Fehler bei Chart-Rendering im Dashboard:", error); ids.forEach(id => ui_helpers.updateElementHTML(id, '<p class="text-danger small text-center p-2">Chart Fehler</p>')); }
     }
@@ -65,7 +65,7 @@ const viewRenderer = (() => {
      function _renderCriteriaComparisonTable(containerId, processedDataFull, globalKollektiv) {
          const container = document.getElementById(containerId); if (!container) return;
          if (!Array.isArray(processedDataFull) || processedDataFull.length === 0) {
-             container.innerHTML = uiComponents.createStatistikCard('criteriaComparisonTable', UI_TEXTS.criteriaComparison.title, '<p class="p-3 text-muted small">Keine globalen Daten für Vergleich verfügbar.</p>', false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
+             container.innerHTML = uiComponents.createStatistikCard('criteriaComparisonTable', UI_TEXTS.criteriaComparison.title.de, '<p class="p-3 text-muted small">Keine globalen Daten für Vergleich verfügbar.</p>', false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
              ui_helpers.initializeTooltips(container);
              return;
          }
@@ -136,10 +136,10 @@ const viewRenderer = (() => {
              return (a.name || '').localeCompare(b.name || '');
          });
          const tableHTML = statistikTabLogic.createCriteriaComparisonTableHTML(results, getKollektivDisplayName(globalKollektiv));
-         const cardTooltipText = (TOOLTIP_CONTENT.criteriaComparisonTable.cardTitle || "Vergleich verschiedener Kriteriensätze")
+         const cardTooltipText = (TOOLTIP_CONTENT.criteriaComparisonTable.cardTitle.de || "Vergleich verschiedener Kriteriensätze")
             .replace('[GLOBAL_KOLLEKTIV_NAME]', `<strong>${getKollektivDisplayName(globalKollektiv)}</strong>`);
 
-         container.innerHTML = uiComponents.createStatistikCard('criteriaComparisonTable', UI_TEXTS.criteriaComparison.title, tableHTML, false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
+         container.innerHTML = uiComponents.createStatistikCard('criteriaComparisonTable', UI_TEXTS.criteriaComparison.title.de, tableHTML, false, 'criteriaComparisonTable', [], 'table-kriterien-vergleich');
          const cardHeader = container.querySelector('.card-header');
          if (cardHeader) cardHeader.setAttribute('data-tippy-content', cardTooltipText);
          ui_helpers.initializeTooltips(container);
@@ -189,19 +189,19 @@ const viewRenderer = (() => {
                          if (!stats || stats.anzahlPatienten === 0) {
                              ui_helpers.updateElementHTML(dashboardContainerId, '<div class="col-12"><p class="text-muted text-center small p-3">Keine Daten für Dashboard.</p></div>');
                          } else {
-                             const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image' : 'fa-download';
-                             const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code' : 'fa-download';
+                             const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'image' : 'download';
+                             const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'file-code' : 'download';
                              const pngTooltipBase = (TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'Als PNG herunterladen');
                              const svgTooltipBase = (TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'Als SVG herunterladen');
                              const createDlBtns = (baseId, chartTitle) => [{id:`dl-${baseId}-png`, icon: dlIconPNG, tooltip: pngTooltipBase.replace('{ChartName}', chartTitle), format:'png', chartId: baseId, chartName: chartTitle}, {id:`dl-${baseId}-svg`, icon: dlIconSVG, tooltip: svgTooltipBase.replace('{ChartName}', chartTitle), format:'svg', chartId: baseId, chartName: chartTitle}];
 
                              dashboardContainer.innerHTML = `
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.ageDistribution, `<p class="mb-0 small">Median: ${formatNumber(stats.alter?.median, 1)} (${formatNumber(stats.alter?.min, 0)} - ${formatNumber(stats.alter?.max, 0)})</p>`, 'chart-dash-age', '', '', 'p-1', createDlBtns('chart-dash-age', UI_TEXTS.chartTitles.ageDistribution))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.genderDistribution, `<p class="mb-0 small">M: ${stats.geschlecht?.m ?? 0} W: ${stats.geschlecht?.f ?? 0}</p>`, 'chart-dash-gender', '', '', 'p-1', createDlBtns('chart-dash-gender', UI_TEXTS.chartTitles.genderDistribution))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.therapyDistribution, `<p class="mb-0 small">OP: ${stats.therapie?.['direkt OP'] ?? 0} nRCT: ${stats.therapie?.nRCT ?? 0}</p>`, 'chart-dash-therapy', '', '', 'p-1', createDlBtns('chart-dash-therapy', UI_TEXTS.chartTitles.therapyDistribution))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusN, `<p class="mb-0 small">N+: ${stats.nStatus?.plus ?? 0} N-: ${stats.nStatus?.minus ?? 0}</p>`, 'chart-dash-status-n', '', '', 'p-1', createDlBtns('chart-dash-status-n', UI_TEXTS.chartTitles.statusN))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusAS, `<p class="mb-0 small">AS+: ${stats.asStatus?.plus ?? 0} AS-: ${stats.asStatus?.minus ?? 0}</p>`, 'chart-dash-status-as', '', '', 'p-1', createDlBtns('chart-dash-status-as', UI_TEXTS.chartTitles.statusAS))}
-                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusT2, `<p class="mb-0 small">T2+: ${stats.t2Status?.plus ?? 0} T2-: ${stats.t2Status?.minus ?? 0}</p>`, 'chart-dash-status-t2', '', '', 'p-1', createDlBtns('chart-dash-status-t2', UI_TEXTS.chartTitles.statusT2))}
+                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.ageDistribution.de, `<p class="mb-0 small">Median: ${formatNumber(stats.alter?.median, 1)} (${formatNumber(stats.alter?.min, 0)} - ${formatNumber(stats.alter?.max, 0)})</p>`, 'chart-dash-age', '', '', 'p-1', createDlBtns('chart-dash-age', UI_TEXTS.chartTitles.ageDistribution.de))}
+                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.genderDistribution.de, `<p class="mb-0 small">M: ${stats.geschlecht?.m ?? 0} W: ${stats.geschlecht?.f ?? 0}</p>`, 'chart-dash-gender', '', '', 'p-1', createDlBtns('chart-dash-gender', UI_TEXTS.chartTitles.genderDistribution.de))}
+                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.therapyDistribution.de, `<p class="mb-0 small">OP: ${stats.therapie?.['direkt OP'] ?? 0} nRCT: ${stats.therapie?.nRCT ?? 0}</p>`, 'chart-dash-therapy', '', '', 'p-1', createDlBtns('chart-dash-therapy', UI_TEXTS.chartTitles.therapyDistribution.de))}
+                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusN.de, `<p class="mb-0 small">N+: ${stats.nStatus?.plus ?? 0} N-: ${stats.nStatus?.minus ?? 0}</p>`, 'chart-dash-status-n', '', '', 'p-1', createDlBtns('chart-dash-status-n', UI_TEXTS.chartTitles.statusN.de))}
+                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusAS.de, `<p class="mb-0 small">AS+: ${stats.asStatus?.plus ?? 0} AS-: ${stats.asStatus?.minus ?? 0}</p>`, 'chart-dash-status-as', '', '', 'p-1', createDlBtns('chart-dash-status-as', UI_TEXTS.chartTitles.statusAS.de))}
+                                ${uiComponents.createDashboardCard(UI_TEXTS.chartTitles.statusT2.de, `<p class="mb-0 small">T2+: ${stats.t2Status?.plus ?? 0} T2-: ${stats.t2Status?.minus ?? 0}</p>`, 'chart-dash-status-t2', '', '', 'p-1', createDlBtns('chart-dash-status-t2', UI_TEXTS.chartTitles.statusT2.de))}
                              `;
                               _renderAuswertungDashboardCharts(stats);
                          }
@@ -249,10 +249,10 @@ const viewRenderer = (() => {
 
              const outerRow = document.createElement('div'); outerRow.className = 'row g-4';
              const createChartDlBtns = (baseId, chartTitle) => [
-                { id: `dl-${baseId}-png`, icon: APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image' : 'fa-download', tooltip: (TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'PNG').replace('{ChartName}', chartTitle), format: 'png', chartId: baseId, chartName: chartTitle },
-                { id: `dl-${baseId}-svg`, icon: APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code' : 'fa-download', tooltip: (TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'SVG').replace('{ChartName}', chartTitle), format: 'svg', chartId: baseId, chartName: chartTitle }
+                { id: `dl-${baseId}-png`, icon: 'image', tooltip: (TOOLTIP_CONTENT.exportTab.chartSinglePNG?.description || 'PNG').replace('{ChartName}', chartTitle), format: 'png', chartId: baseId, chartName: chartTitle },
+                { id: `dl-${baseId}-svg`, icon: 'file-code', tooltip: (TOOLTIP_CONTENT.exportTab.chartSingleSVG?.description || 'SVG').replace('{ChartName}', chartTitle), format: 'svg', chartId: baseId, chartName: chartTitle }
              ];
-             const createTableDlBtn = (tableId, tableName) => ({ id: `dl-${tableId}-png`, icon: 'fa-image', tooltip: (TOOLTIP_CONTENT.exportTab.tableSinglePNG?.description || 'Tabelle als PNG').replace('{TableName}', tableName), format: 'png', tableId: tableId, tableName: tableName });
+             const createTableDlBtn = (tableId, tableName) => ({ id: `dl-${tableId}-png`, icon: 'image', tooltip: (TOOLTIP_CONTENT.exportTab.tableSinglePNG?.description || 'Tabelle als PNG').replace('{TableName}', tableName), format: 'png', tableId: tableId, tableName: tableName });
 
 
              datasets.forEach((data, i) => {
@@ -303,7 +303,7 @@ const viewRenderer = (() => {
                         }
                          const genderChartDiv = document.getElementById(genderChartId);
                          if (genderChartDiv) {
-                            const genderData = [{label: UI_TEXTS.legendLabels.male, value: stats.deskriptiv.geschlecht?.m ?? 0}, {label: UI_TEXTS.legendLabels.female, value: stats.deskriptiv.geschlecht?.f ?? 0}]; if(stats.deskriptiv.geschlecht?.unbekannt > 0) genderData.push({label: UI_TEXTS.legendLabels.unknownGender, value: stats.deskriptiv.geschlecht.unbekannt });
+                            const genderData = [{label: UI_TEXTS.legendLabels.male.de, value: stats.deskriptiv.geschlecht?.m ?? 0}, {label: UI_TEXTS.legendLabels.female.de, value: stats.deskriptiv.geschlecht?.f ?? 0}]; if(stats.deskriptiv.geschlecht?.unbekannt > 0) genderData.push({label: UI_TEXTS.legendLabels.unknownGender.de, value: stats.deskriptiv.geschlecht.unbekannt });
                             chartRenderer.renderPieChart(genderData, genderChartId, { height: 180, margin: { top: 10, right: 10, bottom: 35, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true, legendItemCount: genderData.length });
                         }
                      }, 50);
@@ -460,70 +460,110 @@ const viewRenderer = (() => {
 
     function renderPublikationTab(currentLang, currentSection, currentKollektiv, globalProcessedData, bruteForceResults) {
         _renderTabContent('publikation-tab', () => {
-            publikationTabLogic.initializeData(
-                globalProcessedData,
-                t2CriteriaManager.getAppliedCriteria(),
-                t2CriteriaManager.getAppliedLogic(),
-                bruteForceResults
+            if (!globalProcessedData) throw new Error("Publikations-Daten nicht verfügbar.");
+            
+            // `publicationMainController.getFullPublicationSectionHTML` generiert bereits das gesamte HTML
+            // inklusive des Headers und des Content-Bereichs.
+            const fullContentHTML = publicationMainController.getFullPublicationSectionHTML(
+                {
+                    allKollektivStats: statisticsService.calculateAllStatsForPublication(
+                        globalProcessedData,
+                        t2CriteriaManager.getAppliedCriteria(),
+                        t2CriteriaManager.getAppliedLogic(),
+                        bruteForceResults,
+                        stateManager.getCurrentPublikationBruteForceMetric() // Get the correct BF metric for publication from state
+                    ),
+                    common: publicationDataAggregator.getCommonData(globalProcessedData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceResults, stateManager.getCurrentPublikationBruteForceMetric())
+                },
+                currentSection,
+                currentLang
             );
 
-            const headerHTML = uiComponents.createPublikationTabHeader();
-            const initialContentHTML = publikationTabLogic.getRenderedSectionContent(currentSection, currentLang, currentKollektiv);
-            
-            const container = document.createElement('div');
-            container.innerHTML = headerHTML;
-            const contentAreaDiv = document.createElement('div');
-            contentAreaDiv.id = 'publikation-content-area'; // Ensure this matches the ID used in ui_helpers
-            contentAreaDiv.className = 'bg-white p-3 border rounded'; // Apply styles as in createPublikationTabHeader
-            contentAreaDiv.style.minHeight = '400px';
-            contentAreaDiv.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)'; // Match styles
-            contentAreaDiv.style.overflowY = 'auto';
-            contentAreaDiv.innerHTML = initialContentHTML;
-            
-            const mainCol = container.querySelector('.col-md-9'); // Target specific column if headerHTML has this structure
-            if (mainCol) {
-                const existingContentArea = mainCol.querySelector('#publikation-content-area');
-                if (existingContentArea) {
-                    existingContentArea.innerHTML = initialContentHTML;
-                } else {
-                     const controlDiv = mainCol.querySelector('.d-flex.justify-content-end.align-items-center.mb-2');
-                     if(controlDiv) {
-                         controlDiv.insertAdjacentElement('afterend', contentAreaDiv);
-                     } else {
-                         mainCol.appendChild(contentAreaDiv);
-                     }
-                }
-            } else {
-                 console.warn("Hauptspalte für Publikationsinhalt nicht im Header-HTML gefunden. Inhalt wird möglicherweise nicht korrekt platziert.");
-                 const fallbackContainer = container.querySelector('#publikation-content-area') || container;
-                 fallbackContainer.innerHTML = initialContentHTML;
-            }
-
-
+            // `_renderTabContent` wird den `innerHTML` des Containers (`#publikation-tab-pane`) setzen.
+            // Es ist nicht nötig, hier manuell ein div zu erstellen und es dann in eine Spalte einzufügen.
+            // Der `fullContentHTML` *sollte* bereits die `<div id="publikation-content-area">` und den Header enthalten,
+            // wenn `publicationMainController.getFullPublicationSectionHTML` wie erwartet arbeitet.
+            // Die dynamischen Charts müssen nach dem Setzen des HTML gerendert werden.
             setTimeout(() => {
-                const contentArea = document.getElementById('publikation-content-area');
-                if (!contentArea) { // Double check if it was not found or created above
-                     const mainContentCol = document.querySelector('#publikation-tab-pane .col-md-9');
-                     if (mainContentCol) {
-                          const newContentArea = document.createElement('div');
-                          newContentArea.id = 'publikation-content-area';
-                          newContentArea.className = 'bg-white p-3 border rounded';
-                          newContentArea.style.minHeight = '400px';
-                          newContentArea.style.maxHeight = 'calc(100vh - var(--sticky-header-offset) - 4rem - 2rem)';
-                          newContentArea.style.overflowY = 'auto';
-                          newContentArea.innerHTML = initialContentHTML;
-                          mainContentCol.appendChild(newContentArea);
-                     }
-                }
-                publikationTabLogic.updateDynamicChartsForPublicationTab(currentSection, currentLang, currentKollektiv);
-                ui_helpers.updatePublikationUI(currentLang, currentSection, state.getCurrentPublikationBruteForceMetric());
-                ui_helpers.initializeTooltips(document.getElementById('publikation-tab-pane'));
-            }, 10);
+                const pubTabPane = document.getElementById('publikation-tab-pane');
+                // Wir müssen hier die Tooltips erneut initialisieren, da der Inhalt dynamisch geladen wird
+                ui_helpers.initializeTooltips(pubTabPane);
+                
+                // Aktualisiere die UI des Publikationstabs (z.B. aktiven Abschnitt und Sprache)
+                ui_helpers.updatePublikationUI(currentLang, currentSection, stateManager.getCurrentPublikationBruteForceMetric());
+                
+                // Rendere dynamische Charts für den aktuellen Abschnitt
+                publicationTabLogic.renderDynamicContentForSection(currentSection, currentLang);
 
-            return container.innerHTML;
+                // Speichere die aktuelle Sektions-ID im data-Attribut des Content-Bereichs für den Export
+                const contentArea = document.getElementById('publikation-content-area');
+                if (contentArea) {
+                    contentArea.dataset.currentSectionId = currentSection;
+                }
+
+            }, 50);
+
+            return fullContentHTML;
         });
     }
 
+    function updateHeaderStats() {
+        const headerStatsContainer = document.getElementById('header-stats-container');
+        if (!headerStatsContainer) {
+            console.error("Header Stats Container nicht gefunden.");
+            return;
+        }
+
+        const stats = stateManager.getCurrentHeaderStats();
+        const na = '--';
+
+        // Helper to format status for display
+        const formatStatusDisplay = (label, value, total) => {
+            if (value === na || total === na || total === 0) return `${label}: ${na}`;
+            const percent = (total > 0) ? formatPercent(value / total, 1) : na;
+            const absolute = formatNumber(value, 0);
+            return `${label}: ${absolute} (${percent})`;
+        };
+
+        headerStatsContainer.innerHTML = `
+            <div class="header-stat-item" data-tippy-content="${TOOLTIP_CONTENT.headerStats.kollektiv.de}">
+                <span class="stat-label">Kollektiv:</span> <span class="stat-value">${getKollektivDisplayName(stats.kollektiv)}</span>
+            </div>
+            <div class="header-stat-item" data-tippy-content="${TOOLTIP_CONTENT.headerStats.anzahlPatienten.de}">
+                <span class="stat-label">N:</span> <span class="stat-value">${stats.anzahlPatienten}</span>
+            </div>
+            <div class="header-stat-item" data-tippy-content="${TOOLTIP_CONTENT.headerStats.statusN.de}">
+                <span class="stat-label">N-Status:</span> <span class="stat-value status-${stats.nPathoPlus > 0 ? 'plus' : (stats.nPathoMinus > 0 ? 'minus' : 'unknown')}">${formatStatusDisplay('N+', stats.nPathoPlus, stats.nPathoPlus + stats.nPathoMinus)}</span>
+            </div>
+            <div class="header-stat-item" data-tippy-content="${TOOLTIP_CONTENT.headerStats.statusAS.de}">
+                <span class="stat-label">AS-Status:</span> <span class="stat-value status-${stats.nAsPlus > 0 ? 'plus' : (stats.nAsMinus > 0 ? 'minus' : 'unknown')}">${formatStatusDisplay('AS+', stats.nAsPlus, stats.nAsPlus + stats.nAsMinus)}</span>
+            </div>
+            <div class="header-stat-item" data-tippy-content="${TOOLTIP_CONTENT.headerStats.statusT2.de}">
+                <span class="stat-label">T2-Status:</span> <span class="stat-value status-${stats.nT2Plus > 0 ? 'plus' : (stats.nT2Minus > 0 ? 'minus' : 'unknown')}">${formatStatusDisplay('T2+', stats.nT2Plus, stats.nT2Plus + stats.nT2Minus)}</span>
+            </div>
+        `;
+        ui_helpers.initializeTooltips(headerStatsContainer);
+    }
+    
+    function updateActiveTabInUI(activeTabId) {
+        document.querySelectorAll('#main-nav .nav-link').forEach(link => {
+            const tabPaneId = link.dataset.bsTarget;
+            if (tabPaneId === `#${activeTabId}-tab-pane`) {
+                link.classList.add('active');
+                link.setAttribute('aria-selected', 'true');
+            } else {
+                link.classList.remove('active');
+                link.setAttribute('aria-selected', 'false');
+            }
+        });
+        document.querySelectorAll('.tab-content .tab-pane').forEach(pane => {
+            if (pane.id === `${activeTabId}-tab-pane`) {
+                pane.classList.add('show', 'active');
+            } else {
+                pane.classList.remove('show', 'active');
+            }
+        });
+    }
 
     return Object.freeze({
         renderDatenTab,
@@ -531,6 +571,8 @@ const viewRenderer = (() => {
         renderStatistikTab,
         renderPresentationTab,
         renderExportTab,
-        renderPublikationTab
+        renderPublikationTab,
+        updateHeaderStats, // Export for main.js
+        updateActiveTabInUI // Export for main.js
     });
 })();
