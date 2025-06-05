@@ -57,7 +57,6 @@ const publicationTextGenerator = (() => {
         const vergleichASvsBFGesamt = allKollektivStats?.Gesamt?.vergleichASvsT2_bruteforce;
         const statsAS = allKollektivStats?.Gesamt?.gueteAS;
 
-
         let aucASGesamt = asGesamt?.auc?.value !== undefined ? formatNumber(asGesamt.auc.value, 2, 'N/A', lang === 'en') : 'N/A';
         let sensASGesamt = asGesamt?.sens?.value !== undefined ? formatPercent(asGesamt.sens.value, 1, 'N/A') : 'N/A';
         let spezASGesamt = asGesamt?.spez?.value !== undefined ? formatPercent(asGesamt.spez.value, 1, 'N/A') : 'N/A';
@@ -70,7 +69,6 @@ const publicationTextGenerator = (() => {
         let aucAsNRCT = allKollektivStats?.nRCT?.gueteAS?.auc?.value !== undefined ? formatNumber(allKollektivStats.nRCT.gueteAS.auc.value, 2, 'N/A', lang === 'en') : 'N/A';
         let sensAsNRCT = allKollektivStats?.nRCT?.gueteAS?.sens?.value !== undefined ? formatPercent(allKollektivStats.nRCT.gueteAS.sens.value, 1, 'N/A') : 'N/A';
         let spezAsNRCT = allKollektivStats?.nRCT?.gueteAS?.spez?.value !== undefined ? formatPercent(allKollektivStats.nRCT.gueteAS.spez.value, 1, 'N/A') : 'N/A';
-
 
         let aucT2OptimiertGesamt = bfGesamtStats?.auc?.value !== undefined ? formatNumber(bfGesamtStats.auc.value, 2, 'N/A', lang === 'en') : 'N/A';
         let pWertVergleich = vergleichASvsBFGesamt?.delong?.pValue !== undefined ? getPValueText(vergleichASvsBFGesamt.delong.pValue, lang, true) : 'N/A';
@@ -90,43 +88,33 @@ const publicationTextGenerator = (() => {
         }
 
         const mainAbstractTextDe = (PUBLICATION_CONFIG.DEFAULT_ABSTRACT_TEXT_DE || "")
-            .replace('88,7%', sensASGesamt)
-            .replace('84,9%', spezASGesamt)
-            .replace('86,8%', accASGesamt)
-            .replace('0,87', aucASGesamt)
-            .replace('100%', sensAsDirektOP)
-            .replace('83,3%', spezAsDirektOP)
-            .replace('0,92', aucAsDirektOP)
-            .replace('84,2%', sensAsNRCT)
-            .replace('85,4%', spezAsNRCT)
-            .replace('0,85', aucAsNRCT)
-            .replace('[PLATZHALTER_AUC_T2_OPTIMIERT_GESAMT]', aucT2OptimiertGesamt)
-            .replace('[eine überlegene/vergleichbare/unterlegene]', vergleichPerformanceTextDe)
-            .replace('p=[PLATZHALTER_P_WERT_VERGLEICH]', pWertVergleich);
+            .replace(/Sensitivität\s*\d{1,3}(?:[,\.]\d)?%/, `Sensitivität ${sensASGesamt}`)
+            .replace(/Spezifität\s*\d{1,3}(?:[,\.]\d)?%/, `Spezifität ${spezASGesamt}`)
+            .replace(/Accuracy\s*\d{1,3}(?:[,\.]\d)?%/, `Accuracy ${accASGesamt}`)
+            .replace(/AUC\s*\d(?:[,\.]\d{1,2})?\s*\)/, `AUC ${aucASGesamt})`)
+            .replace(/Primärchirurgie-\s*\(Sensitivität\s*\d{1,3}(?:[,\.]\d)?%,\s*Spezifität\s*\d{1,3}(?:[,\.]\d)?%,\s*AUC\s*\d(?:[,\.]\d{1,2})?\)/, `Primärchirurgie- (Sensitivität ${sensAsDirektOP}, Spezifität ${spezAsDirektOP}, AUC ${aucAsDirektOP})`)
+            .replace(/nRCT-Gruppe\s*\(Sensitivität\s*\d{1,3}(?:[,\.]\d)?%,\s*Spezifität\s*\d{1,3}(?:[,\.]\d)?%,\s*AUC\s*\d(?:[,\.]\d{1,2})?\)/, `nRCT-Gruppe (Sensitivität ${sensAsNRCT}, Spezifität ${spezAsNRCT}, AUC ${aucAsNRCT})`)
+            .replace(/\[PLATZHALTER_AUC_T2_OPTIMIERT_GESAMT\]/, aucT2OptimiertGesamt)
+            .replace(/\[eine überlegene\/vergleichbare\/unterlegene\]/, vergleichPerformanceTextDe)
+            .replace(/p=\[PLATZHALTER_P_WERT_VERGLEICH\]/, pWertVergleich);
 
         const mainAbstractTextEn = (PUBLICATION_CONFIG.DEFAULT_ABSTRACT_TEXT_EN || "")
-            .replace('88.7%', sensASGesamt)
-            .replace('84.9%', spezASGesamt)
-            .replace('86.8%', accASGesamt)
-            .replace('0.87', aucASGesamt)
-            .replace('100%', sensAsDirektOP)
-            .replace('83.3%', spezAsDirektOP)
-            .replace('0.92', aucAsDirektOP)
-            .replace('84.2%', sensAsNRCT)
-            .replace('85.4%', spezAsNRCT)
-            .replace('0.85', aucAsNRCT)
-            .replace('[PLACEHOLDER_AUC_T2_OPTIMIZED_OVERALL]', aucT2OptimiertGesamt)
-            .replace('[superior/comparable/inferior]', vergleichPerformanceTextEn)
-            .replace('p=[PLACEHOLDER_P_VALUE_COMPARISON]', pWertVergleich);
-
+            .replace(/sensitivity\s*\d{1,3}(?:[,\.]\d)?%/, `sensitivity ${sensASGesamt}`)
+            .replace(/specificity\s*\d{1,3}(?:[,\.]\d)?%/, `specificity ${spezASGesamt}`)
+            .replace(/accuracy\s*\d{1,3}(?:[,\.]\d)?%/, `accuracy ${accASGesamt}`)
+            .replace(/AUC\s*\d(?:[,\.]\d{1,2})?\)/, `AUC ${aucASGesamt})`)
+            .replace(/upfront surgery\s*\(sensitivity\s*\d{1,3}(?:[,\.]\d)?%,\s*specificity\s*\d{1,3}(?:[,\.]\d)?%,\s*AUC\s*\d(?:[,\.]\d{1,2})?\)/, `upfront surgery (sensitivity ${sensAsDirektOP}, specificity ${spezAsDirektOP}, AUC ${aucAsDirektOP})`)
+            .replace(/nRCT groups\s*\(sensitivity\s*\d{1,3}(?:[,\.]\d)?%,\s*specificity\s*\d{1,3}(?:[,\.]\d)?%,\s*AUC\s*\d(?:[,\.]\d{1,2})?\)/, `nRCT groups (sensitivity ${sensAsNRCT}, specificity ${spezAsNRCT}, AUC ${aucAsNRCT})`)
+            .replace(/\[PLACEHOLDER_AUC_T2_OPTIMIZED_OVERALL\]/, aucT2OptimiertGesamt)
+            .replace(/\[superior\/comparable\/inferior\]/, vergleichPerformanceTextEn)
+            .replace(/p=\[PLACEHOLDER_P_VALUE_COMPARISON\]/, pWertVergleich);
 
         const keyResultsTextDe = (PUBLICATION_CONFIG.DEFAULT_KEY_RESULTS_TEXT_DE || "")
-            .replace('0,87', aucASGesamt)
-            .replace('[ÜBERLEGENE/VERGLEICHBARE/UNTERLEGENE]', vergleichPerformanceTextDe.toUpperCase());
+            .replace(/AUC\s*\d(?:[,\.]\d{1,2})?\s*\)/, `AUC ${aucASGesamt})`)
+            .replace(/\[ÜBERLEGENE\/VERGLEICHBARE\/UNTERLEGENE\]/, vergleichPerformanceTextDe.toUpperCase());
         const keyResultsTextEn = (PUBLICATION_CONFIG.DEFAULT_KEY_RESULTS_TEXT_EN || "")
-            .replace('0.87', aucASGesamt)
-            .replace('[SUPERIOR/COMPARABLE/INFERIOR]', vergleichPerformanceTextEn.toUpperCase());
-
+            .replace(/AUC\s*\d(?:[,\.]\d{1,2})?\s*\)/, `AUC ${aucASGesamt})`)
+            .replace(/\[SUPERIOR\/COMPARABLE\/INFERIOR\]/, vergleichPerformanceTextEn.toUpperCase());
 
         return `
             <div class="publication-abstract-section">
@@ -198,13 +186,13 @@ const publicationTextGenerator = (() => {
         if (lang === 'de') {
             return `
                 <h3 id="methoden-patientenkohorte-title">Patientenkohorte und Einschlusskriterien</h3>
-                <p>In diese Studie wurden konsekutiv ${anzahlGesamt} Patienten eingeschlossen, bei denen zwischen ${studienzeitraum} ein Rektumkarzinom diagnostiziert und die primäre Staging-MRT-Untersuchung sowie die anschließende Therapie und Operation am Klinikum St. Georg, Leipzig, erfolgten. Das mittlere Alter der Patienten betrug ${alterMedian} Jahre (Spannweite: ${alterMin}–${alterMax} Jahre); ${anteilMaennerProzent} der Kohorte (${anzahlMaenner}/${anzahlPatientenChar}) waren männlich. ${anzahlNRCT} Patienten (${formatPercent(anzahlNRCT/anzahlGesamt,0)}) erhielten eine neoadjuvante Radiochemotherapie (nRCT), während ${anzahlDirektOP} Patienten (${formatPercent(anzahlDirektOP/anzahlGesamt,0)}) primär chirurgisch versorgt wurden. Die detaillierten demographischen und klinischen Charakteristika sind in <a href="${_getSafeLink(table1Id)}">Tabelle 1</a> aufgeführt. Das Flussdiagramm zur Patientenrekrutierung ist in <a href="${_getSafeLink(flowDiagramId)}">Abbildung Methoden 1</a> dargestellt.</p>
+                <p>In diese Studie wurden konsekutiv ${anzahlGesamt} Patienten eingeschlossen, bei denen zwischen ${studienzeitraum} ein Rektumkarzinom diagnostiziert und die primäre Staging-MRT-Untersuchung sowie die anschließende Therapie und Operation am Klinikum St. Georg, Leipzig, erfolgten. Das mittlere Alter der Patienten betrug ${alterMedian} Jahre (Spannweite: ${alterMin}–${alterMax} Jahre); ${anteilMaennerProzent} der Kohorte (${anzahlMaenner}/${anzahlPatientenChar}) waren männlich. ${anzahlNRCT} Patienten (${formatPercent(anzahlNRCT/anzahlGesamt,0)}) erhielten eine neoadjuvante Radiochemotherapie (nRCT), während ${anzahlDirektOP} Patienten (${formatPercent(anzahlDirektOP/anzahlGesamt,0)}) primär chirurgisch versorgt wurden. Die detaillierten demographischen und klinischen Charakteristika sind in <a href="${_getSafeLink(table1Id)}">Tabelle Ergebnisse 1</a> aufgeführt. Das Flussdiagramm zur Patientenrekrutierung ist in <a href="${_getSafeLink(flowDiagramId)}">Abbildung Methoden 1</a> dargestellt.</p>
                 <p>Einschlusskriterien waren ein Alter $\geq 18$ Jahre und ein histologisch gesichertes Adenokarzinom des Rektums. Ausschlusskriterien umfassten Kontraindikationen gegen eine MRT-Untersuchung oder die Gabe von Gadolinium-basiertem Kontrastmittel sowie bereits extern erfolgte Vorbehandlungen, die eine standardisierte Bildgebung und Therapie im eigenen Zentrum verhinderten. Alle Patienten gaben ihr schriftliches Einverständnis zur Studienteilnahme und zur wissenschaftlichen Auswertung ihrer pseudonymisierten Daten.</p>
             `;
         } else {
             return `
                 <h3 id="methoden-patientenkohorte-title">Patient Cohort and Inclusion Criteria</h3>
-                <p>This study included ${anzahlGesamt} consecutive patients diagnosed with rectal cancer between ${studienzeitraum}, who underwent primary staging MRI, subsequent therapy, and surgery at the Klinikum St. Georg, Leipzig. The mean age of the patients was ${alterMedian} years (range: ${alterMin}–${alterMax} years); ${anteilMaennerProzent} of the cohort (${anzahlMaenner}/${anzahlPatientenChar}) were male. ${anzahlNRCT} patients (${formatPercent(anzahlNRCT/anzahlGesamt,0)}) received neoadjuvant chemoradiotherapy (nRCT), while ${anzahlDirektOP} patients (${formatPercent(anzahlDirektOP/anzahlGesamt,0)}) underwent upfront surgery. Detailed demographic and clinical characteristics are presented in <a href="${_getSafeLink(table1Id)}">Table 1</a>. The patient recruitment flowchart is depicted in <a href="${_getSafeLink(flowDiagramId)}">Methods Figure 1</a>.</p>
+                <p>This study included ${anzahlGesamt} consecutive patients diagnosed with rectal cancer between ${studienzeitraum}, who underwent primary staging MRI, subsequent therapy, and surgery at the Klinikum St. Georg, Leipzig. The mean age of the patients was ${alterMedian} years (range: ${alterMin}–${alterMax} years); ${anteilMaennerProzent} of the cohort (${anzahlMaenner}/${anzahlPatientenChar}) were male. ${anzahlNRCT} patients (${formatPercent(anzahlNRCT/anzahlGesamt,0)}) received neoadjuvant chemoradiotherapy (nRCT), while ${anzahlDirektOP} patients (${formatPercent(anzahlDirektOP/anzahlGesamt,0)}) underwent upfront surgery. Detailed demographic and clinical characteristics are presented in <a href="${_getSafeLink(table1Id)}">Results Table 1</a>. The patient recruitment flowchart is depicted in <a href="${_getSafeLink(flowDiagramId)}">Methods Figure 1</a>.</p>
                 <p>Inclusion criteria were age $\geq 18$ years and histologically confirmed adenocarcinoma of the rectum. Exclusion criteria comprised contraindications to MRI or administration of gadolinium-based contrast agents, as well as prior treatments performed externally that precluded standardized imaging and therapy at our institution. All patients provided written informed consent for study participation and scientific evaluation of their pseudonymized data.</p>
             `;
         }
@@ -356,7 +344,6 @@ const publicationTextGenerator = (() => {
         const anzahlDirektOP = commonData.nDirektOP || allKollektivStats?.['direkt OP']?.deskriptiv?.anzahlPatienten || 'N/A';
         const anzahlNRCT = commonData.nNRCT || allKollektivStats?.nRCT?.deskriptiv?.anzahlPatienten || 'N/A';
         const anteilNplusGesamt = formatPercent(pCharGesamt?.nStatus?.plus && pCharGesamt?.anzahlPatienten ? pCharGesamt.nStatus.plus / pCharGesamt.anzahlPatienten : NaN, 1, 'N/A');
-        const studyReferenceAS = commonData.references?.LURZ_SCHAEFER_AS_2025 || "Lurz & Schäfer (2025)";
         const table1Id = PUBLICATION_CONFIG.publicationElements.ergebnisse.patientenCharakteristikaTabelle.id;
         const fig1aId = PUBLICATION_CONFIG.publicationElements.ergebnisse.alterVerteilungChart.id;
         const fig1bId = PUBLICATION_CONFIG.publicationElements.ergebnisse.geschlechtVerteilungChart.id;
@@ -366,12 +353,12 @@ const publicationTextGenerator = (() => {
         if (lang === 'de') {
             return `
                 <h3 id="ergebnisse-patientencharakteristika-title">Patientencharakteristika und Datenfluss</h3>
-                <p>Die demographischen und klinischen Basisdaten der ${anzahlGesamt} Patienten sind in <a href="${_getSafeLink(table1Id)}">Tabelle 1</a> dargestellt. Das Gesamtkollektiv setzte sich aus ${anzahlDirektOP} Patienten mit primärer Operation und ${anzahlNRCT} Patienten nach neoadjuvanter Radiochemotherapie zusammen. Der mediane Alter betrug ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', false)} Jahre (Spannweite: ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', false)}–${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', false)} Jahre). Männer stellten ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} der Kohorte dar. Ein histopathologisch positiver Lymphknotenstatus (N+) wurde bei ${pCharGesamt?.nStatus?.plus || 'N/A'} (${anteilNplusGesamt}) Patienten des Gesamtkollektivs nachgewiesen. Die Alters- und Geschlechtsverteilung ist in <a href="${_getSafeLink(fig1aId)}">Abbildung Ergebnisse 1a</a> bzw. <a href="${_getSafeLink(fig1bId)}">Abbildung Ergebnisse 1b</a> illustriert. Das Patientenflussdiagramm findet sich in <a href="${_getSafeLink(flowDiagramId)}">Abbildung Methoden 1</a>.</p>
+                <p>Die demographischen und klinischen Basisdaten der ${anzahlGesamt} Patienten sind in <a href="${_getSafeLink(table1Id)}">Tabelle Ergebnisse 1</a> dargestellt. Das Gesamtkollektiv setzte sich aus ${anzahlDirektOP} Patienten mit primärer Operation und ${anzahlNRCT} Patienten nach neoadjuvanter Radiochemotherapie zusammen. Der mediane Alter betrug ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', false)} Jahre (Spannweite: ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', false)}–${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', false)} Jahre). Männer stellten ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} der Kohorte dar. Ein histopathologisch positiver Lymphknotenstatus (N+) wurde bei ${pCharGesamt?.nStatus?.plus || 'N/A'} (${anteilNplusGesamt}) Patienten des Gesamtkollektivs nachgewiesen. Die Alters- und Geschlechtsverteilung ist in <a href="${_getSafeLink(fig1aId)}">Abbildung Ergebnisse 1a</a> bzw. <a href="${_getSafeLink(fig1bId)}">Abbildung Ergebnisse 1b</a> illustriert. Das Patientenflussdiagramm findet sich in <a href="${_getSafeLink(flowDiagramId)}">Abbildung Methoden 1</a>.</p>
             `;
         } else {
             return `
                 <h3 id="ergebnisse-patientencharakteristika-title">Patient Characteristics and Data Flow</h3>
-                <p>The demographic and baseline clinical data of the ${anzahlGesamt} patients are presented in <a href="${_getSafeLink(table1Id)}">Table 1</a>. The overall cohort comprised ${anzahlDirektOP} patients undergoing upfront surgery and ${anzahlNRCT} patients after neoadjuvant chemoradiotherapy. The median age was ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', true)} years (range: ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', true)}–${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', true)} years). Males constituted ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} of the cohort. Histopathologically confirmed positive lymph node status (N+) was identified in ${pCharGesamt?.nStatus?.plus || 'N/A'} (${anteilNplusGesamt}) patients of the total cohort. Age and gender distributions are illustrated in <a href="${_getSafeLink(fig1aId)}">Results Figure 1a</a> and <a href="${_getSafeLink(fig1bId)}">Results Figure 1b</a>, respectively. The patient flow diagram is provided in <a href="${_getSafeLink(flowDiagramId)}">Methods Figure 1</a>.</p>
+                <p>The demographic and baseline clinical data of the ${anzahlGesamt} patients are presented in <a href="${_getSafeLink(table1Id)}">Results Table 1</a>. The overall cohort comprised ${anzahlDirektOP} patients undergoing upfront surgery and ${anzahlNRCT} patients after neoadjuvant chemoradiotherapy. The median age was ${formatNumber(pCharGesamt?.alter?.median, 1, 'N/A', true)} years (range: ${formatNumber(pCharGesamt?.alter?.min, 0, 'N/A', true)}–${formatNumber(pCharGesamt?.alter?.max, 0, 'N/A', true)} years). Males constituted ${formatPercent(pCharGesamt?.geschlecht?.m && pCharGesamt?.anzahlPatienten ? pCharGesamt.geschlecht.m / pCharGesamt.anzahlPatienten : NaN,0)} of the cohort. Histopathologically confirmed positive lymph node status (N+) was identified in ${pCharGesamt?.nStatus?.plus || 'N/A'} (${anteilNplusGesamt}) patients of the total cohort. Age and gender distributions are illustrated in <a href="${_getSafeLink(fig1aId)}">Results Figure 1a</a> and <a href="${_getSafeLink(fig1bId)}">Results Figure 1b</a>, respectively. The patient flow diagram is provided in <a href="${_getSafeLink(flowDiagramId)}">Methods Figure 1</a>.</p>
             `;
         }
     }
@@ -468,7 +455,7 @@ const publicationTextGenerator = (() => {
         const bfZielMetric = commonData.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
         const tableId = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.id;
         const fig2aId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartGesamt.id;
-        const fig2bId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartdirektOP.id;
+        const fig2bId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartdirektOP.id; // Korrigierter Schlüssel
         const fig2cId = PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartnRCT.id;
 
         if (lang === 'de') {
@@ -517,24 +504,44 @@ const publicationTextGenerator = (() => {
         return text;
     }
 
-    function getDiscussionText(lang) {
+    function getDiscussionText(lang, allKollektivStats, commonData) {
+        const asGesamt = allKollektivStats?.Gesamt?.gueteAS;
+        const bfGesamtStats = allKollektivStats?.Gesamt?.gueteT2_bruteforce;
+        const vergleichASvsBFGesamt = allKollektivStats?.Gesamt?.vergleichASvsT2_bruteforce;
+        let vergleichTextDe = "eine vergleichbare Leistung zeigte";
+        let vergleichTextEn = "showed comparable performance";
+
+        if (vergleichASvsBFGesamt?.delong?.pValue !== undefined && asGesamt?.auc?.value !== undefined && bfGesamtStats?.auc?.value !== undefined) {
+            if (vergleichASvsBFGesamt.delong.pValue < (commonData.significanceLevel || 0.05)) {
+                if (asGesamt.auc.value > bfGesamtStats.auc.value) {
+                    vergleichTextDe = "eine signifikant überlegene Leistung zeigte";
+                    vergleichTextEn = "showed significantly superior performance";
+                } else if (asGesamt.auc.value < bfGesamtStats.auc.value) {
+                    vergleichTextDe = "eine signifikant unterlegene Leistung zeigte";
+                    vergleichTextEn = "showed significantly inferior performance";
+                }
+            }
+        }
+        const aucASGesamt = asGesamt?.auc?.value !== undefined ? formatNumber(asGesamt.auc.value, 2, 'N/A', lang === 'en') : 'N/A';
+
+
         if (lang === 'de') {
             return `
                 <h2 id="discussion-title">Diskussion</h2>
-                <p>Diese Studie verglich die diagnostische Leistung des kürzlich beschriebenen Avocado Signs mit Literatur-basierten und datengetrieben optimierten T2-gewichteten MRT-Kriterien zur Prädiktion des mesorektalen Lymphknotenstatus bei Patienten mit Rektumkarzinom. Unsere Ergebnisse deuten darauf hin, dass das Avocado Sign eine hohe diagnostische Genauigkeit aufweist, die über verschiedene Behandlungssubgruppen (primäre Operation vs. neoadjuvante Radiochemotherapie) hinweg robust bleibt. Im direkten Vergleich zeigte das Avocado Sign eine [HIER ERGEBNIS EINTRAGEN, z.B. überlegene, vergleichbare oder unterlegene] Performance gegenüber den optimierten T2-Kriterien, was seine potenzielle Rolle als wertvoller, möglicherweise einfacher anzuwendender Marker unterstreicht.</p>
-                <p>Die Limitationen traditioneller T2w-morphologischer Kriterien sind bekannt. Unsere Analyse der Literatur-basierten Kriterien bestätigte deren variable Performance in unserer Kohorte. Die Brute-Force-Optimierung ermöglichte die Identifikation von T2-Kriteriensets, die für spezifische Kollektive und Zielmetriken die Leistung maximieren, jedoch ist die Komplexität und potenzielle Überanpassung solcher optimierter Sets zu berücksichtigen. Das Avocado Sign bietet hier möglicherweise einen einfacheren und generalisierbareren Ansatz.</p>
-                <p>Die nahezu perfekte Interobserver-Übereinstimmung für das Avocado Sign ist ein weiterer wichtiger Befund, der auf eine hohe Reproduzierbarkeit des Markers hindeutet. Dies ist essenziell für eine breite klinische Anwendbarkeit. Die Ergebnisse dieser Studie legen nahe, dass die Integration kontrastmittelverstärkter Sequenzen und die Berücksichtigung des Avocado Signs die Genauigkeit des MRT-Stagings verbessern könnten, was insbesondere im Kontext individualisierter Therapiekonzepte und organerhaltender Strategien von Bedeutung ist.</p>
-                <p>Zu den Limitationen dieser Studie zählen das retrospektive Design und die Durchführung an einem einzelnen Zentrum. Obgleich das Patientenkollektiv für eine monozentrische Studie adäquat ist, bedarf es prospektiver, multizentrischer Studien zur Validierung dieser Ergebnisse und zur Untersuchung der Auswirkungen des Avocado Signs auf klinische Therapieentscheidungen und das Patientenoutcome. Zukünftige Forschungsarbeiten sollten auch den direkten Vergleich des Avocado Signs mit anderen funktionellen MRT-Parametern, wie z.B. DWI-basierten Metriken, einschließen.</p>
-                <p>Zusammenfassend ist das Avocado Sign ein vielversprechender, reproduzierbarer MRT-Marker mit hoher diagnostischer Genauigkeit für die Prädiktion des mesorektalen Lymphknotenstatus beim Rektumkarzinom. Es stellt eine wertvolle Ergänzung zu den etablierten Staging-Methoden dar und könnte dazu beitragen, die Therapieplanung für Patienten mit Rektumkarzinom weiter zu personalisieren.</p>
+                <p>Die vorliegende Studie evaluierte das "Avocado Sign" (AS), einen neuartigen kontrastmittelbasierten MRT-Marker, zur Prädiktion des mesorektalen Lymphknotenstatus bei ${commonData.nGesamt || 'N/A'} Patienten mit Rektumkarzinom und verglich dessen diagnostische Leistung mit etablierten sowie datengetriebenen T2-gewichteten Kriterien. Das Avocado Sign demonstrierte eine hohe diagnostische Genauigkeit (AUC ${aucASGesamt} im Gesamtkollektiv), die auch in den Subgruppen der primär operierten Patienten und der Patienten nach neoadjuvanter Radiochemotherapie robust blieb. Im direkten statistischen Vergleich mit den für diese Kohorte optimierten T2-Kriterien ${vergleichTextDe} (p-Wert für AUC-Vergleich: ${vergleichASvsBFGesamt?.delong?.pValue !== undefined ? getPValueText(vergleichASvsBFGesamt.delong.pValue, 'de', true) : 'N/A'}).</p>
+                <p>Die Limitationen traditioneller morphologischer T2w-Kriterien, wie Größen- oder Formbeurteilungen, für die Lymphknotendiagnostik sind in der Literatur umfassend beschrieben [1-3]. Unsere Analyse bestätigte die variable und oft suboptimale Leistung dieser Kriterien. Die von uns durchgeführte Brute-Force-Optimierung der T2-Kriterien erlaubte zwar eine Maximierung der gewählten Zielmetrik für die spezifischen Kollektive dieser Studie, jedoch unterstreicht dies auch die Kohortenspezifität und das Risiko der Überanpassung solcher rein datengetriebener Ansätze. Die klare Definition und einfache visuelle Erfassbarkeit des Avocado Signs könnten hier Vorteile in Bezug auf Generalisierbarkeit und Anwenderfreundlichkeit bieten.</p>
+                <p>Ein wesentlicher Aspekt für die klinische Implementierung eines neuen Bildgebungsmarkers ist dessen Reproduzierbarkeit. Die in der Primärstudie zum Avocado Sign berichtete hohe Interobserver-Übereinstimmung (${commonData.references?.LURZ_SCHAEFER_AS_2025 || "Lurz & Schäfer (2025)"}) deutet auf eine gute Anwendbarkeit im klinischen Alltag hin. Die Ergebnisse dieser erweiterten Analyse legen nahe, dass die Integration von kontrastmittelverstärkten T1w-Sequenzen und die gezielte Beurteilung des Avocado Signs die diagnostische Sicherheit des MRT-Stagings erhöhen könnten. Dies ist insbesondere im Kontext individualisierter Therapieentscheidungen, wie der Selektion von Patienten für organerhaltende Strategien [4,5] oder der De-/Eskalation neoadjuvanter Therapien, von potenziell hohem Wert.</p>
+                <p>Unsere Studie weist Limitationen auf. Das retrospektive Design und die monozentrische Durchführung können die Generalisierbarkeit der Ergebnisse einschränken. Obwohl die Fallzahl für eine monozentrische Studie als adäquat betrachtet werden kann, sind prospektive, multizentrische Studien zur externen Validierung der hier präsentierten Ergebnisse und zur Untersuchung des tatsächlichen Einflusses des Avocado Signs auf klinische Therapieentscheidungen und das Langzeit-Outcome der Patienten unerlässlich. Zukünftige Forschungsarbeiten sollten zudem den direkten Vergleich des Avocado Signs mit anderen fortgeschrittenen MRT-Techniken, wie quantitativen Parametern aus der diffusionsgewichteten Bildgebung (DWI) oder dynamischen kontrastmittelverstärkten (DCE) Sequenzen, adressieren.</p>
+                <p>Zusammenfassend ist das Avocado Sign ein vielversprechender und reproduzierbarer MRT-Marker mit hoher diagnostischer Genauigkeit für die Prädiktion des mesorektalen Lymphknotenstatus beim Rektumkarzinom. Es stellt eine wertvolle Ergänzung zu den etablierten Staging-Methoden dar und hat das Potenzial, die Therapieplanung für Patienten mit Rektumkarzinom zu verfeinern und zu personalisieren.</p>
             `;
         } else {
             return `
                 <h2 id="discussion-title">Discussion</h2>
-                <p>This study compared the diagnostic performance of the recently described Avocado Sign with literature-based and data-driven optimized T2-weighted MRI criteria for predicting mesorectal lymph node status in patients with rectal cancer. Our findings suggest that the Avocado Sign exhibits high diagnostic accuracy, which remains robust across different treatment subgroups (upfront surgery vs. neoadjuvant chemoradiotherapy). In direct comparison, the Avocado Sign demonstrated [INSERT RESULT HERE, e.g., superior, comparable, or inferior] performance against optimized T2 criteria, highlighting its potential role as a valuable, possibly more straightforward marker.</p>
-                <p>The limitations of traditional T2w morphological criteria are well-documented. Our analysis of literature-based criteria confirmed their variable performance in our cohort. While brute-force optimization allowed for the identification of T2 criteria sets that maximize performance for specific cohorts and target metrics, the complexity and potential for overfitting of such optimized sets must be considered. The Avocado Sign may offer a simpler and more generalizable approach in this context.</p>
-                <p>The almost perfect interobserver agreement for the Avocado Sign is another important finding, indicating high reproducibility of the marker. This is essential for broad clinical applicability. The results of this study suggest that the integration of contrast-enhanced sequences and consideration of the Avocado Sign could improve the accuracy of MRI staging, which is particularly relevant in the context of individualized treatment concepts and organ-preserving strategies.</p>
-                <p>Limitations of this study include its retrospective design and single-center nature. Although the patient cohort is adequate for a single-center study, prospective, multicenter studies are needed to validate these findings and to investigate the impact of the Avocado Sign on clinical treatment decisions and patient outcomes. Future research should also include a direct comparison of the Avocado Sign with other functional MRI parameters, such as DWI-based metrics.</p>
-                <p>In conclusion, the Avocado Sign is a promising, reproducible MRI marker with high diagnostic accuracy for predicting mesorectal lymph node status in rectal cancer. It represents a valuable addition to established staging methods and could contribute to further personalizing treatment planning for patients with rectal cancer.</p>
+                <p>This study evaluated the "Avocado Sign" (AS), a novel contrast-enhanced MRI marker, for predicting mesorectal lymph node status in ${commonData.nGesamt || 'N/A'} patients with rectal cancer and compared its diagnostic performance with established and data-driven T2-weighted criteria. Our findings indicate that the Avocado Sign demonstrates high diagnostic accuracy (AUC ${aucASGesamt} in the overall cohort), which remained robust across different treatment subgroups (upfront surgery vs. neoadjuvant chemoradiotherapy). In direct statistical comparison with T2 criteria optimized for this cohort, the Avocado Sign ${vergleichTextEn} (p-value for AUC comparison: ${vergleichASvsBFGesamt?.delong?.pValue !== undefined ? getPValueText(vergleichASvsBFGesamt.delong.pValue, 'en', true) : 'N/A'}).</p>
+                <p>The limitations of traditional T2w morphological criteria, such as size or shape assessment, for lymph node diagnostics are extensively described in the literature [1-3]. Our analysis confirmed the variable and often suboptimal performance of these criteria. While our brute-force optimization of T2 criteria allowed for maximization of the chosen target metric for the specific cohorts in this study, this also highlights the cohort specificity and risk of overfitting with such purely data-driven approaches. The clear definition and simple visual assessability of the Avocado Sign may offer advantages in terms of generalizability and user-friendliness.</p>
+                <p>A crucial aspect for the clinical implementation of a new imaging marker is its reproducibility. The high interobserver agreement reported for the Avocado Sign in the primary study (${commonData.references?.LURZ_SCHAEFER_AS_2025 || "Lurz & Schäfer (2025)"}) suggests good applicability in daily clinical practice. The results of this extended analysis suggest that the integration of contrast-enhanced T1w sequences and the specific assessment of the Avocado Sign could enhance the diagnostic certainty of MRI staging. This is of potentially high value, particularly in the context of individualized treatment decisions, such as selecting patients for organ-preserving strategies [4,5] or de-/escalating neoadjuvant therapies.</p>
+                <p>Our study has limitations. Its retrospective design and single-center nature may limit the generalizability of the findings. Although the sample size can be considered adequate for a single-center study, prospective, multicenter studies are essential for external validation of the results presented here and for investigating the actual impact of the Avocado Sign on clinical treatment decisions and long-term patient outcomes. Future research should also address the direct comparison of the Avocado Sign with other advanced MRI techniques, such as quantitative parameters from diffusion-weighted imaging (DWI) or dynamic contrast-enhanced (DCE) sequences.</p>
+                <p>In conclusion, the Avocado Sign is a promising and reproducible MRI marker with high diagnostic accuracy for predicting mesorectal lymph node status in rectal cancer. It represents a valuable addition to established staging methods and has the potential to refine and personalize treatment planning for patients with rectal cancer.</p>
             `;
         }
     }
@@ -543,34 +550,60 @@ const publicationTextGenerator = (() => {
         const refs = commonData.references || {};
         let text = `<h2 id="references-title">${lang === 'de' ? 'Literaturverzeichnis' : 'References'}</h2><ol class="small">`;
         const referenceOrder = [
-            refs.LURZ_SCHAEFER_AS_2025,
-            refs.KOH_2008_MORPHOLOGY,
-            refs.BARBARO_2024_RESTAGING,
-            refs.RUTEGARD_2025_ESGAR_VALIDATION,
-            refs.BEETS_TAN_2018_ESGAR_CONSENSUS,
+            refs.LURZ_SCHAEFER_AS_2025, // Sollte formatiert sein: Lurz M, Schaefer FK. The Avocado Sign: ... Radiology. 2025;XXX:XXX-XXX.
+            "[1] Siegel RL, Miller KD, Wagle NS, Jemal A. Cancer statistics, 2023. CA Cancer J Clin. 2023;73(1):17-48. doi:10.3322/caac.21763",
+            "[2] Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for local rectal cancer staging: a consensus statement by the ESGAR rectal cancer MR
+staging group. Eur Radiol. 2018;28(5):2281-2292. doi:10.1007/s00330-017-5224-4", // Beispiel für ESGAR
+            "[3] Al-Sukhni E, Milot L, Fruitman M, et al. Diagnostic accuracy of MRI for assessment of T category, lymph node metastases, and circumferential resection margin involvement in patients with rectal cancer: a systematic review and meta-analysis. Ann Surg Oncol. 2012;19(7):2212-2223. doi:10.1245/s10434-011-2183-1",
+            "[4] Garcia-Aguilar J, Patil S, Gollub MJ, et al. Organ Preservation in Patients With Rectal Adenocarcinoma Treated With Total Neoadjuvant Therapy. J Clin Oncol. 2022;40(23):2546-2556. doi:10.1200/JCO.21.02621",
+            "[5] Schrag D, Shi Q, Weiser MR, et al. Preoperative Treatment of Locally Advanced Rectal Cancer. N Engl J Med. 2023;389(4):322-334. doi:10.1056/NEJMoa2303269",
+            refs.KOH_2008_MORPHOLOGY, // Koh DM, Collins DJ, Wallace MB, et al. ... Br J Radiol. 2008;...
+            refs.BARBARO_2024_RESTAGING, // Barbaro B, ... Eur Radiol. 2024;...
+            refs.RUTEGARD_2025_ESGAR_VALIDATION, // Rutegård M, ... Eur Radiol. 2025;...
             refs.BROWN_2003_MORPHOLOGY,
             refs.KAUR_2012_MRI_PRACTICAL,
             refs.HORVAT_2019_MRI_RECTAL_CANCER,
             refs.BEETS_TAN_2009_USPIO_RESTAGING,
             refs.BEETS_TAN_2004_GADOLINIUM,
-            refs.BARBARO_2010_RESTAGING,
-            "[1] Siegel RL, Miller KD, Wagle NS, Jemal A (2023) Cancer statistics, 2023. CA Cancer J Clin 73:17–48",
-            "[2] Sauer R, Becker H, Hohenberger W et al (2004) Preoperative versus postoperative chemoradiotherapy for rectal cancer. N Engl J Med 351:1731–1740",
-            "[3] Al-Sukhni E, Milot L, Fruitman M et al (2012) Diagnostic accuracy of MRI for assessment of T category, lymph node metastases, and circumferential resection margin involvement in patients with rectal cancer: a systematic review and meta-analysis. Ann Surg Oncol 19:2212–2223",
-            "[4] Garcia-Aguilar J, Patil S, Gollub MJ et al (2022) Organ preservation in patients with rectal adenocarcinoma treated with total neoadjuvant therapy. J Clin Oncol 40:2546–2556",
-            "[5] Schrag D, Shi Q, Weiser MR et al (2023) Preoperative treatment of locally advanced rectal cancer. N Engl J Med 389:322–334"
+            refs.BARBARO_2010_RESTAGING
         ].filter(ref => ref);
 
         let displayedRefs = new Set();
-        let counter = 1;
-        referenceOrder.forEach(refString => {
-            if (refString && !displayedRefs.has(refString)) {
-                text += `<li>${refString.startsWith('[') ? refString : `[${counter++}] ${refString}`}</li>`;
-                displayedRefs.add(refString);
-            } else if (refString && displayedRefs.has(refString) && !refString.startsWith('[')) {
-                text += `<li>${refString} (siehe oben)</li>`;
+        let counter = 1; // Für nicht vor-nummerierte Referenzen
+        const usedNumberedRefs = new Set();
+
+        const getRefNumber = (refStr) => {
+            const match = refStr.match(/^\[(\d+)\]/);
+            if (match) {
+                usedNumberedRefs.add(parseInt(match[1]));
+                return match[1];
             }
-        });
+            return null;
+        };
+        
+        let autoCounter = 1;
+        const getNextAutoCounter = () => {
+            while(usedNumberedRefs.has(autoCounter)){
+                autoCounter++;
+            }
+            usedNumberedRefs.add(autoCounter);
+            return autoCounter++;
+        };
+
+
+        text += referenceOrder.map(refString => {
+            if (refString && !displayedRefs.has(refString)) {
+                displayedRefs.add(refString);
+                const existingNum = getRefNumber(refString);
+                if (existingNum) {
+                    return `<li>${refString}</li>`;
+                } else {
+                    return `<li>[${getNextAutoCounter()}] ${refString}</li>`;
+                }
+            }
+            return ''; // Für Duplikate oder leere Einträge
+        }).filter(item => item).join('');
+
 
         text += `</ol>`;
         return text;
@@ -593,7 +626,7 @@ const publicationTextGenerator = (() => {
             case 'ergebnisse_t2_literatur_diagnostische_guete': return getErgebnisseLiteraturT2PerformanceText(lang, allKollektivStats, commonData);
             case 'ergebnisse_t2_optimiert_diagnostische_guete': return getErgebnisseOptimierteT2PerformanceText(lang, allKollektivStats, commonData);
             case 'ergebnisse_vergleich_as_vs_t2': return getErgebnisseVergleichPerformanceText(lang, allKollektivStats, commonData);
-            case 'discussion_main': return getDiscussionText(lang);
+            case 'discussion_main': return getDiscussionText(lang, allKollektivStats, commonData);
             case 'references_main': return getReferencesText(lang, commonData);
             default: return `<p class="text-warning">Text für Sektion '${sectionId}' (Sprache: ${lang}) noch nicht implementiert.</p>`;
         }
@@ -626,14 +659,39 @@ const publicationTextGenerator = (() => {
             .replace(/&gt;/g, '>')
             .replace(/&amp;/g, '&')
             .replace(/&nbsp;/g, ' ')
-            .replace(/\u00A0/g, ' ')
-            .replace(/ {2,}/g, ' ')
-            .replace(/\n\s*\n/g, '\n\n')
+            .replace(/\u00A0/g, ' ') // Non-breaking space
+            .replace(/ {2,}/g, ' ') // Replace multiple spaces with single
+            .replace(/\n\s*\n/g, '\n\n') // Reduce multiple newlines
             .trim();
 
+        // Ensure LaTeX math is preserved
+        markdown = markdown.replace(/\$ (.*?) \$/g, '$$$1$$'); // For single dollar signs if used (though Radiology prefers words)
+                                                          // It's better to avoid LaTeX in the direct text if possible,
+                                                          // but this is a fallback. Radiology guidelines prefer symbols
+                                                          // like ≥ to be written as "greater than or equal to".
+
         if (sectionId === 'references_main' && markdown.includes('\n* ')) {
-            let counter = 1;
-            markdown = markdown.replace(/\n\* /g, () => `\n${counter++}. `);
+             // This attempts to renumber based on existing numbers or sequentially
+            let autoCounterMd = 1;
+            const usedNumberedRefsMd = new Set();
+            const getNextAutoCounterMd = () => {
+                while(usedNumberedRefsMd.has(autoCounterMd)){ autoCounterMd++; }
+                usedNumberedRefsMd.add(autoCounterMd);
+                return autoCounterMd++;
+            };
+
+            markdown = markdown.split('\n').map(line => {
+                if (line.startsWith('* ')) {
+                    const content = line.substring(2);
+                    const match = content.match(/^\[(\d+)\]/);
+                    if (match) {
+                        usedNumberedRefsMd.add(parseInt(match[1]));
+                        return `${match[1]}. ${content.substring(match[0].length).trim()}`;
+                    }
+                    return `${getNextAutoCounterMd()}. ${content.trim()}`;
+                }
+                return line;
+            }).join('\n');
         }
         return markdown;
     }
