@@ -1,9 +1,9 @@
 const stateManager = (() => {
     const state = {
         currentKollektiv: APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV,
-        appliedT2Criteria: getDefaultT2Criteria(), // Uses function from app_config.js
+        appliedT2Criteria: getDefaultT2Criteria(), 
         appliedT2Logic: APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC,
-        bruteForceResults: {}, // Format: { kollektivId: { result, report, config, timestamp, metricName, metricValue } }
+        bruteForceResults: {}, 
         activeTabId: 'daten',
         userSettings: {
             datenTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT),
@@ -17,8 +17,8 @@ const stateManager = (() => {
             publikationLang: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG,
             publikationSection: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION,
             publikationBruteForceMetric: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC,
-            currentKollektivForBruteForce: APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV, // Kollektiv for which BF was last run/viewed
-            bruteForceActiveMetric: APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC // Target metric for running BF
+            currentKollektivForBruteForce: APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV, 
+            bruteForceActiveMetric: APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC 
         }
     };
 
@@ -52,8 +52,8 @@ const stateManager = (() => {
                 if (JSON.stringify(state.userSettings[key]) !== JSON.stringify(newSettings[key])) {
                     state.userSettings[key] = cloneDeep(newSettings[key]);
                     if (persist) {
-                        const storageKey = APP_CONFIG.STORAGE_KEYS[key.toUpperCase()] || 
-                                         Object.keys(APP_CONFIG.STORAGE_KEYS).find(k => k.toLowerCase() === key.toLowerCase()) || 
+                        const storageKey = APP_CONFIG.STORAGE_KEYS[key.toUpperCase()] ||
+                                         Object.keys(APP_CONFIG.STORAGE_KEYS).find(k => k.toLowerCase() === key.toLowerCase()) ||
                                          `userSetting_${key}`;
                         saveToLocalStorage(storageKey, state.userSettings[key]);
                     }
@@ -64,12 +64,12 @@ const stateManager = (() => {
         });
 
         if (changed) {
-            document.dispatchEvent(new CustomEvent('userSettingsChanged', { 
-                detail: { 
+            document.dispatchEvent(new CustomEvent('userSettingsChanged', {
+                detail: {
                     newSettings: cloneDeep(state.userSettings),
                     oldSettings: oldSettings,
                     changedKeys: changedKeysList
-                } 
+                }
             }));
         }
     }
@@ -131,10 +131,10 @@ const stateManager = (() => {
     function saveCurrentKollektiv() {
         saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV, state.currentKollektiv);
     }
-    
+
     function setBruteForceResultForKollektiv(kollektivId, resultData) {
         const newBruteForceResults = cloneDeep(state.bruteForceResults);
-        newBruteForceResults[kollektivId] = resultData; // resultData = { result (best), report, config, timestamp, metricName, metricValue }
+        newBruteForceResults[kollektivId] = resultData; 
         updateState({ bruteForceResults: newBruteForceResults });
         if(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS_PREFIX){
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS_PREFIX + kollektivId, resultData);
@@ -145,7 +145,7 @@ const stateManager = (() => {
         return state.bruteForceResults[kollektivId] || null;
     }
 
-    function loadCurrentBruteForceResult() { 
+    function loadCurrentBruteForceResult() {
         const kollektivForBf = state.userSettings.currentKollektivForBruteForce || state.currentKollektiv;
         if(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS_PREFIX){
             const loadedResult = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS_PREFIX + kollektivForBf);
@@ -156,10 +156,10 @@ const stateManager = (() => {
             }
         }
     }
-    
+
     function getAllBruteForceResultsFromStorage() {
         const results = {};
-        const kollektive = ['Gesamt', 'direkt OP', 'nRCT']; 
+        const kollektive = ['Gesamt', 'direkt OP', 'nRCT'];
         if(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS_PREFIX){
             kollektive.forEach(kolId => {
                 const stored = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.BRUTE_FORCE_RESULTS_PREFIX + kolId);
@@ -176,10 +176,10 @@ const stateManager = (() => {
         const validTabs = ['daten', 'auswertung', 'statistik', 'praesentation', 'publikation', 'export'];
         if (validTabs.includes(tabId) && state.activeTabId !== tabId) {
             updateState({ activeTabId: tabId });
-            saveToLocalStorage('activeTabId_v2', tabId); 
+            saveToLocalStorage('activeTabId_v2', tabId);
         }
     }
-    
+
     function getActiveTabId() {
         const storedTabId = loadFromLocalStorage('activeTabId_v2');
         const validTabs = ['daten', 'auswertung', 'statistik', 'praesentation', 'publikation', 'export'];
@@ -190,7 +190,7 @@ const stateManager = (() => {
         if (typeof dataProcessor === 'undefined' || typeof mainAppInterface === 'undefined' || typeof mainAppInterface.getProcessedData === 'undefined') {
             return { kollektiv: state.currentKollektiv, anzahlPatienten: 0, nPathoPlus: 0, nPathoMinus: 0, nAsPlus: 0, nAsMinus: 0, nT2Plus: 0, nT2Minus: 0 };
         }
-        // Ensure to use the current processed data, which is already evaluated for T2 criteria
+        
         const currentData = dataProcessor.filterDataByKollektiv(mainAppInterface.getProcessedData(), state.currentKollektiv);
         let nPathoPlus = 0;
         let nPathoMinus = 0;
@@ -206,12 +206,12 @@ const stateManager = (() => {
 
                 if (p.as === '+') nAsPlus++;
                 else if (p.as === '-') nAsMinus++;
-                
+
                 if (p.t2 === '+') nT2Plus++;
                 else if (p.t2 === '-') nT2Minus++;
             });
         }
-        
+
         return {
             kollektiv: state.currentKollektiv,
             anzahlPatienten: Array.isArray(currentData) ? currentData.length : 0,
@@ -223,12 +223,12 @@ const stateManager = (() => {
             nT2Minus: nT2Minus
         };
     }
-    
+
     if (typeof window.राज्य === 'undefined') {
         Object.defineProperty(window, 'राज्य', {
-            get: () => cloneDeep(state), 
+            get: () => cloneDeep(state),
             enumerable: true,
-            configurable: false 
+            configurable: false
         });
     }
 
@@ -247,18 +247,54 @@ const stateManager = (() => {
         setActiveTabId,
         getActiveTabId,
         getCurrentHeaderStats,
-        // Direkter Zugriff auf State-Variablen über Getter, die Klone zurückgeben
         getCurrentKollektiv: () => state.currentKollektiv,
+        setCurrentKollektiv: (newKollektiv) => { 
+            if (state.currentKollektiv !== newKollektiv) {
+                updateState({ currentKollektiv: newKollektiv});
+                saveCurrentKollektiv();
+                return true;
+            }
+            return false;
+        },
         getAppliedT2Criteria: () => cloneDeep(state.appliedT2Criteria),
+        setAppliedT2Criteria: (criteria) => {
+            updateState({ appliedT2Criteria: criteria });
+            saveAppliedT2Criteria();
+        },
         getAppliedT2Logic: () => state.appliedT2Logic,
+        setAppliedT2Logic: (logic) => {
+            updateState({ appliedT2Logic: logic });
+            saveAppliedT2Logic();
+        },
         getUserSettings: () => cloneDeep(state.userSettings),
         getAllBruteForceResults: () => cloneDeep(state.bruteForceResults),
         getCurrentPublikationLang: () => state.userSettings.publikationLang,
         getCurrentPublikationSection: () => state.userSettings.publikationSection,
         getCurrentPublikationBruteForceMetric: () => state.userSettings.publikationBruteForceMetric,
         getCurrentStatsLayout: () => state.userSettings.statsLayout,
+        setCurrentStatsLayout: (layout) => {
+            if (state.userSettings.statsLayout !== layout) {
+                updateUserSettings({ statsLayout: layout });
+                return true;
+            }
+            return false;
+        },
         getCurrentStatsKollektiv1: () => state.userSettings.statsKollektiv1,
+        setCurrentStatsKollektiv1: (kollektiv) => {
+            if (state.userSettings.statsKollektiv1 !== kollektiv) {
+                updateUserSettings({ statsKollektiv1: kollektiv });
+                return true;
+            }
+            return false;
+        },
         getCurrentStatsKollektiv2: () => state.userSettings.statsKollektiv2,
+        setCurrentStatsKollektiv2: (kollektiv) => {
+            if (state.userSettings.statsKollektiv2 !== kollektiv) {
+                updateUserSettings({ statsKollektiv2: kollektiv });
+                return true;
+            }
+            return false;
+        },
         getCurrentPresentationView: () => state.userSettings.praesentationView,
         getCurrentPresentationStudyId: () => state.userSettings.praesentationStudyId
     });
