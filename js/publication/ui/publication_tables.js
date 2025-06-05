@@ -95,28 +95,28 @@ const publicationTables = (() => {
 
         addRow(
             lang === 'de' ? 'Alter (Jahre), Median (IQR)' : 'Age (Years), Median (IQR)',
-            lang === 'de' ? 'Alter (Jahre), Median (IQR)' : 'Age (Years), Median (IQR)',
+            lang === 'de' ? 'Age (Years), Median (IQR)' : 'Age (Years), Median (IQR)',
             (p) => p.alter ? radiologyFormatter.formatMedianIQR(p.alter.median, p.alter.q1, p.alter.q3, 0, 0) : na,
             (p) => p.alter ? radiologyFormatter.formatMedianIQR(p.alter.median, p.alter.q1, p.alter.q3, 0, 0) : na,
             (p) => p.alter ? radiologyFormatter.formatMedianIQR(p.alter.median, p.alter.q1, p.alter.q3, 0, 0) : na
         );
         addRow(
             lang === 'de' ? 'Alter (Jahre), Mittelwert ± SD' : 'Age (Years), Mean ± SD',
-            lang === 'de' ? 'Alter (Jahre), Mittelwert ± SD' : 'Age (Years), Mean ± SD',
+            lang === 'de' ? 'Age (Years), Mean ± SD' : 'Age (Years), Mean ± SD',
             (p) => p.alter ? radiologyFormatter.formatMeanSD(p.alter.mean, p.alter.sd, 0, 0) : na,
             (p) => p.alter ? radiologyFormatter.formatMeanSD(p.alter.mean, p.alter.sd, 0, 0) : na,
             (p) => p.alter ? radiologyFormatter.formatMeanSD(p.alter.mean, p.alter.sd, 0, 0) : na
         );
         addRow(
             lang === 'de' ? 'Männer, n (%)' : 'Men, n (%)',
-            lang === 'de' ? 'Männer, n (%)' : 'Men, n (%)',
+            lang === 'de' ? 'Men, n (%)' : 'Men, n (%)',
             (p, total) => radiologyFormatter.formatPercentageForRadiology(p.geschlecht?.m, total, 0),
             (p, total) => radiologyFormatter.formatPercentageForRadiology(p.geschlecht?.m, total, 0),
             (p, total) => radiologyFormatter.formatPercentageForRadiology(p.geschlecht?.m, total, 0)
         );
         addRow(
             lang === 'de' ? 'Pathologischer N-Status positiv, n (%)' : 'Pathologic N-Status positive, n (%)',
-            lang === 'de' ? 'Pathologischer N-Status positiv, n (%)' : 'Pathologic N-Status positive, n (%)',
+            lang === 'de' ? 'Pathologic N-Status positive, n (%)' : 'Pathologic N-Status positive, n (%)',
             (p, total) => radiologyFormatter.formatPercentageForRadiology(p.nStatus?.plus, total, 0),
             (p, total) => radiologyFormatter.formatPercentageForRadiology(p.nStatus?.plus, total, 0),
             (p, total) => radiologyFormatter.formatPercentageForRadiology(p.nStatus?.plus, total, 0)
@@ -126,7 +126,7 @@ const publicationTables = (() => {
 
     function _renderSinglePerformanceTable(statsData, methodName, kollektivId, lang, tableConfig) {
         const title = (lang === 'de' ? tableConfig.titleDe : tableConfig.titleEn).replace('{METHOD_NAME}', methodName).replace('{KOLLEKTIV_NAME}', getKollektivDisplayName(kollektivId));
-        const shell = _generateTableShell(tableConfig.id + "_" + methodName.replace(/\s+/g, '_') + "_" + kollektivId.replace(/\s+/g, '_'), tableConfig.radiologyLabel, title, lang, tableConfig.footnoteKey || 'diagnostischeGuete');
+        const shell = _generateTableShell(tableConfig.id + "_" + methodName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '') + "_" + kollektivId.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, ''), tableConfig.radiologyLabel, title, lang, tableConfig.footnoteKey || 'diagnostischeGuete');
         let html = shell.htmlOpening;
         const nPat = statsData?.matrix ? (statsData.matrix.rp + statsData.matrix.fp + statsData.matrix.fn + statsData.matrix.rn) : 0;
         const na = '--';
