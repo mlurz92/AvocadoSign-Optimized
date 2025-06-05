@@ -127,21 +127,12 @@ const UI_TEXTS = {
         DESCRIPTION_TEXT: 'Exportieren Sie hier Rohdaten, Analyseergebnisse, Tabellen und Diagramme basierend auf dem global gewählten Kollektiv ([KOLLEKTIV]) und den angewendeten T2-Kriterien.',
         SINGLE_EXPORTS_TITLE: 'Einzelexporte',
         PACKAGE_EXPORTS_TITLE: 'Export-Pakete (.zip)',
-        EXPORT_STATS_CSV: { de: 'Statistik-Übersicht als CSV', en: 'Statistics Overview as CSV'},
-        EXPORT_BRUTEFORCE_TXT: { de: 'Brute-Force Report als TXT', en: 'Brute-Force Report as TXT'},
-        EXPORT_DESKRIPTIV_MD: { de: 'Deskriptive Statistik als MD', en: 'Descriptive Statistics as MD'},
-        EXPORT_DATEN_MD: { de: 'Patientendaten-Tabelle als MD', en: 'Patient Data Table as MD'},
-        EXPORT_AUSWERTUNG_MD: { de: 'Auswertungstabelle als MD', en: 'Evaluation Table as MD'},
-        EXPORT_FILTERED_DATA_CSV: { de: 'Akt. Kollektivdaten als CSV', en: 'Current Cohort Data as CSV'},
-        EXPORT_COMPREHENSIVE_HTML: { de: 'Umfassender HTML-Report', en: 'Comprehensive HTML Report'},
-        EXPORT_PACKAGE_ALL: { de: 'Alle Einzeldateien (ZIP)', en: 'All Single Files (ZIP)'},
-        EXPORT_PACKAGE_CSV: { de: 'Alle CSV-Dateien (ZIP)', en: 'All CSV Files (ZIP)'},
-        EXPORT_PACKAGE_MD: { de: 'Alle Markdown-Dateien (ZIP)', en: 'All Markdown Files (ZIP)'},
-        EXPORT_PACKAGE_XLSX: { de: 'Alle Excel-Dateien (ZIP)', en: 'All Excel Files (ZIP)'},
-        EXPORT_PACKAGE_PNG: { de: 'Alle Diagramme/Tabellen als PNG (ZIP)', en: 'All Charts/Tables as PNG (ZIP)'},
-        EXPORT_PACKAGE_SVG: { de: 'Alle Diagramme als SVG (ZIP)', en: 'All Charts as SVG (ZIP)'},
-        noDataToExport: { de: 'Keine Daten zum Exportieren.', en: 'No data to export.'},
-        exportError: { de: 'Export fehlgeschlagen.', en: 'Export failed.'}
+        EXPORT_STATS_CSV: { de: { description: "Detaillierte Tabelle aller berechneten statistischen Metriken als CSV-Datei." }, en: { description: "Detailed table of all calculated statistical metrics as CSV file." } },
+        BRUTEFORCE_TXT: { de: { description: "Detaillierter Bericht der letzten Brute-Force-Optimierung als Textdatei (.txt)." }, en: { description: "Detailed report of the last brute-force optimization as text file (.txt)." } },
+        // ... (andere Export-Button-Tooltips, falls spezifische Beschreibungen benötigt werden)
+        // UI_TEXTS.EXPORT_TAB enthält bereits viele Titel, diese hier wären für spezifische Hover-Infos.
+        noDataToExport: {de: {description: "Keine Daten zum Exportieren verfügbar."}, en: {description: "No data available for export."}},
+        exportError: {de: {description: "Beim Export ist ein Fehler aufgetreten."}, en: {description: "An error occurred during export."}}
     },
     LADEN: {de: 'Lade Daten...', en: 'Loading data...'},
     chartTitles: {
@@ -275,7 +266,7 @@ const UI_TEXTS = {
                     <li><strong>Auswertung:</strong> Interaktive Definition von T2-Kriterien, Dashboard, Brute-Force-Optimierung und detaillierte Auswertungsergebnisse pro Patient. <strong>Wichtig:</strong> Änderungen an T2-Kriterien müssen über "Anwenden & Speichern" bestätigt werden.</li>
                     <li><strong>Statistik:</strong> Umfassende statistische Auswertungen (deskriptiv, Güte AS & T2, Vergleiche, Assoziationen). Layout umschaltbar (Einzel-/Vergleichsansicht). Enthält Kriterienvergleichstabelle.</li>
                     <li><strong>Präsentation:</strong> Aufbereitung der Ergebnisse für Präsentationen. Fokus auf AS-Performance oder AS vs. T2 Vergleich (mit Auswahl der T2-Basis).</li>
-                    <li><strong>Publikation:</strong> Generiert Textvorschläge, Tabellen und Abbildungen für wissenschaftliche Manuskripte, ausgerichtet auf die Anforderungen des Journals "Radiology".</li>
+                    <li><strong>Publikation:</strong> Generiert Textvorschläge, Tabellen und Abbildungen für wissenschaftliche Manuskripte, spezifisch ausgerichtet auf die formalen und stilistischen Anforderungen des Journals "Radiology".</li>
                     <li><strong>Export:</strong> Download von Rohdaten, Analyseergebnissen, Tabellen und Diagrammen in verschiedenen Formaten.</li>
                 </ul>
                  <h6>Referenzstandard und Wichtiger Hinweis:</h6>
@@ -286,7 +277,7 @@ const UI_TEXTS = {
                 <p>This application is designed for exploratory analysis and scientific comparison of the diagnostic performance of the "Avocado Sign" versus T2-weighted morphological criteria for predicting mesorectal lymph node status (N-status) in patients with rectal cancer. It is based on a patient cohort of 106 cases.</p>
                 <h6>General Operation:</h6>
                 <ul>
-                    <li><strong>Cohort Selection (Header):</strong> Select the global patient cohort here (<strong>Overall</strong>, <strong>Upfront Surgery</strong>, <strong>nCRT</strong>). This selection affects all analyses and displays throughout the application. Header meta-statistics (Number of Patients, N+, AS+, T2+) update accordingly.</li>
+                    <li><strong>Cohort Selection (Header):</strong> Select the patient cohort for analysis: <strong>Overall</strong> (all patients), <strong>Upfront Surgery</strong> (only primary operated without prior treatment), or <strong>nCRT</strong> (only neoadjuvant chemoradiotherapy treated). This selection filters the data for all tabs.</li>
                     <li><strong>Tab Navigation:</strong> Switch between the main functional areas of the application using the tabs.</li>
                     <li><strong>Tooltips:</strong> Many UI elements and outputs are equipped with detailed tooltips that provide explanations, definitions, or interpretation aids on mouseover.</li>
                     <li><strong>Statistical Significance:</strong> In statistical tables, p-values are marked with symbols for significance levels: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. The underlying significance level is &alpha; = [SIGNIFICANCE_LEVEL].</li>
@@ -355,7 +346,7 @@ const TOOLTIP_CONTENT = {
         expandRow: { de: { description: "Klicken Sie hier oder auf den Pfeil-Button, um die detaillierte Bewertung der einzelnen T2-gewichteten Lymphknoten dieses Patienten gemäß der aktuell angewendeten Kriterien anzuzeigen/auszublenden. Erfüllte Positiv-Kriterien werden hervorgehoben." }, en: { description: "Click here or the arrow button to show/hide the detailed evaluation of this patient's individual T2-weighted lymph nodes according to the currently applied criteria. Fulfilled positive criteria are highlighted." } }
     },
     t2Logic: {
-        de: { description: `Logische Verknüpfung der aktiven T2-Kriterien: <strong>UND</strong> (Ein Lymphknoten ist nur positiv, wenn ALLE aktivierten Kriterien erfüllt sind). <strong>ODER</strong> (Ein Lymphknoten ist positiv, wenn MINDESTENS EIN aktiviertes Kriterium erfüllt ist). Die Wahl beeinflusst die Berechnung des T2-Status.` },
+        de: { description: `Logische Verknüpfung der aktiven T2-Kriterien: <strong>UND</strong> (Ein Lymphknoten ist nur positiv, wenn ALLE aktivierten Kriterien erfüllt sind). <strong>ODER</strong> (Ein Lymphknoten ist positiv, wenn MINDESTENS EIN aktiviertes Kriterium genügt). Die Wahl beeinflusst die Berechnung des T2-Status.` },
         en: { description: `Logical operator for active T2 criteria: <strong>AND</strong> (A lymph node is positive only if ALL activated criteria are met). <strong>OR</strong> (A lymph node is positive if AT LEAST ONE activated criterion is met). The choice affects the T2 status calculation.` }
     },
     t2Size: {
@@ -396,7 +387,6 @@ const TOOLTIP_CONTENT = {
     },
     t2MetricsOverview: {
         cardTitle: { de: { description: "Kurzübersicht der diagnostischen Güte für die aktuell angewendeten und gespeicherten T2-Kriterien im Vergleich zum histopathologischen N-Status für das gewählte Kollektiv: <strong>[KOLLEKTIV]</strong>. Alle Konfidenzintervalle (CI) sind 95%-CIs." }, en: { description: "Summary of diagnostic performance for the currently applied and saved T2 criteria versus histopathological N-status for the selected cohort: <strong>[KOLLEKTIV]</strong>. All confidence intervals (CI) are 95% CIs." } },
-        // Die 'name', 'formula' etc. sind hier Teil des TOOLTIP_CONTENT.statMetrics weiter unten
         sens: { de: { name: "Sensitivität" }, en: { name: "Sensitivity"} },
         spez: { de: { name: "Spezifität" }, en: { name: "Specificity"} },
         ppv: { de: { name: "PPV" }, en: { name: "PPV"} },
@@ -530,129 +520,24 @@ const TOOLTIP_CONTENT = {
         }
     },
     exportTab: { // Tooltips for export buttons
-        statsCSV: { de: { description: "Detaillierte Tabelle aller berechneten statistischen Metriken als CSV-Datei." }, en: { description: "Detailed table of all calculated statistical metrics as CSV file." } },
-        bruteForceTXT: { de: { description: "Detaillierter Bericht der letzten Brute-Force-Optimierung als Textdatei (.txt)." }, en: { description: "Detailed report of the last brute-force optimization as text file (.txt)." } },
-        // ... (andere Export-Button-Tooltips, falls spezifische Beschreibungen benötigt werden)
-        // UI_TEXTS.EXPORT_TAB enthält bereits viele Titel, diese hier wären für spezifische Hover-Infos.
+        statsCSV: { type: 'STATS_CSV', ext: 'csv', de: { description: "Detaillierte Tabelle aller berechneten statistischen Metriken als CSV-Datei." }, en: { description: "Detailed table of all calculated statistical metrics as CSV file." } },
+        bruteForceTXT: { type: 'BRUTEFORCE_TXT', ext: 'txt', de: { description: "Detaillierter Bericht der letzten Brute-Force-Optimierung als Textdatei (.txt)." }, en: { description: "Detailed report of the last brute-force optimization as text file (.txt)." } },
+        deskriptivMD: { type: 'DESKRIPTIV_MD', ext: 'md', de: { description: "Deskriptive Statistik als Markdown-Datei (.md)." }, en: { description: "Descriptive Statistics as Markdown file (.md)." } },
+        comprehensiveReportHTML: { type: 'COMPREHENSIVE_REPORT_HTML', ext: 'html', de: { description: "Umfassender Analysebericht als HTML-Datei (.html)." }, en: { description: "Comprehensive analysis report as HTML file (.html)." } },
+        datenMD: { type: 'DATEN_MD', ext: 'md', de: { description: "Die Patientendaten-Tabelle aus dem 'Daten'-Tab als Markdown-Datei (.md)." }, en: { description: "The patient data table from the 'Data' tab as a Markdown file (.md)." } },
+        auswertungMD: { type: 'AUSWERTUNG_MD', ext: 'md', de: { description: "Die Auswertungstabelle aus dem 'Auswertung'-Tab als Markdown-Datei (.md)." }, en: { description: "The evaluation table from the 'Evaluation' tab as a Markdown file (.md)." } },
+        filteredDataCSV: { type: 'FILTERED_DATA_CSV', ext: 'csv', de: { description: "Die gefilterten Rohdaten des aktuellen Kollektivs als CSV-Datei (.csv)." }, en: { description: "The filtered raw data of the current cohort as a CSV file (.csv)." } },
+        pngZIP: { type: 'PNG_ZIP', ext: 'zip', de: { description: "Alle aktuell sichtbaren Diagramme und exportierbaren Tabellen als PNG-Bilder in einem ZIP-Archiv." }, en: { description: "All currently visible charts and exportable tables as PNG images in a ZIP archive." } },
+        svgZIP: { type: 'SVG_ZIP', ext: 'zip', de: { description: "Alle aktuell sichtbaren Diagramme als Vektor-SVG-Dateien in einem ZIP-Archiv." }, en: { description: "All currently visible charts as vector SVG files in a ZIP archive." } },
+        allZIP: { type: 'ALL_ZIP', ext: 'zip', de: { description: "Ein Gesamtpaket aller verfügbaren Exportdateien (CSVs, MDs, TXTs, HTML, Bilder) in einem ZIP-Archiv." }, en: { description: "A comprehensive package of all available export files (CSVs, MDs, TXTs, HTML, images) in a ZIP archive." } },
+        csvZIP: { type: 'CSV_ZIP', ext: 'zip', de: { description: "Alle generierbaren CSV-Dateien in einem ZIP-Archiv." }, en: { description: "All generatable CSV files in a ZIP archive." } },
+        mdZIP: { type: 'MD_ZIP', ext: 'zip', de: { description: "Alle generierbaren Markdown-Dateien in einem ZIP-Archiv." }, en: { description: "All generatable Markdown files in a ZIP archive." } },
+        xlsxZIP: { type: 'XLSX_ZIP', ext: 'zip', de: { description: "Alle generierbaren Excel-Dateien (.xlsx) in einem ZIP-Archiv." }, en: { description: "All generatable Excel files (.xlsx) in a ZIP archive." } },
+        chartSinglePNG: { type: 'CHART_SINGLE_PNG', ext: 'png', de: { description: "Lädt das Diagramm '{ChartName}' als PNG-Bilddatei herunter." }, en: { description: "Downloads the chart '{ChartName}' as a PNG image file." } },
+        chartSingleSVG: { type: 'CHART_SINGLE_SVG', ext: 'svg', de: { description: "Lädt das Diagramm '{ChartName}' als Vektor-SVG-Datei herunter." }, en: { description: "Downloads the chart '{ChartName}' as a vector SVG file." } },
+        tableSinglePNG: { type: 'TABLE_PNG_EXPORT', ext: 'png', de: { description: "Lädt die Tabelle '{TableName}' als PNG-Bilddatei herunter." }, en: { description: "Downloads the table '{TableName}' as a PNG image file." } },
         noDataToExport: {de: {description: "Keine Daten zum Exportieren verfügbar."}, en: {description: "No data available for export."}},
         exportError: {de: {description: "Beim Export ist ein Fehler aufgetreten."}, en: {description: "An error occurred during export."}}
-    },
-    publikationTabTooltips: {
-        spracheSwitch: { de: { description: "Wechselt die Sprache der generierten Texte und einiger Beschriftungen im Publikation-Tab zwischen Deutsch und Englisch." }, en: { description: "Switches the language of the generated texts and some labels in the Publication tab between German and English." } },
-        sectionSelect: { de: { description: "Wählen Sie den Abschnitt der wissenschaftlichen Publikation, für den Textvorschläge und relevante Daten/Grafiken angezeigt werden sollen." }, en: { description: "Select the section of the scientific publication for which text suggestions and relevant data/graphics should be displayed." } },
-        bruteForceMetricSelect: { de: { description: "Wählen Sie die Zielmetrik, deren Brute-Force-Optimierungsergebnisse im Ergebnisteil der generierten Publikationstexte verwendet werden sollen. Standardtexte beziehen sich meist auf die Default-Optimierungsmetrik (Balanced Accuracy)." }, en: { description: "Select the target metric whose brute-force optimization results should be used in the results section of the generated publication texts. Default texts usually refer to the default optimization metric (Balanced Accuracy)." } },
-        abstract_main: { de: { description: "Generiert den Abstract inklusive Key Results und Summary Statement gemäß den Vorgaben des Radiology Style Guides." }, en: { description: "Generates the Abstract including Key Results and Summary Statement according to the Radiology Style Guide specifications." } },
-        introduction_main: { de: { description: "Generiert einen Textvorschlag für die Einleitung der Publikation." }, en: { description: "Generates a text suggestion for the Introduction section of the publication." } },
-        methoden_studienanlage_ethik: { de: { description: "Textvorschlag zu Studiendesign und Ethikvotum." }, en: { description: "Text suggestion for Study Design and Ethical Approval." } },
-        methoden_patientenkohorte: { de: { description: "Textvorschlag zum Patientenkollektiv und den Einschlusskriterien, inkl. Verweis auf Flussdiagramm." }, en: { description: "Text suggestion for Patient Cohort and Inclusion Criteria, incl. reference to flowchart." } },
-        methoden_mrt_protokoll_akquisition: { de: { description: "Textvorschlag zum MRT-Protokoll und der Bildakquisition." }, en: { description: "Text suggestion for MRI Protocol and Image Acquisition." } },
-        methoden_bildanalyse_avocado_sign: { de: { description: "Textvorschlag zur Bildanalyse des Avocado Signs." }, en: { description: "Text suggestion for Image Analysis of the Avocado Sign." } },
-        methoden_bildanalyse_t2_kriterien: { de: { description: "Textvorschlag zur Bildanalyse der T2-gewichteten Kriterien (Literatur & optimiert)." }, en: { description: "Text suggestion for Image Analysis of T2-weighted Criteria (literature & optimized)." } },
-        methoden_referenzstandard_histopathologie: { de: { description: "Textvorschlag zum Referenzstandard (Histopathologie)." }, en: { description: "Text suggestion for Reference Standard (Histopathology)." } },
-        methoden_statistische_analyse_methoden: { de: { description: "Textvorschlag zu den statistischen Analysemethoden." }, en: { description: "Text suggestion for Statistical Analysis Methods." } },
-        ergebnisse_patientencharakteristika: { de: { description: "Textvorschlag und Darstellung der Patientencharakteristika (mit Tab. 1 und Abb. 1)." }, en: { description: "Text suggestion and presentation of Patient Characteristics (with Table 1 and Fig. 1)." } },
-        ergebnisse_as_diagnostische_guete: { de: { description: "Textvorschlag und Tabelle zur diagnostischen Güte des Avocado Signs." }, en: { description: "Text suggestion and table for diagnostic performance of the Avocado Sign." } },
-        ergebnisse_t2_literatur_diagnostische_guete: { de: { description: "Textvorschlag und Tabelle zur diagnostischen Güte der Literatur-basierten T2-Kriterien." }, en: { description: "Text suggestion and table for diagnostic performance of literature-based T2 criteria." } },
-        ergebnisse_t2_optimiert_diagnostische_guete: { de: { description: "Textvorschlag und Tabelle zur diagnostischen Güte der optimierten T2-Kriterien." }, en: { description: "Text suggestion and table for diagnostic performance of optimized T2 criteria." } },
-        ergebnisse_vergleich_as_vs_t2: { de: { description: "Textvorschlag, Tabelle und Abbildungen zum Vergleich der Performance von AS vs. T2-Kriterien." }, en: { description: "Text suggestion, table, and figures for comparing performance of AS vs. T2 criteria." } },
-        discussion_main: { de: { description: "Generiert einen Textvorschlag für die Diskussion der Ergebnisse und Limitationen." }, en: { description: "Generates a text suggestion for the Discussion of results and limitations." } },
-        references_main: { de: { description: "Generiert das Literaturverzeichnis." }, en: { description: "Generates the list of References." } }
-    },
-    statMetrics: { 
-        sens: { 
-            name: {de: "Sensitivität", en: "Sensitivity"}, 
-            description: {de: "Anteil der korrekt als positiv klassifizierten Patienten unter allen tatsächlich positiven Patienten.", en: "Proportion of correctly classified positive patients among all actual positive patients."},
-            formula: "RP / (RP + FN)",
-            interpretation: {de: "Ein hoher Wert bedeutet, dass die Methode viele der tatsächlich positiven Fälle erkennt.", en: "A high value means the method detects many of the actual positive cases."},
-            range: {de: "0 bis 1 (oder 0% bis 100%)", en: "0 to 1 (or 0% to 100%)"}
-        },
-        spez: { 
-            name: {de: "Spezifität", en: "Specificity"},
-            description: {de: "Anteil der korrekt als negativ klassifizierten Patienten unter allen tatsächlich negativen Patienten.", en: "Proportion of correctly classified negative patients among all actual negative patients."},
-            formula: "RN / (RN + FP)",
-            interpretation: {de: "Ein hoher Wert bedeutet, dass die Methode viele der tatsächlich negativen Fälle korrekt als negativ identifiziert.", en: "A high value means the method correctly identifies many of the actual negative cases as negative."},
-            range: {de: "0 bis 1 (oder 0% bis 100%)", en: "0 to 1 (or 0% to 100%)"}
-        },
-        ppv: { 
-            name: {de: "Positiver Prädiktiver Wert (PPV)", en: "Positive Predictive Value (PPV)"},
-            description: {de: "Wahrscheinlichkeit, dass ein Patient mit einem positiven Testergebnis tatsächlich positiv ist.", en: "Probability that a patient with a positive test result is actually positive."},
-            formula: "RP / (RP + FP)",
-            interpretation: {de: "Hängt von der Prävalenz ab. Ein hoher Wert bedeutet eine hohe Zuverlässigkeit eines positiven Tests.", en: "Depends on prevalence. A high value means high reliability of a positive test."},
-            range: {de: "0 bis 1 (oder 0% bis 100%)", en: "0 to 1 (or 0% to 100%)"}
-        },
-        npv: { 
-            name: {de: "Negativer Prädiktiver Wert (NPV)", en: "Negative Predictive Value (NPV)"},
-            description: {de: "Wahrscheinlichkeit, dass ein Patient mit einem negativen Testergebnis tatsächlich negativ ist.", en: "Probability that a patient with a negative test result is actually negative."},
-            formula: "RN / (RN + FN)",
-            interpretation: {de: "Hängt von der Prävalenz ab. Ein hoher Wert bedeutet eine hohe Zuverlässigkeit eines negativen Tests.", en: "Depends on prevalence. A high value means high reliability of a negative test."},
-            range: {de: "0 bis 1 (oder 0% bis 100%)", en: "0 to 1 (or 0% to 100%)"}
-        },
-        acc: { 
-            name: {de: "Genauigkeit (Accuracy)", en: "Accuracy"},
-            description: {de: "Anteil aller korrekt klassifizierten Patienten.", en: "Proportion of all correctly classified patients."},
-            formula: "(RP + RN) / (RP + RN + FP + FN)",
-            interpretation: {de: "Kann bei unausgewogenen Klassen irreführend sein.", en: "Can be misleading in imbalanced classes."},
-            range: {de: "0 bis 1 (oder 0% bis 100%)", en: "0 to 1 (or 0% to 100%)"}
-        },
-        balAcc: { 
-            name: {de: "Balanced Accuracy", en: "Balanced Accuracy"},
-            description: {de: "Mittelwert aus Sensitivität und Spezifität. Robuster bei unausgewogenen Klassen.", en: "Mean of sensitivity and specificity. More robust in imbalanced classes."},
-            formula: "(Sensitivität + Spezifität) / 2",
-            interpretation: {de: "Ein Wert nahe 1 zeigt eine gute Performance auch bei ungleichen Klassengrößen.", en: "A value close to 1 indicates good performance even with imbalanced class sizes."},
-            range: {de: "0 bis 1 (oder 0% bis 100%)", en: "0 to 1 (or 0% to 100%)"}
-        },
-        f1: { 
-            name: {de: "F1-Score", en: "F1-Score"},
-            description: {de: "Harmonisches Mittel aus PPV und Sensitivität.", en: "Harmonic mean of PPV and sensitivity."},
-            formula: "2 * (PPV * Sensitivität) / (PPV + Sensitivität)",
-            interpretation: {de: "Nützlich, wenn sowohl falsch Positive als auch falsch Negative vermieden werden sollen.", en: "Useful when both false positives and false negatives are to be avoided."},
-            range: {de: "0 bis 1", en: "0 to 1"}
-        },
-        auc: { 
-            name: {de: "Fläche unter der ROC-Kurve (AUC)", en: "Area Under the ROC Curve (AUC)"},
-            description: {de: "Maß für die Fähigkeit eines Tests, zwischen positiven und negativen Fällen zu unterscheiden über alle Schwellenwerte hinweg.", en: "Measure of a test's ability to discriminate between positive and negative cases across all thresholds."},
-            interpretation: {de: "0.5 = keine Diskrimination, 1.0 = perfekte Diskrimination. Radiology: >0.7 'fair', >0.8 'good', >0.9 'excellent'.", en: "0.5 = no discrimination, 1.0 = perfect discrimination. Radiology: >0.7 'fair', >0.8 'good', >0.9 'excellent'."},
-            range: {de: "0 bis 1", en: "0 to 1"}
-        },
-        phi: { 
-            name: {de: "Phi-Koeffizient (φ)", en: "Phi Coefficient (φ)"},
-            description: {de: "Maß für die Assoziation zwischen zwei binären Variablen.", en: "Measure of association between two binary variables."},
-            formula: "(RP*RN - FP*FN) / sqrt((RP+FP)*(RP+FN)*(RN+FP)*(RN+FN))",
-            interpretation: {de: "Werte nahe ±1 zeigen eine starke Assoziation, nahe 0 keine.", en: "Values near ±1 indicate a strong association, near 0 no association."},
-            range: {de: "-1 bis +1", en: "-1 to +1"}
-        },
-        or: { 
-            name: {de: "Odds Ratio (OR)", en: "Odds Ratio (OR)"},
-            description: {de: "Quotient der Odds, dass ein Ereignis in einer Gruppe im Vergleich zu einer anderen auftritt.", en: "Ratio of the odds of an event occurring in one group compared to another."},
-            formula: "(RP/FP) / (FN/RN) = (RP*RN) / (FP*FN)",
-            interpretation: {de: "OR > 1: Erhöhte Odds. OR < 1: Verringerte Odds. OR = 1: Kein Unterschied.", en: "OR > 1: Increased odds. OR < 1: Decreased odds. OR = 1: No difference."},
-            range: {de: "0 bis ∞", en: "0 to ∞"}
-        },
-        rd: { 
-            name: {de: "Risikodifferenz (RD)", en: "Risk Difference (RD)"},
-            description: {de: "Absolute Differenz der Risiken (Wahrscheinlichkeiten) eines Ereignisses zwischen zwei Gruppen.", en: "Absolute difference in the risks (probabilities) of an event between two groups."},
-            formula: "P(Ereignis|Gruppe1) - P(Ereignis|Gruppe2) = (RP/(RP+FP)) - (FN/(FN+RN))",
-            interpretation: {de: "Positiver Wert: Höheres Risiko in Gruppe 1. Negativer Wert: Niedrigeres Risiko in Gruppe 1.", en: "Positive value: Higher risk in group 1. Negative value: Lower risk in group 1."},
-            range: {de: "-1 bis +1", en: "-1 to +1"}
-        }
-    },
-    publicationFootnotes: {
-        literaturT2Kriterien: {
-            de: { description: "Zusammenfassung der in dieser Studie implementierten und verglichenen Literatur-basierten T2-Kriteriensets für die N-Status-Beurteilung beim Rektumkarzinom. Die Kriterien wurden jeweils auf das in der Originalpublikation beschriebene oder das am besten passende Subkollektiv dieser Studie angewendet. Abkürzungen: ESGAR, European Society of Gastrointestinal and Abdominal Radiology; nRCT, neoadjuvante Radiochemotherapie." },
-            en: { description: "Summary of literature-based T2 criteria sets implemented and compared in this study for N-status assessment in rectal cancer. Criteria were applied to the subcohort described in the original publication or the best matching subcohort of this study. Abbreviations: ESGAR, European Society of Gastrointestinal and Abdominal Radiology; nCRT, neoadjuvant chemoradiotherapy." }
-        },
-        patientenCharakteristika: {
-            de: { description: "Daten sind als Median (Interquartilsabstand), Mittelwert ± Standardabweichung (SD) oder absolute Anzahl n (Prozent %) dargestellt. Abkürzungen: IQR, Interquartilsabstand; SD, Standardabweichung; N, Anzahl Patienten; nRCT, neoadjuvante Radiochemotherapie. Die Kategorie 'Andere/Nicht Spezifiziert' für Geschlecht wurde in dieser Tabelle nicht aufgeführt." },
-            en: { description: "Data are presented as median (interquartile range), mean ± standard deviation (SD), or absolute number n (percentage %). Abbreviations: IQR, interquartile range; SD, standard deviation; N, number of patients; nCRT, neoadjuvant chemoradiotherapy. The category 'Other/Unspecified' for sex was not listed in this table." }
-        },
-        diagnostischeGuete: {
-            de: { description: "Diagnostische Gütekriterien für die angegebene Methode und das Patientenkollektiv. Alle Konfidenzintervalle (KI) sind 95%-Konfidenzintervalle. Die Werte für Sensitivität, Spezifität, PPV, NPV und Accuracy sind als Prozent (%) mit der Anzahl der Erfolge und der Gesamtzahl der Fälle in Klammern dargestellt. Abkürzungen: PPV, positiver prädiktiver Wert; NPV, negativer prädiktiver Wert; AUC, Fläche unter der ROC-Kurve (Receiver Operating Characteristic)." },
-            en: { description: "Diagnostic performance metrics for the specified method and patient cohort. All confidence intervals (CI) are 95% confidence intervals. Values for sensitivity, specificity, PPV, NPV, and accuracy are presented as percentages (%) with the number of successes and total cases in parentheses. Abbreviations: PPV, positive predictive value; NPV, negative predictive value; AUC, area under the ROC (receiver operating characteristic) curve." }
-        },
-        statistischerVergleich: {
-            de: { description: "Statistischer Vergleich der diagnostischen Leistung zwischen Avocado Sign (AS) und optimierten T2-Kriterien. Die T2-Kriterien wurden für jedes Kollektiv separat für die Zielmetrik '[BF_METRIC_NAME]' optimiert. P-Werte vom DeLong-Test für den Vergleich von AUCs und vom McNemar-Test für den Vergleich von Accuracy. Ein P-Wert < 0.05 wurde als statistisch signifikant betrachtet. Abkürzungen: AUC, Fläche unter der ROC-Kurve; Acc., Accuracy." },
-            en: { description: "Statistical comparison of diagnostic performance between Avocado Sign (AS) and optimized T2 criteria. T2 criteria were optimized for each cohort separately for the target metric '[BF_METRIC_NAME]'. P values from DeLong test for AUC comparison and McNemar test for accuracy comparison. A P value < .05 was considered statistically significant. Abbreviations: AUC, area under the ROC curve; Acc., Accuracy." }
-        }
     }
 };
 
