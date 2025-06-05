@@ -13,9 +13,9 @@ const ui_helpers = (() => {
 
     function showToast(message, type = 'info', duration = APP_CONFIG.UI_SETTINGS.TOAST_DURATION_MS) {
           const toastContainer = document.getElementById('toast-container');
-          if (!toastContainer) { console.error("showToast: Toast-Container Element 'toast-container' nicht gefunden."); return; }
-          if (typeof message !== 'string' || message.trim() === '') { console.warn("showToast: Ungültige oder leere Nachricht."); return; }
-          if (typeof bootstrap === 'undefined' || !bootstrap.Toast) { console.error("showToast: Bootstrap Toast ist nicht verfügbar."); return; }
+          if (!toastContainer) { return; }
+          if (typeof message !== 'string' || message.trim() === '') { return; }
+          if (typeof bootstrap === 'undefined' || !bootstrap.Toast) { return; }
 
           const toastId = `toast-${generateUUID()}`;
           let bgClass = 'bg-secondary', iconClass = 'fa-info-circle', textClass = 'text-white';
@@ -40,11 +40,11 @@ const ui_helpers = (() => {
               const toastInstance = new bootstrap.Toast(toastElement, { delay: duration, autohide: true });
               toastElement.addEventListener('hidden.bs.toast', () => { if(toastContainer.contains(toastElement)) { toastElement.remove(); } }, { once: true });
               toastInstance.show();
-          } catch (e) { console.error("Fehler beim Erstellen/Anzeigen des Toasts:", e); if(toastContainer.contains(toastElement)) { toastElement.remove(); } }
+          } catch (e) { if(toastContainer.contains(toastElement)) { toastElement.remove(); } }
     }
 
     function initializeTooltips(scope = document.body) {
-        if (!window.tippy || typeof scope?.querySelectorAll !== 'function') { console.warn("Tippy.js nicht verfügbar oder ungültiger Scope für Tooltips."); return; }
+        if (!window.tippy || typeof scope?.querySelectorAll !== 'function') { return; }
 
         const elementsInScope = Array.from(scope.matches('[data-tippy-content]') ? [scope] : scope.querySelectorAll('[data-tippy-content]'));
         const elementSet = new Set(elementsInScope);
@@ -135,7 +135,7 @@ const ui_helpers = (() => {
                     span.style.color = isActiveSort ? 'var(--primary-color)' : 'inherit';
                     const thLabel = th.getAttribute('data-tippy-content')?.split('.')[0] || th.textContent.split('(')[0].trim() || key;
                     const spanLabel = span.textContent.trim();
-                    span.setAttribute('data-tippy-content', `Sortieren nach: ${thLabel} -> ${spanLabel}`);
+                    span.setAttribute('data-tippy-content', `Sortieren nach: ${thLabel} → ${spanLabel}`);
                     if (isActiveSort) {
                         icon.className = `fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1`;
                         isSubKeySortActive = true;
@@ -170,7 +170,6 @@ const ui_helpers = (() => {
         let changedCount = 0;
 
         if (typeof bootstrap === 'undefined' || !bootstrap.Collapse) {
-            console.error("Bootstrap Collapse nicht verfügbar.");
             return;
         }
 
@@ -480,6 +479,7 @@ const ui_helpers = (() => {
                 if (elements.bestCriteria) updateElementText(elements.bestCriteria.id, 'Beste Kriterien: --');
                 if (elements.statusText) updateElementText(elements.statusText.id, 'Initialisiere...');
                 if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${getKollektivNameFunc(kollektivToDisplayForInfo)}</strong>`) + ` Status: Initialisiere...`);
+                if (elements.progressContainer) addOrUpdateTooltip(elements.progressContainer, (TOOLTIP_CONTENT.bruteForceProgress?.description || '').replace('[TOTAL]', '0'));
                 break;
             case 'started':
                 const totalComb = formatNumber(data?.totalCombinations || 0, 0, 'N/A');
@@ -618,12 +618,12 @@ const ui_helpers = (() => {
         const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || 'Keine Interpretation verfügbar.';
         const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: null };
         const na = '--';
-        const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
-        const isPercent = !(key === 'f1' || key === 'auc');
-        const valueStr = formatNumber(data?.value, digits, na, true);
-        const lowerStr = formatNumber(data?.ci?.lower, digits, na, true);
-        const upperStr = formatNumber(data?.ci?.upper, digits, na, true);
-        const ciMethodStr = data?.method || 'N/A';
+        const digits = (key === 'f1' || key === 'auc') ? 3 : 0; // AUC und F1 haben 2 bzw 3 Nachkommastellen (numerisch), Sens, Spez etc. %
+        const isPercent = !(key === 'f1' || key === 'auc'); // isPercent anpassen
+        const valueStr = formatNumber(data?.value, isPercent ? 0 : digits, na, true); // für Prozentwerte hier 0 als digits, dann formatPercent() handhabt Rundung
+        const lowerStr = formatNumber(data?.ci?.lower, isPercent ? 0 : digits, na, true);
+        const upperStr = formatNumber(data?.ci?.upper, isPercent ? 0 : digits, na, true);
+        const ciMethodStr = data?.method || na;
         const bewertungStr = (key === 'auc') ? getAUCBewertung(data?.value) : ((key === 'phi') ? getPhiBewertung(data?.value) : '');
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
 
@@ -633,22 +633,23 @@ const ui_helpers = (() => {
             ciWarning = `<hr><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahl (Nenner=${data.n_trials}).</i>`;
         } else if (data?.matrix_components && (key === 'balAcc' || key === 'f1' || key === 'auc')) {
             const mc = data.matrix_components;
-            if (mc.total < ciWarningThreshold * 2 || mc.rp < ciWarningThreshold/2 || mc.fp < ciWarningThreshold/2 || mc.fn < ciWarningThreshold/2 || mc.rn < ciWarningThreshold/2 ) {
-                 ciWarning = `<hr><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahlen in der Konfusionsmatrix (Gesamt=${mc.total}).</i>`;
+            const relevantPatients = Math.max(mc.rp + mc.fn, mc.fp + mc.rn); // Anzahl der Patienten, die die Berechnung des AUC / BalAcc beeinflussen
+            if (relevantPatients < ciWarningThreshold) {
+                 ciWarning = `<hr><i>Hinweis: Konfidenzintervall ggf. unsicher aufgrund kleiner Fallzahlen in der Konfusionsmatrix (relevant N=${relevantPatients}).</i>`;
             }
         }
 
         let interpretation = interpretationTemplate
             .replace(/\[METHODE\]/g, `<strong>${methode}</strong>`)
-            .replace(/\[WERT\]/g, `<strong>${valueStr}${isPercent && valueStr !== na ? '%' : ''}</strong>`)
-            .replace(/\[LOWER\]/g, `<strong>${lowerStr}${isPercent && lowerStr !== na ? '%' : ''}</strong>`)
-            .replace(/\[UPPER\]/g, `<strong>${upperStr}${isPercent && upperStr !== na ? '%' : ''}</strong>`)
+            .replace(/\[WERT\]/g, `<strong>${isPercent ? formatPercent(data?.value, 0) : formatNumber(data?.value, digits, na, true)}</strong>`)
+            .replace(/\[LOWER\]/g, `<strong>${isPercent ? formatPercent(data?.ci?.lower, 0) : formatNumber(data?.ci?.lower, digits, na, true)}</strong>`)
+            .replace(/\[UPPER\]/g, `<strong>${isPercent ? formatPercent(data?.ci?.upper, 0) : formatNumber(data?.ci?.upper, digits, na, true)}</strong>`)
             .replace(/\[METHOD_CI\]/g, `<em>${ciMethodStr}</em>`)
             .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivNameToUse}</strong>`)
             .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`);
 
         if (lowerStr === na || upperStr === na || ciMethodStr === na || !data?.ci) {
-             interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
+             interpretation = interpretation.replace(/\(95% CI nach .*?: .*? – .*?\)/g, '(95% CI: N/A–N/A)'); // Einheitlicher Platzhalter
              interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
         }
         interpretation = interpretation.replace(/, p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
@@ -667,12 +668,12 @@ const ui_helpers = (() => {
          if (!testData) return 'Keine Daten für Interpretation verfügbar.';
         const na = '--';
         const pValue = testData?.pValue;
-        const pStr = (pValue !== null && !isNaN(pValue)) ? (pValue < 0.001 ? '&lt;0.001' : formatNumber(pValue, 3, na)) : na;
+        const pStr = getPValueText(pValue);
         const sigSymbol = getStatisticalSignificanceSymbol(pValue);
         const sigText = getStatisticalSignificanceText(pValue);
         const kollektivNameToUse = getKollektivDisplayName(kollektivName) || kollektivName || 'Unbekannt';
          return interpretationTemplate
-            .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
+            .replace(/\[P_WERT\]/g, `<strong>${pStr.replace('p=','')}</strong>`) // Remove p= prefix for display in tooltip
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
             .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivNameToUse}</strong>`)
@@ -703,25 +704,25 @@ const ui_helpers = (() => {
             lowerStr = formatNumber(assocObj.or?.ci?.lower, 2, na, true);
             upperStr = formatNumber(assocObj.or?.ci?.upper, 2, na, true);
             ciMethodStr = assocObj.or?.method || na;
-            pStr = (assozPValue !== null && !isNaN(assozPValue)) ? (assozPValue < 0.001 ? '&lt;0.001' : formatNumber(assozPValue, 3, na, true)) : na;
+            pStr = getPValueText(assozPValue);
             sigSymbol = getStatisticalSignificanceSymbol(assozPValue);
             sigText = getStatisticalSignificanceText(assozPValue);
         } else if (key === 'rd') {
-            valueStr = formatNumber(assocObj.rd?.value !== null && !isNaN(assocObj.rd?.value) ? assocObj.rd.value * 100 : NaN, 1, na, true);
-            lowerStr = formatNumber(assocObj.rd?.ci?.lower !== null && !isNaN(assocObj.rd?.ci?.lower) ? assocObj.rd.ci.lower * 100 : NaN, 1, na, true);
-            upperStr = formatNumber(assocObj.rd?.ci?.upper !== null && !isNaN(assocObj.rd?.ci?.upper) ? assocObj.rd.ci.upper * 100 : NaN, 1, na, true);
+            valueStr = formatNumber(assocObj.rd?.value !== null && !isNaN(assocObj.rd?.value) ? assocObj.rd.value * 100 : NaN, 0, na, true); // RD als Prozent, 0 Nachkommastellen vor dem %
+            lowerStr = formatNumber(assocObj.rd?.ci?.lower !== null && !isNaN(assocObj.rd?.ci?.lower) ? assocObj.rd.ci.lower * 100 : NaN, 0, na, true);
+            upperStr = formatNumber(assocObj.rd?.ci?.upper !== null && !isNaN(assocObj.rd?.ci?.upper) ? assocObj.rd.ci.upper * 100 : NaN, 0, na, true);
             ciMethodStr = assocObj.rd?.method || na;
         } else if (key === 'phi') {
             valueStr = formatNumber(assocObj.phi?.value, 2, na, true);
             bewertungStr = getPhiBewertung(assocObj.phi?.value);
         } else if (key === 'fisher' || key === 'mannwhitney' || key === 'pvalue' || key === 'size_mwu' || key === 'defaultP') {
              pVal = assocObj?.pValue;
-             pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na, true)) : na;
+             pStr = getPValueText(pVal);
              sigSymbol = getStatisticalSignificanceSymbol(pVal);
              sigText = getStatisticalSignificanceText(pVal);
              const templateToUse = TOOLTIP_CONTENT.statMetrics[key]?.interpretation || TOOLTIP_CONTENT.statMetrics.defaultP.interpretation;
              return templateToUse
-                 .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
+                 .replace(/\[P_WERT\]/g, `<strong>${pStr.replace('p=','')}</strong>`)
                  .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
                  .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
                  .replace(/\[MERKMAL\]/g, `<strong>'${merkmalName}'</strong>`)
@@ -740,13 +741,13 @@ const ui_helpers = (() => {
             .replace(/\[FAKTOR_TEXT\]/g, assocObj?.or?.value > 1 ? UI_TEXTS.statMetrics.orFaktorTexte.ERHOEHT : (assocObj?.or?.value < 1 ? UI_TEXTS.statMetrics.orFaktorTexte.VERRINGERT : UI_TEXTS.statMetrics.orFaktorTexte.UNVERAENDERT))
             .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.HOEHER : (assocObj?.rd?.value < 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.NIEDRIGER : UI_TEXTS.statMetrics.rdRichtungTexte.GLEICH))
             .replace(/\[STAERKE\]/g, `<strong>${bewertungStr}</strong>`)
-            .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
+            .replace(/\[P_WERT\]/g, `<strong>${pStr.replace('p=','')}</strong>`) // Remove p= prefix for display in tooltip
             .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
             .replace(/<hr.*?>.*$/, '');
 
          if (key === 'or' || key === 'rd') {
-            if (lowerStr === na || upperStr === na || ciMethodStr === na || !assocObj?.[key]?.ci) {
-                interpretation = interpretation.replace(/\(95%-KI nach .*?: .*? – .*?\)/g, '(Keine CI-Daten verfügbar)');
+            if (lowerStr === na || upperStr === na || ciMethodStr === na || !(assocObj?.[key]?.ci && isFinite(assocObj[key].ci.lower) && isFinite(assocObj[key].ci.upper))) {
+                interpretation = interpretation.replace(/\(95% CI nach .*?: .*? – .*?\)/g, '(95% CI: N/A–N/A)'); // Einheitlicher Platzhalter
                 interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
             }
          }
@@ -768,12 +769,10 @@ const ui_helpers = (() => {
                   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                     <div class="modal-content modal-glass">
                       <div class="modal-header">
-                        <h5 class="modal-title" id="kurzanleitungModalLabel">${UI_TEXTS.kurzanleitung.title}</h5>
+                        <h5 class="modal-title" id="kurzanleitungModalLabel"></h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
                       </div>
-                      <div class="modal-body">
-                        ${UI_TEXTS.kurzanleitung.content}
-                      </div>
+                      <div class="modal-body"></div>
                       <div class="modal-footer">
                         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Schließen</button>
                       </div>
@@ -784,15 +783,17 @@ const ui_helpers = (() => {
             modalElement = document.getElementById('kurzanleitung-modal');
             kurzanleitungModalInstance = new bootstrap.Modal(modalElement);
         } else {
-            if (modalTitle && UI_TEXTS.kurzanleitung.title) {
-                 modalTitle.innerHTML = UI_TEXTS.kurzanleitung.title;
-            }
-            if (modalBody && UI_TEXTS.kurzanleitung.content) {
-                modalBody.innerHTML = UI_TEXTS.kurzanleitung.content;
-            }
             if (!kurzanleitungModalInstance) {
                 kurzanleitungModalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
             }
+        }
+        
+        // Aktualisiere Titel und Inhalt direkt aus UI_TEXTS
+        if (modalTitle && UI_TEXTS.kurzanleitung.title) {
+            modalTitle.innerHTML = UI_TEXTS.kurzanleitung.title;
+        }
+        if (modalBody && UI_TEXTS.kurzanleitung.content) {
+            modalBody.innerHTML = UI_TEXTS.kurzanleitung.content;
         }
     
         if (kurzanleitungModalInstance && modalElement && !modalElement.classList.contains('show')) {
@@ -801,9 +802,9 @@ const ui_helpers = (() => {
                     if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
                         const defaultInitialTabId = 'publikation-tab'; 
                         if (typeof state !== 'undefined' && state.getActiveTabId() === defaultInitialTabId) {
-                             setTimeout(() => { // Hinzufügen eines Timeouts
+                             setTimeout(() => {
                                 mainAppInterface.refreshCurrentTab();
-                            }, 100); // Kurze Verzögerung, um andere Prozesse abzuschließen
+                            }, 100);
                         }
                     }
                     kurzanleitungFirstShowDone = true; 
