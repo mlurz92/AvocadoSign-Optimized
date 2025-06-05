@@ -67,7 +67,8 @@ const auswertungEventHandlers = (() => {
 
     function handleApplyCriteria(mainAppInterface) {
         if (typeof mainAppInterface.applyAndRefreshAll === 'function') {
-            mainAppInterface.applyAndRefreshAll();
+            t2CriteriaManager.applyCriteria(); // Save criteria
+            mainAppInterface.applyAndRefreshAll(true); // Re-process all data and refresh UI
             ui_helpers.showToast('T2-Kriterien angewendet & gespeichert.', 'success');
         } else {
             console.error("auswertungEventHandlers.handleApplyCriteria: mainAppInterface.applyAndRefreshAll ist nicht definiert.");
@@ -80,10 +81,10 @@ const auswertungEventHandlers = (() => {
             return;
         }
         const metric = document.getElementById('brute-force-metric')?.value || APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC;
-        const currentKollektiv = state.getCurrentKollektiv();
+        const currentKollektiv = stateManager.getCurrentKollektiv();
         
         if (mainAppInterface && typeof mainAppInterface.getProcessedData === 'function') {
-            const dataForWorker = dataProcessor.filterDataByKollektiv(mainAppInterface.getProcessedData(), currentKollektiv).map(p => ({
+            const dataForWorker = dataProcessor.filterDataByKollektiv(mainAppInterface.getRawData(), currentKollektiv).map(p => ({
                 nr: p.nr,
                 n: p.n,
                 lymphknoten_t2: cloneDeep(p.lymphknoten_t2)
@@ -114,7 +115,7 @@ const auswertungEventHandlers = (() => {
     }
 
     function handleApplyBestBfCriteria(mainAppInterface) {
-        const currentKollektiv = state.getCurrentKollektiv();
+        const currentKollektiv = stateManager.getCurrentKollektiv();
         const bfResultForKollektiv = bruteForceManager.getResultsForKollektiv(currentKollektiv);
 
         if (!bfResultForKollektiv?.bestResult?.criteria) {
@@ -138,7 +139,8 @@ const auswertungEventHandlers = (() => {
         ui_helpers.updateT2CriteriaControlsUI(t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic());
         
         if (typeof mainAppInterface.applyAndRefreshAll === 'function') {
-            mainAppInterface.applyAndRefreshAll();
+            t2CriteriaManager.applyCriteria(); // Save criteria
+            mainAppInterface.applyAndRefreshAll(true); // Re-process all data and refresh UI
             ui_helpers.showToast('Beste Brute-Force Kriterien angewendet & gespeichert.', 'success');
         } else {
             console.error("auswertungEventHandlers.handleApplyBestBfCriteria: mainAppInterface.applyAndRefreshAll ist nicht definiert.");
@@ -149,6 +151,10 @@ const auswertungEventHandlers = (() => {
         // Currently, no direct action needed on change, metric is read on start.
         // Could be used to save preference to state if desired in future.
         console.log("Brute-Force Zielmetrik Auswahl geändert zu:", selectElement.value);
+    }
+
+    function init() {
+        // Not used, but kept for consistency if later needed for module-level init
     }
 
 
@@ -163,6 +169,7 @@ const auswertungEventHandlers = (() => {
         handleStartBruteForce,
         handleCancelBruteForce,
         handleApplyBestBfCriteria,
-        handleBruteForceMetricChange
+        handleBruteForceMetricChange,
+        init // Export init function
     });
 })();
