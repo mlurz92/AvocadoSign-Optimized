@@ -196,79 +196,137 @@ const ui_helpers = (() => {
         }
     }
 
-    function getMetricInterpretationHTML(metricKey, metricData, lang = null, forRadiology = false) {
+    function getMetricDescriptionHTML(key, methode = '') {
+       const desc = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statMetrics && TOOLTIP_CONTENT.statMetrics[key]) ? TOOLTIP_CONTENT.statMetrics[key].description : key;
+       return desc.replace(/\[METHODE\]/g, methode);
+    }
+
+    function getMetricInterpretationHTML(key, metricData, methode = '', kollektivName = '', lang = null) {
         const currentLang = lang || (typeof stateManager !== 'undefined' && typeof stateManager.getCurrentPublikationLang === 'function' ? stateManager.getCurrentPublikationLang() : 'de');
-        if (!metricData || typeof metricData.value !== 'number' || isNaN(metricData.value)) return '';
+        const interpretationTemplate = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statMetrics && TOOLTIP_CONTENT.statMetrics[key]) ? TOOLTIP_CONTENT.statMetrics[key].interpretation : 'Keine Interpretation verfügbar.';
+        const data = (typeof metricData === 'object' && metricData !== null) ? metricData : { value: metricData, ci: null, method: 'N/A' };
+        const na = '--';
+        const digits = (key === 'f1' || key === 'auc') ? 3 : 1;
+        const isPercent = !(key === 'f1' || key === 'auc');
+        const valueStr = formatNumber(data?.value, digits, na, currentLang);
+        const lowerStr = formatNumber(data?.ci?.lower, digits, na, currentLang);
+        const upperStr = formatNumber(data?.ci?.upper, digits, na, currentLang);
+        const ciMethodStr = data?.method || 'N/A';
+        const bewertungStr = (key === 'auc' && typeof getAUCBewertung === 'function') ? getAUCBewertung(data?.value, currentLang) : '';
 
-        const uiTextMetricBase = (typeof TOOLTIP_CONTENT !== 'undefined' && TOOLTIP_CONTENT.statMetrics) ? TOOLTIP_CONTENT.statMetrics[metricKey.toLowerCase()] : null;
+        let interpretation = interpretationTemplate
+            .replace(/\[METHODE\]/g, methode)
+            .replace(/\[WERT\]/g, `<strong>${isPercent ? formatPercent(data?.value, digits,na,currentLang) : valueStr}</strong>`)
+            .replace(/\[LOWER\]/g, isPercent ? formatPercent(data?.ci?.lower, digits,na,currentLang) : lowerStr)
+            .replace(/\[UPPER\]/g, isPercent ? formatPercent(data?.ci?.upper, digits,na,currentLang) : upperStr)
+            .replace(/\[METHOD_CI\]/g, ciMethodStr)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektivName)}</strong>`)
+            .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`);
 
-        if (!uiTextMetricBase) {
-            const fallbackValue = (typeof radiologyFormatter !== 'undefined' && forRadiology) ?
-                radiologyFormatter.formatRadiologyNumber(metricData.value, 2, (metricKey.toLowerCase()==='auc'), true) :
-                ((typeof formatNumber === 'function') ? formatNumber(metricData.value, 3, '--', currentLang) : String(metricData.value));
-            return `${metricKey.toUpperCase()}: ${fallbackValue}`;
+        if (lowerStr === na || upperStr === na) {
+             interpretation = interpretation.replace(/\(95% KI.*?nach .*?: .*? - .*?\)/g, '(Keine CI-Daten verfügbar)');
+             interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
+        }
+         interpretation = interpretation.replace(/p=\[P_WERT\], \[SIGNIFIKANZ\]/g,'');
+         interpretation = interpretation.replace(/<hr.*?>.*$/, '');
+
+        return interpretation;
+    }
+
+    function getTestDescriptionHTML(key, t2ShortName = 'T2') {
+        const desc = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statMetrics && TOOLTIP_CONTENT.statMetrics[key]) ? TOOLTIP_CONTENT.statMetrics[key].description : key;
+        return desc.replace(/\[T2_SHORT_NAME\]/g, t2ShortName);
+    }
+
+    function getTestInterpretationHTML(key, testData, kollektivName = '', t2ShortName = 'T2', lang = null) {
+        const currentLang = lang || (typeof stateManager !== 'undefined' && typeof stateManager.getCurrentPublikationLang === 'function' ? stateManager.getCurrentPublikationLang() : 'de');
+        const interpretationTemplate = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statMetrics && TOOLTIP_CONTENT.statMetrics[key]) ? TOOLTIP_CONTENT.statMetrics[key].interpretation : 'Keine Interpretation verfügbar.';
+         if (!testData) return 'Keine Daten für Interpretation verfügbar.';
+        const na = '--';
+        const pValue = testData?.pValue;
+        const pStr = (pValue !== null && !isNaN(pValue)) ? (pValue < 0.001 ? '&lt;0.001' : formatNumber(pValue, 3, na, true)) : na;
+        const sigSymbol = getStatisticalSignificanceSymbol(pValue);
+        const sigText = getStatisticalSignificanceText(pValue, currentLang);
+         return interpretationTemplate
+            .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
+            .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
+            .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektivName)}</strong>`)
+            .replace(/\[T2_SHORT_NAME\]/g, t2ShortName)
+            .replace(/<hr.*?>.*$/, '');
+    }
+
+    function getAssociationInterpretationHTML(key, assocObj, merkmalName, kollektivName, lang = null) {
+        const currentLang = lang || (typeof stateManager !== 'undefined' && typeof stateManager.getCurrentPublikationLang === 'function' ? stateManager.getCurrentPublikationLang() : 'de');
+        const interpretationTemplate = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statMetrics && TOOLTIP_CONTENT.statMetrics[key]) ? TOOLTIP_CONTENT.statMetrics[key].interpretation : 'Keine Interpretation verfügbar.';
+        if (!assocObj) return 'Keine Daten für Interpretation verfügbar.';
+        const na = '--';
+        let valueStr = na, lowerStr = na, upperStr = na, ciMethodStr = na, bewertungStr = '', pStr = na, sigSymbol = '', sigText = '', pVal = NaN;
+        const assozPValue = assocObj?.pValue;
+
+        const ttContentStatMetrics = (TOOLTIP_CONTENT && TOOLTIP_CONTENT.statMetrics) ? TOOLTIP_CONTENT.statMetrics : {};
+
+        if (key === 'or') {
+            valueStr = formatNumber(assocObj.or?.value, 2, na, currentLang);
+            lowerStr = formatNumber(assocObj.or?.ci?.lower, 2, na, currentLang);
+            upperStr = formatNumber(assocObj.or?.ci?.upper, 2, na, currentLang);
+            ciMethodStr = assocObj.or?.method || na;
+            pStr = (assozPValue !== null && !isNaN(assozPValue)) ? (assozPValue < 0.001 ? '&lt;0.001' : formatNumber(assozPValue, 3, na, true)) : na;
+            sigSymbol = getStatisticalSignificanceSymbol(assozPValue);
+            sigText = getStatisticalSignificanceText(assozPValue, currentLang);
+        } else if (key === 'rd') {
+            valueStr = formatNumber(assocObj.rd?.value !== null && !isNaN(assocObj.rd?.value) ? assocObj.rd.value * 100 : NaN, 1, na, currentLang);
+            lowerStr = formatNumber(assocObj.rd?.ci?.lower !== null && !isNaN(assocObj.rd?.ci?.lower) ? assocObj.rd.ci.lower * 100 : NaN, 1, na, currentLang);
+            upperStr = formatNumber(assocObj.rd?.ci?.upper !== null && !isNaN(assocObj.rd?.ci?.upper) ? assocObj.rd.ci.upper * 100 : NaN, 1, na, currentLang);
+            ciMethodStr = assocObj.rd?.method || na;
+        } else if (key === 'phi') {
+            valueStr = formatNumber(assocObj.phi?.value, 2, na, currentLang);
+            bewertungStr = typeof getPhiBewertung === 'function' ? getPhiBewertung(assocObj.phi?.value, currentLang) : '';
+        } else if (key === 'fisher' || key === 'mannwhitney' || key === 'defaultP' || key === 'pvalue') {
+             pVal = assocObj?.pValue;
+             pStr = (pVal !== null && !isNaN(pVal)) ? (pVal < 0.001 ? '&lt;0.001' : formatNumber(pVal, 3, na, true)) : na;
+             sigSymbol = getStatisticalSignificanceSymbol(pVal);
+             sigText = getStatisticalSignificanceText(pVal, currentLang);
+             const specificInterpretation = ttContentStatMetrics[key]?.interpretation;
+             const templateToUse = specificInterpretation || ttContentStatMetrics.defaultP.interpretation;
+             return templateToUse
+                 .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
+                 .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
+                 .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${sigText}</strong>`)
+                 .replace(/\[MERKMAL\]/g, `'${merkmalName}'`)
+                 .replace(/\[VARIABLE\]/g, `'${merkmalName}'`)
+                 .replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektivName)}</strong>`)
+                 .replace(/<hr.*?>.*$/, '');
         }
 
-        const name = uiTextMetricBase.name?.[currentLang] || uiTextMetricBase.name?.de || metricKey.toUpperCase();
-        let description = uiTextMetricBase.description?.[currentLang] || uiTextMetricBase.description?.de || '';
-        const formula = uiTextMetricBase.formula || '';
-        const interpretation = uiTextMetricBase.interpretation?.[currentLang] || uiTextMetricBase.interpretation?.de || '';
-        const range = uiTextMetricBase.range?.[currentLang] || uiTextMetricBase.range?.de || '';
+        const orFaktorTexte = ttContentStatMetrics.orFaktorTexte || {ERHOEHT: 'erhöht', VERRINGERT: 'verringert', UNVERAENDERT: 'unverändert'};
+        const rdRichtungTexte = ttContentStatMetrics.rdRichtungTexte || {HOEHER: 'höher', NIEDRIGER: 'niedriger', GLEICH: 'gleich'};
 
-        const isRate = !['f1', 'auc', 'phi', 'or', 'rd', 'chisq', 'df', 'mcnemar_stat'].includes(metricKey.toLowerCase());
-        let digits;
-        if (forRadiology) {
-            const numRules = APP_CONFIG.PUBLICATION_JOURNAL_REQUIREMENTS.NUMBER_FORMAT_RULES;
-            if (metricKey.toLowerCase() === 'auc') digits = numRules.AUC.digits;
-            else if (isRate) digits = numRules.PERCENTAGES.general_digits;
-            else if (metricKey.toLowerCase() === 'or') digits = numRules.ODDS_RATIO.digits;
-            else if (metricKey.toLowerCase() === 'rd') digits = numRules.RISK_RATIO.digits;
-            else if (metricKey.toLowerCase() === 'phi') digits = numRules.KAPPA.digits;
-            else if (metricKey.toLowerCase() === 'chisq' || metricKey.toLowerCase() === 'mcnemar_stat') digits = 1;
-            else if (metricKey.toLowerCase() === 'df') digits = 0;
-            else digits = 2;
-        } else {
-            digits = (metricKey.toLowerCase() === 'auc' || metricKey.toLowerCase() === 'phi' || metricKey.toLowerCase() === 'or' || metricKey.toLowerCase() === 'rd' || metricKey.toLowerCase() === 'chisq' || metricKey.toLowerCase() === 'mcnemar_stat') ? 3 : 1;
-            if (metricKey.toLowerCase() === 'df') digits = 0;
-        }
+        let interpretation = interpretationTemplate
+            .replace(/\[MERKMAL\]/g, `'${merkmalName}'`)
+            .replace(/\[WERT\]/g, `<strong>${valueStr}${key === 'rd' ? '%' : ''}</strong>`)
+            .replace(/\[LOWER\]/g, lowerStr)
+            .replace(/\[UPPER\]/g, upperStr)
+            .replace(/\[METHOD_CI\]/g, ciMethodStr)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektivName)}</strong>`)
+            .replace(/\[FAKTOR_TEXT\]/g, assocObj?.or?.value > 1 ? orFaktorTexte.ERHOEHT : (assocObj?.or?.value < 1 ? orFaktorTexte.VERRINGERT : orFaktorTexte.UNVERAENDERT))
+            .replace(/\[HOEHER_NIEDRIGER\]/g, assocObj?.rd?.value > 0 ? rdRichtungTexte.HOEHER : (assocObj?.rd?.value < 0 ? rdRichtungTexte.NIEDRIGER : rdRichtungTexte.GLEICH))
+            .replace(/\[STAERKE\]/g, `<strong>${bewertungStr}</strong>`)
+            .replace(/\[P_WERT\]/g, `<strong>${pStr}</strong>`)
+            .replace(/\[SIGNIFIKANZ\]/g, sigSymbol)
+            .replace(/<hr.*?>.*$/, '');
 
-        let valueStr;
-        let ciStrPart = '';
-
-        if (forRadiology && typeof radiologyFormatter !== 'undefined') {
-            if (metricData.ci && typeof metricData.ci.lower === 'number' && typeof metricData.ci.upper === 'number' && !isNaN(metricData.ci.lower) && !isNaN(metricData.ci.upper)) {
-                valueStr = radiologyFormatter.formatRadiologyCI(metricData.value, metricData.ci.lower, metricData.ci.upper, digits, isRate, false);
-            } else {
-                valueStr = radiologyFormatter.formatRadiologyNumber(metricData.value, digits, (metricKey.toLowerCase() === 'auc'), !isRate || metricKey.toLowerCase() === 'auc');
+         if (key === 'or' || key === 'rd') {
+            if (lowerStr === na || upperStr === na) {
+                interpretation = interpretation.replace(/\(95% KI.*?nach .*?: .*? - .*?\)/g, '(Keine CI-Daten verfügbar)');
+                interpretation = interpretation.replace(/nach \[METHOD_CI\]:/g, '');
             }
-        } else if (typeof formatNumber === 'function' && typeof formatPercent === 'function') {
-            valueStr = isRate ? formatPercent(metricData.value, digits, '--%', currentLang) : formatNumber(metricData.value, digits, '--', currentLang);
-            if (metricData.ci && typeof metricData.ci.lower === 'number' && typeof metricData.ci.upper === 'number' && !isNaN(metricData.ci.lower) && !isNaN(metricData.ci.upper)) {
-                const lowerStr = isRate ? formatPercent(metricData.ci.lower, digits, '--', currentLang) : formatNumber(metricData.ci.lower, digits, '--', currentLang);
-                const upperStr = isRate ? formatPercent(metricData.ci.upper, digits, '--', currentLang) : formatNumber(metricData.ci.upper, digits, '--', currentLang);
-                ciStrPart = ` (95% ${currentLang === 'de' ? 'KI' : 'CI'}: ${lowerStr} – ${upperStr})`;
-            }
-            valueStr += ciStrPart;
-        } else {
-            valueStr = String(metricData.value);
-        }
+         }
+         if (key === 'or' && pStr === na) {
+             interpretation = interpretation.replace(/, p=.*?, .*?\)/g, ')');
+         }
 
-        let html = `<strong>${name}: ${valueStr}</strong>`;
-        if (description) html += `<p class="small mt-1 mb-1">${description}</p>`;
-        if (formula) html += `<p class="small mb-1"><em>${currentLang === 'de' ? 'Formel' : 'Formula'}: ${formula}</em></p>`;
-        if (interpretation) html += `<p class="small mb-1">${interpretation}</p>`;
-        if (range) html += `<p class="small mb-0"><em>${currentLang === 'de' ? 'Wertebereich' : 'Range'}: ${range}</em></p>`;
-
-        if (metricKey.toLowerCase() === 'phi' || metricKey.toLowerCase() === 'auc') {
-            const bewertungFn = metricKey.toLowerCase() === 'phi' ? (typeof getPhiBewertung === 'function' ? getPhiBewertung : null) : (typeof getAUCBewertung === 'function' ? getAUCBewertung : null);
-            if(bewertungFn) {
-                const bewertungText = bewertungFn(metricData.value, currentLang);
-                 if (bewertungText && bewertungText !== (currentLang==='de'?'N/A':'N/A') && bewertungText !== (currentLang==='de'?'nicht bestimmbar':'not determinable') ) {
-                    html += `<p class="small mt-1 mb-0"><em>${currentLang==='de'?'Bewertung':'Assessment'}: ${bewertungText}</em></p>`;
-                }
-            }
-        }
-        return `<div style='text-align: left; max-width: 320px;'>${html}</div>`;
+        return interpretation;
     }
 
     function getCriteriaSetTooltipHTML(criteriaSet, lang = null, isBruteForceResult = false, bfMetricName = null, targetKollektivForBF = null) {
@@ -484,7 +542,11 @@ const ui_helpers = (() => {
         initializeTippyForElement,
         checkFirstAppStart,
         showLoadingOverlay,
+        getMetricDescriptionHTML,
         getMetricInterpretationHTML,
+        getTestDescriptionHTML,
+        getTestInterpretationHTML,
+        getAssociationInterpretationHTML,
         getCriteriaSetTooltipHTML,
         htmlToMarkdown
     });
