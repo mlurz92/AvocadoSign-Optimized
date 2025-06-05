@@ -20,7 +20,7 @@ const mainAppInterface = (() => {
         try {
             const response = await fetch('data/data.js');
             let data = await response.text();
-            data = data.replace('const data = ', '');
+            data = data.replace(/^const patientDataRaw = /m, '').replace(/,\s*\]\s*;?$/m, ']').replace(/;$/m, '');
             app.data = JSON.parse(data);
             app.processedData = app.data;
         } catch (error) {
