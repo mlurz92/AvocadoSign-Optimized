@@ -10,7 +10,8 @@ const publicationRenderer = (() => {
             ...commonDataFromLogic,
             currentKollektivName: getKollektivDisplayName(currentKollektiv),
             bruteForceMetricForPublication: bruteForceMetric || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication,
-            references: APP_CONFIG.REFERENCES_FOR_PUBLICATION
+            references: APP_CONFIG.REFERENCES_FOR_PUBLICATION,
+            rawData: commonDataFromLogic.rawData 
         };
 
         const mainSection = PUBLICATION_CONFIG.sections.find(s => s.id === sectionId);
@@ -30,7 +31,7 @@ const publicationRenderer = (() => {
             if (subSection.id === 'methoden_patientenkohorte') {
                 combinedHtml += publicationFigures.renderFlowDiagram(allKollektivStats, lang);
             }
-            else if (subSection.id === 'methoden_bildanalyse_t2_kriterien') {
+            else if (subSection.id === 'methoden_bildanalyse_t2_kriterien') { 
                 combinedHtml += publicationTables.renderLiteraturT2KriterienTabelle(lang);
             } else if (subSection.id === 'ergebnisse_patientencharakteristika') {
                 combinedHtml += publicationTables.renderPatientenCharakteristikaTabelle(allKollektivStats, lang);
@@ -38,23 +39,40 @@ const publicationRenderer = (() => {
                 combinedHtml += `<div class="col-md-6">${publicationFigures.renderAgeDistributionChart(allKollektivStats.Gesamt?.deskriptiv?.alterData || [], PUBLICATION_CONFIG.publicationElements.ergebnisse.alterVerteilungChart.id, {height: 220, margin: { top: 10, right: 10, bottom: 40, left: 45 }}, lang)}</div>`;
                 combinedHtml += `<div class="col-md-6">${publicationFigures.renderGenderDistributionChart(allKollektivStats.Gesamt?.deskriptiv?.geschlecht, PUBLICATION_CONFIG.publicationElements.ergebnisse.geschlechtVerteilungChart.id, {height: 220, margin: { top: 10, right: 10, bottom: 40, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true, legendItemCount: 3}, lang)}</div>`;
                 combinedHtml += '</div>';
-            } else if (subSection.id === 'ergebnisse_as_diagnostische_guete') {
+            } else if (subSection.id === 'ergebnisse_as_diagnostische_guete') { 
                 combinedHtml += publicationTables.renderDiagnostischeGueteTabellen(allKollektivStats, lang, subSection.id, commonData);
-            } else if (subSection.id === 'ergebnisse_t2_literatur_diagnostische_guete') {
+            } else if (subSection.id === 'ergebnisse_t2_literatur_diagnostische_guete') { 
                 combinedHtml += publicationTables.renderDiagnostischeGueteTabellen(allKollektivStats, lang, subSection.id, commonData);
-            } else if (subSection.id === 'ergebnisse_t2_optimiert_diagnostische_guete') {
+            } else if (subSection.id === 'ergebnisse_t2_optimiert_diagnostische_guete') { 
                 combinedHtml += publicationTables.renderDiagnostischeGueteTabellen(allKollektivStats, lang, subSection.id, commonData);
-            } else if (subSection.id === 'ergebnisse_vergleich_as_vs_t2') {
+            } else if (subSection.id === 'ergebnisse_vergleich_as_vs_t2') { 
                  combinedHtml += publicationTables.renderDiagnostischeGueteTabellen(allKollektivStats, lang, subSection.id, commonData);
                  combinedHtml += '<div class="row mt-4 g-3">';
                  const kollektiveForCharts = ['Gesamt', 'direkt OP', 'nRCT'];
+                 
+                 const pubErgebnisseConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse;
+                 if (!pubErgebnisseConfig || typeof pubErgebnisseConfig !== 'object') {
+                    console.error("PUBLICATION_CONFIG.publicationElements.ergebnisse ist nicht korrekt initialisiert.");
+                    combinedHtml += '</div>'; // Close row
+                    combinedHtml += `</div>`; // Close sub-section
+                    return; // or handle error more gracefully
+                 }
+
                  const chartElementsConfig = [
-                    PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartGesamt,
-                    PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartDirektOP,
-                    PUBLICATION_CONFIG.publicationElements.ergebnisse.vergleichPerformanceChartNRCT
+                    pubErgebnisseConfig.vergleichPerformanceChartGesamt,
+                    pubErgebnisseConfig.vergleichPerformanceChartdirektOP,
+                    pubErgebnisseConfig.vergleichPerformanceChartnRCT
                  ];
+
                  kollektiveForCharts.forEach((kolId, index) => {
-                    const chartId = chartElementsConfig[index].id;
+                    const chartConfig = chartElementsConfig[index];
+                    if (!chartConfig || typeof chartConfig !== 'object' || !chartConfig.id) {
+                        console.warn(`Chart-Konfiguration für Index ${index} (Kollektiv: ${kolId}) ist ungültig oder nicht gefunden.`);
+                        combinedHtml += `<div class="col-md-4"><p class="text-warning small">Fehler: Chart-Konfiguration für ${getKollektivDisplayName(kolId)} ungültig.</p></div>`;
+                        return; 
+                    }
+                    const chartId = chartConfig.id;
+                    
                     const bfResultsForDisplay = bruteForceManager.getResultsForKollektiv(kolId);
                     let bfStatsForChart = null;
                     let bfDefForChart = null;
