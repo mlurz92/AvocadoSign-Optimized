@@ -190,7 +190,7 @@ const publicationTables = (() => {
             return rows;
         };
 
-        if (sectionId === 'ergebnisse_as_performance') {
+        if (sectionId === 'ergebnisse_as_diagnostische_guete') {
             tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteASTabelle.id;
             tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteASTabelle.titleDe;
             tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteASTabelle.titleEn;
@@ -198,7 +198,7 @@ const publicationTables = (() => {
             tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdForHTML}"><thead><tr><th>${lang==='de'?'Methode':'Method'}</th><th>${lang==='de'?'Kollektiv':'Cohort'}</th><th>Sens. (95%-KI)</th><th>Spez. (95%-KI)</th><th>PPV (95%-KI)</th><th>NPV (95%-KI)</th><th>Acc. (95%-KI)</th><th>AUC (95%-KI)</th></tr></thead><tbody>`;
             tableHTML += renderTableRows('Avocado Sign', (kolId) => allKollektivStats?.[kolId]?.gueteAS);
             tableHTML += `</tbody></table></div>`;
-        } else if (sectionId === 'ergebnisse_literatur_t2_performance') {
+        } else if (sectionId === 'ergebnisse_t2_literatur_diagnostische_guete') {
             tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteLiteraturT2Tabelle.id;
             tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteLiteraturT2Tabelle.titleDe;
             tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteLiteraturT2Tabelle.titleEn;
@@ -213,7 +213,7 @@ const publicationTables = (() => {
                 }
             });
             tableHTML += `</tbody></table></div>`;
-        } else if (sectionId === 'ergebnisse_optimierte_t2_performance') {
+        } else if (sectionId === 'ergebnisse_t2_optimiert_diagnostische_guete') {
             tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.id;
             tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.titleDe.replace('{BF_METRIC}', bfZielMetric);
             tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.titleEn.replace('{BF_METRIC}', bfZielMetric);
@@ -221,7 +221,7 @@ const publicationTables = (() => {
             tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdForHTML}"><thead><tr><th>${lang==='de'?'Optimierungs-Ziel':'Optimization Target'}</th><th>${lang==='de'?'Kollektiv':'Cohort'}</th><th>Sens. (95%-KI)</th><th>Spez. (95%-KI)</th><th>PPV (95%-KI)</th><th>NPV (95%-KI)</th><th>Acc. (95%-KI)</th><th>AUC (95%-KI)</th></tr></thead><tbody>`;
             tableHTML += renderTableRows(`Optimiert für ${bfZielMetric}`, (kolId) => allKollektivStats?.[kolId]?.gueteT2_bruteforce);
             tableHTML += `</tbody></table></div>`;
-        } else if (sectionId === 'ergebnisse_vergleich_performance') {
+        } else if (sectionId === 'ergebnisse_vergleich_as_vs_t2') {
              tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.id;
              tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.titleDe;
              tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.titleEn;
@@ -232,7 +232,7 @@ const publicationTables = (() => {
                     <th>${lang==='de'?'Kollektiv':'Cohort'}</th>
                     <th>${lang==='de'?'Methode 1':'Method 1'} (AUC)</th>
                     <th>${lang==='de'?'Methode 2':'Method 2'} (AUC)</th>
-                    <th>${lang==='de'?'Diff. AUC (M1-M2)':'AUC Diff. (M1-M2)'}</th>
+                    <th>${lang==='de'?'Diff. AUC (M1–M2)':'AUC Diff. (M1–M2)'}</th>
                     <th>DeLong p-Wert (AUC)</th>
                     <th>McNemar p-Wert (Acc.)</th>
                 </tr></thead><tbody>`;
