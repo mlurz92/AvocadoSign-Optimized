@@ -79,12 +79,12 @@
         </ul>
 
         <div class="tab-content" id="main-tab-content">
-            <div class="tab-pane fade show active p-3" id="daten-tab-pane" role="tabpanel" aria-labelledby="daten-tab-link"><!-- Daten-Tab Inhalt wird dynamisch geladen --></div>
-            <div class="tab-pane fade p-3" id="auswertung-tab-pane" role="tabpanel" aria-labelledby="auswertung-tab-link"><!-- Auswertungs-Tab Inhalt wird dynamisch geladen --></div>
-            <div class="tab-pane fade p-3" id="statistik-tab-pane" role="tabpanel" aria-labelledby="statistik-tab-link"><!-- Statistik-Tab Inhalt wird dynamisch geladen --></div>
-            <div class="tab-pane fade p-3" id="praesentation-tab-pane" role="tabpanel" aria-labelledby="praesentation-tab-link"><!-- Präsentations-Tab Inhalt wird dynamisch geladen --></div>
-            <div class="tab-pane fade gx-0" id="publikation-tab-pane" role="tabpanel" aria-labelledby="publikation-tab-link"><!-- Publikations-Tab Inhalt wird dynamisch geladen --></div>
-            <div class="tab-pane fade p-3" id="export-tab-pane" role="tabpanel" aria-labelledby="export-tab-link"><!-- Export-Tab Inhalt wird dynamisch geladen --></div>
+            <div class="tab-pane fade show active p-3" id="daten-tab-pane" role="tabpanel" aria-labelledby="daten-tab-link"></div>
+            <div class="tab-pane fade p-3" id="auswertung-tab-pane" role="tabpanel" aria-labelledby="auswertung-tab-link"></div>
+            <div class="tab-pane fade p-3" id="statistik-tab-pane" role="tabpanel" aria-labelledby="statistik-tab-link"></div>
+            <div class="tab-pane fade p-3" id="praesentation-tab-pane" role="tabpanel" aria-labelledby="praesentation-tab-link"></div>
+            <div class="tab-pane fade gx-0" id="publikation-tab-pane" role="tabpanel" aria-labelledby="publikation-tab-link"></div>
+            <div class="tab-pane fade p-3" id="export-tab-pane" role="tabpanel" aria-labelledby="export-tab-link"></div>
         </div>
     </div>
 
@@ -97,7 +97,7 @@
 
     <div class="toast-container position-fixed bottom-0 end-0 p-3">
     </div>
-    
+
     <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
@@ -118,21 +118,21 @@
     <script src="js/config/app_config.js"></script>
     <script src="js/config/text_config.js"></script>
     <script src="js/config/publication_config.js"></script>
-    
+
     <script src="js/utils/utils.js"></script>
-    <script src="js/app/state.js"></script> 
-    
+    <script src="js/app/state.js"></script>
+
     <script src="js/core/data_processor.js"></script>
     <script src="js/core/t2_criteria_manager.js"></script>
     <script src="js/core/study_criteria_manager.js"></script>
-    
+
     <script src="js/services/statistics_service.js"></script>
     <script src="js/services/brute_force_manager.js"></script>
-    <script src="js/services/export_service.js"></script> 
-    
+    <script src="js/services/export_service.js"></script>
+
     <script src="js/publication/engine/radiology_formatter.js"></script>
     <script src="js/publication/engine/publication_data_aggregator.js"></script>
-    
+
     <script src="js/publication/templates/summary_statement_generator.js"></script>
     <script src="js/publication/templates/key_results_generator.js"></script>
     <script src="js/publication/templates/abstract_generator.js"></script>
@@ -141,35 +141,36 @@
     <script src="js/publication/templates/results_generator.js"></script>
     <script src="js/publication/templates/discussion_generator.js"></script>
     <script src="js/publication/templates/references_generator.js"></script>
-    
+
     <script src="js/ui/core/ui_helpers.js"></script>
     <script src="js/ui/core/ui_components.js"></script>
-    
+
     <script src="js/ui/renderers/table_renderer.js"></script>
     <script src="js/ui/renderers/chart_renderer.js"></script>
-    
+
     <script src="js/publication/ui/publication_tables.js"></script>
     <script src="js/publication/ui/publication_figures.js"></script>
     <script src="js/publication/publication_main_controller.js"></script>
     <script src="js/publication/ui/publication_tab_logic.js"></script>
     <script src="js/publication/ui/publication_renderer.js"></script>
-    
+
     <script src="js/ui/view_logic/data_tab_logic.js"></script>
     <script src="js/ui/view_logic/auswertung_tab_logic.js"></script>
     <script src="js/ui/view_logic/statistik_tab_logic.js"></script>
     <script src="js/ui/view_logic/praesentation_tab_logic.js"></script>
-    
-    <script src="js/ui/view_renderer.js"></script> 
-    
+    <script src="js/ui/ui_view_logic.js"></script> 
+
+    <script src="js/ui/view_renderer.js"></script>
+
     <script src="js/ui/event_handlers/general_event_handlers.js"></script>
     <script src="js/ui/event_handlers/auswertung_event_handlers.js"></script>
     <script src="js/ui/event_handlers/statistik_event_handlers.js"></script>
     <script src="js/ui/event_handlers/praesentation_event_handlers.js"></script>
     <script src="js/ui/event_handlers/publikation_event_handlers.js"></script>
-    <script src="js/ui/event_handlers/export_event_handlers.js"></script> 
-    
-    <script src="js/app/main.js"></script> 
-    
+    <script src="js/ui/event_handlers/export_event_handlers.js"></script>
+
+    <script src="js/app/main.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
