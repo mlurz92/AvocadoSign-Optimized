@@ -801,7 +801,9 @@ const ui_helpers = (() => {
                     if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
                         const defaultInitialTabId = 'publikation-tab'; 
                         if (typeof state !== 'undefined' && state.getActiveTabId() === defaultInitialTabId) {
-                            mainAppInterface.refreshCurrentTab();
+                             setTimeout(() => { // Hinzufügen eines Timeouts
+                                mainAppInterface.refreshCurrentTab();
+                            }, 100); // Kurze Verzögerung, um andere Prozesse abzuschließen
                         }
                     }
                     kurzanleitungFirstShowDone = true; 
