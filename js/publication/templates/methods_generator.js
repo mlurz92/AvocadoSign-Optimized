@@ -6,7 +6,6 @@ const methodsGenerator = (() => {
         if (subSectionConfig && UI_TEXTS.publikationTab?.sectionLabels?.[subSectionConfig.labelKey]) {
             return UI_TEXTS.publikationTab.sectionLabels[subSectionConfig.labelKey];
         }
-        // Fallback, falls labelKey nicht in UI_TEXTS definiert ist
         const fallbackTitle = sectionId.replace('methoden_', '').replace(/_/g, ' ');
         return fallbackTitle.charAt(0).toUpperCase() + fallbackTitle.slice(1);
     }
@@ -215,7 +214,14 @@ const methodsGenerator = (() => {
     }
 
     return Object.freeze({
-        generateMethodsSection
+        generateMethodsSection,
+        generateStudyDesignEthicsText: _generateStudyDesignEthics,
+        generatePatientCohortText: _generatePatientCohort,
+        generateMriProtocolText: _generateMriProtocol,
+        generateImageAnalysisASText: _generateImageAnalysisAS,
+        generateImageAnalysisT2Text: _generateImageAnalysisT2,
+        generateReferenceStandardText: _generateReferenceStandard,
+        generateStatisticalAnalysisText: _generateStatisticalAnalysis
     });
 
 })();
