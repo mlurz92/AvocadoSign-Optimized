@@ -18,7 +18,7 @@ const tableRenderer = (() => {
             const formIcon = ui_helpers.getT2IconSVG('form', lk.form);
             const konturIcon = ui_helpers.getT2IconSVG('kontur', lk.kontur);
             const homogenitaetIcon = ui_helpers.getT2IconSVG('homogenitaet', lk.homogenitaet);
-            const sizeIcon = ui_helpers.getT2IconSVG('ruler-horizontal', null);
+            const sizeIcon = ui_helpers.getIcon('ruler-horizontal');
 
             const sizeTooltip = TOOLTIP_CONTENT.t2Size?.description || 'Größe (Kurzachse)';
             const formTooltip = TOOLTIP_CONTENT.t2Form?.description || 'Form';
@@ -44,20 +44,20 @@ const tableRenderer = (() => {
         const rowId = `daten-row-${patient.nr}`;
         const detailRowId = `daten-detail-${patient.nr}`;
         const hasT2Nodes = Array.isArray(patient.lymphknoten_t2) && patient.lymphknoten_t2.length > 0;
-        const geschlechtText = patient.geschlecht === 'm' ? (UI_TEXTS.legendLabels.male || 'Männlich') : patient.geschlecht === 'f' ? (UI_TEXTS.legendLabels.female || 'Weiblich') : (UI_TEXTS.legendLabels.unknownGender || 'Unbekannt');
+        const geschlechtText = patient.geschlecht === 'm' ? (UI_TEXTS.legendLabels.male.de || 'Männlich') : patient.geschlecht === 'f' ? (UI_TEXTS.legendLabels.female.de || 'Weiblich') : (UI_TEXTS.legendLabels.unknownGender.de || 'Unbekannt');
         const therapieText = getKollektivDisplayName(patient.therapie);
         const naPlaceholder = '--';
 
-        const tooltipNr = TOOLTIP_CONTENT.datenTable.nr || 'Nr.';
-        const tooltipName = TOOLTIP_CONTENT.datenTable.name || 'Name';
-        const tooltipVorname = TOOLTIP_CONTENT.datenTable.vorname || 'Vorname';
-        const tooltipGeschlecht = TOOLTIP_CONTENT.datenTable.geschlecht || 'Geschlecht';
-        const tooltipAlter = TOOLTIP_CONTENT.datenTable.alter || 'Alter';
-        const tooltipTherapie = TOOLTIP_CONTENT.datenTable.therapie || 'Therapie';
-        const tooltipStatus = TOOLTIP_CONTENT.datenTable.n_as_t2 || 'N/AS/T2 Status';
+        const tooltipNr = TOOLTIP_CONTENT.datenTable.nr.de || 'Nr.';
+        const tooltipName = TOOLTIP_CONTENT.datenTable.name.de || 'Name';
+        const tooltipVorname = TOOLTIP_CONTENT.datenTable.vorname.de || 'Vorname';
+        const tooltipGeschlecht = TOOLTIP_CONTENT.datenTable.geschlecht.de || 'Geschlecht';
+        const tooltipAlter = TOOLTIP_CONTENT.datenTable.alter.de || 'Alter';
+        const tooltipTherapie = TOOLTIP_CONTENT.datenTable.therapie.de || 'Therapie';
+        const tooltipStatus = TOOLTIP_CONTENT.datenTable.n_as_t2.de || 'N/AS/T2 Status';
         const bemerkungText = ui_helpers.escapeMarkdown(patient.bemerkung || '');
-        const tooltipBemerkung = bemerkungText ? bemerkungText : (TOOLTIP_CONTENT.datenTable.bemerkung || 'Bemerkung');
-        const tooltipExpand = hasT2Nodes ? (TOOLTIP_CONTENT.datenTable.expandRow || 'Details anzeigen/ausblenden') : 'Keine T2-Lymphknoten Details verfügbar';
+        const tooltipBemerkung = bemerkungText ? bemerkungText : (TOOLTIP_CONTENT.datenTable.bemerkung.de || 'Bemerkung');
+        const tooltipExpand = hasT2Nodes ? (TOOLTIP_CONTENT.datenTable.expandRow.de || 'Details anzeigen/ausblenden') : 'Keine T2-Lymphknoten Details verfügbar';
 
         const t2StatusIcon = patient.t2 === '+' ? 'plus' : patient.t2 === '-' ? 'minus' : 'unknown';
         const t2StatusText = patient.t2 ?? '?';
@@ -77,7 +77,7 @@ const tableRenderer = (() => {
                 </td>
                 <td data-label="Bemerkung" class="text-truncate" style="max-width: 150px;" data-tippy-content="${tooltipBemerkung}">${bemerkungText || naPlaceholder}</td>
                  <td class="text-center p-1" style="width: 30px;" data-tippy-content="${tooltipExpand}">
-                     ${hasT2Nodes ? '<button class="btn btn-sm btn-outline-secondary p-1 row-toggle-button" aria-label="Details ein-/ausklappen"><i class="fas fa-chevron-down row-toggle-icon"></i></button>' : ''}
+                     ${hasT2Nodes ? `<button class="btn btn-sm btn-outline-secondary p-1 row-toggle-button" aria-label="Details ein-/ausklappen">${ui_helpers.getIcon('chevron-down', 16, 'var(--text-medium)', 1.5, 'row-toggle-icon')}</button>` : ''}
                  </td>
             </tr>
             ${hasT2Nodes ? `
@@ -113,7 +113,7 @@ const tableRenderer = (() => {
 
             const baseClass = "sub-row-item border rounded mb-1 p-1 w-100 align-items-center small";
             const highlightClass = lk.isPositive ? 'bg-status-red-light' : '';
-            let itemContent = `<strong class="me-2">LK ${index + 1}: ${lk.isPositive ? '<span class="badge bg-danger text-white ms-1" data-tippy-content="Positiv bewertet">Pos.</span>' : '<span class="badge bg-success text-white ms-1" data-tippy-content="Negativ bewertet">Neg.</span>'}</strong>`;
+            let itemContent = `<strong class="me-2">LK ${index + 1}: ${lk.isPositive ? `<span class="badge bg-danger text-white ms-1" data-tippy-content="${ui_helpers.getIcon('check', 12, 'currentColor', 2, 'me-1')}Positiv bewertet</span>` : `<span class="badge bg-success text-white ms-1" data-tippy-content="${ui_helpers.getIcon('check', 12, 'currentColor', 2, 'me-1')}Negativ bewertet</span>`}</strong>`;
 
             const formatCriterionCheck = (key, iconType, valueText, checkResultForLK) => {
                 if (!appliedCriteria?.[key]?.active) return '';
@@ -131,7 +131,7 @@ const tableRenderer = (() => {
                 const icon = ui_helpers.getT2IconSVG(iconType || key, valueText);
                 const text = valueText || naPlaceholder;
                 const tooltipKey = 't2' + key.charAt(0).toUpperCase() + key.slice(1);
-                const tooltipBase = TOOLTIP_CONTENT[tooltipKey]?.description || `Merkmal ${key}`;
+                const tooltipBase = TOOLTIP_CONTENT[tooltipKey]?.description?.de || `Merkmal ${key}`;
                 const statusText = checkMet ? 'Erfüllt' : (checkFailed ? 'Nicht erfüllt' : (checkResultForLK[key] === null ? 'Nicht anwendbar/geprüft' : 'Unbekannt'));
                 const tooltip = `${tooltipBase} | Status: ${statusText}`;
 
@@ -161,14 +161,14 @@ const tableRenderer = (() => {
         const asCountsText = `${formatNumber(patient.anzahl_as_plus_lk, 0, '-')} / ${formatNumber(patient.anzahl_as_lk, 0, '-')}`;
         const t2CountsText = `${formatNumber(patient.anzahl_t2_plus_lk, 0, '-')} / ${formatNumber(patient.anzahl_t2_lk, 0, '-')}`;
 
-        const tooltipNr = TOOLTIP_CONTENT.auswertungTable.nr || 'Nr.';
-        const tooltipName = TOOLTIP_CONTENT.auswertungTable.name || 'Name';
-        const tooltipTherapie = TOOLTIP_CONTENT.auswertungTable.therapie || 'Therapie';
-        const tooltipStatus = TOOLTIP_CONTENT.auswertungTable.n_as_t2 || 'N/AS/T2 Status';
-        const tooltipNCounts = TOOLTIP_CONTENT.auswertungTable.n_counts || 'N+ LKs / N gesamt LKs (Pathologie)';
-        const tooltipASCounts = TOOLTIP_CONTENT.auswertungTable.as_counts || 'AS+ LKs / AS gesamt LKs (T1KM)';
-        const tooltipT2Counts = TOOLTIP_CONTENT.auswertungTable.t2_counts || 'T2+ LKs / T2 gesamt LKs (angew. Kriterien)';
-        const tooltipExpand = hasBewerteteNodes ? (TOOLTIP_CONTENT.auswertungTable.expandRow || 'Details zur T2-Bewertung anzeigen/ausblenden') : 'Keine T2-Lymphknoten Bewertung verfügbar';
+        const tooltipNr = TOOLTIP_CONTENT.auswertungTable.nr.de || 'Nr.';
+        const tooltipName = TOOLTIP_CONTENT.auswertungTable.name.de || 'Name';
+        const tooltipTherapie = TOOLTIP_CONTENT.auswertungTable.therapie.de || 'Therapie';
+        const tooltipStatus = TOOLTIP_CONTENT.auswertungTable.n_as_t2.de || 'N/AS/T2 Status';
+        const tooltipNCounts = TOOLTIP_CONTENT.auswertungTable.n_counts.de || 'N+ LKs / N gesamt LKs (Pathologie)';
+        const tooltipASCounts = TOOLTIP_CONTENT.auswertungTable.as_counts.de || 'AS+ LKs / AS gesamt LKs (T1KM)';
+        const tooltipT2Counts = TOOLTIP_CONTENT.auswertungTable.t2_counts.de || 'T2+ LKs / T2 gesamt LKs (angew. Kriterien)';
+        const tooltipExpand = hasBewerteteNodes ? (TOOLTIP_CONTENT.auswertungTable.expandRow.de || 'Details zur T2-Bewertung anzeigen/ausblenden') : 'Keine T2-Lymphknoten Bewertung verfügbar';
 
         const t2StatusIcon = patient.t2 === '+' ? 'plus' : patient.t2 === '-' ? 'minus' : 'unknown';
         const t2StatusText = patient.t2 ?? '?';
@@ -187,7 +187,7 @@ const tableRenderer = (() => {
                 <td data-label="AS+/AS ges." class="text-center" data-tippy-content="${tooltipASCounts}">${asCountsText}</td>
                 <td data-label="T2+/T2 ges." class="text-center" id="t2-counts-${patient.nr}" data-tippy-content="${tooltipT2Counts}">${t2CountsText}</td>
                  <td class="text-center p-1" style="width: 30px;" data-tippy-content="${tooltipExpand}">
-                     ${hasBewerteteNodes ? '<button class="btn btn-sm btn-outline-secondary p-1 row-toggle-button" aria-label="Details ein-/ausklappen"><i class="fas fa-chevron-down row-toggle-icon"></i></button>' : ''}
+                     ${hasBewerteteNodes ? `<button class="btn btn-sm btn-outline-secondary p-1 row-toggle-button" aria-label="Details ein-/ausklappen">${ui_helpers.getIcon('chevron-down', 16, 'var(--text-medium)', 1.5, 'row-toggle-icon')}</button>` : ''}
                  </td>
             </tr>
              ${hasBewerteteNodes ? `
