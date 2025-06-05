@@ -44,10 +44,10 @@ function initializeApp() {
             typeof viewRenderer === 'undefined' || typeof ui_helpers === 'undefined' || typeof exportService === 'undefined' ||
             typeof dataTabLogic === 'undefined' || typeof auswertungTabLogic === 'undefined' ||
             typeof statistikTabLogic === 'undefined' || typeof praesentationTabLogic === 'undefined' ||
-            typeof publikationTabLogic === 'undefined' || typeof publicationRenderer === 'undefined' || // Path updated by HTML import
-            typeof publicationTextGenerator === 'undefined' || // Path updated by HTML import
-            typeof publicationTables === 'undefined' || // New module
-            typeof publicationFigures === 'undefined' || // New module
+            typeof publikationTabLogic === 'undefined' || typeof publicationRenderer === 'undefined' ||
+            typeof publicationTextGenerator === 'undefined' ||
+            typeof publicationTables === 'undefined' ||
+            typeof publicationFigures === 'undefined' ||
             typeof studyT2CriteriaManager === 'undefined' ||
             typeof bruteForceManager === 'undefined' || typeof generalEventHandlers === 'undefined' ||
             typeof auswertungEventHandlers === 'undefined' || typeof statistikEventHandlers === 'undefined' ||
@@ -89,7 +89,7 @@ function initializeApp() {
         updateUIState();
         setupEventListeners();
 
-        const initialTabId = state.getActiveTabId() || 'publikation-tab'; // Default to publikation-tab
+        const initialTabId = state.getActiveTabId() || 'publikation-tab';
         const initialTabElement = document.getElementById(initialTabId);
          if(initialTabElement && bootstrap.Tab) {
             const tab = bootstrap.Tab.getOrCreateInstance(initialTabElement);
@@ -394,8 +394,6 @@ function handleBruteForceResult(payload) {
             ui_helpers.initializeTooltips(modalBody);
         }
         ui_helpers.showToast('Optimierung abgeschlossen.', 'success');
-        // Initialisierung des Publikations-Tabs nach Abschluss der Brute-Force-Analyse,
-        // um sicherzustellen, dass die neuesten BF-Ergebnisse verfügbar sind.
         if (state.getActiveTabId() === 'publikation-tab') {
             publikationTabLogic.initializeData(localRawData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getAllResults());
             _renderCurrentTab('publikation-tab');
