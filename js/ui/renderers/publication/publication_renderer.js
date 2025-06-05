@@ -1,8 +1,5 @@
 const publicationRenderer = (() => {
 
-    // _formatMetricForTable wurde in publication_tables.js verschoben und ist dort privat
-    // Der relevante Aufruf in renderSectionContent wird angepasst, falls es einen direkten Aufruf gab.
-
     function renderSectionContent(sectionId, lang, allKollektivStats, commonDataFromLogic, options = {}) {
         if (!sectionId || !lang || !allKollektivStats || !commonDataFromLogic) {
             return '<p class="text-danger">Fehler: Notwendige Daten für die Sektionsanzeige fehlen.</p>';
@@ -13,7 +10,7 @@ const publicationRenderer = (() => {
             ...commonDataFromLogic,
             currentKollektivName: getKollektivDisplayName(currentKollektiv),
             bruteForceMetricForPublication: bruteForceMetric || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication,
-            references: APP_CONFIG.REFERENCES_FOR_PUBLICATION // Direkter Zugriff auf die globalen Referenzen
+            references: APP_CONFIG.REFERENCES_FOR_PUBLICATION
         };
 
         const mainSection = PUBLICATION_CONFIG.sections.find(s => s.id === sectionId);
@@ -27,15 +24,13 @@ const publicationRenderer = (() => {
         mainSection.subSections.forEach(subSection => {
             combinedHtml += `<div class="publication-sub-section border-bottom pb-4 mb-4" id="pub-content-${subSection.id}">`;
             
-            // Render content based on subSection ID
             const textContentHtml = publicationTextGenerator.getSectionText(subSection.id, lang, allKollektivStats, commonData);
             combinedHtml += textContentHtml || `<p class="text-muted">Inhalt für diesen Unterabschnitt (ID: ${subSection.id}, Sprache: ${lang}) wird noch generiert.</p>`;
 
-            // Render tables and figures dynamically where needed based on the sub-section
-            if (subSection.id === 'methoden_patientenkollektiv') {
+            if (subSection.id === 'methoden_patientenkohorte') { // Adjusted ID
                 combinedHtml += publicationFigures.renderFlowDiagram(allKollektivStats, lang);
             }
-            else if (subSection.id === 'methoden_t2_definition') {
+            else if (subSection.id === 'methoden_bildanalyse_t2_kriterien') { // Adjusted ID
                 combinedHtml += publicationTables.renderLiteraturT2KriterienTabelle(lang);
             } else if (subSection.id === 'ergebnisse_patientencharakteristika') {
                 combinedHtml += publicationTables.renderPatientenCharakteristikaTabelle(allKollektivStats, lang);
@@ -43,13 +38,13 @@ const publicationRenderer = (() => {
                 combinedHtml += `<div class="col-md-6">${publicationFigures.renderAgeDistributionChart(allKollektivStats.Gesamt?.deskriptiv?.alterData || [], PUBLICATION_CONFIG.publicationElements.ergebnisse.alterVerteilungChart.id, {height: 220, margin: { top: 10, right: 10, bottom: 40, left: 45 }}, lang)}</div>`;
                 combinedHtml += `<div class="col-md-6">${publicationFigures.renderGenderDistributionChart(allKollektivStats.Gesamt?.deskriptiv?.geschlecht, PUBLICATION_CONFIG.publicationElements.ergebnisse.geschlechtVerteilungChart.id, {height: 220, margin: { top: 10, right: 10, bottom: 40, left: 10 }, innerRadiusFactor: 0.0, legendBelow: true, legendItemCount: 3}, lang)}</div>`;
                 combinedHtml += '</div>';
-            } else if (subSection.id === 'ergebnisse_as_performance') {
+            } else if (subSection.id === 'ergebnisse_as_diagnostische_guete') { // Adjusted ID
                 combinedHtml += publicationTables.renderDiagnostischeGueteTabellen(allKollektivStats, lang, subSection.id, commonData);
-            } else if (subSection.id === 'ergebnisse_literatur_t2_performance') {
+            } else if (subSection.id === 'ergebnisse_t2_literatur_diagnostische_guete') { // Adjusted ID
                 combinedHtml += publicationTables.renderDiagnostischeGueteTabellen(allKollektivStats, lang, subSection.id, commonData);
-            } else if (subSection.id === 'ergebnisse_optimierte_t2_performance') {
+            } else if (subSection.id === 'ergebnisse_t2_optimiert_diagnostische_guete') { // Adjusted ID
                 combinedHtml += publicationTables.renderDiagnostischeGueteTabellen(allKollektivStats, lang, subSection.id, commonData);
-            } else if (subSection.id === 'ergebnisse_vergleich_performance') {
+            } else if (subSection.id === 'ergebnisse_vergleich_as_vs_t2') { // Adjusted ID
                  combinedHtml += publicationTables.renderDiagnostischeGueteTabellen(allKollektivStats, lang, subSection.id, commonData);
                  combinedHtml += '<div class="row mt-4 g-3">';
                  const kollektiveForCharts = ['Gesamt', 'direkt OP', 'nRCT'];
@@ -65,7 +60,7 @@ const publicationRenderer = (() => {
                     let bfDefForChart = null;
 
                     if (bfResultsForDisplay && bfResultsForDisplay.metric === commonData.bruteForceMetricForPublication && bfResultsForDisplay.bestResult) {
-                        const dataForThisKollektiv = dataProcessor.filterDataByKollektiv(commonData.rawData, kolId); // Zugang zu rawData über commonData
+                        const dataForThisKollektiv = dataProcessor.filterDataByKollektiv(commonData.rawData, kolId);
                         const bfCriteria = bfResultsForDisplay.bestResult.criteria;
                         const bfLogic = bfResultsForDisplay.bestResult.logic;
                         const evaluatedDataBF = t2CriteriaManager.evaluateDataset(cloneDeep(dataForThisKollektiv), bfCriteria, bfLogic);
