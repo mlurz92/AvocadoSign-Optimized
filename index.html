@@ -63,7 +63,7 @@
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="praesentation-tab-link" data-bs-toggle="tab" data-bs-target="#praesentation-tab-pane" type="button" role="tab" aria-controls="praesentation-tab-pane" aria-selected="false">
-                    <i data-lucide="slideshow" class="nav-icon"></i> Präsentation
+                    <i data-lucide="presentation" class="nav-icon"></i> Präsentation
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -118,16 +118,20 @@
     <script src="js/config/app_config.js"></script>
     <script src="js/config/text_config.js"></script>
     <script src="js/config/publication_config.js"></script>
+    
     <script src="js/utils/utils.js"></script>
-    <script src="js/app/state.js"></script>
+    <script src="js/app/state.js"></script> 
+    
     <script src="js/core/data_processor.js"></script>
     <script src="js/core/t2_criteria_manager.js"></script>
     <script src="js/core/study_criteria_manager.js"></script>
+    
     <script src="js/services/statistics_service.js"></script>
     <script src="js/services/brute_force_manager.js"></script>
-    <script src="js/services/export_service.js"></script>
+    
     <script src="js/publication/engine/radiology_formatter.js"></script>
     <script src="js/publication/engine/publication_data_aggregator.js"></script>
+    
     <script src="js/publication/templates/summary_statement_generator.js"></script>
     <script src="js/publication/templates/key_results_generator.js"></script>
     <script src="js/publication/templates/abstract_generator.js"></script>
@@ -136,28 +140,44 @@
     <script src="js/publication/templates/results_generator.js"></script>
     <script src="js/publication/templates/discussion_generator.js"></script>
     <script src="js/publication/templates/references_generator.js"></script>
+    
     <script src="js/ui/core/ui_helpers.js"></script>
     <script src="js/ui/core/ui_components.js"></script>
+    
     <script src="js/ui/renderers/table_renderer.js"></script>
     <script src="js/ui/renderers/chart_renderer.js"></script>
+    
     <script src="js/publication/ui/publication_tables.js"></script>
     <script src="js/publication/ui/publication_figures.js"></script>
     <script src="js/publication/publication_main_controller.js"></script>
     <script src="js/publication/ui/publication_tab_logic.js"></script>
     <script src="js/publication/ui/publication_renderer.js"></script>
+    
     <script src="js/ui/view_logic/data_tab_logic.js"></script>
     <script src="js/ui/view_logic/auswertung_tab_logic.js"></script>
     <script src="js/ui/view_logic/statistik_tab_logic.js"></script>
     <script src="js/ui/view_logic/praesentation_tab_logic.js"></script>
-    <script src="js/ui/view_renderer.js"></script>
+    
+    <script src="js/services/export_service.js"></script> 
+    
+    <script src="js/ui/view_renderer.js"></script> 
+    
     <script src="js/ui/event_handlers/general_event_handlers.js"></script>
     <script src="js/ui/event_handlers/auswertung_event_handlers.js"></script>
     <script src="js/ui/event_handlers/statistik_event_handlers.js"></script>
     <script src="js/ui/event_handlers/praesentation_event_handlers.js"></script>
     <script src="js/ui/event_handlers/publikation_event_handlers.js"></script>
-    <script src="js/ui/event_handlers/export_event_handlers.js"></script>
-    <script src="js/app/main.js"></script>
+    <script src="js/ui/event_handlers/export_event_handlers.js"></script> 
+    
+    <script src="js/app/main.js"></script> 
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>lucide.createIcons();</script>
+    <script>
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        } else {
+            console.error("Lucide Icons script nicht geladen oder fehlgeschlagen.");
+        }
+    </script>
 </body>
 </html>
