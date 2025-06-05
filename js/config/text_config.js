@@ -130,33 +130,83 @@ const UI_TEXTS = {
         title: "Kurzanleitung & Wichtige Hinweise",
         content: `
             <p>Willkommen zum <strong>Lymphknoten T2 - Avocado Sign Analyse Tool v${APP_CONFIG.APP_VERSION}</strong>.</p>
+            <p>Diese Anwendung dient der explorativen Analyse und dem wissenschaftlichen Vergleich der diagnostischen Leistung des "Avocado Signs" gegenüber T2-gewichteten morphologischen Kriterien zur Prädiktion des mesorektalen Lymphknotenstatus (N-Status) bei Patienten mit Rektumkarzinom. Sie basiert auf einem Patientenkollektiv von 106 Fällen.</p>
+
             <h6>Allgemeine Bedienung:</h6>
             <ul>
-                <li><strong>Kollektiv-Auswahl (Header):</strong> Wählen Sie hier das globale Patientenkollektiv (Gesamt, Direkt OP, nRCT). Diese Auswahl beeinflusst alle Analysen und Darstellungen.</li>
-                <li><strong>Tab-Navigation:</strong> Wechseln Sie zwischen den Hauptfunktionen (Daten, Auswertung, Statistik, etc.).</li>
-                <li><strong>Tooltips:</strong> Fahren Sie mit der Maus über Elemente für detaillierte Erklärungen.</li>
-                <li><strong>Statistische Signifikanz:</strong> p-Werte werden mit Symbolen versehen: * p < 0.05, ** p < 0.01, *** p < 0.001. Das Signifikanzniveau ist α = ${formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,2).replace('.',',')}.</li>
+                <li><strong>Kollektiv-Auswahl (Header):</strong> Wählen Sie hier das globale Patientenkollektiv (<strong>Gesamt</strong>, <strong>Direkt OP</strong>, <strong>nRCT</strong>). Diese Auswahl beeinflusst alle Analysen und Darstellungen in der gesamten Anwendung. Die Header-Meta-Statistiken (Anzahl Patienten, N+, AS+, T2+) aktualisieren sich entsprechend.</li>
+                <li><strong>Tab-Navigation:</strong> Wechseln Sie über die Reiter zwischen den Hauptfunktionsbereichen der Anwendung.</li>
+                <li><strong>Tooltips:</strong> Viele Bedienelemente und Ausgaben sind mit detaillierten Tooltips versehen, die bei Mausüberfahrung Erklärungen, Definitionen oder Interpretationshilfen bieten.</li>
+                <li><strong>Statistische Signifikanz:</strong> In statistischen Tabellen werden p-Werte mit Symbolen für Signifikanzniveaus versehen: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Das zugrundeliegende Signifikanzniveau ist &alpha; = ${formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,2).replace('.',',')}.</li>
             </ul>
-            <h6>Wichtige Tabs:</h6>
+
+            <h6>Wichtige Tabs und deren Funktionen:</h6>
             <ul>
-                <li><strong>Daten:</strong> Zeigt Patientendaten. Reihen sind für T2-LK-Details aufklappbar.</li>
-                <li><strong>Auswertung:</strong>
+                <li><strong>Daten:</strong>
                     <ul>
-                        <li>Definieren Sie hier <strong>T2-Malignitätskriterien</strong> (Größe, Form etc.) und die <strong>Logik</strong> (UND/ODER).</li>
-                        <li>Klicken Sie <strong>"Anwenden & Speichern"</strong>, um Ihre T2-Definitionen auf den Datensatz anzuwenden und die Ergebnisse in allen Tabs zu aktualisieren. Ungespeicherte Änderungen werden markiert.</li>
-                        <li>Starten Sie die <strong>Brute-Force-Optimierung</strong>, um datengetrieben die besten T2-Kriterien für eine Zielmetrik zu finden.</li>
+                        <li>Zeigt die detaillierten Patientendaten des aktuell ausgewählten Kollektivs in tabellarischer Form.</li>
+                        <li>Spalten können durch Klick auf die Überschrift sortiert werden. Die Spalte "N/AS/T2" erlaubt eine Sub-Sortierung nach den Einzelkomponenten N, AS oder T2.</li>
+                        <li>Für Patienten mit erfassten T2-Lymphknoten können Detailzeilen aufgeklappt werden, die die morphologischen Eigenschaften jedes einzelnen T2-Lymphknotens (Größe, Form, Kontur, Homogenität, Signal) visualisieren.</li>
+                        <li>Ein Button "Alle Details Anzeigen/Ausblenden" erlaubt das globale Steuern dieser Detailansichten.</li>
                     </ul>
                 </li>
-                <li><strong>Statistik:</strong> Detaillierte statistische Analysen. Wählen Sie "Einzelansicht" oder "Vergleich Aktiv" für Kollektivvergleiche. Konfidenzintervalle (CI) sind 95%-CIs.</li>
-                <li><strong>Präsentation:</strong> Aufbereitete Ergebnisse, ideal für Vorträge.</li>
-                <li><strong>Publikation:</strong> Generiert Textvorschläge und Materialien für eine wissenschaftliche Publikation.</li>
-                <li><strong>Export:</strong> Lädt Analyseergebnisse und Daten herunter.</li>
+                <li><strong>Auswertung:</strong>
+                    <ul>
+                        <li><strong>Dashboard:</strong> Bietet eine schnelle visuelle Übersicht (kleine Diagramme für Alter, Geschlecht, Therapie, N/AS/T2-Status) für das aktuelle Kollektiv.</li>
+                        <li><strong>T2-Kriterien-Definition:</strong> Ermöglicht die interaktive Definition von T2-basierten Malignitätskriterien.
+                            <ul>
+                                <li>Aktivieren/Deaktivieren Sie einzelne Kriterien (Größe, Form, Kontur, Homogenität, Signal) per Checkbox.</li>
+                                <li>Stellen Sie den Schwellenwert für das Größenkriterium (Kurzachse, &ge;) per Slider oder Direkteingabe ein.</li>
+                                <li>Wählen Sie für Form, Kontur, Homogenität und Signal den als suspekt geltenden Wert über Optionsbuttons.</li>
+                                <li>Definieren Sie die logische Verknüpfung (UND/ODER) der aktiven Kriterien.</li>
+                                <li><strong>Wichtig:</strong> Änderungen werden erst wirksam und in allen Tabs berücksichtigt, nachdem Sie auf <strong>"Anwenden & Speichern"</strong> geklickt haben. Ein Indikator am Kartenrand weist auf ungespeicherte Änderungen hin. Mit "Zurücksetzen" können die Kriterien auf den Default-Wert zurückgesetzt werden (Änderung muss ebenfalls angewendet werden).</li>
+                            </ul>
+                        </li>
+                        <li><strong>T2 Metrik-Übersicht:</strong> Zeigt die wichtigsten diagnostischen Gütekriterien (Sens, Spez, PPV, NPV, etc. mit 95% CIs) für die aktuell *angewendeten und gespeicherten* T2-Kriterien im Vergleich zum N-Status für das globale Kollektiv.</li>
+                        <li><strong>Brute-Force-Optimierung:</strong>
+                            <ul>
+                                <li>Ermöglicht die automatische Suche nach der T2-Kriterienkombination (inkl. Logik), die eine vom Nutzer gewählte Zielmetrik (z.B. Balanced Accuracy, F1-Score) maximiert.</li>
+                                <li>Die Analyse läuft im Hintergrund (Web Worker) und zeigt Fortschritt sowie das aktuell beste Ergebnis an.</li>
+                                <li>Nach Abschluss können die besten Kriterien direkt übernommen und angewendet werden. Ein Klick auf "Top 10" öffnet ein Modal mit den besten Ergebnissen und einer Exportoption für den Bericht.</li>
+                            </ul>
+                        </li>
+                        <li><strong>Auswertungstabelle:</strong> Listet Patienten mit ihrem N-, AS- und (gemäß aktuell angewendeten Kriterien berechneten) T2-Status sowie den jeweiligen Lymphknotenzahlen auf. Detailzeilen zeigen die Bewertung jedes T2-Lymphknotens anhand der aktuellen Kriteriendefinition, wobei erfüllte, zur Positiv-Bewertung beitragende Merkmale hervorgehoben werden.</li>
+                    </ul>
+                </li>
+                <li><strong>Statistik:</strong>
+                    <ul>
+                        <li>Bietet umfassende statistische Auswertungen, immer basierend auf den aktuell *angewendeten* T2-Kriterien.</li>
+                        <li>Über den Button "Vergleich Aktiv" kann zwischen einer Einzelansicht (für das global gewählte Kollektiv) und einer Vergleichsansicht zweier spezifisch wählbarer Kollektive umgeschaltet werden.</li>
+                        <li>Angezeigt werden deskriptive Statistiken, detaillierte diagnostische Gütekriterien (für AS vs. N und T2 vs. N) inklusive Konfidenzintervallen, statistische Vergleichstests (AS vs. T2; ggf. Kollektiv A vs. B) und Assoziationsanalysen.</li>
+                        <li>Eine **Kriterienvergleichstabelle** am Ende des Tabs vergleicht die Performance von AS, den angewandten T2-Kriterien und definierten Literatur-Sets für das global gewählte Kollektiv.</li>
+                    </ul>
+                </li>
+                <li><strong>Präsentation:</strong>
+                    <ul>
+                        <li>Bereitet Ergebnisse in einem für Präsentationen optimierten Format auf.</li>
+                        <li>Zwei Ansichten wählbar: Fokus rein auf "Avocado Sign (Performance)" oder "AS vs. T2 (Vergleich)".</li>
+                        <li>Im Vergleichsmodus kann eine T2-Basis aus den angewandten Kriterien oder Literatur-Sets gewählt werden. Das globale Kollektiv passt sich ggf. dem Zielkollektiv der Studie an.</li>
+                        <li>Enthält Info-Karten, Vergleichstabellen, statistische Tests und Diagramme.</li>
+                    </ul>
+                </li>
+                <li><strong>Publikation:</strong>
+                    <ul>
+                        <li>Generiert automatisch Textvorschläge in Deutsch oder Englisch für verschiedene Abschnitte einer wissenschaftlichen Publikation (Abstract, Einleitung, Methoden, Ergebnisse, Diskussion, Referenzen).</li>
+                        <li>Integriert dynamisch aktuelle Daten, Statistiken (basierend auf angewandten T2-Kriterien und ausgewählter BF-Zielmetrik für Teile der Ergebnisdarstellung) und Konfigurationen.</li>
+                        <li>Enthält ebenfalls direkt im Text eingebettete Tabellen und Diagramme.</li>
+                    </ul>
+                </li>
+                <li><strong>Export:</strong>
+                    <ul>
+                        <li>Ermöglicht den Download von Rohdaten, Analyseergebnissen, Tabellen und Diagrammen.</li>
+                        <li>Formate: CSV, Markdown (MD), Text (TXT), HTML, PNG, SVG.</li>
+                        <li>Bietet Einzelexporte sowie thematisch gebündelte ZIP-Pakete.</li>
+                        <li>Alle Exporte basieren auf dem global gewählten Kollektiv und den zuletzt *angewendeten* T2-Kriterien.</li>
+                    </ul>
+                </li>
             </ul>
-             <h6>T2-Kriterien Anwendung:</h6>
-            <p class="small">Der Status 'T2' in den Tabellen, die T2-bezogenen Statistiken und Diagramme (außer bei expliziter Auswahl einer Literaturstudie im Präsentationstab) basieren <strong>immer</strong> auf den zuletzt im 'Auswertung'-Tab <strong>definierten UND angewendeten</strong> Kriterien.</p>
-            <h6>Referenzstandard:</h6>
-            <p class="small">Der pathologische N-Status dient als Referenzstandard für alle diagnostischen Güteberechnungen.</p>
-            <p class="small">Diese Anwendung ist ein Forschungswerkzeug und nicht für die klinische Diagnostik vorgesehen.</p>
+             <h6>Referenzstandard und Wichtiger Hinweis:</h6>
+            <p class="small">Der histopathologische N-Status aus dem Operationspräparat dient in allen Analysen als Referenzstandard. Diese Anwendung ist ein Forschungswerkzeug und ausdrücklich <strong>nicht</strong> für die klinische Diagnostik oder Therapieentscheidungen im Einzelfall vorgesehen. Alle Ergebnisse sind im Kontext der Studienlimitationen (retrospektiv, monozentrisch, spezifisches Kollektiv) zu interpretieren.</p>
         `
     },
     TOOLTIP_CONTENT: {
@@ -174,7 +224,7 @@ const UI_TEXTS = {
             auswertung: "Zentraler Tab zur Definition von T2-Kriterien, Anzeige eines deskriptiven Dashboards, Durchführung der Brute-Force-Optimierung und detaillierte Auswertungsergebnisse pro Patient basierend auf den angewendeten Kriterien.",
             statistik: "Bietet detaillierte statistische Analysen (Gütekriterien, Vergleiche, Assoziationen) für das global gewählte Kollektiv oder einen Vergleich zweier spezifisch wählbarer Kollektive. Alle Konfidenzintervalle (CI) sind 95%-CIs.",
             praesentation: "Stellt Analyseergebnisse in einem aufbereiteten, präsentationsfreundlichen Format dar, fokussiert auf den Vergleich des Avocado Signs mit T2-basierten Ansätzen (angewandt oder Literatur).",
-            publikation: "Generiert Textvorschläge und Materialien für eine wissenschaftliche Publikation.",
+            publikation: "Generiert Textvorschläge und Materialien für wissenschaftliche Publikationen.",
             export: "Bietet umfangreiche Optionen zum Herunterladen von Rohdaten, Analyseergebnissen, Tabellen und Diagrammen in verschiedenen Dateiformaten.",
             moreTabsDropdown: "Weitere Tabs anzeigen."
         },
@@ -400,5 +450,4 @@ const UI_TEXTS = {
 };
 
 deepFreeze(UI_TEXTS);
-// TOOLTIP_CONTENT ist jetzt Teil von UI_TEXTS
 const TOOLTIP_CONTENT = UI_TEXTS.TOOLTIP_CONTENT;
