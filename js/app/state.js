@@ -77,7 +77,6 @@ const stateManager = (() => {
     function loadAppliedT2Criteria() {
         const loadedCriteria = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA);
         if (loadedCriteria && typeof loadedCriteria === 'object') {
-            // Basic validation to ensure it's not just an empty object or malformed
             let isValid = true;
             const defaultKeys = Object.keys(getDefaultT2Criteria());
             for (const key of defaultKeys) {
@@ -188,10 +187,11 @@ const stateManager = (() => {
     }
 
     function getCurrentHeaderStats() {
-        if (typeof dataProcessor === 'undefined' || typeof window.PATIENT_RAW_DATA === 'undefined') {
+        if (typeof dataProcessor === 'undefined' || typeof mainAppInterface === 'undefined' || typeof mainAppInterface.getProcessedData === 'undefined') {
             return { kollektiv: state.currentKollektiv, anzahlPatienten: 0, nPathoPlus: 0, nPathoMinus: 0, nAsPlus: 0, nAsMinus: 0, nT2Plus: 0, nT2Minus: 0 };
         }
-        const currentData = dataProcessor.getProcessedDataForSelectedKollektiv(window.PATIENT_RAW_DATA, state.currentKollektiv, state.appliedT2Criteria, state.appliedT2Logic);
+        // Ensure to use the current processed data, which is already evaluated for T2 criteria
+        const currentData = dataProcessor.filterDataByKollektiv(mainAppInterface.getProcessedData(), state.currentKollektiv);
         let nPathoPlus = 0;
         let nPathoMinus = 0;
         let nAsPlus = 0;
@@ -201,14 +201,14 @@ const stateManager = (() => {
 
         if (Array.isArray(currentData)) {
             currentData.forEach(p => {
-                if (p.n_patho_status === '+') nPathoPlus++;
-                else if (p.n_patho_status === '-') nPathoMinus++;
+                if (p.n === '+') nPathoPlus++;
+                else if (p.n === '-') nPathoMinus++;
 
-                if (p.n_as_status === '+') nAsPlus++;
-                else if (p.n_as_status === '-') nAsMinus++;
+                if (p.as === '+') nAsPlus++;
+                else if (p.as === '-') nAsMinus++;
                 
-                if (p.n_t2_status === '+') nT2Plus++;
-                else if (p.n_t2_status === '-') nT2Minus++;
+                if (p.t2 === '+') nT2Plus++;
+                else if (p.t2 === '-') nT2Minus++;
             });
         }
         
@@ -233,8 +233,6 @@ const stateManager = (() => {
     }
 
     return Object.freeze({
-        // Kein direktes updateState mehr nach außen, nur über spezifische Setter
-        // updateState, 
         loadAppliedT2Criteria,
         saveAppliedT2Criteria,
         loadAppliedT2Logic,
@@ -254,7 +252,14 @@ const stateManager = (() => {
         getAppliedT2Criteria: () => cloneDeep(state.appliedT2Criteria),
         getAppliedT2Logic: () => state.appliedT2Logic,
         getUserSettings: () => cloneDeep(state.userSettings),
-        getAllBruteForceResults: () => cloneDeep(state.bruteForceResults)
-        // Zugriff auf kompletten State (read-only) über window.राज्य
+        getAllBruteForceResults: () => cloneDeep(state.bruteForceResults),
+        getCurrentPublikationLang: () => state.userSettings.publikationLang,
+        getCurrentPublikationSection: () => state.userSettings.publikationSection,
+        getCurrentPublikationBruteForceMetric: () => state.userSettings.publikationBruteForceMetric,
+        getCurrentStatsLayout: () => state.userSettings.statsLayout,
+        getCurrentStatsKollektiv1: () => state.userSettings.statsKollektiv1,
+        getCurrentStatsKollektiv2: () => state.userSettings.statsKollektiv2,
+        getCurrentPresentationView: () => state.userSettings.praesentationView,
+        getCurrentPresentationStudyId: () => state.userSettings.praesentationStudyId
     });
 })();
