@@ -13,7 +13,7 @@ const APP_CONFIG = Object.freeze({
         PRESENTATION_VIEW: 'as-pur',
         PRESENTATION_STUDY_ID: null,
         PUBLIKATION_LANG: 'de',
-        PUBLIKATION_SECTION: 'methoden',
+        PUBLIKATION_SECTION: 'abstract',
         PUBLIKATION_BRUTE_FORCE_METRIC: 'Balanced Accuracy',
         CRITERIA_COMPARISON_SETS: Object.freeze([
             'avocado_sign',
@@ -45,10 +45,9 @@ const APP_CONFIG = Object.freeze({
 
     PATHS: Object.freeze({
         BRUTE_FORCE_WORKER: 'workers/brute_force_worker.js',
-        PUBLICATION_TEXT_GENERATOR: 'js/ui/renderers/publication/publication_text_generator.js',
-        PUBLICATION_RENDERER: 'js/ui/renderers/publication/publication_renderer.js',
-        PUBLICATION_TABLES: 'js/ui/renderers/publication/publication_tables.js',
-        PUBLICATION_FIGURES: 'js/ui/renderers/publication/publication_figures.js'
+        // Pfade für neue Publikationsmodule werden hier nicht zwingend benötigt,
+        // da sie per script-Tag in index.html geladen werden.
+        // Bei dynamischem Laden könnten sie hier ergänzt werden.
     }),
 
     PERFORMANCE_SETTINGS: Object.freeze({
@@ -62,13 +61,14 @@ const APP_CONFIG = Object.freeze({
         BOOTSTRAP_CI_ALPHA: 0.05,
         SIGNIFICANCE_LEVEL: 0.05,
         SIGNIFICANCE_SYMBOLS: Object.freeze([
-            { threshold: 0.001, symbol: '***' },
-            { threshold: 0.01, symbol: '**' },
-            { threshold: 0.05, symbol: '*' }
+            Object.freeze({ threshold: 0.001, symbol: '***' }),
+            Object.freeze({ threshold: 0.01, symbol: '**' }),
+            Object.freeze({ threshold: 0.05, symbol: '*' })
         ]),
         DEFAULT_CI_METHOD_PROPORTION: 'Wilson Score',
         DEFAULT_CI_METHOD_EFFECTSIZE: 'Bootstrap Percentile',
-        FISHER_EXACT_THRESHOLD: 5
+        FISHER_EXACT_THRESHOLD: 5,
+        CI_WARNING_SAMPLE_SIZE_THRESHOLD: 10
     }),
 
     T2_CRITERIA_SETTINGS: Object.freeze({
@@ -155,8 +155,8 @@ const APP_CONFIG = Object.freeze({
             PRAES_AS_VS_T2_CHART_SVG: 'PraesChartASvsT2_{StudyID}_SVG',
             TABLE_PNG_EXPORT: '{TableName}_PNG',
             CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
-            PUBLIKATION_METHODEN_MD: 'Publikation_{SectionName}_MD',
-            PUBLIKATION_ERGEBNISSE_MD: 'Publikation_{SectionName}_MD'
+            PUBLIKATION_MAIN_MD: 'Publikation_Gesamt_MD',
+            PUBLIKATION_SECTION_MD: 'Publikation_{SectionName}_MD'
         }),
         EXCEL_SHEET_NAME_DATEN: 'Datenliste',
         EXCEL_SHEET_NAME_AUSWERTUNG: 'Auswertung',
@@ -186,32 +186,72 @@ const APP_CONFIG = Object.freeze({
     }),
 
     PUBLICATION_JOURNAL_REQUIREMENTS: Object.freeze({
-        WORD_COUNT_MAIN_TEXT_MAX: 3000,
-        WORD_COUNT_ABSTRACT_MAX: 300,
-        REFERENCE_LIMIT: 35,
-        FIGURE_LIMIT: 6,
-        TABLE_LIMIT: 4,
-        KEY_RESULTS_WORD_LIMIT: 75,
-        SUMMARY_STATEMENT_WORD_LIMIT: 30
+        JOURNAL_NAME: "Radiology",
+        MANUSCRIPT_TYPE_ORIGINAL_RESEARCH: Object.freeze({
+            WORD_LIMIT_MAIN_TEXT: 3000,
+            WORD_LIMIT_TITLE: 15,
+            ABBREVIATION_LIST_MAX_COUNT: 10,
+            ABBREVIATION_MIN_USAGE_FOR_LIST: 10,
+            SUMMARY_STATEMENT_WORD_LIMIT: 30,
+            KEY_RESULTS_WORD_LIMIT: 75,
+            KEY_RESULTS_MAX_POINTS: 3,
+            ABSTRACT_WORD_LIMIT: 300,
+            INTRODUCTION_WORD_LIMIT: 400,
+            MATERIALS_METHODS_WORD_LIMIT: 800,
+            RESULTS_WORD_LIMIT: 1000,
+            DISCUSSION_WORD_LIMIT: 800,
+            REFERENCE_LIMIT: 35,
+            FIGURE_LIMIT: 6,
+            TABLE_LIMIT: 4
+        }),
+        MANUSCRIPT_TYPE_TECHNICAL_DEVELOPMENT: Object.freeze({
+            WORD_LIMIT_MAIN_TEXT: 2000
+        }),
+        P_VALUE_FORMAT_RULES: Object.freeze({
+            DEFAULT_DIGITS: 2,
+            SMALL_P_DIGITS: 3,
+            SMALL_P_THRESHOLD: 0.01,
+            REPORT_EXACT_THRESHOLD: 0.001,
+            MAX_P_VALUE_DISPLAY: 0.99,
+            MIN_P_VALUE_DISPLAY_PREFIX: "<",
+            NO_LEADING_ZERO: true
+        }),
+        NUMBER_FORMAT_RULES: Object.freeze({
+            AUC: { digits: 2 },
+            ICC: { digits: 2 },
+            KAPPA: { digits: 2 },
+            ADC: { digits: 3, max_digits: 3 },
+            ODDS_RATIO: { digits: 2 },
+            HAZARD_RATIO: { digits: 2 },
+            RISK_RATIO: { digits: 2 },
+            PERCENTAGES: { general_digits: 0, min_digits: 0 },
+            CORRELATION_COEFFICIENT_RULES: Object.freeze({
+                SMALL_SAMPLE_DIGITS: 2,
+                LARGE_SAMPLE_DIGITS: 3,
+                SAMPLE_THRESHOLD_FOR_DIGITS: 100
+            })
+        })
     }),
 
     REFERENCES_FOR_PUBLICATION: Object.freeze({
-        LURZ_SCHAEFER_AS_2025: "Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11462-y",
-        KOH_2008_MORPHOLOGY: "Koh DM, Chau I, Tait D, Wotherspoon A, Cunningham D, Brown G. Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. Int J Radiat Oncol Biol Phys. 2008;71(2):456-461.",
-        BARBARO_2024_RESTAGING: "Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: A single center experience. Radiother Oncol. 2024;193:110124.",
+        LURZ_SCHAEFER_2025_AS: "Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025;XXX:XXX-XXX. DOI: 10.1007/s00330-025-11462-y",
+        BARBARO_2024_RESTAGING: "Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: A single center experience. Radiother Oncol. 2024;193:110124. DOI: 10.1016/j.radonc.2024.110124",
+        BEETS_TAN_2018_ESGAR_CONSENSUS: "Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for clinical management of rectal cancer: Updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. Eur Radiol. 2018;28(4):1465-1475. DOI: 10.1007/s00330-017-5026-2",
+        KOH_2008_MORPHOLOGY: "Koh DM, Chau I, Tait D, Wotherspoon A, Cunningham D, Brown G. Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. Int J Radiat Oncol Biol Phys. 2008;71(2):456-461. DOI: 10.1016/j.ijrobp.2007.10.016",
         RUTEGARD_2025_ESGAR_VALIDATION: "Rutegård MK, Båtsman M, Blomqvist L, et al. Evaluation of MRI characterisation of histopathologically matched lymph nodes and other mesorectal nodal structures in rectal cancer. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11361-2",
-        BEETS_TAN_2018_ESGAR_CONSENSUS: "Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for clinical management of rectal cancer: Updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. Eur Radiol. 2018;28(4):1465-1475.",
-        BROWN_2003_MORPHOLOGY: "Brown G, Richards CJ, Bourne MW, et al. Morphologic predictors of lymph node status in rectal cancer with use of high-spatial-resolution MR imaging with histopathologic comparison. Radiology. 2003;227(2):371-377.",
-        KAUR_2012_MRI_PRACTICAL: "Kaur H, Choi H, You NY, et al. MR Imaging for Preoperative Evaluation of Primary Rectal Cancer: Practical Considerations. RadioGraphics. 2012;32(2):389-409.",
-        HORVAT_2019_MRI_RECTAL_CANCER: "Horvat N, Carlos Tavares Rocha C, Clemente Oliveira B, Petkovska I, Gollub MJ. MRI of Rectal Cancer: Tumor Staging, Imaging Techniques, and Management. RadioGraphics. 2019;39(2):e1-e24.",
-        BEETS_TAN_2009_USPIO_RESTAGING: "Lahaye MJ, Beets GL, Engelen SME, et al. Locally Advanced Rectal Cancer: MR Imaging for Restaging after Neoadjuvant Radiation Therapy with Concomitant Chemotherapy Part II. What Are the Criteria to Predict Involved Lymph Nodes?. Radiology. 2009;252(1):81-91.",
-        BEETS_TAN_2004_GADOLINIUM: "Vliegen RFA, Beets GL, von Meyenfeldt MF, et al. Rectal Cancer: MR Imaging in Local Staging—Is Gadolinium-based Contrast Material Helpful?. Radiology. 2005;234(1):179-188.",
-        BARBARO_2010_RESTAGING: "Barbaro B, Vitale R, Leccisotti L, et al. Restaging Locally Advanced Rectal Cancer with MR Imaging after Chemoradiation Therapy. Radiographics. 2010;30(3):699-721.",
+        BROWN_2003_MORPHOLOGY: "Brown G, Richards CJ, Bourne MW, et al. Morphologic predictors of lymph node status in rectal cancer with use of high-spatial-resolution MR imaging with histopathologic comparison. Radiology. 2003;227(2):371-377. DOI: 10.1148/radiol.2272011747",
+        KAUR_2012_MRI_PRACTICAL: "Kaur H, Choi H, You YN, et al. MR Imaging for Preoperative Evaluation of Primary Rectal Cancer: Practical Considerations. RadioGraphics. 2012;32(2):389-409. DOI: 10.1148/rg.322115122",
+        HORVAT_2019_MRI_RECTAL_CANCER: "Horvat N, Carlos Tavares Rocha C, Clemente Oliveira B, Petkovska I, Gollub MJ. MRI of Rectal Cancer: Tumor Staging, Imaging Techniques, and Management. RadioGraphics. 2019;39(2):e1-e24. DOI: 10.1148/rg.2019180114",
+        BEETS_TAN_2004_GADOLINIUM: "Vliegen RFA, Beets GL, von Meyenfeldt MF, et al. Rectal Cancer: MR Imaging in Local Staging—Is Gadolinium-based Contrast Material Helpful?. Radiology. 2005;234(1):179-188. DOI: 10.1148/radiol.2341031403",
+        BEETS_TAN_2009_USPIO_RESTAGING: "Lahaye MJ, Beets GL, Engelen SME, et al. Locally Advanced Rectal Cancer: MR Imaging for Restaging after Neoadjuvant Radiation Therapy with Concomitant Chemotherapy Part II. What Are the Criteria to Predict Involved Lymph Nodes?. Radiology. 2009;252(1):81-91. DOI: 10.1148/radiol.2521081364",
+        BARBARO_2010_RESTAGING_MRI: "Barbaro B, Vitale R, Leccisotti L, et al. Restaging Locally Advanced Rectal Cancer with MR Imaging after Chemoradiation Therapy. RadioGraphics. 2010;30(3):699-721. DOI: 10.1148/rg.303095085",
+        RADIOLOGY_STROBE_EXAMPLE: "http://pubs.rsna.org/doi/pdf/10.1148/radiol.2017161218",
+        RADIOLOGY_STARD_EXAMPLE: "http://pubs.rsna.org/doi/pdf/10.1148/radiol.2015151516",
         ETHICS_VOTE_LEIPZIG: "Ethikvotum Nr. 2023-101, Ethikkommission der Landesärztekammer Sachsen",
         STUDY_PERIOD_2020_2023: "Januar 2020 und November 2023",
-        MRI_SYSTEM_SIEMENS_3T: "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers)",
-        CONTRAST_AGENT_PROHANCE: "Gadoteridol (ProHance; Bracco)",
-        RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER: ["29", "7", "19"]
+        MRI_SYSTEM_SIEMENS_3T: "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers, Erlangen, Deutschland)",
+        CONTRAST_AGENT_PROHANCE: "Gadoteridol (ProHance; Bracco Imaging Deutschland GmbH, Konstanz, Deutschland)",
+        RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER: Object.freeze(["29", "7", "19"])
     }),
 
     SPECIAL_IDS: Object.freeze({
