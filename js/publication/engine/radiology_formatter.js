@@ -93,11 +93,6 @@ const radiologyFormatter = (() => {
         const percentage = (den === 0) ? 0 : (num / den);
         
         let percentDigits = APP_CONFIG.PUBLICATION_JOURNAL_REQUIREMENTS.NUMBER_FORMAT_RULES.PERCENTAGES.general_digits;
-        // Radiology: "Number of digits in a percentage should correspond to the number of digits in the X/Y values of the proportion. Be consistent for similar data. Generally, a minimum of 2 digits should be shown. 22 of 50 = 44% and not 44.0%."
-        // This is tricky. If numerator/denominator are large, more digits for % might be implied.
-        // For now, stick to the explicitly stated "22 of 50 = 44%".
-        // If values are like 22.5 / 50.0, then 45.0% might be okay.
-        // Let's default to 0 decimal places for the percentage for simplicity, as per "44%".
         
         const formattedPercent = formatPercent(percentage, digits, '--%', 'en'); // Use 'en' for dot decimal
         return `${formatRadiologyNumber(num, 0)} of ${formatRadiologyNumber(den, 0)} (${String(formattedPercent).replace('.0%','%').replace('%','') }%)`;
@@ -140,9 +135,6 @@ const radiologyFormatter = (() => {
         if (legendDetails) {
             legend += `${legendDetails} `;
         }
-        // According to Radiology: "define all abbreviations in the caption and include all units"
-        // This part needs to be handled by the specific figure generation logic or passed in 'details'
-        // For now, we add a placeholder reminder if not handled by specific figure legends.
         if (!legendDetails || !legendDetails.toLowerCase().includes('abbreviations')) {
             legend += (currentLang === 'de' ? '(Alle Abkürzungen sind in der Legende zu definieren.)' : '(All abbreviations should be defined in the legend.)');
         }
@@ -150,13 +142,6 @@ const radiologyFormatter = (() => {
     }
     
     function manageAbbreviations(text, abbreviationConfig, context = 'mainText') {
-        // Basic placeholder. Real implementation needs state management across sections.
-        // abbreviationConfig is expected to be an object like:
-        // { ACRONYM: { fullText: "Full Meaning", abstractDefined: false, mainTextDefined: false, count: 0, usesInText: 0 } }
-        // This function would iterate through text, find potential acronyms from the config,
-        // check if they need definition in the current context, define them, and update their status.
-        // It's complex to do statelessly here for the entire document.
-        // For now, it returns text as is, assuming definition is handled by templates.
         let processedText = text;
         if (abbreviationConfig && typeof abbreviationConfig === 'object') {
             Object.keys(abbreviationConfig).forEach(abbr => {
@@ -170,9 +155,7 @@ const radiologyFormatter = (() => {
                     else if (context === 'mainText') definedInContext = config.mainTextDefined;
 
                     if (firstOccurrenceInBlock && !definedInContext) {
-                        firstOccurrenceInBlock = false; // Only for this block of text being processed
-                        // This is a simplified local "first use" for the current call.
-                        // True "first use" needs global tracking within abstract/mainText.
+                        firstOccurrenceInBlock = false;
                         return `${config.fullText} (${abbr})`;
                     }
                     return abbr;
