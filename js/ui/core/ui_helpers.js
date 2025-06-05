@@ -3,7 +3,6 @@ const ui_helpers = (() => {
     function getIcon(name, size = APP_CONFIG.UI_SETTINGS.ICON_SIZE, color = APP_CONFIG.UI_SETTINGS.ICON_COLOR, strokeWidth = APP_CONFIG.UI_SETTINGS.ICON_STROKE_WIDTH, additionalClasses = '') {
         if (typeof lucide !== 'undefined' && lucide.icons[name]) {
             const iconNode = lucide.icons[name];
-            // CreateElement function of lucide returns a string.
             const svgString = lucide.createElement(iconNode);
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = svgString;
@@ -20,14 +19,14 @@ const ui_helpers = (() => {
                 return svgElement.outerHTML;
             }
         }
-        return `<span style="color:${color}; font-weight:bold;" class="${additionalClasses}">[${name}]</span>`;
+        return `<span style="color:${color}; font-weight:bold;" class="${additionalClasses || ''}">[${name}]</span>`;
     }
 
     function showToast(message, type = 'info', duration = APP_CONFIG.UI_SETTINGS.TOAST_DURATION_MS) {
         const toastContainer = document.querySelector('.toast-container');
         if (!toastContainer || typeof bootstrap === 'undefined') {
             console.warn("Toast Container oder Bootstrap nicht gefunden, Toast kann nicht angezeigt werden:", message);
-            alert(message); // Fallback
+            alert(message); 
             return;
         }
 
@@ -68,33 +67,38 @@ const ui_helpers = (() => {
         if (element) {
             element.innerHTML = htmlContent;
         } else {
-            console.warn(`Element mit ID '${elementId}' nicht gefunden für HTML-Update.`);
+            // console.warn(`Element mit ID '${elementId}' nicht gefunden für HTML-Update.`);
         }
     }
     
     function getTooltipHTML(tooltipKey, dynamicContent = null, lang = null) {
         const currentLang = lang || राज्य?.userSettings?.publikationLang || 'de';
         let tooltipData = null;
-        if (TOOLTIP_CONTENT && typeof TOOLTIP_CONTENT === 'object') {
+        // Use getObjectValueByPath from utils.js, assuming it's globally available via utils.js include
+        if (typeof getObjectValueByPath === 'function' && typeof TOOLTIP_CONTENT === 'object') {
              tooltipData = getObjectValueByPath(TOOLTIP_CONTENT, tooltipKey);
+        } else if (TOOLTIP_CONTENT && TOOLTIP_CONTENT[tooltipKey]) { // Fallback for direct keys
+             tooltipData = TOOLTIP_CONTENT[tooltipKey];
         }
 
-        if (tooltipData && tooltipData[currentLang] && tooltipData[currentLang].description) {
+
+        if (tooltipData && tooltipData[currentLang] && typeof tooltipData[currentLang].description === 'string') {
             let description = tooltipData[currentLang].description;
             if (dynamicContent !== null) {
                 if (typeof dynamicContent === 'object') {
                     for (const key in dynamicContent) {
                          if (Object.prototype.hasOwnProperty.call(dynamicContent, key)) {
-                            description = description.replace(new RegExp(`\\[${key.toUpperCase()}\\]`, 'g'), dynamicContent[key]);
+                            description = description.replace(new RegExp(`\\[${key.toUpperCase()}\\]`, 'g'), String(dynamicContent[key]));
                         }
                     }
                 } else {
-                    description = description.replace(/\[.*?\]/, String(dynamicContent));
+                    description = description.replace(/\[([A-Z_]+)\]/g, String(dynamicContent));
                 }
             }
             return `data-tippy-content="${description.replace(/"/g, '&quot;')}"`;
         }
-        return `data-tippy-content="Tooltip für ${tooltipKey} nicht gefunden."`;
+        // console.warn(`Tooltip für Schlüssel '${tooltipKey}' und Sprache '${currentLang}' nicht gefunden.`);
+        return `data-tippy-content="Info: ${tooltipKey.split('.').pop()}"`; // Basic fallback
     }
 
     function initializeTooltips(parentElement = document.body) {
@@ -105,13 +109,13 @@ const ui_helpers = (() => {
                     allowHTML: true,
                     animation: 'fade',
                     duration: [APP_CONFIG.UI_SETTINGS.TOOLTIP_DELAY[0], APP_CONFIG.UI_SETTINGS.TOOLTIP_DELAY[1]],
-                    theme: 'light-border', // Or a custom theme defined in CSS
+                    theme: 'light-border', 
                     interactive: true,
                     appendTo: () => document.body,
                     maxWidth: 350,
                     placement: 'top',
-                    onShow(instance) { // Ensure content is not empty
-                        if (!instance.props.content || String(instance.props.content).trim() === '') {
+                    onShow(instance) { 
+                        if (!instance.props.content || String(instance.props.content).trim() === '' || String(instance.props.content).startsWith("Info: ")) {
                             return false;
                         }
                     }
@@ -133,12 +137,13 @@ const ui_helpers = (() => {
                 placement: 'top',
                 ...options,
                 onShow(instance) {
-                    if (!instance.props.content || String(instance.props.content).trim() === '') {
+                    if (!instance.props.content || String(instance.props.content).trim() === '' || String(instance.props.content).startsWith("Info: ")) {
                         return false;
                     }
-                    if (options.onShow) {
+                    if (options.onShow && typeof options.onShow === 'function') {
                         return options.onShow(instance);
                     }
+                    return true;
                 }
             });
         }
@@ -155,7 +160,14 @@ const ui_helpers = (() => {
                 if(modalBody && modalTitle && UI_TEXTS && UI_TEXTS.kurzanleitung) {
                     const currentLang = राज्य?.userSettings?.publikationLang || 'de';
                     modalTitle.textContent = UI_TEXTS.kurzanleitung.title[currentLang] || UI_TEXTS.kurzanleitung.title.de;
-                    modalBody.innerHTML = UI_TEXTS.kurzanleitung.content[currentLang] || UI_TEXTS.kurzanleitung.content.de;
+                    
+                    let anleitungContent = UI_TEXTS.kurzanleitung.content[currentLang] || UI_TEXTS.kurzanleitung.content.de;
+                    anleitungContent = anleitungContent.replace(/\[APP_VERSION\]/g, APP_CONFIG.APP_VERSION);
+                    const sigLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL;
+                    const formattedSigLevel = typeof formatNumber === 'function' ? formatNumber(sigLevel, sigLevel >= 0.01 ? 2:3).replace('.',',') : String(sigLevel);
+                    anleitungContent = anleitungContent.replace(/\[SIGNIFICANCE_LEVEL\]/g, formattedSigLevel);
+
+                    modalBody.innerHTML = anleitungContent;
                     infoModal.show();
                     saveToLocalStorage(firstStartKey, 'false');
                 }
@@ -169,27 +181,27 @@ const ui_helpers = (() => {
         
         if (overlay && overlayTextElement) {
             if (show) {
-                const currentLang = राज्य?.userSettings?.publikationLang || 'de';
-                overlayTextElement.textContent = text || (UI_TEXTS.LADEN?.[currentLang] || (currentLang === 'de' ? 'Lade Daten...' : 'Loading data...'));
+                const currentLang = રાજ્ય?.userSettings?.publikationLang || 'de';
+                const defaultText = UI_TEXTS.LADEN?.[currentLang] || (currentLang === 'de' ? 'Lade Daten...' : 'Loading data...');
+                overlayTextElement.textContent = text || defaultText;
                 overlay.classList.remove('d-none');
                  if (targetTabPaneId) {
                     overlay.dataset.targetPane = targetTabPaneId;
                  }
             } else {
-                // Hide only if not targeted or target matches
                 if (!targetTabPaneId || overlay.dataset.targetPane === targetTabPaneId || !overlay.dataset.targetPane) {
                     overlay.classList.add('d-none');
-                    delete overlay.dataset.targetPane;
+                    if(overlay.dataset.targetPane) delete overlay.dataset.targetPane;
                 }
             }
         }
     }
 
     function getMetricInterpretationHTML(metricKey, metricData, lang = 'de', forRadiology = false) {
-        if (!metricData || typeof metricData.value !== 'number') return '';
+        if (!metricData || typeof metricData.value !== 'number' || isNaN(metricData.value)) return '';
         
         const uiTextMetricBase = TOOLTIP_CONTENT.statMetrics?.[metricKey.toLowerCase()];
-        if (!uiTextMetricBase) return `${metricKey}: ${radiologyFormatter.formatRadiologyNumber(metricData.value, 2, forRadiology)}`;
+        if (!uiTextMetricBase) return `${metricKey.toUpperCase()}: ${forRadiology ? radiologyFormatter.formatRadiologyNumber(metricData.value, 2, (metricKey.toLowerCase()==='auc'), true) : formatNumber(metricData.value, 3, '--', lang)}`;
 
         const name = uiTextMetricBase.name?.[lang] || uiTextMetricBase.name?.de || metricKey.toUpperCase();
         let description = uiTextMetricBase.description?.[lang] || uiTextMetricBase.description?.de || '';
@@ -197,59 +209,83 @@ const ui_helpers = (() => {
         const interpretation = uiTextMetricBase.interpretation?.[lang] || uiTextMetricBase.interpretation?.de || '';
         const range = uiTextMetricBase.range?.[lang] || uiTextMetricBase.range?.de || '';
         
-        const isRate = !['f1', 'auc', 'phi', 'or', 'rd'].includes(metricKey.toLowerCase());
-        const digits = (metricKey.toLowerCase() === 'auc' || metricKey.toLowerCase() === 'phi' || metricKey.toLowerCase() === 'or' || metricKey.toLowerCase() === 'rd') ? (forRadiology ? 2 : 3) : (forRadiology ? 0 : 1);
+        const isRate = !['f1', 'auc', 'phi', 'or', 'rd', 'phi', 'chisq', 'df', 'mcnemar_stat'].includes(metricKey.toLowerCase());
+        let digits;
+        if (forRadiology) {
+            digits = (metricKey.toLowerCase() === 'auc' || metricKey.toLowerCase() === 'phi' || metricKey.toLowerCase() === 'or' || metricKey.toLowerCase() === 'rd') ? 2 : 0;
+             if (metricKey.toLowerCase() === 'chisq' || metricKey.toLowerCase() === 'mcnemar_stat') digits = 1;
+             if (metricKey.toLowerCase() === 'df') digits = 0;
+        } else {
+            digits = (metricKey.toLowerCase() === 'auc' || metricKey.toLowerCase() === 'phi' || metricKey.toLowerCase() === 'or' || metricKey.toLowerCase() === 'rd' || metricKey.toLowerCase() === 'chisq' || metricKey.toLowerCase() === 'mcnemar_stat') ? 3 : 1;
+            if (metricKey.toLowerCase() === 'df') digits = 0;
+        }
 
-        const formattedValue = forRadiology 
-            ? radiologyFormatter.formatRadiologyNumber(metricData.value, digits, (metricKey.toLowerCase()==='auc'), !isRate) 
-            : (isRate ? formatPercent(metricData.value, digits, '--%', lang) : formatNumber(metricData.value, digits, '--', lang));
-        
-        let formattedCI = '';
-        if (metricData.ci && typeof metricData.ci.lower === 'number' && typeof metricData.ci.upper === 'number') {
-            formattedCI = forRadiology 
-                ? radiologyFormatter.formatRadiologyCI(metricData.value, metricData.ci.lower, metricData.ci.upper, digits, isRate, true) // true as value is already formatted string for CI fn
-                : ` (95% KI: ${isRate ? formatPercent(metricData.ci.lower, digits, '--', lang) : formatNumber(metricData.ci.lower, digits, '--', lang)} – ${isRate ? formatPercent(metricData.ci.upper, digits, '--', lang) : formatNumber(metricData.ci.upper, digits, '--', lang)})`;
-                if(forRadiology && formattedCI.startsWith(String(metricData.value))) { // radiologyFormatter.formatRadiologyCI returns value + CI
-                    formattedCI = formattedCI.substring(String(metricData.value).length).trim();
-                }
+
+        let valueStr;
+        if (forRadiology) {
+            valueStr = radiologyFormatter.formatRadiologyNumber(metricData.value, digits, (metricKey.toLowerCase()==='auc'), !isRate || metricKey.toLowerCase() === 'auc');
+        } else {
+            valueStr = isRate ? formatPercent(metricData.value, digits, '--%', lang) : formatNumber(metricData.value, digits, '--', lang);
         }
         
-        let html = `<strong>${name}: ${formattedValue}${forRadiology && formattedCI ? ' ' + formattedCI.replace('(95% CI:','(95%-KI:') : formattedCI}</strong>`;
+        let formattedCI = '';
+        if (metricData.ci && typeof metricData.ci.lower === 'number' && typeof metricData.ci.upper === 'number' && !isNaN(metricData.ci.lower) && !isNaN(metricData.ci.upper)) {
+            if (forRadiology) {
+                formattedCI = radiologyFormatter.formatRadiologyCI(metricData.value, metricData.ci.lower, metricData.ci.upper, digits, isRate, valueStr);
+                valueStr = formattedCI; // formatRadiologyCI returns the full string
+            } else {
+                const lowerStr = isRate ? formatPercent(metricData.ci.lower, digits, '--', lang) : formatNumber(metricData.ci.lower, digits, '--', lang);
+                const upperStr = isRate ? formatPercent(metricData.ci.upper, digits, '--', lang) : formatNumber(metricData.ci.upper, digits, '--', lang);
+                formattedCI = ` (95% ${lang==='de'?'KI':'CI'}: ${lowerStr} – ${upperStr})`;
+                valueStr += formattedCI;
+            }
+        }
+        
+        let html = `<strong>${name}: ${valueStr}</strong>`;
         if (description) html += `<p class="small mt-1 mb-1">${description}</p>`;
         if (formula) html += `<p class="small mb-1"><em>${lang === 'de' ? 'Formel' : 'Formula'}: ${formula}</em></p>`;
         if (interpretation) html += `<p class="small mb-1">${interpretation}</p>`;
         if (range) html += `<p class="small mb-0"><em>${lang === 'de' ? 'Wertebereich' : 'Range'}: ${range}</em></p>`;
         
         if (metricKey.toLowerCase() === 'phi' || metricKey.toLowerCase() === 'auc') {
-            const bewertungFn = metricKey.toLowerCase() === 'phi' ? getPhiBewertung : getAUCBewertung;
-            const bewertungText = bewertungFn(metricData.value, lang);
-            html += `<p class="small mt-1 mb-0"><em>${lang==='de'?'Bewertung':'Assessment'}: ${bewertungText}</em></p>`;
+            const bewertungFn = metricKey.toLowerCase() === 'phi' ? (typeof getPhiBewertung === 'function' ? getPhiBewertung : null) : (typeof getAUCBewertung === 'function' ? getAUCBewertung : null);
+            if(bewertungFn) {
+                const bewertungText = bewertungFn(metricData.value, lang);
+                 if (bewertungText && bewertungText !== (lang==='de'?'N/A':'N/A') ) {
+                    html += `<p class="small mt-1 mb-0"><em>${lang==='de'?'Bewertung':'Assessment'}: ${bewertungText}</em></p>`;
+                }
+            }
         }
-
-        return `<div style='text-align: left;'>${html}</div>`;
+        return `<div style='text-align: left; max-width: 320px;'>${html}</div>`;
     }
     
-    function getCriteriaSetTooltipHTML(criteriaSet, lang = 'de', isBruteForceResult = false, bfMetricName = null) {
+    function getCriteriaSetTooltipHTML(criteriaSet, lang = 'de', isBruteForceResult = false, bfMetricName = null, targetKollektivForBF = null) {
         if (!criteriaSet) return '';
-        let html = `<strong>${criteriaSet.name || (lang === 'de' ? 'Unbenannter Kriteriensatz' : 'Unnamed Criteria Set')}</strong>`;
-        html += `<p class="small mt-1 mb-1">${criteriaSet.description || (lang === 'de' ? 'Keine Beschreibung verfügbar.' : 'No description available.')}</p>`;
+        let html = `<strong>${criteriaSet.name || (lang === 'de' ? 'Kriteriensatz' : 'Criteria Set')}</strong>`;
         
+        if (criteriaSet.description) {
+            html += `<p class="small mt-1 mb-1">${criteriaSet.description}</p>`;
+        } else if (isBruteForceResult) {
+             html += `<p class="small mt-1 mb-1">${lang === 'de' ? 'Optimierter Kriteriensatz' : 'Optimized Criteria Set'}</p>`;
+        }
+
         if (isBruteForceResult && criteriaSet.metricValue !== undefined && bfMetricName) {
             const metricValStr = formatNumber(criteriaSet.metricValue, 3, '--', lang);
-            html += `<p class="small mb-1"><em>${bfMetricName}: ${metricValStr}</em></p>`;
+            const kollektivName = targetKollektivForBF ? getKollektivDisplayName(targetKollektivForBF) : '';
+            html += `<p class="small mb-1"><em>${bfMetricName}${kollektivName ? ` (${kollektivName})` : ''}: ${metricValStr}</em></p>`;
         }
         
         if(criteriaSet.criteria && criteriaSet.logic) {
             const formattedCriteria = studyT2CriteriaManager.formatCriteriaForDisplay(criteriaSet.criteria, criteriaSet.logic, false, lang);
-            html += `<p class="small mb-1"><strong>${lang === 'de' ? 'Angewandte Kriterien' : 'Applied Criteria'}:</strong> ${formattedCriteria}</p>`;
+            html += `<p class="small mb-1" style="white-space: normal;"><strong>${lang === 'de' ? 'Kriterien' : 'Criteria'}:</strong> ${formattedCriteria}</p>`;
         }
-        if (criteriaSet.applicableKollektiv) {
-            html += `<p class="small mb-1"><em>${lang === 'de' ? 'Zielkollektiv (Orig.)' : 'Target Cohort (Orig.)'}: ${getKollektivDisplayName(criteriaSet.applicableKollektiv)}</em></p>`;
+        if (criteriaSet.applicableKollektiv && !isBruteForceResult) { // For BF, kollektiv is part of metric display
+            html += `<p class="small mb-1"><em>${lang === 'de' ? 'Eval. auf' : 'Eval. on'}: ${getKollektivDisplayName(criteriaSet.applicableKollektiv)}</em></p>`;
         }
         if (criteriaSet.context) {
             html += `<p class="small mb-0"><em>${lang === 'de' ? 'Kontext' : 'Context'}: ${criteriaSet.context}</em></p>`;
         }
-        return `<div style='text-align: left;'>${html}</div>`;
+        return `<div style='text-align: left; max-width: 320px;'>${html}</div>`;
     }
 
     function htmlToMarkdown(htmlString) {
@@ -289,8 +325,8 @@ const ui_helpers = (() => {
                         case 'h6': markdown = `###### ${childrenMarkdown.trim()}\n\n`; break;
                         case 'p': 
                             const parentTagP = node.parentNode ? node.parentNode.tagName.toLowerCase() : '';
-                            if (parentTagP === 'li' || parentTagP === 'blockquote') { // Less newlines if P in LI or BQ
-                                markdown = `${childrenMarkdown.trim()}\n`; 
+                            if (parentTagP === 'li' || parentTagP === 'blockquote') { 
+                                markdown = `${childrenMarkdown.trim().replace(/\n\n$/, '\n')}`; // Single newline after P in LI/BQ
                             } else {
                                 markdown = `${childrenMarkdown.trim()}\n\n`; 
                             }
@@ -312,10 +348,11 @@ const ui_helpers = (() => {
                         case 'a':
                             const href = node.getAttribute('href') || '';
                             const title = node.getAttribute('title') || '';
-                            if (href.startsWith('#') && childrenMarkdown.trim().toLowerCase().includes('figure') || childrenMarkdown.trim().toLowerCase().includes('table')) {
-                                 markdown = childrenMarkdown.trim(); // Keep internal figure/table links as plain text
+                            const linkText = childrenMarkdown.trim();
+                            if (href.startsWith('#') && (linkText.toLowerCase().includes('figure') || linkText.toLowerCase().includes('table'))) {
+                                 markdown = linkText; 
                             } else {
-                                markdown = `[${childrenMarkdown.trim()}](${href}${title ? ` "${title}"` : ''})`;
+                                markdown = `[${linkText}](${href}${title ? ` "${title}"` : ''})`;
                             }
                             break;
                         case 'img':
@@ -332,14 +369,18 @@ const ui_helpers = (() => {
                             const parentLiTag = node.parentNode ? node.parentNode.tagName.toLowerCase() : '';
                             const depth = getListDepth(node);
                             const indent = '    '.repeat(depth > 0 ? depth -1 : 0); 
+                            let liContent = childrenMarkdown.trim();
+                            // Remove trailing newlines from paragraphs inside list items for tighter list
+                            liContent = liContent.replace(/(\n\n)$/, '\n');
+
                             if (parentLiTag === 'ul') {
-                                markdown = `${indent}* ${childrenMarkdown.trim().replace(/\n+$/, '')}\n`;
+                                markdown = `${indent}* ${liContent}\n`;
                             } else if (parentLiTag === 'ol') {
                                 const start = node.parentNode.hasAttribute('start') ? parseInt(node.parentNode.getAttribute('start')) : 1;
-                                const index = Array.from(node.parentNode.children).indexOf(node);
-                                markdown = `${indent}${start + index}. ${childrenMarkdown.trim().replace(/\n+$/, '')}\n`;
+                                const index = Array.from(node.parentNode.children).filter(el => el.tagName === 'LI').indexOf(node);
+                                markdown = `${indent}${start + index}. ${liContent}\n`;
                             } else {
-                                markdown = childrenMarkdown; 
+                                markdown = liContent; 
                             }
                             break;
                         case 'blockquote':
@@ -348,41 +389,52 @@ const ui_helpers = (() => {
                             break;
                         case 'table':
                             let tableMd = '';
-                            const headerRows = Array.from(node.querySelectorAll('thead tr'));
-                            const bodyRows = Array.from(node.querySelectorAll('tbody tr'));
-                            const allRows = headerRows.concat(bodyRows);
-                            
-                            if (allRows.length > 0) {
-                                const firstRowCells = Array.from(allRows[0].children).filter(cell => cell.tagName === 'TH' || cell.tagName === 'TD');
-                                const numCols = firstRowCells.length;
+                            const tHead = node.querySelector('thead');
+                            const tBody = node.querySelector('tbody');
+                            const headerRowsHtml = tHead ? Array.from(tHead.querySelectorAll('tr')) : [];
+                            const bodyRowsHtml = tBody ? Array.from(tBody.querySelectorAll('tr')) : 
+                                                 (headerRowsHtml.length === 0 ? Array.from(node.querySelectorAll('tr')) : []); // Fallback if no tbody
 
-                                if (headerRows.length > 0 || (bodyRows.length > 0 && numCols > 0) ) {
-                                    const headerCells = headerRows.length > 0 ? 
-                                        Array.from(headerRows[0].children).map(th => processNode(th).trim()) :
-                                        firstRowCells.map(td => processNode(td).trim()); 
+                            if (headerRowsHtml.length > 0 || bodyRowsHtml.length > 0) {
+                                const getCells = (rowNode) => Array.from(rowNode.children)
+                                    .filter(cell => cell.tagName === 'TH' || cell.tagName === 'TD')
+                                    .map(cell => processNode(cell).trim().replace(/\|/g, '\\|').replace(/\n/g, ' ')); // Ensure cell content is single line and pipes escaped
 
-                                    tableMd += `| ${headerCells.join(' | ')} |\n`;
-                                    tableMd += `| ${Array(numCols).fill('---').join(' | ')} |\n`;
+                                let numCols = 0;
+                                if(headerRowsHtml.length > 0) numCols = getCells(headerRowsHtml[0]).length;
+                                else if(bodyRowsHtml.length > 0) numCols = getCells(bodyRowsHtml[0]).length;
+
+                                if (numCols > 0) {
+                                    if (headerRowsHtml.length > 0) {
+                                        headerRowsHtml.forEach(hr => {
+                                            tableMd += `| ${getCells(hr).join(' | ')} |\n`;
+                                        });
+                                        tableMd += `| ${Array(numCols).fill('---').join(' | ')} |\n`;
+                                    } else if (bodyRowsHtml.length > 0) { // Use first body row as header
+                                        tableMd += `| ${getCells(bodyRowsHtml[0]).join(' | ')} |\n`;
+                                        tableMd += `| ${Array(numCols).fill('---').join(' | ')} |\n`;
+                                    }
+
+                                    const dataRowsToProcess = headerRowsHtml.length > 0 ? bodyRowsHtml : bodyRowsHtml.slice(1);
+                                    dataRowsToProcess.forEach(br => {
+                                        tableMd += `| ${getCells(br).join(' | ')} |\n`;
+                                    });
+                                    markdown = tableMd + '\n';
+                                } else {
+                                     markdown = childrenMarkdown; // Malformed table or empty
                                 }
-                                
-                                const rowsToProcess = headerRows.length > 0 ? bodyRows : (allRows.length > 1 ? allRows.slice(1) : []);
-                                rowsToProcess.forEach(row => {
-                                    const cells = Array.from(row.children).map(td => processNode(td).trim().replace(/\|/g, '\\|').replace(/\n/g,'<br>')); 
-                                    tableMd += `| ${cells.join(' | ')} |\n`;
-                                });
-                                markdown = tableMd + '\n';
                             } else {
                                 markdown = childrenMarkdown; 
                             }
                             break;
-                        case 'thead': case 'tbody': case 'tr':
+                        case 'thead': case 'tbody': case 'tr': case 'caption':
                             markdown = childrenMarkdown; 
                             break;
                         case 'th': case 'td':
                             markdown = ` ${childrenMarkdown.trim().replace(/\s+/g, ' ')} `; 
                             break;
                         case 'style': case 'script': case 'button': case 'select': case 'input': case 'textarea':
-                            markdown = ''; // Ignore these tags and their content
+                            markdown = ''; 
                             break;
                         default:
                             markdown = childrenMarkdown;
@@ -405,6 +457,7 @@ const ui_helpers = (() => {
 
         let resultMarkdown = processNode(tempDiv);
         resultMarkdown = resultMarkdown.replace(/\n{3,}/g, '\n\n').trim();
+        resultMarkdown = resultMarkdown.replace(/(\n\s*){2,}\n/g, '\n\n'); // Another pass for multiple blank lines potentially created by nested block elements in lists
         return resultMarkdown;
     }
 
