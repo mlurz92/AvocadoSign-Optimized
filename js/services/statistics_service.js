@@ -30,6 +30,34 @@ const statisticsService = (() => {
         return variance >= 0 ? Math.sqrt(variance) : NaN;
     }
 
+    function getQuartiles(arr) {
+        if (!Array.isArray(arr) || arr.length === 0) return { q1: NaN, median: NaN, q3: NaN };
+        const sortedArr = arr.map(x => parseFloat(x)).filter(x => !isNaN(x) && isFinite(x)).sort((a, b) => a - b);
+        if (sortedArr.length === 0) return { q1: NaN, median: NaN, q3: NaN };
+
+        const median = getMedian(sortedArr);
+        let q1, q3;
+
+        const lowerHalf = sortedArr.filter(x => x < median);
+        if (sortedArr.length % 2 === 0) {
+            const midIndex = sortedArr.length / 2;
+            q1 = getMedian(sortedArr.slice(0, midIndex));
+            q3 = getMedian(sortedArr.slice(midIndex));
+        } else {
+             const midIndex = Math.floor(sortedArr.length / 2);
+             q1 = getMedian(sortedArr.slice(0, midIndex));
+             q3 = getMedian(sortedArr.slice(midIndex + 1));
+        }
+        if (sortedArr.length < 4) { // Fallback for very small arrays
+            q1 = (sortedArr.length > 0) ? sortedArr[0] : NaN;
+            q3 = (sortedArr.length > 0) ? sortedArr[sortedArr.length - 1] : NaN;
+        }
+
+
+        return { q1: q1, median: median, q3: q3 };
+    }
+
+
     function erf(x) {
         const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
         const sign = (x >= 0) ? 1 : -1;
@@ -489,7 +517,6 @@ const statisticsService = (() => {
 
     function calculateDiagnosticPerformance(data, predictionKey, referenceKey) {
         if (!Array.isArray(data) || data.length === 0) {
-             console.warn(`calculateDiagnosticPerformance: Keine oder ungültige Daten für ${predictionKey} vs ${referenceKey}.`);
              return null;
         }
         const matrix = calculateConfusionMatrix(data, predictionKey, referenceKey);
@@ -540,7 +567,7 @@ const statisticsService = (() => {
         const balAccBootCIResult = !isNaN(balAcc_val) ? bootstrapCI(data, bootstrapStatFnFactory(predictionKey, referenceKey, 'balAcc')) : { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE, se: NaN };
         const f1BootCIResult = !isNaN(f1_val) ? bootstrapCI(data, bootstrapStatFnFactory(predictionKey, referenceKey, 'f1')) : { lower: NaN, upper: NaN, method: APP_CONFIG.STATISTICAL_CONSTANTS.DEFAULT_CI_METHOD_EFFECTSIZE, se: NaN };
         const aucBootCIResult = balAccBootCIResult;
-        
+
         const matrixComponentsForBootstrap = { rp, fp, fn, rn, total };
 
         return {
@@ -560,7 +587,7 @@ const statisticsService = (() => {
         const nullReturn = { mcnemar: { pValue: NaN, statistic: NaN, df: NaN, method: "McNemar's Test (Nicht berechnet)" }, delong: { pValue: NaN, Z: NaN, diffAUC: NaN, method: "DeLong Test (Nicht berechnet)" } };
         if (!Array.isArray(data) || data.length === 0 || !key1 || !key2 || !referenceKey) return nullReturn;
 
-        let b = 0, c = 0; // b: key1+/key2-, c: key1-/key2+
+        let b = 0, c = 0;
         data.forEach(p => {
             if (p && typeof p === 'object') {
                 const p1_is_plus = p[key1] === '+';
@@ -569,8 +596,8 @@ const statisticsService = (() => {
                 const valid_p2 = p[key2] === '+' || p[key2] === '-';
 
                 if (valid_p1 && valid_p2) {
-                    if (p1_is_plus && !p2_is_plus) b++; // Method 1 identified, Method 2 missed
-                    if (!p1_is_plus && p2_is_plus) c++; // Method 1 missed, Method 2 identified
+                    if (p1_is_plus && !p2_is_plus) b++;
+                    if (!p1_is_plus && p2_is_plus) c++;
                 }
             }
         });
@@ -767,7 +794,7 @@ const statisticsService = (() => {
 
     function calculateDescriptiveStats(data) {
         const n = data?.length ?? 0;
-        const nullMetric = { median: NaN, min: NaN, max: NaN, mean: NaN, sd: NaN, n: 0 };
+        const nullMetric = { median: NaN, min: NaN, max: NaN, q1: NaN, q3: NaN, mean: NaN, sd: NaN, n: 0 };
         const nullReturn = { anzahlPatienten: 0, alter: nullMetric, geschlecht: { m: 0, f: 0, unbekannt: 0 }, therapie: { 'direkt OP': 0, 'nRCT': 0, unbekannt: 0 }, nStatus: { plus: 0, minus: 0, unbekannt: 0 }, asStatus: { plus: 0, minus: 0, unbekannt: 0 }, t2Status: { plus: 0, minus: 0, unbekannt: 0 }, lkAnzahlen: null, alterData: [] };
 
         if (!Array.isArray(data) || n === 0) return nullReturn;
@@ -788,7 +815,11 @@ const statisticsService = (() => {
             if (keyPlus && statusKeyForPlusCount) {
                 plusCounts = getCounts(data.filter(p => p?.[statusKeyForPlusCount] === '+'), keyPlus).sort((a, b) => a - b);
             }
-            const getStatsFromCounts = (counts) => counts.length === 0 ? { ...nullMetric, n: 0 } : { median: getMedian(counts), min: counts[0], max: counts[counts.length - 1], mean: getMean(counts), sd: getStdDev(counts), n: counts.length };
+            const getStatsFromCounts = (counts) => {
+                 if (counts.length === 0) return { ...nullMetric, n: 0 };
+                 const quartiles = getQuartiles(counts);
+                 return { median: quartiles.median, min: counts[0], max: counts[counts.length - 1], q1: quartiles.q1, q3: quartiles.q3, mean: getMean(counts), sd: getStdDev(counts), n: counts.length };
+            };
             return { total: getStatsFromCounts(totalCounts), plus: (keyPlus && statusKeyForPlusCount) ? getStatsFromCounts(plusCounts) : { ...nullMetric, n: 0 } };
         };
 
@@ -797,7 +828,8 @@ const statisticsService = (() => {
             as: getLKStats('anzahl_as_lk', 'anzahl_as_plus_lk', 'as'),
             t2: getLKStats('anzahl_t2_lk', 'anzahl_t2_plus_lk', 't2')
         };
-        const alterStats = alterData.length > 0 ? { median: getMedian(alterData), mean: getMean(alterData), sd: getStdDev(alterData), min: alterData[0], max: alterData[alterData.length - 1], n: alterData.length } : nullMetric;
+        const alterQuartiles = getQuartiles(alterData);
+        const alterStats = alterData.length > 0 ? { median: alterQuartiles.median, mean: getMean(alterData), sd: getStdDev(alterData), min: alterData[0], max: alterData[alterData.length - 1], q1: alterQuartiles.q1, q3: alterQuartiles.q3, n: alterData.length } : nullMetric;
 
         return { anzahlPatienten: n, alter: alterStats, geschlecht: geschlecht, therapie: therapie, nStatus: nStatus, asStatus: asStatus, t2Status: t2Status, lkAnzahlen: lkAnzahlen, alterData: alterData };
     }
@@ -820,7 +852,7 @@ const statisticsService = (() => {
 
             const evaluatedDataApplied = t2CriteriaManager.evaluateDataset(cloneDeep(filteredData), appliedT2Criteria, appliedT2Logic);
 
-            results[kollektivId].deskriptiv = calculateDescriptiveStats(filteredData); // Verwendet gefilterte, aber nicht T2-evaluierte Daten für Basis-Deskriptiv
+            results[kollektivId].deskriptiv = calculateDescriptiveStats(filteredData);
             results[kollektivId].gueteAS = calculateDiagnosticPerformance(evaluatedDataApplied, 'as', 'n');
             results[kollektivId].gueteT2_angewandt = calculateDiagnosticPerformance(evaluatedDataApplied, 't2', 'n');
             results[kollektivId].vergleichASvsT2_angewandt = compareDiagnosticMethods(evaluatedDataApplied, 'as', 't2', 'n');
@@ -830,13 +862,16 @@ const statisticsService = (() => {
             PUBLICATION_CONFIG.literatureCriteriaSets.forEach(studySetConf => {
                 const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(studySetConf.id);
                 if (studySet) {
-                    let isApplicable = true;
-                    if (studySet.applicableKollektiv && studySet.applicableKollektiv !== 'Gesamt' && studySet.applicableKollektiv !== kollektivId) {
-                        isApplicable = false;
+                    let dataForStudyEvaluation = filteredData;
+                    if (studySet.applicableKollektiv && studySet.applicableKollektiv !== kollektivId && studySet.applicableKollektiv !== 'Gesamt') {
+                         dataForStudyEvaluation = dataProcessor.filterDataByKollektiv(data, studySet.applicableKollektiv);
+                    } else if (studySet.applicableKollektiv === 'Gesamt' && kollektivId !== 'Gesamt') {
+                         dataForStudyEvaluation = dataProcessor.filterDataByKollektiv(data, 'Gesamt');
                     }
 
-                    if (isApplicable) {
-                        const evaluatedDataStudy = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(filteredData), studySet);
+
+                    if (dataForStudyEvaluation.length > 0) {
+                        const evaluatedDataStudy = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(dataForStudyEvaluation), studySet);
                         results[kollektivId].gueteT2_literatur[studySetConf.id] = calculateDiagnosticPerformance(evaluatedDataStudy, 't2', 'n');
                         results[kollektivId][`vergleichASvsT2_literatur_${studySetConf.id}`] = compareDiagnosticMethods(evaluatedDataStudy, 'as', 't2', 'n');
                     } else {
