@@ -37,7 +37,8 @@ const UI_TEXTS = {
             methoden: 'Methoden',
             ergebnisse: 'Ergebnisse',
             discussion: 'Diskussion',
-            references: 'Referenzen'
+            references: 'Referenzen',
+            sidebarTitle: 'Manuskript-Navigation'
         },
         bruteForceMetricSelectLabel: 'Optimierungsmetrik für T2 (BF):'
     },
@@ -193,7 +194,7 @@ const UI_TEXTS = {
                     <ul>
                         <li>Generiert automatisch Textvorschläge in Deutsch oder Englisch für verschiedene Abschnitte einer wissenschaftlichen Publikation (Abstract, Einleitung, Methoden, Ergebnisse, Diskussion, Referenzen).</li>
                         <li>Integriert dynamisch aktuelle Daten, Statistiken (basierend auf angewandten T2-Kriterien und ausgewählter BF-Zielmetrik für Teile der Ergebnisdarstellung) und Konfigurationen.</li>
-                        <li>Enthält ebenfalls direkt im Text eingebettete Tabellen und Diagramme.</li>
+                        <li>Enthält ebenfalls direkt im Text eingebettete Tabellen und Diagramme. Die Formatierung orientiert sich an den Vorgaben des Journals <strong>Radiology</strong>.</li>
                     </ul>
                 </li>
                 <li><strong>Export:</strong>
@@ -224,7 +225,7 @@ const UI_TEXTS = {
             auswertung: "Zentraler Tab zur Definition von T2-Kriterien, Anzeige eines deskriptiven Dashboards, Durchführung der Brute-Force-Optimierung und detaillierte Auswertungsergebnisse pro Patient basierend auf den angewendeten Kriterien.",
             statistik: "Bietet detaillierte statistische Analysen (Gütekriterien, Vergleiche, Assoziationen) für das global gewählte Kollektiv oder einen Vergleich zweier spezifisch wählbarer Kollektive. Alle Konfidenzintervalle (CI) sind 95%-CIs.",
             praesentation: "Stellt Analyseergebnisse in einem aufbereiteten, präsentationsfreundlichen Format dar, fokussiert auf den Vergleich des Avocado Signs mit T2-basierten Ansätzen (angewandt oder Literatur).",
-            publikation: "Generiert Textvorschläge und Materialien für wissenschaftliche Publikationen.",
+            publikation: "Generiert Textvorschläge und Materialien für wissenschaftliche Publikationen, orientiert an den Vorgaben des Journals <strong>Radiology</strong>.",
             export: "Bietet umfangreiche Optionen zum Herunterladen von Rohdaten, Analyseergebnissen, Tabellen und Diagrammen in verschiedenen Dateiformaten.",
             moreTabsDropdown: "Weitere Tabs anzeigen."
         },
@@ -385,7 +386,7 @@ const UI_TEXTS = {
             tableSinglePNG: { description: "Ausgewählte Tabelle '{TableName}' als PNG-Bilddatei.", type: 'TABLE_PNG_EXPORT', ext: "png"},
             allZIP: { description: "Alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT, alle MDs, Rohdaten-CSV, HTML-Report) in einem ZIP-Archiv.", type: 'ALL_ZIP', ext: "zip"},
             csvZIP: { description: "Alle verfügbaren CSV-Dateien (Statistik, Rohdaten) in einem ZIP-Archiv.", type: 'CSV_ZIP', ext: "zip"},
-            mdZIP: { description: "Alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikationstexte) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "zip"},
+            mdZIP: { description: "Alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikationstexte) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "md"},
             pngZIP: { description: "Identisch zum 'Diagramme & Tabellen (PNG)' Einzel-Export.", type: 'PNG_ZIP', ext: "zip"},
             svgZIP: { description: "Identisch zum 'Diagramme (SVG)' Einzel-Export.", type: 'SVG_ZIP', ext: "zip"},
             xlsxZIP: { description: "Alle verfügbaren Excel-Dateien in einem ZIP-Archiv.", type: 'XLSX_ZIP', ext: "xlsx"}
@@ -393,35 +394,23 @@ const UI_TEXTS = {
         publikationTabTooltips: {
             spracheSwitch: { description: "Wechselt die Sprache der generierten Texte und einiger Beschriftungen im Publikation-Tab zwischen Deutsch und Englisch." },
             sectionSelect: { description: "Wählen Sie den Abschnitt der wissenschaftlichen Publikation, für den Textvorschläge und relevante Daten/Grafiken angezeigt werden sollen." },
-            bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, deren Brute-Force-Optimierungsergebnisse im Ergebnisteil angezeigt werden sollen. Standardtexte beziehen sich meist auf die Default-Optimierungsmetrik (Balanced Accuracy)." },
-            abstract: {
-                main: "Inhalt für den Abstract und die Key Results gemäß Journal-Vorgaben."
-            },
-            introduction: {
-                main: "Textvorschlag für die Einleitung der Publikation."
-            },
-            methoden: {
-                studienanlage: "Textvorschlag und Informationen zu Studiendesign, Ethik und Software (gemäß Radiology-Anforderungen).",
-                patientenkollektiv: "Textvorschlag und Informationen zum Patientenkollektiv und der Datenbasis (gemäß Radiology-Anforderungen).",
-                mrtProtokoll: "Textvorschlag und Informationen zum MRT-Protokoll und Kontrastmittelgabe (gemäß Radiology-Anforderungen).",
-                asDefinition: "Textvorschlag und Informationen zur Definition und Bewertung des Avocado Signs (gemäß Radiology-Anforderungen).",
-                t2Definition: "Textvorschlag und Informationen zur Definition und Bewertung der T2-Kriterien (Literatur, Brute-Force optimiert) (gemäß Radiology-Anforderungen).",
-                referenzstandard: "Textvorschlag und Informationen zum Referenzstandard (Histopathologie) (gemäß Radiology-Anforderungen).",
-                statistischeAnalyse: "Textvorschlag und Informationen zu den statistischen Analysemethoden (gemäß Radiology-Anforderungen)."
-            },
-            ergebnisse: {
-                patientencharakteristika: "Textvorschlag und relevante Tabellen/Diagramme zu den Patientencharakteristika (gemäß Radiology-Anforderungen).",
-                asPerformance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte des Avocado Signs (gemäß Radiology-Anforderungen).",
-                literaturT2Performance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Literatur-basierten T2-Kriterien (gemäß Radiology-Anforderungen).",
-                optimierteT2Performance: "Textvorschlag und relevante Tabellen/Diagramme zur diagnostischen Güte der Brute-Force optimierten T2-Kriterien (gemäß Radiology-Anforderungen).",
-                vergleichPerformance: "Textvorschlag und relevante Tabellen/Diagramme zum statistischen Vergleich der diagnostischen Güte zwischen Avocado Sign und den T2-Kriteriensets (gemäß Radiology-Anforderungen)."
-            },
-            discussion: {
-                main: "Textvorschlag für die Diskussion der Publikation."
-            },
-            references: {
-                main: "Referenzliste der Publikation."
-            }
+            bruteForceMetricSelect: { description: "Wählen Sie die Zielmetrik, deren Brute-Force-Optimierungsergebnisse im Ergebnisteil der generierten Publikationstexte und -tabellen verwendet werden sollen. Die Standardauswahl ist 'Balanced Accuracy'." },
+            abstract_main: { description: "Generiert den Abstract und die Key Results der Publikation gemäß den Radiology-Richtlinien." },
+            introduction_main: { description: "Generiert den Einleitungstext der Publikation." },
+            methoden_studienanlage_ethik: { description: "Generiert Text zu Studiendesign, Ethikvotum und verwendeter Software." },
+            methoden_patientenkohorte: { description: "Generiert Text zur Patientenkohorte, Ein- und Ausschlusskriterien und zeigt das Flussdiagramm." },
+            methoden_mrt_protokoll_akquisition: { description: "Generiert Text zum MRT-Protokoll und zur Bildakquisition." },
+            methoden_bildanalyse_avocado_sign: { description: "Generiert Text zur Definition und Bewertung des Avocado Signs." },
+            methoden_bildanalyse_t2_kriterien: { description: "Generiert Text zur Definition und Bewertung der T2-Kriterien (Literatur und Brute-Force optimiert) und zeigt die Tabelle der Literaturkriterien." },
+            methoden_referenzstandard_histopathologie: { description: "Generiert Text zum Referenzstandard (Histopathologie)." },
+            methoden_statistische_analyse_methoden: { description: "Generiert Text zu den statistischen Analysemethoden." },
+            ergebnisse_patientencharakteristika: { description: "Generiert Text, Tabelle und Diagramme zu den Patientencharakteristika." },
+            ergebnisse_as_diagnostische_guete: { description: "Generiert Text und Tabelle zur diagnostischen Güte des Avocado Signs." },
+            ergebnisse_t2_literatur_diagnostische_guete: { description: "Generiert Text und Tabelle zur diagnostischen Güte der Literatur-basierten T2-Kriterien." },
+            ergebnisse_t2_optimiert_diagnostische_guete: { description: "Generiert Text und Tabelle zur diagnostischen Güte der Brute-Force optimierten T2-Kriterien." },
+            ergebnisse_vergleich_as_vs_t2: { description: "Generiert Text, Tabelle und Diagramme zum statistischen Vergleich von Avocado Sign vs. T2-Kriterien." },
+            discussion_main: { description: "Generiert den Diskussionstext der Publikation." },
+            references_main: { description: "Generiert das Literaturverzeichnis der Publikation." }
         },
         statMetrics: {
             sens: { name: "Sensitivität", description: "Sensitivität ([METHODE] vs. N): Anteil der tatsächlich positiven Fälle (N+), die durch die Methode [METHODE] korrekt als positiv erkannt wurden.<br><i>Formel: RP / (RP + FN)</i>", interpretation: "Die Methode [METHODE] erkannte <strong>[WERT]</strong> der tatsächlich N+ Patienten korrekt (95%-KI nach [METHOD_CI]: [LOWER] – [UPPER]) im Kollektiv [KOLLEKTIV]."},
