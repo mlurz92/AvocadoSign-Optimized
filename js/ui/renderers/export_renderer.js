@@ -1,109 +1,151 @@
-const exportTabRenderer = (() => {
+const exportRenderer = (() => {
 
-    function _createExportButtonHTML(typeKey, typeConfig, currentKollektiv) {
-        if (!typeKey || !typeConfig || typeof typeConfig.type !== 'string' || typeof typeConfig.ext !== 'string') {
-            console.warn(`Ungültige Konfiguration für Export-Typ: ${typeKey}`);
-            return '';
-        }
+    function _createExportButton(config) {
+        return `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>${config.label}</strong>
+                    <p class="mb-0 text-muted small">${config.description}</p>
+                </div>
+                <button id="${config.id}" class="btn btn-sm btn-primary export-btn" 
+                        data-format="${config.format}" 
+                        data-tippy-content="${config.tooltip}" 
+                        ${config.disabled ? 'disabled' : ''}>
+                    <i class="fas ${config.icon} fa-fw"></i>
+                </button>
+            </div>`;
+    }
 
-        const tooltipConfig = TOOLTIP_CONTENT.exportTab[typeKey];
-        if(!tooltipConfig || typeof tooltipConfig.description !== 'string') {
-             console.warn(`Fehlende Tooltip-Beschreibung für Export-Typ: ${typeKey}`);
-             return '';
-        }
+    function _createExportCard(title, description, buttons) {
+        return `
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">${title}</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">${description}</p>
+                    <div class="list-group">
+                        ${buttons.map(_createExportButton).join('')}
+                    </div>
+                </div>
+            </div>`;
+    }
 
-        const buttonId = `export-${typeKey}`;
-        const buttonText = typeKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).replace('Md', 'MD').replace('Csv', 'CSV').replace('Txt', 'TXT').replace('Png', 'PNG').replace('Svg', 'SVG').replace('Zip', 'ZIP').replace('Xlsx', 'XLSX');
-        const fileExtension = `(.${typeConfig.ext})`;
-        let tippyContent = tooltipConfig.description.replace('[KOLLEKTIV]', getKollektivDisplayName(currentKollektiv));
+    function render(hasBruteForceResults, canExportDataDependent) {
 
-        let iconClass = 'fa-file-alt'; // Default icon
-        if (typeConfig.ext === 'csv') iconClass = 'fa-file-csv';
-        else if (typeConfig.ext === 'zip') iconClass = 'fa-file-archive';
-        else if (typeConfig.ext === 'png') iconClass = 'fa-file-image';
-        else if (typeConfig.ext === 'svg') iconClass = 'fa-file-code';
-        else if (typeConfig.ext === 'html') iconClass = 'fa-file-code';
-        else if (typeConfig.ext === 'xlsx') iconClass = 'fa-file-excel';
+        const singleExports = [
+            {
+                id: 'export-statistik-csv',
+                label: 'Statistik-Übersicht (.csv)',
+                description: 'Exportiert die Haupt-Performance-Metriken aller Kriteriensets als CSV-Datei.',
+                icon: 'fa-file-csv',
+                format: 'stats-csv',
+                tooltip: TOOLTIP_CONTENT.exportTab.statsCsv.description,
+                disabled: !canExportDataDependent
+            },
+            {
+                id: 'export-bruteforce-txt',
+                label: 'Brute-Force Top-Ergebnisse (.txt)',
+                description: 'Exportiert die besten gefundenen Kriterien-Kombinationen aus dem Brute-Force-Lauf.',
+                icon: 'fa-file-alt',
+                format: 'bruteforce-txt',
+                tooltip: TOOLTIP_CONTENT.exportTab.bruteForceTxt.description,
+                disabled: !hasBruteForceResults
+            },
+            {
+                id: 'export-filtered-data-csv',
+                label: 'Gefilterte Rohdaten (.csv)',
+                description: 'Exportiert die Patientendaten des aktuell ausgewählten Kollektivs als CSV-Datei.',
+                icon: 'fa-file-csv',
+                format: 'filtered-data-csv',
+                tooltip: TOOLTIP_CONTENT.exportTab.filteredDataCsv.description,
+                disabled: !canExportDataDependent
+            },
+             {
+                id: 'export-comprehensive-report-html',
+                label: 'Analysebericht (.html)',
+                description: 'Erstellt einen umfassenden, interaktiven HTML-Bericht mit allen Tabellen und Diagrammen.',
+                icon: 'fa-file-code',
+                format: 'comprehensive-report-html',
+                tooltip: TOOLTIP_CONTENT.exportTab.comprehensiveReport.description,
+                disabled: !canExportDataDependent
+            }
+        ];
 
+        const zipExports = [
+            {
+                id: 'export-all-zip',
+                label: 'Gesamtpaket (.zip)',
+                description: 'Enthält alle Einzel-Exporte (CSV, MD, PNG, SVG) in einem ZIP-Archiv.',
+                icon: 'fa-file-archive',
+                format: 'all-zip',
+                tooltip: TOOLTIP_CONTENT.exportTab.allZip.description,
+                disabled: !canExportDataDependent
+            },
+            {
+                id: 'export-csv-zip',
+                label: 'Alle CSV-Dateien (.zip)',
+                description: 'Alle relevanten Daten und Statistiken, exportiert in separate CSV-Dateien.',
+                icon: 'fa-file-csv',
+                format: 'csv-zip',
+                tooltip: TOOLTIP_CONTENT.exportTab.csvZip.description,
+                disabled: !canExportDataDependent
+            },
+            {
+                id: 'export-md-zip',
+                label: 'Alle Markdown-Dateien (.zip)',
+                description: 'Alle Tabellen als Markdown-Dateien, ideal für Dokumentationen oder Berichte.',
+                icon: 'fa-file-alt',
+                format: 'md-zip',
+                tooltip: TOOLTIP_CONTENT.exportTab.mdZip.description,
+                disabled: !canExportDataDependent
+            },
+            {
+                id: 'export-png-zip',
+                label: 'Alle Diagramme (.png)',
+                description: 'Alle generierten Diagramme in hoher Auflösung als PNG-Dateien.',
+                icon: 'fa-file-image',
+                format: 'png-zip',
+                tooltip: TOOLTIP_CONTENT.exportTab.pngZip.description,
+                disabled: !canExportDataDependent
+            },
+            {
+                id: 'export-svg-zip',
+                label: 'Alle Diagramme (.svg)',
+                description: 'Alle generierten Diagramme als skalierbare Vektorgrafiken (SVG).',
+                icon: 'fa-file-image',
+                format: 'svg-zip',
+                tooltip: TOOLTIP_CONTENT.exportTab.svgZip.description,
+                disabled: !canExportDataDependent
+            }
+        ];
+
+        const excelExports = [
+             {
+                id: 'export-xlsx-zip',
+                label: 'Excel-Gesamtmappe (.xlsx)',
+                description: 'Eine einzelne Excel-Datei mit mehreren Arbeitsblättern (Daten, Auswertung, Statistiken).',
+                icon: 'fa-file-excel',
+                format: 'xlsx-zip',
+                tooltip: TOOLTIP_CONTENT.exportTab.xlsxZip.description,
+                disabled: !canExportDataDependent
+            }
+        ];
 
         return `
-            <div class="col">
-                <button class="btn btn-outline-primary w-100 h-100 d-flex flex-column justify-content-center align-items-center p-3 export-btn-fixed-height" 
-                        id="${buttonId}" 
-                        data-export-type="${typeConfig.type}" 
-                        data-export-ext="${typeConfig.ext}"
-                        data-tippy-content="${tippyContent}">
-                    <i class="fas ${iconClass} fa-2x mb-2"></i>
-                    <span class="export-btn-text">${buttonText}</span>
-                    <small class="text-muted export-btn-ext">${fileExtension}</small>
-                </button>
-            </div>
-        `;
+            <div class="row">
+                <div class="col-lg-6">
+                    ${_createExportCard('Einzel-Exporte', 'Laden Sie spezifische Ergebnisse und Daten als einzelne Dateien herunter. Diese Optionen sind ideal für schnelle Analysen oder die Einbindung in bestehende Dokumente.', singleExports)}
+                </div>
+                <div class="col-lg-6">
+                    ${_createExportCard('Paket-Exporte (.zip)', 'Laden Sie thematisch gruppierte Dateien gebündelt in einem einzigen ZIP-Archiv herunter. Dies ist nützlich für die Archivierung oder Weitergabe vollständiger Analyse-Sets.', zipExports)}
+                    ${_createExportCard('Excel-Exporte', 'Exportieren Sie alle relevanten Daten in eine einzige, gut strukturierte Excel-Arbeitsmappe zur weiteren Analyse in Tabellenkalkulationsprogrammen.', excelExports)}
+                </div>
+            </div>`;
     }
 
-
-    function renderExportTab(currentKollektiv) {
-        if (typeof APP_CONFIG === 'undefined' || typeof APP_CONFIG.EXPORT_SETTINGS === 'undefined' || typeof UI_TEXTS === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined') {
-            console.error("Abhängigkeiten für exportTabRenderer (APP_CONFIG, UI_TEXTS, TOOLTIP_CONTENT) nicht vollständig geladen.");
-            return '<p class="text-danger p-3">Fehler: Wichtige Konfigurationskomponenten für den Export-Tab nicht geladen.</p>';
-        }
-
-        const exportSettings = APP_CONFIG.EXPORT_SETTINGS;
-        const filenameTypes = exportSettings.FILENAME_TYPES;
-        const kollektivName = getKollektivDisplayName(currentKollektiv);
-
-        let einzeleporteHtml = '';
-        let paketexporteHtml = '';
-
-        const singleExportOrder = [
-            'STATS_CSV', 'STATS_XLSX', 'BRUTEFORCE_TXT',
-            'DESKRIPTIV_MD', 'DATEN_MD', 'DATEN_XLSX',
-            'AUSWERTUNG_MD', 'AUSWERTUNG_XLSX',
-            'FILTERED_DATA_CSV', 'FILTERED_DATA_XLSX',
-            'COMPREHENSIVE_REPORT_HTML',
-            'CRITERIA_COMPARISON_MD',
-            'PUBLIKATION_ABSTRACT_MD', 'PUBLIKATION_INTRODUCTION_MD', 'PUBLIKATION_METHODEN_MD',
-            'PUBLIKATION_ERGEBNISSE_MD', 'PUBLIKATION_DISCUSSION_MD', 'PUBLIKATION_REFERENCES_MD'
-        ];
-
-        const packageExportOrder = [
-            'ALL_ZIP', 'CSV_ZIP', 'MD_ZIP', 'PNG_ZIP', 'SVG_ZIP', 'XLSX_ZIP'
-        ];
-
-
-        singleExportOrder.forEach(key => {
-            if (filenameTypes[key]) {
-                einzeleporteHtml += _createExportButtonHTML(key, filenameTypes[key], currentKollektiv);
-            }
-        });
-
-        packageExportOrder.forEach(key => {
-             if (filenameTypes[key]) {
-                paketexporteHtml += _createExportButtonHTML(key, filenameTypes[key], currentKollektiv);
-            }
-        });
-
-
-        let html = `
-            <div class="export-tab-container p-md-3">
-                <div class="alert alert-info small" role="alert">
-                    ${TOOLTIP_CONTENT.exportTab.description.replace('[KOLLEKTIV]', `<strong>${kollektivName}</strong>`)}
-                </div>
-
-                <h3 class="mt-4 mb-3">${UI_TEXTS.exportTab.singleExports || 'Einzelexporte'}</h3>
-                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3 mb-4 export-options-container">
-                    ${einzeleporteHtml || `<p class="col-12 text-muted">${UI_TEXTS.generalMessages.noDataAvailable || 'Keine Einzelexporte definiert.'}</p>`}
-                </div>
-
-                <h3 class="mt-4 mb-3">${UI_TEXTS.exportTab.exportPackages || 'Export-Pakete (.zip)'}</h3>
-                 <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3 mb-3 export-options-container">
-                    ${paketexporteHtml || `<p class="col-12 text-muted">${UI_TEXTS.generalMessages.noDataAvailable || 'Keine Export-Pakete definiert.'}</p>`}
-                </div>
-            </div>
-        `;
-        return html;
-    }
     return Object.freeze({
-        renderExportTab
+        render
     });
+
 })();
