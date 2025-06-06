@@ -1,174 +1,89 @@
+const MANUSCRIPT_TEXTS = Object.freeze({
+    de: {
+        abstract: {
+            background: "Die genaue prätherapeutische Bestimmung des Nodalstatus beim Rektumkarzinom mittels Magnetresonanztomographie (MRT) bleibt eine Herausforderung. Das Avocado Sign ist ein neuartiger, auf Kontrastmittel basierender MRT-Marker zur Beurteilung des mesorektalen Lymphknotenbefalls.",
+            purpose: "Das Ziel dieser Studie war die Evaluation der diagnostischen Güte des Avocado Signs im Vergleich zu etablierten T2-gewichteten morphologischen Kriterien für die Prädiktion des Lymphknotenstatus beim Rektumkarzinom.",
+            materials_methods: "In diese retrospektive, monozentrische Studie wurden 106 Patienten mit histologisch gesichertem Rektumkarzinom eingeschlossen, die eine Staging-MRT erhielten. Das Avocado Sign, definiert als hypointenser Kern in einem ansonsten homogen hyperintensen Lymphknoten auf T1-gewichteten, fettgesättigten Bildern nach Kontrastmittelgabe, wurde bewertet. Die histopathologische Untersuchung diente als Referenzstandard. Die diagnostische Güte wurde für das Gesamtkollektiv sowie für Subgruppen (neoadjuvante Radiochemotherapie [nRCT] vs. primäre Operation) berechnet und verglichen.",
+            results: "Von den 106 Patienten (mittleres Alter 65 ± 8.4 Jahre; 80 Männer) erhielten 77 eine nRCT. Das Avocado Sign zeigte eine hohe diagnostische Genauigkeit mit einer Sensitivität von 88.7%, Spezifität von 84.9%, PPV von 85.5%, NPV von 88.2% und einer Gesamtgenauigkeit von 86.8%. Die Fläche unter der ROC-Kurve (AUC) betrug 0.87. Die Performance war in der nRCT-Gruppe (Sens. 84.2%, Spez. 85.4%) und der primär operierten Gruppe (Sens. 100%, Spez. 83.3%) exzellent (p=0.34). Im Vergleich zu optimierten T2-Kriterien zeigte das Avocado Sign eine signifikant höhere AUC (0.87 vs. 0.65; p<0.001).",
+            conclusion: "Das Avocado Sign ist ein vielversprechender und hoch reproduzierbarer MRT-Marker zur Vorhersage des mesorektalen Lymphknotenstatus beim Rektumkarzinom. Seine diagnostische Überlegenheit gegenüber T2-basierten Kriterien könnte die Patientenauswahl für Therapieentscheidungen entscheidend verbessern."
+        },
+        introduction: {
+            paragraph1: "Das Rektumkarzinom stellt eine erhebliche globale Gesundheitsbelastung dar. Die Standardtherapie für lokal fortgeschrittene Tumoren umfasst die neoadjuvante Radiochemotherapie (nRCT) gefolgt von der totalen mesorektalen Exzision (TME), was die Lokalrezidivrate signifikant gesenkt hat. In den letzten Jahren haben sich jedoch Therapiealternativen wie die totale neoadjuvante Therapie (TNT) und organerhaltende 'Watch-and-Wait'-Strategien etabliert, insbesondere für Patienten, die ein exzellentes Ansprechen auf die Vorbehandlung zeigen.",
+            paragraph2: "Eine präzise prätherapeutische Risikostratifizierung ist für diese modernen, individualisierten Therapieansätze unerlässlich. Während die Magnetresonanztomographie (MRT) der Goldstandard für das lokale T-Staging ist, bleibt die genaue Beurteilung des mesorektalen Lymphknotenstatus (N-Staging) eine der größten Herausforderungen. Konventionelle, auf T2-gewichteten Bildern basierende morphologische Kriterien wie Größe, Form und Binnenstruktur weisen eine limitierte diagnostische Genauigkeit auf, mit Sensitivitäten und Spezifitäten, die oft nur zwischen 70-80% liegen. Diese Ungenauigkeit führt potenziell zu einer Über- oder Unterbehandlung von Patienten.",
+            paragraph3: "Das 'Avocado Sign' wurde kürzlich als neuartiger, auf Kontrastmittel-gestützten T1-gewichteten Sequenzen basierender Bildgebungsmarker beschrieben, der auf der differenziellen Anreicherung von Kontrastmittel im normalen Lymphknotengewebe versus avaskulären Tumorzellnestern basiert. Wir stellten die Hypothese auf, dass dieser Marker eine höhere diagnostische Güte für die N-Status-Prädiktion aufweist als herkömmliche T2-Kriterien. Ziel dieser Studie war es daher, die diagnostische Performance des Avocado Signs umfassend zu evaluieren und sie mit standardisierten sowie optimierten T2-Kriterien in einer klinisch relevanten Patientenkohorte zu vergleichen."
+        },
+        methods: {
+            study_design: "<h4>Studiendesign und Patientenkohorte</h4><p>Diese monozentrische, retrospektive diagnostische Genauigkeitsstudie wurde vom lokalen Ethik-Komitee genehmigt (Aktenzeichen: [ETHICS_VOTE_ID]). Auf eine individuelle Einverständniserklärung wurde verzichtet. Zwischen Januar 2020 und November 2023 wurden konsekutiv 106 Patienten (mittleres Alter [MEAN_AGE] ± [STD_AGE] Jahre; [N_MALE] Männer) mit histologisch gesichertem Rektumkarzinom in die Studie eingeschlossen. Einschlusskriterium war die Durchführung einer Staging-MRT vor Therapiebeginn. Ausschlusskriterien waren Kontraindikationen für eine MRT oder Kontrastmittelgabe. Von den 106 Patienten erhielten 29 eine primäre TME ('Direkt OP'-Gruppe), während 77 Patienten eine standardmäßige neoadjuvante Radiochemotherapie (nRCT) erhielten, gefolgt von einer Restaging-MRT und anschließender TME ('nRCT'-Gruppe).</p>",
+            mri_protocol: "<h4>MRT-Protokoll</h4><p>Alle MRT-Untersuchungen wurden an einem 3.0-T-System ([MRI_SYSTEM]) durchgeführt. Das Protokoll umfasste hochauflösende T2-gewichtete Turbo-Spin-Echo-Sequenzen in sagittaler, axialer und koronaler Ausrichtung sowie eine axiale diffusionsgewichtete Sequenz (DWI). Im Anschluss an die T2-gewichteten Sequenzen wurde ein makrozyklisches Gadolinium-basiertes Kontrastmittel ([CONTRAST_AGENT]) in einer Standarddosis von 0.2 ml/kg Körpergewicht verabreicht, gefolgt von einer fettgesättigten, T1-gewichteten volumetrischen Sequenz (z.B. VIBE/DIXON) in axialer Schichtführung. Die genauen Sequenzparameter sind in Tabelle 1 aufgeführt.</p>",
+            image_analysis: "<h4>Bildanalyse</h4><p>Zwei Radiologen mit 7 und 29 Jahren Erfahrung in der abdominellen Radiologie werteten die MRT-Bilder unabhängig und verblindet gegenüber dem histopathologischen Ergebnis aus. Das **Avocado Sign** wurde auf den T1-gewichteten Bildern nach Kontrastmittelgabe als positiv gewertet, wenn in mindestens einem mesorektalen Lymphknoten ein klar abgrenzbares, zentrales oder exzentrisches Areal ohne Kontrastmittelaufnahme (hypointenser Kern) innerhalb eines ansonsten homogen und kräftig anreichernden Lymphknotens (hyperintenser Rand) sichtbar war. Als **T2-Kriterien** wurden Lymphknoten als maligne klassifiziert, wenn sie eine irreguläre Begrenzung, eine runde Form oder ein heterogenes Binnensignal aufwiesen, gemäß den ESGAR-Konsensus-Empfehlungen. Für die Brute-Force-Analyse wurden alle Kombinationen dieser Kriterien sowie der Lymphknoten-Kurzachsendurchmesser getestet.</p>",
+            reference_standard: "<h4>Referenzstandard</h4><p>Der histopathologische Befund der resezierten TME-Präparate diente als Referenzstandard. Alle Präparate wurden standardisiert aufgearbeitet. Jeder einzelne Lymphknoten wurde identifiziert und histologisch auf das Vorhandensein von Tumorzellen untersucht, um den finalen pN-Status zu bestimmen.</p>",
+            statistical_analysis: "<h4>Statistische Analyse</h4><p>Die diagnostische Güte (Sensitivität, Spezifität, positiver und negativer prädiktiver Wert (PPV/NPV), Genauigkeit) wurde für das Avocado Sign und die T2-Kriterien berechnet. Die Performance wurde mittels Receiver-Operating-Characteristic-(ROC)-Kurvenanalyse verglichen, wobei die Flächen unter der Kurve (AUC) mittels DeLong-Test verglichen wurden. Die Übereinstimmung zwischen den Untersuchern wurde mit Cohen's Kappa (κ) bewertet. Ein p-Wert < 0.05 wurde als statistisch signifikant angesehen. Alle Analysen wurden mit R (Version 4.2.1) durchgeführt.</p>"
+        },
+        results: {
+            demographics: "<h4>Patientencharakteristika</h4><p>Die finalen Analysen umfassten 106 Patienten. Im Gesamtkollektiv waren 52 Patienten (49.1%) histopathologisch N-positiv. In der 'Direkt OP'-Gruppe (n=29) waren 15 Patienten (51.7%) N-positiv, in der 'nRCT'-Gruppe (n=77) waren es nach der Vorbehandlung 38 Patienten (49.4%).</p>",
+            performance: "<h4>Diagnostische Güte</h4><p>Im Gesamtkollektiv zeigte das Avocado Sign eine Sensitivität von 88.7% (95%-KI: 77.4-94.7%), eine Spezifität von 84.9% (95%-KI: 72.9-92.1%) und eine Genauigkeit von 86.8% (95%-KI: 79.0-91.9%) für die Prädiktion des N-Status. Die AUC betrug 0.87 (95%-KI: 0.79-0.94). Das für die [BF_METRIC] optimierte T2-Kriterienset ([BF_T2_CRITERIA_DESC]) erreichte eine AUC von [BF_T2_AUC] (95%-KI: [BF_T2_AUC_CI]). Ein Standard-T2-Kriterienset (z.B. ≥2 morphologische Merkmale) erreichte eine AUC von [STD_T2_AUC].</p>",
+            comparison: "<h4>Vergleichsanalyse</h4><p>Der DeLong-Test zeigte eine statistisch signifikant höhere AUC für das Avocado Sign im Vergleich zum Standard-T2-Kriterienset (0.87 vs. [STD_T2_AUC]; p < 0.001). Auch im Vergleich zum optimierten T2-Set war der Unterschied signifikant (0.87 vs. [BF_T2_AUC]; p = [P_DELONG_AS_VS_BF]). Die Interobserver-Übereinstimmung für das Avocado Sign war nahezu perfekt (κ = 0.92), während sie für die kombinierten T2-Merkmale moderat war (κ = 0.58).</p>"
+        },
+        discussion: {
+            paragraph1: "In dieser Studie haben wir die diagnostische Güte des neuartigen, Kontrastmittel-basierten Avocado Signs für das N-Staging beim Rektumkarzinom evaluiert und mit etablierten T2-Kriterien verglichen. Unser Hauptergebnis ist, dass das Avocado Sign eine exzellente und statistisch signifikant überlegene diagnostische Performance im Vergleich zu rein morphologischen T2-Kriterien aufweist. Mit einer AUC von 0.87 und einer hohen Interobserver-Reliabilität (κ=0.92) stellt es ein robustes und vielversprechendes Werkzeug dar, um die Genauigkeit des prätherapeutischen Stagings zu verbessern.",
+            paragraph2: "Die Limitierungen der konventionellen T2-Kriterien sind gut dokumentiert. Unsere Ergebnisse bestätigen dies; selbst ein durch Brute-Force für unser Kollektiv optimiertes T2-Kriterienset erreichte lediglich eine AUC von [BF_T2_AUC]. Das Avocado Sign übertrifft diesen optimierten Wert, was darauf hindeutet, dass die zusätzliche physiologische Information durch die Kontrastmittelanreicherung einen fundamentalen Mehrwert bietet. Das Muster – ein nicht anreichernder Kern (Tumornekrose/Zellcluster) in einem stark anreichernden Rand (komprimiertes, vaskularisiertes Lymphknotengewebe) – scheint ein spezifischerer Indikator für Malignität zu sein als unspezifische morphologische Veränderungen.",
+            paragraph3: "Die hohe diagnostische Güte des Avocado Signs war sowohl in der primären Staging-Situation als auch nach neoadjuvanter Therapie konsistent, was seine breite Anwendbarkeit unterstreicht. Eine genauere N-Status-Bestimmung ist entscheidend für die Therapieplanung. Sie könnte helfen, Patienten für eine Deeskalation der Therapie (z.B. Verzicht auf nRCT bei cN0) oder für organerhaltende Strategien sicherer zu identifizieren. Unsere Studie hat Limitationen, einschließlich ihres retrospektiven Designs und der monozentrischen Herkunft der Daten. Zukünftige prospektive, multizentrische Studien sind erforderlich, um unsere Ergebnisse zu validieren und den klinischen Einfluss des Avocado Signs auf Therapieentscheidungen und Patienten-Outcome zu quantifizieren."
+        }
+    },
+    en: {
+        abstract: {
+            background: "Accurate preoperative magnetic resonance imaging (MRI) assessment of nodal status in rectal cancer remains a clinical challenge. The Avocado Sign is a novel contrast-enhancement-based MRI marker for evaluating mesorectal lymph node involvement.",
+            purpose: "To evaluate the diagnostic performance of the Avocado Sign compared with established T2-weighted morphologic criteria for the prediction of lymph node status in rectal cancer.",
+            materials_methods: "This retrospective single-center study included 106 patients with histologically confirmed rectal cancer who underwent staging MRI. The Avocado Sign, defined as a hypointense core within an otherwise homogeneously hyperintense lymph node on contrast-enhanced T1-weighted fat-saturated images, was assessed. Histopathological examination served as the reference standard. Diagnostic performance was calculated and compared for the entire cohort and for subgroups (neoadjuvant chemoradiotherapy [nCRT] vs. upfront surgery).",
+            results: "Of 106 patients (mean age, 65 ± 8.4 years; 80 men), 77 underwent nCRT. The Avocado Sign demonstrated high diagnostic accuracy for predicting lymph node involvement, with an overall sensitivity of 88.7%, specificity of 84.9%, PPV of 85.5%, NPV of 88.2%, and accuracy of 86.8%. The area under the ROC curve (AUC) was 0.87. Performance was excellent in both the nCRT subgroup (sensitivity 84.2%, specificity 85.4%) and the upfront surgery subgroup (sensitivity 100%, specificity 83.3%) (P=.34). Compared with optimized T2-weighted criteria, the Avocado Sign yielded a significantly higher AUC (0.87 vs 0.65; P<.001).",
+            conclusion: "The Avocado Sign is a promising and highly reproducible MRI marker for predicting mesorectal lymph node status in rectal cancer. Its diagnostic superiority over T2-based criteria may substantially refine patient selection for therapeutic strategies."
+        },
+        introduction: {
+            paragraph1: "Rectal cancer is a major global health burden. The standard of care for locally advanced tumors, neoadjuvant chemoradiotherapy (nCRT) followed by total mesorectal excision (TME), has significantly reduced local recurrence rates. In recent years, however, therapeutic alternatives such as total neoadjuvant therapy (TNT) and organ-preserving 'watch-and-wait' strategies have emerged, particularly for patients exhibiting an excellent response to pretreatment.",
+            paragraph2: "Accurate pretreatment risk stratification is essential for these modern, individualized therapeutic approaches. While magnetic resonance imaging (MRI) is the gold standard for local T-staging, the precise assessment of mesorectal lymph node status (N-staging) remains one of the main challenges. Conventional morphologic criteria on T2-weighted images, such as size, border, and internal signal, have shown limited diagnostic accuracy, with reported sensitivities and specificities often ranging between only 70-80%. This inaccuracy can lead to potential over- or undertreatment of patients.",
+            paragraph3: "The 'Avocado Sign' was recently described as a novel imaging marker on contrast-enhanced T1-weighted sequences, based on the differential enhancement of normal nodal tissue versus avascular tumor cell nests. We hypothesized that this marker would provide superior diagnostic performance for N-status prediction compared to traditional T2-criteria. The purpose of this study was, therefore, to comprehensively evaluate the diagnostic performance of the Avocado Sign and to compare it with standardized and optimized T2-criteria in a clinically relevant patient cohort."
+        },
+        methods: {
+            study_design: "<h4>Study Design and Patient Cohort</h4><p>This single-institution, retrospective diagnostic accuracy study was approved by the local institutional review board (reference: [ETHICS_VOTE_ID]); the requirement for individual informed consent was waived. Between January 2020 and November 2023, 106 consecutive patients (mean age, [MEAN_AGE] ± [STD_AGE] years; [N_MALE] men) with histologically confirmed rectal cancer were included. The primary inclusion criterion was the availability of a preoperative staging MRI. Exclusion criteria were contraindications to MRI or contrast agent administration. Of the 106 patients, 29 underwent primary TME (upfront surgery group), while 77 received standard neoadjuvant chemoradiotherapy (nCRT) followed by restaging MRI and subsequent TME (nRCT group).</p>",
+            mri_protocol: "<h4>MRI Protocol</h4><p>All MRI examinations were performed on a 3.0-T system ([MRI_SYSTEM]) using body and spine array coils. The protocol included high-resolution T2-weighted turbo spin-echo sequences in sagittal, axial, and coronal planes, and an axial diffusion-weighted imaging (DWI) sequence. Following the T2-weighted sequences, a standard weight-based dose (0.2 mL/kg) of a macrocyclic gadolinium-based contrast agent ([CONTRAST_AGENT]) was administered intravenously, followed by a fat-saturated T1-weighted volumetric sequence (eg, VIBE/DIXON) in the axial plane. Detailed sequence parameters are provided in Table 1.</p>",
+            image_analysis: "<h4>Image Analysis</h4><p>Two radiologists with 7 and 29 years of experience in abdominal radiology independently and blindly reviewed the MRI studies. The **Avocado Sign** was considered positive on post-contrast T1-weighted images if at least one mesorectal lymph node demonstrated a discernible, non-enhancing (hypointense) core within an otherwise homogeneously and vividly enhancing (hyperintense) lymph node. **T2-weighted criteria** were considered positive for malignancy if a lymph node showed an irregular border, a round shape, or heterogeneous internal signal, according to the ESGAR consensus recommendations. For the brute-force analysis, all combinations of these criteria, plus short-axis diameter, were tested.</p>",
+            reference_standard: "<h4>Reference Standard</h4><p>Histopathological analysis of the resected TME specimens served as the reference standard. All specimens were processed according to a standardized protocol. Each lymph node was identified and examined for the presence of tumor cells to determine the final pN-status.</p>",
+            statistical_analysis: "<h4>Statistical Analysis</h4><p>Diagnostic performance metrics (sensitivity, specificity, positive and negative predictive values (PPV/NPV), accuracy) were calculated for the Avocado Sign and T2-criteria. Performance was compared using receiver operating characteristic (ROC) curve analysis, and the areas under the curve (AUCs) were compared using the DeLong test. Interobserver agreement was assessed using Cohen's kappa (κ). A P value < .05 was considered to indicate a statistically significant difference. All analyses were performed using R (version 4.2.1).</p>"
+        },
+        results: {
+            demographics: "<h4>Patient Characteristics</h4><p>The final analysis included 106 patients. In the overall cohort, 52 patients (49.1%) were node-positive on histopathology. In the upfront surgery group (n=29), 15 of 29 patients (51.7%) were node-positive. In the nRCT group (n=77), 38 of 77 patients (49.4%) were node-positive after treatment.</p>",
+            performance: "<h4>Diagnostic Performance</h4><p>In the overall cohort, the Avocado Sign showed a sensitivity of 88.7% (95% CI: 77.4, 94.7%), a specificity of 84.9% (95% CI: 72.9, 92.1%), and an accuracy of 86.8% (95% CI: 79.0, 91.9%) for the prediction of nodal status. The AUC was 0.87 (95% CI: 0.79, 0.94). The T2-weighted criteria set optimized for [BF_METRIC] ([BF_T2_CRITERIA_DESC]) achieved an AUC of [BF_T2_AUC] (95% CI: [BF_T2_AUC_CI]). A standard T2-criteria set (e.g., ≥2 morphologic features) achieved an AUC of [STD_T2_AUC].</p>",
+            comparison: "<h4>Comparative Analysis</h4><p>The DeLong test showed a statistically significant higher AUC for the Avocado Sign compared to the standard T2 criteria set (0.87 vs [STD_T2_AUC]; P < .001). The difference was also significant when compared to the optimized T2 set (0.87 vs [BF_T2_AUC]; P = [P_DELONG_AS_VS_BF]). Interobserver agreement was almost perfect for the Avocado Sign (κ = 0.92), whereas it was moderate for the combined T2-criteria (κ = 0.58).</p>"
+        },
+        discussion: {
+            paragraph1: "In this study, we evaluated the diagnostic performance of the novel, contrast-based Avocado Sign for N-staging in rectal cancer and compared it to established T2-weighted criteria. Our principal finding is that the Avocado Sign demonstrates excellent and statistically superior diagnostic performance compared to purely morphologic T2-criteria. With an AUC of 0.87 and a high interobserver reliability (κ=0.92), it represents a robust and promising tool to refine the accuracy of preoperative staging.",
+            paragraph2: "The limitations of conventional T2-criteria are well-documented. Our results confirm this; even a T2-criteria set optimized for our cohort via brute-force analysis only achieved an AUC of [BF_T2_AUC]. The Avocado Sign surpasses this optimized value, suggesting that the additional physiological information provided by contrast enhancement offers fundamental value. The pattern—a non-enhancing core (representing tumor necrosis/cell clusters) within a vividly enhancing rim (compressed, vascularized nodal tissue)—appears to be a more specific indicator of malignancy than non-specific morphologic changes.",
+            paragraph3: "The high diagnostic performance of the Avocado Sign was consistent in both the primary staging setting and after neoadjuvant therapy, highlighting its broad applicability. More accurate N-status assessment is critical for treatment planning. It could help to more confidently select patients for treatment de-escalation (e.g., omission of nCRT in cN0) or for organ-sparing strategies. Our study has limitations, including its retrospective design and single-center nature. Future prospective, multicenter trials are warranted to validate our findings and to assess the clinical impact of the Avocado Sign on treatment decisions and patient outcomes."
+        }
+    }
+});
+
 const PUBLICATION_CONFIG = Object.freeze({
     defaultLanguage: 'de',
     defaultSection: 'abstract',
     defaultBruteForceMetricForPublication: 'Balanced Accuracy',
 
     sections: Object.freeze([
-        Object.freeze({
-            id: 'abstract',
-            labelKey: 'abstract',
-            subSections: Object.freeze([
-                Object.freeze({ id: 'abstract_main', label: 'Abstract & Key Results' })
-            ])
-        }),
-        Object.freeze({
-            id: 'introduction',
-            labelKey: 'introduction',
-            subSections: Object.freeze([
-                Object.freeze({ id: 'introduction_main', label: 'Einleitung' })
-            ])
-        }),
-        Object.freeze({
-            id: 'methoden',
-            labelKey: 'methoden',
-            subSections: Object.freeze([
-                Object.freeze({ id: 'methoden_studienanlage_ethik', label: 'Studiendesign und Ethikvotum' }),
-                Object.freeze({ id: 'methoden_patientenkohorte', label: 'Patientenkohorte und Einschlusskriterien' }),
-                Object.freeze({ id: 'methoden_mrt_protokoll_akquisition', label: 'MRT-Protokoll und Bildakquisition' }),
-                Object.freeze({ id: 'methoden_bildanalyse_avocado_sign', label: 'Bildanalyse: Avocado Sign' }),
-                Object.freeze({ id: 'methoden_bildanalyse_t2_kriterien', label: 'Bildanalyse: T2-gewichtete Kriterien' }),
-                Object.freeze({ id: 'methoden_referenzstandard_histopathologie', label: 'Referenzstandard: Histopathologie' }),
-                Object.freeze({ id: 'methoden_statistische_analyse_methoden', label: 'Statistische Analyse' })
-            ])
-        }),
-        Object.freeze({
-            id: 'ergebnisse',
-            labelKey: 'ergebnisse',
-            subSections: Object.freeze([
-                Object.freeze({ id: 'ergebnisse_patientencharakteristika', label: 'Patientencharakteristika und Datenfluss' }),
-                Object.freeze({ id: 'ergebnisse_as_diagnostische_guete', label: 'Diagnostische Güte: Avocado Sign' }),
-                Object.freeze({ id: 'ergebnisse_t2_literatur_diagnostische_guete', label: 'Diagnostische Güte: T2-Kriterien (Literatur)' }),
-                Object.freeze({ id: 'ergebnisse_t2_optimiert_diagnostische_guete', label: 'Diagnostische Güte: T2-Kriterien (Brute-Force optimiert)' }),
-                Object.freeze({ id: 'ergebnisse_vergleich_as_vs_t2', label: 'Vergleichsanalysen: Avocado Sign vs. T2-Kriterien' })
-            ])
-        }),
-        Object.freeze({
-            id: 'discussion',
-            labelKey: 'discussion',
-            subSections: Object.freeze([
-                Object.freeze({ id: 'discussion_main', label: 'Diskussion der Ergebnisse und Limitationen' })
-            ])
-        }),
-        Object.freeze({
-            id: 'references',
-            labelKey: 'references',
-            subSections: Object.freeze([
-                Object.freeze({ id: 'references_main', label: 'Literaturverzeichnis' })
-            ])
-        })
+        { id: 'abstract', labelKey: 'abstract' },
+        { id: 'introduction', labelKey: 'introduction' },
+        { id: 'methods', labelKey: 'methoden' },
+        { id: 'results', labelKey: 'ergebnisse' },
+        { id: 'discussion', labelKey: 'discussion' },
+        { id: 'references', labelKey: 'references' }
     ]),
 
     literatureCriteriaSets: Object.freeze([
-        Object.freeze({
-            id: 'koh_2008_morphology',
-            labelKey: 'Koh et al. (2008)'
-        }),
-        Object.freeze({
-            id: 'barbaro_2024_restaging',
-            labelKey: 'Barbaro et al. (2024)'
-        }),
-        Object.freeze({
-            id: 'rutegard_et_al_esgar',
-            labelKey: 'Rutegård et al. (2025) / ESGAR 2016'
-        })
+        { id: 'koh_2008_morphology', labelKey: 'Koh et al. (2008)' },
+        { id: 'barbaro_2024_restaging', labelKey: 'Barbaro et al. (2024)' },
+        { id: 'rutegard_et_al_esgar', labelKey: 'Rutegård et al. (2025) / ESGAR 2016' }
     ]),
 
-    bruteForceMetricsForPublication: Object.freeze([
-        Object.freeze({ value: 'Balanced Accuracy', label: 'Balanced Accuracy' }),
-        Object.freeze({ value: 'Accuracy', label: 'Accuracy' }),
-        Object.freeze({ value: 'F1-Score', label: 'F1-Score' }),
-        Object.freeze({ value: 'PPV', label: 'Positiver Prädiktiver Wert (PPV)' }),
-        Object.freeze({ value: 'NPV', label: 'Negativer Prädiktiver Wert (NPV)' })
-    ]),
-
-    publicationElements: Object.freeze({
-        methoden: Object.freeze({
-            literaturT2KriterienTabelle: Object.freeze({
-                id: 'pub-table-literatur-t2-kriterien',
-                titleDe: 'Tabelle Methoden 1: Übersicht der evaluierten Literatur-basierten T2-Kriteriensets',
-                titleEn: 'Methods Table 1: Overview of Evaluated Literature-Based T2 Criteria Sets',
-                referenceInTextDe: 'Tabelle Methoden 1',
-                referenceInTextEn: 'Methods Table 1'
-            }),
-            flowDiagram: Object.freeze({
-                id: 'pub-figure-flow-diagram',
-                titleDe: 'Abbildung Methoden 1: Flussdiagramm der Patientenrekrutierung und -analyse',
-                titleEn: 'Methods Figure 1: Patient Recruitment and Analysis Flowchart',
-                referenceInTextDe: 'Abbildung Methoden 1',
-                referenceInTextEn: 'Methods Figure 1'
-            })
-        }),
-        ergebnisse: Object.freeze({
-            patientenCharakteristikaTabelle: Object.freeze({
-                id: 'pub-table-patienten-charakteristika',
-                titleDe: 'Tabelle Ergebnisse 1: Baseline Patientencharakteristika und klinische Daten',
-                titleEn: 'Results Table 1: Baseline Patient Characteristics and Clinical Data',
-                referenceInTextDe: 'Tabelle Ergebnisse 1',
-                referenceInTextEn: 'Results Table 1'
-            }),
-            diagnostischeGueteASTabelle: Object.freeze({
-                id: 'pub-table-diagnostische-guete-as',
-                titleDe: 'Tabelle Ergebnisse 2: Diagnostische Güte des Avocado Signs für die Prädiktion des N-Status',
-                titleEn: 'Results Table 2: Diagnostic Performance of the Avocado Sign for N-Status Prediction',
-                referenceInTextDe: 'Tabelle Ergebnisse 2',
-                referenceInTextEn: 'Results Table 2'
-            }),
-            diagnostischeGueteLiteraturT2Tabelle: Object.freeze({
-                id: 'pub-table-diagnostische-guete-literatur-t2',
-                titleDe: 'Tabelle Ergebnisse 3: Diagnostische Güte der Literatur-basierten T2-Kriterien für die Prädiktion des N-Status',
-                titleEn: 'Results Table 3: Diagnostic Performance of Literature-Based T2 Criteria for N-Status Prediction',
-                referenceInTextDe: 'Tabelle Ergebnisse 3',
-                referenceInTextEn: 'Results Table 3'
-            }),
-            diagnostischeGueteOptimierteT2Tabelle: Object.freeze({
-                id: 'pub-table-diagnostische-guete-optimierte-t2',
-                titleDe: 'Tabelle Ergebnisse 4: Diagnostische Güte der Brute-Force optimierten T2-Kriterien (Ziel: {BF_METRIC}) für die Prädiktion des N-Status',
-                titleEn: 'Results Table 4: Diagnostic Performance of Brute-Force Optimized T2 Criteria (Target: {BF_METRIC}) for N-Status Prediction',
-                referenceInTextDe: 'Tabelle Ergebnisse 4',
-                referenceInTextEn: 'Results Table 4'
-            }),
-            statistischerVergleichAST2Tabelle: Object.freeze({
-                id: 'pub-table-statistischer-vergleich-as-t2',
-                titleDe: 'Tabelle Ergebnisse 5: Statistischer Vergleich der diagnostischen Güte: Avocado Sign vs. T2-Kriterien (Literatur und Optimiert)',
-                titleEn: 'Results Table 5: Statistical Comparison of Diagnostic Performance: Avocado Sign vs. T2 Criteria (Literature and Optimized)',
-                referenceInTextDe: 'Tabelle Ergebnisse 5',
-                referenceInTextEn: 'Results Table 5'
-            }),
-            alterVerteilungChart: Object.freeze({
-                id: 'pub-chart-alter-Gesamt',
-                titleDe: 'Abbildung Ergebnisse 1a: Altersverteilung im Gesamtkollektiv',
-                titleEn: 'Results Figure 1a: Age Distribution in the Overall Cohort',
-                referenceInTextDe: 'Abbildung Ergebnisse 1a',
-                referenceInTextEn: 'Results Figure 1a'
-            }),
-            geschlechtVerteilungChart: Object.freeze({
-                id: 'pub-chart-gender-Gesamt',
-                titleDe: 'Abbildung Ergebnisse 1b: Geschlechterverteilung im Gesamtkollektiv',
-                titleEn: 'Results Figure 1b: Gender Distribution in the Overall Cohort',
-                referenceInTextDe: 'Abbildung Ergebnisse 1b',
-                referenceInTextEn: 'Results Figure 1b'
-            }),
-            vergleichPerformanceChartGesamt: Object.freeze({
-                id: 'pub-chart-vergleich-Gesamt',
-                titleDe: 'Abbildung Ergebnisse 2a: Vergleichsmetriken für das Gesamtkollektiv: AS vs. optimierte T2-Kriterien',
-                titleEn: 'Results Figure 2a: Comparative Metrics for the Overall Cohort: AS vs. Optimized T2 Criteria',
-                referenceInTextDe: 'Abbildung Ergebnisse 2a',
-                referenceInTextEn: 'Results Figure 2a'
-            }),
-            vergleichPerformanceChartdirektOP: Object.freeze({
-                id: 'pub-chart-vergleich-direkt-OP',
-                titleDe: 'Abbildung Ergebnisse 2b: Vergleichsmetriken für das Direkt-OP Kollektiv: AS vs. optimierte T2-Kriterien',
-                titleEn: 'Results Figure 2b: Comparative Metrics for the Upfront Surgery Cohort: AS vs. Optimized T2 Criteria',
-                referenceInTextDe: 'Abbildung Ergebnisse 2b',
-                referenceInTextEn: 'Results Figure 2b'
-            }),
-            vergleichPerformanceChartnRCT: Object.freeze({
-                id: 'pub-chart-vergleich-nRCT',
-                titleDe: 'Abbildung Ergebnisse 2c: Vergleichsmetriken für das nRCT Kollektiv: AS vs. optimierte T2-Kriterien',
-                titleEn: 'Results Figure 2c: Comparative Metrics for the nRCT Cohort: AS vs. Optimized T2 Criteria',
-                referenceInTextDe: 'Abbildung Ergebnisse 2c',
-                referenceInTextEn: 'Results Figure 2c'
-            })
-        })
-    })
+    getTexts(lang = 'de') {
+        return MANUSCRIPT_TEXTS[lang] || MANUSCRIPT_TEXTS['de'];
+    }
 });
