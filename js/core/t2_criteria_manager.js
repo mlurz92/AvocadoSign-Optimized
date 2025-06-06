@@ -4,8 +4,9 @@ const t2CriteriaManager = (() => {
     let isUnsaved = false;
 
     function initialize() {
-        const savedCriteria = stateManager.load(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA);
-        const savedLogic = stateManager.load(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC);
+        // Verwende die neuen loadStateItem Methoden vom stateManager
+        const savedCriteria = state.loadStateItem(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA);
+        const savedLogic = state.loadStateItem(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC);
 
         if (savedCriteria) {
             appliedCriteria = { ...appliedCriteria, ...savedCriteria };
@@ -44,8 +45,9 @@ const t2CriteriaManager = (() => {
 
     function applyCriteria() {
         appliedCriteria = cloneDeep(currentCriteria);
-        stateManager.save(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA, appliedCriteria);
-        stateManager.save(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC, appliedCriteria.logic);
+        // Verwende die neuen saveStateItem Methoden vom stateManager
+        state.saveStateItem(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA, appliedCriteria);
+        state.saveStateItem(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC, appliedCriteria.logic);
         isUnsaved = false;
     }
     
