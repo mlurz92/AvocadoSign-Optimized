@@ -91,6 +91,7 @@ Die Anwendung folgt einem klaren, unidirektionalen Datenfluss, der vom zentralen
 
 Jede Datei und jedes Verzeichnis hat eine klar definierte Aufgabe.
 
+```
 /
 ├── js/
 │   ├── app/
@@ -133,6 +134,7 @@ Jede Datei und jedes Verzeichnis hat eine klar definierte Aufgabe.
 ├── workers/
 │   └── brute_force_worker.js # Rechenintensiver Code für die Brute-Force-Optimierung.
 └── index.html                # Einziger HTML-Einstiegspunkt.
+```
 
 ---
 
