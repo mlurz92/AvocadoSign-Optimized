@@ -3,62 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avocado Sign Analyse</title>
+    <title>Avocado Sign Analyse Tool</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/themes/glass.css"/>
-
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
-    <header class="app-header">
-        <div class="container-fluid">
-            <div class="d-flex flex-wrap align-items-center justify-content-between">
+    <div id="app-container">
+        <header class="app-header fixed-top">
+            <div class="container-fluid d-flex justify-content-between align-items-center">
                 <h1 class="app-title">Avocado Sign Analyse</h1>
-                <div class="btn-group kollektiv-selector" role="group" aria-label="Kollektiv Auswahl">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-kollektiv="Gesamt" data-tippy-content="Gesamtkollektiv anzeigen (n=100)">Gesamt</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-kollektiv="pRCT" data-tippy-content="Primäre RCT Kohorte anzeigen (n=50)">pRCT</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-kollektiv="nRCT" data-tippy-content="Neoadjuvante RCT Kohorte anzeigen (n=50)">nRCT</button>
+                <div class="d-flex align-items-center">
+                    <div class="btn-group kollektiv-selector me-4" role="group" aria-label="Kollektiv Auswahl">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-kollektiv="Gesamt" data-tippy-content="Gesamtkollektiv (n=106)">Gesamt</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-kollektiv="direkt OP" data-tippy-content="Primär operierte Kohorte (n=29)">Direkt OP</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-kollektiv="nRCT" data-tippy-content="Neoadjuvant vorbehandelte Kohorte (n=77)">nRCT</button>
+                    </div>
+                    <button id="show-kurzanleitung-btn" class="btn btn-sm btn-outline-secondary" data-tippy-content="Kurzanleitung & Hinweise anzeigen">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
                 </div>
             </div>
-            <div class="header-stats-bar">
+        </header>
+
+        <main>
+            <div class="header-stats-bar text-center small py-2 bg-light border-bottom">
                 <strong>Kollektiv:</strong> <span id="header-kollektiv">--</span> |
                 <strong>Patienten:</strong> <span id="header-anzahl-patienten">--</span> |
                 <strong>N-Status:</strong> <span id="header-status-n">--</span> |
                 <strong>AS-Status:</strong> <span id="header-status-as">--</span> |
                 <strong>T2-Status:</strong> <span id="header-status-t2">--</span>
             </div>
-        </div>
-    </header>
 
-    <main class="container-fluid mt-3">
-        <ul class="nav nav-tabs" id="app-nav" role="tablist">
-            <li class="nav-item" role="presentation"><a class="nav-link" id="daten-tab" data-bs-toggle="tab" href="#daten-tab-pane" role="tab"><i class="fas fa-table fa-fw me-1"></i>Daten</a></li>
-            <li class="nav-item" role="presentation"><a class="nav-link" id="auswertung-tab" data-bs-toggle="tab" href="#auswertung-tab-pane" role="tab"><i class="fas fa-cogs fa-fw me-1"></i>Auswertung</a></li>
-            <li class="nav-item" role="presentation"><a class="nav-link" id="statistik-tab" data-bs-toggle="tab" href="#statistik-tab-pane" role="tab"><i class="fas fa-chart-bar fa-fw me-1"></i>Statistik</a></li>
-            <li class="nav-item" role="presentation"><a class="nav-link" id="praesentation-tab" data-bs-toggle="tab" href="#praesentation-tab-pane" role="tab"><i class="fas fa-person-chalkboard fa-fw me-1"></i>Präsentation</a></li>
-            <li class="nav-item" role="presentation"><a class="nav-link active" id="publikation-tab" data-bs-toggle="tab" href="#publikation-tab-pane" role="tab"><i class="fas fa-feather-alt fa-fw me-1"></i>Publikation</a></li>
-            <li class="nav-item" role="presentation"><a class="nav-link" id="export-tab" data-bs-toggle="tab" href="#export-tab-pane" role="tab"><i class="fas fa-file-export fa-fw me-1"></i>Export</a></li>
-        </ul>
-        
-        <div class="tab-content bg-white p-3 border border-top-0 rounded-bottom" id="app-tab-content">
-        </div>
-    </main>
+            <nav class="navigation-tabs">
+                <div class="container-fluid">
+                    <ul class="nav nav-tabs" id="app-nav" role="tablist">
+                        <li class="nav-item" role="presentation"><a class="nav-link" id="daten-tab" data-bs-toggle="tab" href="#daten-tab-pane" role="tab" aria-controls="daten-tab-pane" aria-selected="false"><i class="fas fa-table fa-fw"></i>Daten</a></li>
+                        <li class="nav-item" role="presentation"><a class="nav-link" id="auswertung-tab" data-bs-toggle="tab" href="#auswertung-tab-pane" role="tab" aria-controls="auswertung-tab-pane" aria-selected="false"><i class="fas fa-cogs fa-fw"></i>Auswertung</a></li>
+                        <li class="nav-item" role="presentation"><a class="nav-link" id="statistik-tab" data-bs-toggle="tab" href="#statistik-tab-pane" role="tab" aria-controls="statistik-tab-pane" aria-selected="false"><i class="fas fa-chart-bar fa-fw"></i>Statistik</a></li>
+                        <li class="nav-item" role="presentation"><a class="nav-link" id="praesentation-tab" data-bs-toggle="tab" href="#praesentation-tab-pane" role="tab" aria-controls="praesentation-tab-pane" aria-selected="false"><i class="fas fa-person-chalkboard fa-fw"></i>Präsentation</a></li>
+                        <li class="nav-item" role="presentation"><a class="nav-link active" id="publikation-tab" data-bs-toggle="tab" href="#publikation-tab-pane" role="tab" aria-controls="publikation-tab-pane" aria-selected="true"><i class="fas fa-feather-alt fa-fw"></i>Publikation</a></li>
+                        <li class="nav-item" role="presentation"><a class="nav-link" id="export-tab" data-bs-toggle="tab" href="#export-tab-pane" role="tab" aria-controls="export-tab-pane" aria-selected="false"><i class="fas fa-file-export fa-fw"></i>Export</a></li>
+                    </ul>
+                </div>
+            </nav>
+            
+            <div class="tab-content main-content" id="app-tab-content">
+                <div class="tab-pane fade" id="daten-tab-pane" role="tabpanel" aria-labelledby="daten-tab"></div>
+                <div class="tab-pane fade" id="auswertung-tab-pane" role="tabpanel" aria-labelledby="auswertung-tab"></div>
+                <div class="tab-pane fade" id="statistik-tab-pane" role="tabpanel" aria-labelledby="statistik-tab"></div>
+                <div class="tab-pane fade" id="praesentation-tab-pane" role="tabpanel" aria-labelledby="praesentation-tab"></div>
+                <div class="tab-pane fade show active" id="publikation-tab-pane" role="tabpanel" aria-labelledby="publikation-tab"></div>
+                <div class="tab-pane fade" id="export-tab-pane" role="tabpanel" aria-labelledby="export-tab"></div>
+            </div>
+        </main>
+    </div>
 
-    <footer class="app-footer">
-        <div class="container-fluid text-center small text-muted">
-            <p class="mb-1">Avocado Sign Analyse Tool v2.5.0 | &copy; 2025 | <a href="#" id="show-kurzanleitung-btn">Kurzanleitung anzeigen</a></p>
-        </div>
+    <footer class="app-footer mt-auto py-3 bg-light text-center small text-muted">
+        Avocado Sign Analyse Tool v3.0.0 | &copy; 2025
     </footer>
-    
-    <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
+    <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100"></div>
+
+    <div class="modal fade" id="kurzanleitung-modal" tabindex="-1" aria-labelledby="kurzanleitungModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="kurzanleitungModalLabel">Kurzanleitung</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+          </div>
+          <div class="modal-body" id="kurzanleitung-modal-body"></div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -66,9 +93,12 @@
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <script src="data/patient_data.js"></script>
-
+    
     <script src="js/utils/utils.js"></script>
 
     <script src="js/config/app_config.js"></script>
@@ -83,6 +113,8 @@
     <script src="js/services/brute_force_manager.js"></script>
     <script src="js/services/export_service.js"></script>
     <script src="js/services/publication_generator_service.js"></script>
+    
+    <script src="js/app/state_manager.js"></script>
 
     <script src="js/ui/helpers.js"></script>
     <script src="js/ui/components.js"></script>
@@ -96,8 +128,6 @@
     <script src="js/ui/renderers/chart_renderer.js"></script>
     <script src="js/ui/renderers/publication_renderer.js"></script>
 
-    <script src="js/app/state_manager.js"></script>
-    
     <script src="js/ui/controllers/data_controller.js"></script>
     <script src="js/ui/controllers/auswertung_controller.js"></script>
     <script src="js/ui/controllers/statistik_controller.js"></script>
