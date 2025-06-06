@@ -53,7 +53,7 @@ const t2CriteriaManager = (() => {
         isUnsaved = true;
     }
     
-    function isUnsaved() {
+    function getIsUnsaved() {
         return isUnsaved;
     }
 
@@ -162,7 +162,7 @@ const t2CriteriaManager = (() => {
         updateCurrentLogic,
         applyCriteria,
         resetCurrentCriteria,
-        isUnsaved,
+        isUnsaved: getIsUnsaved,
         evaluateLymphknoten,
         evaluateDataset
     });
