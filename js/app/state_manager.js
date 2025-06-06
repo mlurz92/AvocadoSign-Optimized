@@ -99,7 +99,7 @@ const stateManager = (() => {
     }
 
     function setPublikationSection(newSectionId) {
-        const isValidSection = PUBLICATION_CONFIG.sections.some(section => section.id === newSectionId || section.subSections.some(sub => sub.id === newSectionId));
+        const isValidSection = PUBLICATION_CONFIG.sections.some(section => section.id === newSectionId || (section.subSections && section.subSections.some(sub => sub.id === newSectionId)));
         if (typeof newSectionId === 'string' && isValidSection && currentState.currentPublikationSection !== newSectionId) {
             currentState.currentPublikationSection = newSectionId;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION, currentState.currentPublikationSection);
@@ -222,9 +222,9 @@ const stateManager = (() => {
         setCurrentKollektiv,
         getSortState,
         setSortState,
-        getPublikationLang,
+        getCurrentPublikationLang,
         setPublikationLang,
-        getPublikationSection,
+        getCurrentPublikationSection,
         setPublikationSection,
         getPublikationBfMetric,
         setPublikationBfMetric,
