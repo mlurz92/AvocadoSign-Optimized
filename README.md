@@ -90,3 +90,52 @@ Die Anwendung folgt einem klaren, unidirektionalen Datenfluss, der vom zentralen
 ## 5. Detaillierte Projektstruktur & Modul-Beschreibung
 
 Jede Datei und jedes Verzeichnis hat eine klar definierte Aufgabe.
+
+/
+├── js/
+│   ├── app/
+│   │   ├── main.js             # Orchestriert die gesamte Anwendung, steuert den Render-Zyklus.
+│   │   └── state_manager.js    # Verwaltet den UI-Zustand (aktiver Tab, Sortierung etc.) persistent.
+│   ├── config/
+│   │   ├── app_config.js       # Globale Anwendungskonstanten (Version, Pfade, Settings).
+│   │   ├── publication_config.js # Texte und Struktur für den Publikations-Generator.
+│   │   └── text_config.js        # UI-Texte, Tooltips, Labels.
+│   ├── core/
+│   │   ├── data_processor.js   # Filtert und prozessiert den rohen Patientendatensatz.
+│   │   ├── study_criteria_manager.js # Verwaltet die festen T2-Kriteriensets aus publizierten Studien.
+│   │   └── t2_criteria_manager.js  # Verwaltet die interaktiv definierten T2-Kriterien.
+│   ├── services/
+│   │   ├── brute_force_manager.js # Steuert den Web Worker für die Brute-Force-Optimierung.
+│   │   ├── export_service.js   # Kapselt die gesamte Logik zur Dateierstellung und zum Download.
+│   │   ├── publication_generator_service.js # Generiert den wissenschaftlichen Text für den Publikation-Tab.
+│   │   └── statistics_service.js # Führt alle statistischen Berechnungen durch.
+│   ├── ui/
+│   │   ├── controllers/
+│   │   │   ├── auswertung_controller.js # Steuert alle Interaktionen auf dem Auswertung-Tab.
+│   │   │   ├── data_controller.js       # Steuert alle Interaktionen auf dem Daten-Tab.
+│   │   │   ├── export_controller.js     # Steuert alle Interaktionen auf dem Export-Tab.
+│   │   │   ├── praesentation_controller.js # Steuert alle Interaktionen auf dem Präsentation-Tab.
+│   │   │   ├── publikation_controller.js   # Steuert alle Interaktionen auf dem Publikation-Tab.
+│   │   │   └── statistik_controller.js    # Steuert alle Interaktionen auf dem Statistik-Tab.
+│   │   ├── renderers/
+│   │   │   ├── auswertung_renderer.js   # Erzeugt das HTML für den Auswertung-Tab.
+│   │   │   ├── chart_renderer.js        # Erzeugt alle D3.js-Diagramme.
+│   │   │   ├── data_renderer.js         # Erzeugt das HTML für den Daten-Tab.
+│   │   │   ├── export_renderer.js       # Erzeugt das HTML für den Export-Tab.
+│   │   │   ├── praesentation_renderer.js  # Erzeugt das HTML für den Präsentation-Tab.
+│   │   │   ├── publication_renderer.js    # Erzeugt das HTML für den Publikation-Tab.
+│   │   │   ├── statistik_renderer.js      # Erzeugt das HTML für den Statistik-Tab.
+│   │   │   └── table_renderer.js        # Zentraler Generator für Tabellenköpfe und -zeilen.
+│   │   ├── components.js       # Generatoren für kleine, wiederverwendbare UI-Elemente (z.B. Icons, Buttons).
+│   │   └── helpers.js          # Allgemeine UI-Hilfsfunktionen (Toasts, Tooltips, DOM-Manipulation).
+│   └── utils/
+│       └── utils.js            # Globale, nicht-UI-bezogene Hilfsfunktionen (Formatierung, IDs).
+├── workers/
+│   └── brute_force_worker.js # Rechenintensiver Code für die Brute-Force-Optimierung.
+└── index.html                # Einziger HTML-Einstiegspunkt.
+
+---
+
+## 6. Lizenz
+
+Dieses Projekt ist unter der **MIT-Lizenz** lizenziert. Dies bedeutet, Sie können den Code frei verwenden, modifizieren und verbreiten, solange der ursprüngliche Copyright-Hinweis beibehalten wird.
