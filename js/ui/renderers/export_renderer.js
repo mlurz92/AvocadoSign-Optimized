@@ -7,7 +7,7 @@ const exportRenderer = (() => {
                     <strong>${config.label}</strong>
                     <p class="mb-0 text-muted small">${config.description}</p>
                 </div>
-                <button id="${config.id}" class="btn btn-sm btn-primary export-btn" 
+                <button id="${config.id}" class="btn btn-primary export-btn" 
                         data-format="${config.format}" 
                         data-tippy-content="${config.tooltip}" 
                         ${config.disabled ? 'disabled' : ''}>
@@ -17,13 +17,14 @@ const exportRenderer = (() => {
     }
 
     function _createExportCard(title, description, buttons) {
+        if (!buttons || buttons.length === 0) return '';
         return `
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="card-title mb-0">${title}</h5>
                 </div>
                 <div class="card-body">
-                    <p class="card-text">${description}</p>
+                    <p class="card-text small">${description}</p>
                     <div class="list-group">
                         ${buttons.map(_createExportButton).join('')}
                     </div>
@@ -32,42 +33,44 @@ const exportRenderer = (() => {
     }
 
     function render(hasBruteForceResults, canExportDataDependent) {
+        const kollektiv = stateManager.getCurrentKollektiv();
+        const tt = (key) => TOOLTIP_CONTENT.exportTab[key]?.description.replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(kollektiv)}</strong>`) || '';
 
         const singleExports = [
             {
-                id: 'export-statistik-csv',
+                id: 'export-stats-csv',
                 label: 'Statistik-Übersicht (.csv)',
-                description: 'Exportiert die Haupt-Performance-Metriken aller Kriteriensets als CSV-Datei.',
+                description: 'Exportiert die Haupt-Performance-Metriken und deskriptive Statistiken als CSV-Datei.',
                 icon: 'fa-file-csv',
                 format: 'stats-csv',
-                tooltip: TOOLTIP_CONTENT.exportTab.statsCsv.description,
+                tooltip: tt('STATS_CSV'),
                 disabled: !canExportDataDependent
             },
             {
                 id: 'export-bruteforce-txt',
                 label: 'Brute-Force Top-Ergebnisse (.txt)',
-                description: 'Exportiert die besten gefundenen Kriterien-Kombinationen aus dem Brute-Force-Lauf.',
+                description: 'Exportiert die besten gefundenen Kriterien-Kombinationen aus dem letzten Brute-Force-Lauf.',
                 icon: 'fa-file-alt',
                 format: 'bruteforce-txt',
-                tooltip: TOOLTIP_CONTENT.exportTab.bruteForceTxt.description,
+                tooltip: tt('BRUTEFORCE_TXT'),
                 disabled: !hasBruteForceResults
             },
             {
                 id: 'export-filtered-data-csv',
                 label: 'Gefilterte Rohdaten (.csv)',
                 description: 'Exportiert die Patientendaten des aktuell ausgewählten Kollektivs als CSV-Datei.',
-                icon: 'fa-file-csv',
+                icon: 'fa-database',
                 format: 'filtered-data-csv',
-                tooltip: TOOLTIP_CONTENT.exportTab.filteredDataCsv.description,
+                tooltip: tt('FILTERED_DATA_CSV'),
                 disabled: !canExportDataDependent
             },
-             {
+            {
                 id: 'export-comprehensive-report-html',
                 label: 'Analysebericht (.html)',
-                description: 'Erstellt einen umfassenden, interaktiven HTML-Bericht mit allen Tabellen und Diagrammen.',
-                icon: 'fa-file-code',
+                description: 'Erstellt einen umfassenden, druckbaren HTML-Bericht mit allen Tabellen und Diagrammen.',
+                icon: 'fa-file-invoice',
                 format: 'comprehensive-report-html',
-                tooltip: TOOLTIP_CONTENT.exportTab.comprehensiveReport.description,
+                tooltip: tt('COMPREHENSIVE_REPORT_HTML'),
                 disabled: !canExportDataDependent
             }
         ];
@@ -76,58 +79,40 @@ const exportRenderer = (() => {
             {
                 id: 'export-all-zip',
                 label: 'Gesamtpaket (.zip)',
-                description: 'Enthält alle Einzel-Exporte (CSV, MD, PNG, SVG) in einem ZIP-Archiv.',
+                description: 'Enthält alle Einzel-Exporte (Statistik, Rohdaten, BF-Report, MD-Tabellen) in einem ZIP-Archiv.',
                 icon: 'fa-file-archive',
                 format: 'all-zip',
-                tooltip: TOOLTIP_CONTENT.exportTab.allZip.description,
+                tooltip: tt('ALL_ZIP'),
                 disabled: !canExportDataDependent
             },
             {
-                id: 'export-csv-zip',
-                label: 'Alle CSV-Dateien (.zip)',
-                description: 'Alle relevanten Daten und Statistiken, exportiert in separate CSV-Dateien.',
-                icon: 'fa-file-csv',
-                format: 'csv-zip',
-                tooltip: TOOLTIP_CONTENT.exportTab.csvZip.description,
-                disabled: !canExportDataDependent
-            },
-            {
-                id: 'export-md-zip',
-                label: 'Alle Markdown-Dateien (.zip)',
-                description: 'Alle Tabellen als Markdown-Dateien, ideal für Dokumentationen oder Berichte.',
-                icon: 'fa-file-alt',
-                format: 'md-zip',
-                tooltip: TOOLTIP_CONTENT.exportTab.mdZip.description,
-                disabled: !canExportDataDependent
-            },
-            {
-                id: 'export-png-zip',
+                id: 'export-charts-png-zip',
                 label: 'Alle Diagramme (.png)',
-                description: 'Alle generierten Diagramme in hoher Auflösung als PNG-Dateien.',
+                description: 'Alle aktuell sichtbaren Diagramme als hochauflösende PNG-Dateien.',
                 icon: 'fa-file-image',
                 format: 'png-zip',
-                tooltip: TOOLTIP_CONTENT.exportTab.pngZip.description,
+                tooltip: tt('PNG_ZIP'),
                 disabled: !canExportDataDependent
             },
             {
-                id: 'export-svg-zip',
+                id: 'export-charts-svg-zip',
                 label: 'Alle Diagramme (.svg)',
-                description: 'Alle generierten Diagramme als skalierbare Vektorgrafiken (SVG).',
-                icon: 'fa-file-image',
+                description: 'Alle aktuell sichtbaren Diagramme als skalierbare Vektorgrafiken (SVG).',
+                icon: 'fa-file-signature',
                 format: 'svg-zip',
-                tooltip: TOOLTIP_CONTENT.exportTab.svgZip.description,
+                tooltip: tt('SVG_ZIP'),
                 disabled: !canExportDataDependent
             }
         ];
 
         const excelExports = [
              {
-                id: 'export-xlsx-zip',
+                id: 'export-excel-workbook',
                 label: 'Excel-Gesamtmappe (.xlsx)',
-                description: 'Eine einzelne Excel-Datei mit mehreren Arbeitsblättern (Daten, Auswertung, Statistiken).',
+                description: 'Eine einzelne Excel-Datei mit mehreren Arbeitsblättern (Daten, Auswertung, Statistiken, Konfiguration).',
                 icon: 'fa-file-excel',
-                format: 'xlsx-zip',
-                tooltip: TOOLTIP_CONTENT.exportTab.xlsxZip.description,
+                format: 'excel-workbook',
+                tooltip: tt('XLSX_ZIP'),
                 disabled: !canExportDataDependent
             }
         ];
@@ -135,11 +120,11 @@ const exportRenderer = (() => {
         return `
             <div class="row">
                 <div class="col-lg-6">
-                    ${_createExportCard('Einzel-Exporte', 'Laden Sie spezifische Ergebnisse und Daten als einzelne Dateien herunter. Diese Optionen sind ideal für schnelle Analysen oder die Einbindung in bestehende Dokumente.', singleExports)}
+                    ${_createExportCard('Einzel-Exporte', 'Laden Sie spezifische Ergebnisse und Daten als einzelne Dateien herunter.', singleExports)}
                 </div>
                 <div class="col-lg-6">
-                    ${_createExportCard('Paket-Exporte (.zip)', 'Laden Sie thematisch gruppierte Dateien gebündelt in einem einzigen ZIP-Archiv herunter. Dies ist nützlich für die Archivierung oder Weitergabe vollständiger Analyse-Sets.', zipExports)}
-                    ${_createExportCard('Excel-Exporte', 'Exportieren Sie alle relevanten Daten in eine einzige, gut strukturierte Excel-Arbeitsmappe zur weiteren Analyse in Tabellenkalkulationsprogrammen.', excelExports)}
+                    ${_createExportCard('Paket-Exporte (.zip)', 'Laden Sie thematisch gruppierte Dateien gebündelt in einem einzigen ZIP-Archiv herunter.', zipExports)}
+                    ${_createExportCard('Excel-Exporte', 'Exportieren Sie alle relevanten Daten in eine einzige, gut strukturierte Excel-Arbeitsmappe.', excelExports)}
                 </div>
             </div>`;
     }
