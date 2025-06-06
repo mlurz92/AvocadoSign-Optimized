@@ -141,6 +141,15 @@ const studyT2CriteriaManager = (() => {
         return cloneDeep(studyT2CriteriaSets);
     }
 
+    function getAllStudyCriteriaSetsSorted() {
+        const sortedSets = [...studyT2CriteriaSets].sort((a, b) => {
+            const nameA = a.name || a.id;
+            const nameB = b.name || b.id;
+            return nameA.localeCompare(nameB);
+        });
+        return cloneDeep(sortedSets);
+    }
+
     function getStudyCriteriaSetById(id) {
         if (typeof id !== 'string') return null;
         const foundSet = studyT2CriteriaSets.find(set => set.id === id);
@@ -350,6 +359,7 @@ const studyT2CriteriaManager = (() => {
 
     return Object.freeze({
         getAllStudyCriteriaSets,
+        getAllStudyCriteriaSetsSorted,
         getStudyCriteriaSetById,
         applyStudyT2CriteriaToPatient,
         applyStudyT2CriteriaToDataset,
