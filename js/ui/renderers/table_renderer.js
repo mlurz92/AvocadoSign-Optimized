@@ -6,20 +6,21 @@ const tableRenderer = (() => {
             const { key, label, sortable = true, tooltip = '', subSortKeys, style = '', class: headerClass = '' } = header;
             const thStyle = style ? `style="${style}"` : '';
             const tippyContent = tooltip ? `data-tippy-content="${tooltip}"` : '';
-            const sortAttributes = sortable ? `data-sort-key="${key}" style="cursor: pointer;"` : '';
-            
+            const sortableClass = sortable ? 'sortable-header' : '';
+            const thClasses = [headerClass, sortableClass].filter(Boolean).join(' ');
+
             let sortIconHTML = '';
             if (sortable) {
                 sortIconHTML = '<i class="fas fa-sort text-muted opacity-50 ms-1"></i>';
                 if (sortState.key === key) {
-                    if (!subSortKeys || subSortKeys.some(sk => sk.key === sortState.subKey) || !sortState.subKey) {
+                    if (!subSortKeys || !sortState.subKey || subSortKeys.some(sk => sk.key === sortState.subKey)) {
                         sortIconHTML = `<i class="fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1"></i>`;
                     }
                 }
             }
 
-            headerHTML += `<th scope="col" class="${headerClass}" ${thStyle} ${sortAttributes} ${tippyContent}>`;
-            
+            headerHTML += `<th scope="col" class="${thClasses}" ${thStyle} data-sort-key="${key}" ${tippyContent}>`;
+
             if (subSortKeys && Array.isArray(subSortKeys)) {
                 const subHeaders = subSortKeys.map(sk => {
                     const isActiveSubSort = sortState.key === key && sortState.subKey === sk.key;
