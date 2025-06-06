@@ -4,8 +4,8 @@ const t2CriteriaManager = (() => {
     let isUnsaved = false;
 
     function initialize() {
-        const savedCriteria = stateManager.getAppliedT2Criteria();
-        const savedLogic = stateManager.getAppliedT2Logic();
+        const savedCriteria = stateManager.load(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA);
+        const savedLogic = stateManager.load(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC);
 
         if (savedCriteria) {
             appliedCriteria = { ...appliedCriteria, ...savedCriteria };
@@ -44,7 +44,8 @@ const t2CriteriaManager = (() => {
 
     function applyCriteria() {
         appliedCriteria = cloneDeep(currentCriteria);
-        stateManager.setAppliedT2Criteria(appliedCriteria);
+        stateManager.save(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA, appliedCriteria);
+        stateManager.save(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC, appliedCriteria.logic);
         isUnsaved = false;
     }
     
