@@ -2,6 +2,7 @@ const statistikController = (() => {
 
     let mainApp = null;
     let isInitialized = false;
+    let paneElement = null;
 
     function _handleLayoutToggle() {
         const currentLayout = stateManager.getStatsLayout();
@@ -19,7 +20,7 @@ const statistikController = (() => {
         }
         mainApp.updateAndRender();
     }
-    
+
     function _populateSelectors() {
         const select1 = document.getElementById('statistik-kollektiv-select-1');
         const select2 = document.getElementById('statistik-kollektiv-select-2');
@@ -40,22 +41,28 @@ const statistikController = (() => {
         select1.value = selectedValue1;
         select2.value = selectedValue2;
     }
+    
+    function _handleEvents(event) {
+        const target = event.target;
+        if (target.id === 'statistik-toggle-vergleich') {
+            _handleLayoutToggle();
+        } else if (target.matches('#statistik-kollektiv-select-1, #statistik-kollektiv-select-2')) {
+            _handleKollektivSelect(event);
+        }
+    }
 
     function _addEventListeners() {
-        const pane = document.getElementById('statistik-tab-pane');
-        if (!pane) return;
-
-        pane.addEventListener('click', (event) => {
-            if (event.target.id === 'statistik-toggle-vergleich') {
-                _handleLayoutToggle();
-            }
-        });
-
-        pane.addEventListener('change', (event) => {
-            if (event.target.id === 'statistik-kollektiv-select-1' || event.target.id === 'statistik-kollektiv-select-2') {
-                _handleKollektivSelect(event);
-            }
-        });
+        if (paneElement) {
+            paneElement.addEventListener('click', _handleEvents);
+            paneElement.addEventListener('change', _handleEvents);
+        }
+    }
+    
+    function _removeEventListeners() {
+        if (paneElement) {
+            paneElement.removeEventListener('click', _handleEvents);
+            paneElement.removeEventListener('change', _handleEvents);
+        }
     }
 
     function updateView() {
@@ -68,11 +75,13 @@ const statistikController = (() => {
             const isVergleich = layout === 'vergleich';
             toggleBtn.classList.toggle('active', isVergleich);
             toggleBtn.setAttribute('aria-pressed', String(isVergleich));
-            toggleBtn.innerHTML = isVergleich ? '<i class="fas fa-users-cog me-1"></i> Vergleich Aktiv' : '<i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv';
+            toggleBtn.innerHTML = isVergleich 
+                ? '<i class="fas fa-columns me-1"></i> Vergleich Aktiv' 
+                : '<i class="fas fa-user me-1"></i> Einzelansicht Aktiv';
         }
 
-        if (container1) uiHelpers.toggleElementClass(container1.id, 'd-none', layout !== 'vergleich');
-        if (container2) uiHelpers.toggleElementClass(container2.id, 'd-none', layout !== 'vergleich');
+        if (container1) container1.classList.toggle('d-none', layout !== 'vergleich');
+        if (container2) container2.classList.toggle('d-none', layout !== 'vergleich');
 
         _populateSelectors();
     }
@@ -80,13 +89,23 @@ const statistikController = (() => {
     function init(appInterface) {
         if (isInitialized) return;
         mainApp = appInterface;
-        _addEventListeners();
+        paneElement = document.getElementById('statistik-tab-pane');
         isInitialized = true;
+    }
+
+    function onTabEnter() {
+       _addEventListeners();
+       updateView();
+    }
+
+    function onTabExit() {
+       _removeEventListeners();
     }
 
     return Object.freeze({
         init,
-        updateView
+        onTabEnter,
+        onTabExit
     });
 
 })();
