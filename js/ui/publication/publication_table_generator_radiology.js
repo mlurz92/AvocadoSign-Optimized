@@ -1,53 +1,96 @@
-const publicationTables = (() => {
+const publicationTableGeneratorRadiology = (() => {
 
-    function _formatMetricForTable(metricData, isRate = true, digits = 1, lang = 'de') {
-        if (!metricData || metricData.value === undefined || metricData.value === null || isNaN(metricData.value)) return 'N/A';
+    function _formatTableCell(value, digits = 1, lang = 'de', options = {}) {
+        const { isRate = false, isPValue = false, isMeanSD = false, isMedianIQR = false, isRange = false, isCount = false } = options;
+        const naStr = 'N/A';
 
-        const formatSingleValue = (val, d, isP) => {
-            if (val === null || val === undefined || isNaN(val) || !isFinite(val)) return 'N/A';
-            let formattedNum;
-            if (isP) {
-                formattedNum = formatPercent(val, d, 'N/A');
-            } else {
-                formattedNum = formatNumber(val, d, 'N/A', lang === 'en');
-            }
-            return formattedNum;
-        };
-
-        const valStr = formatSingleValue(metricData.value, digits, isRate);
-        if (valStr === 'N/A') return valStr;
-
-        if (metricData.ci && metricData.ci.lower !== null && metricData.ci.upper !== null && !isNaN(metricData.ci.lower) && !isNaN(metricData.ci.upper) && isFinite(metricData.ci.lower) && isFinite(metricData.ci.upper)) {
-            const lowerStr = formatSingleValue(metricData.ci.lower, digits, isRate);
-            const upperStr = formatSingleValue(metricData.ci.upper, digits, isRate);
-            if (lowerStr === 'N/A' || upperStr === 'N/A') return valStr;
-            const ciText = lang === 'de' ? '95%-KI' : '95% CI';
-
-            let mainValForDisplay = valStr;
-            let lowerValForDisplay = lowerStr;
-            let upperValForDisplay = upperStr;
-
-            if(isRate){
-                mainValForDisplay = String(mainValForDisplay).replace('%','');
-                lowerValForDisplay = String(lowerValForDisplay).replace('%','');
-                upperValForDisplay = String(upperValForDisplay).replace('%','');
-                return `${mainValForDisplay} (${ciText}: ${lowerValForDisplay}\u00A0–\u00A0${upperValForDisplay})%`;
-            } else {
-                 return `${mainValForDisplay} (${ciText}: ${lowerValForDisplay}\u00A0–\u00A0${upperValForDisplay})`;
-            }
+        if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) {
+            return naStr;
         }
-        return valStr;
+
+        if (isPValue) {
+            if (value < 0.001) return '< .001';
+            if (value > 0.99) return '> .99';
+            let pFormatted;
+            if (value < 0.01) pFormatted = value.toFixed(3);
+            else if (Math.abs(value - 0.05) < 0.005 && value !== 0.05) pFormatted = value.toFixed(3);
+            else pFormatted = value.toFixed(2);
+            return pFormatted.replace(/^0\./, '.');
+        }
+
+        if (isMeanSD && typeof value === 'object' && value.mean !== undefined && value.sd !== undefined) {
+            const meanStr = _formatTableCell(value.mean, digits, lang);
+            const sdStr = _formatTableCell(value.sd, digits, lang);
+            return `${meanStr} ± ${sdStr}`;
+        }
+
+        if (isMedianIQR && typeof value === 'object' && value.median !== undefined) {
+            const medianStr = _formatTableCell(value.median, digits, lang);
+            const q1Str = value.q1 !== undefined ? _formatTableCell(value.q1, digits, lang) : naStr;
+            const q3Str = value.q3 !== undefined ? _formatTableCell(value.q3, digits, lang) : naStr;
+            if (q1Str !== naStr && q3Str !== naStr) {
+                return `${medianStr} (IQR: ${q1Str}–${q3Str})`;
+            }
+            return medianStr;
+        }
+        
+        if (isRange && typeof value === 'object' && value.min !== undefined && value.max !== undefined) {
+            const minStr = _formatTableCell(value.min, digits, lang);
+            const maxStr = _formatTableCell(value.max, digits, lang);
+            return `${minStr}–${maxStr}`;
+        }
+
+
+        if (isRate) {
+            const numValue = parseFloat(value);
+            if (isNaN(numValue) || !isFinite(numValue)) return naStr;
+            let percentString = (numValue * 100).toFixed(digits);
+            if (lang === 'de') percentString = percentString.replace('.', ',');
+            return `${percentString}%`;
+        }
+
+        if (isCount) {
+            const numValue = parseInt(value, 10);
+            if (isNaN(numValue)) return naStr;
+            return formatNumber(numValue, 0, naStr, lang === 'en');
+        }
+
+        const numValue = parseFloat(value);
+        if (isNaN(numValue) || !isFinite(numValue)) return naStr;
+        let numStr = numValue.toFixed(digits);
+        if (lang === 'de') numStr = numStr.replace('.', ',');
+        return numStr;
     }
 
-    function _renderLiteraturT2KriterienTabelle(lang) {
-        let tableHTML = `<h4 class="mt-4 mb-3" id="${PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle.id}-title">${lang === 'de' ? PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle.titleDe : PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle.titleEn}</h4>`;
-        tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle.id}">
+    function _formatCIForTable(metricValue, ciLower, ciUpper, digits = 1, isRate = true, lang = 'de') {
+        const valueStr = _formatTableCell(metricValue, digits, lang, { isRate });
+        if (valueStr === 'N/A') return 'N/A';
+
+        const lowerStr = _formatTableCell(ciLower, digits, lang, { isRate });
+        const upperStr = _formatTableCell(ciUpper, digits, lang, { isRate });
+
+        if (lowerStr === 'N/A' || upperStr === 'N/A') return valueStr;
+        
+        let valuePart = valueStr;
+        let ciPart = `${lowerStr}, ${upperStr}`;
+        if(isRate) {
+            valuePart = valueStr.replace('%','');
+            ciPart = `${lowerStr.replace('%','')}, ${upperStr.replace('%','')}`;
+        }
+        return `${valuePart} (${ciPart})`;
+    }
+
+
+    function _renderLiteraturT2KriterienTabelleRadiology(lang) {
+        const tableConfig = PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle;
+        let tableHTML = `<h5 class="mt-4 mb-2" id="${tableConfig.id}-title">${lang === 'de' ? tableConfig.titleDe : tableConfig.titleEn}</h5>`;
+        tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableConfig.id}">
             <thead>
                 <tr>
                     <th>${lang === 'de' ? 'Studie / Kriteriensatz' : 'Study / Criteria Set'}</th>
-                    <th>${lang === 'de' ? 'Primäres Zielkollektiv (Orig.)' : 'Primary Target Cohort (Orig.)'}</th>
-                    <th>${lang === 'de' ? 'Kernkriterien (Kurzfassung)' : 'Core Criteria (Summary)'}</th>
-                    <th>${lang === 'de' ? 'Logik' : 'Logic'}</th>
+                    <th>${lang === 'de' ? 'Primäres Zielkollektiv (Originalstudie)' : 'Primary Target Cohort (Original Study)'}</th>
+                    <th>${lang === 'de' ? 'Kernkriterien (Zusammenfassung)' : 'Core Criteria (Summary)'}</th>
+                    <th>${lang === 'de' ? 'Logische Verknüpfung' : 'Logic'}</th>
                 </tr>
             </thead><tbody>`;
 
@@ -55,38 +98,41 @@ const publicationTables = (() => {
             const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(conf.id);
             if (studySet) {
                 const kriterienText = studySet.logic === 'KOMBINIERT' ?
-                    (studySet.studyInfo?.keyCriteriaSummary || studySet.description) :
+                    (studySet.studyInfo?.keyCriteriaSummary || studySet.description || (lang === 'de' ? 'Kombinierte Logik gemäß Publikation' : 'Combined logic as per publication')) :
                     studyT2CriteriaManager.formatCriteriaForDisplay(studySet.criteria, studySet.logic, false);
 
                 tableHTML += `<tr>
-                                <td>${studySet.name || studySet.labelKey}</td>
-                                <td>${getKollektivDisplayName(studySet.applicableKollektiv)} (${studySet.context || 'N/A'})</td>
-                                <td style="white-space: normal;">${kriterienText || 'Keine Beschreibung'}</td>
+                                <td>${studySet.name || UI_TEXTS.kollektivDisplayNames[studySet.id] || studySet.labelKey}</td>
+                                <td>${getKollektivDisplayName(studySet.applicableKollektiv)} ${(studySet.context && studySet.context !== studySet.applicableKollektiv) ? `(${(studySet.studyInfo?.patientCohort || studySet.context || 'N/A')})` : ''}</td>
+                                <td style="white-space: normal;">${kriterienText || (lang === 'de' ? 'Keine Beschreibung' : 'No description')}</td>
                                 <td>${UI_TEXTS.t2LogicDisplayNames[studySet.logic] || studySet.logic}</td>
                               </tr>`;
             }
         });
-        tableHTML += `</tbody></table></div>`;
+        tableHTML += `</tbody>
+            <tfoot>
+                <tr><td colspan="4" class="small text-muted">${lang === 'de' ? 'ESGAR = European Society of Gastrointestinal and Abdominal Radiology.' : 'ESGAR = European Society of Gastrointestinal and Abdominal Radiology.'}</td></tr>
+            </tfoot>
+        </table></div>`;
         return tableHTML;
     }
 
-    function _renderPatientenCharakteristikaTabelle(allKollektivStats, lang) {
-        if (!allKollektivStats || !allKollektivStats.Gesamt || !allKollektivStats.Gesamt.deskriptiv) return `<p class="text-muted small">Keine ausreichenden Patientendaten für Tabelle 1 verfügbar.</p>`;
-        let tableHTML = `<h4 class="mt-4 mb-3" id="${PUBLICATION_CONFIG.publicationElements.ergebnisse.patientenCharakteristikaTabelle.id}-title">${lang === 'de' ? PUBLICATION_CONFIG.publicationElements.ergebnisse.patientenCharakteristikaTabelle.titleDe : PUBLICATION_CONFIG.publicationElements.ergebnisse.patientenCharakteristikaTabelle.titleEn}</h4>`;
-        tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${PUBLICATION_CONFIG.publicationElements.ergebnisse.patientenCharakteristikaTabelle.id}">
+    function _renderPatientenCharakteristikaTabelleRadiology(allKollektivStats, lang, commonData) {
+        const tableConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse.patientenCharakteristikaTabelle;
+        if (!allKollektivStats || !allKollektivStats.Gesamt || !allKollektivStats.Gesamt.deskriptiv) return `<p class="text-muted small">${lang === 'de' ? 'Keine ausreichenden Patientendaten für Tabelle Ergebnisse 1 verfügbar.' : 'Insufficient patient data for Results Table 1.'}</p>`;
+
+        let tableHTML = `<h5 class="mt-4 mb-2" id="${tableConfig.id}-title">${lang === 'de' ? tableConfig.titleDe : tableConfig.titleEn}</h5>`;
+        tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableConfig.id}">
             <thead>
                 <tr>
                     <th>${lang === 'de' ? 'Merkmal' : 'Characteristic'}</th>
-                    <th>${getKollektivDisplayName('Gesamt')} (N=${allKollektivStats.Gesamt?.deskriptiv?.anzahlPatienten || 0})</th>
-                    <th>${getKollektivDisplayName('direkt OP')} (N=${allKollektivStats['direkt OP']?.deskriptiv?.anzahlPatienten || 0})</th>
-                    <th>${getKollektivDisplayName('nRCT')} (N=${allKollektivStats.nRCT?.deskriptiv?.anzahlPatienten || 0})</th>
+                    <th>${getKollektivDisplayName('Gesamt')} (n=${_formatTableCell(allKollektivStats.Gesamt?.deskriptiv?.anzahlPatienten, 0, lang, {isCount: true})})</th>
+                    <th>${getKollektivDisplayName('direkt OP')} (n=${_formatTableCell(allKollektivStats['direkt OP']?.deskriptiv?.anzahlPatienten, 0, lang, {isCount: true})})</th>
+                    <th>${getKollektivDisplayName('nRCT')} (n=${_formatTableCell(allKollektivStats.nRCT?.deskriptiv?.anzahlPatienten, 0, lang, {isCount: true})})</th>
                 </tr>
             </thead><tbody>`;
-
-        const fVal = (val, dig = 1, placeholder = 'N/A', useStd = false) => formatNumber(val, dig, placeholder, useStd);
-        const fPerc = (count, total, dig = 1) => (total > 0 && count !== undefined && count !== null && !isNaN(count)) ? formatPercent(count / total, dig) : 'N/A';
+        
         const na = 'N/A';
-
         const addRow = (labelDe, labelEn, getterGesamt, getterDirektOP, getterNRCT) => {
             const pGesamt = allKollektivStats.Gesamt?.deskriptiv;
             const pDirektOP = allKollektivStats['direkt OP']?.deskriptiv;
@@ -99,201 +145,192 @@ const publicationTables = (() => {
                           </tr>`;
         };
 
-        addRow('Alter, Median (Min–Max) [Jahre]', 'Age, Median (Min–Max) [Years]',
-            p => `${fVal(p.alter?.median,1,undefined,lang==='en')} (${fVal(p.alter?.min,0,undefined,lang==='en')}–${fVal(p.alter?.max,0,undefined,lang==='en')})`,
-            p => `${fVal(p.alter?.median,1,undefined,lang==='en')} (${fVal(p.alter?.min,0,undefined,lang==='en')}–${fVal(p.alter?.max,0,undefined,lang==='en')})`,
-            p => `${fVal(p.alter?.median,1,undefined,lang==='en')} (${fVal(p.alter?.min,0,undefined,lang==='en')}–${fVal(p.alter?.max,0,undefined,lang==='en')})`
+        addRow(lang === 'de' ? 'Alter (Jahre), Median (IQR)' : 'Age (years), median (IQR)', lang === 'de' ? 'Alter (Jahre), Median (IQR)' : 'Age (years), median (IQR)',
+            p => _formatTableCell(p.alter, 0, lang, { isMedianIQR: true }),
+            p => _formatTableCell(p.alter, 0, lang, { isMedianIQR: true }),
+            p => _formatTableCell(p.alter, 0, lang, { isMedianIQR: true })
         );
-        addRow('Geschlecht, männlich [n (%)]', 'Sex, male [n (%)]',
-            p => `${p.geschlecht?.m ?? 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})`,
-            p => `${p.geschlecht?.m ?? 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})`,
-            p => `${p.geschlecht?.m ?? 0} (${fPerc(p.geschlecht?.m, p.anzahlPatienten)})`
+         addRow(lang === 'de' ? 'Alter (Jahre), Mittelwert ± SD' : 'Age (years), mean ± SD', lang === 'de' ? 'Alter (Jahre), Mittelwert ± SD' : 'Age (years), mean ± SD',
+            p => _formatTableCell(p.alter, 1, lang, { isMeanSD: true }),
+            p => _formatTableCell(p.alter, 1, lang, { isMeanSD: true }),
+            p => _formatTableCell(p.alter, 1, lang, { isMeanSD: true })
         );
-        addRow('Pathologischer N-Status, positiv [n (%)]', 'Pathological N-Status, positive [n (%)]',
-            p => `${p.nStatus?.plus ?? 0} (${fPerc(p.nStatus?.plus, p.anzahlPatienten)})`,
-            p => `${p.nStatus?.plus ?? 0} (${fPerc(p.nStatus?.plus, p.anzahlPatienten)})`,
-            p => `${p.nStatus?.plus ?? 0} (${fPerc(p.nStatus?.plus, p.anzahlPatienten)})`
+        addRow(lang === 'de' ? 'Geschlecht, männlich, n (%)' : 'Sex, male, n (%)', lang === 'de' ? 'Geschlecht, männlich, n (%)' : 'Sex, male, n (%)',
+            p => `${_formatTableCell(p.geschlecht?.m,0,lang,{isCount:true})} (${_formatPercentForPub(p.geschlecht?.m, p.anzahlPatienten, 0, lang)})`,
+            p => `${_formatTableCell(p.geschlecht?.m,0,lang,{isCount:true})} (${_formatPercentForPub(p.geschlecht?.m, p.anzahlPatienten, 0, lang)})`,
+            p => `${_formatTableCell(p.geschlecht?.m,0,lang,{isCount:true})} (${_formatPercentForPub(p.geschlecht?.m, p.anzahlPatienten, 0, lang)})`
         );
-        tableHTML += `
-            <tr>
-                <td colspan="4" class="small text-muted" style="text-align: left;">
-                    ${lang === 'de' ? 'Hinweis: Diese Tabelle enthält eine Zusammenfassung der demografischen und klinischen Merkmale der Studienteilnehmer. Informationen zu Rasse und Ethnizität wurden in dieser Studie nicht erhoben. Bei zukünftigen Erhebungen würden diese Informationen, falls verfügbar, gemäß den Journalrichtlinien detailliert berichtet werden, inklusive der Quelle der Klassifizierung und der Auflistung spezifischer Kategorien in alphabetischer Reihenfolge.' : 'Note: This table summarizes the demographic and clinical characteristics of the study participants. Information on race and ethnicity was not collected in this study. In future data collection, if available, such information would be reported in detail according to journal guidelines, including the source of classification and listing specific categories in alphabetical order.'}
-                </td>
-            </tr>
-        `;
-        tableHTML += `</tbody></table></div>`;
+        addRow(lang === 'de' ? 'Pathologischer N-Status, positiv, n (%)' : 'Pathologic N-status, positive, n (%)', lang === 'de' ? 'Pathologischer N-Status, positiv, n (%)' : 'Pathologic N-status, positive, n (%)',
+            p => `${_formatTableCell(p.nStatus?.plus,0,lang,{isCount:true})} (${_formatPercentForPub(p.nStatus?.plus, p.anzahlPatienten, 1, lang)})`,
+            p => `${_formatTableCell(p.nStatus?.plus,0,lang,{isCount:true})} (${_formatPercentForPub(p.nStatus?.plus, p.anzahlPatienten, 1, lang)})`,
+            p => `${_formatTableCell(p.nStatus?.plus,0,lang,{isCount:true})} (${_formatPercentForPub(p.nStatus?.plus, p.anzahlPatienten, 1, lang)})`
+        );
+         tableHTML += `</tbody>
+            <tfoot>
+                <tr><td colspan="4" class="small text-muted">${lang === 'de' ? 'IQR = Interquartilsabstand (Q1–Q3), SD = Standardabweichung, nRCT = neoadjuvante Radiochemotherapie.' : 'IQR = interquartile range (Q1–Q3), SD = standard deviation, nRCT = neoadjuvant chemoradiotherapy.'}</td></tr>
+            </tfoot>
+        </table></div>`;
         return tableHTML;
     }
 
-    function _renderDiagnostischeGueteTabellen(allKollektivStats, lang, sectionId, commonData) {
-        if (!allKollektivStats) return '<p class="text-muted small">Keine Gütedaten für diese Sektion verfügbar.</p>';
+    function _renderDiagnostischeGueteTabelleRadiology(allKollektivStats, lang, sectionId, commonData) {
+        if (!allKollektivStats) return `<p class="text-muted small">${lang === 'de' ? 'Keine Gütedaten verfügbar.' : 'No performance data available.'}</p>`;
         let tableHTML = '';
-        let tableIdForHTML = 'pub-table-default-guete';
-        let tableTitleDe = 'Diagnostische Güte';
-        let tableTitleEn = 'Diagnostic Performance';
-
-        const kollektive = ['Gesamt', 'direkt OP', 'nRCT'];
+        let tableConfig = null;
         const bfZielMetric = commonData.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
 
-        const renderTableRows = (methodName, statsGetter) => {
+        switch(sectionId) {
+            case 'ergebnisse_as_diagnostische_guete':
+                tableConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteASTabelle;
+                break;
+            case 'ergebnisse_t2_literatur_diagnostische_guete':
+                tableConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteLiteraturT2Tabelle;
+                break;
+            case 'ergebnisse_t2_optimiert_diagnostische_guete':
+                tableConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle;
+                break;
+            default: return `<p class="text-warning small">${lang === 'de' ? 'Unbekannter Tabellentyp für diagnostische Güte.' : 'Unknown table type for diagnostic performance.'}</p>`;
+        }
+
+        const titleDe = tableConfig.titleDe.replace('{BF_METRIC}', bfZielMetric);
+        const titleEn = tableConfig.titleEn.replace('{BF_METRIC}', bfZielMetric);
+        tableHTML += `<h5 class="mt-4 mb-2" id="${tableConfig.id}-title">${lang === 'de' ? titleDe : titleEn}</h5>`;
+        tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableConfig.id}">
+            <thead><tr>
+                <th>${lang==='de'?'Methode / Kriteriensatz':'Method / Criteria Set'}</th>
+                <th>${lang==='de'?'Kollektiv (n)':'Cohort (n)'}</th>
+                <th>${lang==='de'?'Sensitivität':'Sensitivity'} (%) (95% CI)</th>
+                <th>${lang==='de'?'Spezifität':'Specificity'} (%) (95% CI)</th>
+                <th>PPV (%) (95% CI)</th>
+                <th>NPV (%) (95% CI)</th>
+                <th>${lang==='de'?'Genauigkeit':'Accuracy'} (%) (95% CI)</th>
+                <th>AUC (95% CI)</th>
+            </tr></thead><tbody>`;
+
+        const renderRows = (methodDisplayName, statsGetter, kollektivIds) => {
             let rows = '';
-            kollektive.forEach(kolId => {
+            kollektivIds.forEach(kolId => {
                 const stats = statsGetter(kolId);
                 const currentKollektivData = allKollektivStats?.[kolId]?.deskriptiv;
                 const nPat = currentKollektivData?.anzahlPatienten || 0;
+                const displayName = getKollektivDisplayName(kolId);
 
                  if (stats && stats.matrix && (stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn > 0)) {
                     rows += `<tr>
-                                <td>${methodName}</td>
-                                <td>${getKollektivDisplayName(kolId)} (N=${nPat})</td>
-                                <td>${_formatMetricForTable(stats.sens, true, 1, lang)}</td>
-                                <td>${_formatMetricForTable(stats.spez, true, 1, lang)}</td>
-                                <td>${_formatMetricForTable(stats.ppv, true, 1, lang)}</td>
-                                <td>${_formatMetricForTable(stats.npv, true, 1, lang)}</td>
-                                <td>${_formatMetricForTable(stats.acc, true, 1, lang)}</td>
-                                <td>${_formatMetricForTable(stats.auc, false, 3, lang)}</td>
+                                <td>${methodDisplayName}</td>
+                                <td>${displayName} (${_formatTableCell(nPat,0,lang,{isCount:true})})</td>
+                                <td>${_formatCIForTable(stats.sens?.value, stats.sens?.ci?.lower, stats.sens?.ci?.upper, 1, true, lang)}</td>
+                                <td>${_formatCIForTable(stats.spez?.value, stats.spez?.ci?.lower, stats.spez?.ci?.upper, 1, true, lang)}</td>
+                                <td>${_formatCIForTable(stats.ppv?.value, stats.ppv?.ci?.lower, stats.ppv?.ci?.upper, 1, true, lang)}</td>
+                                <td>${_formatCIForTable(stats.npv?.value, stats.npv?.ci?.lower, stats.npv?.ci?.upper, 1, true, lang)}</td>
+                                <td>${_formatCIForTable(stats.acc?.value, stats.acc?.ci?.lower, stats.acc?.ci?.upper, 1, true, lang)}</td>
+                                <td>${_formatCIForTable(stats.auc?.value, stats.auc?.ci?.lower, stats.auc?.ci?.upper, 2, false, lang)}</td>
                               </tr>`;
                 } else {
                      rows += `<tr>
-                                <td>${methodName}</td>
-                                <td>${getKollektivDisplayName(kolId)} (N=${nPat > 0 ? nPat : '?'})</td>
+                                <td>${methodDisplayName}</td>
+                                <td>${displayName} (${_formatTableCell(nPat,0,lang,{isCount:true})})</td>
                                 <td colspan="6" class="text-center text-muted small"><em>${lang === 'de' ? 'Keine validen Daten' : 'No valid data'}</em></td>
                               </tr>`;
                 }
             });
             return rows;
         };
-
-        const renderSingleKollektivTableRows = (methodName, kolIdForSet, stats) => {
-            let rows = '';
-            const currentKollektivData = allKollektivStats?.[kolIdForSet]?.deskriptiv;
-            const nPat = currentKollektivData?.anzahlPatienten || 0;
-
-            if (stats && stats.matrix && (stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn > 0)) {
-                 rows += `<tr>
-                            <td>${methodName}</td>
-                            <td>${getKollektivDisplayName(kolIdForSet)} (N=${nPat})</td>
-                            <td>${_formatMetricForTable(stats.sens, true, 1, lang)}</td>
-                            <td>${_formatMetricForTable(stats.spez, true, 1, lang)}</td>
-                            <td>${_formatMetricForTable(stats.ppv, true, 1, lang)}</td>
-                            <td>${_formatMetricForTable(stats.npv, true, 1, lang)}</td>
-                            <td>${_formatMetricForTable(stats.acc, true, 1, lang)}</td>
-                            <td>${_formatMetricForTable(stats.auc, false, 3, lang)}</td>
-                          </tr>`;
-            } else {
-                 rows += `<tr>
-                            <td>${methodName}</td>
-                            <td>${getKollektivDisplayName(kolIdForSet)} (N=${nPat > 0 ? nPat : '?'})</td>
-                            <td colspan="6" class="text-center text-muted small"><em>${lang === 'de' ? 'Keine validen Daten oder nicht anwendbar' : 'No valid data or not applicable'}</em></td>
-                          </tr>`;
-            }
-            return rows;
-        };
+        
+        const kollektiveToRender = ['Gesamt', 'direkt OP', 'nRCT'];
 
         if (sectionId === 'ergebnisse_as_diagnostische_guete') {
-            tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteASTabelle.id;
-            tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteASTabelle.titleDe;
-            tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteASTabelle.titleEn;
-            tableHTML += `<h4 class="mt-4 mb-3" id="${tableIdForHTML}-title">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
-            tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdForHTML}"><thead><tr><th>${lang==='de'?'Methode':'Method'}</th><th>${lang==='de'?'Kollektiv':'Cohort'}</th><th>Sens. (95%-KI)</th><th>Spez. (95%-KI)</th><th>PPV (95%-KI)</th><th>NPV (95%-KI)</th><th>Acc. (95%-KI)</th><th>AUC (95%-KI)</th></tr></thead><tbody>`;
-            tableHTML += renderTableRows('Avocado Sign', (kolId) => allKollektivStats?.[kolId]?.gueteAS);
-            tableHTML += `</tbody></table></div>`;
+            tableHTML += renderRows('Avocado Sign', (kolId) => allKollektivStats?.[kolId]?.gueteAS, kollektiveToRender);
         } else if (sectionId === 'ergebnisse_t2_literatur_diagnostische_guete') {
-            tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteLiteraturT2Tabelle.id;
-            tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteLiteraturT2Tabelle.titleDe;
-            tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteLiteraturT2Tabelle.titleEn;
-            tableHTML += `<h4 class="mt-4 mb-3" id="${tableIdForHTML}-title">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
-            tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdForHTML}"><thead><tr><th>${lang==='de'?'Kriteriensatz':'Criteria Set'}</th><th>${lang==='de'?'Angew. Kollektiv':'Applied Cohort'}</th><th>Sens. (95%-KI)</th><th>Spez. (95%-KI)</th><th>PPV (95%-KI)</th><th>NPV (95%-KI)</th><th>Acc. (95%-KI)</th><th>AUC (95%-KI)</th></tr></thead><tbody>`;
             PUBLICATION_CONFIG.literatureCriteriaSets.forEach(conf => {
                 const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(conf.id);
                 if(studySet){
                     const targetKollektivForStudy = studySet.applicableKollektiv || 'Gesamt';
                     const stats = allKollektivStats?.[targetKollektivForStudy]?.gueteT2_literatur?.[conf.id];
-                    tableHTML += renderSingleKollektivTableRows(studySet.name || studySet.labelKey, targetKollektivForStudy, stats);
+                    tableHTML += renderRows(studySet.name || UI_TEXTS.kollektivDisplayNames[studySet.id] || studySet.labelKey, () => stats, [targetKollektivForStudy]);
                 }
             });
-            tableHTML += `</tbody></table></div>`;
         } else if (sectionId === 'ergebnisse_t2_optimiert_diagnostische_guete') {
-            tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.id;
-            tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.titleDe.replace('{BF_METRIC}', bfZielMetric);
-            tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.diagnostischeGueteOptimierteT2Tabelle.titleEn.replace('{BF_METRIC}', bfZielMetric);
-            tableHTML += `<h4 class="mt-4 mb-3" id="${tableIdForHTML}-title">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
-            tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdForHTML}"><thead><tr><th>${lang==='de'?'Optimierungs-Ziel':'Optimization Target'}</th><th>${lang==='de'?'Kollektiv':'Cohort'}</th><th>Sens. (95%-KI)</th><th>Spez. (95%-KI)</th><th>PPV (95%-KI)</th><th>NPV (95%-KI)</th><th>Acc. (95%-KI)</th><th>AUC (95%-KI)</th></tr></thead><tbody>`;
-            tableHTML += renderTableRows(`Optimiert für ${bfZielMetric}`, (kolId) => allKollektivStats?.[kolId]?.gueteT2_bruteforce);
-            tableHTML += `</tbody></table></div>`;
-        } else if (sectionId === 'ergebnisse_vergleich_as_vs_t2') {
-             tableIdForHTML = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.id;
-             tableTitleDe = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.titleDe;
-             tableTitleEn = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle.titleEn;
-             tableHTML += `<h4 class="mt-4 mb-3" id="${tableIdForHTML}-title">${lang === 'de' ? tableTitleDe : tableTitleEn}</h4>`;
-             tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableIdForHTML}">
-                <thead><tr>
-                    <th>${lang==='de'?'Vergleich':'Comparison'}</th>
-                    <th>${lang==='de'?'Kollektiv':'Cohort'}</th>
-                    <th>${lang==='de'?'Methode 1':'Method 1'} (AUC)</th>
-                    <th>${lang==='de'?'Methode 2':'Method 2'} (AUC)</th>
-                    <th>${lang==='de'?'Diff. AUC (M1–M2)':'AUC Diff. (M1–M2)'}</th>
-                    <th>DeLong p-Wert (AUC)</th>
-                    <th>McNemar p-Wert (Acc.)</th>
-                </tr></thead><tbody>`;
-
-            kollektive.forEach(kolId => {
-                const asStats = allKollektivStats?.[kolId]?.gueteAS;
-
-                const litSetConf = PUBLICATION_CONFIG.literatureCriteriaSets.find(lc => {
-                    const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(lc.id);
-                    return studySet && (studySet.applicableKollektiv === kolId || (studySet.applicableKollektiv === 'Gesamt' && kolId === 'Gesamt'));
-                });
-
-                const litStats = litSetConf ? allKollektivStats?.[kolId]?.gueteT2_literatur?.[litSetConf.id] : null;
-                const bfStats = allKollektivStats?.[kolId]?.gueteT2_bruteforce;
-                const bfDef = allKollektivStats?.[kolId]?.bruteforce_definition;
-
-                const vergleichASvsLit = litSetConf ? allKollektivStats?.[kolId]?.[`vergleichASvsT2_literatur_${litSetConf.id}`] : null;
-                const vergleichASvsBF = allKollektivStats?.[kolId]?.vergleichASvsT2_bruteforce;
-
-                let diffAucLitStr = formatNumber(vergleichASvsLit?.delong?.diffAUC, 3, 'N/A', true);
-                if (lang === 'de' && diffAucLitStr !== 'N/A') diffAucLitStr = diffAucLitStr.replace('.', ',');
-                else if (lang === 'en' && diffAucLitStr !== 'N/A') diffAucLitStr = diffAucLitStr.replace(',', '.');
-
-
-                let diffAucBfStr = formatNumber(vergleichASvsBF?.delong?.diffAUC, 3, 'N/A', true);
-                if (lang === 'de' && diffAucBfStr !== 'N/A') diffAucBfStr = diffAucBfStr.replace('.', ',');
-                else if (lang === 'en' && diffAucBfStr !== 'N/A') diffAucBfStr = diffAucBfStr.replace(',', '.');
-
-
-                if (asStats && litStats && vergleichASvsLit) {
-                    tableHTML += `<tr>
-                        <td>AS vs. Literatur (${studyT2CriteriaManager.getStudyCriteriaSetById(litSetConf.id)?.displayShortName || litSetConf.labelKey || litSetConf.id})</td>
-                        <td>${getKollektivDisplayName(kolId)}</td>
-                        <td>AS (${_formatMetricForTable(asStats.auc, false, 3, lang)})</td>
-                        <td>Lit. (${_formatMetricForTable(litStats.auc, false, 3, lang)})</td>
-                        <td>${diffAucLitStr}</td>
-                        <td>${getPValueText(vergleichASvsLit.delong?.pValue, lang)} ${getStatisticalSignificanceSymbol(vergleichASvsLit.delong?.pValue)}</td>
-                        <td>${getPValueText(vergleichASvsLit.mcnemar?.pValue, lang)} ${getStatisticalSignificanceSymbol(vergleichASvsLit.mcnemar?.pValue)}</td>
-                    </tr>`;
-                }
-                 if (asStats && bfStats && vergleichASvsBF && bfDef) {
-                     tableHTML += `<tr>
-                        <td>AS vs. BF-Optimiert (${bfDef.metricName || bfZielMetric})</td>
-                        <td>${getKollektivDisplayName(kolId)}</td>
-                        <td>AS (${_formatMetricForTable(asStats.auc, false, 3, lang)})</td>
-                        <td>BF (${_formatMetricForTable(bfStats.auc, false, 3, lang)})</td>
-                        <td>${diffAucBfStr}</td>
-                        <td>${getPValueText(vergleichASvsBF.delong?.pValue, lang)} ${getStatisticalSignificanceSymbol(vergleichASvsBF.delong?.pValue)}</td>
-                        <td>${getPValueText(vergleichASvsBF.mcnemar?.pValue, lang)} ${getStatisticalSignificanceSymbol(vergleichASvsBF.mcnemar?.pValue)}</td>
-                    </tr>`;
-                 }
-            });
-            tableHTML += `</tbody></table></div>`;
+            tableHTML += renderRows(lang === 'de' ? `Optimierte T2-Kriterien (für ${bfZielMetric})` : `Optimized T2 Criteria (for ${bfZielMetric})`, (kolId) => allKollektivStats?.[kolId]?.gueteT2_bruteforce, kollektiveToRender);
         }
+        tableHTML += `</tbody>
+            <tfoot>
+                <tr><td colspan="8" class="small text-muted">${lang === 'de' ? 'PPV = Positiver Prädiktiver Wert, NPV = Negativer Prädiktiver Wert, AUC = Fläche unter der Kurve (hier äquivalent zur Balanced Accuracy). Alle Konfidenzintervalle (CI) sind 95%-Intervalle.' : 'PPV = positive predictive value, NPV = negative predictive value, AUC = area under the curve (here equivalent to balanced accuracy). All confidence intervals (CI) are 95% CIs.'}</td></tr>
+            </tfoot>
+        </table></div>`;
+        return tableHTML;
+    }
+    
+    function _renderStatistischerVergleichAST2TabelleRadiology(allKollektivStats, lang, commonData) {
+        const tableConfig = PUBLICATION_CONFIG.publicationElements.ergebnisse.statistischerVergleichAST2Tabelle;
+        const bfZielMetric = commonData.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
+
+        let tableHTML = `<h5 class="mt-4 mb-2" id="${tableConfig.id}-title">${lang === 'de' ? tableConfig.titleDe : tableConfig.titleEn}</h5>`;
+        tableHTML += `<div class="table-responsive"><table class="table table-sm table-bordered table-striped small publication-table" id="${tableConfig.id}">
+            <thead><tr>
+                <th>${lang==='de'?'Vergleich':'Comparison'}</th>
+                <th>${lang==='de'?'Kollektiv':'Cohort'}</th>
+                <th>${lang==='de'?'AUC Methode 1':'AUC Method 1'} (95% CI)</th>
+                <th>${lang==='de'?'AUC Methode 2':'AUC Method 2'} (95% CI)</th>
+                <th>${lang==='de'?'Differenz AUC (M1–M2)':'AUC Difference (M1–M2)'}</th>
+                <th>DeLong ${lang==='de'?'p-Wert':'P value'} (AUC)</th>
+                <th>McNemar ${lang==='de'?'p-Wert':'P value'} (Accuracy)</th>
+            </tr></thead><tbody>`;
+
+        const kollektive = ['Gesamt', 'direkt OP', 'nRCT'];
+        kollektive.forEach(kolId => {
+            const asStats = allKollektivStats?.[kolId]?.gueteAS;
+
+            const litSetConf = PUBLICATION_CONFIG.literatureCriteriaSets.find(lc => {
+                const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(lc.id);
+                return studySet && (studySet.applicableKollektiv === kolId || (studySet.applicableKollektiv === 'Gesamt' && kolId === 'Gesamt'));
+            });
+
+            const litStats = litSetConf ? allKollektivStats?.[kolId]?.gueteT2_literatur?.[litSetConf.id] : null;
+            const bfStats = allKollektivStats?.[kolId]?.gueteT2_bruteforce;
+            const bfDef = allKollektivStats?.[kolId]?.bruteforce_definition;
+
+            const vergleichASvsLit = litSetConf ? allKollektivStats?.[kolId]?.[`vergleichASvsT2_literatur_${litSetConf.id}`] : null;
+            const vergleichASvsBF = allKollektivStats?.[kolId]?.vergleichASvsT2_bruteforce;
+
+            if (asStats && litStats && vergleichASvsLit) {
+                const litSetName = studyT2CriteriaManager.getStudyCriteriaSetById(litSetConf.id)?.displayShortName || UI_TEXTS.kollektivDisplayNames[litSetConf.id] || litSetConf.id;
+                tableHTML += `<tr>
+                    <td>AS vs. ${litSetName}</td>
+                    <td>${getKollektivDisplayName(kolId)}</td>
+                    <td>${_fCIForTable(asStats.auc, 2, false, lang)}</td>
+                    <td>${_fCIForTable(litStats.auc, 2, false, lang)}</td>
+                    <td>${_formatTableCell(vergleichASvsLit.delong?.diffAUC, 2, lang, {forceSign: true})}</td>
+                    <td>${_formatTableCell(vergleichASvsLit.delong?.pValue, 3, lang, {isPValue: true})}</td>
+                    <td>${_formatTableCell(vergleichASvsLit.mcnemar?.pValue, 3, lang, {isPValue: true})}</td>
+                </tr>`;
+            }
+             if (asStats && bfStats && vergleichASvsBF && bfDef) {
+                 tableHTML += `<tr>
+                    <td>AS vs. ${lang === 'de' ? 'Optimierte T2 (für ' : 'Optimized T2 (for '}${bfDef.metricName || bfZielMetric})</td>
+                    <td>${getKollektivDisplayName(kolId)}</td>
+                    <td>${_fCIForTable(asStats.auc, 2, false, lang)}</td>
+                    <td>${_fCIForTable(bfStats.auc, 2, false, lang)}</td>
+                    <td>${_formatTableCell(vergleichASvsBF.delong?.diffAUC, 2, lang, {forceSign: true})}</td>
+                    <td>${_formatTableCell(vergleichASvsBF.delong?.pValue, 3, lang, {isPValue: true})}</td>
+                    <td>${_formatTableCell(vergleichASvsBF.mcnemar?.pValue, 3, lang, {isPValue: true})}</td>
+                </tr>`;
+             }
+        });
+        tableHTML += `</tbody>
+            <tfoot>
+                <tr><td colspan="7" class="small text-muted">${lang === 'de' ? 'AUC = Fläche unter der Kurve. Alle Konfidenzintervalle (CI) sind 95%-Intervalle. P-Werte < .05 gelten als statistisch signifikant.' : 'AUC = area under the curve. All confidence intervals (CI) are 95% CIs. P values < .05 were considered statistically significant.'}</td></tr>
+            </tfoot>
+        </table></div>`;
         return tableHTML;
     }
 
+
     return Object.freeze({
-        renderLiteraturT2KriterienTabelle: _renderLiteraturT2KriterienTabelle,
-        renderPatientenCharakteristikaTabelle: _renderPatientenCharakteristikaTabelle,
-        renderDiagnostischeGueteTabellen: _renderDiagnostischeGueteTabellen
+        renderLiteraturT2KriterienTabelleRadiology: _renderLiteraturT2KriterienTabelleRadiology,
+        renderPatientenCharakteristikaTabelleRadiology: _renderPatientenCharakteristikaTabelleRadiology,
+        renderDiagnostischeGueteTabelleRadiology: _renderDiagnostischeGueteTabellenRadiology,
+        renderStatistischerVergleichAST2TabelleRadiology: _renderStatistischerVergleichAST2TabelleRadiology
     });
 
 })();
