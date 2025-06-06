@@ -4,10 +4,8 @@ const auswertungRenderer = (() => {
         const displayName = getKollektivDisplayName(kollektivName);
         let html = `<h3 class="mb-3">Dashboard: Kollektiv ${displayName}</h3><div class="row g-3">`;
 
-        if (!dashboardStats) {
-            html += `<div class="col-12"><p class="text-center text-muted p-3">Keine Dashboard-Daten verfügbar.</p></div>`;
-            html += `</div><hr class="my-4">`;
-            return html;
+        if (!dashboardStats || dashboardStats.count === 0) {
+            return `${html}<div class="col-12"><p class="text-center text-muted p-3">Keine Dashboard-Daten für dieses Kollektiv verfügbar.</p></div></div><hr class="my-4">`;
         }
 
         const cards = [
@@ -20,15 +18,13 @@ const auswertungRenderer = (() => {
         ];
 
         cards.forEach(card => {
-            const tooltipText = (TOOLTIP_CONTENT.deskriptiveStatistik[card.tooltipKey]?.description || card.title).replace('[KOLLEKTIV]', `<strong>${displayName}</strong>`);
+            const tooltipText = (TOOLTIP_CONTENT.headerStats[card.tooltipKey] || card.title).replace('[KOLLEKTIV]', `<strong>${displayName}</strong>`);
             html += `
-                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 dashboard-card-col">
-                    <div class="card dashboard-card h-100" data-tippy-content="${tooltipText}">
-                        <div class="card-header card-header-sm p-1">${card.title}</div>
-                        <div class="card-body p-2">
-                            <div id="${card.id}" class="dashboard-chart-container" style="min-height: 150px;">
-                                <p class="text-center text-muted small pt-4">Lade Diagramm...</p>
-                            </div>
+                <div class="col-xl-2 col-lg-4 col-md-6 col-sm-6">
+                    <div class="card h-100" data-tippy-content="${tooltipText}">
+                        <div class="card-header card-header-sm text-center">${card.title}</div>
+                        <div class="card-body p-1 d-flex align-items-center justify-content-center">
+                            <div id="${card.id}" class="dashboard-chart-container" style="min-height: 150px; width:100%;"></div>
                         </div>
                     </div>
                 </div>`;
@@ -39,52 +35,43 @@ const auswertungRenderer = (() => {
     }
 
     function _createT2KriterienDefinitionHTML(currentCriteria, currentLogic) {
-        let html = `
-            <div class="row">
-                <div class="col-lg-8">
-                    <h3 class="mb-3">T2-Kriterien Definition</h3>
-                </div>
-                <div class="col-lg-4 text-lg-end">
-                     <span id="t2-criteria-unsaved-indicator" class="badge bg-warning text-dark p-2 d-none" data-tippy-content="${TOOLTIP_CONTENT.t2CriteriaCard.unsavedIndicator}">Ungespeicherte Änderungen!</span>
-                </div>
-            </div>
+        return `
+            <h3 class="mb-3">T2-Kriterien Definition (Live-Analyse)</h3>
             <div class="card t2-criteria-card mb-4" id="t2-criteria-definition-card">
                 <div class="card-body">
-                    <div class="row g-3">
+                    <div class="row g-3 align-items-start">
                         <div class="col-md-6 col-lg-3 criteria-group">
-                            ${uiComponents.createCriteriaToggle('size', currentCriteria.size.active, TOOLTIP_CONTENT.t2Size.description)}
-                            ${uiComponents.createRangeSlider('size', currentCriteria.size.threshold, APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE, currentCriteria.size.active)}
+                            ${uiComponents.createCriteriaToggle('size', currentCriteria.size.active)}
+                            ${uiComponents.createRangeSlider('size', currentCriteria.size.threshold, currentCriteria.size.active)}
                         </div>
                         <div class="col-md-6 col-lg-2 criteria-group">
-                            ${uiComponents.createCriteriaToggle('form', currentCriteria.form.active, TOOLTIP_CONTENT.t2Form.description)}
-                            ${uiComponents.createRadioOptions('form', APP_CONFIG.T2_CRITERIA_SETTINGS.FORM_VALUES, currentCriteria.form.value, currentCriteria.form.active)}
+                            ${uiComponents.createCriteriaToggle('form', currentCriteria.form.active)}
+                            ${uiComponents.createRadioOptions('form', currentCriteria.form.value, currentCriteria.form.active)}
                         </div>
                         <div class="col-md-6 col-lg-2 criteria-group">
-                            ${uiComponents.createCriteriaToggle('kontur', currentCriteria.kontur.active, TOOLTIP_CONTENT.t2Kontur.description)}
-                            ${uiComponents.createRadioOptions('kontur', APP_CONFIG.T2_CRITERIA_SETTINGS.KONTUR_VALUES, currentCriteria.kontur.value, currentCriteria.kontur.active)}
+                            ${uiComponents.createCriteriaToggle('kontur', currentCriteria.kontur.active)}
+                            ${uiComponents.createRadioOptions('kontur', currentCriteria.kontur.value, currentCriteria.kontur.active)}
                         </div>
                         <div class="col-md-6 col-lg-2 criteria-group">
-                            ${uiComponents.createCriteriaToggle('homogenitaet', currentCriteria.homogenitaet.active, TOOLTIP_CONTENT.t2Homogenitaet.description)}
-                            ${uiComponents.createRadioOptions('homogenitaet', APP_CONFIG.T2_CRITERIA_SETTINGS.HOMOGENITAET_VALUES, currentCriteria.homogenitaet.value, currentCriteria.homogenitaet.active)}
+                            ${uiComponents.createCriteriaToggle('homogenitaet', currentCriteria.homogenitaet.active)}
+                            ${uiComponents.createRadioOptions('homogenitaet', currentCriteria.homogenitaet.value, currentCriteria.homogenitaet.active)}
                         </div>
-                        <div class="col-md-6 col-lg-3 criteria-group">
-                            ${uiComponents.createCriteriaToggle('signal', currentCriteria.signal.active, TOOLTIP_CONTENT.t2Signal.description)}
-                            ${uiComponents.createRadioOptions('signal', APP_CONFIG.T2_CRITERIA_SETTINGS.SIGNAL_VALUES, currentCriteria.signal.value, currentCriteria.signal.active)}
+                        <div class="col-md-12 col-lg-3 criteria-group">
+                            ${uiComponents.createCriteriaToggle('signal', currentCriteria.signal.active)}
+                            ${uiComponents.createRadioOptions('signal', currentCriteria.signal.value, currentCriteria.signal.active)}
                         </div>
                     </div>
                     <hr class="my-3">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center">
-                        <div class="me-3 mb-2 mb-md-0">
-                            ${uiComponents.createLogicSwitch(currentLogic, TOOLTIP_CONTENT.t2Logic.description)}
+                    <div class="d-flex flex-wrap justify-content-end align-items-center">
+                        <div class="me-auto">
+                            ${uiComponents.createLogicSwitch(currentLogic)}
                         </div>
-                        <div class="btn-toolbar" role="toolbar">
-                            <button class="btn btn-sm btn-outline-secondary me-2" id="btn-reset-criteria" data-tippy-content="${TOOLTIP_CONTENT.t2Actions.reset}"><i class="fas fa-undo fa-fw me-1"></i>Zurücksetzen</button>
-                            <button class="btn btn-sm btn-primary" id="btn-apply-criteria" data-tippy-content="${TOOLTIP_CONTENT.t2Actions.apply}"><i class="fas fa-check-circle fa-fw me-1"></i>Anwenden & Speichern</button>
-                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" id="btn-reset-criteria-defaults" data-tippy-content="Setzt die T2-Kriterien auf die empfohlenen Standardwerte der Anwendung zurück.">
+                            <i class="fas fa-undo fa-fw me-1"></i>Standard wiederherstellen
+                        </button>
                     </div>
                 </div>
             </div>`;
-        return html;
     }
 
     function _createT2MetricsOverviewHTML(stats, kollektivName) {
@@ -92,7 +79,7 @@ const auswertungRenderer = (() => {
         let contentHTML;
 
         if (!stats || !stats.matrix || stats.matrix.rp === undefined) {
-            contentHTML = `<p class="m-0 text-muted small">Metriken für angewandte T2-Kriterien sind für das Kollektiv ${displayName} nicht verfügbar. Bitte Kriterien anwenden.</p>`;
+            contentHTML = `<p class="m-0 text-muted small">Metriken für angewandte T2-Kriterien sind für das Kollektiv ${displayName} nicht verfügbar.</p>`;
         } else {
             const metrics = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc'];
             const metricDisplayNames = { sens: 'Sens', spez: 'Spez', ppv: 'PPV', npv: 'NPV', acc: 'Acc', balAcc: 'BalAcc' };
@@ -102,18 +89,20 @@ const auswertungRenderer = (() => {
                 const interpretationHTML = uiHelpers.getMetricInterpretationHTML(key, metricData, 'T2 (angewandt)', displayName);
                 const formattedValue = formatCI(metricData?.value, metricData?.ci?.lower, metricData?.ci?.upper, 1, true, '--');
                 contentHTML += `
-                    <div class="p-1 flex-fill bd-highlight ${index > 0 ? 'border-start' : ''}">
-                        <strong data-tippy-content="${uiHelpers.getMetricDescriptionHTML(key, 'T2 (angewandt)')}">${metricDisplayNames[key]}:</strong>
+                    <div class="p-1 flex-fill bd-highlight ${index > 0 ? 'border-start' : ''}" style="min-width: 110px;">
+                        <strong data-tippy-content="${getMetricDescriptionHTML(key, 'T2 (angewandt)')}">${metricDisplayNames[key]}:</strong>
                         <span data-tippy-content="${interpretationHTML}"> ${formattedValue}</span>
                     </div>`;
             });
             contentHTML += '</div>';
         }
 
-        return `<h3 class="mb-3">T2 Metrik-Übersicht (Angewandte Kriterien)</h3>
-                <div class="card mb-4" data-tippy-content="${(TOOLTIP_CONTENT.t2MetricsOverview.cardTitle || 'Kurzübersicht').replace('[KOLLEKTIV]', `<strong>${displayName}</strong>`)}">
-                    <div class="card-body p-2">${contentHTML}</div>
-                </div><hr class="my-4">`;
+        const tooltip = (TOOLTIP_CONTENT.t2MetricsOverview.cardTitle || 'Kurzübersicht').replace('[KOLLEKTIV]', `<strong>${displayName}</strong>`);
+        return `
+            <h3 class="mb-3">T2 Metrik-Übersicht</h3>
+            <div class="card mb-4" data-tippy-content="${tooltip}">
+                <div class="card-body p-2">${contentHTML}</div>
+            </div><hr class="my-4">`;
     }
 
     function _createBruteForcePanelHTML(isWorkerAvailable, kollektivName) {
@@ -128,12 +117,10 @@ const auswertungRenderer = (() => {
                             <select class="form-select form-select-sm" id="brute-force-metric" data-tippy-content="${TOOLTIP_CONTENT.bruteForceMetric.description}">${metricOptions}</select>
                         </div>
                         <div class="col-md-4 col-lg-3">
-                            <button class="btn btn-primary btn-sm w-100" id="btn-start-brute-force" ${!isWorkerAvailable ? 'disabled' : ''} data-tippy-content="${TOOLTIP_CONTENT.bruteForceStart.description}">
+                            <button class="btn btn-primary w-100" id="btn-start-brute-force" ${!isWorkerAvailable ? 'disabled' : ''} data-tippy-content="${TOOLTIP_CONTENT.bruteForceStart.description}">
                                 <i class="fas fa-cogs fa-fw me-1"></i>Optimierung starten
                             </button>
-                        </div>
-                        <div class="col-md-3 col-lg-2">
-                            <button class="btn btn-danger btn-sm w-100 d-none" id="btn-cancel-brute-force" data-tippy-content="Aktuelle Optimierung abbrechen">
+                            <button class="btn btn-danger w-100 d-none" id="btn-cancel-brute-force" data-tippy-content="Aktuelle Optimierung abbrechen">
                                 <i class="fas fa-stop-circle fa-fw me-1"></i>Stopp
                             </button>
                         </div>
@@ -142,16 +129,13 @@ const auswertungRenderer = (() => {
                         Status: Bereit für Kollektiv <strong>${getKollektivDisplayName(kollektivName)}</strong>.
                     </div>
                     <div id="brute-force-progress-container" class="mt-2 d-none"></div>
-                    <div id="brute-force-result-container" class="mt-3 d-none"></div>
+                    <div id="brute-force-result-container" class="mt-3"></div>
                 </div>
             </div><hr class="my-4">`;
     }
 
     function _createAuswertungTableHTML(data, sortState, appliedCriteria, appliedLogic) {
-        const tableId = 'auswertung-table';
-        const tableBodyId = 'auswertung-table-body';
         const noDataMessage = `<td colspan="8" class="text-center text-muted p-3">Keine Patientendaten für das aktuelle Kollektiv verfügbar.</td>`;
-
         const headers = [
             { key: 'expand', label: '', sortable: false, class: 'text-center p-1', style: 'width: 40px;' },
             { key: 'nr', label: 'Nr.', sortable: true, tooltip: TOOLTIP_CONTENT.auswertungTable.nr.description },
@@ -164,12 +148,7 @@ const auswertungRenderer = (() => {
         ];
 
         const tableHeaderHTML = tableRenderer.createSortableTableHeaders(headers, sortState);
-        let tableBodyHTML = '';
-        if (!data || data.length === 0) {
-            tableBodyHTML = `<tr>${noDataMessage}</tr>`;
-        } else {
-            tableBodyHTML = data.map(patient => tableRenderer.createAuswertungTableRow(patient, appliedCriteria, appliedLogic)).join('');
-        }
+        const tableBodyHTML = (!data || data.length === 0) ? `<tr>${noDataMessage}</tr>` : data.map(patient => tableRenderer.createAuswertungTableRow(patient, appliedCriteria, appliedLogic)).join('');
 
         return `
             <h3 class="mb-3">Patienten-Auswertungstabelle</h3>
@@ -179,9 +158,9 @@ const auswertungRenderer = (() => {
                 </button>
             </div>
             <div class="table-responsive">
-                <table class="table table-sm table-hover data-table" id="${tableId}">
+                <table class="table table-sm table-hover data-table" id="auswertung-table">
                     ${tableHeaderHTML}
-                    <tbody id="${tableBodyId}">${tableBodyHTML}</tbody>
+                    <tbody id="auswertung-table-body">${tableBodyHTML}</tbody>
                 </table>
             </div>`;
     }
