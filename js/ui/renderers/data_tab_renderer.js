@@ -13,11 +13,11 @@ const dataTabRenderer = (() => {
             detailHtml += `<div class="col-12 col-md-6 col-lg-4">
                             <div class="sub-row-item border rounded">
                                 <strong class="me-2">LK #${index + 1}:</strong>
-                                <span class="me-2">${uiComponents.getIconForT2Feature('size', lk.groesse, true)}Größe: ${formatNumber(lk.groesse, 1, 'N/A')}mm</span>
-                                <span class="me-2">${uiComponents.getIconForT2Feature('form', lk.form)}Form: ${lk.form || 'N/A'}</span>
-                                <span class="me-2">${uiComponents.getIconForT2Feature('kontur', lk.kontur)}Kontur: ${lk.kontur || 'N/A'}</span>
-                                <span class="me-2">${uiComponents.getIconForT2Feature('homogenitaet', lk.homogenitaet)}Signalhomogenität: ${lk.homogenitaet || 'N/A'}</span>
-                                <span class="me-2">${uiComponents.getIconForT2Feature('signal', lk.signal)}Signalintensität: ${lk.signal || 'N/A'}</span>
+                                <span class="me-2">${window.uiComponents.getIconForT2Feature('size', lk.groesse, true)}Größe: ${formatNumber(lk.groesse, 1, 'N/A')}mm</span>
+                                <span class="me-2">${window.uiComponents.getIconForT2Feature('form', lk.form)}Form: ${lk.form || 'N/A'}</span>
+                                <span class="me-2">${window.uiComponents.getIconForT2Feature('kontur', lk.kontur)}Kontur: ${lk.kontur || 'N/A'}</span>
+                                <span class="me-2">${window.uiComponents.getIconForT2Feature('homogenitaet', lk.homogenitaet)}Signalhomogenität: ${lk.homogenitaet || 'N/A'}</span>
+                                <span class="me-2">${window.uiComponents.getIconForT2Feature('signal', lk.signal)}Signalintensität: ${lk.signal || 'N/A'}</span>
                            </div>
                          </div>`;
         });
@@ -26,7 +26,7 @@ const dataTabRenderer = (() => {
     }
 
     function renderDatenTab(data, sortState) {
-        if (typeof tableRenderer === 'undefined' || typeof uiComponents === 'undefined') {
+        if (typeof window.tableRenderer === 'undefined' || typeof window.uiComponents === 'undefined') {
             console.error("tableRenderer oder uiComponents nicht verfügbar für dataTabRenderer.");
             return '<p class="text-danger p-3">Fehler: Tabellen-Renderer-Komponenten nicht geladen.</p>';
         }
@@ -61,7 +61,7 @@ const dataTabRenderer = (() => {
             { key: 'bemerkung', label: 'Bemerkung', sortable: true, tooltip: TOOLTIP_CONTENT.datenTable.bemerkung.description, style: 'min-width: 150px;' }
         ];
 
-        tableHtml += tableRenderer.createSortableTableHeaders(headers, sortState);
+        tableHtml += window.tableRenderer.createSortableTableHeaders(headers, sortState);
         tableHtml += `<tbody id="${tableBodyId}">`;
 
         if (!data || data.length === 0) {
@@ -83,9 +83,9 @@ const dataTabRenderer = (() => {
                                 <td class="text-center">${patient.alter !== null && patient.alter !== undefined ? patient.alter : 'N/A'}</td>
                                 <td>${patient.therapie || 'N/A'}</td>
                                 <td class="text-center">
-                                    <span class="status-badge ${getStatusClass(patient.n)}">${patient.n || '?'}</span> |
-                                    <span class="status-badge ${getStatusClass(patient.as)}">${patient.as || '?'}</span> |
-                                    <span class="status-badge ${getStatusClass(patient.t2)}">${patient.t2 || '?'}</span>
+                                    <span class="status-badge ${window.getStatusClass(patient.n)}">${patient.n || '?'}</span> |
+                                    <span class="status-badge ${window.getStatusClass(patient.as)}">${patient.as || '?'}</span> |
+                                    <span class="status-badge ${window.getStatusClass(patient.t2)}">${patient.t2 || '?'}</span>
                                 </td>
                                 <td style="white-space: normal; max-width: 300px; overflow-wrap: break-word;">${patient.bemerkung || ''}</td>
                               </tr>`;
