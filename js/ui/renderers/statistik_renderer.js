@@ -1,101 +1,197 @@
-const statistikTabRenderer = (() => {
+const statistikRenderer = (() => {
 
-    function _createLayoutControlsHTML(currentLayout, kollektiv1, kollektiv2, globalKollektiv) {
-        const kollektivOptions = ['Gesamt', 'direkt OP', 'nRCT']
-            .map(k => `<option value="${k}" ${k === globalKollektiv && currentLayout === 'einzel' ? 'disabled' : ''}>${getKollektivDisplayName(k)}</option>`)
-            .join('');
+    function _createDeskriptivTabelleHTML(data, kollektiv) {
+        if (!data) return '<p class="text-muted p-2">Keine deskriptiven Daten verfügbar.</p>';
+        const kollektivName = getKollektivDisplayName(kollektiv);
 
-        const tooltipLayout = TOOLTIP_CONTENT.statistikLayout.description;
-        const tooltipK1 = TOOLTIP_CONTENT.statistikKollektiv1.description;
-        const tooltipK2 = TOOLTIP_CONTENT.statistikKollektiv2.description;
-        const tooltipToggle = TOOLTIP_CONTENT.statistikToggleVergleich.description;
+        const rows = [
+            { label: 'Anzahl Patienten', value: formatNumber(data.count, 0) },
+            { label: 'Alter (Median, IQR)', value: `${formatNumber(data.age.median, 0)} (${formatNumber(data.age.q1, 0)} - ${formatNumber(data.age.q3, 0)})` },
+            { label: 'Geschlechterverteilung (m/w)', value: `${formatNumber(data.gender.m, 0)} / ${formatNumber(data.gender.f, 0)}` }
+        ];
 
-        const displayK1 = currentLayout === 'vergleich' ? 'block' : 'none';
-        const displayK2 = currentLayout === 'vergleich' ? 'block' : 'none';
-        const buttonText = currentLayout === 'vergleich' ? 'Einzelansicht Aktivieren' : 'Vergleich Aktivieren';
-        const buttonIcon = currentLayout === 'vergleich' ? 'fa-user' : 'fa-users';
-
-
-        return `
-            <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 p-3 border rounded bg-light shadow-sm">
-                <div class="me-3 mb-2 mb-md-0">
-                    <button class="btn btn-sm btn-outline-primary" id="statistik-toggle-vergleich" data-tippy-content="${tooltipToggle}">
-                        <i class="fas ${buttonIcon} fa-fw me-1"></i><span id="statistik-layout-button-text">${buttonText}</span>
-                    </button>
-                    <input type="hidden" id="statistik-layout-input" value="${currentLayout}" data-tippy-content="${tooltipLayout}">
-                </div>
-                <div class="d-flex flex-wrap align-items-center">
-                    <div class="me-3 mb-2 mb-md-0" id="statistik-kollektiv1-group" style="display: ${displayK1};">
-                        <label for="statistik-kollektiv-select-1" class="form-label form-label-sm mb-0 me-1">Kollektiv 1:</label>
-                        <select class="form-select form-select-sm d-inline-block" id="statistik-kollektiv-select-1" style="width: auto;" data-tippy-content="${tooltipK1}">
-                            ${kollektivOptions.replace(`value="${kollektiv1}"`, `value="${kollektiv1}" selected`)}
-                        </select>
-                    </div>
-                    <div id="statistik-kollektiv2-group" style="display: ${displayK2};">
-                        <label for="statistik-kollektiv-select-2" class="form-label form-label-sm mb-0 me-1">Kollektiv 2:</label>
-                        <select class="form-select form-select-sm d-inline-block" id="statistik-kollektiv-select-2" style="width: auto;" data-tippy-content="${tooltipK2}">
-                           ${kollektivOptions.replace(`value="${kollektiv2}"`, `value="${kollektiv2}" selected`)}
-                        </select>
-                    </div>
-                </div>
-            </div>
-        `;
+        let tableHTML = '<table class="table table-sm table-borderless table-striped mb-0">';
+        rows.forEach(row => {
+            tableHTML += `<tr><td class="small">${row.label}</td><td class="text-end small"><strong>${row.value}</strong></td></tr>`;
+        });
+        tableHTML += '</table>';
+        return tableHTML;
     }
 
-    function _createSectionHTML(sectionId, titleKey, contentPlaceholderId, extraCardClasses = '', cardTooltipKey = null) {
-        const title = UI_TEXTS.statistikTab.sectionTitles[titleKey] || titleKey.replace(/_/g, ' ');
-        const tooltipText = cardTooltipKey && TOOLTIP_CONTENT.statistikTabTooltips[cardTooltipKey] ? TOOLTIP_CONTENT.statistikTabTooltips[cardTooltipKey].description : title;
-        return `
-            <section id="${sectionId}" class="mb-4">
-                <div class="card stat-card ${extraCardClasses}" data-tippy-content="${tooltipText}">
-                    <div class="card-header">
-                        <h4 class="mb-0">${title}</h4>
-                         <div class="card-header-buttons">
-                            <button class="btn btn-sm btn-outline-secondary table-download-png-btn d-none" data-table-id="${contentPlaceholderId}-table" data-tippy-content="Diese Tabelle als PNG herunterladen">
-                                <i class="fas fa-image"></i> PNG
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary chart-download-btn d-none" data-chart-id="${contentPlaceholderId}-chart" data-format="png" data-tippy-content="Dieses Diagramm als PNG herunterladen">
-                                <i class="fas fa-image"></i> PNG
-                            </button>
-                             <button class="btn btn-sm btn-outline-secondary chart-download-btn d-none" data-chart-id="${contentPlaceholderId}-chart" data-format="svg" data-tippy-content="Dieses Diagramm als SVG herunterladen">
-                                <i class="fas fa-file-alt"></i> SVG
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body" id="${contentPlaceholderId}">
-                        <p class="text-muted text-center p-3">Statistische Daten werden geladen...</p>
-                    </div>
-                </div>
-            </section>
-        `;
+    function _createPerformanceTabelleHTML(data, key, kollektiv, title) {
+        if (!data || !data.matrix) return `<p class="text-muted p-2">Keine Performancedaten für ${title} verfügbar.</p>`;
+        const kollektivName = getKollektivDisplayName(kollektiv);
+
+        const metrics = [
+            { key: 'sens', label: 'Sensitivität' },
+            { key: 'spez', label: 'Spezifität' },
+            { key: 'ppv', label: 'Positiver Prädiktiver Wert' },
+            { key: 'npv', label: 'Negativer Prädiktiver Wert' },
+            { key: 'acc', label: 'Accuracy' },
+            { key: 'balAcc', label: 'Balanced Accuracy' },
+            { key: 'f1', label: 'F1-Score' },
+            { key: 'auc', label: 'Area Under Curve (AUC)' }
+        ];
+
+        let tableHTML = '<table class="table table-sm table-borderless table-striped mb-0">';
+        metrics.forEach(metric => {
+            const metricData = data[metric.key];
+            if (!metricData) return;
+            const formattedValue = formatCI(metricData.value, metricData.ci?.lower, metricData.ci?.upper, metric.key === 'auc' || metric.key === 'f1' ? 3 : 1, metric.key !== 'auc' && metric.key !== 'f1', '--');
+            const tooltipDesc = uiHelpers.getMetricDescriptionHTML(metric.key, title);
+            const tooltipInterp = uiHelpers.getMetricInterpretationHTML(metric.key, metricData, title, kollektivName);
+
+            tableHTML += `
+                <tr>
+                    <td class="small" data-tippy-content="${tooltipDesc}">${metric.label}</td>
+                    <td class="text-end small" data-tippy-content="${tooltipInterp}"><strong>${formattedValue}</strong></td>
+                </tr>`;
+        });
+        tableHTML += '</table>';
+        return tableHTML;
     }
 
-    function renderStatistikTab(processedData, appliedCriteria, appliedLogic, statsLayout, kollektiv1, kollektiv2, globalKollektiv) {
-        if (typeof uiComponents === 'undefined' || typeof statisticsService === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined' || typeof UI_TEXTS === 'undefined') {
-            console.error("Abhängigkeiten für statistikTabRenderer nicht vollständig geladen.");
-            return '<p class="text-danger p-3">Fehler: Wichtige UI oder Statistik Komponenten für den Statistik-Tab nicht geladen.</p>';
+    function _createVergleichstestsTabelleHTML(data, kollektiv) {
+        if (!data || !data.mcnemar || !data.delong) return '<p class="text-muted p-2">Keine Vergleichsdaten verfügbar.</p>';
+        const kollektivName = getKollektivDisplayName(kollektiv);
+        const tests = [
+            { key: 'mcnemar', label: 'McNemar-Test (Sens/Spez)', data: data.mcnemar },
+            { key: 'delong', label: 'DeLong-Test (AUC)', data: data.delong }
+        ];
+
+        let tableHTML = '<table class="table table-sm table-borderless table-striped mb-0">';
+        tests.forEach(test => {
+            const pValueFormatted = test.data.pValue < 0.001 ? '&lt;0.001' : formatNumber(test.data.pValue, 3);
+            const sigSymbol = getStatisticalSignificanceSymbol(test.data.pValue);
+            const tooltipDesc = uiHelpers.getTestDescriptionHTML(test.key, 'T2');
+            const tooltipInterp = uiHelpers.getTestInterpretationHTML(test.key, test.data, kollektivName, 'T2');
+
+            tableHTML += `
+                <tr>
+                    <td class="small" data-tippy-content="${tooltipDesc}">${test.label}</td>
+                    <td class="text-end small" data-tippy-content="${tooltipInterp}">
+                        p = <strong>${pValueFormatted}</strong> ${sigSymbol}
+                    </td>
+                </tr>`;
+        });
+        tableHTML += '</table>';
+        return tableHTML;
+    }
+
+    function _createAssoziationsTabelleHTML(data, kollektiv) {
+        if (!data) return '<p class="text-muted p-2">Keine Assoziationsdaten verfügbar.</p>';
+        const kollektivName = getKollektivDisplayName(kollektiv);
+
+        const tests = [
+            { key: 'size_mwu', label: 'Größe (MWU)', data: data.size_mwu, type: 'p-value' },
+            { key: 'form', label: 'Form (Fisher)', data: data.form, type: 'p-value' },
+            { key: 'kontur', label: 'Kontur (Fisher)', data: data.kontur, type: 'p-value' },
+            { key: 'homogenitaet', label: 'Homogenität (Fisher)', data: data.homogenitaet, type: 'p-value' },
+            { key: 'signal', label: 'Signal (Fisher)', data: data.signal, type: 'p-value' }
+        ];
+
+        let tableHTML = '<table class="table table-sm table-borderless table-striped mb-0">';
+        tests.forEach(test => {
+            const pValueFormatted = test.data.pValue < 0.001 ? '&lt;0.001' : formatNumber(test.data.pValue, 3);
+            const sigSymbol = getStatisticalSignificanceSymbol(test.data.pValue);
+            const tooltipDesc = uiHelpers.getTestDescriptionHTML(test.key, 'N-Status');
+            const tooltipInterp = uiHelpers.getAssociationInterpretationHTML(test.key, test.data, test.label, kollektivName);
+
+            tableHTML += `
+                <tr>
+                    <td class="small" data-tippy-content="${tooltipDesc}">${test.label}</td>
+                    <td class="text-end small" data-tippy-content="${tooltipInterp}">
+                         p = <strong>${pValueFormatted}</strong> ${sigSymbol}
+                    </td>
+                </tr>`;
+        });
+        tableHTML += '</table>';
+        return tableHTML;
+    }
+
+    function _renderEinzelLayout(stats, kollektiv) {
+        const kollektivName = getKollektivDisplayName(kollektiv);
+        const chartDownloadButtons = [
+            { format: 'png', chartId: `chart-as-vs-t2-${kollektiv}`, chartName: `Performance_Vergleich_${kollektiv}` },
+            { format: 'svg', chartId: `chart-as-vs-t2-${kollektiv}`, chartName: `Performance_Vergleich_${kollektiv}` }
+        ];
+
+        return `
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    ${uiComponents.createStatistikCard(`deskriptiv-${kollektiv}`, `Deskriptive Statistik`, _createDeskriptivTabelleHTML(stats.descriptive, kollektiv), true, 'deskriptiveStatistik')}
+                </div>
+                <div class="col-lg-6">
+                    ${uiComponents.createStatistikCard(`assoziation-${kollektiv}`, `Assoziation: T2-Merkmale vs. N-Status`, _createAssoziationsTabelleHTML(stats.associations, kollektiv), true, 'assoziationMerkmale')}
+                </div>
+                <div class="col-lg-6">
+                     ${uiComponents.createStatistikCard(`performance-as-${kollektiv}`, `Performance Avocado Sign`, _createPerformanceTabelleHTML(stats.avocadoSign, 'as', kollektiv, 'Avocado Sign'), true, 'performanceAS')}
+                </div>
+                <div class="col-lg-6">
+                    ${uiComponents.createStatistikCard(`performance-t2-${kollektiv}`, `Performance T2 (angewandte Kriterien)`, _createPerformanceTabelleHTML(stats.t2, 't2', kollektiv, 'T2'), true, 'performanceT2')}
+                </div>
+                <div class="col-lg-6">
+                    ${uiComponents.createStatistikCard(`vergleich-as-t2-${kollektiv}`, `Vergleich: AS vs. T2`, _createVergleichstestsTabelleHTML(stats.comparison, kollektiv), true, 'vergleichASvsT2')}
+                </div>
+                <div class="col-lg-6">
+                    ${uiComponents.createStatistikCard(`chart-container-as-vs-t2-${kollektiv}`, `Performance-Vergleich: ${kollektivName}`, `<div id="chart-as-vs-t2-${kollektiv}" class="chart-container" style="min-height: 350px;"></div>`, true, 'chartASvsT2', chartDownloadButtons)}
+                </div>
+            </div>`;
+    }
+
+    function _renderVergleichLayout(stats, kollektiv1, kollektiv2) {
+        if (!stats.kollektiv1 || !stats.kollektiv2) {
+            return `<p class="p-3 text-center text-muted">Statistikdaten für den Vergleichsmodus konnten nicht geladen werden.</p>`;
         }
+        const kollektiv1Name = getKollektivDisplayName(kollektiv1);
+        const kollektiv2Name = getKollektivDisplayName(kollektiv2);
 
-        let html = _createLayoutControlsHTML(statsLayout, kollektiv1, kollektiv2, globalKollektiv);
+        return `
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="p-2 border rounded">
+                        <h4 class="text-center mb-3">Kollektiv: ${kollektiv1Name}</h4>
+                        ${_renderEinzelLayout(stats.kollektiv1, kollektiv1)}
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="p-2 border rounded">
+                        <h4 class="text-center mb-3">Kollektiv: ${kollektiv2Name}</h4>
+                        ${_renderEinzelLayout(stats.kollektiv2, kollektiv2)}
+                    </div>
+                </div>
+            </div>`;
+    }
 
-        const baseKollektivForDisplay = statsLayout === 'vergleich' ? kollektiv1 : globalKollektiv;
+    function render(stats, layout, kollektiv1, kollektiv2) {
+        let content;
+        const selectorHTML = `
+            <div class="d-flex justify-content-end align-items-center mb-3">
+                <div id="statistik-kollektiv-select-1-container" class="me-2 ${layout === 'vergleich' ? '' : 'd-none'}">
+                    <label for="statistik-kollektiv-select-1" class="form-label form-label-sm me-1">Kollektiv 1:</label>
+                    <select id="statistik-kollektiv-select-1" class="form-select form-select-sm" style="width: auto; display: inline-block;"></select>
+                </div>
+                <div id="statistik-kollektiv-select-2-container" class="me-3 ${layout === 'vergleich' ? '' : 'd-none'}">
+                     <label for="statistik-kollektiv-select-2" class="form-label form-label-sm me-1">Kollektiv 2:</label>
+                    <select id="statistik-kollektiv-select-2" class="form-select form-select-sm" style="width: auto; display: inline-block;"></select>
+                </div>
+                <button id="statistik-toggle-vergleich" class="btn btn-sm btn-outline-primary" data-tippy-content="${TOOLTIP_CONTENT.statistikToggleVergleich.description}">
+                    <i class="fas fa-user-cog me-1"></i> Einzelansicht Aktiv
+                </button>
+            </div>`;
 
-        html += _createSectionHTML('statistik-deskriptiv', 'deskriptiveStatistik', 'deskriptiv-content', '', 'deskriptiveStatistikCard');
-        html += _createSectionHTML('statistik-diagnostik-as', 'diagnostischeGueteAS', 'diagnostik-as-content', '', 'diagnostischeGueteASCard');
-        html += _createSectionHTML('statistik-diagnostik-t2', 'diagnostischeGueteT2', 'diagnostik-t2-content', '', 'diagnostischeGueteT2Card');
-        html += _createSectionHTML('statistik-vergleich-as-t2', 'statistischerVergleichASvsT2', 'vergleich-as-t2-content', '', 'statistischerVergleichASvsT2Card');
-        html += _createSectionHTML('statistik-assoziation', 'assoziationEinzelkriterien', 'assoziation-content', '', 'assoziationEinzelkriterienCard');
-
-        if (statsLayout === 'vergleich') {
-            html += _createSectionHTML('statistik-kollektiv-vergleich', 'vergleichKollektive', 'kollektiv-vergleich-content', '', 'vergleichKollektiveCard');
+        if (!stats) {
+            content = '<p class="p-3 text-center text-muted">Keine Statistikdaten zum Anzeigen vorhanden. Bitte wählen Sie ein Kollektiv aus.</p>';
+        } else if (layout === 'vergleich') {
+            content = _renderVergleichLayout(stats, kollektiv1, kollektiv2);
+        } else {
+            content = _renderEinzelLayout(stats, kollektiv1);
         }
-        html += _createSectionHTML('statistik-kriterien-vergleichstabelle', 'kriterienVergleichstabelle', 'kriterien-vergleichstabelle-content', '', 'kriterienVergleichstabelleCard');
-
-        return html;
+        return selectorHTML + content;
     }
 
     return Object.freeze({
-        renderStatistikTab
+        render
     });
 
 })();
