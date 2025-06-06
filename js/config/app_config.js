@@ -129,7 +129,7 @@ const APP_CONFIG = Object.freeze({
         CSV_DELIMITER: ';',
         COMPREHENSIVE_REPORT_LOGO_URL: '',
         INCLUDE_TIMESTAMP_IN_FILENAME: false,
-        FILENAME_TYPES: Object.freeze({
+        FILENAME_TYPES: Object.FROZEN({
             STATS_CSV: 'StatistikCSV',
             BRUTEFORCE_TXT: 'BruteForceTXT',
             DESKRIPTIV_MD: 'DeskriptiveStatistikMD',
@@ -236,7 +236,15 @@ const APP_CONFIG = Object.freeze({
         APPLIED_CRITERIA_DISPLAY_NAME: 'Eingestellte T2 Kriterien',
         AVOCADO_SIGN_ID: 'avocado_sign',
         AVOCADO_SIGN_DISPLAY_NAME: 'Avocado Sign'
-    })
+    }),
+    
+    METRIC_OPTIONS: Object.freeze([
+        Object.freeze({ value: 'Accuracy', label: 'Accuracy' }),
+        Object.freeze({ value: 'Balanced Accuracy', label: 'Balanced Accuracy' }),
+        Object.freeze({ value: 'F1-Score', label: 'F1-Score' }),
+        Object.freeze({ value: 'PPV', label: 'Positiver Prädiktiver Wert (PPV)' }),
+        Object.freeze({ value: 'NPV', label: 'Negativer Prädiktiver Wert (NPV)' })
+    ])
 });
 
 function getDefaultT2Criteria() {
