@@ -222,7 +222,7 @@ const statistikTabLogic = (() => {
          ];
          const tableId = "table-kriterien-vergleich";
          const displayGlobalKollektivName = window.getKollektivDisplayName(globalKollektivName);
-         let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped table-hover small caption-top" id="${tableId}"><caption>Vergleich verschiedener Kriteriensätze (vs. N) für das globale Kollektiv: ${displayGlobalKollektivName}</caption><thead class="small"><tr>`;
+         let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped table-hover small caption-top" id="${tableId}"><caption>Vergleich verschiedener Kriteriensätze (vs. N) für das globale Kollektiv: ${displayGlobalKollektivName}</caption><thead><tr><th>Test</th><th>Statistik</th><th>p-Wert</th><th>Methode</th></tr></thead><tbody>`;
          headers.forEach(h => {
             const tooltipAttr = h.tooltip ? `data-tippy-content="${h.tooltip}"` : '';
             tableHTML += `<th ${tooltipAttr}>${h.label}</th>`;
