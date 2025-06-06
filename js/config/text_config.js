@@ -19,7 +19,10 @@ const UI_TEXTS = {
         'direkt OP': 'Direkt OP',
         'nRCT': 'nRCT',
         'avocado_sign': 'Avocado Sign',
-        'applied_criteria': 'Eingestellte T2 Kriterien'
+        'applied_criteria': 'Eingestellte T2 Kriterien',
+        'koh_2008_morphology': 'Koh et al. (2008)',
+        'barbaro_2024_restaging': 'Barbaro et al. (2024)',
+        'rutegard_et_al_esgar': 'Rutegård et al. (ESGAR)',
     },
     t2LogicDisplayNames: {
         'UND': 'UND',
@@ -41,6 +44,53 @@ const UI_TEXTS = {
             sidebarTitle: 'Manuskript-Navigation'
         },
         bruteForceMetricSelectLabel: 'Optimierungsmetrik für T2 (BF):'
+    },
+    statistikTab: {
+        sectionTitles: {
+            deskriptiveStatistik: 'Deskriptive Statistik',
+            diagnostischeGueteAS: 'Diagnostische Güte: Avocado Sign',
+            diagnostischeGueteT2: 'Diagnostische Güte: T2-Kriterien (angewandt)',
+            statistischerVergleichASvsT2: 'Statistischer Vergleich: AS vs. T2 (angewandt)',
+            assoziationEinzelkriterien: 'Assoziation: Einzelmerkmale vs. N-Status',
+            vergleichKollektive: 'Vergleich gewählter Kollektive',
+            kriterienVergleichstabelle: 'Performance-Vergleich: AS vs. T2-Sets'
+        },
+        layoutToggleEinzel: 'Einzelansicht Aktivieren',
+        layoutToggleVergleich: 'Vergleich Aktivieren',
+        kollektiv1SelectLabel: 'Kollektiv 1:',
+        kollektiv2SelectLabel: 'Kollektiv 2:'
+    },
+    praesentationTab: {
+        viewSelect: {
+            label: 'Ansicht wählen',
+            asPurLabel: 'Avocado Sign (Performance)',
+            asVsT2Label: 'AS vs. T2 (Vergleich)'
+        },
+        studySelect: {
+            label: 'T2-Vergleichsbasis wählen'
+        },
+        t2BasisInfoCard: {
+            title: "Informationen zur T2-Vergleichsbasis"
+        },
+        demographicsCard: {
+            title: "Demographische Basisdaten (Avocado Sign Kollektiv)"
+        },
+        asPerformanceCard: {
+            title: "Performance Avocado Sign (vs. N-Status)"
+        },
+        asVsT2PerformanceCard: {
+            title: "Vergleich Performance: AS vs. T2-Basis"
+        },
+        asVsT2TestsCard: {
+            title: "Statistische Tests: AS vs. T2-Basis"
+        },
+        asVsT2ChartCard: {
+            title: "Diagramm: AS vs. T2-Basis"
+        }
+    },
+    exportTab: {
+        singleExports: 'Einzelexporte',
+        exportPackages: 'Export-Pakete (.zip)'
     },
     chartTitles: {
         ageDistribution: 'Altersverteilung',
@@ -104,28 +154,10 @@ const UI_TEXTS = {
         pngLabel: "Als PNG herunterladen",
         svgLabel: "Als SVG herunterladen"
     },
-    statMetrics: {
-        signifikanzTexte: {
-            SIGNIFIKANT: "statistisch signifikant",
-            NICHT_SIGNIFIKANT: "statistisch nicht signifikant"
-        },
-        orFaktorTexte: {
-            ERHOEHT: "erhöht",
-            VERRINGERT: "verringert",
-            UNVERAENDERT: "unverändert"
-        },
-        rdRichtungTexte: {
-            HOEHER: "höher",
-            NIEDRIGER: "niedriger",
-            GLEICH: "gleich"
-        },
-        assoziationStaerkeTexte: {
-            stark: "stark",
-            moderat: "moderat",
-            schwach: "schwach",
-            sehr_schwach: "sehr schwach",
-            nicht_bestimmbar: "nicht bestimmbar"
-        }
+    generalMessages: {
+        noDataAvailable: "Keine Daten verfügbar.",
+        loading: "Lade...",
+        errorOccurred: "Ein Fehler ist aufgetreten."
     },
     kurzanleitung: {
         title: "Kurzanleitung & Wichtige Hinweise",
@@ -288,52 +320,36 @@ const UI_TEXTS = {
         statistikKollektiv1: { description: "Wählen Sie das erste Kollektiv für die statistische Auswertung oder den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv')." },
         statistikKollektiv2: { description: "Wählen Sie das zweite Kollektiv für den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv')." },
         statistikToggleVergleich: { description: "Schaltet zwischen der detaillierten Einzelansicht für das global gewählte Kollektiv und der Vergleichsansicht zweier spezifisch wählbarer Kollektive um." },
-        deskriptiveStatistik: {
-            cardTitle: "Demographie, klinische Daten und Lymphknoten-Basiszahlen des Kollektivs <strong>[KOLLEKTIV]</strong>.",
-            alterMedian: { description: "Median des Alters (Jahre) mit Bereich (Min-Max) und [Mittelwert ± Standardabweichung].", name: "Alter", unit: "Jahre" },
-            geschlecht: { description: "Absolute und prozentuale Geschlechterverteilung.", name: "Geschlecht" },
-            nStatus: { description: "Verteilung des pathologischen N-Status (+/-).", name: "N-Status (Patho)"},
-            asStatus: { description: "Verteilung des Avocado Sign Status (+/-).", name: "AS-Status" },
-            t2Status: { description: "Verteilung des T2-Status (+/-) basierend auf den aktuell angewendeten Kriterien.", name: "T2-Status (angewandt)" },
-            lkAnzahlPatho: { description: "Anzahl histopathologisch untersuchter Lymphknoten pro Patient.", name: "LK N gesamt" },
-            lkAnzahlPathoPlus: { description: "Anzahl pathologisch positiver (N+) Lymphknoten bei N+ Patienten.", name: "LK N+" },
-            lkAnzahlAS: { description: "Gesamtzahl im T1KM-MRT sichtbarer Lymphknoten.", name: "LK AS gesamt" },
-            lkAnzahlASPlus: { description: "Anzahl Avocado Sign positiver (AS+) Lymphknoten bei AS+ Patienten.", name: "LK AS+" },
-            lkAnzahlT2: { description: "Gesamtzahl im T2-MRT sichtbarer Lymphknoten.", name: "LK T2 gesamt" },
-            lkAnzahlT2Plus: { description: "Anzahl T2-positiver Lymphknoten (gemäß aktueller Kriterien) bei T2+ Patienten.", name: "LK T2+" },
-            chartAge: { description: "Histogramm der Altersverteilung im Kollektiv <strong>[KOLLEKTIV]</strong>." },
-            chartGender: { description: "Tortendiagramm der Geschlechterverteilung im Kollektiv <strong>[KOLLEKTIV]</strong>." },
-            age: { name: "Alter", description: "Alter des Patienten in Jahren." },
-            gender: { name: "Geschlecht", description: "Geschlecht des Patienten." }
-        },
-        diagnostischeGueteAS: { cardTitle: "Diagnostische Güte des Avocado Signs (AS) vs. Histopathologie (N) für Kollektiv <strong>[KOLLEKTIV]</strong>. Alle Konfidenzintervalle (CI) sind 95%-CIs." },
-        diagnostischeGueteT2: { cardTitle: "Diagnostische Güte der aktuell angewendeten T2-Kriterien vs. Histopathologie (N) für Kollektiv <strong>[KOLLEKTIV]</strong>. Alle CIs sind 95%-CIs." },
-        statistischerVergleichASvsT2: { cardTitle: "Statistischer Vergleich der diagnostischen Leistung von AS vs. aktuell angewandten T2-Kriterien (gepaarte Tests) im Kollektiv <strong>[KOLLEKTIV]</strong>." },
-        assoziationEinzelkriterien: { cardTitle: "Assoziation zwischen AS-Status bzw. einzelnen T2-Merkmalen und dem N-Status (+/-) im Kollektiv <strong>[KOLLEKTIV]</strong>. OR: Odds Ratio, RD: Risk Difference, φ: Phi-Koeffizient. Alle CIs sind 95%-CIs." },
-        vergleichKollektive: { cardTitle: "Statistischer Vergleich der Accuracy und AUC (für AS und T2) zwischen <strong>[KOLLEKTIV1]</strong> und <strong>[KOLLEKTIV2]</strong> (ungepaarte Tests)." },
-        criteriaComparisonTable: {
-            cardTitle: "Tabellarischer Leistungsvergleich: Avocado Sign, angewandte T2-Kriterien und Literatur-Sets für das global gewählte Kollektiv <strong>[GLOBAL_KOLLEKTIV_NAME]</strong>. Literatur-Sets werden auf ihrem spezifischen Zielkollektiv evaluiert, falls abweichend (in Klammern angegeben). Alle Werte ohne CIs.",
-            tableHeaderSet: "Methode / Kriteriensatz (Eval. auf Kollektiv N)",
-            tableHeaderSens: "Sensitivität",
-            tableHeaderSpez: "Spezifität",
-            tableHeaderPPV: "PPV",
-            tableHeaderNPV: "NPV",
-            tableHeaderAcc: "Accuracy",
-            tableHeaderAUC: "AUC / Bal. Accuracy"
+        statistikTabTooltips: {
+            deskriptiveStatistikCard: "Zeigt deskriptive Statistiken (Alter, Geschlecht, N-Status, etc.) und Basis-Lymphknotenzahlen für das ausgewählte Kollektiv bzw. Kollektiv 1 im Vergleichsmodus.",
+            diagnostischeGueteASCard: "Zeigt die detaillierte diagnostische Güte (Sensitivität, Spezifität, PPV, NPV, Accuracy, AUC/Balanced Accuracy) des Avocado Signs im Vergleich zum histopathologischen N-Status für das ausgewählte Kollektiv bzw. Kollektiv 1.",
+            diagnostischeGueteT2Card: "Zeigt die detaillierte diagnostische Güte der aktuell im Auswertungstab **angewendeten und gespeicherten** T2-Kriterien im Vergleich zum histopathologischen N-Status für das ausgewählte Kollektiv bzw. Kollektiv 1.",
+            statistischerVergleichASvsT2Card: "Zeigt die Ergebnisse statistischer Tests (McNemar für Accuracy, DeLong für AUC) zum direkten Vergleich der Performance des Avocado Signs mit den aktuell angewendeten T2-Kriterien für das ausgewählte Kollektiv bzw. Kollektiv 1.",
+            assoziationEinzelkriterienCard: "Analysiert die Assoziation des Avocado Sign Status und einzelner T2-Merkmale (basierend auf den aktuell angewendeten Kriterien) mit dem histopathologischen N-Status. Zeigt Odds Ratios (OR), Risk Differences (RD), Phi-Koeffizienten und p-Werte (Fisher's Exact Test) für das ausgewählte Kollektiv bzw. Kollektiv 1. Für die LK-Größe wird ein Mann-Whitney-U-Test durchgeführt.",
+            vergleichKollektiveCard: "Vergleicht die Accuracy und AUC des Avocado Signs sowie der angewendeten T2-Kriterien zwischen den zwei ausgewählten Kollektiven (Kollektiv 1 vs. Kollektiv 2) mittels ungepaarter statistischer Tests (Fisher's Exact für Accuracy, Z-Test für AUCs). Nur sichtbar, wenn 'Vergleich Aktiv' ausgewählt ist.",
+            kriterienVergleichstabelleCard: "Zeigt eine zusammenfassende Tabelle der diagnostischen Performance (Sens, Spez, PPV, NPV, Acc, AUC) des Avocado Signs, der aktuell angewendeten T2-Kriterien und definierter Literatur-Kriteriensets. Die Auswertung erfolgt jeweils auf dem global gewählten Kollektiv, es sei denn, für ein Literatur-Set ist ein spezifisches Zielkollektiv definiert (dann wird dieses für dieses Set verwendet und in Klammern angezeigt)."
         },
         praesentation: {
             viewSelect: { description: "Wählen Sie die Ansicht: <strong>Avocado Sign (Performance)</strong> für eine Übersicht der AS-Performance oder <strong>AS vs. T2 (Vergleich)</strong> für einen direkten Vergleich von AS mit einer auswählbaren T2-Kriterienbasis." },
             studySelect: { description: "Wählen Sie eine T2-Kriterienbasis für den Vergleich mit dem Avocado Sign. Optionen: aktuell in der App eingestellte Kriterien oder vordefinierte Sets aus publizierten Studien. Die Auswahl aktualisiert die untenstehenden Vergleiche. Das globale Kollektiv passt sich ggf. an das Zielkollektiv der Studie an." },
             t2BasisInfoCard: {
-                title: "Informationen zur T2-Vergleichsbasis",
-                description: "Zeigt Details zu den aktuell für den Vergleich mit AS ausgewählten T2-Kriterien. Die Performance-Werte beziehen sich auf das angegebene Vergleichskollektiv.",
-                reference: "Studienreferenz oder Quelle der Kriterien.",
-                patientCohort: "Ursprüngliche Studienkohorte oder aktuelles Vergleichskollektiv (mit Patientenzahl).",
-                investigationType: "Art der Untersuchung in der Originalstudie (z.B. Primärstaging, Restaging).",
-                focus: "Hauptfokus der Originalstudie bezüglich dieser Kriterien.",
-                keyCriteriaSummary: "Zusammenfassung der angewendeten T2-Kriterien und Logik."
+                description: "Zeigt Details zu den aktuell für den Vergleich mit AS ausgewählten T2-Kriterien. Die Performance-Werte beziehen sich auf das angegebene Vergleichskollektiv: <strong>[CURRENT_KOLLEKTIV_PRAES]</strong>."
             },
-            comparisonTableCard: { description: "Numerische Gegenüberstellung der diagnostischen Gütekriterien für AS vs. die ausgewählte T2-Basis, bezogen auf das aktuelle (Vergleichs-)Kollektiv."},
+            demographicsCard: {
+                description: "Demographische Charakteristika und Basisdaten für das aktuell in der Avocado-Sign-Performance-Ansicht betrachtete Kollektiv: <strong>[CURRENT_KOLLEKTIV_PRAES]</strong>."
+            },
+            asPerformanceCard: {
+                description: "Diagnostische Gütekriterien des Avocado Signs für das aktuell in der Avocado-Sign-Performance-Ansicht betrachtete Kollektiv: <strong>[CURRENT_KOLLEKTIV_PRAES]</strong>."
+            },
+            asVsT2PerformanceCard: {
+                description: "Direkter Vergleich der diagnostischen Gütekriterien zwischen dem Avocado Sign und der ausgewählten T2-Vergleichsbasis <strong>([T2_SHORT_NAME_VERGLEICH])</strong> für das aktuelle Vergleichskollektiv: <strong>[CURRENT_KOLLEKTIV_PRAES]</strong>."
+            },
+            asVsT2TestsCard: {
+                description: "Ergebnisse der statistischen Tests (McNemar für Accuracy, DeLong für AUC) zum Vergleich der Performance zwischen Avocado Sign und der ausgewählten T2-Vergleichsbasis <strong>([T2_SHORT_NAME_VERGLEICH])</strong> für das aktuelle Vergleichskollektiv: <strong>[CURRENT_KOLLEKTIV_PRAES]</strong>."
+            },
+            asVsT2ChartCard: {
+                description: "Visueller Vergleich der Haupt-Gütekriterien (Sens, Spez, PPV, NPV, Acc, AUC) zwischen Avocado Sign und der ausgewählten T2-Vergleichsbasis <strong>([T2_SHORT_NAME_VERGLEICH])</strong> für das aktuelle Vergleichskollektiv: <strong>[CURRENT_KOLLEKTIV_PRAES]</strong>."
+            },
             downloadDemographicsMD: { description: "Lädt die Tabelle der demographischen Basisdaten (nur für Avocado-Sign-Ansicht) als Markdown-Datei (.md) herunter."},
             downloadPerformanceCSV: { description: "Lädt die Tabelle der diagnostischen Güte (je nach Ansicht: AS oder AS vs. T2-Basis) als CSV-Datei (.csv) herunter." },
             downloadPerformanceMD: { description: "Lädt die Tabelle der diagnostischen Güte (je nach Ansicht: AS oder AS vs. T2-Basis) als Markdown-Datei (.md) herunter." },
@@ -343,53 +359,36 @@ const UI_TEXTS = {
             downloadCompChartSVG: { description: "Lädt das Vergleichs-Balkendiagramm (AS vs. T2-Basis) als Vektor-SVG-Datei herunter." },
             downloadTablePNG: { description: "Lädt die angezeigte Tabelle als PNG-Bilddatei herunter." },
             downloadCompTablePNG: { description: "Lädt die Vergleichs-Metrik-Tabelle (AS vs. T2) als PNG-Datei herunter." },
-            asPurPerfTable: {
-                kollektiv: "Patientenkollektiv (N = Anzahl Patienten).",
-                sens: "Sensitivität des Avocado Signs (vs. N) in diesem Kollektiv.",
-                spez: "Spezifität des Avocado Signs (vs. N) in diesem Kollektiv.",
-                ppv: "PPV des Avocado Signs (vs. N) in diesem Kollektiv.",
-                npv: "NPV des Avocado Signs (vs. N) in diesem Kollektiv.",
-                acc: "Accuracy des Avocado Signs (vs. N) in diesem Kollektiv.",
-                auc: "AUC / Balanced Accuracy des Avocado Signs (vs. N) in diesem Kollektiv."
-            },
-            asVsT2PerfTable: {
-                metric: "Diagnostische Metrik.",
-                asValue: "Wert der Metrik für Avocado Sign (AS) (vs. N) im Kollektiv <strong>[KOLLEKTIV_NAME_VERGLEICH]</strong>, inkl. 95% CI.",
-                t2Value: "Wert der Metrik für die T2-Basis <strong>[T2_SHORT_NAME]</strong> (vs. N) im Kollektiv <strong>[KOLLEKTIV_NAME_VERGLEICH]</strong>, inkl. 95% CI."
-            },
-            asVsT2TestTable: {
-                test: "Statistischer Test zum Vergleich von AS vs. <strong>[T2_SHORT_NAME]</strong>.",
-                statistic: "Wert der Teststatistik.",
-                pValue: "p-Wert des Tests. p < 0.05 bedeutet einen statistisch signifikanten Unterschied zwischen AS und <strong>[T2_SHORT_NAME]</strong> in Bezug auf die getestete Metrik (Accuracy oder AUC) im Kollektiv <strong>[KOLLEKTIV_NAME_VERGLEICH]</strong>.",
-                method: "Name des verwendeten statistischen Tests."
-            }
+            'download-praes-t2-info-md': { description: "Lädt die Informationen zur T2-Vergleichsbasis als Markdown-Datei (.md) herunter."},
         },
         exportTab: {
-            singleExports: "Einzelexporte",
-            exportPackages: "Export-Pakete (.zip)",
             description: "Ermöglicht den Export von Analyseergebnissen, Tabellen und Diagrammen basierend auf dem aktuell gewählten globalen Kollektiv (<strong>[KOLLEKTIV]</strong>) und den aktuell angewendeten T2-Kriterien.",
-            statsCSV: { description: "Detaillierte Tabelle aller berechneten statistischen Metriken (deskriptiv, Güte AS & T2, Vergleiche, Assoziationen) aus dem Statistik-Tab als CSV-Datei.", type: 'STATS_CSV', ext: "csv" },
-            statsXLSX: { description: "Exportiert die detaillierte Tabelle aller berechneten statistischen Metriken (wie CSV-Export) als Excel-Datei (.xlsx).", type: 'STATISTIK_XLSX', ext: "xlsx" },
-            bruteForceTXT: { description: "Detaillierter Bericht der letzten Brute-Force-Optimierung für das aktuelle Kollektiv (Top 10 Ergebnisse, Konfiguration) als Textdatei (.txt), falls durchgeführt.", type: 'BRUTEFORCE_TXT', ext: "txt" },
-            deskriptivMD: { description: "Tabelle der deskriptiven Statistik (Statistik-Tab) als Markdown (.md).", type: 'DESKRIPTIV_MD', ext: "md" },
-            datenMD: { description: "Aktuelle Datenliste (Daten-Tab) als Markdown-Tabelle (.md).", type: 'DATEN_MD', ext: "md" },
-            datenXLSX: { description: "Aktuelle Datenliste (Daten-Tab) als Excel-Datei (.xlsx).", type: 'DATEN_XLSX', ext: "xlsx" },
-            auswertungMD: { description: "Aktuelle Auswertungstabelle (Auswertung-Tab, inkl. T2-Ergebnisse) als Markdown (.md).", type: 'AUSWERTUNG_MD', ext: "md" },
-            auswertungXLSX: { description: "Aktuelle Auswertungstabelle (Auswertung-Tab, inkl. T2-Ergebnisse) als Excel-Datei (.xlsx).", type: 'AUSWERTUNG_XLSX', ext: "xlsx" },
-            filteredDataCSV: { description: "Rohdaten des aktuell ausgewählten Kollektivs (inkl. T2-Bewertung) als CSV-Datei (.csv).", type: 'FILTERED_DATA_CSV', ext: "csv" },
-            filteredDataXLSX: { description: "Rohdaten des aktuell ausgewählten Kollektivs (inkl. T2-Bewertung) als Excel-Datei (.xlsx).", type: 'FILTERED_DATA_XLSX', ext: "xlsx" },
-            comprehensiveReportHTML: { description: "Umfassender Analysebericht als HTML-Datei (Statistiken, Konfigurationen, Diagramme), druckbar.", type: 'COMPREHENSIVE_REPORT_HTML', ext: "html" },
-            chartsPNG: { description: "Alle aktuell sichtbaren Diagramme (Statistik, Auswertung, Präsentation) und ausgewählte Tabellen als einzelne PNG-Dateien (ZIP-Archiv).", type: 'PNG_ZIP', ext: "zip" },
-            chartsSVG: { description: "Alle aktuell sichtbaren Diagramme (Statistik, Auswertung, Präsentation) als einzelne SVG-Dateien (ZIP-Archiv).", type: 'SVG_ZIP', ext: "zip" },
-            chartSinglePNG: { description: "Ausgewähltes Diagramm '{ChartName}' als PNG-Datei.", type: 'CHART_SINGLE_PNG', ext: "png"},
-            chartSingleSVG: { description: "Ausgewähltes Diagramm '{ChartName}' als SVG-Datei (Vektorformat).", type: 'CHART_SINGLE_SVG', ext: "svg"},
-            tableSinglePNG: { description: "Ausgewählte Tabelle '{TableName}' als PNG-Bilddatei.", type: 'TABLE_PNG_EXPORT', ext: "png"},
-            allZIP: { description: "Alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT, alle MDs, Rohdaten-CSV, HTML-Report) in einem ZIP-Archiv.", type: 'ALL_ZIP', ext: "zip"},
-            csvZIP: { description: "Alle verfügbaren CSV-Dateien (Statistik, Rohdaten) in einem ZIP-Archiv.", type: 'CSV_ZIP', ext: "zip"},
-            mdZIP: { description: "Alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikationstexte) in einem ZIP-Archiv.", type: 'MD_ZIP', ext: "md"},
-            pngZIP: { description: "Identisch zum 'Diagramme & Tabellen (PNG)' Einzel-Export.", type: 'PNG_ZIP', ext: "zip"},
-            svgZIP: { description: "Identisch zum 'Diagramme (SVG)' Einzel-Export.", type: 'SVG_ZIP', ext: "zip"},
-            xlsxZIP: { description: "Alle verfügbaren Excel-Dateien in einem ZIP-Archiv.", type: 'XLSX_ZIP', ext: "xlsx"}
+            STATS_CSV: { description: "Detaillierte Tabelle aller berechneten statistischen Metriken (deskriptiv, Güte AS & T2, Vergleiche, Assoziationen) aus dem Statistik-Tab als CSV-Datei." },
+            STATS_XLSX: { description: "Exportiert die detaillierte Tabelle aller berechneten statistischen Metriken (wie CSV-Export) als Excel-Datei (.xlsx)." },
+            BRUTEFORCE_TXT: { description: "Detaillierter Bericht der letzten Brute-Force-Optimierung für das aktuelle Kollektiv (Top 10 Ergebnisse, Konfiguration) als Textdatei (.txt), falls durchgeführt." },
+            DESKRIPTIV_MD: { description: "Tabelle der deskriptiven Statistik (Statistik-Tab) als Markdown (.md)." },
+            DATEN_MD: { description: "Aktuelle Datenliste (Daten-Tab) als Markdown-Tabelle (.md)." },
+            DATEN_XLSX: { description: "Aktuelle Datenliste (Daten-Tab) als Excel-Datei (.xlsx)." },
+            AUSWERTUNG_MD: { description: "Aktuelle Auswertungstabelle (Auswertung-Tab, inkl. T2-Ergebnisse) als Markdown (.md)." },
+            AUSWERTUNG_XLSX: { description: "Aktuelle Auswertungstabelle (Auswertung-Tab, inkl. T2-Ergebnisse) als Excel-Datei (.xlsx)." },
+            FILTERED_DATA_CSV: { description: "Rohdaten des aktuell ausgewählten Kollektivs (inkl. T2-Bewertung) als CSV-Datei (.csv)." },
+            FILTERED_DATA_XLSX: { description: "Rohdaten des aktuell ausgewählten Kollektivs (inkl. T2-Bewertung) als Excel-Datei (.xlsx)." },
+            COMPREHENSIVE_REPORT_HTML: { description: "Umfassender Analysebericht als HTML-Datei (Statistiken, Konfigurationen, Diagramme), druckbar." },
+            CHARTS_PNG: { description: "Alle aktuell sichtbaren Diagramme (Statistik, Auswertung, Präsentation) und ausgewählte Tabellen als einzelne PNG-Dateien (ZIP-Archiv)." },
+            CHARTS_SVG: { description: "Alle aktuell sichtbaren Diagramme (Statistik, Auswertung, Präsentation) als einzelne SVG-Dateien (ZIP-Archiv)." },
+            ALL_ZIP: { description: "Alle verfügbaren Einzeldateien (Statistik-CSV, BruteForce-TXT, alle MDs, Rohdaten-CSV, HTML-Report) in einem ZIP-Archiv."},
+            CSV_ZIP: { description: "Alle verfügbaren CSV-Dateien (Statistik, Rohdaten) in einem ZIP-Archiv."},
+            MD_ZIP: { description: "Alle verfügbaren Markdown-Dateien (Deskriptiv, Daten, Auswertung, Publikationstexte) in einem ZIP-Archiv."},
+            PNG_ZIP: { description: "Identisch zum 'Diagramme & Tabellen (PNG)' Einzel-Export."},
+            SVG_ZIP: { description: "Identisch zum 'Diagramme (SVG)' Einzel-Export."},
+            XLSX_ZIP: { description: "Alle verfügbaren Excel-Dateien in einem ZIP-Archiv."},
+            CRITERIA_COMPARISON_MD: { description: "Kriterienvergleichstabelle (Statistik-Tab) als Markdown (.md)." },
+            PUBLIKATION_ABSTRACT_MD: { description: "Generierter Text für Publikation-Abstract als Markdown (.md)." },
+            PUBLIKATION_INTRODUCTION_MD: { description: "Generierter Text für Publikation-Einleitung als Markdown (.md)." },
+            PUBLIKATION_METHODEN_MD: { description: "Generierter Text für Publikation-Methoden als Markdown (.md)." },
+            PUBLIKATION_ERGEBNISSE_MD: { description: "Generierter Text für Publikation-Ergebnisse als Markdown (.md)." },
+            PUBLIKATION_DISCUSSION_MD: { description: "Generierter Text für Publikation-Diskussion als Markdown (.md)." },
+            PUBLIKATION_REFERENCES_MD: { description: "Generiertes Literaturverzeichnis als Markdown (.md)." }
         },
         publikationTabTooltips: {
             spracheSwitch: { description: "Wechselt die Sprache der generierten Texte und einiger Beschriftungen im Publikation-Tab zwischen Deutsch und Englisch." },
