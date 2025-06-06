@@ -1,151 +1,135 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     const mainApp = (() => {
-
-        const tabPaneContainer = document.getElementById('app-tab-content');
-        let isFirstRenderDone = false;
         let processedData = [];
+        let isFirstRender = true;
+        let lastActiveTabId = null;
 
-        function _renderActiveTab(data) {
+        const mainAppInterface = {
+            updateAndRender: () => updateAndRender()
+        };
+
+        const controllers = {
+            'daten-tab': dataController,
+            'auswertung-tab': auswertungController,
+            'statistik-tab': statistikController,
+            'praesentation-tab': praesentationController,
+            'publikation-tab': publikationController,
+            'export-tab': exportController
+        };
+
+        function _renderActiveTab(evaluatedData, activeTabId) {
+            const tabPaneContainer = document.getElementById('app-tab-content');
             if (!tabPaneContainer) return;
-            
-            const activeTabId = stateManager.getActiveTabId();
-            const currentKollektiv = stateManager.getCurrentKollektiv();
-            let contentHTML = '';
 
-            const spinnerHTML = `<div class="d-flex justify-content-center align-items-center" style="min-height: 400px;"><div class="spinner-border" role="status"><span class="visually-hidden">Lade...</span></div></div>`;
-            tabPaneContainer.innerHTML = spinnerHTML;
+            const spinnerHTML = `<div class="d-flex justify-content-center align-items-center" style="min-height: 50vh;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade...</span></div></div>`;
+            const activePane = document.getElementById(`${activeTabId}-pane`);
+            if(activePane) activePane.innerHTML = spinnerHTML;
 
             setTimeout(() => {
+                let contentHTML = '';
+                const currentKollektiv = stateManager.getCurrentKollektiv();
+                const appliedCriteria = t2CriteriaManager.getCriteria();
+                const appliedLogic = t2CriteriaManager.getLogic();
+
                 switch (activeTabId) {
                     case 'daten-tab':
-                        contentHTML = dataRenderer.render(data, stateManager.getSortState('daten'));
+                        contentHTML = dataRenderer.render(evaluatedData, stateManager.getSortState('daten'));
                         break;
                     case 'auswertung-tab':
-                        const dashboardStats = statisticsService.calculateDescriptiveStats(data);
-                        const t2Metrics = statisticsService.calculateDiagnosticPerformance(data, 't2', 'n');
-                        const evaluatedDataForAuswertung = t2CriteriaManager.evaluateDatasetWithCriteria(data, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
-                        contentHTML = auswertungRenderer.render(evaluatedDataForAuswertung, dashboardStats, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), stateManager.getSortState('auswertung'), currentKollektiv, bruteForceManager.isWorkerAvailable(), t2Metrics);
+                        const dashboardStats = statisticsService.calculateDescriptiveStats(evaluatedData);
+                        const t2Metrics = statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n');
+                        contentHTML = auswertungRenderer.render(evaluatedData, dashboardStats, appliedCriteria, appliedLogic, stateManager.getSortState('auswertung'), currentKollektiv, bruteForceManager.isWorkerAvailable(), t2Metrics);
                         break;
                     case 'statistik-tab':
-                        const evaluatedDataForStats = t2CriteriaManager.evaluateDatasetWithCriteria(data, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
-                        const stats = {
-                           descriptive: statisticsService.calculateDescriptiveStats(evaluatedDataForStats),
-                           avocadoSign: statisticsService.calculateDiagnosticPerformance(evaluatedDataForStats, 'as', 'n'),
-                           t2: statisticsService.calculateDiagnosticPerformance(evaluatedDataForStats, 't2', 'n'),
-                           comparison: statisticsService.compareDiagnosticMethods(evaluatedDataForStats, 'as', 't2', 'n'),
-                           associations: statisticsService.calculateAssociations(evaluatedDataForStats, t2CriteriaManager.getAppliedCriteria())
-                        };
+                        const stats = statisticsService.calculateAllStats(evaluatedData, appliedCriteria, appliedLogic);
                         contentHTML = statistikRenderer.render(stats, stateManager.getStatsLayout(), stateManager.getStatsKollektiv1(), stateManager.getStatsKollektiv2());
                         break;
                     case 'praesentation-tab':
-                        const currentStudyId = stateManager.getPresentationStudyId() || APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
-                        const studySet = studyT2CriteriaManager.getStudyCriteriaSetById(currentStudyId);
-                        const praesKollektiv = studySet?.applicableKollektiv || 'Gesamt';
-                        const praesDataFiltered = dataProcessor.filterDataByKollektiv(processedData, praesKollektiv);
-                        const praesDataEvaluated = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(praesDataFiltered, studySet);
-
-                        const praesStats = {
-                            asPur: statisticsService.calculateDiagnosticPerformance(dataProcessor.filterDataByKollektiv(processedData, 'Gesamt'), 'as', 'n'),
-                            asVsT2: {
-                                avocadoSign: statisticsService.calculateDiagnosticPerformance(praesDataEvaluated, 'as', 'n'),
-                                t2: statisticsService.calculateDiagnosticPerformance(praesDataEvaluated, 't2', 'n'),
-                                comparison: statisticsService.compareDiagnosticMethods(praesDataEvaluated, 'as', 't2', 'n'),
-                            }
-                        };
+                        const praesStats = presentationController.getPresentationData(processedData);
                         contentHTML = praesentationRenderer.render(stateManager.getPresentationView(), praesStats, stateManager.getPresentationStudyId());
                         break;
                     case 'publikation-tab':
-                        contentHTML = publikationController.renderAndGetContent();
+                        contentHTML = publikationController.renderContent();
                         break;
                     case 'export-tab':
-                        contentHTML = exportRenderer.render(bruteForceManager.getAllResults(), processedData.length > 0);
+                        contentHTML = exportRenderer.render(Object.keys(bruteForceManager.getAllResults()).length > 0, processedData.length > 0);
                         break;
                     default:
-                        contentHTML = `<p>Tab "${activeTabId}" nicht gefunden.</p>`;
+                        contentHTML = `<p class="text-danger">Tab "${activeTabId}" konnte nicht geladen werden.</p>`;
                 }
-                
-                tabPaneContainer.innerHTML = contentHTML;
-                _postRenderUpdates(activeTabId, data);
-
-            }, 100);
+                if(activePane) activePane.innerHTML = contentHTML;
+                _postRenderUpdates(activeTabId, evaluatedData);
+            }, 50);
         }
 
-        function _postRenderUpdates(activeTabId, data) {
-            uiHelpers.initializeTooltips(tabPaneContainer);
+        function _postRenderUpdates(activeTabId, evaluatedData) {
+            uiHelpers.destroyTooltips();
+            uiHelpers.initializeTooltips(document.getElementById(`${activeTabId}-pane`));
             
-            if (activeTabId === 'daten-tab') {
-                const tableBody = document.getElementById('daten-table-body');
-                if (tableBody) uiHelpers.attachRowCollapseListeners(tableBody);
-            } else if (activeTabId === 'auswertung-tab') {
-                const tableBody = document.getElementById('auswertung-table-body');
-                if (tableBody) uiHelpers.attachRowCollapseListeners(tableBody);
-                const dashboardStats = statisticsService.calculateDescriptiveStats(data);
-                if(dashboardStats && dashboardStats.anzahlPatienten > 0) {
-                    chartRenderer.renderPieChart('dashboard-chart-gender', [{label: 'M', value: dashboardStats.geschlecht.m}, {label: 'W', value: dashboardStats.geschlecht.f}], true);
-                    chartRenderer.renderPieChart('dashboard-chart-therapy', [{label: 'pRCT', value: dashboardStats.therapie['direkt OP']}, {label: 'nRCT', value: dashboardStats.therapie.nRCT}], true);
-                    chartRenderer.renderPieChart('dashboard-chart-status-n', [{label: 'N+', value: dashboardStats.nStatus.plus}, {label: 'N-', value: dashboardStats.nStatus.minus}], true);
-                    chartRenderer.renderPieChart('dashboard-chart-status-as', [{label: 'AS+', value: dashboardStats.asStatus.plus}, {label: 'AS-', value: dashboardStats.asStatus.minus}], true);
-                    const t2Data = t2CriteriaManager.evaluateDatasetWithCriteria(data, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
-                    const t2Stats = dataProcessor.calculateHeaderStats(t2Data, stateManager.getCurrentKollektiv());
-                    chartRenderer.renderPieChart('dashboard-chart-status-t2', [{label: 'T2+', value: t2Stats.t2Pos}, {label: 'T2-', value: t2Stats.t2Neg}], true);
-                    chartRenderer.renderAgeDistribution('dashboard-chart-age', dashboardStats.alterData);
+            const controller = controllers[activeTabId];
+            if (controller && typeof controller.onTabEnter === 'function') {
+                controller.onTabEnter();
+            }
+            
+            if (activeTabId === 'auswertung-tab') {
+                const dashboardStats = statisticsService.calculateDescriptiveStats(evaluatedData);
+                 if(dashboardStats && dashboardStats.count > 0) {
+                    chartRenderer.renderBarChart('dashboard-chart-gender', [{label: 'M', value: dashboardStats.gender.m}, {label: 'W', value: dashboardStats.gender.f}], {yAxisLabel: 'Anzahl'});
+                    chartRenderer.renderBarChart('dashboard-chart-therapy', [{label: 'Direkt OP', value: dashboardStats.therapy['direkt OP']}, {label: 'nRCT', value: dashboardStats.therapy.nRCT}], {yAxisLabel: 'Anzahl'});
                 }
             } else if (activeTabId === 'statistik-tab') {
-                statistikController.updateView();
-            } else if (activeTabId === 'praesentation-tab') {
-                praesentationController.updateView();
-            } else if (activeTabId === 'publikation-tab') {
-                publikationController.updateView();
-            } else if (activeTabId === 'export-tab') {
-                exportController.updateView();
-            }
-
-            if (!isFirstRenderDone) {
-                _handleFirstAppStart();
-                isFirstRenderDone = true;
+                 const stats = statisticsService.calculateAllStats(evaluatedData, t2CriteriaManager.getCriteria(), t2CriteriaManager.getLogic());
+                 const chartData = stats.comparison ? [
+                    { metric: 'Sensitivität', values: [{ name: 'Avocado Sign', ...stats.avocadoSign.sens }, { name: 'T2', ...stats.t2.sens }] },
+                    { metric: 'Spezifität', values: [{ name: 'Avocado Sign', ...stats.avocadoSign.spez }, { name: 'T2', ...stats.t2.spez }] },
+                    { metric: 'AUC', values: [{ name: 'Avocado Sign', ...stats.avocadoSign.auc }, { name: 'T2', ...stats.t2.auc }] }
+                 ] : [];
+                 chartRenderer.renderPerformanceComparisonChart(`chart-as-vs-t2-${stateManager.getCurrentKollektiv()}`, chartData, {method1: 'Avocado Sign', method2: 'T2'});
             }
         }
         
-        function _handleFirstAppStart() {
-            const firstStart = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START);
-            if (firstStart === null) {
-                uiHelpers.showKurzanleitung().then(() => {
-                    localStorage.setItem(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, 'done');
-                });
-            }
-        }
-        
-        function updateAndRender() {
-            const currentKollektiv = stateManager.getCurrentKollektiv();
-            const filteredData = dataProcessor.filterDataByKollektiv(processedData, currentKollektiv);
-            
-            const evaluatedData = t2CriteriaManager.evaluateDatasetWithCriteria(filteredData, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
-            const headerStats = dataProcessor.calculateHeaderStats(evaluatedData, currentKollektiv);
-            
-            uiHelpers.updateHeaderStatsUI(headerStats);
-            uiHelpers.updateKollektivButtonsUI(currentKollektiv);
-            
-            _renderActiveTab(evaluatedData);
-        }
-
         function _handleTabChange(event) {
+            const link = event.target.closest('a.nav-link');
+            if (!link) return;
             event.preventDefault();
-            const link = event.target.closest('a');
-            if (!link || !link.dataset.bsToggle) return;
+            
+            const newTabId = link.id;
+            if (newTabId === stateManager.getActiveTabId()) return;
 
-            const newTabId = link.getAttribute('href').substring(1);
+            if(lastActiveTabId && controllers[lastActiveTabId] && typeof controllers[lastActiveTabId].onTabExit === 'function') {
+                controllers[lastActiveTabId].onTabExit();
+            }
+
+            document.querySelector('#app-nav .nav-link.active')?.classList.remove('active');
+            document.querySelector('.tab-content .tab-pane.active')?.classList.remove('active', 'show');
+            
+            link.classList.add('active');
+            const newPane = document.getElementById(`${newTabId}-pane`);
+            if(newPane) newPane.classList.add('active', 'show');
+
             stateManager.setActiveTabId(newTabId);
+            lastActiveTabId = newTabId;
             updateAndRender();
         }
         
         function _handleKollektivChange(event) {
             const button = event.target.closest('[data-kollektiv]');
-            if (button) {
-                const newKollektiv = button.dataset.kollektiv;
-                stateManager.setCurrentKollektiv(newKollektiv);
+            if (button && stateManager.setCurrentKollektiv(button.dataset.kollektiv)) {
                 updateAndRender();
             }
+        }
+
+        function updateAndRender() {
+            const currentKollektiv = stateManager.getCurrentKollektiv();
+            const filteredData = dataProcessor.filterDataByKollektiv(processedData, currentKollektiv);
+            const evaluatedData = t2CriteriaManager.evaluateDatasetWithCriteria(filteredData, t2CriteriaManager.getCriteria(), t2CriteriaManager.getLogic());
+            const headerStats = dataProcessor.calculateHeaderStats(evaluatedData, currentKollektiv);
+            
+            uiHelpers.updateHeaderStatsUI(headerStats);
+            uiHelpers.updateKollektivButtonsUI(currentKollektiv);
+            
+            _renderActiveTab(evaluatedData, stateManager.getActiveTabId());
         }
 
         function init() {
@@ -154,32 +138,42 @@ document.addEventListener('DOMContentLoaded', () => {
             processedData = dataProcessor.processPatientData(patientDataRaw);
             stateManager.init();
             t2CriteriaManager.initialize();
-            
-            const mainAppInterface = { updateAndRender };
-            
-            try {
-                dataController.init(mainAppInterface);
-                auswertungController.init(mainAppInterface);
-                statistikController.init(mainAppInterface);
-                praesentationController.init(mainAppInterface);
-                exportController.init(mainAppInterface);
-                publikationController.init(mainAppInterface);
-                bruteForceManager.init({
-                    onProgress: (payload) => auswertungController.updateBruteForceUI('progress', payload),
-                    onResult: (payload) => auswertungController.updateBruteForceUI('result', payload),
-                    onError: (payload) => auswertungController.updateBruteForceUI('error', payload),
-                    onCancelled: (payload) => auswertungController.updateBruteForceUI('cancelled', payload),
-                    onStarted: (payload) => auswertungController.updateBruteForceUI('started', payload)
-                });
-            } catch (error) {
-                 console.error("Fehler bei der Controller-Initialisierung:", error);
-                 uiHelpers.showToast("Ein kritischer Fehler ist bei der Initialisierung der App aufgetreten.", "danger");
-                 return;
-            }
+            studyT2CriteriaManager.initialize();
 
-            document.querySelectorAll('#app-nav .nav-link').forEach(tab => tab.addEventListener('click', _handleTabChange));
+            Object.values(controllers).forEach(controller => controller.init(mainAppInterface));
+            
+            bruteForceManager.init({
+                onProgress: (payload) => auswertungController.updateBruteForceUI('progress', payload),
+                onResult: (payload) => auswertungController.updateBruteForceUI('result', payload),
+                onError: (payload) => auswertungController.updateBruteForceUI('error', payload),
+                onCancelled: (payload) => auswertungController.updateBruteForceUI('cancelled', payload),
+                onStarted: (payload) => auswertungController.updateBruteForceUI('started', payload)
+            });
+
+            document.getElementById('app-nav').addEventListener('click', _handleTabChange);
             document.querySelector('.kollektiv-selector').addEventListener('click', _handleKollektivChange);
             document.getElementById('show-kurzanleitung-btn').addEventListener('click', () => uiHelpers.showKurzanleitung());
+
+            const initialTabId = stateManager.getActiveTabId();
+            lastActiveTabId = initialTabId;
+            const initialTabElement = document.getElementById(initialTabId);
+            const initialPaneElement = document.getElementById(`${initialTabId}-pane`);
+
+            document.querySelector('#app-nav .nav-link.active')?.classList.remove('active');
+            document.querySelector('.tab-content .tab-pane.active')?.classList.remove('active', 'show');
+            if(initialTabElement) initialTabElement.classList.add('active');
+            if(initialPaneElement) initialPaneElement.classList.add('active', 'show');
+
+            if (isFirstRender) {
+                const firstStart = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START);
+                if (firstStart === null) {
+                    const modalBody = document.getElementById('kurzanleitung-modal-body');
+                    if (modalBody) modalBody.innerHTML = UI_TEXTS.kurzanleitung.content;
+                    uiHelpers.showKurzanleitung();
+                    localStorage.setItem(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START, 'done');
+                }
+                isFirstRender = false;
+            }
 
             updateAndRender();
         }
