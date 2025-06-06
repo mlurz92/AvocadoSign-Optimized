@@ -31,6 +31,7 @@ const state = (() => {
             auswertungTableSort: cloneDeep(defaultState.auswertungTableSort),
             activeTabId: defaultState.activeTabId
         };
+        // Migration von alter localStorage-Key
         if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) {
             localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
         }
@@ -205,6 +206,15 @@ const state = (() => {
         return false;
     }
 
+    // Neue öffentliche Methoden zum Laden und Speichern einzelner Zustandselemente
+    function loadStateItem(key) {
+        return loadFromLocalStorage(key);
+    }
+
+    function saveStateItem(key, value) {
+        saveToLocalStorage(key, value);
+    }
+
     return Object.freeze({
         init,
         getCurrentKollektiv,
@@ -230,7 +240,10 @@ const state = (() => {
         getCurrentPresentationStudyId,
         setCurrentPresentationStudyId,
         getActiveTabId,
-        setActiveTabId
+        setActiveTabId,
+        // Neue Methoden exportieren
+        loadStateItem,
+        saveStateItem
     });
 
 })();
