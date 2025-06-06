@@ -1,48 +1,29 @@
 const publikationEventHandlers = (() => {
 
-    function handlePublikationSpracheChange(checkbox, mainAppInterface) {
-        if (!checkbox || !mainAppInterface || typeof mainAppInterface.updateGlobalUIState !== 'function' || typeof mainAppInterface.refreshCurrentTab !== 'function') {
-            console.error("publikationEventHandlers.handlePublikationSpracheChange: Ungültige Parameter.");
+    function handlePublikationSpracheChange(checkboxElement) {
+        if (!checkboxElement || typeof publicationController === 'undefined' || typeof publicationController.handleLanguageChange !== 'function') {
+            console.error("publikationEventHandlers.handlePublikationSpracheChange: Ungültige Parameter oder publicationController nicht verfügbar.");
             return;
         }
-        const newLang = checkbox.checked ? 'en' : 'de';
-        if (state.setCurrentPublikationLang(newLang)) {
-            mainAppInterface.updateGlobalUIState();
-            if (state.getActiveTabId() === 'publikation-tab') {
-                mainAppInterface.refreshCurrentTab();
-            }
-        }
+        const newLang = checkboxElement.checked ? 'en' : 'de';
+        publicationController.handleLanguageChange(newLang);
     }
 
-    function handlePublikationBfMetricChange(selectElement, mainAppInterface) {
-        if (!selectElement || !mainAppInterface || typeof mainAppInterface.updateGlobalUIState !== 'function' || typeof mainAppInterface.refreshCurrentTab !== 'function') {
-            console.error("publikationEventHandlers.handlePublikationBfMetricChange: Ungültige Parameter.");
+    function handlePublikationBfMetricChange(selectElement) {
+        if (!selectElement || typeof publicationController === 'undefined' || typeof publicationController.handleBfMetricChange !== 'function') {
+            console.error("publikationEventHandlers.handlePublikationBfMetricChange: Ungültige Parameter oder publicationController nicht verfügbar.");
             return;
         }
         const newMetric = selectElement.value;
-        if (state.setCurrentPublikationBruteForceMetric(newMetric)) {
-            mainAppInterface.updateGlobalUIState();
-            if (state.getActiveTabId() === 'publikation-tab') {
-                mainAppInterface.refreshCurrentTab();
-            }
-        }
+        publicationController.handleBfMetricChange(newMetric);
     }
 
-    function handlePublikationSectionChange(sectionId, mainAppInterface) {
-        if (!sectionId || !mainAppInterface || typeof mainAppInterface.updateGlobalUIState !== 'function' || typeof mainAppInterface.refreshCurrentTab !== 'function') {
-            console.error("publikationEventHandlers.handlePublikationSectionChange: Ungültige Parameter.");
+    function handlePublikationSectionChange(sectionId) {
+        if (!sectionId || typeof publicationController === 'undefined' || typeof publicationController.handleSectionChange !== 'function') {
+            console.error("publikationEventHandlers.handlePublikationSectionChange: Ungültige Parameter oder publicationController nicht verfügbar.");
             return;
         }
-        if (state.setCurrentPublikationSection(sectionId)) {
-            mainAppInterface.updateGlobalUIState();
-            if (state.getActiveTabId() === 'publikation-tab') {
-                mainAppInterface.refreshCurrentTab();
-            }
-            const contentArea = document.getElementById('publikation-content-area');
-            if (contentArea) {
-                contentArea.scrollTop = 0;
-            }
-        }
+        publicationController.handleSectionChange(sectionId);
     }
 
     return Object.freeze({
@@ -50,4 +31,5 @@ const publikationEventHandlers = (() => {
         handlePublikationBfMetricChange,
         handlePublikationSectionChange
     });
+
 })();
