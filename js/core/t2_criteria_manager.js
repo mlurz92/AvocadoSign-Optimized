@@ -1,80 +1,52 @@
 const t2CriteriaManager = (() => {
-    let appliedCriteria = getDefaultT2Criteria();
-    let currentCriteria = cloneDeep(appliedCriteria);
-    let isUnsaved = false;
+    let criteria = getDefaultT2Criteria();
 
     function initialize() {
         const savedCriteria = stateManager.loadStateItem(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA);
         const savedLogic = stateManager.loadStateItem(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC);
-
+        
+        let loadedCriteria = getDefaultT2Criteria();
         if (savedCriteria) {
-            appliedCriteria = deepMerge(getDefaultT2Criteria(), savedCriteria);
+            loadedCriteria = deepMerge(loadedCriteria, savedCriteria);
         }
         if (savedLogic) {
-            appliedCriteria.logic = savedLogic;
+            loadedCriteria.logic = savedLogic;
         }
-
-        currentCriteria = cloneDeep(appliedCriteria);
-        isUnsaved = false;
+        criteria = loadedCriteria;
     }
 
-    function getAppliedCriteria() {
-        return cloneDeep(appliedCriteria);
+    function getCriteria() {
+        return cloneDeep(criteria);
+    }
+    
+    function getLogic() {
+        return criteria.logic;
     }
 
-    function getAppliedLogic() {
-        return appliedCriteria.logic;
-    }
-
-    function getCurrentCriteria() {
-        return cloneDeep(currentCriteria);
-    }
-
-    function getCurrentLogic() {
-        return currentCriteria.logic;
-    }
-
-    function updateCurrentCriteria(newCriteria, newLogic) {
+    function setCriteria(newCriteria, newLogic) {
         if (newCriteria) {
-            currentCriteria = deepMerge(currentCriteria, newCriteria);
+            criteria = deepMerge(criteria, newCriteria);
         }
         if (newLogic) {
-            currentCriteria.logic = newLogic;
+            criteria.logic = newLogic;
         }
-        isUnsaved = true;
-    }
-    
-    function hasUnsavedChanges() {
-        return JSON.stringify(currentCriteria) !== JSON.stringify(appliedCriteria);
-    }
-
-    function applyCurrentCriteria() {
-        appliedCriteria = cloneDeep(currentCriteria);
-        const { logic, ...criteriaToSave } = appliedCriteria;
+        const { logic, ...criteriaToSave } = criteria;
         stateManager.saveStateItem(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA, criteriaToSave);
         stateManager.saveStateItem(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC, logic);
-        isUnsaved = false;
-        uiHelpers.showToast('Neue T2-Kriterien erfolgreich angewendet und gespeichert.', 'success');
-        return true;
-    }
-    
-    function resetCurrentCriteria() {
-        currentCriteria = cloneDeep(appliedCriteria);
-        isUnsaved = false;
-    }
-    
-    function resetToDefaults() {
-        currentCriteria = getDefaultT2Criteria();
-        isUnsaved = true;
     }
 
-    function formatCriteriaForDisplay(criteria, logic) {
-        if (!criteria || typeof criteria !== 'object') return 'N/A';
+    function resetToDefaults() {
+        criteria = getDefaultT2Criteria();
+        setCriteria(criteria, criteria.logic);
+    }
+
+    function formatCriteriaForDisplay(criteriaObj, logic) {
+        if (!criteriaObj || typeof criteriaObj !== 'object') return 'N/A';
         const parts = [];
-        const activeKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active);
+        const activeKeys = Object.keys(criteriaObj).filter(key => key !== 'logic' && criteriaObj[key]?.active);
         if (activeKeys.length === 0) return 'Keine aktiven Kriterien';
 
-        const effectiveLogic = logic || criteria.logic || 'ODER';
+        const effectiveLogic = logic || criteriaObj.logic || 'ODER';
         const separator = (effectiveLogic === 'UND') ? ' UND ' : ' ODER ';
 
         const formatValue = (key, criterion) => {
@@ -87,14 +59,11 @@ const t2CriteriaManager = (() => {
         const sortedActiveKeys = [...activeKeys].sort((a, b) => {
             const indexA = priorityOrder.indexOf(a);
             const indexB = priorityOrder.indexOf(b);
-            if (indexA === -1 && indexB === -1) return a.localeCompare(b);
-            if (indexA === -1) return 1;
-            if (indexB === -1) return -1;
-            return indexA - indexB;
+            return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
         });
 
         sortedActiveKeys.forEach(key => {
-            const criterion = criteria[key];
+            const criterion = criteriaObj[key];
             let prefix = '';
             switch(key) {
                 case 'size': prefix = 'Größe '; break;
@@ -109,14 +78,13 @@ const t2CriteriaManager = (() => {
         return parts.join(separator);
     }
     
-    function checkSingleLymphNode(lk, criteria) {
+    function checkSingleLymphNode(lk, criteriaObj) {
         const checkResult = { size: null, form: null, kontur: null, homogenitaet: null, signal: null };
-        if (!lk || typeof lk !== 'object' || !criteria || typeof criteria !== 'object') return checkResult;
+        if (!lk || typeof lk !== 'object' || !criteriaObj || typeof criteriaObj !== 'object') return checkResult;
 
-        if (criteria.size?.active) {
-            const threshold = criteria.size.threshold;
+        if (criteriaObj.size?.active) {
+            const { threshold, condition = '>=' } = criteriaObj.size;
             const nodeSize = lk.groesse;
-            const condition = criteria.size.condition || '>=';
             if (typeof nodeSize === 'number' && !isNaN(nodeSize) && typeof threshold === 'number' && !isNaN(threshold)) {
                  switch(condition) {
                     case '>=': checkResult.size = nodeSize >= threshold; break;
@@ -128,25 +96,27 @@ const t2CriteriaManager = (() => {
                  }
             } else { checkResult.size = false; }
         }
-        if (criteria.form?.active) checkResult.form = (lk.form === criteria.form.value);
-        if (criteria.kontur?.active) checkResult.kontur = (lk.kontur === criteria.kontur.value);
-        if (criteria.homogenitaet?.active) checkResult.homogenitaet = (lk.homogenitaet === criteria.homogenitaet.value);
-        if (criteria.signal?.active) checkResult.signal = (lk.signal !== null && lk.signal === criteria.signal.value);
+        if (criteriaObj.form?.active) checkResult.form = (lk.form === criteriaObj.form.value);
+        if (criteriaObj.kontur?.active) checkResult.kontur = (lk.kontur === criteriaObj.kontur.value);
+        if (criteriaObj.homogenitaet?.active) checkResult.homogenitaet = (lk.homogenitaet === criteriaObj.homogenitaet.value);
+        if (criteriaObj.signal?.active) checkResult.signal = (lk.signal !== null && lk.signal === criteriaObj.signal.value);
 
         return checkResult;
     }
 
-    function evaluateDatasetWithCriteria(dataset, criteria, logic) {
+    function evaluateDatasetWithCriteria(dataset, criteriaObj, logic) {
         if (!Array.isArray(dataset)) return [];
         return dataset.map(patient => {
+            if (!patient) return null;
             const evaluatedPatient = cloneDeep(patient);
             let patientT2Positive = false;
             let t2PlusLkCount = 0;
             const lymphNodes = evaluatedPatient.lymphknoten_t2 || [];
-
+            
             evaluatedPatient.lymphknoten_t2_bewertet = lymphNodes.map(lk => {
-                const checkResult = checkSingleLymphNode(lk, criteria);
-                const activeKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active);
+                if (!lk) return null;
+                const checkResult = checkSingleLymphNode(lk, criteriaObj);
+                const activeKeys = Object.keys(criteriaObj).filter(key => key !== 'logic' && criteriaObj[key]?.active);
                 let lkPasses = false;
 
                 if (activeKeys.length > 0) {
@@ -161,27 +131,30 @@ const t2CriteriaManager = (() => {
                     patientT2Positive = true;
                     t2PlusLkCount++;
                 }
-
-                return { lk, evaluationDetails: checkResult, passes: lkPasses };
-            });
+                return { lk: lk, evaluationDetails: checkResult, passes: lkPasses };
+            }).filter(Boolean);
             
-            evaluatedPatient.t2 = lymphNodes.length > 0 ? (patientT2Positive ? '+' : '-') : '?';
+            const hasT2Data = lymphNodes.length > 0;
+            const hasActiveCriteria = Object.keys(criteriaObj).some(key => key !== 'logic' && criteriaObj[key]?.active);
+            
+            if (hasActiveCriteria) {
+                 evaluatedPatient.t2 = hasT2Data ? (patientT2Positive ? '+' : '-') : '-';
+            } else {
+                 evaluatedPatient.t2 = '?';
+            }
+            
+            evaluatedPatient.anzahl_t2_lk = lymphNodes.length;
             evaluatedPatient.anzahl_t2_plus_lk = t2PlusLkCount;
 
             return evaluatedPatient;
-        });
+        }).filter(Boolean);
     }
 
     return Object.freeze({
         initialize,
-        getAppliedCriteria,
-        getAppliedLogic,
-        getCurrentCriteria,
-        getCurrentLogic,
-        updateCurrentCriteria,
-        hasUnsavedChanges,
-        applyCurrentCriteria,
-        resetCurrentCriteria,
+        getCriteria,
+        getLogic,
+        setCriteria,
         resetToDefaults,
         formatCriteriaForDisplay,
         evaluateDatasetWithCriteria
