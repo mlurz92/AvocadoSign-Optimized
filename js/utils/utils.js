@@ -395,3 +395,33 @@ function getPhiBewertung(phiValue) {
     if (absPhi >= 0.1) return texts.schwach || 'schwach';
     return texts.sehr_schwach || 'sehr schwach';
 }
+
+function getStatusClass(status) {
+    if (status === '+') return 'status-plus';
+    if (status === '-') return 'status-minus';
+    return 'status-unknown';
+}
+
+// Exponiere alle relevanten Funktionen global
+window.getKollektivDisplayName = getKollektivDisplayName;
+window.formatNumber = formatNumber;
+window.formatPercent = formatPercent;
+window.formatCI = formatCI;
+window.getCurrentDateString = getCurrentDateString;
+window.saveToLocalStorage = saveToLocalStorage;
+window.loadFromLocalStorage = loadFromLocalStorage;
+window.debounce = debounce;
+window.isObject = isObject;
+window.cloneDeep = cloneDeep;
+window.deepMerge = deepMerge;
+window.getObjectValueByPath = getObjectValueByPath;
+window.getSortFunction = getSortFunction;
+window.getStatisticalSignificanceSymbol = getStatisticalSignificanceSymbol;
+window.getStatisticalSignificanceText = getStatisticalSignificanceText;
+window.getPValueText = getPValueText;
+window.generateUUID = generateUUID;
+window.clampNumber = clampNumber;
+window.arraysAreEqual = arraysAreEqual;
+window.getAUCBewertung = getAUCBewertung;
+window.getPhiBewertung = getPhiBewertung;
+window.getStatusClass = getStatusClass;
