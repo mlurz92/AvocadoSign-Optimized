@@ -129,7 +129,7 @@ const APP_CONFIG = Object.freeze({
         CSV_DELIMITER: ';',
         COMPREHENSIVE_REPORT_LOGO_URL: '',
         INCLUDE_TIMESTAMP_IN_FILENAME: false,
-        FILENAME_TYPES: Object.FROZEN({
+        FILENAME_TYPES: Object.freeze({
             STATS_CSV: 'StatistikCSV',
             BRUTEFORCE_TXT: 'BruteForceTXT',
             DESKRIPTIV_MD: 'DeskriptiveStatistikMD',
