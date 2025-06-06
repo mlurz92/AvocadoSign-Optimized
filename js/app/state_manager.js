@@ -1,4 +1,4 @@
-const state = (() => {
+const stateManager = (() => {
     let currentState = {};
 
     const defaultState = {
@@ -31,7 +31,6 @@ const state = (() => {
             auswertungTableSort: cloneDeep(defaultState.auswertungTableSort),
             activeTabId: defaultState.activeTabId
         };
-        // Migration von alter localStorage-Key
         if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) {
             localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
         }
@@ -51,39 +50,42 @@ const state = (() => {
         return false;
     }
 
-    function getDatenTableSort() {
-        return cloneDeep(currentState.datenTableSort);
+    function getSortState(tableType) {
+        if (tableType === 'daten') {
+            return cloneDeep(currentState.datenTableSort);
+        }
+        if (tableType === 'auswertung') {
+            return cloneDeep(currentState.auswertungTableSort);
+        }
+        return {};
     }
 
-    function updateDatenTableSortDirection(key, subKey = null) {
-        if (!key) return false;
-        if (currentState.datenTableSort.key === key && currentState.datenTableSort.subKey === subKey) {
-            currentState.datenTableSort.direction = currentState.datenTableSort.direction === 'asc' ? 'desc' : 'asc';
+    function setSortState(tableType, { key, subKey, direction }) {
+        let targetSortState;
+        if (tableType === 'daten') {
+            targetSortState = currentState.datenTableSort;
+        } else if (tableType === 'auswertung') {
+            targetSortState = currentState.auswertungTableSort;
         } else {
-            currentState.datenTableSort = { key: key, direction: 'asc', subKey: subKey };
+            return false;
+        }
+
+        if (targetSortState.key === key && targetSortState.subKey === subKey) {
+            targetSortState.direction = direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            targetSortState.key = key;
+            targetSortState.subKey = subKey;
+            targetSortState.direction = 'asc';
         }
         return true;
-     }
-
-    function getAuswertungTableSort() {
-        return cloneDeep(currentState.auswertungTableSort);
     }
 
-     function updateAuswertungTableSortDirection(key, subKey = null) {
-         if (!key) return false;
-         if (currentState.auswertungTableSort.key === key && currentState.auswertungTableSort.subKey === subKey) {
-            currentState.auswertungTableSort.direction = currentState.auswertungTableSort.direction === 'asc' ? 'desc' : 'asc';
-        } else {
-            currentState.auswertungTableSort = { key: key, direction: 'asc', subKey: subKey };
-        }
-        return true;
-     }
 
     function getCurrentPublikationLang() {
         return currentState.currentPublikationLang;
     }
 
-    function setCurrentPublikationLang(newLang) {
+    function setPublikationLang(newLang) {
         if ((newLang === 'de' || newLang === 'en') && currentState.currentPublikationLang !== newLang) {
             currentState.currentPublikationLang = newLang;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG, currentState.currentPublikationLang);
@@ -96,25 +98,25 @@ const state = (() => {
         return currentState.currentPublikationSection;
     }
 
-    function setCurrentPublikationSection(newSectionId) {
-        const isValidSection = PUBLICATION_CONFIG.sections.some(section => section.id === newSectionId);
+    function setPublikationSection(newSectionId) {
+        const isValidSection = PUBLICATION_CONFIG.sections.some(section => section.id === newSectionId || section.subSections.some(sub => sub.id === newSectionId));
         if (typeof newSectionId === 'string' && isValidSection && currentState.currentPublikationSection !== newSectionId) {
             currentState.currentPublikationSection = newSectionId;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION, currentState.currentPublikationSection);
             return true;
         }
         if (!isValidSection) {
-            console.warn(`setCurrentPublikationSection: Ungültige Sektions-ID '${newSectionId}'`);
+            console.warn(`setPublikationSection: Ungültige Sektions-ID '${newSectionId}'`);
         }
         return false;
     }
 
-    function getCurrentPublikationBruteForceMetric() {
+    function getPublikationBfMetric() {
         return currentState.currentPublikationBruteForceMetric;
     }
 
-    function setCurrentPublikationBruteForceMetric(newMetric) {
-        const isValidMetric = PUBLICATION_CONFIG.bruteForceMetricsForPublication.some(m => m.value === newMetric);
+    function setPublikationBfMetric(newMetric) {
+        const isValidMetric = APP_CONFIG.METRIC_OPTIONS.some(m => m.value === newMetric);
         if (isValidMetric && currentState.currentPublikationBruteForceMetric !== newMetric) {
             currentState.currentPublikationBruteForceMetric = newMetric;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC, currentState.currentPublikationBruteForceMetric);
@@ -123,11 +125,11 @@ const state = (() => {
         return false;
     }
 
-    function getCurrentStatsLayout() {
+    function getStatsLayout() {
         return currentState.currentStatsLayout;
     }
 
-    function setCurrentStatsLayout(newLayout) {
+    function setStatsLayout(newLayout) {
         if ((newLayout === 'einzel' || newLayout === 'vergleich') && currentState.currentStatsLayout !== newLayout) {
             currentState.currentStatsLayout = newLayout;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT, currentState.currentStatsLayout);
@@ -136,11 +138,11 @@ const state = (() => {
         return false;
     }
 
-    function getCurrentStatsKollektiv1() {
+    function getStatsKollektiv1() {
         return currentState.currentStatsKollektiv1;
     }
 
-    function setCurrentStatsKollektiv1(newKollektiv) {
+    function setStatsKollektiv1(newKollektiv) {
          if (typeof newKollektiv === 'string' && currentState.currentStatsKollektiv1 !== newKollektiv) {
             currentState.currentStatsKollektiv1 = newKollektiv;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1, currentState.currentStatsKollektiv1);
@@ -149,11 +151,11 @@ const state = (() => {
         return false;
     }
 
-    function getCurrentStatsKollektiv2() {
+    function getStatsKollektiv2() {
         return currentState.currentStatsKollektiv2;
     }
 
-    function setCurrentStatsKollektiv2(newKollektiv) {
+    function setStatsKollektiv2(newKollektiv) {
          if (typeof newKollektiv === 'string' && currentState.currentStatsKollektiv2 !== newKollektiv) {
             currentState.currentStatsKollektiv2 = newKollektiv;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2, currentState.currentStatsKollektiv2);
@@ -162,29 +164,29 @@ const state = (() => {
         return false;
     }
 
-    function getCurrentPresentationView() {
+    function getPresentationView() {
         return currentState.currentPresentationView;
     }
 
-    function setCurrentPresentationView(newView) {
+    function setPresentationView(newView) {
         if ((newView === 'as-pur' || newView === 'as-vs-t2') && currentState.currentPresentationView !== newView) {
             currentState.currentPresentationView = newView;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW, currentState.currentPresentationView);
             if (newView === 'as-pur') {
-                setCurrentPresentationStudyId(null); 
+                setPresentationStudyId(null);
             } else if (!currentState.currentPresentationStudyId && newView === 'as-vs-t2') {
-                setCurrentPresentationStudyId(APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID);
+                setPresentationStudyId(APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID);
             }
             return true;
         }
         return false;
     }
 
-    function getCurrentPresentationStudyId() {
+    function getPresentationStudyId() {
         return currentState.currentPresentationStudyId;
     }
 
-    function setCurrentPresentationStudyId(newStudyId) {
+    function setPresentationStudyId(newStudyId) {
         const newStudyIdValue = newStudyId === undefined ? null : newStudyId;
         if (currentState.currentPresentationStudyId !== newStudyIdValue) {
             currentState.currentPresentationStudyId = newStudyIdValue;
@@ -206,7 +208,6 @@ const state = (() => {
         return false;
     }
 
-    // Neue öffentliche Methoden zum Laden und Speichern einzelner Zustandselemente
     function loadStateItem(key) {
         return loadFromLocalStorage(key);
     }
@@ -219,29 +220,26 @@ const state = (() => {
         init,
         getCurrentKollektiv,
         setCurrentKollektiv,
-        getDatenTableSort,
-        updateDatenTableSortDirection,
-        getAuswertungTableSort,
-        updateAuswertungTableSortDirection,
-        getCurrentPublikationLang,
-        setCurrentPublikationLang,
-        getCurrentPublikationSection,
-        setCurrentPublikationSection,
-        getCurrentPublikationBruteForceMetric,
-        setCurrentPublikationBruteForceMetric,
-        getCurrentStatsLayout,
-        setCurrentStatsLayout,
-        getCurrentStatsKollektiv1,
-        setCurrentStatsKollektiv1,
-        getCurrentStatsKollektiv2,
-        setCurrentStatsKollektiv2,
-        getCurrentPresentationView,
-        setCurrentPresentationView,
-        getCurrentPresentationStudyId,
-        setCurrentPresentationStudyId,
+        getSortState,
+        setSortState,
+        getPublikationLang,
+        setPublikationLang,
+        getPublikationSection,
+        setPublikationSection,
+        getPublikationBfMetric,
+        setPublikationBfMetric,
+        getStatsLayout,
+        setStatsLayout,
+        getStatsKollektiv1,
+        setStatsKollektiv1,
+        getStatsKollektiv2,
+        setStatsKollektiv2,
+        getPresentationView,
+        setPresentationView,
+        getPresentationStudyId,
+        setPresentationStudyId,
         getActiveTabId,
         setActiveTabId,
-        // Neue Methoden exportieren
         loadStateItem,
         saveStateItem
     });
