@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avocado Sign vs. T2 Kriterien Analyse v2.3.0</title>
+    <title>Avocado Sign vs. T2 Kriterien Analyse v2.5.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <link rel="stylesheet" href="css/style.css">
@@ -147,7 +147,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
-    <script src="data/data.js"></script>
+    <script src="data/patient_data.js"></script>
 
     <script src="js/utils/utils.js"></script>
 
@@ -168,16 +168,19 @@
 
     <script src="js/ui/renderers/table_renderer.js"></script>
     <script src="js/ui/renderers/chart_renderer.js"></script>
-    <script src="js/ui/renderers/publication/publication_text_generator.js"></script>
-    <script src="js/ui/renderers/publication/publication_tables.js"></script>
-    <script src="js/ui/renderers/publication/publication_figures.js"></script>
-    <script src="js/ui/renderers/publication/publication_renderer.js"></script>
 
-    <script src="js/ui/view_logic/data_tab_logic.js"></script>
-    <script src="js/ui/view_logic/auswertung_tab_logic.js"></script>
-    <script src="js/ui/view_logic/statistik_tab_logic.js"></script>
-    <script src="js/ui/view_logic/praesentation_tab_logic.js"></script>
-    <script src="js/ui/view_logic/publikation_tab_logic.js"></script>
+    <script src="js/ui/renderers/data_tab_renderer.js"></script>
+    <script src="js/ui/renderers/auswertung_tab_renderer.js"></script>
+    <script src="js/ui/renderers/statistik_tab_renderer.js"></script>
+    <script src="js/ui/renderers/praesentation_tab_renderer.js"></script>
+    <script src="js/ui/renderers/export_tab_renderer.js"></script>
+
+    <script src="js/ui/publication/publication_text_generator_radiology.js"></script>
+    <script src="js/ui/publication/publication_table_generator_radiology.js"></script>
+    <script src="js/ui/publication/publication_figure_generator_radiology.js"></script>
+    <script src="js/ui/publication/publication_content_generator.js"></script>
+    <script src="js/ui/publication/publication_view_renderer.js"></script>
+    <script src="js/ui/publication/publication_controller.js"></script>
 
     <script src="js/ui/event_handlers/general_event_handlers.js"></script>
     <script src="js/ui/event_handlers/auswertung_event_handlers.js"></script>
@@ -185,9 +188,9 @@
     <script src="js/ui/event_handlers/praesentation_event_handlers.js"></script>
     <script src="js/ui/event_handlers/publikation_event_handlers.js"></script>
 
-    <script src="js/ui/view_renderer.js"></script>
+    <script src="js/ui/view_renderer.js"></script> 
 
-    <script src="js/app/state.js"></script>
+    <script src="js/app/state_manager.js"></script>
     <script src="js/app/main.js"></script>
 
 </body>
