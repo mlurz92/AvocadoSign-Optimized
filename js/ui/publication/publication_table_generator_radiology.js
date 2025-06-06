@@ -1,5 +1,12 @@
 const publicationTableGeneratorRadiology = (() => {
 
+    // Importiere die benötigten Formatierungsfunktionen vom Text-Generator
+    const _formatNumberForPub = publicationTextGeneratorRadiology.formatNumberForPub;
+    const _formatPercentForPub = publicationTextGeneratorRadiology.formatPercentForPub;
+    const _fCIForPub = publicationTextGeneratorRadiology.fCIForPub;
+    const _getPValueTextForPub = publicationTextGeneratorRadiology.getPValueTextForPub;
+
+
     function _formatTableCell(value, digits = 1, lang = 'de', options = {}) {
         const { isRate = false, isPValue = false, isMeanSD = false, isMedianIQR = false, isRange = false, isCount = false } = options;
         const naStr = 'N/A';
@@ -9,13 +16,7 @@ const publicationTableGeneratorRadiology = (() => {
         }
 
         if (isPValue) {
-            if (value < 0.001) return '< .001';
-            if (value > 0.99) return '> .99';
-            let pFormatted;
-            if (value < 0.01) pFormatted = value.toFixed(3);
-            else if (Math.abs(value - 0.05) < 0.005 && value !== 0.05) pFormatted = value.toFixed(3);
-            else pFormatted = value.toFixed(2);
-            return pFormatted.replace(/^0\./, '.');
+            return _getPValueTextForPub(value, lang).replace('P = ', ''); // Entferne 'P = ' für die Tabelle
         }
 
         if (isMeanSD && typeof value === 'object' && value.mean !== undefined && value.sd !== undefined) {
@@ -52,14 +53,14 @@ const publicationTableGeneratorRadiology = (() => {
         if (isCount) {
             const numValue = parseInt(value, 10);
             if (isNaN(numValue)) return naStr;
-            return formatNumber(numValue, 0, naStr, lang === 'en');
+            // Verwende die exponierte Funktion für Zahlenformatierung mit Standardformat
+            return _formatNumberForPub(numValue, 0, lang, true);
         }
 
         const numValue = parseFloat(value);
         if (isNaN(numValue) || !isFinite(numValue)) return naStr;
-        let numStr = numValue.toFixed(digits);
-        if (lang === 'de') numStr = numStr.replace('.', ',');
-        return numStr;
+        // Verwende die exponierte Funktion für Zahlenformatierung
+        return _formatNumberForPub(numValue, digits, lang);
     }
 
     function _formatCIForTable(metricValue, ciLower, ciUpper, digits = 1, isRate = true, lang = 'de') {
@@ -224,6 +225,8 @@ const publicationTableGeneratorRadiology = (() => {
                                 <td>${_formatCIForTable(stats.ppv?.value, stats.ppv?.ci?.lower, stats.ppv?.ci?.upper, 1, true, lang)}</td>
                                 <td>${_formatCIForTable(stats.npv?.value, stats.npv?.ci?.lower, stats.npv?.ci?.upper, 1, true, lang)}</td>
                                 <td>${_formatCIForTable(stats.acc?.value, stats.acc?.ci?.lower, stats.acc?.ci?.upper, 1, true, lang)}</td>
+                                <td>${_formatCIForTable(stats.balAcc?.value, stats.balAcc?.ci?.lower, stats.balAcc?.ci?.upper, 1, true, lang)}</td>
+                                <td>${_formatCIForTable(stats.f1?.value, stats.f1?.ci?.lower, stats.f1?.ci?.upper, 3, false, lang)}</td>
                                 <td>${_formatCIForTable(stats.auc?.value, stats.auc?.ci?.lower, stats.auc?.ci?.upper, 2, false, lang)}</td>
                               </tr>`;
                 } else {
