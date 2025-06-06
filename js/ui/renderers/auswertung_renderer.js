@@ -20,7 +20,7 @@ const auswertungRenderer = (() => {
         ];
 
         cards.forEach(card => {
-            const tooltipText = (TOOLTIP_CONTENT.deskriptiveStatistik[card.tooltipKey]?.description || card.title).replace('[KOLLEKTIV]', displayName);
+            const tooltipText = (TOOLTIP_CONTENT.deskriptiveStatistik[card.tooltipKey]?.description || card.title).replace('[KOLLEKTIV]', `<strong>${displayName}</strong>`);
             html += `
                 <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 dashboard-card-col">
                     <div class="card dashboard-card h-100" data-tippy-content="${tooltipText}">
@@ -109,7 +109,7 @@ const auswertungRenderer = (() => {
             });
             contentHTML += '</div>';
         }
-        
+
         return `<h3 class="mb-3">T2 Metrik-Übersicht (Angewandte Kriterien)</h3>
                 <div class="card mb-4" data-tippy-content="${(TOOLTIP_CONTENT.t2MetricsOverview.cardTitle || 'Kurzübersicht').replace('[KOLLEKTIV]', `<strong>${displayName}</strong>`)}">
                     <div class="card-body p-2">${contentHTML}</div>
@@ -129,7 +129,7 @@ const auswertungRenderer = (() => {
                         </div>
                         <div class="col-md-4 col-lg-3">
                             <button class="btn btn-primary btn-sm w-100" id="btn-start-brute-force" ${!isWorkerAvailable ? 'disabled' : ''} data-tippy-content="${TOOLTIP_CONTENT.bruteForceStart.description}">
-                                <i class="fas fa-cogs fa-fw me-1"></i>Optimierung Starten
+                                <i class="fas fa-cogs fa-fw me-1"></i>Optimierung starten
                             </button>
                         </div>
                         <div class="col-md-3 col-lg-2">
@@ -151,7 +151,7 @@ const auswertungRenderer = (() => {
         const tableId = 'auswertung-table';
         const tableBodyId = 'auswertung-table-body';
         const noDataMessage = `<td colspan="8" class="text-center text-muted p-3">Keine Patientendaten für das aktuelle Kollektiv verfügbar.</td>`;
-        
+
         const headers = [
             { key: 'expand', label: '', sortable: false, class: 'text-center p-1', style: 'width: 40px;' },
             { key: 'nr', label: 'Nr.', sortable: true, tooltip: TOOLTIP_CONTENT.auswertungTable.nr.description },
@@ -186,7 +186,7 @@ const auswertungRenderer = (() => {
             </div>`;
     }
 
-    function render(data, currentT2Criteria, currentT2Logic, sortState, currentKollektiv, isBruteForceWorkerAvailable, t2MetricsStats) {
+    function render(data, dashboardStats, currentT2Criteria, currentT2Logic, sortState, currentKollektiv, isBruteForceWorkerAvailable, t2MetricsStats) {
         let html = _createDashboardHTML(dashboardStats, currentKollektiv);
         html += _createT2KriterienDefinitionHTML(currentT2Criteria, currentT2Logic);
         html += _createT2MetricsOverviewHTML(t2MetricsStats, currentKollektiv);
