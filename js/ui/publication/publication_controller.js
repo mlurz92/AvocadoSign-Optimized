@@ -199,7 +199,7 @@ const publicationController = (() => {
         }
     }
 
-    function refreshControllerWithNewData(allStats, rawData, appliedCriteria, appliedLogic, bfResults) {
+    function refreshWithNewData(allStats, rawData, appliedCriteria, appliedLogic, bfResults) {
         currentAllKollektivStats = allStats;
         currentRawGlobalData = rawData;
         currentAppliedCriteria = appliedCriteria;
