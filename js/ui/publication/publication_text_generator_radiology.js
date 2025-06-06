@@ -111,21 +111,22 @@ const publicationTextGeneratorRadiology = (() => {
         const aucT2OptimiertGesamtValue = bfGesamtStats?.auc?.value;
         const aucT2OptimiertGesamtText = _fCIForPub(bfGesamtStats?.auc, 2, false, lang);
         const pWertVergleichDelong = _getPValueTextForPub(vergleichASvsBFGesamt?.delong?.pValue, lang);
-        const studyPeriod = commonData.references?.STUDY_PERIOD_2020_2023 || (lang === 'de' ? "Januar 2020 und November 2023" : "January 2020 and November 2023");
-        const ethicsVoteText = commonData.references?.ETHICS_VOTE_LEIPZIG || (lang === 'de' ? "Ethikkommission der Sächsischen Landesärztekammer (Aktenzeichen EK-Allg-2023-101)" : "ethics committee of the Saxon State Medical Association (file number EK-Allg-2023-101)");
+        const studyPeriod = commonData.references?.STUDY_PERIOD_2020_2023;
+        const formattedStudyPeriod = studyPeriod?.fullCitation ? (lang === 'de' ? studyPeriod.fullCitation.replace(" und ", " und ") : studyPeriod.fullCitation.replace(" und ", " and ")) : (lang === 'de' ? "Januar 2020 und November 2023" : "January 2020 and November 2023");
+        const ethicsVoteText = commonData.references?.ETHICS_VOTE_LEIPZIG?.fullCitation || (lang === 'de' ? "Ethikkommission der Sächsischen Landesärztekammer (Aktenzeichen EK-Allg-2023-101)" : "ethics committee of the Saxon State Medical Association (file number EK-Allg-2023-101)");
 
 
         const abstractDe = `
             <p><strong>Hintergrund:</strong> Eine präzise prätherapeutische Bestimmung des mesorektalen Lymphknotenstatus (N-Status) ist entscheidend für Therapieentscheidungen beim Rektumkarzinom. Standard-MRT-Kriterien zeigen Limitierungen.</p>
             <p><strong>Ziel:</strong> Evaluation der diagnostischen Leistung des "Avocado Sign" (AS), eines neuartigen kontrastmittelverstärkten (KM) MRT-Markers, im Vergleich zu etablierten T2-gewichteten (T2w) Kriterien zur Prädiktion des N-Status.</p>
-            <p><strong>Material und Methoden:</strong> Diese retrospektive, von der ${ethicsVoteText} genehmigte Monozenterstudie schloss Patienten mit histologisch gesichertem Rektumkarzinom ein, die zwischen ${studyPeriod.replace(" and ", " und ")} eine Staging-MRT erhielten. Zwei verblindete Radiologen evaluierten das AS (hypointenser Kern in hyperintensem Lymphknoten auf T1w-KM-Sequenzen) und morphologische T2w-Kriterien. Der Referenzstandard war die histopathologische Untersuchung. Sensitivität, Spezifität, Genauigkeit (ACC) und die Fläche unter der Receiver-Operating-Characteristic-Kurve (AUC) wurden berechnet; AUC-Werte wurden mittels DeLong-Test verglichen.</p>
+            <p><strong>Material und Methoden:</strong> Diese retrospektive, von der ${ethicsVoteText} genehmigte Monozenterstudie schloss Patienten mit histologisch gesichertem Rektumkarzinom ein, die zwischen ${formattedStudyPeriod} eine Staging-MRT erhielten. Zwei verblindete Radiologen evaluierten das AS (hypointenser Kern in hyperintensem Lymphknoten auf T1w-KM-Sequenzen) und morphologische T2w-Kriterien. Der Referenzstandard war die histopathologische Untersuchung. Sensitivität, Spezifität, Genauigkeit (ACC) und die Fläche unter der Receiver-Operating-Characteristic-Kurve (AUC) wurden berechnet; AUC-Werte wurden mittels DeLong-Test verglichen.</p>
             <p><strong>Ergebnisse:</strong> ${patientText} wurden analysiert. Das AS zeigte eine Sensitivität von ${sensASGesamtText.split(' (')[0]} (n=${_formatNumberForPub(asGesamt?.matrix?.rp,0)}/${_formatNumberForPub(asGesamt?.matrix?.rp + asGesamt?.matrix?.fn,0)}; ${sensASGesamtText.split(' (')[1]}), eine Spezifität von ${spezASGesamtText.split(' (')[0]} (n=${_formatNumberForPub(asGesamt?.matrix?.rn,0)}/${_formatNumberForPub(asGesamt?.matrix?.fp + asGesamt?.matrix?.rn,0)}; ${spezASGesamtText.split(' (')[1]}), eine ACC von ${accASGesamtText.split(' (')[0]} (n=${_formatNumberForPub(asGesamt?.matrix?.rp + asGesamt?.matrix?.rn,0)}/${_formatNumberForPub(nGesamt,0)}; ${accASGesamtText.split(' (')[1]}) und eine AUC von ${aucASGesamtText}. Für die optimierten T2w-Kriterien betrug die AUC ${aucT2OptimiertGesamtText}. Der Unterschied der AUC zwischen AS und optimierten T2w-Kriterien war nicht statistisch signifikant (${pWertVergleichDelong}).</p>
             <p><strong>Fazit:</strong> Das Avocado Sign ist ein vielversprechender MRT-Marker zur Prädiktion des Lymphknotenstatus beim Rektumkarzinom und zeigt eine hohe diagnostische Güte.</p>
         `;
         const abstractEn = `
             <p><strong>Background:</strong> Accurate pretherapeutic determination of mesorectal lymph node status (N-status) is crucial for treatment decisions in rectal cancer. Standard MRI criteria have limitations.</p>
             <p><strong>Purpose:</strong> To evaluate the diagnostic performance of the "Avocado Sign" (AS), a novel contrast-enhanced (CE) MRI marker, compared to established T2-weighted (T2w) criteria for predicting N-status.</p>
-            <p><strong>Materials and Methods:</strong> This retrospective, ${ethicsVoteText.replace("ethics committee of the Saxon State Medical Association (file number EK-Allg-2023-101)","institutional review board")}-approved, single-center study included patients with histologically confirmed rectal cancer who underwent staging MRI between ${studyPeriod}. Two blinded radiologists evaluated the AS (hypointense core within a hyperintense lymph node on T1w CE sequences) and morphological T2w criteria. Histopathological examination was the reference standard. Sensitivity, specificity, accuracy (ACC), and area under the receiver operating characteristic curve (AUC) were calculated; AUCs were compared using the DeLong test.</p>
+            <p><strong>Materials and Methods:</strong> This retrospective, ${ethicsVoteText.replace("ethics committee of the Saxon State Medical Association (file number EK-Allg-2023-101)","institutional review board")}-approved, single-center study included patients with histologically confirmed rectal cancer who underwent staging MRI between ${formattedStudyPeriod}. Two blinded radiologists evaluated the AS (hypointense core within a hyperintense lymph node on T1w CE sequences) and morphological T2w criteria. Histopathological examination was the reference standard. Sensitivity, specificity, accuracy (ACC), and area under the receiver operating characteristic curve (AUC) were calculated; AUCs were compared using the DeLong test.</p>
             <p><strong>Results:</strong> ${patientText.replace("patients (mean age,","patients (median age,")} were analyzed. The AS showed a sensitivity of ${sensASGesamtText.split(' (')[0]} (n=${_formatNumberForPub(asGesamt?.matrix?.rp,0)}/${_formatNumberForPub(asGesamt?.matrix?.rp + asGesamt?.matrix?.fn,0)}; ${sensASGesamtText.split(' (')[1]}), specificity of ${spezASGesamtText.split(' (')[0]} (n=${_formatNumberForPub(asGesamt?.matrix?.rn,0)}/${_formatNumberForPub(asGesamt?.matrix?.fp + asGesamt?.matrix?.rn,0)}; ${spezASGesamtText.split(' (')[1]}), ACC of ${accASGesamtText.split(' (')[0]} (n=${_formatNumberForPub(asGesamt?.matrix?.rp + asGesamt?.matrix?.rn,0)}/${_formatNumberForPub(nGesamt,0)}; ${accASGesamtText.split(' (')[1]}), and AUC of ${aucASGesamtText}. For optimized T2w criteria, the AUC was ${aucT2OptimiertGesamtText}. The difference in AUC between AS and optimized T2w criteria was not statistically significant (${pWertVergleichDelong}).</p>
             <p><strong>Conclusion:</strong> The Avocado Sign is a promising MRI marker for predicting lymph node status in rectal cancer, demonstrating high diagnostic performance.</p>
         `;
@@ -194,7 +195,7 @@ const publicationTextGeneratorRadiology = (() => {
 
     function _getMethodenStudienanlageEthikText(lang, commonData) {
         const studyReferenceAS = commonData.references?.LURZ_SCHAEFER_AS_2025 ? _getSafeLink(commonData.references.LURZ_SCHAEFER_AS_2025.id, `(${commonData.references.LURZ_SCHAEFER_AS_2025.numberInList || 'X'})`, lang) : '(Lurz & Schäfer 2025)';
-        const ethicsVote = commonData.references?.ETHICS_VOTE_LEIPZIG || (lang === 'de' ? "Ethikkommission der Sächsischen Landesärztekammer (Aktenzeichen EK-Allg-2023-101)" : "ethics committee of the Saxon State Medical Association (file number EK-Allg-2023-101)");
+        const ethicsVote = commonData.references?.ETHICS_VOTE_LEIPZIG?.fullCitation || (lang === 'de' ? "Ethikkommission der Sächsischen Landesärztekammer (Aktenzeichen EK-Allg-2023-101)" : "ethics committee of the Saxon State Medical Association (file number EK-Allg-2023-101)");
         const appNameAndVersion = `${commonData.appName || "AvocadoSign Analysis Tool"} v${commonData.appVersion || APP_CONFIG.APP_VERSION}`;
 
 
@@ -213,7 +214,7 @@ const publicationTextGeneratorRadiology = (() => {
 
     function _getMethodenPatientenkohorteText(lang, allKollektivStats, commonData) {
         const anzahlGesamt = commonData.nGesamt || allKollektivStats?.Gesamt?.deskriptiv?.anzahlPatienten || 0;
-        const studienzeitraum = commonData.references?.STUDY_PERIOD_2020_2023 || "January 2020 to November 2023";
+        const studienzeitraum = commonData.references?.STUDY_PERIOD_2020_2023?.fullCitation || "January 2020 to November 2023";
         const formattedStudienzeitraum = lang === 'de' ? studienzeitraum.replace("and", "und") : studienzeitraum;
         const table1Id = PUBLICATION_CONFIG.publicationElements.ergebnisse.patientenCharakteristikaTabelle.id;
         const fig1Id = PUBLICATION_CONFIG.publicationElements.methoden.flowDiagram.id;
@@ -232,8 +233,8 @@ const publicationTextGeneratorRadiology = (() => {
     }
 
     function _getMethodenMRTProtokollAkquisitionText(lang, commonData) {
-        const mrtSystem = commonData.references?.MRI_SYSTEM_SIEMENS_3T || (lang === 'de' ? "3,0-T Magnetom Prisma Fit (Siemens Healthineers, Erlangen, Deutschland)" : "3.0-T Magnetom Prisma Fit (Siemens Healthineers, Erlangen, Germany)");
-        const kontrastmittel = commonData.references?.CONTRAST_AGENT_PROHANCE || (lang === 'de' ? "Gadoteridol (ProHance, Bracco Imaging, Konstanz, Deutschland)" : "Gadoteridol (ProHance, Bracco Imaging, Konstanz, Germany)");
+        const mrtSystem = commonData.references?.MRI_SYSTEM_SIEMENS_3T?.fullCitation || (lang === 'de' ? "3,0-T Magnetom Prisma Fit (Siemens Healthineers, Erlangen, Deutschland)" : "3.0-T Magnetom Prisma Fit (Siemens Healthineers, Erlangen, Germany)");
+        const kontrastmittel = commonData.references?.CONTRAST_AGENT_PROHANCE?.fullCitation || (lang === 'de' ? "Gadoteridol (ProHance, Bracco Imaging, Konstanz, Deutschland)" : "Gadoteridol (ProHance, Bracco Imaging, Konstanz, Germany)");
         const t2SliceThickness = "2–3 mm";
         const t1VibeSliceThickness = commonData.references?.LURZ_SCHAEFER_AS_2025_DETAILS?.t1VibeSliceThickness || "1.5 mm";
         const asPubRef = commonData.references?.LURZ_SCHAEFER_AS_2025 ? _getSafeLink(commonData.references.LURZ_SCHAEFER_AS_2025.id, `(${commonData.references.LURZ_SCHAEFER_AS_2025.numberInList || 'X'})`, lang) : '(Originalpublikation zum Avocado Sign)';
@@ -255,7 +256,7 @@ const publicationTextGeneratorRadiology = (() => {
 
     function _getMethodenBildanalyseAvocadoSignText(lang, commonData) {
         const studyReferenceAS = commonData.references?.LURZ_SCHAEFER_AS_2025 ? _getSafeLink(commonData.references.LURZ_SCHAEFER_AS_2025.id, `(${commonData.references.LURZ_SCHAEFER_AS_2025.numberInList || 'X'})`, lang) : '(Originalpublikation zum Avocado Sign)';
-        const radiologistExperience = commonData.references?.RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER || ["XX", "YY", "ZZ"];
+        const radiologistExperience = commonData.references?.RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER?.fullCitation || ["XX", "YY", "ZZ"];
         const figASExampleRef = lang === 'de' ? 'Abbildung 2 der Originalpublikation' : 'Figure 2 of the original publication';
 
 
@@ -273,7 +274,7 @@ const publicationTextGeneratorRadiology = (() => {
     }
 
     function _getMethodenBildanalyseT2KriterienText(lang, commonData, allKollektivStats) {
-        const radiologistExperience = commonData.references?.RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER || ["XX", "YY"];
+        const radiologistExperience = commonData.references?.RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER?.fullCitation || ["XX", "YY"];
         const bfZielMetric = commonData.bruteForceMetricForPublication || PUBLICATION_CONFIG.defaultBruteForceMetricForPublication;
         const tableLiteraturKriterienId = PUBLICATION_CONFIG.publicationElements.methoden.literaturT2KriterienTabelle.id;
         const formatCriteriaFunc = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.formatCriteriaForDisplay : (c, l, s) => 'N/A';
