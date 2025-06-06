@@ -1,6 +1,6 @@
 const APP_CONFIG = Object.freeze({
     APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
-    APP_VERSION: "2.3.0",
+    APP_VERSION: "2.5.0",
 
     DEFAULT_SETTINGS: Object.freeze({
         KOLLEKTIV: 'Gesamt',
@@ -13,7 +13,7 @@ const APP_CONFIG = Object.freeze({
         PRESENTATION_VIEW: 'as-pur',
         PRESENTATION_STUDY_ID: null,
         PUBLIKATION_LANG: 'de',
-        PUBLIKATION_SECTION: 'methoden',
+        PUBLIKATION_SECTION: 'abstract',
         PUBLIKATION_BRUTE_FORCE_METRIC: 'Balanced Accuracy',
         CRITERIA_COMPARISON_SETS: Object.freeze([
             'avocado_sign',
@@ -40,15 +40,17 @@ const APP_CONFIG = Object.freeze({
         PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
         CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
         CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
-        FIRST_APP_START: 'appFirstStart_v2.3'
+        FIRST_APP_START: 'appFirstStart_v2.5'
     }),
 
     PATHS: Object.freeze({
         BRUTE_FORCE_WORKER: 'workers/brute_force_worker.js',
-        PUBLICATION_TEXT_GENERATOR: 'js/ui/renderers/publication/publication_text_generator.js',
-        PUBLICATION_RENDERER: 'js/ui/renderers/publication/publication_renderer.js',
-        PUBLICATION_TABLES: 'js/ui/renderers/publication/publication_tables.js',
-        PUBLICATION_FIGURES: 'js/ui/renderers/publication/publication_figures.js'
+        PUBLICATION_CONTROLLER: 'js/ui/publication/publication_controller.js',
+        PUBLICATION_VIEW_RENDERER: 'js/ui/publication/publication_view_renderer.js',
+        PUBLICATION_CONTENT_GENERATOR: 'js/ui/publication/publication_content_generator.js',
+        PUBLICATION_TEXT_GENERATOR: 'js/ui/publication/publication_text_generator_radiology.js',
+        PUBLICATION_TABLE_GENERATOR: 'js/ui/publication/publication_table_generator_radiology.js',
+        PUBLICATION_FIGURE_GENERATOR: 'js/ui/publication/publication_figure_generator_radiology.js'
     }),
 
     PERFORMANCE_SETTINGS: Object.freeze({
@@ -62,13 +64,14 @@ const APP_CONFIG = Object.freeze({
         BOOTSTRAP_CI_ALPHA: 0.05,
         SIGNIFICANCE_LEVEL: 0.05,
         SIGNIFICANCE_SYMBOLS: Object.freeze([
-            { threshold: 0.001, symbol: '***' },
-            { threshold: 0.01, symbol: '**' },
-            { threshold: 0.05, symbol: '*' }
+            Object.freeze({ threshold: 0.001, symbol: '***' }),
+            Object.freeze({ threshold: 0.01, symbol: '**' }),
+            Object.freeze({ threshold: 0.05, symbol: '*' })
         ]),
         DEFAULT_CI_METHOD_PROPORTION: 'Wilson Score',
         DEFAULT_CI_METHOD_EFFECTSIZE: 'Bootstrap Percentile',
-        FISHER_EXACT_THRESHOLD: 5
+        FISHER_EXACT_THRESHOLD: 5,
+        CI_WARNING_SAMPLE_SIZE_THRESHOLD: 10
     }),
 
     T2_CRITERIA_SETTINGS: Object.freeze({
@@ -103,6 +106,9 @@ const APP_CONFIG = Object.freeze({
         TERTIARY_COLOR_GREEN: '#2ca02c',
         AS_COLOR: '#4472C4',
         T2_COLOR: '#E0DC2C',
+        COLOR_SCHEMES: Object.freeze({
+            default: Object.freeze(['#4472C4', '#E0DC2C', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#ff7f0e', '#1f77b4'])
+        }),
         ANIMATION_DURATION_MS: 750,
         AXIS_LABEL_FONT_SIZE: '11px',
         TICK_LABEL_FONT_SIZE: '10px',
@@ -137,8 +143,8 @@ const APP_CONFIG = Object.freeze({
             PNG_ZIP: 'PNGPaketZIP',
             SVG_ZIP: 'SVGPaketZIP',
             XLSX_ZIP: 'XLSXPaketZIP',
-            FILTERED_DATA_CSV: 'GefilterteDatenCSV',
-            FILTERED_DATA_XLSX: 'GefilterteDatenXLSX',
+            FILTERED_DATA_CSV: 'GefilterteRohdatenCSV',
+            FILTERED_DATA_XLSX: 'GefilterteRohdatenXLSX',
             COMPREHENSIVE_REPORT_HTML: 'AnalyseberichtHTML',
             AUSWERTUNG_XLSX: 'AuswertungTabelleXLSX',
             DATEN_XLSX: 'DatenlisteXLSX',
@@ -179,7 +185,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.3.0"}`,
+        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.5.0"}`,
         REPORT_LOGO_ALT_TEXT: 'Institutslogo',
         INCLUDE_KEY_RESULTS: true,
         INCLUDE_SUMMARY_STATEMENT: true
@@ -196,22 +202,29 @@ const APP_CONFIG = Object.freeze({
     }),
 
     REFERENCES_FOR_PUBLICATION: Object.freeze({
-        LURZ_SCHAEFER_AS_2025: "Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11462-y",
-        KOH_2008_MORPHOLOGY: "Koh DM, Chau I, Tait D, Wotherspoon A, Cunningham D, Brown G. Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. Int J Radiat Oncol Biol Phys. 2008;71(2):456-461.",
-        BARBARO_2024_RESTAGING: "Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: A single center experience. Radiother Oncol. 2024;193:110124.",
-        RUTEGARD_2025_ESGAR_VALIDATION: "Rutegård MK, Båtsman M, Blomqvist L, et al. Evaluation of MRI characterisation of histopathologically matched lymph nodes and other mesorectal nodal structures in rectal cancer. Eur Radiol. 2025. DOI: 10.1007/s00330-025-11361-2",
-        BEETS_TAN_2018_ESGAR_CONSENSUS: "Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for clinical management of rectal cancer: Updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. Eur Radiol. 2018;28(4):1465-1475.",
-        BROWN_2003_MORPHOLOGY: "Brown G, Richards CJ, Bourne MW, et al. Morphologic predictors of lymph node status in rectal cancer with use of high-spatial-resolution MR imaging with histopathologic comparison. Radiology. 2003;227(2):371-377.",
-        KAUR_2012_MRI_PRACTICAL: "Kaur H, Choi H, You NY, et al. MR Imaging for Preoperative Evaluation of Primary Rectal Cancer: Practical Considerations. RadioGraphics. 2012;32(2):389-409.",
-        HORVAT_2019_MRI_RECTAL_CANCER: "Horvat N, Carlos Tavares Rocha C, Clemente Oliveira B, Petkovska I, Gollub MJ. MRI of Rectal Cancer: Tumor Staging, Imaging Techniques, and Management. RadioGraphics. 2019;39(2):e1-e24.",
-        BEETS_TAN_2009_USPIO_RESTAGING: "Lahaye MJ, Beets GL, Engelen SME, et al. Locally Advanced Rectal Cancer: MR Imaging for Restaging after Neoadjuvant Radiation Therapy with Concomitant Chemotherapy Part II. What Are the Criteria to Predict Involved Lymph Nodes?. Radiology. 2009;252(1):81-91.",
-        BEETS_TAN_2004_GADOLINIUM: "Vliegen RFA, Beets GL, von Meyenfeldt MF, et al. Rectal Cancer: MR Imaging in Local Staging—Is Gadolinium-based Contrast Material Helpful?. Radiology. 2005;234(1):179-188.",
-        BARBARO_2010_RESTAGING: "Barbaro B, Vitale R, Leccisotti L, et al. Restaging Locally Advanced Rectal Cancer with MR Imaging after Chemoradiation Therapy. Radiographics. 2010;30(3):699-721.",
-        ETHICS_VOTE_LEIPZIG: "Ethikvotum Nr. 2023-101, Ethikkommission der Landesärztekammer Sachsen",
-        STUDY_PERIOD_2020_2023: "Januar 2020 und November 2023",
-        MRI_SYSTEM_SIEMENS_3T: "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers)",
-        CONTRAST_AGENT_PROHANCE: "Gadoteridol (ProHance; Bracco)",
-        RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER: ["29", "7", "19"]
+        SIEGEL_2023_CANCER_STATS: Object.freeze({ id: 'ref-siegel-2023', numberInList: 1, fullCitation: 'Siegel RL, Miller KD, Wagle NS, Jemal A. Cancer statistics, 2023. CA Cancer J Clin. 2023;73(1):17-48. doi:10.3322/caac.21763' }),
+        SAUER_2004_NEOADJUVANT: Object.freeze({ id: 'ref-sauer-2004', numberInList: 2, fullCitation: 'Sauer R, Becker H, Hohenberger W, et al. Preoperative versus postoperative chemoradiotherapy for rectal cancer. N Engl J Med. 2004;351(17):1731-1740. doi:10.1056/NEJMoa040694' }),
+        BEETS_TAN_2018_ESGAR_CONSENSUS: Object.freeze({ id: 'ref-beets-tan-2018', numberInList: 3, fullCitation: 'Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for clinical management of rectal cancer: Updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. Eur Radiol. 2018;28(4):1465-1475. doi:10.1007/s00330-017-5026-2' }),
+        AL_SUKHNI_2012_MRI_ACCURACY: Object.freeze({ id: 'ref-al-sukhni-2012', numberInList: 4, fullCitation: 'Al-Sukhni E, Milot L, Fruitman M, et al. Diagnostic accuracy of MRI for assessment of T category, lymph node metastases, and circumferential resection margin involvement in patients with rectal cancer: a systematic review and meta-analysis. Ann Surg Oncol. 2012;19(7):2212-2223. doi:10.1245/s10434-011-2183-1' }),
+        TAYLOR_2011_PREOP_MRI: Object.freeze({ id: 'ref-taylor-2011', numberInList: 5, fullCitation: 'Taylor FG, Quirke P, Heald RJ, et al. Preoperative high-resolution magnetic resonance imaging can identify good prognosis stage I, II, and III rectal cancer best managed by surgery alone: a prospective, multicenter, European study. Ann Surg. 2011;253(4):711-719. doi:10.1097/SLA.0b013e31820b8d52' }),
+        GARCIA_AGUILAR_2022_ORGAN_PRESERVATION: Object.freeze({ id: 'ref-garcia-aguilar-2022', numberInList: 6, fullCitation: 'Garcia-Aguilar J, Patil S, Gollub MJ, et al. Organ Preservation in Patients With Rectal Adenocarcinoma Treated With Total Neoadjuvant Therapy. J Clin Oncol. 2022;40(23):2546-2556. doi:10.1200/JCO.21.02621' }),
+        SCHRAG_2023_PREOP_TREATMENT: Object.freeze({ id: 'ref-schrag-2023', numberInList: 7, fullCitation: 'Schrag D, Shi Q, Weiser MR, et al. Preoperative Treatment of Locally Advanced Rectal Cancer. N Engl J Med. 2023;389(4):322-334. doi:10.1056/NEJMoa2303269' }),
+        LURZ_SCHAEFER_AS_2025: Object.freeze({ id: 'ref-lurz-schaefer-2025', numberInList: 8, fullCitation: 'Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025. doi:10.1007/s00330-025-11462-y (Beispiel-DOI)' }),
+        KOH_2008_MORPHOLOGY: Object.freeze({ id: 'ref-koh-2008', numberInList: 9, fullCitation: 'Koh DM, Chau I, Tait D, Wotherspoon A, Cunningham D, Brown G. Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. Int J Radiat Oncol Biol Phys. 2008;71(2):456-461. doi:10.1016/j.ijrobp.2007.10.016' }),
+        BARBARO_2024_RESTAGING: Object.freeze({ id: 'ref-barbaro-2024', numberInList: 10, fullCitation: 'Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: A single center experience. Radiother Oncol. 2024;193:110124. doi:10.1016/j.radonc.2024.110124' }),
+        RUTEGARD_2025_ESGAR_VALIDATION: Object.freeze({ id: 'ref-rutegard-2025', numberInList: 11, fullCitation: 'Rutegård MK, Båtsman M, Blomqvist L, et al. Evaluation of MRI characterisation of histopathologically matched lymph nodes and other mesorectal nodal structures in rectal cancer. Eur Radiol. 2025. doi:10.1007/s00330-025-11361-2 (Beispiel-DOI)' }),
+        STELZNER_2022_OCUM_MRI: Object.freeze({ id: 'ref-stelzner-2022', numberInList: 12, fullCitation: 'Stelzner S, Ruppert R, Kube R, et al. Selection of patients with rectal cancer for neoadjuvant therapy using pre-therapeutic MRI-results from OCUM trial. Eur J Radiol. 2022;147:110113. doi:10.1016/j.ejrad.2021.110113' }),
+        LAMBREGTS_2013_GADOFOSVESET: Object.freeze({ id: 'ref-lambregts-2013', numberInList: 13, fullCitation: 'Lambregts DMJ, Heijnen LA, Maas M, et al. Gadofosveset-enhanced MRI for the assessment of rectal cancer lymph nodes: predictive criteria. Abdom Imaging. 2013;38(4):720-727. doi:10.1007/s00261-012-9957-4' }),
+        BARBARO_2010_RESTAGING_RADIOGRAPHICS: Object.freeze({ id: 'ref-barbaro-2010', numberInList: 14, fullCitation: 'Barbaro B, Vitale R, Leccisotti L, et al. Restaging Locally Advanced Rectal Cancer with MR Imaging after Chemoradiation Therapy. Radiographics. 2010;30(3):699-721. doi:10.1148/rg.303095085' }),
+        HORVAT_2019_MRI_RECTAL_CANCER_RADIOGRAPHICS: Object.freeze({ id: 'ref-horvat-2019', numberInList: 15, fullCitation: 'Horvat N, Carlos Tavares Rocha C, Clemente Oliveira B, Petkovska I, Gollub MJ. MRI of Rectal Cancer: Tumor Staging, Imaging Techniques, and Management. RadioGraphics. 2019;39(2):367-387. doi:10.1148/rg.2019180114' }),
+        HAO_2025_DWI_RADIOMICS: Object.freeze({ id: 'ref-hao-2025', numberInList: 16, fullCitation: 'Hao Y, Zheng J, Li W et al. Ultra-high b-value DWI in rectal cancer: image quality assessment and regional lymph node prediction based on radiomics. Eur Radiol. 2025;35:49-60. doi:10.1007/s00330-024-10958-3 (Beispiel-DOI)' }),
+        KIM_2019_FDG_PET_ACCURACY: Object.freeze({ id: 'ref-kim-2019', numberInList: 17, fullCitation: 'Kim SH, Song BI, Kim BW et al. Predictive value of [18F]FDG PET/CT for lymph node metastasis in rectal cancer. Sci Rep. 2019;9:4979. doi:10.1038/s41598-019-41422-8' }),
+        ZHOU_2021_LYMPHATIC_METASTASIS: Object.freeze({ id: 'ref-zhou-2021', numberInList: 18, fullCitation: 'Zhou H, Lei PJ, Padera TP. Progression of metastasis through lymphatic system. Cells. 2021;10(3):627. doi:10.3390/cells10030627' }),
+        ETHICS_VOTE_LEIPZIG: Object.freeze({id: 'ref-ethics-leipzig', numberInList: 19, fullCitation: 'Ethikkommission der Sächsischen Landesärztekammer (Aktenzeichen EK-Allg-2023-101)'}),
+        STUDY_PERIOD_2020_2023: Object.freeze({id: 'ref-study-period', numberInList: 20, fullCitation: 'Januar 2020 und November 2023'}),
+        MRI_SYSTEM_SIEMENS_3T: Object.freeze({id: 'ref-mri-system', numberInList: 21, fullCitation: '3,0-T System (MAGNETOM Prisma Fit; Siemens Healthineers, Erlangen, Deutschland)'}),
+        CONTRAST_AGENT_PROHANCE: Object.freeze({id: 'ref-contrast-agent', numberInList: 22, fullCitation: 'Gadoteridol (ProHance; Bracco Imaging, Konstanz, Deutschland)'}),
+        RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER: Object.freeze({id: 'ref-radiologist-experience', numberInList: 23, fullCitation: ['29', '7', '19']})
     }),
 
     SPECIAL_IDS: Object.freeze({
