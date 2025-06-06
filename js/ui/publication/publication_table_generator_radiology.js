@@ -298,8 +298,8 @@ const publicationTableGeneratorRadiology = (() => {
                 tableHTML += `<tr>
                     <td>AS vs. ${litSetName}</td>
                     <td>${getKollektivDisplayName(kolId)}</td>
-                    <td>${_fCIForTable(asStats.auc, 2, false, lang)}</td>
-                    <td>${_fCIForTable(litStats.auc, 2, false, lang)}</td>
+                    <td>${_fCIForTable(asStats.auc.value, asStats.auc.ci?.lower, asStats.auc.ci?.upper, 2, false, lang)}</td>
+                    <td>${_fCIForTable(litStats.auc.value, litStats.auc.ci?.lower, litStats.auc.ci?.upper, 2, false, lang)}</td>
                     <td>${_formatTableCell(vergleichASvsLit.delong?.diffAUC, 2, lang, {forceSign: true})}</td>
                     <td>${_formatTableCell(vergleichASvsLit.delong?.pValue, 3, lang, {isPValue: true})}</td>
                     <td>${_formatTableCell(vergleichASvsLit.mcnemar?.pValue, 3, lang, {isPValue: true})}</td>
@@ -309,8 +309,8 @@ const publicationTableGeneratorRadiology = (() => {
                  tableHTML += `<tr>
                     <td>AS vs. ${lang === 'de' ? 'Optimierte T2 (für ' : 'Optimized T2 (for '}${bfDef.metricName || bfZielMetric})</td>
                     <td>${getKollektivDisplayName(kolId)}</td>
-                    <td>${_fCIForTable(asStats.auc, 2, false, lang)}</td>
-                    <td>${_fCIForTable(bfStats.auc, 2, false, lang)}</td>
+                    <td>${_fCIForTable(asStats.auc.value, asStats.auc.ci?.lower, asStats.auc.ci?.upper, 2, false, lang)}</td>
+                    <td>${_fCIForTable(bfStats.auc.value, bfStats.auc.ci?.lower, bfStats.auc.ci?.upper, 2, false, lang)}</td>
                     <td>${_formatTableCell(vergleichASvsBF.delong?.diffAUC, 2, lang, {forceSign: true})}</td>
                     <td>${_formatTableCell(vergleichASvsBF.delong?.pValue, 3, lang, {isPValue: true})}</td>
                     <td>${_formatTableCell(vergleichASvsBF.mcnemar?.pValue, 3, lang, {isPValue: true})}</td>
@@ -329,7 +329,7 @@ const publicationTableGeneratorRadiology = (() => {
     return Object.freeze({
         renderLiteraturT2KriterienTabelleRadiology: _renderLiteraturT2KriterienTabelleRadiology,
         renderPatientenCharakteristikaTabelleRadiology: _renderPatientenCharakteristikaTabelleRadiology,
-        renderDiagnostischeGueteTabelleRadiology: _renderDiagnostischeGueteTabellenRadiology,
+        renderDiagnostischeGueteTabelleRadiology: _renderDiagnostischeGueteTabelleRadiology,
         renderStatistischerVergleichAST2TabelleRadiology: _renderStatistischerVergleichAST2TabelleRadiology
     });
 
