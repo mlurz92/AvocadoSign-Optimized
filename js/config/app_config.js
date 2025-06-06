@@ -27,19 +27,19 @@ const APP_CONFIG = Object.freeze({
     }),
 
     STORAGE_KEYS: Object.freeze({
-        APPLIED_CRITERIA: 'appliedT2Criteria_v4.2_detailed',
-        APPLIED_LOGIC: 'appliedT2Logic_v4.2_detailed',
-        CURRENT_KOLLEKTIV: 'currentKollektiv_v4.2_detailed',
-        PUBLIKATION_LANG: 'currentPublikationLang_v4.2_detailed',
-        PUBLIKATION_SECTION: 'currentPublikationSection_v4.2_detailed',
-        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v4.2_detailed',
-        STATS_LAYOUT: 'currentStatsLayout_v4.2_detailed',
-        STATS_KOLLEKTIV1: 'currentStatsKollektiv1_v4.2_detailed',
-        STATS_KOLLEKTIV2: 'currentStatsKollektiv2_v4.2_detailed',
-        PRESENTATION_VIEW: 'currentPresentationView_v4.2_detailed',
-        PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v4.2_detailed',
-        CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v4.2_detailed',
-        CHART_COLOR_SCHEME: 'chartColorScheme_v4.2_detailed',
+        APPLIED_CRITERIA: 'appliedT2Criteria_v2.5_app',
+        APPLIED_LOGIC: 'appliedT2Logic_v2.5_app',
+        CURRENT_KOLLEKTIV: 'currentKollektiv_v2.5_app',
+        PUBLIKATION_LANG: 'currentPublikationLang_v2.5_app',
+        PUBLIKATION_SECTION: 'currentPublikationSection_v2.5_app',
+        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v2.5_app',
+        STATS_LAYOUT: 'currentStatsLayout_v2.5_app',
+        STATS_KOLLEKTIV1: 'currentStatsKollektiv1_v2.5_app',
+        STATS_KOLLEKTIV2: 'currentStatsKollektiv2_v2.5_app',
+        PRESENTATION_VIEW: 'currentPresentationView_v2.5_app',
+        PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v2.5_app',
+        CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v2.5_app',
+        CHART_COLOR_SCHEME: 'chartColorScheme_v2.5_app',
         FIRST_APP_START: 'appFirstStart_v2.5'
     }),
 
@@ -48,9 +48,9 @@ const APP_CONFIG = Object.freeze({
         PUBLICATION_CONTROLLER: 'js/ui/publication/publication_controller.js',
         PUBLICATION_VIEW_RENDERER: 'js/ui/publication/publication_view_renderer.js',
         PUBLICATION_CONTENT_GENERATOR: 'js/ui/publication/publication_content_generator.js',
-        PUBLICATION_TEXT_GENERATOR: 'js/ui/publication/publication_text_generator_radiology.js',
-        PUBLICATION_TABLE_GENERATOR: 'js/ui/publication/publication_table_generator_radiology.js',
-        PUBLICATION_FIGURE_GENERATOR: 'js/ui/publication/publication_figure_generator_radiology.js'
+        PUBLICATION_TEXT_GENERATOR_RADIOLOGY: 'js/ui/publication/publication_text_generator_radiology.js',
+        PUBLICATION_TABLE_GENERATOR_RADIOLOGY: 'js/ui/publication/publication_table_generator_radiology.js',
+        PUBLICATION_FIGURE_GENERATOR_RADIOLOGY: 'js/ui/publication/publication_figure_generator_radiology.js'
     }),
 
     PERFORMANCE_SETTINGS: Object.freeze({
@@ -83,8 +83,8 @@ const APP_CONFIG = Object.freeze({
     }),
 
     UI_SETTINGS: Object.freeze({
-        ICON_SIZE: 20,
-        ICON_STROKE_WIDTH: 1.5,
+        ICON_SIZE: 16,
+        ICON_STROKE_WIDTH: 1.2,
         ICON_COLOR: 'var(--text-dark)',
         ICON_COLOR_INACTIVE: 'var(--text-medium)',
         DEFAULT_TABLE_ROWS_PER_PAGE: 50,
@@ -162,7 +162,11 @@ const APP_CONFIG = Object.freeze({
             TABLE_PNG_EXPORT: '{TableName}_PNG',
             CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
             PUBLIKATION_METHODEN_MD: 'Publikation_{SectionName}_MD',
-            PUBLIKATION_ERGEBNISSE_MD: 'Publikation_{SectionName}_MD'
+            PUBLIKATION_ERGEBNISSE_MD: 'Publikation_{SectionName}_MD',
+            PUBLIKATION_ABSTRACT_MD: 'Publikation_Abstract_MD',
+            PUBLIKATION_INTRODUCTION_MD: 'Publikation_Introduction_MD',
+            PUBLIKATION_DISCUSSION_MD: 'Publikation_Discussion_MD',
+            PUBLIKATION_REFERENCES_MD: 'Publikation_References_MD'
         }),
         EXCEL_SHEET_NAME_DATEN: 'Datenliste',
         EXCEL_SHEET_NAME_AUSWERTUNG: 'Auswertung',
@@ -209,10 +213,10 @@ const APP_CONFIG = Object.freeze({
         TAYLOR_2011_PREOP_MRI: Object.freeze({ id: 'ref-taylor-2011', numberInList: 5, fullCitation: 'Taylor FG, Quirke P, Heald RJ, et al. Preoperative high-resolution magnetic resonance imaging can identify good prognosis stage I, II, and III rectal cancer best managed by surgery alone: a prospective, multicenter, European study. Ann Surg. 2011;253(4):711-719. doi:10.1097/SLA.0b013e31820b8d52' }),
         GARCIA_AGUILAR_2022_ORGAN_PRESERVATION: Object.freeze({ id: 'ref-garcia-aguilar-2022', numberInList: 6, fullCitation: 'Garcia-Aguilar J, Patil S, Gollub MJ, et al. Organ Preservation in Patients With Rectal Adenocarcinoma Treated With Total Neoadjuvant Therapy. J Clin Oncol. 2022;40(23):2546-2556. doi:10.1200/JCO.21.02621' }),
         SCHRAG_2023_PREOP_TREATMENT: Object.freeze({ id: 'ref-schrag-2023', numberInList: 7, fullCitation: 'Schrag D, Shi Q, Weiser MR, et al. Preoperative Treatment of Locally Advanced Rectal Cancer. N Engl J Med. 2023;389(4):322-334. doi:10.1056/NEJMoa2303269' }),
-        LURZ_SCHAEFER_AS_2025: Object.freeze({ id: 'ref-lurz-schaefer-2025', numberInList: 8, fullCitation: 'Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025. doi:10.1007/s00330-025-11462-y (Beispiel-DOI)' }),
+        LURZ_SCHAEFER_AS_2025: Object.freeze({ id: 'ref-lurz-schaefer-2025', numberInList: 8, fullCitation: 'Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025;XXX:XXX-XXX. doi:10.1007/s00330-025-11462-y (Beispiel-DOI)', LURZ_SCHAEFER_AS_2025_DETAILS: {t1VibeSliceThickness: "1.5 mm"} }),
         KOH_2008_MORPHOLOGY: Object.freeze({ id: 'ref-koh-2008', numberInList: 9, fullCitation: 'Koh DM, Chau I, Tait D, Wotherspoon A, Cunningham D, Brown G. Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. Int J Radiat Oncol Biol Phys. 2008;71(2):456-461. doi:10.1016/j.ijrobp.2007.10.016' }),
         BARBARO_2024_RESTAGING: Object.freeze({ id: 'ref-barbaro-2024', numberInList: 10, fullCitation: 'Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: A single center experience. Radiother Oncol. 2024;193:110124. doi:10.1016/j.radonc.2024.110124' }),
-        RUTEGARD_2025_ESGAR_VALIDATION: Object.freeze({ id: 'ref-rutegard-2025', numberInList: 11, fullCitation: 'Rutegård MK, Båtsman M, Blomqvist L, et al. Evaluation of MRI characterisation of histopathologically matched lymph nodes and other mesorectal nodal structures in rectal cancer. Eur Radiol. 2025. doi:10.1007/s00330-025-11361-2 (Beispiel-DOI)' }),
+        RUTEGARD_2025_ESGAR_VALIDATION: Object.freeze({ id: 'ref-rutegard-2025', numberInList: 11, fullCitation: 'Rutegård MK, Båtsman M, Blomqvist L, et al. Evaluation of MRI characterisation of histopathologically matched lymph nodes and other mesorectal nodal structures in rectal cancer. Eur Radiol. 2025;XXX:XXX-XXX. doi:10.1007/s00330-025-11361-2 (Beispiel-DOI)' }),
         STELZNER_2022_OCUM_MRI: Object.freeze({ id: 'ref-stelzner-2022', numberInList: 12, fullCitation: 'Stelzner S, Ruppert R, Kube R, et al. Selection of patients with rectal cancer for neoadjuvant therapy using pre-therapeutic MRI-results from OCUM trial. Eur J Radiol. 2022;147:110113. doi:10.1016/j.ejrad.2021.110113' }),
         LAMBREGTS_2013_GADOFOSVESET: Object.freeze({ id: 'ref-lambregts-2013', numberInList: 13, fullCitation: 'Lambregts DMJ, Heijnen LA, Maas M, et al. Gadofosveset-enhanced MRI for the assessment of rectal cancer lymph nodes: predictive criteria. Abdom Imaging. 2013;38(4):720-727. doi:10.1007/s00261-012-9957-4' }),
         BARBARO_2010_RESTAGING_RADIOGRAPHICS: Object.freeze({ id: 'ref-barbaro-2010', numberInList: 14, fullCitation: 'Barbaro B, Vitale R, Leccisotti L, et al. Restaging Locally Advanced Rectal Cancer with MR Imaging after Chemoradiation Therapy. Radiographics. 2010;30(3):699-721. doi:10.1148/rg.303095085' }),
