@@ -43,19 +43,39 @@ const praesentationTabRenderer = (() => {
         if (downloadButtonIds && downloadButtonIds.length > 0) {
             buttonsHTML += '<div class="card-header-buttons">';
             downloadButtonIds.forEach(btn => {
-                const btnConfig = TOOLTIP_CONTENT.praesentation[btn.id];
-                const btnLabel = btn.label || (btnConfig ? btnConfig.labelShort || btn.id.replace('download', '').replace(/([A-Z])/g, ' $1').trim() : btn.id);
-                const btnIcon = btn.icon || 'fa-download';
-                const btnTippy = btnConfig ? btnConfig.description : `Download ${btnLabel}`;
-                const btnDisabled = btn.disabled ? 'disabled' : '';
-                const btnExtraClass = btn.extraClass || '';
+                const btnId = btn.id || `dl-${contentPlaceholderId.replace(/[^a-zA-Z0-9_-]/g, '')}-${btn.format || 'action'}`;
+                const iconClass = btn.icon || 'fa-download';
+                let tooltip = btn.tooltip || `Als ${String(btn.format || 'Aktion').toUpperCase()} herunterladen`;
 
-                buttonsHTML += `<button class="btn btn-sm btn-outline-secondary ms-1 ${btnExtraClass}" id="${btn.id}" data-tippy-content="${btnTippy}" ${btnDisabled}><i class="fas ${btnIcon} fa-fw"></i> ${btnLabel}</button>`;
-            });
-            buttonsHTML += '</div>';
+                const safeDefaultTitle = String(title).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
+                const safeChartName = String(btn.chartName || safeDefaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
+                const safeTableName = String(btn.tableName || safeDefaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
+
+                if (btn.format === 'png' && btn.chartId && TOOLTIP_CONTENT.exportTab.CHART_SINGLE_PNG?.description) {
+                    tooltip = TOOLTIP_CONTENT.exportTab.CHART_SINGLE_PNG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
+                } else if (btn.format === 'svg' && btn.chartId && TOOLTIP_CONTENT.exportTab.CHART_SINGLE_SVG?.description) {
+                    tooltip = TOOLTIP_CONTENT.exportTab.CHART_SINGLE_SVG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
+                } else if (btn.format === 'png' && btn.tableId && TOOLTIP_CONTENT.exportTab.TABLE_PNG_EXPORT?.description) {
+                    tooltip = TOOLTIP_CONTENT.exportTab.TABLE_PNG_EXPORT.description.replace('{TableName}', `<strong>${safeTableName}</strong>`);
+                }
+
+
+                const dataAttributes = [];
+                if (btn.chartId) dataAttributes.push(`data-chart-id="${btn.chartId}"`);
+                if (btn.tableId) dataAttributes.push(`data-table-id="${btn.tableId}"`);
+                
+                if (btn.tableName) dataAttributes.push(`data-table-name="${safeTableName.replace(/\s/g, '_')}"`);
+                else if (btn.chartId) dataAttributes.push(`data-chart-name="${safeChartName.replace(/\s/g, '_')}"`);
+                else dataAttributes.push(`data-default-name="${safeDefaultTitle.replace(/\s/g, '_')}"`);
+
+
+                if (btn.format) dataAttributes.push(`data-format="${btn.format}"`);
+
+                return `<button class="btn btn-sm btn-outline-secondary ms-1 ${btn.extraClass || ''}" id="${btnId}" ${dataAttributes.join(' ')} data-tippy-content="${tooltip}" ${btn.disabled ? 'disabled' : ''}><i class="fas ${iconClass} fa-fw"></i> ${btn.label || ''}</button>`;
+            }).join('');
         }
 
-        const tooltipText = cardTooltipKey && TOOLTIP_CONTENT.praesentation[cardTooltipKey] ? TOOLTIP_CONTENT.praesentation[cardTooltipKey].description.replace('[CURRENT_KOLLEKTIV_PRAES]', getKollektivDisplayName(stateManager.getCurrentKollektivForPresentation() || stateManager.getCurrentKollektiv())) : title;
+        const tooltipText = cardTooltipKey && TOOLTIP_CONTENT.praesentation[cardTooltipKey] ? TOOLTIP_CONTENT.praesentation[cardTooltipKey].description.replace('[CURRENT_KOLLEKTIV_PRAES]', getKollektivDisplayName(window.stateManager.getCurrentKollektivForPresentation() || window.stateManager.getCurrentKollektiv())) : title;
         const displayStyle = isInitiallyHidden ? 'style="display: none;"' : '';
 
         return `
@@ -72,7 +92,7 @@ const praesentationTabRenderer = (() => {
 
 
     function renderPresentationTab(currentView, currentStudyId, currentKollektiv, processedData, appliedCriteria, appliedLogic) {
-        if (typeof uiComponents === 'undefined' || typeof TOOLTIP_CONTENT === 'undefined' || typeof UI_TEXTS === 'undefined' || typeof APP_CONFIG === 'undefined' || typeof stateManager === 'undefined') {
+        if (typeof window.uiComponents === 'undefined' || typeof window.TOOLTIP_CONTENT === 'undefined' || typeof window.UI_TEXTS === 'undefined' || typeof window.APP_CONFIG === 'undefined' || typeof window.stateManager === 'undefined') {
             console.error("Abhängigkeiten für praesentationTabRenderer nicht vollständig geladen.");
             return '<p class="text-danger p-3">Fehler: Wichtige UI Komponenten für den Präsentation-Tab nicht geladen.</p>';
         }
