@@ -1,198 +1,201 @@
-const praesentationTabRenderer = (() => {
+const praesentationRenderer = (() => {
 
-    function _createViewAndStudySelectControls(currentView, currentStudyId, currentKollektiv, appliedCriteria) {
-        let html = `<div class="row mb-4 align-items-end">
-                        <div class="col-md-5 mb-3 mb-md-0">
-                            <label class="form-label fw-bold">${UI_TEXTS.praesentationTab.viewSelect.label}:</label>
-                            <div data-tippy-content="${TOOLTIP_CONTENT.praesentation.viewSelect.description}">`;
-
-        const views = [
-            { value: 'as-pur', label: UI_TEXTS.praesentationTab.viewSelect.asPurLabel, icon: 'fa-bullseye' },
-            { value: 'as-vs-t2', label: UI_TEXTS.praesentationTab.viewSelect.asVsT2Label, icon: 'fa-balance-scale-right' }
-        ];
-
-        views.forEach(view => {
-            const isChecked = view.value === currentView;
-            html += `<div class="form-check form-check-inline">
-                        <input class="form-check-input praes-view-radio" type="radio" name="praesentationAnsicht" id="praes-ansicht-${view.value}" value="${view.value}" ${isChecked ? 'checked' : ''}>
-                        <label class="form-check-label praes-view-btn" for="praes-ansicht-${view.value}"><i class="fas ${view.icon} fa-fw me-1"></i>${view.label}</label>
-                     </div>`;
-        });
-        html += `</div></div>`;
-
-        const studySelectDisplay = currentView === 'as-vs-t2' ? 'block' : 'none';
-        html += `<div class="col-md-7" id="praes-study-select-group" style="display: ${studySelectDisplay};">
-                    <label for="praes-study-select" class="form-label fw-bold">${UI_TEXTS.praesentationTab.studySelect.label}:</label>
-                    <select class="form-select" id="praes-study-select" data-tippy-content="${TOOLTIP_CONTENT.praesentation.studySelect.description}">`;
-
-        const appliedCriteriaName = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME || "Aktuell angewandte Kriterien";
-        html += `<option value="${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID}" ${currentStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID ? 'selected' : ''}>${appliedCriteriaName}</option>`;
-
-        if (typeof studyT2CriteriaManager !== 'undefined') {
-            const literatureSets = studyT2CriteriaManager.getAllStudyCriteriaSetsSorted();
-            literatureSets.forEach(set => {
-                html += `<option value="${set.id}" ${currentStudyId === set.id ? 'selected' : ''}>${set.displayShortName || set.name}</option>`;
-            });
-        }
-        html += `</select></div></div>`;
-        return html;
-    }
-
-    function _createCardHTML(cardId, title, contentPlaceholderId, downloadButtonIds = [], extraCardClasses = '', cardTooltipKey = null, isInitiallyHidden = false) {
-        let buttonsHTML = '';
-        if (downloadButtonIds && downloadButtonIds.length > 0) {
-            buttonsHTML += '<div class="card-header-buttons">';
-            downloadButtonIds.forEach(btn => {
-                const btnId = btn.id || `dl-${contentPlaceholderId.replace(/[^a-zA-Z0-9_-]/g, '')}-${btn.format || 'action'}`;
-                const iconClass = btn.icon || 'fa-download';
-                let tooltip = btn.tooltip || `Als ${String(btn.format || 'Aktion').toUpperCase()} herunterladen`;
-
-                const safeDefaultTitle = String(title).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
-                const safeChartName = String(btn.chartName || safeDefaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
-                const safeTableName = String(btn.tableName || safeDefaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
-
-                if (btn.format === 'png' && btn.chartId && TOOLTIP_CONTENT.exportTab.CHART_SINGLE_PNG?.description) {
-                    tooltip = TOOLTIP_CONTENT.exportTab.CHART_SINGLE_PNG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
-                } else if (btn.format === 'svg' && btn.chartId && TOOLTIP_CONTENT.exportTab.CHART_SINGLE_SVG?.description) {
-                    tooltip = TOOLTIP_CONTENT.exportTab.CHART_SINGLE_SVG.description.replace('{ChartName}', `<strong>${safeChartName}</strong>`);
-                } else if (btn.format === 'png' && btn.tableId && TOOLTIP_CONTENT.exportTab.TABLE_PNG_EXPORT?.description) {
-                    tooltip = TOOLTIP_CONTENT.exportTab.TABLE_PNG_EXPORT.description.replace('{TableName}', `<strong>${safeTableName}</strong>`);
-                }
-
-
-                const dataAttributes = [];
-                if (btn.chartId) dataAttributes.push(`data-chart-id="${btn.chartId}"`);
-                if (btn.tableId) dataAttributes.push(`data-table-id="${btn.tableId}"`);
-                
-                if (btn.tableName) dataAttributes.push(`data-table-name="${safeTableName.replace(/\s/g, '_')}"`);
-                else if (btn.chartId) dataAttributes.push(`data-chart-name="${safeChartName.replace(/\s/g, '_')}"`);
-                else dataAttributes.push(`data-default-name="${safeDefaultTitle.replace(/\s/g, '_')}"`);
-
-
-                if (btn.format) dataAttributes.push(`data-format="${btn.format}"`);
-
-                return `<button class="btn btn-sm btn-outline-secondary ms-1 ${btn.extraClass || ''}" id="${btnId}" ${dataAttributes.join(' ')} data-tippy-content="${tooltip}" ${btn.disabled ? 'disabled' : ''}><i class="fas ${iconClass} fa-fw"></i> ${btn.label || ''}</button>`;
-            }).join('');
-        }
-
-        const tooltipText = cardTooltipKey && TOOLTIP_CONTENT.praesentation[cardTooltipKey] ? TOOLTIP_CONTENT.praesentation[cardTooltipKey].description.replace('[CURRENT_KOLLEKTIV_PRAES]', getKollektivDisplayName(window.stateManager.getCurrentKollektivForPresentation() || window.stateManager.getCurrentKollektiv())) : title;
-        const displayStyle = isInitiallyHidden ? 'style="display: none;"' : '';
+    function _createViewSelectorHTML(currentView, studyData, selectedStudyId) {
+        const studyOptions = studyData.map(study =>
+            `<option value="${study.id}" ${study.id === selectedStudyId ? 'selected' : ''}>${study.name}</option>`
+        ).join('');
 
         return `
-            <div class="card praesentation-card mb-4 ${extraCardClasses}" id="${cardId}" ${displayStyle} data-tippy-content="${tooltipText}">
-                <div class="card-header">
-                    <h5 class="mb-0 card-title-praes">${title}</h5>
-                    ${buttonsHTML}
+            <div class="d-flex flex-wrap justify-content-center align-items-center mb-4 p-2 rounded bg-light border">
+                <div class="btn-group me-3 mb-2 mb-md-0" role="group" aria-label="Ansicht auswählen">
+                    <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as-pur" value="as-pur" ${currentView === 'as-pur' ? 'checked' : ''}>
+                    <label class="btn btn-sm btn-outline-primary" for="praes-ansicht-as-pur" data-tippy-content="Zeigt Demographie und Performance des Avocado Signs für das Gesamtkollektiv.">
+                        <i class="fas fa-seedling me-1"></i>AS Pur
+                    </label>
+                    <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-ansicht-as-vs-t2" value="as-vs-t2" ${currentView === 'as-vs-t2' ? 'checked' : ''}>
+                    <label class="btn btn-sm btn-outline-primary" for="praes-ansicht-as-vs-t2" data-tippy-content="Vergleicht die Performance des Avocado Signs mit etablierten T2-Kriterien-Sets.">
+                        <i class="fas fa-balance-scale me-1"></i>AS vs. T2
+                    </label>
                 </div>
-                <div class="card-body p-0" id="${contentPlaceholderId}">
-                    <p class="text-muted text-center p-3">Inhalt wird geladen...</p>
+                <div id="praes-study-select-group" class="d-flex align-items-center ${currentView === 'as-vs-t2' ? '' : 'd-none'}">
+                    <label for="praes-study-select" class="form-label form-label-sm me-2 mb-0">Vergleichsstudie:</label>
+                    <select id="praes-study-select" class="form-select form-select-sm" style="width: auto;">
+                        ${studyOptions}
+                    </select>
                 </div>
             </div>`;
     }
 
+    function _createDemographicsTableHTML(stats) {
+        if (!stats) return '<p class="text-muted p-2">Keine Demographiedaten verfügbar.</p>';
+        const rows = [
+            { label: 'Anzahl Patienten (n)', value: formatNumber(stats.count, 0) },
+            { label: 'Medianes Alter (Jahre)', value: formatNumber(stats.age.median, 0) },
+            { label: 'Interquartilsabstand Alter', value: `${formatNumber(stats.age.q1, 0)} - ${formatNumber(stats.age.q3, 0)}` },
+            { label: 'Geschlecht (m / w)', value: `${formatNumber(stats.gender.m, 0)} / ${formatNumber(stats.gender.f, 0)}` },
+            { label: 'Therapie (pRCT / nRCT)', value: `${formatNumber(stats.therapy.pRCT, 0)} / ${formatNumber(stats.therapy.nRCT, 0)}` },
+            { label: 'Histologie N+ / N-', value: `${formatNumber(stats.nStatus.positive, 0)} / ${formatNumber(stats.nStatus.negative, 0)}` }
+        ];
+        let tableHTML = '<table class="table table-sm table-striped table-borderless mb-0">';
+        rows.forEach(row => {
+            tableHTML += `<tr><td class="small">${row.label}</td><td class="text-end small"><strong>${row.value}</strong></td></tr>`;
+        });
+        tableHTML += '</table>';
+        return tableHTML;
+    }
 
-    function renderPresentationTab(currentView, currentStudyId, currentKollektiv, processedData, appliedCriteria, appliedLogic) {
-        if (typeof window.uiComponents === 'undefined' || typeof window.TOOLTIP_CONTENT === 'undefined' || typeof window.UI_TEXTS === 'undefined' || typeof window.APP_CONFIG === 'undefined' || typeof window.stateManager === 'undefined') {
-            console.error("Abhängigkeiten für praesentationTabRenderer nicht vollständig geladen.");
-            return '<p class="text-danger p-3">Fehler: Wichtige UI Komponenten für den Präsentation-Tab nicht geladen.</p>';
+    function _createPerformanceTableHTML(stats, title, keyPrefix, kollektivName = 'Gesamt') {
+        if (!stats) return `<p class="text-muted p-2">Keine Performancedaten für ${title} verfügbar.</p>`;
+        const metrics = [
+            { key: 'sens', label: 'Sensitivität' },
+            { key: 'spez', label: 'Spezifität' },
+            { key: 'ppv', label: 'PPV' },
+            { key: 'npv', label: 'NPV' },
+            { key: 'acc', label: 'Accuracy' },
+            { key: 'balAcc', label: 'Balanced Accuracy' }
+        ];
+        let tableHTML = '<table class="table table-sm table-striped table-borderless mb-0">';
+        metrics.forEach(metric => {
+            const metricData = stats[metric.key];
+            const formattedValue = formatCI(metricData.value, metricData.ci?.lower, metricData.ci?.upper, 1, true, '--');
+            const tooltipInterp = uiHelpers.getMetricInterpretationHTML(metric.key, metricData, title, kollektivName);
+            tableHTML += `<tr><td class="small">${metric.label}</td><td class="text-end small" data-tippy-content="${tooltipInterp}"><strong>${formattedValue}</strong></td></tr>`;
+        });
+        tableHTML += '</table>';
+        return tableHTML;
+    }
+
+    function _createComparisonTableHTML(stats, asTitle, t2Title, kollektivName = 'Gesamt') {
+        if (!stats) return '<p class="text-muted p-2">Keine Vergleichsdaten verfügbar.</p>';
+        const metrics = ['sens', 'spez', 'ppv', 'npv', 'balAcc', 'auc'];
+        const metricLabels = { sens: 'Sensitivität', spez: 'Spezifität', ppv: 'PPV', npv: 'NPV', balAcc: 'Balanced Acc.', auc: 'AUC' };
+
+        let tableHTML = '<table class="table table-sm table-striped table-bordered text-center mb-0">';
+        tableHTML += '<thead><tr><th scope="col" class="small">Metrik</th><th scope="col" class="small">Avocado Sign</th><th scope="col" class="small">T2-Kriterien</th></tr></thead><tbody>';
+
+        metrics.forEach(metric => {
+            const asData = stats.avocadoSign[metric];
+            const t2Data = stats.t2[metric];
+            const isPercent = metric !== 'auc';
+            const digits = metric === 'auc' ? 3 : 1;
+
+            const asFormatted = formatCI(asData.value, asData.ci?.lower, asData.ci?.upper, digits, isPercent, '--');
+            const t2Formatted = formatCI(t2Data.value, t2Data.ci?.lower, t2Data.ci?.upper, digits, isPercent, '--');
+
+            const asTooltip = uiHelpers.getMetricInterpretationHTML(metric, asData, asTitle, kollektivName);
+            const t2Tooltip = uiHelpers.getMetricInterpretationHTML(metric, t2Data, t2Title, kollektivName);
+
+            tableHTML += `
+                <tr>
+                    <td class="small text-start"><strong>${metricLabels[metric]}</strong></td>
+                    <td class="small" data-tippy-content="${asTooltip}">${asFormatted}</td>
+                    <td class="small" data-tippy-content="${t2Tooltip}">${t2Formatted}</td>
+                </tr>`;
+        });
+        tableHTML += '</tbody></table>';
+        return tableHTML;
+    }
+
+    function _createComparisonTestsTableHTML(stats, kollektivName = 'Gesamt') {
+        if (!stats) return '<p class="text-muted p-2">Keine Testdaten verfügbar.</p>';
+        const tests = [
+            { key: 'mcnemar', label: 'McNemar-Test (Sens/Spez)' },
+            { key: 'delong', label: 'DeLong-Test (AUC)' }
+        ];
+        let tableHTML = '<table class="table table-sm table-striped table-borderless mb-0">';
+        tests.forEach(test => {
+            const testData = stats[test.key];
+            const pValueFormatted = testData.pValue < 0.001 ? '&lt;0.001' : formatNumber(testData.pValue, 3);
+            const sigSymbol = getStatisticalSignificanceSymbol(testData.pValue);
+            const tooltip = uiHelpers.getTestInterpretationHTML(test.key, testData, kollektivName, 'T2');
+            tableHTML += `<tr><td class="small">${test.label}</td><td class="text-end small" data-tippy-content="${tooltip}">p = <strong>${pValueFormatted}</strong> ${sigSymbol}</td></tr>`;
+        });
+        tableHTML += '</tbody></table>';
+        return tableHTML;
+    }
+
+    function _createAsPurViewHTML(stats) {
+        if (!stats) return '<p class="p-3 text-center text-muted">Statistikdaten für die "AS Pur"-Ansicht konnten nicht geladen werden.</p>';
+
+        const demographicsCard = uiComponents.createStatistikCard(
+            'praes-demographics-as-pur',
+            'Demographie (Gesamtkollektiv)',
+            _createDemographicsTableHTML(stats.descriptive),
+            true, null,
+            [{ id: 'download-demographics-as-pur-md', format: 'md', icon: 'fa-file-alt', tooltip: 'Demographie als Markdown herunterladen' }]
+        );
+
+        const performanceCard = uiComponents.createStatistikCard(
+            'praes-performance-as-pur',
+            'Performance Avocado Sign',
+            _createPerformanceTableHTML(stats.avocadoSign, 'Avocado Sign', 'as'),
+            true, null,
+            [{ id: 'download-performance-as-pur-csv', format: 'csv', icon: 'fa-file-csv', tooltip: 'Performance-Daten als CSV herunterladen' },
+             { id: 'download-performance-as-pur-md', format: 'md', icon: 'fa-file-alt', tooltip: 'Performance-Tabelle als Markdown herunterladen' }]
+        );
+
+        const chartCard = uiComponents.createStatistikCard(
+            'praes-chart-container-as-pur',
+            'Performance-Chart',
+            '<div id="praes-chart-as-pur" class="chart-container" style="min-height: 350px;"></div>',
+            true, null,
+            [{ format: 'png', chartId: 'praes-chart-as-pur', chartName: 'Performance_AS_Pur' },
+             { format: 'svg', chartId: 'praes-chart-as-pur', chartName: 'Performance_AS_Pur' }]
+        );
+
+        return `<div class="row g-4">${demographicsCard}${performanceCard}${chartCard}</div>`;
+    }
+
+    function _createAsVsT2ViewHTML(stats, study) {
+        if (!stats || !study) return '<p class="p-3 text-center text-muted">Vergleichsdaten für die ausgewählte Studie konnten nicht geladen werden.</p>';
+
+        const comparisonTableCard = uiComponents.createStatistikCard(
+            'praes-comp-table-as-vs-t2',
+            'Performance-Vergleich',
+            _createComparisonTableHTML(stats, 'Avocado Sign', study.name),
+            true, null,
+            [{ id: 'download-performance-as-vs-t2-csv', format: 'csv', icon: 'fa-file-csv', tooltip: 'Vergleichsdaten als CSV herunterladen' },
+             { id: 'download-comp-table-as-vs-t2-md', format: 'md', icon: 'fa-file-alt', tooltip: 'Vergleichstabelle als Markdown herunterladen' }]
+        );
+
+        const comparisonTestsCard = uiComponents.createStatistikCard(
+            'praes-comp-tests-as-vs-t2',
+            'Statistische Tests',
+            _createComparisonTestsTableHTML(stats.comparison),
+            true, null,
+            [{ id: 'download-tests-as-vs-t2-md', format: 'md', icon: 'fa-file-alt', tooltip: 'Statistische Tests als Markdown herunterladen' }]
+        );
+
+        const chartCard = uiComponents.createStatistikCard(
+            'praes-chart-container-as-vs-t2',
+            'Performance-Vergleichs-Chart',
+            '<div id="praes-chart-as-vs-t2" class="chart-container" style="min-height: 400px;"></div>',
+            true, null,
+            [{ format: 'png', chartId: 'praes-chart-as-vs-t2', chartName: `Vergleich_AS_vs_${study.id}` },
+             { format: 'svg', chartId: 'praes-chart-as-vs-t2', chartName: `Vergleich_AS_vs_${study.id}` }]
+        );
+
+        return `<div class="row g-4">${comparisonTableCard}${comparisonTestsCard}${chartCard}</div>`;
+    }
+
+    function render(currentView, stats, selectedStudyId) {
+        const studyData = studyCriteriaManager.getStudyListForPresentation();
+        let contentHTML = _createViewSelectorHTML(currentView, studyData, selectedStudyId);
+
+        if (currentView === 'as-pur') {
+            contentHTML += _createAsPurViewHTML(stats.asPur);
+        } else if (currentView === 'as-vs-t2') {
+            const selectedStudy = studyCriteriaManager.getStudyById(selectedStudyId);
+            contentHTML += _createAsVsT2ViewHTML(stats.asVsT2, selectedStudy);
+        } else {
+            contentHTML += '<p class="p-3 text-center text-muted">Bitte wählen Sie eine Ansicht aus.</p>';
         }
-        let html = _createViewAndStudySelectControls(currentView, currentStudyId, currentKollektiv, appliedCriteria);
-        html += `<div id="praesentation-content-area" class="mt-4">`;
 
-        const t2BasisInfoDownloads = [
-            { id: 'download-praes-t2-info-md', label: 'MD', icon: 'fa-file-alt'}
-        ];
-        html += _createCardHTML(
-            'praes-t2-basis-info-card',
-            UI_TEXTS.praesentationTab.t2BasisInfoCard.title,
-            'praes-t2-basis-info-content',
-            t2BasisInfoDownloads,
-            '',
-            't2BasisInfoCard',
-            currentView !== 'as-vs-t2'
-        );
-
-        const demographieDownloads = [
-            { id: 'download-praes-demographics-table-png', label: 'PNG', icon: 'fa-image', extraClass: 'table-download-png-btn', tableIdAttribute: 'praes-demographics-table'},
-            { id: 'download-praes-demographics-md', label: 'MD', icon: 'fa-file-alt'}
-        ];
-        html += _createCardHTML(
-            'praes-demographics-card',
-            UI_TEXTS.praesentationTab.demographicsCard.title,
-            'praes-demographics-content',
-            demographieDownloads,
-            '',
-            'demographicsCard',
-            currentView === 'as-vs-t2'
-        );
-
-        const asPerfDownloads = [
-            { id: 'download-praes-as-perf-table-png', label: 'PNG', icon: 'fa-image', extraClass: 'table-download-png-btn', tableIdAttribute: 'praes-as-perf-table' },
-            { id: 'download-praes-as-perf-csv', label: 'CSV', icon: 'fa-file-csv' },
-            { id: 'download-praes-as-perf-md', label: 'MD', icon: 'fa-file-alt' }
-        ];
-        html += _createCardHTML(
-            'praes-as-performance-card',
-            UI_TEXTS.praesentationTab.asPerformanceCard.title,
-            'praes-as-performance-content',
-            asPerfDownloads,
-            '',
-            'asPerformanceCard',
-            currentView === 'as-vs-t2'
-        );
-
-        html += `<div class="presentation-comparison-row" id="praes-as-vs-t2-comparison-row" ${currentView !== 'as-vs-t2' ? 'style="display:none;"' : ''}>
-                    <div class="col-lg-7 presentation-comparison-col-left">`;
-
-        const compTableDownloads = [
-            { id: 'download-praes-comp-table-png', label: 'PNG', icon: 'fa-image', extraClass: 'table-download-png-btn', tableIdAttribute: 'praes-as-vs-t2-perf-table'},
-            { id: 'download-praes-comp-table-csv', label: 'CSV', icon: 'fa-file-csv'},
-            { id: 'download-praes-comp-table-md', label: 'MD', icon: 'fa-file-alt'}
-        ];
-        html += _createCardHTML(
-            'praes-as-vs-t2-perf-card',
-            UI_TEXTS.praesentationTab.asVsT2PerformanceCard.title,
-            'praes-as-vs-t2-perf-content',
-            compTableDownloads,
-            '',
-            'asVsT2PerformanceCard'
-        );
-
-        const compTestDownloads = [
-            { id: 'download-praes-comp-tests-table-png', label: 'PNG', icon: 'fa-image', extraClass: 'table-download-png-btn', tableIdAttribute: 'praes-as-vs-t2-tests-table'},
-            { id: 'download-praes-comp-tests-md', label: 'MD', icon: 'fa-file-alt' }
-        ];
-        html += _createCardHTML(
-            'praes-as-vs-t2-tests-card',
-            UI_TEXTS.praesentationTab.asVsT2TestsCard.title,
-            'praes-as-vs-t2-tests-content',
-            compTestDownloads,
-            '',
-            'asVsT2TestsCard'
-        );
-        html += `   </div>
-                    <div class="col-lg-5 presentation-comparison-col-right">`;
-
-        const compChartDownloads = [
-             { id: 'download-praes-comp-chart-png', label: 'PNG', icon: 'fa-image', extraClass: 'chart-download-btn', chartIdAttribute: 'praes-as-vs-t2-comparison-chart-area', formatAttribute: 'png'},
-             { id: 'download-praes-comp-chart-svg', label: 'SVG', icon: 'fa-file-alt', extraClass: 'chart-download-btn', chartIdAttribute: 'praes-as-vs-t2-comparison-chart-area', formatAttribute: 'svg'}
-        ];
-        html += _createCardHTML(
-            'praes-as-vs-t2-chart-card',
-            UI_TEXTS.praesentationTab.asVsT2ChartCard.title,
-            'praes-as-vs-t2-chart-content',
-            compChartDownloads,
-            '',
-            'asVsT2ChartCard'
-        );
-        html += `       </div>
-                 </div>`;
-
-        html += `</div>`;
-        return html;
+        return contentHTML;
     }
 
     return Object.freeze({
-        renderPresentationTab
+        render
     });
+
 })();
