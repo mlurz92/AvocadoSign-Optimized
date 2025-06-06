@@ -311,17 +311,17 @@ const ui_helpers = (() => {
                                 el.classList.remove('active');
                              }
                         }
-                    });
-
-                    if (key === 'size') {
-                        const range = document.getElementById('range-size');
-                        const input = document.getElementById('input-size');
-                        const valueDisplay = document.getElementById('value-size');
-                        const thresholdValue = criterion.threshold ?? getDefaultT2Criteria().size.threshold;
-                        if (range) range.value = formatNumber(thresholdValue, 1, '', true);
-                        if (input) input.value = formatNumber(thresholdValue, 1, '', true);
-                        if (valueDisplay) valueDisplay.textContent = formatNumber(thresholdValue, 1);
                     }
+                });
+
+                if (key === 'size') {
+                    const range = document.getElementById('range-size');
+                    const input = document.getElementById('input-size');
+                    const valueDisplay = document.getElementById('value-size');
+                    const thresholdValue = criterion.threshold ?? getDefaultT2Criteria().size.threshold;
+                    if (range) range.value = formatNumber(thresholdValue, 1, '', true);
+                    if (input) input.value = formatNumber(thresholdValue, 1, '', true);
+                    if (valueDisplay) valueDisplay.textContent = formatNumber(thresholdValue, 1);
                 }
             }
         });
@@ -532,7 +532,7 @@ const ui_helpers = (() => {
                     if (elements.resultKollektivNminus) updateElementText(elements.resultKollektivNminus.id, formatNumber(data.nMinus,0,'--'));
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig.');
                      if (bfInfoElement) addOrUpdateTooltip(bfInfoElement, (window.TOOLTIP_CONTENT.bruteForceInfo.description || '').replace('[KOLLEKTIV_NAME]', `<strong>${resultKollektivName}</strong>`) + ` Status: Fertig.`);
-                     if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, (window.TOOLTIP_CONTENT.bruteForceResult.description || '').replace('[N_GESAMT]', formatNumber(data.nGesamt,0,'?')).replace('[N_PLUS]', formatNumber(data.nPlus,0,'?')).replace('[N_MINUS]', formatNumber(data.nMinus,0,'?')) );
+                     if (elements.resultContainer) addOrUpdateTooltip(elements.resultContainer, (window.TOOLTIP_CONTENT.bruteForceResult.description || '').replace('[N_GESAMT]', formatNumber(data.nGesamt,0,'?')).replace('[N_PLUS]', formatNumber(data.nPlus,0,'?')).replace('[N_MINUS]', formatNumber(data.nMinus,0,'?')));
                 } else {
                     if (elements.resultContainer) toggleElementClass(elements.resultContainer.id, 'd-none', true);
                     if (elements.statusText) updateElementText(elements.statusText.id, 'Fertig (kein valides Ergebnis).');
