@@ -73,7 +73,7 @@ const publicationTextGeneratorRadiology = (() => {
 
     function _getKollektivTextForPub(kollektivId, n, lang = 'de') {
         const name = getKollektivDisplayName(kollektivId);
-        const nText = `n=${formatNumber(n, 0, 'N/A', lang === 'en')}`;
+        const nText = `n=${_formatNumberForPub(n, 0, lang, lang === 'en')}`;
         return `${name} (${nText})`;
     }
 
@@ -94,7 +94,7 @@ const publicationTextGeneratorRadiology = (() => {
         const anzahlMaenner = gesamtStats?.deskriptiv?.geschlecht?.m || 0;
         const anzahlFrauen = gesamtStats?.deskriptiv?.geschlecht?.f || 0;
         const sexText = lang === 'de' ? `${anzahlMaenner} Männer und ${anzahlFrauen} Frauen` : `${anzahlMaenner} men and ${anzahlFrauen} women`;
-        const patientText = lang === 'de' ? `${_formatNumberForPub(nGesamt,0,lang)} Patienten (mittleres Alter, ${ageRangeText}; ${anzahlMaenner} Männer)` : `${_formatNumberForPub(nGesamt,0,lang)} patients (mean age, ${ageRangeText}; ${anzahlMaenner} men)`;
+        const patientText = lang === 'de' ? `${_formatNumberForPub(nGesamt,0,lang)} Patienten (mittleres Alter, ${ageRangeText}; ${anzahlMaenner} Männer)` : `${_formatNumberForPub(nGesamt,0,lang)} patients (median age, ${ageRangeText}; ${anzahlMaenner} men)`;
 
 
         const sensASGesamtValue = asGesamt?.sens?.value;
@@ -507,9 +507,11 @@ const publicationTextGeneratorRadiology = (() => {
 
 
         if (lang === 'de') {
-            text += `<h3 id="ergebnisse-vergleich-as-vs-t2-title">Vergleichsanalysen: Avocado Sign vs. T2-Kriterien</h3><p>Statistische Vergleiche zwischen AS und T2-Kriteriensets (Literatur und optimiert für ${bfZielMetric}) sind in ${tableRef} dargestellt. Visuelle Vergleiche sind in ${fig2aRef}, ${fig2bRef} und ${fig2cRef} zu sehen.</p>`;
+            return `
+                <h3 id="ergebnisse-vergleich-as-vs-t2-title">Vergleichsanalysen: Avocado Sign vs. T2-Kriterien</h3><p>Statistische Vergleiche zwischen AS und T2-Kriteriensets (Literatur und optimiert für ${bfZielMetric}) sind in ${tableRef} dargestellt. Visuelle Vergleiche sind in ${fig2aRef}, ${fig2bRef} und ${fig2cRef} zu sehen.</p>`;
         } else {
-            text += `<h3 id="ergebnisse-vergleich-as-vs-t2-title">Comparative Analyses: Avocado Sign vs. T2 Criteria</h3><p>Statistical comparisons between AS and T2 criteria sets (literature-based and optimized for ${bfZielMetric}) are detailed in ${tableRef}. Visual comparisons are presented in ${fig2aRef}, ${fig2bRef}, and ${fig2cRef}.</p>`;
+            return `
+                <h3 id="ergebnisse-vergleich-as-vs-t2-title">Comparative Analyses: Avocado Sign vs. T2 Criteria</h3><p>Statistical comparisons between AS and T2 criteria sets (literature-based and optimized for ${bfZielMetric}) are detailed in ${tableRef}. Visual comparisons are presented in ${fig2aRef}, ${fig2bRef}, and ${fig2cRef}.</p>`;
         }
 
         const kollektive = [
@@ -695,7 +697,12 @@ const publicationTextGeneratorRadiology = (() => {
 
     return Object.freeze({
         getSectionText,
-        getSectionTextAsMarkdown
+        getSectionTextAsMarkdown,
+        // Exponiere die Formatierungsfunktionen für den externen Gebrauch
+        formatNumberForPub: _formatNumberForPub,
+        formatPercentForPub: _formatPercentForPub,
+        fCIForPub: _fCIForPub,
+        getPValueTextForPub: _getPValueTextForPub
     });
 
 })();
