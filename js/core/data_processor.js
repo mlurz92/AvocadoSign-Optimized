@@ -57,7 +57,7 @@ const dataProcessor = (() => {
                 processedLk.groesse = (typeof lk.groesse === 'number' && !isNaN(lk.groesse) && lk.groesse >= 0) ? lk.groesse : null;
 
                 const validateEnum = (value, allowedValues) => {
-                     return (typeof value === 'string' && value !== null && allowedValues.includes(value.trim().toLowerCase()))
+                     return (typeof value === 'string' && value !== null && Array.isArray(allowedValues) && allowedValues.includes(value.trim().toLowerCase()))
                          ? value.trim().toLowerCase()
                          : null;
                 };
@@ -84,9 +84,9 @@ const dataProcessor = (() => {
             console.error("processPatientData: Ungültige Eingabedaten, Array erwartet.");
             return [];
         }
-        if (typeof APP_CONFIG === 'undefined') {
-             console.error("processPatientData: APP_CONFIG ist nicht verfügbar.");
-             return [];
+        if (typeof APP_CONFIG === 'undefined' || typeof APP_CONFIG.T2_CRITERIA_SETTINGS === 'undefined') {
+             console.error("processPatientData: APP_CONFIG oder APP_CONFIG.T2_CRITERIA_SETTINGS ist nicht verfügbar.");
+             return rawData.map((p, i) => ({ ...p, nr: p.nr ?? i + 1, error: "Konfigurationsfehler" }));
         }
 
         return rawData.map((patient, index) => processSinglePatient(patient, index, APP_CONFIG));
@@ -124,6 +124,10 @@ const dataProcessor = (() => {
 
          const formatStatus = (pos, neg) => {
              const totalKnown = pos + neg;
+             if (totalKnown === 0 && n > 0 && (pos === 0 && neg === 0)) { // If all are null/undefined for this status
+                const unknownCount = n - totalKnown;
+                if (unknownCount === n) return placeholder; // All unknown
+             }
              return totalKnown > 0 ? `${formatPercent(pos / totalKnown, 1)} (+)` : placeholder;
          };
 
