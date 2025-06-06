@@ -1,46 +1,92 @@
-# Avocado Sign Analyse Tool
+# Avocado Sign Analyse Tool - Technische Dokumentation
 
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Architektur](https://img.shields.io/badge/architektur-MVC--like-blueviolet.svg)
 ![Tech Stack](https://img.shields.io/badge/tech-JS%20/%20HTML%20/%20CSS-lightgrey.svg)
 
-Das **Avocado Sign Analyse Tool** ist eine interaktive Webanwendung zur wissenschaftlichen Auswertung und zum Performance-Vergleich von MRT-Kriterien für das Lymphknoten-Staging beim Rektumkarzinom. Es ermöglicht eine detaillierte Gegenüberstellung des "Avocado Signs" mit etablierten und benutzerdefinierten T2-gewichteten morphologischen Kriterien.
+---
 
-## ✨ Hauptfunktionen
+## 1. Übersicht und Zielsetzung
 
-* **Interaktive T2-Kriterien-Definition:** Definieren Sie flexible T2-Kriteriensets durch eine Kombination aus Größe, Form, Kontur, Homogenität und Signalverhalten mit UND/ODER-Logik.
-* **Brute-Force-Optimierung:** Finden Sie automatisch das T2-Kriterienset, das eine gewählte statistische Metrik (z.B. Balanced Accuracy, F1-Score) für das aktuelle Datenkollektiv maximiert.
-* **Detaillierte statistische Analyse:** Umfassende statistische Auswertungen, inklusive diagnostischer Gütekriterien (Sensitivität, Spezifität, AUC etc.) mit 95%-Konfidenzintervallen, Vergleichstests (McNemar, DeLong) und Assoziationstests.
-* **Vergleichs-Modus:** Stellen Sie zwei beliebige Patientenkohorten (z.B. pRCT vs. nRCT) in einer übersichtlichen "Side-by-Side"-Ansicht gegenüber.
-* **Publikations-Generator:** Erstellt einen strukturierten, formatierten und mit den aktuellen Analyseergebnissen befüllten Manuskriptentwurf, der den Richtlinien des Fachjournals *Radiology* folgt (Deutsch & Englisch).
-* **Präsentations-Ansichten:** Generiert reduzierte, auf das Wesentliche fokussierte Ansichten, ideal für Vorträge und Präsentationen.
-* **Umfassender Daten-Export:** Exportieren Sie alle Tabellen, Rohdaten, Statistiken und Diagramme in verschiedenen Formaten (CSV, MD, PNG, SVG, XLSX, ZIP).
+Das **Avocado Sign Analyse Tool** ist eine hochspezialisierte, interaktive Single-Page-Webanwendung (SPA) für die medizinisch-wissenschaftliche Forschung. Ihr Kernzweck ist die detaillierte, datengestützte Analyse und der statistische Performance-Vergleich von MRT-Kriterien zur Beurteilung des Lymphknotenstatus beim Rektumkarzinom. Die Anwendung wurde entwickelt, um eine systematische, reproduzierbare und effiziente Auswertung zu ermöglichen, die von der interaktiven Kriterienfindung bis zur automatisierten Erstellung eines publikationsreifen Manuskriptentwurfs reicht.
 
-## 🚀 Setup und Nutzung
+---
 
-Die Anwendung ist eine reine Client-Side-Anwendung und erfordert keine komplexe Installation.
+## 2. Technologischer Stack & Systemanforderungen
 
-1.  **Repository klonen oder herunterladen:**
+Die Anwendung ist als reine Client-Side-Anwendung konzipiert, die keine serverseitige Logik oder Datenbank benötigt.
+
+* **Kerntechnologien:**
+    * **JavaScript (ES6+):** Für die gesamte Anwendungslogik und Interaktivität.
+    * **HTML5 & CSS3:** Für die Struktur und das benutzerdefinierte Styling der Benutzeroberfläche.
+* **Hauptbibliotheken:**
+    * **D3.js (v7):** Zur Erstellung aller dynamischen und interaktiven Datenvisualisierungen und Diagramme.
+    * **Bootstrap (v5.3):** Als responsives UI-Framework für das grundlegende Layout, die Komponenten (Buttons, Karten, Tabs) und das Grid-System.
+    * **Tippy.js (v6):** Zur Implementierung der kontextsensitiven, reichhaltigen Tooltips, die ein wesentlicher Bestandteil der User Experience sind.
+    * **Font Awesome (v6.5):** Für die Icon-Darstellung in der gesamten Anwendung.
+    * **JSZip & FileSaver.js:** Zur clientseitigen Generierung von ZIP-Archiven und zum Auslösen von Datei-Downloads für die Exportfunktionen.
+* **Systemanforderungen:**
+    * Ein moderner, immergrüner Webbrowser (z.B. Google Chrome, Mozilla Firefox, Microsoft Edge) mit aktiviertem JavaScript.
+    * Für eine optimale Performance, insbesondere bei der Brute-Force-Optimierung, wird ein System mit einer zeitgemäßen CPU empfohlen.
+
+---
+
+## 3. Setup & Inbetriebnahme
+
+Die Inbetriebnahme ist unkompliziert und erfordert keine Build-Prozesse.
+
+1.  **Repository beziehen:** Klonen oder laden Sie das Repository auf Ihr lokales System.
     ```bash
     git clone [https://github.com/mlurz92/AvocadoSign-Optimized.git](https://github.com/mlurz92/AvocadoSign-Optimized.git)
     ```
 2.  **Anwendung starten:**
-    * **Empfohlene Methode:** Starten Sie einen lokalen Webserver im Projektverzeichnis. Dies verhindert mögliche Probleme mit Browser-Sicherheitsrichtlinien (CORS). Ein einfacher Python-Server genügt:
-        ```bash
-        # Python 3
-        python -m http.server
-        ```
-        Öffnen Sie anschließend `http://localhost:8000` in Ihrem Browser.
-    * **Alternative:** Öffnen Sie die Datei `index.html` direkt in einem modernen Webbrowser (Chrome, Firefox, Edge).
+    * **Empfohlene Methode (Lokaler Webserver):** Um potenzielle Browser-Sicherheitsbeschränkungen (CORS bei direkten Datei-Zugriffen) zu umgehen, wird der Betrieb über einen lokalen Webserver dringend empfohlen.
+        * Navigieren Sie im Terminal in das Projektverzeichnis.
+        * Starten Sie einen einfachen Server, z.B. mit Python 3:
+            ```bash
+            python -m http.server
+            ```
+        * Öffnen Sie die angezeigte URL (meist `http://localhost:8000`) in Ihrem Browser.
+    * **Alternative Methode:** Öffnen Sie die Datei `index.html` direkt im Browser. Diese Methode kann bei einigen Browsern zu Problemen beim Laden von Modulen führen.
 
-## 🛠️ Technologie-Stack
+---
 
-* **Frontend:** HTML5, CSS3, JavaScript (ES6+)
-* **Visualisierung:** [D3.js](https://d3js.org/)
-* **UI-Framework:** [Bootstrap 5](https://getbootstrap.com/)
-* **UI-Helfer:** [Tippy.js](https://atomiks.github.io/tippyjs/) (für Tooltips)
-* **Client-seitige Dateien:** [JSZip](https://stuk.github.io/jszip/), [FileSaver.js](https://github.com/eligrey/FileSaver.js)
+## 4. Architektur-Konzept
 
-## 📂 Projektstruktur
+Die Anwendung wurde nach modernen Software-Architektur-Prinzipien grundlegend neugestaltet, um maximale Wartbarkeit, Skalierbarkeit und logische Klarheit zu erreichen.
 
-Die Anwendung folgt einer modularen, am MVC-Muster orientierten Architektur, um eine klare Trennung der Verantwortlichkeiten zu gewährleisten.
+### 4.1. Design-Philosophie
+
+* **Modularität:** Jede Funktionseinheit ist in einem eigenen, gekapselten Modul untergebracht. Dies reduziert Abhängigkeiten und erleichtert Tests und Erweiterungen.
+* **Separation of Concerns (SoC):** Es besteht eine strikte Trennung zwischen Datenverarbeitung (Core/Services), Anwendungssteuerung (Controller) und Darstellung (Renderer). Kein Modul greift in die Verantwortlichkeiten eines anderen ein.
+* **Single Source of Truth:** Der Anwendungszustand (z.B. aktiver Tab, Sortierreihenfolge, ausgewählte Kriterien) wird zentral im `stateManager` verwaltet. Module lesen aus diesem Zustand, ändern ihn aber nicht direkt, sondern über definierte Schnittstellen.
+
+### 4.2. Das MVC-ähnliche Muster
+
+Die Struktur orientiert sich an einem klassischen Model-View-Controller-Muster:
+
+* **Model:** Die `core`- und `services`-Schichten. Sie repräsentieren die Geschäftslogik.
+    * `core`: Hält die Kernregeln der Datenauswertung (z.B. wie T2-Kriterien angewendet werden).
+    * `services`: Bietet wiederverwendbare Funktionalitäten wie statistische Berechnungen, Export-Logik oder die Kommunikation mit dem Web Worker.
+* **View:** Die `renderers`-Schicht. Diese Module sind "dumm" und ausschließlich dafür verantwortlich, Daten in HTML umzuwandeln. Sie enthalten keinerlei Anwendungslogik.
+* **Controller:** Die `controllers`-Schicht. Sie sind das Bindeglied. Sie lauschen auf UI-Events (z.B. Klicks), delegieren Rechen- und Datenaufgaben an das **Model** (Services/Core) und weisen anschließend die **View** (Renderer) an, sich mit den neuen Daten zu aktualisieren.
+
+### 4.3. Unidirektionaler Datenfluss & Render-Zyklus
+
+Die Anwendung folgt einem klaren, unidirektionalen Datenfluss, der vom zentralen `main.js`-Modul gesteuert wird:
+
+1.  **Aktion:** Ein Benutzer interagiert mit der UI (z.B. Klick auf einen Button).
+2.  **Controller:** Der zuständige Controller fängt das Event ab.
+3.  **Zustandsänderung:** Der Controller aktualisiert den Anwendungszustand über den `stateManager` (z.B. `stateManager.setCurrentKollektiv(...)`).
+4.  **Render-Anstoß:** Der Controller ruft die zentrale `mainApp.updateAndRender()`-Funktion auf.
+5.  **Datenverarbeitung:** `updateAndRender()` holt den neuen Zustand vom `stateManager` und die aufbereiteten Daten vom `dataProcessor`.
+6.  **Rendering:** `updateAndRender()` ruft den zuständigen Renderer (z.B. `dataRenderer.render(...)`) mit den neuen Daten auf, um den HTML-Code zu erzeugen.
+7.  **DOM-Update:** Der erzeugte HTML-Code wird in die Seite eingefügt.
+8.  **Post-Render-Updates:** Notwendige Nacharbeiten werden ausgeführt (z.B. Initialisierung von Tooltips, Aufruf von Controller-Update-Funktionen).
+
+---
+
+## 5. Detaillierte Projektstruktur & Modul-Beschreibung
+
+Jede Datei und jedes Verzeichnis hat eine klar definierte Aufgabe.
