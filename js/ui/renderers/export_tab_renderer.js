@@ -1,14 +1,21 @@
 const exportTabRenderer = (() => {
 
     function _createExportButtonHTML(typeKey, typeConfig, currentKollektiv) {
-        if (!typeKey || !typeConfig || typeof typeConfig.description !== 'string' || typeof typeConfig.type !== 'string' || typeof typeConfig.ext !== 'string') {
+        if (!typeKey || !typeConfig || typeof typeConfig.type !== 'string' || typeof typeConfig.ext !== 'string') {
             console.warn(`Ungültige Konfiguration für Export-Typ: ${typeKey}`);
             return '';
         }
+
+        const tooltipConfig = TOOLTIP_CONTENT.exportTab[typeKey];
+        if(!tooltipConfig || typeof tooltipConfig.description !== 'string') {
+             console.warn(`Fehlende Tooltip-Beschreibung für Export-Typ: ${typeKey}`);
+             return '';
+        }
+
         const buttonId = `export-${typeKey}`;
         const buttonText = typeKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).replace('Md', 'MD').replace('Csv', 'CSV').replace('Txt', 'TXT').replace('Png', 'PNG').replace('Svg', 'SVG').replace('Zip', 'ZIP').replace('Xlsx', 'XLSX');
         const fileExtension = `(.${typeConfig.ext})`;
-        let tippyContent = typeConfig.description.replace('[KOLLEKTIV]', getKollektivDisplayName(currentKollektiv));
+        let tippyContent = tooltipConfig.description.replace('[KOLLEKTIV]', getKollektivDisplayName(currentKollektiv));
 
         let iconClass = 'fa-file-alt'; // Default icon
         if (typeConfig.ext === 'csv') iconClass = 'fa-file-csv';
