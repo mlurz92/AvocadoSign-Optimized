@@ -304,7 +304,6 @@ const uiHelpers = (() => {
             }
         }
 
-
         if (key === 'or') {
             valueStr = formatNumber(assocObj.or?.value, 2, na, true);
             lowerStr = formatNumber(assocObj.or?.ci?.lower, 2, na, true);
@@ -408,19 +407,18 @@ const uiHelpers = (() => {
                     modalElement.addEventListener('hidden.bs.modal', () => resolve(), { once: true });
                     kurzanleitungFirstShowDone = true;
                 } else {
-                    modalElement.addEventListener('hidden.bs.modal', () => resolve(), { once: true });
+                     modalElement.addEventListener('hidden.bs.modal', () => resolve(), { once: true });
                 }
-                 if(!modalElement.classList.contains('show')) {
+                if (!modalElement.classList.contains('show')) {
                     kurzanleitungModalInstance.show();
-                 } else {
+                } else {
                     resolve();
-                 }
+                }
             } else {
                 resolve();
             }
         });
     }
-
 
     return Object.freeze({
         escapeMarkdown,
