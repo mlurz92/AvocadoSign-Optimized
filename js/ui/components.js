@@ -27,20 +27,18 @@ const uiComponents = (() => {
     }
 
     function createStatistikCard(id, title, content = '', addPadding = true, tooltipKey = null, downloadButtons = []) {
-        const kollektivName = getKollektivDisplayName(stateManager.getCurrentKollektiv());
-        // Handle tooltip content replacement for dynamic values
-        let cardTooltipContent = title; // Fallback to title
-        if (tooltipKey && TOOLTIP_CONTENT.statistikTabTooltips[tooltipKey]) {
+        const kollektivName = utils.getKollektivDisplayName(stateManager.getCurrentKollektiv());
+        let cardTooltipContent = title;
+
+        if (tooltipKey && TOOLTIP_CONTENT.statistikTabTooltips?.[tooltipKey]) {
             cardTooltipContent = (TOOLTIP_CONTENT.statistikTabTooltips[tooltipKey].description || tooltipKey)
                                 .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`);
-        } else if (tooltipKey && TOOLTIP_CONTENT.praesentation[tooltipKey]?.description) { // Check presentation tooltips too
+        } else if (tooltipKey && TOOLTIP_CONTENT.praesentation?.[tooltipKey]?.description) {
             cardTooltipContent = (TOOLTIP_CONTENT.praesentation[tooltipKey].description || tooltipKey)
                                 .replace(/\[CURRENT_KOLLEKTIV_PRAES\]/g, `<strong>${kollektivName}</strong>`);
         }
 
-
         const cardTooltipHtml = cardTooltipContent ? `data-tippy-content="${cardTooltipContent}"` : '';
-
         const headerButtonHtml = createHeaderButtonHTML(downloadButtons, id, title);
 
         return `
@@ -59,7 +57,6 @@ const uiComponents = (() => {
 
     function createCriteriaToggle(key, isChecked) {
         const labels = { size: 'Größe', form: 'Form', kontur: 'Kontur', homogenitaet: 'Homogenität', signal: 'Signal' };
-        // Ensure TOOLTIP_CONTENT keys match the exact structure, e.g., t2Size, t2Form etc.
         const tooltipKey = `t2${key.charAt(0).toUpperCase() + key.slice(1)}`;
         const tooltip = TOOLTIP_CONTENT[tooltipKey]?.description || `Kriterium ${labels[key]}`;
         return `
@@ -72,8 +69,7 @@ const uiComponents = (() => {
 
     function createRangeSlider(key, value, isEnabled) {
         const rangeConfig = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE;
-        const formattedValue = formatNumber(value, 1, rangeConfig.min.toFixed(1), true);
-        // Tooltip needs to correctly parse variables
+        const formattedValue = utils.formatNumber(value, 1, rangeConfig.min.toFixed(1), true);
         const tooltip = (TOOLTIP_CONTENT.t2Size?.description || "")
                         .replace('${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min}', rangeConfig.min)
                         .replace('${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max}', rangeConfig.max)
@@ -84,7 +80,7 @@ const uiComponents = (() => {
                 <div class="d-flex align-items-center flex-wrap">
                     <span class="me-1 small text-muted">≥</span>
                     <input type="range" class="form-range criteria-range flex-grow-1 me-2" id="range-${key}" min="${rangeConfig.min}" max="${rangeConfig.max}" step="${rangeConfig.step}" value="${formattedValue}" ${isEnabled ? '' : 'disabled'} data-tippy-content="${tooltip}">
-                    <span class="criteria-value-display text-end me-1 fw-bold" id="value-${key}">${formatNumber(value, 1)}</span><span class="me-2 small text-muted">mm</span>
+                    <span class="criteria-value-display text-end me-1 fw-bold" id="value-${key}">${utils.formatNumber(value, 1)}</span><span class="me-2 small text-muted">mm</span>
                     <input type="number" class="form-control form-control-sm criteria-input-manual" id="input-${key}" min="${rangeConfig.min}" max="${rangeConfig.max}" step="${rangeConfig.step}" value="${formattedValue}" ${isEnabled ? '' : 'disabled'} aria-label="Größe manuell eingeben" data-tippy-content="Schwellenwert manuell eingeben.">
                 </div>
             </div>`;
@@ -94,7 +90,7 @@ const uiComponents = (() => {
         const values = APP_CONFIG.T2_CRITERIA_SETTINGS[`${key.toUpperCase()}_VALUES`];
         const buttonsHTML = values.map(value => {
             const isActiveValue = isEnabled && currentValue === value;
-            const icon = getIconForT2Feature(key, value); // No isMet param for radio options, only for evaluation display
+            const icon = getIconForT2Feature(key, value);
             const buttonTooltip = `Kriterium '${key}' auf '${value}' setzen. ${isEnabled ? '' : '(Kriterium ist derzeit inaktiv)'}`;
             return `<button type="button" class="btn btn-sm t2-criteria-button ${isActiveValue ? 'active' : ''}" data-criterion="${key}" data-value="${value}" data-tippy-content="${buttonTooltip}" ${isEnabled ? '' : 'disabled'}>${icon}</button>`;
         }).join('');
@@ -118,21 +114,14 @@ const uiComponents = (() => {
         const r = (s - sw) / 2;
 
         let svgContent = '';
-        // If isMet is a boolean (from evaluationDetails), use it to determine fill color
-        // Otherwise, use 'none' for default rendering in criteria definition
         let fillColor = (isMet === true) ? 'var(--danger-color-light)' : 'none';
         let strokeColor = cfg.ICON_COLOR;
         
-        // Define specific fill colors for signal feature values
         const signalFills = { 'signalarm': '#555555', 'intermediär': '#aaaaaa', 'signalreich': '#f0f0f0' };
-
         const unknownIcon = `<g stroke="${strokeColor}" stroke-width="${sw / 2}"><rect x="${s*0.2}" y="${s*0.2}" width="${s*0.6}" height="${s*0.6}" fill="none" stroke-dasharray="2 2" /><line x1="${s*0.2}" y1="${s*0.2}" x2="${s*0.8}" y2="${s*0.8}" /><line x1="${s*0.8}" y1="${s*0.2}" x2="${s*0.2}" y2="${s*0.8}" /></g>`;
 
         switch (type) {
             case 'size':
-                // For size, if isMet is true, it means threshold was met.
-                // The icon is generic, so just color it if met, otherwise default stroke.
-                // This icon represents a measurement tool.
                 svgContent = `<g stroke="${(isMet === true) ? 'var(--danger-color)' : strokeColor}" stroke-width="${sw/2}" stroke-linecap="round"><path d="M${sw} ${c} H${s-sw} M${c} ${sw} V${s-sw}" /><line x1="${s*0.2}" y1="${c-s*0.15}" x2="${s*0.2}" y2="${c+s*0.15}" /><line x1="${s*0.8}" y1="${c-s*0.15}" x2="${s*0.8}" y2="${c+s*0.15}" /></g>`;
                 break;
             case 'form':
@@ -146,19 +135,14 @@ const uiComponents = (() => {
                 else svgContent = unknownIcon;
                 break;
             case 'homogenitaet':
-                // For homogeneity, if isMet is true, it means feature is 'heterogen' and met criteria
-                // Or if it's 'homogen' and also met criteria (less common for suspect, but possible if inverted logic)
-                // Let's assume heterogen is the suspect feature.
-                const homoStroke = (isMet === true && value === 'heterogen') ? 'var(--danger-color)' : strokeColor; // Highlight stroke for 'heterogen' if met
-                const homoFill = (isMet === true && value === 'heterogen') ? 'var(--danger-color-light)' : 'none';
-
-                if (value === 'homogen') svgContent = `<rect x="${sw}" y="${sw}" width="${s-2*sw}" height="${s-2*sw}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${sw/2}" rx="1"/>`; // Homogen is a solid square
+                const homoStroke = (isMet === true && value === 'heterogen') ? 'var(--danger-color)' : strokeColor;
+                if (value === 'homogen') svgContent = `<rect x="${sw}" y="${sw}" width="${s-2*sw}" height="${s-2*sw}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${sw/2}" rx="1"/>`;
                 else if (value === 'heterogen') {
                     const pSize = (s - 2 * sw) / 4;
                     let pattern = `<rect x="${sw}" y="${sw}" width="${s-2*sw}" height="${s-2*sw}" fill="none" stroke="${homoStroke}" stroke-width="${sw/2}" rx="1"/>`;
                     for (let i = 0; i < 4; i++) {
                         for (let j = 0; j < 4; j++) {
-                            if ((i + j) % 2 === 0) { // Chessboard pattern
+                            if ((i + j) % 2 === 0) {
                                 pattern += `<rect x="${sw+i*pSize}" y="${sw+j*pSize}" width="${pSize}" height="${pSize}" fill="${homoStroke}" style="opacity:0.6;"/>`;
                             }
                         }
@@ -167,7 +151,7 @@ const uiComponents = (() => {
                 } else svgContent = unknownIcon;
                 break;
             case 'signal':
-                const signalFillColor = (isMet === true && signalFills[value]) ? 'var(--danger-color-light)' : signalFills[value] || 'none'; // Use danger-color-light if met
+                const signalFillColor = (isMet === true && signalFills[value]) ? 'var(--danger-color-light)' : signalFills[value] || 'none';
                 if (signalFills[value]) {
                     svgContent = `<circle cx="${c}" cy="${c}" r="${r}" fill="${signalFillColor}" stroke="${value === 'signalreich' ? '#333' : 'rgba(0,0,0,0.1)'}" stroke-width="${sw*0.75}"/>`;
                 } else svgContent = unknownIcon;
@@ -177,7 +161,7 @@ const uiComponents = (() => {
         }
 
         const valueClass = value ? `icon-value-${String(value).replace(/\s+/g, '-').toLowerCase()}` : 'icon-value-unknown';
-        const metClass = (isMet === true) ? 'icon-met' : ((isMet === false) ? 'icon-not-met' : ''); // Class for met/not met status
+        const metClass = (isMet === true) ? 'icon-met' : ((isMet === false) ? 'icon-not-met' : '');
         return `<svg class="icon-t2 icon-${type} ${valueClass} ${metClass}" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${type}: ${value || 'unbekannt'}">${svgContent}</svg>`;
     }
 
