@@ -24,8 +24,13 @@ const auswertungController = (() => {
             debouncedUpdate();
         } else if (target.matches('.criteria-range, .criteria-input-manual')) {
             const value = parseFloat(target.value);
-            if (!isNaN(value)) {
-                t2CriteriaManager.setCriteria({ size: { threshold: value } });
+            // Ensure value is clamped within the allowed range before setting
+            const min = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min;
+            const max = APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max;
+            const clampedValue = clampNumber(value, min, max); // Using global clampNumber from utils.js
+
+            if (!isNaN(clampedValue)) {
+                t2CriteriaManager.setCriteria({ size: { threshold: clampedValue } });
                 debouncedUpdate();
             }
         }
@@ -60,6 +65,9 @@ const auswertungController = (() => {
             case 'btn-cancel-brute-force':
                 bruteForceManager.cancelAnalysis();
                 break;
+            case 'auswertung-toggle-details': // Handling for expanding/collapsing all details in Auswertungstab
+                _toggleAllDetails('auswertung-table-body', button);
+                break;
         }
     }
 
@@ -81,6 +89,38 @@ const auswertungController = (() => {
                 criteriaCard.classList.add('highlight-animation');
                 setTimeout(() => criteriaCard.classList.remove('highlight-animation'), 2000);
             }
+        }
+    }
+
+    function _toggleAllDetails(tableBodyId, button) {
+        if (!button) return;
+        const tableBody = document.getElementById(tableBodyId);
+        if (!tableBody) return;
+
+        const isExpandAction = button.dataset.action === 'expand';
+        const collapseElements = tableBody.querySelectorAll('.collapse');
+
+        collapseElements.forEach(el => {
+            const instance = bootstrap.Collapse.getOrCreateInstance(el);
+            if (isExpandAction && !el.classList.contains('show')) {
+                instance.show();
+            } else if (!isExpandAction && el.classList.contains('show')) {
+                instance.hide();
+            }
+        });
+
+        const newAction = isExpandAction ? 'collapse' : 'expand';
+        const newIconClass = isExpandAction ? 'fa-chevron-up' : 'fa-chevron-down';
+        const newButtonText = isExpandAction ? 'Alle Details Ausblenden' : 'Alle Details Anzeigen'; // Corrected text
+        const tooltipContent = isExpandAction ? 
+            TOOLTIP_CONTENT.auswertungTable.collapseAll.description : // Assuming a collapseAll description in TOOLTIP_CONTENT
+            TOOLTIP_CONTENT.auswertungTable.expandAll.description;
+            
+        button.dataset.action = newAction;
+        button.innerHTML = `<i class="fas ${newIconClass} me-1"></i>${newButtonText}`;
+        button.setAttribute('data-tippy-content', tooltipContent);
+        if (button._tippy) {
+            button._tippy.setContent(tooltipContent);
         }
     }
 
@@ -112,7 +152,10 @@ const auswertungController = (() => {
             case 'progress':
                 const percent = payload.total > 0 ? Math.round((payload.tested / payload.total) * 100) : 0;
                 progressContainer.innerHTML = `<div class="progress" style="height: 20px;"><div class="progress-bar" role="progressbar" style="width: ${percent}%;" aria-valuenow="${percent}">${percent}%</div></div><p class="text-center small mt-1 mb-0">${payload.tested} / ${payload.total} getestet</p>`;
-                infoText.innerHTML = `Status: Läuft... Aktuell Bester ${payload.metric}: <strong>${formatNumber(payload.currentBest?.metricValue, 4)}</strong>`;
+                // Check if currentBest exists and has a metricValue before trying to format
+                const currentBestMetricValue = payload.currentBest?.metricValue;
+                const currentBestFormatted = (typeof currentBestMetricValue === 'number' && isFinite(currentBestMetricValue)) ? formatNumber(currentBestMetricValue, 4) : 'N/A';
+                infoText.innerHTML = `Status: Läuft... Aktuell Bester ${payload.metric}: <strong>${currentBestFormatted}</strong>`;
                 break;
             case 'result':
                 infoText.innerHTML = `Status: Abgeschlossen für Kollektiv <strong>${getKollektivDisplayName(payload.kollektiv)}</strong>. Dauer: ${formatNumber(payload.duration / 1000, 1)}s.`;
@@ -121,12 +164,15 @@ const auswertungController = (() => {
             case 'cancelled':
                 infoText.innerHTML = `Status: Analyse für Kollektiv <strong>${getKollektivDisplayName(payload.kollektiv)}</strong> abgebrochen.`;
                 progressContainer.innerHTML = '';
+                resultContainer.innerHTML = ''; // Clear previous results on cancellation
                 break;
             case 'error':
                  infoText.innerHTML = `<span class="text-danger">Status: Fehler bei der Optimierung.</span><p class="small text-danger mb-0">${payload.message}</p>`;
                  progressContainer.innerHTML = '';
+                 resultContainer.innerHTML = ''; // Clear previous results on error
                 break;
         }
+        uiHelpers.initializeTooltips(document.getElementById('auswertung-tab-pane')); // Re-initialize tooltips after UI update
     }
     
     function _renderBruteForceResultTable(payload) {
@@ -181,6 +227,20 @@ const auswertungController = (() => {
            onCancelled: (payload) => updateBruteForceUI('cancelled', payload),
            onError: (payload) => updateBruteForceUI('error', payload)
        });
+       // Ensure the current brute force status is reflected when entering the tab
+       if (bruteForceManager.isAnalysisRunning()) {
+           // If it's running, try to get the last known state to update UI
+           // This requires bruteForceManager to store its last payload or have a getStatus method
+           // For now, it will just show 'running' but no progress if no last payload is stored
+           updateBruteForceUI('started', { kollektiv: bruteForceManager.currentKollektivRunning || stateManager.getCurrentKollektiv() }); // Placeholder
+       } else {
+           const lastResult = bruteForceManager.getResultsForKollektiv(stateManager.getCurrentKollektiv());
+           if (lastResult) {
+               updateBruteForceUI('result', lastResult);
+           } else {
+                updateBruteForceUI('ready', { kollektiv: stateManager.getCurrentKollektiv() }); // Reset info text to ready
+           }
+       }
     }
     
     function onTabExit() {
@@ -190,7 +250,8 @@ const auswertungController = (() => {
     return Object.freeze({
         init,
         onTabEnter,
-        onTabExit
+        onTabExit,
+        updateBruteForceUI // Make this public so main.js can call it for initial state
     });
 
 })();
