@@ -1,12 +1,19 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     const mainApp = (() => {
+        let rawData = [];
         let processedData = [];
         let isFirstRender = true;
         let lastActiveTabId = null;
 
         const mainAppInterface = {
-            updateAndRender: () => updateAndRender()
+            updateAndRender: () => updateAndRender(),
+            getGlobalEvaluatedData: () => {
+                const appliedCriteria = t2CriteriaManager.getCriteria();
+                const appliedLogic = t2CriteriaManager.getLogic();
+                return t2CriteriaManager.evaluateDatasetWithCriteria(processedData, appliedCriteria, appliedLogic);
+            },
+            getProcessedData: () => dataProcessor.getProcessedData(),
         };
 
         const controllers = {
@@ -26,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
             uiHelpers.updateElementHTML('header-status-t2', stats.statusT2);
         }
 
-        function _renderActiveTab(evaluatedData, activeTabId) {
+        function _renderActiveTab(filteredData, globallyEvaluatedData, activeTabId) {
             const tabPaneContainer = document.getElementById('app-tab-content');
             if (!tabPaneContainer) return;
 
@@ -42,48 +49,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 switch (activeTabId) {
                     case 'daten-tab':
-                        contentHTML = dataRenderer.render(evaluatedData, stateManager.getSortState('daten'));
+                        contentHTML = dataRenderer.render(filteredData, stateManager.getSortState('daten'));
                         break;
                     case 'auswertung-tab':
-                        const dashboardStats = statisticsService.calculateDescriptiveStats(evaluatedData);
-                        const t2Metrics = statisticsService.calculateDiagnosticPerformance(evaluatedData, 't2', 'n');
-                        contentHTML = auswertungRenderer.render(evaluatedData, dashboardStats, appliedCriteria, appliedLogic, stateManager.getSortState('auswertung'), currentKollektiv, bruteForceManager.isWorkerAvailable(), t2Metrics);
+                        const dashboardStats = statisticsService.calculateDescriptiveStats(filteredData);
+                        const t2Metrics = statisticsService.calculateDiagnosticPerformance(filteredData, 't2', 'n');
+                        contentHTML = auswertungRenderer.render(filteredData, dashboardStats, appliedCriteria, appliedLogic, stateManager.getSortState('auswertung'), currentKollektiv, bruteForceManager.isWorkerAvailable(), t2Metrics);
                         break;
                     case 'statistik-tab':
                         const statsLayout = stateManager.getStatsLayout();
                         let statsForRendering;
                         if (statsLayout === 'vergleich') {
-                            const kollektiv1Data = dataProcessor.filterDataByKollektiv(processedData, stateManager.getStatsKollektiv1());
-                            const kollektiv2Data = dataProcessor.filterDataByKollektiv(processedData, stateManager.getStatsKollektiv2());
+                            const kollektiv1Data = dataProcessor.filterDataByKollektiv(globallyEvaluatedData, stateManager.getStatsKollektiv1());
+                            const kollektiv2Data = dataProcessor.filterDataByKollektiv(globallyEvaluatedData, stateManager.getStatsKollektiv2());
                             statsForRendering = {
                                 kollektiv1: statisticsService.calculateAllStats(kollektiv1Data, appliedCriteria, appliedLogic),
                                 kollektiv2: statisticsService.calculateAllStats(kollektiv2Data, appliedCriteria, appliedLogic)
                             };
                         } else {
-                            statsForRendering = statisticsService.calculateAllStats(evaluatedData, appliedCriteria, appliedLogic);
+                            statsForRendering = statisticsService.calculateAllStats(filteredData, appliedCriteria, appliedLogic);
                         }
                         contentHTML = statistikRenderer.render(statsForRendering, statsLayout, stateManager.getStatsKollektiv1(), stateManager.getStatsKollektiv2());
                         break;
                     case 'praesentation-tab':
-                        const praesData = praesentationController.getPresentationData(processedData);
+                        const praesData = praesentationController.getPresentationData(globallyEvaluatedData);
                         contentHTML = praesentationRenderer.render(stateManager.getPresentationView(), praesData, stateManager.getPresentationStudyId());
                         break;
                     case 'publikation-tab':
-                        contentHTML = publikationController.renderContent(processedData);
+                        contentHTML = publikationController.renderContent(globallyEvaluatedData);
                         break;
                     case 'export-tab':
                         const hasBruteForceResults = Object.keys(bruteForceManager.getAllResults()).length > 0;
-                        contentHTML = exportRenderer.render(hasBruteForceResults, evaluatedData.length > 0);
+                        contentHTML = exportRenderer.render(hasBruteForceResults, filteredData.length > 0);
                         break;
                     default:
                         contentHTML = `<p class="text-danger">Tab "${activeTabId}" konnte nicht geladen werden.</p>`;
                 }
                 if(activePane) activePane.innerHTML = contentHTML;
-                _postRenderUpdates(activeTabId, evaluatedData);
+                _postRenderUpdates(activeTabId, filteredData, globallyEvaluatedData);
             }, 50);
         }
 
-        function _postRenderUpdates(activeTabId, evaluatedData) {
+        function _postRenderUpdates(activeTabId, filteredData, globallyEvaluatedData) {
             uiHelpers.destroyTooltips();
             const activePane = document.getElementById(`${activeTabId}-pane`);
             if (activePane) {
@@ -94,12 +101,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const controller = controllers[activeTabId];
             if (controller && typeof controller.onTabEnter === 'function') {
-                controller.onTabEnter();
+                controller.onTabEnter(mainAppInterface);
             }
             
             if (activeTabId === 'auswertung-tab') {
-                const dashboardStats = statisticsService.calculateDescriptiveStats(evaluatedData);
-                const headerStats = dataProcessor.calculateHeaderStats(evaluatedData, stateManager.getCurrentKollektiv());
+                const dashboardStats = statisticsService.calculateDescriptiveStats(filteredData);
+                const headerStats = dataProcessor.calculateHeaderStats(filteredData, stateManager.getCurrentKollektiv());
                  if(dashboardStats && dashboardStats.count > 0) {
                     chartRenderer.renderBarChart('dashboard-chart-gender', [{label: 'M', value: dashboardStats.gender.m}, {label: 'W', value: dashboardStats.gender.f}], {yAxisLabel: 'Anzahl'});
                     chartRenderer.renderBarChart('dashboard-chart-therapy', [{label: 'Direkt OP', value: dashboardStats.therapy['direkt OP']}, {label: 'nRCT', value: dashboardStats.therapy.nRCT}], {yAxisLabel: 'Anzahl'});
@@ -118,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const appliedLogic = t2CriteriaManager.getLogic();
 
                 if (statsLayout === 'einzel') {
-                    const stats = statisticsService.calculateAllStats(evaluatedData, appliedCriteria, appliedLogic);
+                    const stats = statisticsService.calculateAllStats(filteredData, appliedCriteria, appliedLogic);
                     if(stats && stats.avocadoSign && stats.t2) {
                         const chartData = [
                             { metric: 'Sensitivität', values: [{ name: 'AS', ...stats.avocadoSign.sens }, { name: 'T2', ...stats.t2.sens }] },
@@ -128,13 +135,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             { metric: 'Accuracy', values: [{ name: 'AS', ...stats.avocadoSign.acc }, { name: 'T2', ...stats.t2.acc }] },
                             { metric: 'AUC', values: [{ name: 'AS', ...stats.avocadoSign.auc }, { name: 'T2', ...stats.t2.auc }] }
                         ];
-                        chartRenderer.renderPerformanceComparisonChart(`chart-as-vs-t2-${stateManager.getCurrentKollektiv()}`, chartData, { method1: 'AS', method2: 'T2' });
+                        chartRenderer.renderPerformanceComparisonChart(`chart-as-vs-t2-${stateManager.getCurrentKollektiv()}`, chartData, { method1: 'AS', method2: 'T2' }, { yAxisLabel: 'Wert'});
                     }
                 } else if (statsLayout === 'vergleich') {
                     const k1 = stateManager.getStatsKollektiv1();
                     const k2 = stateManager.getStatsKollektiv2();
-                    const data1 = dataProcessor.filterDataByKollektiv(processedData, k1);
-                    const data2 = dataProcessor.filterDataByKollektiv(processedData, k2);
+                    const data1 = dataProcessor.filterDataByKollektiv(globallyEvaluatedData, k1);
+                    const data2 = dataProcessor.filterDataByKollektiv(globallyEvaluatedData, k2);
                     const stats1 = statisticsService.calculateAllStats(data1, appliedCriteria, appliedLogic);
                     const stats2 = statisticsService.calculateAllStats(data2, appliedCriteria, appliedLogic);
                     
@@ -144,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             { metric: 'Spez', values: [{ name: 'AS', ...stats1.avocadoSign.spez }, { name: 'T2', ...stats1.t2.spez }] },
                             { metric: 'AUC', values: [{ name: 'AS', ...stats1.avocadoSign.auc }, { name: 'T2', ...stats1.t2.auc }] }
                         ];
-                         chartRenderer.renderPerformanceComparisonChart(`chart-container-as-vs-t2-${k1}-compare`, chartData1, { method1: 'AS', method2: 'T2' });
+                         chartRenderer.renderPerformanceComparisonChart(`chart-as-vs-t2-${k1}-compare`, chartData1, { method1: 'AS', method2: 'T2' }, { yAxisLabel: 'Wert'});
                     }
                     if (stats2 && stats2.avocadoSign && stats2.t2) {
                         const chartData2 = [
@@ -152,13 +159,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             { metric: 'Spez', values: [{ name: 'AS', ...stats2.avocadoSign.spez }, { name: 'T2', ...stats2.t2.spez }] },
                             { metric: 'AUC', values: [{ name: 'AS', ...stats2.avocadoSign.auc }, { name: 'T2', ...stats2.t2.auc }] }
                         ];
-                         chartRenderer.renderPerformanceComparisonChart(`chart-container-as-vs-t2-${k2}-comp`, chartData2, { method1: 'AS', method2: 'T2' });
+                         chartRenderer.renderPerformanceComparisonChart(`chart-as-vs-t2-${k2}-comp`, chartData2, { method1: 'AS', method2: 'T2' }, { yAxisLabel: 'Wert'});
                     }
                 }
 
             } else if (activeTabId === 'praesentation-tab') {
                 const currentView = stateManager.getPresentationView();
-                const praesData = praesentationController.getPresentationData(processedData);
+                const praesData = praesentationController.getPresentationData(globallyEvaluatedData);
 
                 if (currentView === 'as-pur' && praesData.asPur) {
                     const asPerformanceStats = praesData.asPur.avocadoSign;
@@ -184,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             { metric: 'NPV', values: [{ name: 'AS', ...asVsT2Stats.avocadoSign.npv }, { name: t2ShortName, ...asVsT2Stats.t2.npv }] },
                             { metric: 'AUC', values: [{ name: 'AS', ...asVsT2Stats.avocadoSign.auc }, { name: t2ShortName, ...asVsT2Stats.t2.auc }] }
                         ];
-                        chartRenderer.renderPerformanceComparisonChart('praes-chart-as-vs-t2', chartData, { method1: 'AS', method2: t2ShortName });
+                        chartRenderer.renderPerformanceComparisonChart('praes-chart-as-vs-t2', chartData, { method1: 'AS', method2: t2ShortName }, { yAxisLabel: 'Wert'});
                     }
                 }
             }
@@ -220,11 +227,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function updateAndRender() {
+            // 1. Evaluate ALL data first to create a consistent global dataset
+            const appliedCriteria = t2CriteriaManager.getCriteria();
+            const appliedLogic = t2CriteriaManager.getLogic();
+            const globallyEvaluatedData = t2CriteriaManager.evaluateDatasetWithCriteria(processedData, appliedCriteria, appliedLogic);
+
+            // 2. Filter this global dataset for the current view/kollektiv
             const currentKollektiv = stateManager.getCurrentKollektiv();
-            const filteredData = dataProcessor.filterDataByKollektiv(processedData, currentKollektiv);
-            const evaluatedData = t2CriteriaManager.evaluateDatasetWithCriteria(filteredData, t2CriteriaManager.getCriteria(), t2CriteriaManager.getLogic());
-            const headerStats = dataProcessor.calculateHeaderStats(evaluatedData, currentKollektiv);
+            const filteredData = dataProcessor.filterDataByKollektiv(globallyEvaluatedData, currentKollektiv);
             
+            // 3. Update UI elements based on the filtered data
+            const headerStats = dataProcessor.calculateHeaderStats(filteredData, currentKollektiv);
             _updateHeaderStats(headerStats);
             uiHelpers.updateKollektivButtonsUI(currentKollektiv);
             
@@ -235,12 +248,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 tab.show();
             }
             
-            _renderActiveTab(evaluatedData, activeTabId);
+            // 4. Render the active tab, passing BOTH filtered and global data as needed
+            _renderActiveTab(filteredData, globallyEvaluatedData, activeTabId);
         }
 
         function init() {
+            rawData = patientDataRaw;
             stateManager.init();
-            processedData = dataProcessor.processPatientData(patientDataRaw);
+            processedData = dataProcessor.processPatientData(rawData);
             t2CriteriaManager.initialize();
 
             Object.values(controllers).forEach(controller => {
