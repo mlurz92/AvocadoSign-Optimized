@@ -6,8 +6,7 @@ const publicationGeneratorService = (() => {
 
         const s = stats.Gesamt;
         const bfResultData = bruteForceResult || {};
-        const isEnglish = lang === 'en';
-
+        
         const formatMetric = (metricObj, digits, isPercent = false) => utils.formatCI(metricObj?.value, metricObj?.ci?.lower, metricObj?.ci?.upper, digits, isPercent, 'N/A');
         const formatP = (pValue) => utils.getPValueText(pValue, lang);
 
@@ -49,7 +48,7 @@ const publicationGeneratorService = (() => {
 
         return {
             '[ETHICS_VOTE_ID]': refEthicsLeipzig.fullCitation.split(' ').pop().replace(')',''),
-            '[MEAN_AGE]': utils.formatNumber(ageMedian, 0),
+            '[MEAN_AGE]': utils.formatNumber(ageMedian, 1),
             '[STD_AGE]': utils.formatNumber(ageStdDev, 1, 'N/A', true).replace('.', lang === 'de' ? ',' : '.'),
             '[N_MALE]': maleCount,
             '[N_TOTAL]': totalCount,
@@ -62,12 +61,12 @@ const publicationGeneratorService = (() => {
             '[AS_PPV]': formatMetric(asPpv, 1, true),
             '[AS_NPV]': formatMetric(asNpv, 1, true),
             '[AS_ACC]': formatMetric(asAcc, 1, true),
-            '[AS_AUC_CI]': formatMetric(asAuc, 3, false),
+            '[AS_AUC_CI]': formatMetric(asAuc, 2, false),
             '[BF_METRIC]': bfMetric,
             '[BF_T2_CRITERIA_DESC]': bfCriteriaDesc,
-            '[BF_T2_AUC]': formatMetric(bfT2Auc, 3, false),
-            '[BF_T2_AUC_CI]': formatMetric(bfT2Auc, 3, false),
-            '[STD_T2_AUC]': formatMetric(stdT2Auc, 3, false),
+            '[BF_T2_AUC]': formatMetric(bfT2Auc, 2, false),
+            '[BF_T2_AUC_CI]': formatMetric(bfT2Auc, 2, false),
+            '[STD_T2_AUC]': formatMetric(stdT2Auc, 2, false),
             '[P_DELONG_AS_VS_BF]': formatP(delongASvsBF_pValue),
             '[STUDY_PERIOD_START]': refStudyPeriod.fullCitation.split(' ')[0],
             '[STUDY_PERIOD_END]': refStudyPeriod.fullCitation.split(' ')[2],
@@ -83,7 +82,6 @@ const publicationGeneratorService = (() => {
             '[BF_METRIC_VALUE_FORMATED]': bfResultData.bestResult ? utils.formatNumber(bfResultData.bestResult.metricValue, 4) : 'N/A',
             '[BF_T2_LOGIC]': bfBestLogic || 'N/A',
             '[BF_T2_CRITERIA_FORMATED_SHORT]': bfBestCriteria ? t2CriteriaManager.formatCriteriaForDisplay(bfBestCriteria, bfBestLogic, true) : 'N/A',
-
             '[ASSOC_SIZE_P]': formatP(s.associations?.size_mwu?.pValue),
             '[ASSOC_FORM_P]': formatP(s.associations?.form?.pValue),
             '[ASSOC_KONTUR_P]': formatP(s.associations?.kontur?.pValue),
@@ -101,7 +99,6 @@ const publicationGeneratorService = (() => {
             '[ASSOC_SIGNAL_OR]': formatMetric(s.associations?.signal?.or, 2, false),
             '[ASSOC_SIGNAL_RD]': formatMetric(s.associations?.signal?.rd, 1, true),
             '[ASSOC_SIGNAL_PHI]': utils.formatNumber(s.associations?.signal?.phi?.value, 2),
-
             '[CURRENT_T2_CRITERIA_DISPLAY]': t2CriteriaManager.formatCriteriaForDisplay(appliedT2Criteria, appliedT2Logic),
             '[CURRENT_T2_LOGIC_DISPLAY]': appliedT2Logic,
             '[BF_METRIC_DISPLAY]': APP_CONFIG.METRIC_OPTIONS.find(m => m.value === bfMetric)?.label || bfMetric,
@@ -115,12 +112,12 @@ const publicationGeneratorService = (() => {
 
         const getSectionText = (sectionKey) => {
             const section = texts[sectionKey];
-            if (!section) return `<p>${texts[sectionKey] || 'Inhalt nicht gefunden.'}</p>`;
-            return Object.values(section).join(' ');
+            if (!section) return `<p>${sectionKey || 'Inhalt nicht gefunden.'}</p>`;
+            return `<p>${Object.values(section).join('</p><p>')}</p>`;
         };
 
         const generateTableHTML = (tableData) => {
-            let html = `<table class="table table-bordered table-sm">`;
+            let html = `<table class="table table-bordered table-sm publication-table">`;
             if (tableData.head) {
                 html += `<thead><tr>${tableData.head.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
             }
@@ -142,17 +139,16 @@ const publicationGeneratorService = (() => {
                 content = getSectionText(sectionId);
                 break;
             case 'methods':
-                content = Object.values(texts.methods).join('');
+                content = getSectionText(sectionId);
                 if (includeTablesFigures) {
                     content += `<h4>Tabelle 1: MRT-Protokoll</h4>` + generateTableHTML(publicationContentGeneratorRadiology.getTable1Data(context));
                 }
                 break;
             case 'results':
-                content = Object.values(texts.results).join('');
+                content = getSectionText(sectionId);
                 if (includeTablesFigures) {
                     content += `<h4>Tabelle 2: Demographie</h4>` + generateTableHTML(publicationContentGeneratorRadiology.getTable2Data(context));
                     content += `<h4>Tabelle 3: Diagnostische Güte</h4>` + generateTableHTML(publicationContentGeneratorRadiology.getTable3Data(context));
-                    content += `<h4>Abbildung 3: ROC-Kurven</h4>` + publicationContentGeneratorRadiology.getFigure3Data(context);
                 }
                 break;
             case 'references':
@@ -170,11 +166,12 @@ const publicationGeneratorService = (() => {
             let rawContent = _generateSectionContent(sectionId, context, format);
 
             for (const [key, value] of Object.entries(replacements)) {
-                rawContent = rawContent.replace(new RegExp(key.replace(/\[/g, '\\[').replace(/\]/g, '\\]'), 'g'), value ?? 'N/A');
+                const safeValue = value ?? 'N/A';
+                rawContent = rawContent.replace(new RegExp(key.replace(/\[/g, '\\[').replace(/\]/g, '\\]'), 'g'), safeValue);
             }
             
             if (format === 'html') {
-                return rawContent.replace(/<\/p><p>/g, '<br><br>').replace(/<p>|<\/p>/g, '');
+                 return rawContent;
             }
             
             return rawContent;
@@ -201,12 +198,12 @@ const publicationGeneratorService = (() => {
         getTable2Data: (context) => ({
             head: ['Characteristic', 'Value'],
             body: [
-                ['Age—mean ± SD', `${utils.formatNumber(context.stats.Gesamt.descriptive.age.mean, 1, 'N/A', true).replace('.', context.lang === 'de' ? ',' : '.')} ± ${utils.formatNumber(context.stats.Gesamt.descriptive.age.sd, 1, 'N/A', true).replace('.', context.lang === 'de' ? ',' : '.')}`],
+                ['Age—mean ± SD (years)', `${utils.formatNumber(context.stats.Gesamt.descriptive.age.mean, 1, 'N/A', true).replace('.', context.lang === 'de' ? ',' : '.')} ± ${utils.formatNumber(context.stats.Gesamt.descriptive.age.sd, 1, 'N/A', true).replace('.', context.lang === 'de' ? ',' : '.')}`],
                 ['Male—no. (%)', `${context.stats.Gesamt.descriptive.gender.m} (${utils.formatPercent(context.stats.Gesamt.descriptive.gender.m / context.stats.Gesamt.descriptive.count, 1)})`],
                 ['Female—no. (%)', `${context.stats.Gesamt.descriptive.gender.f} (${utils.formatPercent(context.stats.Gesamt.descriptive.gender.f / context.stats.Gesamt.descriptive.count, 1)})`],
                 ['Treatment approach—no. (%)', ''],
-                ['Surgery alone', `${context.stats.Gesamt.descriptive.therapy['direkt OP']} (${utils.formatPercent(context.stats.Gesamt.descriptive.therapy['direkt OP'] / context.stats.Gesamt.descriptive.count, 1)})`],
-                ['Neoadjuvant therapy', `${context.stats.Gesamt.descriptive.therapy.nRCT} (${utils.formatPercent(context.stats.Gesamt.descriptive.therapy.nRCT / context.stats.Gesamt.descriptive.count, 1)})`],
+                ['  Upfront surgery', `${context.stats.Gesamt.descriptive.therapy['direkt OP']} (${utils.formatPercent(context.stats.Gesamt.descriptive.therapy['direkt OP'] / context.stats.Gesamt.descriptive.count, 1)})`],
+                ['  Neoadjuvant therapy', `${context.stats.Gesamt.descriptive.therapy.nRCT} (${utils.formatPercent(context.stats.Gesamt.descriptive.therapy.nRCT / context.stats.Gesamt.descriptive.count, 1)})`],
             ]
         }),
         getTable3Data: (context) => {
@@ -215,22 +212,21 @@ const publicationGeneratorService = (() => {
              const sNrct = context.stats.nRCT;
              const formatMetric = (metric, d, isPercent) => utils.formatCI(metric?.value, metric?.ci?.lower, metric?.ci?.upper, d, isPercent, 'N/A');
              return {
-                head: ['Metric', `Overall (n=${sGesamt?.descriptive.count || 'N/A'})`, `Surgery alone (n=${sOp?.descriptive.count || 'N/A'})`, `Neoadjuvant therapy (n=${sNrct?.descriptive.count || 'N/A'})`],
+                head: ['Metric', `Overall (n=${sGesamt?.descriptive.count || 'N/A'})`, `Upfront Surgery (n=${sOp?.descriptive.count || 'N/A'})`, `Neoadjuvant Therapy (n=${sNrct?.descriptive.count || 'N/A'})`],
                 body: [
                     ['Sensitivity (95% CI)', formatMetric(sGesamt?.avocadoSign.sens, 1, true), formatMetric(sOp?.avocadoSign.sens, 1, true), formatMetric(sNrct?.avocadoSign.sens, 1, true)],
                     ['Specificity (95% CI)', formatMetric(sGesamt?.avocadoSign.spez, 1, true), formatMetric(sOp?.avocadoSign.spez, 1, true), formatMetric(sNrct?.avocadoSign.spez, 1, true)],
                     ['PPV (95% CI)', formatMetric(sGesamt?.avocadoSign.ppv, 1, true), formatMetric(sOp?.avocadoSign.ppv, 1, true), formatMetric(sNrct?.avocadoSign.ppv, 1, true)],
                     ['NPV (95% CI)', formatMetric(sGesamt?.avocadoSign.npv, 1, true), formatMetric(sOp?.avocadoSign.npv, 1, true), formatMetric(sNrct?.avocadoSign.npv, 1, true)],
                     ['Accuracy (95% CI)', formatMetric(sGesamt?.avocadoSign.acc, 1, true), formatMetric(sOp?.avocadoSign.acc, 1, true), formatMetric(sNrct?.avocadoSign.acc, 1, true)],
-                    ['AUC (95% CI)', formatMetric(sGesamt?.avocadoSign.auc, 3, false), formatMetric(sOp?.avocadoSign.auc, 3, false), formatMetric(sNrct?.avocadoSign.auc, 3, false)]
+                    ['AUC (95% CI)', formatMetric(sGesamt?.avocadoSign.auc, 2, false), formatMetric(sOp?.avocadoSign.auc, 2, false), formatMetric(sNrct?.avocadoSign.auc, 2, false)]
                 ],
                 note: 'AS = Avocado Sign, CI = confidence interval, PPV = positive predictive value, NPV = negative predictive value, AUC = area under the receiver operating characteristic curve.'
             };
         },
-        getFigure3Data: (context) => `<div class="row"><div class="col-md-4"><div id="chart-as-overall" class="chart-container" style="min-height: 300px;"></div><p class="text-center small">a) Overall Cohort</p></div><div class="col-md-4"><div id="chart-as-surgery-alone" class="chart-container" style="min-height: 300px;"></div><p class="text-center small">b) Surgery Alone</p></div><div class="col-md-4"><div id="chart-as-nRCT" class="chart-container" style="min-height: 300px;"></div><p class="text-center small">c) nRCT</p></div></div>`,
         getReferences: (context) => {
             const refs = APP_CONFIG.REFERENCES_FOR_PUBLICATION;
-            let content = '<ol>';
+            let content = '<ol class="references-list">';
             Object.values(refs).sort((a,b) => a.numberInList - b.numberInList).forEach(ref => {
                 if(ref.fullCitation) content += `<li>${ref.fullCitation}</li>`;
             });
