@@ -46,14 +46,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         contentHTML = statistikRenderer.render(stats, stateManager.getStatsLayout(), stateManager.getStatsKollektiv1(), stateManager.getStatsKollektiv2());
                         break;
                     case 'praesentation-tab':
-                        const praesStats = presentationController.getPresentationData(processedData);
-                        contentHTML = praesentationRenderer.render(stateManager.getPresentationView(), praesStats, stateManager.getPresentationStudyId());
+                        const praesData = praesentationController.getPresentationData(processedData);
+                        contentHTML = praesentationRenderer.render(stateManager.getPresentationView(), praesData, stateManager.getPresentationStudyId());
                         break;
                     case 'publikation-tab':
-                        contentHTML = publikationController.renderContent();
+                        contentHTML = publikationController.renderContent(processedData);
                         break;
                     case 'export-tab':
-                        contentHTML = exportRenderer.render(Object.keys(bruteForceManager.getAllResults()).length > 0, processedData.length > 0);
+                        const hasBruteForceResults = Object.keys(bruteForceManager.getAllResults()).length > 0;
+                        contentHTML = exportRenderer.render(hasBruteForceResults, evaluatedData.length > 0);
                         break;
                     default:
                         contentHTML = `<p class="text-danger">Tab "${activeTabId}" konnte nicht geladen werden.</p>`;
@@ -65,7 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function _postRenderUpdates(activeTabId, evaluatedData) {
             uiHelpers.destroyTooltips();
-            uiHelpers.initializeTooltips(document.getElementById(`${activeTabId}-pane`));
+            const activePane = document.getElementById(`${activeTabId}-pane`);
+            if (activePane) {
+                uiHelpers.initializeTooltips(activePane);
+            }
             
             const controller = controllers[activeTabId];
             if (controller && typeof controller.onTabEnter === 'function') {
@@ -146,11 +150,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             bruteForceManager.init({
-                onProgress: (payload) => auswertungController.updateBruteForceUI('progress', payload),
-                onResult: (payload) => auswertungController.updateBruteForceUI('result', payload),
-                onError: (payload) => auswertungController.updateBruteForceUI('error', payload),
-                onCancelled: (payload) => auswertungController.updateBruteForceUI('cancelled', payload),
-                onStarted: (payload) => auswertungController.updateBruteForceUI('started', payload)
+                onStarted: (payload) => controllers['auswertung-tab'].updateBruteForceUI('started', payload),
+                onProgress: (payload) => controllers['auswertung-tab'].updateBruteForceUI('progress', payload),
+                onResult: (payload) => controllers['auswertung-tab'].updateBruteForceUI('result', payload),
+                onCancelled: (payload) => controllers['auswertung-tab'].updateBruteForceUI('cancelled', payload),
+                onError: (payload) => controllers['auswertung-tab'].updateBruteForceUI('error', payload)
             });
 
             document.getElementById('app-nav').addEventListener('click', _handleTabChange);
