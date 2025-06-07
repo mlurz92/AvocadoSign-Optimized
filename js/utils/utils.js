@@ -1,440 +1,403 @@
-function getKollektivDisplayName(kollektivId) {
-    const displayName = UI_TEXTS?.kollektivDisplayNames?.[kollektivId] || kollektivId || 'Unbekannt';
-    return displayName;
-}
+const utils = (() => {
 
-function formatNumber(num, digits = 1, placeholder = '--', useStandardFormat = false) {
-    const number = parseFloat(num);
-    if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
-        return placeholder;
-    }
-    if (useStandardFormat) {
-        return number.toFixed(digits);
-    }
-    try {
-        return number.toLocaleString('de-DE', {
-            minimumFractionDigits: digits,
-            maximumFractionDigits: digits
-        });
-    } catch (e) {
-        console.error("Fehler bei formatNumber mit de-DE Locale:", e);
-        return number.toFixed(digits);
-    }
-}
-
-function formatPercent(num, digits = 1, placeholder = '--%') {
-    const number = parseFloat(num);
-    if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
-        return placeholder;
-    }
-    try {
-        return new Intl.NumberFormat('de-DE', {
-            style: 'percent',
-            minimumFractionDigits: digits,
-            maximumFractionDigits: digits
-        }).format(number);
-    } catch (e) {
-        console.error("Fehler bei formatPercent mit de-DE Locale:", e);
-        return (number * 100).toFixed(digits) + '%';
-    }
-}
-
-function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeholder = '--') {
-    const formatFn = isPercent ? formatPercent : formatNumber;
-    const formattedValue = formatFn(value, digits, placeholder, !isPercent); // Use standard format for non-percent numbers in CI
-
-    if (formattedValue === placeholder && !(value === 0 && placeholder === '--')) { // Allow 0 to be formatted
-        return placeholder;
-    }
-    
-    let valueToDisplay = formattedValue;
-    if (isPercent && formattedValue !== placeholder) {
-         valueToDisplay = formattedValue.replace('%','');
+    function getKollektivDisplayName(kollektivId) {
+        return UI_TEXTS?.kollektivDisplayNames?.[kollektivId] || kollektivId || 'Unbekannt';
     }
 
-
-    const formattedLower = formatFn(ciLower, digits, null, !isPercent);
-    const formattedUpper = formatFn(ciUpper, digits, null, !isPercent);
-
-    if (formattedLower !== null && formattedUpper !== null) {
-        const lowerStr = isPercent ? String(formattedLower).replace('%','') : String(formattedLower);
-        const upperStr = isPercent ? String(formattedUpper).replace('%','') : String(formattedUpper);
-        const ciStr = `(${lowerStr}\u00A0-\u00A0${upperStr})`; // Non-breaking space
-        return `${valueToDisplay} ${ciStr}${isPercent ? '%' : ''}`;
-    } else {
-        return formattedValue; // Return value with % if applicable and CI is not available
-    }
-}
-
-function getCurrentDateString(format = 'YYYY-MM-DD') {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-
-    if (format === 'YYYYMMDD') {
-        return `${year}${month}${day}`;
-    }
-    if (format === 'DD.MM.YYYY') {
-        return `${day}.${month}.${year}`;
-    }
-    return `${year}-${month}-${day}`;
-}
-
-function saveToLocalStorage(key, value) {
-    if (typeof key !== 'string' || key.length === 0) {
-        console.error("saveToLocalStorage: Ungültiger Schlüssel angegeben.");
-        return;
-    }
-    try {
-        localStorage.setItem(key, JSON.stringify(value));
-    } catch (e) {
-        console.error(`Fehler beim Speichern im Local Storage (Schlüssel: ${key}):`, e);
-        // Removed specific ui_helpers.showToast here as utils should be independent of UI helpers
-        // if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showToast === 'function') {
-        //     ui_helpers.showToast(`Speichern der Einstellung '${key}' fehlgeschlagen.`, 'warning');
-        // }
-    }
-}
-
-function loadFromLocalStorage(key) {
-    if (typeof key !== 'string' || key.length === 0) {
-        console.error("loadFromLocalStorage: Ungültiger Schlüssel angegeben.");
-        return null;
-    }
-    try {
-        const item = localStorage.getItem(key);
-        return (item !== null && item !== undefined) ? JSON.parse(item) : null;
-    } catch (e) {
-        console.warn(`Fehler beim Laden aus dem Local Storage (Schlüssel: ${key}): ${e.message}. Lösche ggf. Eintrag.`);
-        try {
-            localStorage.removeItem(key);
-            console.log(`Fehlerhafter Eintrag für Schlüssel '${key}' aus Local Storage entfernt.`);
-        } catch (removeError) {
-             console.error(`Fehler beim Entfernen des fehlerhaften Eintrags (Schlüssel: ${key}):`, removeError);
+    function formatNumber(num, digits = 1, placeholder = '--', useStandardFormat = false) {
+        const number = parseFloat(num);
+        if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
+            return placeholder;
         }
-        return null;
+        if (useStandardFormat) {
+            return number.toFixed(digits);
+        }
+        try {
+            return number.toLocaleString('de-DE', {
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits
+            });
+        } catch (e) {
+            return number.toFixed(digits);
+        }
     }
-}
 
-function debounce(func, wait) {
-  let timeoutId = null;
-  return function executedFunction(...args) {
-    const context = this;
-    const later = () => {
-      timeoutId = null;
-      func.apply(context, args);
-    };
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(later, wait);
-  };
-}
-
-function isObject(item) {
-    return (item !== null && typeof item === 'object' && !Array.isArray(item));
-}
-
-function cloneDeep(obj) {
-    if (obj === null || typeof obj !== 'object') {
-        return obj;
+    function formatPercent(num, digits = 1, placeholder = '--%') {
+        const number = parseFloat(num);
+        if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
+            return placeholder;
+        }
+        try {
+            return new Intl.NumberFormat('de-DE', {
+                style: 'percent',
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits
+            }).format(number);
+        } catch (e) {
+            return (number * 100).toFixed(digits) + '%';
+        }
     }
-    try {
-         if (typeof self !== 'undefined' && self.structuredClone) {
-             return self.structuredClone(obj);
-         } else {
-            return JSON.parse(JSON.stringify(obj));
-         }
-    } catch (e) {
-        console.warn("Fehler beim Deep Cloning via structuredClone/JSON, versuche Fallback:", e);
-        if (Array.isArray(obj)) {
-             const arrCopy = [];
-             for(let i = 0; i < obj.length; i++){
-                 arrCopy[i] = cloneDeep(obj[i]);
+
+    function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeholder = '--') {
+        const formatFn = isPercent ? formatPercent : formatNumber;
+        const formattedValue = formatFn(value, digits, placeholder, !isPercent);
+
+        if (formattedValue === placeholder && !(value === 0 && placeholder === '--')) {
+            return placeholder;
+        }
+        
+        let valueToDisplay = formattedValue;
+        if (isPercent && formattedValue !== placeholder) {
+             valueToDisplay = formattedValue.replace('%','');
+        }
+
+        const formattedLower = formatFn(ciLower, digits, null, !isPercent);
+        const formattedUpper = formatFn(ciUpper, digits, null, !isPercent);
+
+        if (formattedLower !== null && formattedUpper !== null) {
+            const lowerStr = isPercent ? String(formattedLower).replace('%','') : String(formattedLower);
+            const upperStr = isPercent ? String(formattedUpper).replace('%','') : String(formattedUpper);
+            const ciStr = `(${lowerStr}\u00A0-\u00A0${upperStr})`;
+            return `${valueToDisplay} ${ciStr}${isPercent ? '%' : ''}`;
+        } else {
+            return formattedValue;
+        }
+    }
+
+    function getCurrentDateString(format = 'YYYY-MM-DD') {
+        const date = new Date();
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+
+        if (format === 'YYYYMMDD') {
+            return `${year}${month}${day}`;
+        }
+        if (format === 'DD.MM.YYYY') {
+            return `${day}.${month}.${year}`;
+        }
+        return `${year}-${month}-${day}`;
+    }
+
+    function saveToLocalStorage(key, value) {
+        if (typeof key !== 'string' || key.length === 0) {
+            console.error("saveToLocalStorage: Ungültiger Schlüssel angegeben.");
+            return;
+        }
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+        } catch (e) {
+            console.error(`Fehler beim Speichern im Local Storage (Schlüssel: ${key}):`, e);
+        }
+    }
+
+    function loadFromLocalStorage(key) {
+        if (typeof key !== 'string' || key.length === 0) {
+            console.error("loadFromLocalStorage: Ungültiger Schlüssel angegeben.");
+            return null;
+        }
+        try {
+            const item = localStorage.getItem(key);
+            return (item !== null && item !== undefined) ? JSON.parse(item) : null;
+        } catch (e) {
+            console.warn(`Fehler beim Laden aus dem Local Storage (Schlüssel: ${key}): ${e.message}. Lösche ggf. Eintrag.`);
+            try {
+                localStorage.removeItem(key);
+            } catch (removeError) {
+                 console.error(`Fehler beim Entfernen des fehlerhaften Eintrags (Schlüssel: ${key}):`, removeError);
+            }
+            return null;
+        }
+    }
+
+    function debounce(func, wait) {
+      let timeoutId = null;
+      return function executedFunction(...args) {
+        const context = this;
+        const later = () => {
+          timeoutId = null;
+          func.apply(context, args);
+        };
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(later, wait);
+      };
+    }
+
+    function isObject(item) {
+        return (item !== null && typeof item === 'object' && !Array.isArray(item));
+    }
+
+    function cloneDeep(obj) {
+        if (obj === null || typeof obj !== 'object') {
+            return obj;
+        }
+        try {
+             if (typeof self !== 'undefined' && self.structuredClone) {
+                 return self.structuredClone(obj);
              }
-             return arrCopy;
-         };
-        if (typeof obj === 'object') {
-             const objCopy = {};
-             for(const key in obj) {
-                 if(Object.prototype.hasOwnProperty.call(obj, key)) {
-                     objCopy[key] = cloneDeep(obj[key]);
-                 }
-             }
-             return objCopy;
-         };
-        return obj;
+             return JSON.parse(JSON.stringify(obj));
+        } catch (e) {
+            const fallbackClone = (o) => {
+                if (o === null || typeof o !== 'object') return o;
+                if (Array.isArray(o)) {
+                    const arrCopy = [];
+                    for(let i = 0; i < o.length; i++){ arrCopy[i] = fallbackClone(o[i]); }
+                    return arrCopy;
+                }
+                const objCopy = {};
+                for(const key in o) {
+                    if(Object.prototype.hasOwnProperty.call(o, key)) { objCopy[key] = fallbackClone(o[key]); }
+                }
+                return objCopy;
+            };
+            return fallbackClone(obj);
+        }
     }
-}
 
-function deepMerge(target, ...sources) {
-    let output = cloneDeep(target);
-    sources.forEach(source => {
-        const sourceCopy = cloneDeep(source);
-        if (isObject(output) && isObject(sourceCopy)) {
-            Object.keys(sourceCopy).forEach(key => {
-                const targetValue = output[key];
-                const sourceValue = sourceCopy[key];
-                if (isObject(sourceValue) && sourceValue !== null) {
-                    if (isObject(targetValue) && targetValue !== null) {
-                        output[key] = deepMerge(targetValue, sourceValue);
-                    } else {
+    function deepMerge(target, ...sources) {
+        let output = cloneDeep(target);
+        sources.forEach(source => {
+            const sourceCopy = cloneDeep(source);
+            if (isObject(output) && isObject(sourceCopy)) {
+                Object.keys(sourceCopy).forEach(key => {
+                    const targetValue = output[key];
+                    const sourceValue = sourceCopy[key];
+                    if (isObject(sourceValue) && sourceValue !== null) {
+                        output[key] = (isObject(targetValue) && targetValue !== null) ? deepMerge(targetValue, sourceValue) : sourceValue;
+                    } else if (sourceValue !== undefined) {
                         output[key] = sourceValue;
                     }
-                } else if (sourceValue !== undefined) {
-                    output[key] = sourceValue;
-                }
-            });
-        } else if(isObject(sourceCopy)) {
-            output = sourceCopy;
-        }
-    });
-    return output;
-}
-
-function getObjectValueByPath(obj, path) {
-    if (!obj || typeof path !== 'string') {
-        return undefined;
-    }
-    try {
-        return path.split('.').reduce((acc, part) => acc && acc[part], obj);
-    } catch (e) {
-        console.warn(`Fehler beim Zugriff auf Pfad '${path}':`, e);
-        return undefined;
-    }
-}
-
-function getSortFunction(key, direction = 'asc', subKey = null) {
-    const dirModifier = direction === 'asc' ? 1 : -1;
-
-    return (a, b) => {
-        if (!a || !b) return 0;
-
-        let valA, valB;
-
-        try {
-            if (key === 'status' && subKey) {
-                const getSubStatusValue = (p, sk) => {
-                    const statusVal = getObjectValueByPath(p, sk);
-                    return statusVal === '+' ? 1 : (statusVal === '-' ? 0 : -1);
-                };
-                valA = getSubStatusValue(a, subKey);
-                valB = getSubStatusValue(b, subKey);
+                });
+            } else if(isObject(sourceCopy)) {
+                output = sourceCopy;
             }
-            else if (key === 'status') {
-                const getCombinedStatusValue = (p) => {
-                    if (!p) return -Infinity;
-                    let value = 0;
-                    if (p.n === '+') value += 4; else if (p.n === '-') value -= 4;
-                    if (p.as === '+') value += 2; else if (p.as === '-') value -= 2;
-                    if (p.t2 === '+') value += 1; else if (p.t2 === '-') value -= 1;
-                    return value;
-                };
-                valA = getCombinedStatusValue(a);
-                valB = getCombinedStatusValue(b);
-            }
-            else if (key === 'anzahl_patho_lk' || key === 'anzahl_as_lk' || key === 'anzahl_t2_lk') {
-                 const getCounts = (p, k) => {
-                     if (!p) return { plus: NaN, total: NaN };
-                     let plusKey, totalKey;
-                     if (k === 'anzahl_patho_lk') { plusKey = 'anzahl_patho_n_plus_lk'; totalKey = 'anzahl_patho_lk'; }
-                     else if (k === 'anzahl_as_lk') { plusKey = 'anzahl_as_plus_lk'; totalKey = 'anzahl_as_lk'; }
-                     else if (k === 'anzahl_t2_lk') { plusKey = 'anzahl_t2_plus_lk'; totalKey = 'anzahl_t2_lk'; }
-                     else { return { plus: NaN, total: NaN }; }
-                     const plus = getObjectValueByPath(p, plusKey);
-                     const total = getObjectValueByPath(p, totalKey);
-                     return { plus: (plus ?? NaN), total: (total ?? NaN) };
-                 };
-                 const countsA = getCounts(a, key);
-                 const countsB = getCounts(b, key);
-                 valA = countsA.plus;
-                 valB = countsB.plus;
-                 if (valA === valB || (isNaN(valA) && isNaN(valB))) {
-                     valA = countsA.total;
-                     valB = countsB.total;
-                 }
-            }
-             else {
-                 valA = getObjectValueByPath(a, key);
-                 valB = getObjectValueByPath(b, key);
-             }
-
-             const isInvalidA = valA === null || valA === undefined || (typeof valA === 'number' && isNaN(valA));
-             const isInvalidB = valB === null || valB === undefined || (typeof valB === 'number' && isNaN(valB));
-
-             if (isInvalidA && isInvalidB) return 0;
-             if (isInvalidA) return 1 * dirModifier;
-             if (isInvalidB) return -1 * dirModifier;
-
-             if (typeof valA === 'string' && typeof valB === 'string') {
-                 return valA.localeCompare(valB, 'de-DE', { sensitivity: 'base', numeric: true }) * dirModifier;
-             }
-             if (typeof valA === 'number' && typeof valB === 'number') {
-                 return (valA - valB) * dirModifier;
-             }
-             if (typeof valA === 'boolean' && typeof valB === 'boolean') {
-                 return (valA === valB ? 0 : (valA ? 1 : -1)) * dirModifier;
-             }
-
-             try {
-                 return String(valA).localeCompare(String(valB), 'de-DE', { sensitivity: 'base', numeric: true }) * dirModifier;
-             } catch (e) {
-                  console.warn("Fallback string comparison failed:", e);
-                  if (valA < valB) return -1 * dirModifier;
-                  if (valA > valB) return 1 * dirModifier;
-                  return 0;
-             }
-
-        } catch (error) {
-             console.error("Fehler während der Sortierung:", error, "Key:", key, "SubKey:", subKey, "A:", a, "B:", b);
-             return 0;
-        }
-    };
-}
-
-function getStatisticalSignificanceSymbol(pValue) {
-    if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return '';
-    const significanceLevels = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS; // Bereits absteigend sortiert
-    const overallSignificanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL;
-
-    for (const level of significanceLevels) {
-        if (pValue < level.threshold) {
-            return level.symbol;
-        }
-    }
-    if (pValue < overallSignificanceLevel) { // Falls kein Symbol in der Liste passt, aber unter dem allgemeinen Niveau
-        return significanceLevels[significanceLevels.length - 1]?.symbol || '*'; // Fallback zum geringsten definierten Symbol
-    }
-    return 'ns'; // not significant
-}
-
-function getStatisticalSignificanceText(pValue, significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL) {
-     if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return '';
-     const level = significanceLevel;
-     return pValue < level
-         ? UI_TEXTS.statMetrics.signifikanzTexte.SIGNIFIKANT || 'statistisch signifikant'
-         : UI_TEXTS.statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT || 'statistisch nicht signifikant';
-}
-
-function getPValueText(pValue, lang = 'de') {
-    if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return 'N/A';
-
-    const pLessThanThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS[0]?.threshold || 0.001; // kleinster Schwellenwert für 'p < ...'
-    if (pValue < pLessThanThreshold) {
-        const thresholdStr = String(pLessThanThreshold).replace('.', lang === 'de' ? ',' : '.');
-        return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','.')}`;
-    }
-
-    let pFormatted = formatNumber(pValue, 3, 'N/A', true); // useStandardFormat = true
-    if (pFormatted === '0.000' && pLessThanThreshold === 0.001) { // Spezifischer Fall, wenn p sehr klein, aber nicht <0.001 laut Formatierung
-         const thresholdStr = String(pLessThanThreshold).replace('.', lang === 'de' ? ',' : '.');
-         return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','.')}`;
-    }
-
-    if (lang === 'de' && pFormatted !== 'N/A') {
-        pFormatted = pFormatted.replace('.', ',');
-    }
-    return `p = ${pFormatted}`;
-}
-
-function generateUUID() {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-        return crypto.randomUUID();
-    } else {
-        let d = new Date().getTime();
-        let d2 = (typeof performance !== 'undefined' && performance.now && (performance.now() * 1000)) || 0;
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            let r = Math.random() * 16;
-            if (d > 0) {
-                r = (d + r) % 16 | 0;
-                d = Math.floor(d / 16);
-            } else {
-                r = (d2 + r) % 16 | 0;
-                d2 = Math.floor(d2 / 16);
-            }
-            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
         });
+        return output;
     }
-}
 
-function clampNumber(num, min, max) {
-    const number = parseFloat(num);
-    const minVal = parseFloat(min);
-    const maxVal = parseFloat(max);
-    if(isNaN(number) || isNaN(minVal) || isNaN(maxVal)) {
-        console.warn(`Ungültige Eingabe für clampNumber: num=${num}, min=${min}, max=${max}`);
-        return NaN;
-    };
-    return Math.min(Math.max(number, minVal), maxVal);
-}
-
-function arraysAreEqual(arr1, arr2) {
-    if (!Array.isArray(arr1) || !Array.isArray(arr2)) return false;
-    if (arr1.length !== arr2.length) return false;
-    for (let i = 0; i < arr1.length; i++) {
-        if (arr1[i] !== arr2[i]) return false;
+    function getObjectValueByPath(obj, path) {
+        if (!obj || typeof path !== 'string') {
+            return undefined;
+        }
+        try {
+            return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+        } catch (e) {
+            return undefined;
+        }
     }
-    return true;
-}
 
-function getAUCBewertung(aucValue) {
-    const value = parseFloat(aucValue);
-    if (isNaN(value) || value < 0 || value > 1) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_bestimmbar || 'N/A';
-    if (value >= 0.9) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.exzellent || 'exzellent';
-    if (value >= 0.8) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.gut || 'gut';
-    if (value >= 0.7) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.moderat || 'moderat';
-    if (value > 0.5) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.schwach || 'schwach';
-    return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_informativ || 'nicht informativ';
-}
+    function getSortFunction(key, direction = 'asc', subKey = null) {
+        const dirModifier = direction === 'asc' ? 1 : -1;
 
-function getPhiBewertung(phiValue) {
-    const value = parseFloat(phiValue);
-    if (isNaN(value)) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_bestimmbar || 'N/A';
-    const absPhi = Math.abs(value);
-    const texts = UI_TEXTS.statMetrics.assoziationStaerkeTexte || {};
-    if (absPhi >= 0.5) return texts.stark || 'stark';
-    if (absPhi >= 0.3) return texts.moderat || 'moderat';
-    if (absPhi >= 0.1) return texts.schwach || 'schwach';
-    return texts.sehr_schwach || 'sehr schwach';
-}
+        return (a, b) => {
+            if (!a || !b) return 0;
+            let valA, valB;
+            try {
+                if (key === 'status' && subKey) {
+                    const getSubStatusValue = (p, sk) => {
+                        const statusVal = getObjectValueByPath(p, sk);
+                        return statusVal === '+' ? 1 : (statusVal === '-' ? 0 : -1);
+                    };
+                    valA = getSubStatusValue(a, subKey);
+                    valB = getSubStatusValue(b, subKey);
+                }
+                else if (key === 'status') {
+                    const getCombinedStatusValue = (p) => {
+                        if (!p) return -Infinity;
+                        let value = 0;
+                        if (p.n === '+') value += 4; else if (p.n === '-') value -= 4;
+                        if (p.as === '+') value += 2; else if (p.as === '-') value -= 2;
+                        if (p.t2 === '+') value += 1; else if (p.t2 === '-') value -= 1;
+                        return value;
+                    };
+                    valA = getCombinedStatusValue(a);
+                    valB = getCombinedStatusValue(b);
+                }
+                else if (key === 'anzahl_patho_lk' || key === 'anzahl_as_lk' || key === 'anzahl_t2_lk') {
+                     const getCounts = (p, k) => {
+                         if (!p) return { plus: NaN, total: NaN };
+                         let plusKey, totalKey;
+                         if (k === 'anzahl_patho_lk') { plusKey = 'anzahl_patho_n_plus_lk'; totalKey = 'anzahl_patho_lk'; }
+                         else if (k === 'anzahl_as_lk') { plusKey = 'anzahl_as_plus_lk'; totalKey = 'anzahl_as_lk'; }
+                         else if (k === 'anzahl_t2_lk') { plusKey = 'anzahl_t2_plus_lk'; totalKey = 'anzahl_t2_lk'; }
+                         else { return { plus: NaN, total: NaN }; }
+                         const plus = getObjectValueByPath(p, plusKey);
+                         const total = getObjectValueByPath(p, totalKey);
+                         return { plus: (plus ?? NaN), total: (total ?? NaN) };
+                     };
+                     const countsA = getCounts(a, key);
+                     const countsB = getCounts(b, key);
+                     valA = countsA.plus;
+                     valB = countsB.plus;
+                     if (valA === valB || (isNaN(valA) && isNaN(valB))) {
+                         valA = countsA.total;
+                         valB = countsB.total;
+                     }
+                }
+                 else {
+                     valA = getObjectValueByPath(a, key);
+                     valB = getObjectValueByPath(b, key);
+                 }
 
-function getStatusClass(status) {
-    if (status === '+') return 'status-plus';
-    if (status === '-') return 'status-minus';
-    return 'status-unknown';
-}
+                 const isInvalidA = valA === null || valA === undefined || (typeof valA === 'number' && isNaN(valA));
+                 const isInvalidB = valB === null || valB === undefined || (typeof valB === 'number' && isNaN(valB));
 
-// Exponiere alle relevanten Funktionen global, damit sie von anderen Modulen direkt genutzt werden können
-// Dies wird in einer modernen JS-Umgebung oft durch Import/Export Statements ersetzt,
-// aber da die Anwendung auf globalen Funktionen basiert, müssen sie am Window-Objekt bleiben oder
-// über ein Modulmuster wie im Falle von uiHelpers exponiert werden.
-// Da diese Datei als "js/utils/utils.js" direkt im HTML geladen wird
-// und ihre Funktionen von vielen anderen Modulen direkt aufgerufen werden (z.B. formatNumber, cloneDeep),
-// muss sie explizit globale Funktionen erstellen oder ein einziges Objekt exportieren,
-// das dann global zugänglich ist.
-// Ich werde hier die Funktionen direkt am window-Objekt belassen, da dies dem ursprünglichen Designansatz entspricht
-// und die Komplexität der Refaktorierung aller Aufrufe zu einem 'utils' Objekt vermeiden würde.
-// Die Änderung in helpers.js war notwendig, da uiHelpers.updateHeaderStatsUI explizit als Teil des uiHelpers-Objekts aufgerufen wurde.
+                 if (isInvalidA && isInvalidB) return 0;
+                 if (isInvalidA) return 1 * dirModifier;
+                 if (isInvalidB) return -1 * dirModifier;
 
-// Dies ist die Liste der Funktionen, die global zugänglich sein müssen
-window.getKollektivDisplayName = getKollektivDisplayName;
-window.formatNumber = formatNumber;
-window.formatPercent = formatPercent;
-window.formatCI = formatCI;
-window.getCurrentDateString = getCurrentDateString;
-window.saveToLocalStorage = saveToLocalStorage;
-window.loadFromLocalStorage = loadFromLocalStorage;
-window.debounce = debounce;
-window.isObject = isObject;
-window.cloneDeep = cloneDeep;
-window.deepMerge = deepMerge;
-window.getObjectValueByPath = getObjectValueByPath;
-window.getSortFunction = getSortFunction;
-window.getStatisticalSignificanceSymbol = getStatisticalSignificanceSymbol;
-window.getStatisticalSignificanceText = getStatisticalSignificanceText;
-window.getPValueText = getPValueText;
-window.generateUUID = generateUUID;
-window.clampNumber = clampNumber;
-window.arraysAreEqual = arraysAreEqual;
-window.getAUCBewertung = getAUCBewertung;
-window.getPhiBewertung = getPhiBewertung;
-window.getStatusClass = getStatusClass;
+                 if (typeof valA === 'string' && typeof valB === 'string') {
+                     return valA.localeCompare(valB, 'de-DE', { sensitivity: 'base', numeric: true }) * dirModifier;
+                 }
+                 if (typeof valA === 'number' && typeof valB === 'number') {
+                     return (valA - valB) * dirModifier;
+                 }
+                 if (typeof valA === 'boolean' && typeof valB === 'boolean') {
+                     return (valA === valB ? 0 : (valA ? 1 : -1)) * dirModifier;
+                 }
+
+                 try {
+                     return String(valA).localeCompare(String(valB), 'de-DE', { sensitivity: 'base', numeric: true }) * dirModifier;
+                 } catch (e) {
+                      if (valA < valB) return -1 * dirModifier;
+                      if (valA > valB) return 1 * dirModifier;
+                      return 0;
+                 }
+            } catch (error) {
+                 return 0;
+            }
+        };
+    }
+
+    function getStatisticalSignificanceSymbol(pValue) {
+        if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return '';
+        const significanceLevels = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS;
+        const overallSignificanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL;
+
+        for (const level of significanceLevels) {
+            if (pValue < level.threshold) {
+                return level.symbol;
+            }
+        }
+        if (pValue < overallSignificanceLevel) {
+            return significanceLevels[significanceLevels.length - 1]?.symbol || '*';
+        }
+        return 'ns';
+    }
+
+    function getStatisticalSignificanceText(pValue, significanceLevel) {
+         if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return '';
+         const level = significanceLevel || APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL;
+         return pValue < level
+             ? UI_TEXTS.statMetrics.signifikanzTexte.SIGNIFIKANT || 'statistisch signifikant'
+             : UI_TEXTS.statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT || 'statistisch nicht signifikant';
+    }
+
+    function getPValueText(pValue, lang = 'de') {
+        if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return 'N/A';
+        const pLessThanThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS[0]?.threshold || 0.001;
+        if (pValue < pLessThanThreshold) {
+            const thresholdStr = String(pLessThanThreshold).replace('.', lang === 'de' ? ',' : '.');
+            return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','.')}`;
+        }
+        let pFormatted = formatNumber(pValue, 3, 'N/A', true);
+        if (pFormatted === '0.000' && pValue > 0) {
+             const thresholdStr = String(pLessThanThreshold).replace('.', lang === 'de' ? ',' : '.');
+             return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','.')}`;
+        }
+        if (lang === 'de' && pFormatted !== 'N/A') {
+            pFormatted = pFormatted.replace('.', ',');
+        }
+        return `p = ${pFormatted}`;
+    }
+
+    function generateUUID() {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        } else {
+            let d = new Date().getTime();
+            let d2 = (typeof performance !== 'undefined' && performance.now && (performance.now() * 1000)) || 0;
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                let r = Math.random() * 16;
+                if (d > 0) {
+                    r = (d + r) % 16 | 0;
+                    d = Math.floor(d / 16);
+                } else {
+                    r = (d2 + r) % 16 | 0;
+                    d2 = Math.floor(d2 / 16);
+                }
+                return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+            });
+        }
+    }
+
+    function clampNumber(num, min, max) {
+        const number = parseFloat(num);
+        const minVal = parseFloat(min);
+        const maxVal = parseFloat(max);
+        if(isNaN(number) || isNaN(minVal) || isNaN(maxVal)) return NaN;
+        return Math.min(Math.max(number, minVal), maxVal);
+    }
+
+    function arraysAreEqual(arr1, arr2) {
+        if (!Array.isArray(arr1) || !Array.isArray(arr2) || arr1.length !== arr2.length) return false;
+        for (let i = 0; i < arr1.length; i++) {
+            if (arr1[i] !== arr2[i]) return false;
+        }
+        return true;
+    }
+
+    function getAUCBewertung(aucValue) {
+        const value = parseFloat(aucValue);
+        const texts = UI_TEXTS.statMetrics.assoziationStaerkeTexte || {};
+        if (isNaN(value) || value < 0 || value > 1) return texts.nicht_bestimmbar || 'N/A';
+        if (value >= 0.9) return texts.exzellent || 'exzellent';
+        if (value >= 0.8) return texts.gut || 'gut';
+        if (value >= 0.7) return texts.moderat || 'moderat';
+        if (value > 0.5) return texts.schwach || 'schwach';
+        return texts.nicht_informativ || 'nicht informativ';
+    }
+
+    function getPhiBewertung(phiValue) {
+        const value = parseFloat(phiValue);
+        const texts = UI_TEXTS.statMetrics.assoziationStaerkeTexte || {};
+        if (isNaN(value)) return texts.nicht_bestimmbar || 'N/A';
+        const absPhi = Math.abs(value);
+        if (absPhi >= 0.5) return texts.stark || 'stark';
+        if (absPhi >= 0.3) return texts.moderat || 'moderat';
+        if (absPhi >= 0.1) return texts.schwach || 'schwach';
+        return texts.sehr_schwach || 'sehr schwach';
+    }
+
+    function getStatusClass(status) {
+        if (status === '+') return 'status-plus';
+        if (status === '-') return 'status-minus';
+        return 'status-unknown';
+    }
+
+    return Object.freeze({
+        getKollektivDisplayName,
+        formatNumber,
+        formatPercent,
+        formatCI,
+        getCurrentDateString,
+        saveToLocalStorage,
+        loadFromLocalStorage,
+        debounce,
+        isObject,
+        cloneDeep,
+        deepMerge,
+        getObjectValueByPath,
+        getSortFunction,
+        getStatisticalSignificanceSymbol,
+        getStatisticalSignificanceText,
+        getPValueText,
+        generateUUID,
+        clampNumber,
+        arraysAreEqual,
+        getAUCBewertung,
+        getPhiBewertung,
+        getStatusClass
+    });
+
+})();
