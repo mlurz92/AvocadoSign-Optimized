@@ -1,6 +1,6 @@
 const APP_CONFIG = Object.freeze({
     APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
-    APP_VERSION: "2.5.0",
+    APP_VERSION: "3.0.0",
 
     DEFAULT_SETTINGS: Object.freeze({
         KOLLEKTIV: 'Gesamt',
@@ -11,46 +11,33 @@ const APP_CONFIG = Object.freeze({
         STATS_KOLLEKTIV1: 'Gesamt',
         STATS_KOLLEKTIV2: 'nRCT',
         PRESENTATION_VIEW: 'as-pur',
-        PRESENTATION_STUDY_ID: null,
+        PRESENTATION_STUDY_ID: 'applied_criteria',
         PUBLIKATION_LANG: 'de',
         PUBLIKATION_SECTION: 'abstract',
         PUBLIKATION_BRUTE_FORCE_METRIC: 'Balanced Accuracy',
-        CRITERIA_COMPARISON_SETS: Object.freeze([
-            'avocado_sign',
-            'applied_criteria',
-            'rutegard_et_al_esgar',
-            'koh_2008_morphology',
-            'barbaro_2024_restaging'
-        ]),
         CHART_COLOR_SCHEME: 'default',
         BRUTE_FORCE_METRIC: 'Balanced Accuracy'
     }),
 
     STORAGE_KEYS: Object.freeze({
-        APPLIED_CRITERIA: 'appliedT2Criteria_v2.5_app',
-        APPLIED_LOGIC: 'appliedT2Logic_v2.5_app',
-        CURRENT_KOLLEKTIV: 'currentKollektiv_v2.5_app',
-        PUBLIKATION_LANG: 'currentPublikationLang_v2.5_app',
-        PUBLIKATION_SECTION: 'currentPublikationSection_v2.5_app',
-        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v2.5_app',
-        STATS_LAYOUT: 'currentStatsLayout_v2.5_app',
-        STATS_KOLLEKTIV1: 'currentStatsKollektiv1_v2.5_app',
-        STATS_KOLLEKTIV2: 'currentStatsKollektiv2_v2.5_app',
-        PRESENTATION_VIEW: 'currentPresentationView_v2.5_app',
-        PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v2.5_app',
-        CRITERIA_COMPARISON_SETS: 'criteriaComparisonSets_v2.5_app',
-        CHART_COLOR_SCHEME: 'chartColorScheme_v2.5_app',
-        FIRST_APP_START: 'appFirstStart_v2.5'
+        APPLIED_CRITERIA: 'appliedT2Criteria_v3.0_app',
+        APPLIED_LOGIC: 'appliedT2Logic_v3.0_app',
+        CURRENT_KOLLEKTIV: 'currentKollektiv_v3.0_app',
+        DATEN_TABLE_SORT: 'datenTableSort_v3.0_app',
+        AUSWERTUNG_TABLE_SORT: 'auswertungTableSort_v3.0_app',
+        PUBLIKATION_LANG: 'currentPublikationLang_v3.0_app',
+        PUBLIKATION_SECTION: 'currentPublikationSection_v3.0_app',
+        PUBLIKATION_BRUTE_FORCE_METRIC: 'currentPublikationBfMetric_v3.0_app',
+        STATS_LAYOUT: 'currentStatsLayout_v3.0_app',
+        STATS_KOLLEKTIV1: 'currentStatsKollektiv1_v3.0_app',
+        STATS_KOLLEKTIV2: 'currentStatsKollektiv2_v3.0_app',
+        PRESENTATION_VIEW: 'currentPresentationView_v3.0_app',
+        PRESENTATION_STUDY_ID: 'currentPresentationStudyId_v3.0_app',
+        FIRST_APP_START: 'appFirstStart_v3.0'
     }),
 
     PATHS: Object.freeze({
-        BRUTE_FORCE_WORKER: 'workers/brute_force_worker.js',
-        PUBLICATION_CONTROLLER: 'js/ui/publication/publication_controller.js',
-        PUBLICATION_VIEW_RENDERER: 'js/ui/publication/publication_view_renderer.js',
-        PUBLICATION_CONTENT_GENERATOR: 'js/ui/publication/publication_content_generator.js',
-        PUBLICATION_TEXT_GENERATOR_RADIOLOGY: 'js/ui/publication/publication_text_generator_radiology.js',
-        PUBLICATION_TABLE_GENERATOR_RADIOLOGY: 'js/ui/publication/publication_table_generator_radiology.js',
-        PUBLICATION_FIGURE_GENERATOR_RADIOLOGY: 'js/ui/publication/publication_figure_generator_radiology.js'
+        BRUTE_FORCE_WORKER: 'workers/brute_force_worker.js'
     }),
 
     PERFORMANCE_SETTINGS: Object.freeze({
@@ -189,7 +176,7 @@ const APP_CONFIG = Object.freeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"2.5.0"}`,
+        REPORT_AUTHOR: `Generiert durch Analyse-Tool v${"3.0.0"}`,
         REPORT_LOGO_ALT_TEXT: 'Institutslogo',
         INCLUDE_KEY_RESULTS: true,
         INCLUDE_SUMMARY_STATEMENT: true
