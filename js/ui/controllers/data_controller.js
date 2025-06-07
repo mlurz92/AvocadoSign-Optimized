@@ -13,8 +13,12 @@ const dataController = (() => {
         const currentSortState = stateManager.getSortState('daten');
         let direction = 'asc';
 
+        // Check if the same key and subKey are clicked, then toggle direction
         if (currentSortState.key === key && currentSortState.subKey === subKey) {
             direction = currentSortState.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            // If a different key or subKey is clicked, reset direction to 'asc'
+            direction = 'asc';
         }
 
         stateManager.setSortState('daten', { key, subKey, direction });
@@ -40,10 +44,10 @@ const dataController = (() => {
 
         const newAction = isExpandAction ? 'collapse' : 'expand';
         const newIconClass = isExpandAction ? 'fa-chevron-up' : 'fa-chevron-down';
-        const newButtonText = isExpandAction ? 'Alle Details Ausblenden' : 'Alle Details Einblenden';
+        const newButtonText = isExpandAction ? 'Alle Details Ausblenden' : 'Alle Details Anzeigen';
         const tooltipContent = isExpandAction ? 
-            TOOLTIP_CONTENT.datenTable.collapseAll.description : 
-            TOOLTIP_CONTENT.datenTable.expandAll.description;
+            (TOOLTIP_CONTENT.datenTable.collapseAll?.description || 'Alle Details ausblenden') : 
+            (TOOLTIP_CONTENT.datenTable.expandAll?.description || 'Alle Details anzeigen');
             
         button.dataset.action = newAction;
         button.innerHTML = `<i class="fas ${newIconClass} me-1"></i>${newButtonText}`;
@@ -73,9 +77,20 @@ const dataController = (() => {
             isInitialized = true;
         }
     }
+    
+    function onTabEnter() {
+        // No specific onTabEnter logic needed for dataController at the moment beyond event listeners
+        // Event listeners are attached once in init, so no need to re-attach unless they are removed on exit.
+    }
+
+    function onTabExit() {
+        // No specific onTabExit logic needed for dataController at the moment
+    }
 
     return Object.freeze({
-        init
+        init,
+        onTabEnter,
+        onTabExit
     });
 
 })();
