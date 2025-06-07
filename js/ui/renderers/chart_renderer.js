@@ -30,10 +30,10 @@ const chartRenderer = (() => {
         const config = {
             width: options.width || C.DEFAULT_WIDTH,
             height: options.height || C.DEFAULT_HEIGHT,
-            margin: options.margin || C.COMPACT_PIE_MARGIN, // Changed to compact margin for dashboard
+            margin: options.margin || C.COMPACT_PIE_MARGIN,
             xAxisLabel: options.xAxisLabel || '',
             yAxisLabel: options.yAxisLabel || '',
-            barColor: options.barColor || C.AS_COLOR // Default bar color
+            barColor: options.barColor || C.AS_COLOR
         };
         const svg = _createBaseSvg(containerId, config);
         const tooltip = _createTooltip(containerId);
@@ -62,7 +62,6 @@ const chartRenderer = (() => {
             .style("text-anchor", "end")
             .style("font-size", C.TICK_LABEL_FONT_SIZE);
         
-        // Add X-axis label
         if (config.xAxisLabel) {
             svg.append("text")
                 .attr("x", config.width / 2)
@@ -78,11 +77,10 @@ const chartRenderer = (() => {
             .range([config.height, 0]);
 
         svg.append("g")
-            .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0f"))) // Format as integer
+            .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0f")))
             .selectAll("text")
             .style("font-size", C.TICK_LABEL_FONT_SIZE);
 
-        // Add Y-axis label
         if (config.yAxisLabel) {
             svg.append("text")
                 .attr("transform", "rotate(-90)")
@@ -103,10 +101,10 @@ const chartRenderer = (() => {
             .attr("width", x.bandwidth())
             .attr("y", d => y(0))
             .attr("height", 0)
-            .attr("fill", (d, i) => C.COLOR_SCHEMES.default[i % C.COLOR_SCHEMES.default.length]) // Use color scheme
+            .attr("fill", (d, i) => C.COLOR_SCHEMES.default[i % C.COLOR_SCHEMES.default.length])
             .on("mouseover", (event, d) => {
                 tooltip.style("opacity", 1)
-                       .html(`<strong>${d.label}</strong><br>${options.yAxisLabel || 'Wert'}: ${formatNumber(d.value, 0)}`)
+                       .html(`<strong>${d.label}</strong><br>${options.yAxisLabel || 'Wert'}: ${utils.formatNumber(d.value, 0)}`)
                        .style("left", (event.pageX + 15) + "px")
                        .style("top", (event.pageY - 28) + "px");
             })
@@ -153,15 +151,14 @@ const chartRenderer = (() => {
             .style("font-size", C.TICK_LABEL_FONT_SIZE);
 
         const y = d3.scaleLinear()
-            .domain([0, 1]) // Metrics like Sens, Spez, AUC are usually between 0 and 1
+            .domain([0, 1])
             .range([config.height, 0]);
 
         svg.append("g")
-            .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0%"))) // Format as percentage
+            .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0%")))
             .selectAll("text")
             .style("font-size", C.TICK_LABEL_FONT_SIZE);
         
-        // Add Y-axis label
         if (config.yAxisLabel) {
             svg.append("text")
                 .attr("transform", "rotate(-90)")
@@ -197,7 +194,7 @@ const chartRenderer = (() => {
             .attr("height", 0)
             .on("mouseover", (event, d) => {
                  tooltip.style("opacity", 1)
-                       .html(`<strong>${d.name} - ${d.key}</strong><br>${config.yAxisLabel}: ${formatCI(d.value, d.ci?.lower, d.ci?.upper, d.key === 'AUC' ? 3 : 1, d.key !== 'AUC')}`)
+                       .html(`<strong>${d.name} - ${d.key}</strong><br>${config.yAxisLabel}: ${utils.formatCI(d.value, d.ci?.lower, d.ci?.upper, d.key === 'AUC' ? 3 : 1, d.key !== 'AUC')}`)
                        .style("left", (event.pageX + 15) + "px")
                        .style("top", (event.pageY - 28) + "px");
             })
@@ -225,7 +222,6 @@ const chartRenderer = (() => {
             .attr("stroke", "black")
             .attr("stroke-width", 1.5);
 
-        // Add legend
         const legend = svg.append("g")
             .attr("font-family", "sans-serif")
             .attr("font-size", C.LEGEND_FONT_SIZE)
@@ -271,12 +267,10 @@ const chartRenderer = (() => {
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    // Use getBoundingClientRect for more accurate dimensions, especially if SVG is scaled by CSS
                     const bbox = svgElement.getBoundingClientRect();
                     canvas.width = bbox.width * scale;
                     canvas.height = bbox.height * scale;
                     const ctx = canvas.getContext('2d');
-                    // Draw the image
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                     URL.revokeObjectURL(url);
                     canvas.toBlob(resolve, 'image/png');
