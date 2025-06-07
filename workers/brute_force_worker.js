@@ -11,32 +11,32 @@ let t2SizeRange = { min: 0.1, max: 15.0, step: 0.1 };
 const reportIntervalFactor = 200;
 
 function cloneDeepWorker(obj) {
-     if (obj === null || typeof obj !== 'object') return obj;
-     try {
-         if (typeof self !== 'undefined' && self.structuredClone) {
-             return self.structuredClone(obj);
-         } else {
-             return JSON.parse(JSON.stringify(obj));
-         }
-     } catch(e) {
-         if (Array.isArray(obj)) {
-             const arrCopy = [];
-             for(let i = 0; i < obj.length; i++){
-                 arrCopy[i] = cloneDeepWorker(obj[i]);
-             }
-             return arrCopy;
-         }
-         if (typeof obj === 'object') {
-             const objCopy = {};
-             for(const key in obj) {
-                 if(Object.prototype.hasOwnProperty.call(obj, key)) {
-                     objCopy[key] = cloneDeepWorker(obj[i]);
-                 }
-             }
-             return objCopy;
-         }
-         return obj;
-     }
+    if (obj === null || typeof obj !== 'object') return obj;
+    try {
+        if (typeof self !== 'undefined' && self.structuredClone) {
+            return self.structuredClone(obj);
+        } else {
+            return JSON.parse(JSON.stringify(obj));
+        }
+    } catch(e) {
+        if (Array.isArray(obj)) {
+            const arrCopy = [];
+            for(let i = 0; i < obj.length; i++){
+                arrCopy[i] = cloneDeepWorker(obj[i]);
+            }
+            return arrCopy;
+        }
+        if (typeof obj === 'object') {
+            const objCopy = {};
+            for(const key in obj) {
+                if(Object.prototype.hasOwnProperty.call(obj, key)) {
+                    objCopy[key] = cloneDeepWorker(obj[key]);
+                }
+            }
+            return objCopy;
+        }
+        return obj;
+    }
 }
 
 function checkSingleLymphNodeWorker(lymphNode, criteria) {
@@ -334,7 +334,7 @@ function runBruteForce() {
                     logic: r.logic,
                     criteria: r.criteria,
                     metricValue: r.metricValue,
-                    sens: r.sens, // Ensure sens, spez, ppv, npv are also included if available
+                    sens: r.sens,
                     spez: r.spez,
                     ppv: r.ppv,
                     npv: r.npv
@@ -394,7 +394,6 @@ self.onmessage = function(event) {
         if (isRunning) {
             isRunning = false;
             self.postMessage({ type: 'cancelled', payload: { kollektiv: kollektivName } });
-        } else {
         }
     } else {
         self.postMessage({ type: 'error', payload: { message: `Unbekannte Aktion vom Hauptthread: ${action}` } });
