@@ -1,8 +1,8 @@
 const bruteForceManager = (() => {
     let worker = null;
     let isRunningState = false;
-    let currentKollektivRunning = null;
-    let allKollektivResults = {};
+    let currentKollektivRunning = null; // Stores the kollektiv ID for the currently running analysis
+    let allKollektivResults = {}; // Stores the results per kollektiv
 
     let onProgressCallback = null;
     let onResultCallback = null;
@@ -17,11 +17,14 @@ const bruteForceManager = (() => {
             return false;
         }
         try {
+            // Terminate existing worker if any, to ensure a fresh start
             if (worker) {
                 worker.terminate();
                 worker = null;
             }
+            // Create a new worker instance
             worker = new Worker(APP_CONFIG.PATHS.BRUTE_FORCE_WORKER);
+            // Assign event handlers
             worker.onmessage = handleWorkerMessage;
             worker.onerror = handleWorkerError;
             worker.onmessageerror = (e) => {
@@ -29,7 +32,7 @@ const bruteForceManager = (() => {
                 if (onErrorCallback) onErrorCallback({ message: 'Worker-Kommunikationsfehler (messageerror).' });
                  isRunningState = false;
                  currentKollektivRunning = null;
-                 worker = null;
+                 worker = null; // Invalidate worker if it encounters a message error
             };
             console.log("BruteForceManager: Worker erfolgreich initialisiert.");
             return true;
@@ -51,7 +54,7 @@ const bruteForceManager = (() => {
         switch (type) {
             case 'started':
                 isRunningState = true;
-                currentKollektivRunning = payload?.kollektiv || currentKollektivRunning;
+                currentKollektivRunning = payload?.kollektiv || currentKollektivRunning; // Update kollektiv in case it was not set before
                 if (onStartedCallback) onStartedCallback(payload);
                 break;
             case 'progress':
@@ -61,25 +64,25 @@ const bruteForceManager = (() => {
                 isRunningState = false;
                 const resultKollektiv = payload?.kollektiv || currentKollektivRunning;
                 if (resultKollektiv && payload && payload.bestResult) {
-                    allKollektivResults[resultKollektiv] = cloneDeep(payload);
+                    allKollektivResults[resultKollektiv] = cloneDeep(payload); // Store results
                 } else {
                     console.warn("BruteForceManager: Unvollständiges Ergebnis vom Worker, Kollektiv-Info fehlt oder kein bestResult. Payload:", payload, "CurrentKollektivRunning:", currentKollektivRunning);
                 }
-                currentKollektivRunning = null;
+                currentKollektivRunning = null; // Reset running kollektiv
                 if (onResultCallback) onResultCallback(payload);
                 break;
             case 'cancelled':
                 isRunningState = false;
                 const cancelledKollektiv = payload?.kollektiv || currentKollektivRunning;
                 console.log(`BruteForceManager: Analyse für Kollektiv '${cancelledKollektiv}' abgebrochen.`);
-                currentKollektivRunning = null;
+                currentKollektivRunning = null; // Reset running kollektiv
                 if (onCancelledCallback) onCancelledCallback(payload);
                 break;
             case 'error':
                 isRunningState = false;
                 const errorKollektiv = payload?.kollektiv || currentKollektivRunning;
                 console.error(`BruteForceManager: Fehler vom Worker für Kollektiv '${errorKollektiv}':`, payload?.message);
-                currentKollektivRunning = null;
+                currentKollektivRunning = null; // Reset running kollektiv
                 if (onErrorCallback) onErrorCallback(payload);
                 break;
             default:
@@ -90,10 +93,10 @@ const bruteForceManager = (() => {
     function handleWorkerError(error) {
         console.error("BruteForceManager: Globaler Fehler im Brute Force Worker:", error);
         isRunningState = false;
-        const erroredKollektiv = currentKollektivRunning;
+        const erroredKollektiv = currentKollektivRunning; // Capture kollektiv before resetting
         currentKollektivRunning = null;
         if (onErrorCallback) onErrorCallback({ message: error.message || 'Unbekannter Worker-Fehler', kollektiv: erroredKollektiv });
-        worker = null;
+        worker = null; // Invalidate worker on global error
     }
 
     function setCallbacks(callbacks = {}) {
@@ -105,9 +108,11 @@ const bruteForceManager = (() => {
     }
 
     function init(callbacks = {}) {
-        setCallbacks(callbacks);
-        allKollektivResults = {};
-        return initializeWorker();
+        setCallbacks(callbacks); // Set initial callbacks
+        allKollektivResults = {}; // Clear previous results on init
+        currentKollektivRunning = null; // Ensure no stale running state
+        isRunningState = false;
+        return initializeWorker(); // Try to initialize worker
     }
 
     function startAnalysis(data, metric, kollektiv) {
@@ -116,6 +121,7 @@ const bruteForceManager = (() => {
             if (onErrorCallback) onErrorCallback({ message: "Eine Optimierung läuft bereits.", kollektiv: kollektiv });
             return false;
         }
+        // Ensure worker is available or try to initialize it
         if (!worker) {
             const workerInitialized = initializeWorker();
             if (!workerInitialized) {
@@ -130,8 +136,8 @@ const bruteForceManager = (() => {
             return false;
         }
 
-        currentKollektivRunning = kollektiv;
-        isRunningState = true;
+        currentKollektivRunning = kollektiv; // Store the kollektiv that started the analysis
+        isRunningState = true; // Set running state before posting message
 
         worker.postMessage({
             action: 'start',
@@ -139,7 +145,7 @@ const bruteForceManager = (() => {
                 data: data,
                 metric: metric,
                 kollektiv: kollektiv,
-                t2SizeRange: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE
+                t2SizeRange: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE // Pass size range from config
             }
         });
         console.log(`BruteForceManager: Analyse gestartet für Kollektiv '${kollektiv}' mit Metrik '${metric}'.`);
@@ -169,7 +175,7 @@ const bruteForceManager = (() => {
     }
 
     function isWorkerAvailable() {
-        return !!worker;
+        return !!worker; // Returns true if worker object exists, false otherwise
     }
 
     function terminateWorker() {
@@ -191,6 +197,8 @@ const bruteForceManager = (() => {
         isRunning: isAnalysisRunning,
         isWorkerAvailable,
         terminateWorker,
-        setCallbacks
+        setCallbacks,
+        // Expose currentKollektivRunning for debugging/status display if needed by controllers
+        get currentKollektivRunning() { return currentKollektivRunning; }
     });
 })();
