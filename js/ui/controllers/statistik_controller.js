@@ -2,7 +2,7 @@ const statistikController = (() => {
 
     let mainApp = null;
     let isInitialized = false;
-    let paneElement = null; // Reference to the tab pane element
+    let paneElement = null;
 
     function _handleLayoutToggle() {
         const currentLayout = stateManager.getStatsLayout();
@@ -31,25 +31,24 @@ const statistikController = (() => {
         const selectedValue2 = stateManager.getStatsKollektiv2();
         
         const optionsHTML = kollektive.map(k => {
-            const displayName = getKollektivDisplayName(k);
+            const displayName = utils.getKollektivDisplayName(k);
             return `<option value="${k}">${displayName}</option>`;
         }).join('');
         
         select1.innerHTML = optionsHTML;
         select2.innerHTML = optionsHTML;
         
-        // Ensure selected values are actually set if they exist in the new options
         if (kollektive.includes(selectedValue1)) {
             select1.value = selectedValue1;
         } else {
-            select1.value = kollektive[0]; // Default to first available kollektiv
+            select1.value = kollektive[0];
             stateManager.setStatsKollektiv1(kollektive[0]);
         }
 
         if (kollektive.includes(selectedValue2)) {
             select2.value = selectedValue2;
         } else {
-            select2.value = kollektive.length > 1 ? kollektive[1] : kollektive[0]; // Default to second if exists, else first
+            select2.value = kollektive.length > 1 ? kollektive[1] : kollektive[0];
             stateManager.setStatsKollektiv2(kollektive.length > 1 ? kollektive[1] : kollektive[0]);
         }
     }
@@ -65,10 +64,8 @@ const statistikController = (() => {
 
     function _addEventListeners() {
         if (paneElement) {
-            // Remove existing listeners to prevent duplicates
             paneElement.removeEventListener('click', _handleEvents);
             paneElement.removeEventListener('change', _handleEvents);
-            // Add new listeners
             paneElement.addEventListener('click', _handleEvents);
             paneElement.addEventListener('change', _handleEvents);
         }
@@ -105,17 +102,17 @@ const statistikController = (() => {
     function init(appInterface) {
         if (isInitialized) return;
         mainApp = appInterface;
-        paneElement = document.getElementById('statistik-tab-pane'); // Get reference to the pane element
+        paneElement = document.getElementById('statistik-tab-pane');
         isInitialized = true;
     }
 
     function onTabEnter() {
        _addEventListeners();
-       updateView(); // Ensure view is updated when tab is entered
+       updateView();
     }
 
     function onTabExit() {
-       _removeEventListeners(); // Remove listeners when tab is exited to prevent issues
+       _removeEventListeners();
     }
 
     return Object.freeze({
