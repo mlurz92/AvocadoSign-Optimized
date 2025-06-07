@@ -65,19 +65,27 @@ const publikationController = (() => {
             stats[k] = statisticsService.calculateAllStats(evaluated, appliedT2Criteria, appliedT2Logic);
         });
 
+        // Add brute force result for the 'Gesamt' kollektiv only, as it's typically run on the full dataset
         const bfResult = bruteForceManager.getResultsForKollektiv('Gesamt');
         let bfStats = null;
         if (bfResult && bfResult.bestResult) {
             const gesamtData = dataProcessor.filterDataByKollektiv(allProcessedData, 'Gesamt');
             const bfEvaluated = t2CriteriaManager.evaluateDatasetWithCriteria(gesamtData, bfResult.bestResult.criteria, bfResult.bestResult.logic);
-            bfStats = statisticsService.calculateDiagnosticPerformance(bfEvaluated, 't2', 'n');
+            bfStats = statisticsService.calculateDiagnosticPerformance(bfEvaluated, 't2', 'n'); // Calculate performance of BF criteria
         }
         
+        // Ensure 'Gesamt' stats exist before trying to add to it
         if (stats.Gesamt) {
-            stats.Gesamt.bruteforce = bfStats;
-            const comparisonData = t2CriteriaManager.evaluateDatasetWithCriteria(dataProcessor.filterDataByKollektiv(allProcessedData, 'Gesamt'), bfResult?.bestResult?.criteria, bfResult?.bestResult?.logic);
-            stats.Gesamt.comparison_as_vs_bf = statisticsService.compareDiagnosticMethods(comparisonData, 'as', 't2', 'n');
+            stats.Gesamt.bruteforce = bfStats; // Add BF performance to Gesamt stats
+            // Compare AS vs. BF T2 if BF result is available
+            if (bfResult && bfResult.bestResult) {
+                const gesamtData = dataProcessor.filterDataByKollektiv(allProcessedData, 'Gesamt');
+                // Create a temporary evaluated dataset using the BF best criteria for comparison
+                const evaluatedForComparison = t2CriteriaManager.evaluateDatasetWithCriteria(gesamtData, bfResult.bestResult.criteria, bfResult.bestResult.logic);
+                stats.Gesamt.comparison_as_vs_bf = statisticsService.compareDiagnosticMethods(evaluatedForComparison, 'as', 't2', 'n');
+            }
         }
+
 
         return {
             lang,
@@ -95,15 +103,17 @@ const publikationController = (() => {
         const bfMetric = stateManager.getPublikationBfMetric();
 
         const context = getPublicationContext(allProcessedData);
-        const sectionContent = publicationGeneratorService.generateSection(sectionId, context, 'html');
+        const sectionContent = publicationGeneratorService.generateSection(sectionId, context, 'html', lang); // Pass lang parameter to generator
         
         return publicationRenderer.render(lang, sectionId, bfMetric, sectionContent);
     }
 
     function _addEventListeners() {
         if(paneElement) {
+            // Remove existing listeners to prevent duplicates
             paneElement.removeEventListener('change', _handleEvents);
             paneElement.removeEventListener('click', _handleEvents);
+            // Add new listeners
             paneElement.addEventListener('change', _handleEvents);
             paneElement.addEventListener('click', _handleEvents);
         }
@@ -120,17 +130,19 @@ const publikationController = (() => {
         const section = stateManager.getCurrentPublikationSection();
         const container = document.getElementById('publication-bf-metric-container');
         if (container) {
+            // Only show BF metric selector for relevant sections
             const showContainer = section.startsWith('ergebnisse') || section.startsWith('abstract') || section.startsWith('discussion');
             uiHelpers.toggleElementClass(container.id, 'd-none', !showContainer);
         }
         
         const contentArea = document.getElementById('publication-content-area');
         if (contentArea) {
-            contentArea.scrollTop = 0;
+            contentArea.scrollTop = 0; // Scroll to top when section changes
         }
 
         const navLinks = document.querySelectorAll('#publication-sections-nav .nav-link');
         navLinks.forEach(link => {
+            // Check if link has a data-section-id attribute
             if (link.dataset.sectionId) {
                 link.classList.toggle('active', link.dataset.sectionId === section);
             }
@@ -157,7 +169,8 @@ const publikationController = (() => {
         init,
         onTabEnter,
         onTabExit,
-        renderContent
+        renderContent,
+        getPublicationContext // Make public for exportService
     });
 
 })();
