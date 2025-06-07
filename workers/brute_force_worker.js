@@ -19,17 +19,17 @@ function formatNumberWorker(num, digits = 1, placeholder = '--') {
 }
 
 function formatCriteriaForDisplayWorker(criteria, logic = null) {
-    if (!criteria || typeof criteria !== 'object') return 'N/A';
+    if (!criteria || typeof criteria !== 'object') return APP_CONFIG.UI_TEXTS.global.notApplicableShort || 'N/A';
     const parts = [];
     const activeKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active);
-    if (activeKeys.length === 0) return 'Keine aktiven Kriterien';
+    if (activeKeys.length === 0) return APP_CONFIG.UI_TEXTS.global.noActiveCriteria || 'Keine aktiven Kriterien';
 
     const effectiveLogic = logic || criteria.logic || 'ODER';
-    const separator = (effectiveLogic === 'UND') ? ' UND ' : ' ODER ';
+    const separator = (effectiveLogic === 'UND') ? ` ${APP_CONFIG.UI_TEXTS.t2LogicDisplayNames.UND} ` : ` ${APP_CONFIG.UI_TEXTS.t2LogicDisplayNames.ODER} `;
 
     const formatValue = (key, criterion) => {
         if (!criterion) return '?';
-        if (key === 'size') return `${criterion.condition || '>='}${formatNumberWorker(criterion.threshold, 1)}mm`;
+        if (key === 'size') return `${APP_CONFIG.UI_TEXTS.criteriaDisplay.size} ${criterion.condition || '>='}${formatNumberWorker(criterion.threshold, 1)}mm`;
         return criterion.value || '?';
     };
 
@@ -47,11 +47,11 @@ function formatCriteriaForDisplayWorker(criteria, logic = null) {
         const criterion = criteria[key];
         let prefix = '';
         switch(key) {
-            case 'size': prefix = 'Größe '; break;
-            case 'form': prefix = 'Form='; break;
-            case 'kontur': prefix = 'Kontur='; break;
-            case 'homogenitaet': prefix = 'Homog.='; break;
-            case 'signal': prefix = 'Signal='; break;
+            case 'size': prefix = APP_CONFIG.UI_TEXTS.criteriaDisplay.size; break;
+            case 'form': prefix = APP_CONFIG.UI_TEXTS.criteriaDisplay.form; break;
+            case 'kontur': prefix = APP_CONFIG.UI_TEXTS.criteriaDisplay.contour; break;
+            case 'homogenitaet': prefix = APP_CONFIG.UI_TEXTS.criteriaDisplay.homogeneity; break;
+            case 'signal': prefix = APP_CONFIG.UI_TEXTS.criteriaDisplay.signal; break;
             default: prefix = key + '=';
         }
         parts.push(`${prefix}${formatValue(key, criterion)}`);
@@ -68,7 +68,6 @@ function cloneDeepWorker(obj) {
              return JSON.parse(JSON.stringify(obj));
          }
      } catch(e) {
-         console.error("BruteForceWorker: Fehler beim Klonen (structuredClone/JSON), Fallback...", e, obj);
          if (Array.isArray(obj)) {
              const arrCopy = [];
              for(let i = 0; i < obj.length; i++){
@@ -197,10 +196,10 @@ function generateCriteriaCombinations() {
     const CRITERIA_KEYS = ['size', 'form', 'kontur', 'homogenitaet', 'signal'];
     const VALUE_OPTIONS = {
         size: [],
-        form: ['rund', 'oval'],
-        kontur: ['scharf', 'irregulär'],
-        homogenitaet: ['homogen', 'heterogen'],
-        signal: ['signalarm', 'intermediär', 'signalreich']
+        form: APP_CONFIG.T2_CRITERIA_SETTINGS.FORM_VALUES,
+        kontur: APP_CONFIG.T2_CRITERIA_SETTINGS.KONTUR_VALUES,
+        homogenitaet: APP_CONFIG.T2_CRITERIA_SETTINGS.HOMOGENITAET_VALUES,
+        signal: APP_CONFIG.T2_CRITERIA_SETTINGS.SIGNAL_VALUES
     };
     const LOGICS = ['UND', 'ODER'];
 
@@ -213,12 +212,10 @@ function generateCriteriaCombinations() {
         if (!VALUE_OPTIONS.size.includes(max) && max > VALUE_OPTIONS.size[VALUE_OPTIONS.size.length-1]) VALUE_OPTIONS.size.push(max);
         VALUE_OPTIONS.size = [...new Set(VALUE_OPTIONS.size)].sort((a, b) => a - b);
          if (VALUE_OPTIONS.size.length === 0) {
-             console.warn("BruteForceWorker: t2SizeRange führte zu leerer VALUE_OPTIONS.size, verwende Standardgrößen.");
              VALUE_OPTIONS.size = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
          }
     } else {
         VALUE_OPTIONS.size = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-        console.warn("BruteForceWorker: t2SizeRange nicht korrekt definiert oder ungültig, verwende Standardgrößen.");
     }
 
 
@@ -275,7 +272,7 @@ function generateCriteriaCombinations() {
 function runBruteForce() {
     if (!isRunning) return;
     if (!currentData || currentData.length === 0) {
-        self.postMessage({ type: 'error', payload: { message: "Keine Daten im Worker für Brute-Force." } });
+        self.postMessage({ type: 'error', payload: { message: APP_CONFIG.UI_TEXTS.bruteForceInfo.noDataWorker || "Keine Daten im Worker für Brute-Force." } });
         isRunning = false;
         return;
     }
@@ -286,7 +283,7 @@ function runBruteForce() {
 
     const allCombinations = generateCriteriaCombinations();
     if (totalCombinations === 0 || allCombinations.length === 0) {
-        self.postMessage({ type: 'error', payload: { message: "Keine Kriterienkombinationen generiert. Überprüfen Sie die t2SizeRange Konfiguration." } });
+        self.postMessage({ type: 'error', payload: { message: APP_CONFIG.UI_TEXTS.bruteForceInfo.noCombinationsGenerated || "Keine Kriterienkombinationen generiert. Überprüfen Sie die t2SizeRange Konfiguration." } });
         isRunning = false;
         return;
     }
@@ -305,7 +302,6 @@ function runBruteForce() {
         try {
             metricValue = calculateMetric(currentData, combo.criteria, combo.logic, targetMetric);
         } catch (error) {
-            console.error("BruteForceWorker: Fehler in calculateMetric für Kombination:", combo, "Fehler:", error);
             metricValue = -Infinity;
         }
 
@@ -356,13 +352,13 @@ function runBruteForce() {
             }
             lastScore = currentScore;
 
-            if (rank <= 10) { // Immer die Top 10 Ränge nehmen
+            if (rank <= 10) {
                 topResults.push(validResults[i]);
-            } else { // Wenn der 11. Rang den gleichen Score hat wie der letzte der Top 10, auch nehmen
+            } else {
                 if(rank === 11 && Math.abs(currentScore - (topResults[topResults.length - 1]?.metricValue ?? -Infinity)) < precision) {
                     topResults.push(validResults[i]);
                 } else {
-                    break; // Sobald ein neuer, niedrigerer Rang nach den Top 10 beginnt, abbrechen
+                    break;
                 }
             }
         }
@@ -386,7 +382,11 @@ function runBruteForce() {
                 results: topResults.map(r => ({
                     logic: r.logic,
                     criteria: r.criteria,
-                    metricValue: r.metricValue
+                    metricValue: r.metricValue,
+                    sens: r.sens, // Ensure sens, spez, ppv, npv are also included if available
+                    spez: r.spez,
+                    ppv: r.ppv,
+                    npv: r.npv
                 })),
                 bestResult: finalBest,
                 metric: targetMetric,
@@ -406,24 +406,22 @@ function runBruteForce() {
 
 self.onmessage = function(event) {
     if (!event || !event.data) {
-        console.error("Worker: Ungültige Nachricht empfangen.");
-        self.postMessage({ type: 'error', payload: { message: "Ungültige Nachricht vom Hauptthread empfangen." } });
+        self.postMessage({ type: 'error', payload: { message: APP_CONFIG.UI_TEXTS.bruteForceInfo.invalidMessage || "Ungültige Nachricht vom Hauptthread empfangen." } });
         return;
     }
     const { action, payload } = event.data;
 
     if (action === 'start') {
         if (isRunning) {
-            console.warn("BruteForceWorker: Worker läuft bereits. Startanfrage ignoriert.");
-            self.postMessage({ type: 'error', payload: { message: "Worker läuft bereits." } });
+            self.postMessage({ type: 'error', payload: { message: APP_CONFIG.UI_TEXTS.bruteForceInfo.workerAlreadyRunning || "Worker läuft bereits." } });
             return;
         }
         try {
             if (!payload || !Array.isArray(payload.data) || !payload.metric || !payload.kollektiv || !payload.t2SizeRange) {
-                throw new Error("Unvollständige Startdaten für Brute-Force. Benötigt: data, metric, kollektiv, t2SizeRange.");
+                throw new Error(APP_CONFIG.UI_TEXTS.bruteForceInfo.incompleteStartData || "Unvollständige Startdaten für Brute-Force. Benötigt: data, metric, kollektiv, t2SizeRange.");
             }
             if (typeof payload.t2SizeRange.min !== 'number' || typeof payload.t2SizeRange.max !== 'number' || typeof payload.t2SizeRange.step !== 'number' || payload.t2SizeRange.step <= 0) {
-                 throw new Error("Ungültige t2SizeRange Konfiguration: min, max, step müssen Zahlen sein und step > 0.");
+                 throw new Error(APP_CONFIG.UI_TEXTS.bruteForceInfo.invalidSizeRange || "Ungültige t2SizeRange Konfiguration: min, max, step müssen Zahlen sein und step > 0.");
             }
 
             currentData = payload.data;
@@ -432,32 +430,27 @@ self.onmessage = function(event) {
             t2SizeRange = payload.t2SizeRange;
 
             if (currentData.length === 0) {
-                throw new Error("Leeres Datenset für Brute-Force erhalten.");
+                throw new Error(APP_CONFIG.UI_TEXTS.bruteForceInfo.emptyDataSet || "Leeres Datenset für Brute-Force erhalten.");
             }
             isRunning = true;
             runBruteForce();
         }
         catch (error) {
-            console.error("BruteForceWorker: Initialisierungsfehler:", error);
-            self.postMessage({ type: 'error', payload: { message: `Initialisierungsfehler im Worker: ${error.message}` } });
+            self.postMessage({ type: 'error', payload: { message: `${APP_CONFIG.UI_TEXTS.bruteForceInfo.initializationError || 'Initialisierungsfehler im Worker'}: ${error.message}` } });
             isRunning = false;
         }
     } else if (action === 'cancel') {
         if (isRunning) {
             isRunning = false;
             self.postMessage({ type: 'cancelled', payload: { kollektiv: kollektivName } });
-            console.log("BruteForceWorker: Analyse abgebrochen.");
         } else {
-            console.warn("BruteForceWorker: Keine laufende Analyse zum Abbrechen.");
         }
     } else {
-        console.warn(`BruteForceWorker: Unbekannte Aktion empfangen: ${action}`);
-        self.postMessage({ type: 'error', payload: { message: `Unbekannte Aktion vom Hauptthread: ${action}` } });
+        self.postMessage({ type: 'error', payload: { message: `${APP_CONFIG.UI_TEXTS.bruteForceInfo.unknownAction || 'Unbekannte Aktion vom Hauptthread'}: ${action}` } });
     }
 };
 
 self.onerror = function(error) {
-    console.error("BruteForceWorker: Globaler Fehler im Worker:", error);
-    self.postMessage({ type: 'error', payload: { message: `Globaler Worker Fehler: ${error.message || 'Unbekannter Fehler im Worker'}` } });
+    self.postMessage({ type: 'error', payload: { message: `${APP_CONFIG.UI_TEXTS.bruteForceInfo.globalWorkerError || 'Globaler Worker Fehler'}: ${error.message || 'Unbekannter Fehler im Worker'}` } });
     isRunning = false;
 };
