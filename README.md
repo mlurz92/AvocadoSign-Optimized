@@ -1,163 +1,127 @@
-# Avocado Sign Analyse & Publikations-Tool v3.0
+# **Lymphknoten T2 \- Avocado Sign Analyse Tool (Version 2.3.0)**
 
-![Status](https://img.shields.io/badge/status-stable-success.svg)
-![Lizenz](https://img.shields.io/badge/license-MIT-blue.svg)
-![Architektur](https://img.shields.io/badge/architektur-MVC--like-blueviolet.svg)
-![Technologie](https://img.shields.io/badge/tech-Vanilla%20JS%20|%20D3.js%20|%20Bootstrap-lightgrey.svg)
+## **1\. Übersicht**
 
----
+Das **Lymphknoten T2 \- Avocado Sign Analyse Tool** ist eine webbasierte Anwendung, die speziell für die wissenschaftliche Forschung im Bereich der radiologischen Diagnostik des Rektumkarzinoms entwickelt wurde. Es dient der detaillierten Analyse und dem Vergleich der diagnostischen Leistung verschiedener MRT-basierter Kriterien zur Beurteilung des mesorektalen Lymphknotenstatus (N-Status). Im Fokus steht der Vergleich des neuartigen "Avocado Signs" (AS) mit etablierten Literatur-basierten sowie datengetriebenen, optimierten T2-gewichteten (T2w) morphologischen Kriterien.
 
-## 1. Übersicht und Vision
+Diese Anwendung ist als interaktives Forschungsinstrument konzipiert und **nicht für die klinische Diagnostik oder direkte Therapieentscheidungen vorgesehen.**
 
-Das **Avocado Sign Analyse & Publikations-Tool** ist eine hochspezialisierte, interaktive Single-Page-Webanwendung (SPA), die für die medizinisch-wissenschaftliche Forschung konzipiert wurde. Ihr Kernzweck ist die datengestützte Analyse und der statistische Performance-Vergleich von MRT-Kriterien zur Beurteilung des Lymphknotenstatus beim Rektumkarzinom.
+## **2\. Hauptfunktionen**
 
-Die Anwendung wurde entwickelt, um den gesamten wissenschaftlichen Workflow zu unterstützen: von der explorativen Datenanalyse über die rigorose, interaktive Hypothesenprüfung bis hin zur automatisierten Erstellung eines einreichungsfertigen Manuskriptentwurfs, der speziell auf die hohen Standards des Fachjournals **Radiology** zugeschnitten ist.
+Das Tool bietet eine breite Palette an Funktionalitäten für die wissenschaftliche Analyse:
 
----
+* **Interaktive Datenexploration:** Detaillierte Ansicht und Filterung von pseudonymisierten Patientendaten, inklusive klinischer Informationen und spezifischer Lymphknotenmerkmale.  
+* **Dynamische T2-Kriterien-Definition:** Flexible Konfiguration und sofortige Anwendung von komplexen T2w-Kriteriensets (basierend auf Größe, Form, Kontur, Homogenität, Signal) mit UND/ODER-Logik.  
+* **Brute-Force-Optimierung:** Ein integrierter Algorithmus zur automatisierten Identifikation der T2w-Kriterienkombination, die eine vom Nutzer gewählte diagnostische Zielmetrik (z.B. Balanced Accuracy, F1-Score) für das ausgewählte Patientenkollektiv maximiert.  
+* **Umfassende statistische Auswertung:** Berechnung und Darstellung einer Vielzahl diagnostischer Gütekriterien (Sensitivität, Spezifität, Positiver Prädiktiver Wert (PPV), Negativer Prädiktiver Wert (NPV), Accuracy, Balanced Accuracy, Area Under the Curve (AUC)) inklusive 95%-Konfidenzintervallen und p-Werten. Vergleichende Statistiken zwischen verschiedenen Methoden und Kollektiven werden ebenfalls bereitgestellt.  
+* **Publikationsunterstützung (*Radiology*\-Fokus):** Automatische Generierung von Textentwürfen, Tabellen und Abbildungen für wissenschaftliche Manuskripte, spezifisch ausgerichtet auf die formalen und stilistischen Anforderungen des Fachjournals *Radiology*.  
+* **Präsentationserstellung:** Aufbereitung ausgewählter Ergebnisse in einem übersichtlichen Format, das direkt für wissenschaftliche Präsentationen verwendet werden kann.  
+* **Vielseitiger Datenexport:** Export von Rohdaten, Analyseergebnissen, Tabellen und Grafiken in verschiedenen Formaten (CSV, XLSX, TXT, MD, PNG, SVG, HTML, ZIP).
 
-## 2. Technologie-Stack & Architektur
+## **3\. Datenbasis**
 
-Die Anwendung ist als reine Client-Side-Anwendung ohne serverseitige Abhängigkeiten konzipiert.
+Die Analysen innerhalb dieser Anwendungsversion basieren auf einem fest integrierten, pseudonymisierten Datensatz von **106 Patientenfällen** mit histologisch gesichertem Rektumkarzinom. Dieser Datensatz umfasst:
 
-* **Kerntechnologien:**
-    * **JavaScript (ES6+):** Modulare Anwendungslogik, keine Framework-Abhängigkeiten.
-    * **HTML5 & CSS3:** Struktur und benutzerdefiniertes Styling.
-* **Hauptbibliotheken:**
-    * **D3.js (v7):** Für alle dynamischen und interaktiven Datenvisualisierungen.
-    * **Bootstrap (v5.3):** Als responsives UI-Framework für Layout und grundlegende Komponenten.
-    * **Tippy.js (v6):** Für kontextsensitive, reichhaltige Tooltips zur Verbesserung der User Experience.
-    * **PapaParse:** Für clientseitiges CSV-Parsing.
-    * **JSZip & FileSaver.js:** Zur clientseitigen Generierung von ZIP-Archiven und zum Auslösen von Datei-Downloads.
-    * **SheetJS (XLSX):** Zur Erstellung von Excel-Arbeitsmappen.
-    * **html2canvas:** Zum Erstellen von PNG-Abbildungen aus HTML-Tabellen.
+* Klinische Basisinformationen (Alter, Geschlecht, Therapiegruppe).  
+* Den durch Histopathologie bestätigten N-Status jedes Patienten (Referenzstandard).  
+* Die Befundung des Avocado Signs für jeden relevanten Lymphknoten.  
+* Detaillierte morphologische Eigenschaften für jeden im T2-gewichteten MRT beurteilten Lymphknoten (Kurzachsendurchmesser, Form, Kontur, Homogenität, Signalintensität).
 
-### Architektur-Konzept
+## **4\. Verwendete Technologien**
 
-Die Anwendung folgt einem modernen, MVC-ähnlichen Architekturmuster, das auf strikter **Separation of Concerns (SoC)** und einem **unidirektionalen Datenfluss** basiert:
+Die Anwendung ist als reine Client-Side Webanwendung implementiert und nutzt folgende Kerntechnologien:
 
-* **Model (Daten & Logik):**
-    * **`core`:** Kapselt die primäre Datenverarbeitungslogik (z.B. `data_processor.js`, `t2_criteria_manager.js`).
-    * **`services`:** Bietet wiederverwendbare Geschäftslogik (z.B. `statistics_service.js`, `export_service.js`, `brute_force_manager.js`).
-* **View (Darstellung):**
-    * **`renderers`:** Eine Schicht von "dummen" Modulen, die ausschließlich dafür verantwortlich sind, Daten in HTML-Strukturen umzuwandeln. Sie enthalten keinerlei Anwendungslogik.
-* **Controller (Steuerung):**
-    * **`controllers`:** Das Bindeglied zwischen Model und View. Sie fangen Benutzerinteraktionen ab, veranlassen Berechnungen im Model und weisen die View an, sich mit den neuen Daten zu aktualisieren.
-    * **`main.js`:** Der zentrale Orchestrator, der den Render-Zyklus steuert und die Interaktion der Module koordiniert.
+* **HTML5:** Für die strukturelle Basis der Webseite.  
+* **CSS3:** Für das Styling und Layout.  
+* **JavaScript (ES6+):** Für die gesamte Anwendungslogik, Datenverarbeitung, statistische Berechnungen und dynamische UI-Interaktionen.  
+* **Bootstrap 5:** Als CSS-Framework für ein responsives Design und vorgefertigte UI-Komponenten.  
+* **D3.js:** Zur Generierung dynamischer und interaktiver Diagramme und Visualisierungen.  
+* **Tippy.js:** Für die Anzeige kontextsensitiver Tooltips.  
+* **PapaParse:** Zur Verarbeitung von CSV-Daten (primär für potenzielle zukünftige Importfunktionen oder interne Datenaufbereitung).  
+* **JSZip:** Zur Erstellung von ZIP-Archiven für die Exportfunktionalitäten.  
+* **Web Workers:** Für rechenintensive Aufgaben im Hintergrund (z.B. Brute-Force-Optimierung), um die Reaktionsfähigkeit der Benutzeroberfläche zu gewährleisten.
 
----
+## **5\. Anwendungsstruktur (Tab-Übersicht)**
 
-## 3. Projektstruktur
+Die Anwendung ist in mehrere thematische Module (Tabs) gegliedert:
 
-Die Verzeichnisstruktur ist klar nach Verantwortlichkeiten getrennt, um maximale Wartbarkeit zu gewährleisten.
+### **5.1 Tab: Daten**
 
-```
-/
-├── data/
-│   └── patient_data.js         # Anonymisierter Rohdatensatz der Studienkohorte.
-├── docs/
-│   ├── ...                     # Wissenschaftliche Artikel und Style Guides.
-├── css/
-│   └── style.css               # Benutzerdefinierte Stylesheets.
-├── js/
-│   ├── app/
-│   │   ├── main.js             # Orchestriert die gesamte Anwendung, steuert den Render-Zyklus.
-│   │   └── state_manager.js    # Verwaltet den UI-Zustand (aktiver Tab, Sortierung etc.) persistent.
-│   ├── config/
-│   │   ├── app_config.js       # Globale Anwendungskonstanten (Version, Pfade, Settings).
-│   │   ├── publication_config.js # Texte und Struktur für den Publikations-Generator.
-│   │   └── text_config.js        # UI-Texte, Tooltips, Labels.
-│   ├── core/
-│   │   ├── data_processor.js   # Filtert und prozessiert den rohen Patientendatensatz.
-│   │   ├── study_criteria_manager.js # Verwaltet feste T2-Kriteriensets aus publizierten Studien.
-│   │   └── t2_criteria_manager.js  # Verwaltet die interaktiv definierten T2-Kriterien.
-│   ├── services/
-│   │   ├── brute_force_manager.js # Steuert den Web Worker für die Brute-Force-Optimierung.
-│   │   ├── export_service.js   # Kapselt die gesamte Logik zur Dateierstellung und zum Download.
-│   │   ├── publication_generator_service.js # Generiert den wissenschaftlichen Text für den Publikation-Tab.
-│   │   └── statistics_service.js # Führt alle statistischen Berechnungen durch.
-│   ├── ui/
-│   │   ├── controllers/        # Steuern die Interaktionen der jeweiligen Tabs.
-│   │   ├── renderers/          # Erzeugen das HTML-Markup für die jeweiligen UI-Teile.
-│   │   ├── components.js       # Generatoren für wiederverwendbare UI-Elemente.
-│   │   └── helpers.js          # Allgemeine UI-Hilfsfunktionen (Toasts, Tooltips).
-│   └── utils/
-│       └── utils.js            # Globale, nicht-UI-bezogene Hilfsfunktionen (Formatierung, IDs).
-├── workers/
-│   └── brute_force_worker.js # Rechenintensiver Code für die Brute-Force-Optimierung.
-└── index.html                # Einziger HTML-Einstiegspunkt der Anwendung.
-```
+* **Funktion:** Anzeige und Exploration der detaillierten Patientendaten des aktuell ausgewählten globalen Kollektivs.  
+* **Kerninhalte:** Sortierbare Tabelle mit Patienteninformationen (pseudonymisierte ID, Alter, Geschlecht, Therapie, N/AS/T2-Status, Bemerkungen). Aufklappbare Detailansicht für jeden Patienten, die die morphologischen Eigenschaften aller T2-gewichteten Lymphknoten visualisiert.
 
----
+### **5.2 Tab: Auswertung**
 
-## 4. Inbetriebnahme
+* **Funktion:** Interaktive Definition von T2w-Kriterien, Durchführung der Brute-Force-Optimierung und detaillierte Auswertung der aktuell eingestellten Kriterien auf Patientenebene.  
+* **Kerninhalte:**  
+  * **Dashboard:** Schnellübersicht über das aktuelle Kollektiv (Alter, Geschlecht, Therapie, N/AS/T2-Status).  
+  * **T2-Kriterien-Auswahl:** Interaktive Steuerelemente zur Definition von Schwellenwerten und Logik für die fünf T2-Merkmale. Buttons zum Anwenden, Speichern und Zurücksetzen der Kriterien.  
+  * **T2 Gütekriterien (angewandt):** Anzeige der Performance (Sens, Spez, etc. mit 95%-KI) der aktuell definierten T2-Kriterien.  
+  * **Brute-Force Optimierung:** Auswahl der Zielmetrik, Start/Abbruch der Optimierung, Fortschrittsanzeige, Ergebnisdarstellung (beste Kriterien, erreichte Metrik) und Option zur Übernahme der optimierten Kriterien.  
+  * **Auswertungstabelle:** Patientenliste mit Status (N, AS, T2) und Lymphknotenzahlen. Detailansicht pro Patient zeigt die Bewertung einzelner T2-Lymphknoten gemäß aktueller Kriterien.
 
-1.  **Repository beziehen:** Klonen Sie das Repository.
-    ```bash
-    git clone [https://github.com/mlurz92/AvocadoSign-Optimized.git](https://github.com/mlurz92/AvocadoSign-Optimized.git)
-    ```
-2.  **Anwendung starten (dringend empfohlen):**
-    * Navigieren Sie im Terminal in das Projektverzeichnis.
-    * Starten Sie einen lokalen Webserver, z.B. mit Python 3:
-        ```bash
-        python -m http.server
-        ```
-    * Öffnen Sie die angezeigte URL (meist `http://localhost:8000`) in Ihrem Browser.
+### **5.3 Tab: Statistik**
 
----
+* **Funktion:** Umfassende statistische Auswertungen und Vergleiche der diagnostischen Leistung von AS und T2-Kriterien.  
+* **Kerninhalte:**  
+  * **Layout-Umschaltung:** Einzelansicht (für globales Kollektiv) oder Vergleichsansicht (für zwei spezifisch wählbare Kollektive).  
+  * **Statistische Analysen:** Deskriptive Statistik, detaillierte diagnostische Gütekriterien für AS und T2 (mit Konfidenzintervallen und Konfusionsmatrizen), statistische Vergleichstests (McNemar, DeLong), Assoziationsanalysen (OR, RD, Phi), Kollektivvergleiche.  
+  * **Kriterienvergleichstabelle:** Zusammenfassender Vergleich von AS, angewandten T2-Kriterien und Literatur-Sets.
 
-## 5. Funktionsumfang im Detail
+### **5.4 Tab: Präsentation**
 
-### Globale Funktionen
-* **Kollektiv-Auswahl:** Wählen Sie die globale Studienkohorte (`Gesamt`, `Direkt OP`, `nRCT`). Alle Analysen und Visualisierungen in der gesamten Anwendung passen sich dynamisch an.
-* **Statusleiste:** Zeigt Live-Kennzahlen (Patientenanzahl, N/AS/T2-Status) für das gewählte Kollektiv.
-* **Persistenz:** Benutzereinstellungen wie Kriterien, Layouts und Sortierungen bleiben über Sitzungen hinweg erhalten.
+* **Funktion:** Aufbereitung ausgewählter Analyseergebnisse in einem präsentationsfreundlichen Format.  
+* **Kerninhalte:**  
+  * **Ansichtsauswahl:** Fokus auf "Avocado Sign Performance" oder "AS vs. T2 Vergleich".  
+  * **T2-Vergleichsbasis-Auswahl:** Ermöglicht den Vergleich von AS mit aktuellen oder Literatur-T2-Kriterien.  
+  * **Darstellung:** Info-Karten, Vergleichstabellen (Metriken, statistische Tests), Balkendiagramme.  
+  * **Download-Optionen:** Export von Tabellen (CSV, MD) und Diagrammen (PNG, SVG).
 
-### Kernmodule (Tabs)
+### **5.5 Tab: Publikation**
 
-#### **Daten**
-* **Zweck:** Transparente Darstellung und Exploration der Rohdaten.
-* **Features:** Sortierbare Patiententabelle, aufklappbare Detailansicht mit morphologischen Daten für jeden einzelnen T2-Lymphknoten.
+* **Funktion:** Unterstützung bei der Erstellung eines wissenschaftlichen Manuskripts durch Generierung von Textvorschlägen, Tabellen und Abbildungen, **spezifisch ausgerichtet auf die Richtlinien des Fachjournals *Radiology***.  
+* **Kerninhalte:**  
+  * **Sprachauswahl:** Deutsch / Englisch.  
+  * **Sektionsauswahl:** Navigation durch typische Manuskriptabschnitte (Abstract, Einleitung, Material und Methoden, Ergebnisse, Diskussion, Literaturverzeichnis), inklusive *Radiology*\-spezifischer Untergliederungen.  
+  * **BF-Zielmetrik-Auswahl:** Bestimmt, welche Brute-Force-Ergebnisse in den Text einfließen.  
+  * **Dynamisch generierte Inhalte:** Wissenschaftlich formulierte Textbausteine, die aktuelle Daten, Statistiken (p-Werte, CIs gemäß *Radiology*\-Vorgaben), Tabellen- und Abbildungsreferenzen integrieren und die formale Struktur und stilistischen Anforderungen von *Radiology* berücksichtigen.
 
-#### **Auswertung**
-* **Zweck:** Die interaktive Werkbank zur Definition, Analyse und Optimierung von diagnostischen Kriterien.
-* **Features:**
-    * **Live-Dashboard** zur visuellen Einordnung der Kohorte.
-    * **Interaktiver Kriterien-Editor** zur Definition von T2-Kriterien (Größe, Form, Kontur, Homogenität, Signal) und deren logischer Verknüpfung (UND/ODER).
-    * **Brute-Force-Optimierung** zur datengestützten Ermittlung der besten Kriterienkombination für eine wählbare Zielmetrik.
-    * **Detail-Tabelle** zur fallbasierten Analyse der Kriterien-Auswirkungen, inklusive Hervorhebung der entscheidenden Merkmale.
+### **5.6 Tab: Export**
 
-#### **Statistik**
-* **Zweck:** Rigorose statistische Auswertung zur Validierung der Ergebnisse für eine Publikation.
-* **Features:**
-    * Umschaltbare Einzel- und Vergleichsansichten für verschiedene Kollektive.
-    * Berechnung aller relevanten diagnostischen Gütekriterien **inklusive 95%-Konfidenzintervallen**.
-    * Durchführung von **McNemar- und DeLong-Tests** zum direkten Vergleich der diagnostischen Methoden.
-    * Detaillierte Assoziationsanalysen zwischen Einzelmerkmalen und dem N-Status.
-    * Interaktive Tooltips mit Definitionen und kontextbezogenen Interpretationen für jede statistische Kennzahl.
+* **Funktion:** Umfassende Exportmöglichkeiten für Daten, Analyseergebnisse und generierte Materialien.  
+* **Kerninhalte:**  
+  * **Exportoptionen:** Rohdaten (CSV, XLSX), Analyse-Tabellen (MD, XLSX), Statistikberichte (CSV, XLSX, MD), Brute-Force-Berichte (TXT), Diagramme (PNG, SVG als ZIP), Publikationstexte (MD als ZIP), umfassender HTML-Bericht.  
+  * **Abhängigkeit:** Exporte basieren auf dem global gewählten Kollektiv und den aktuell angewendeten T2-Kriterien.
 
-#### **Präsentation**
-* **Zweck:** Erstellung von aufbereiteten, publikationsreifen Abbildungen und Tabellen.
-* **Features:**
-    * Fokussierte Ansichten, die das Avocado Sign allein oder im Vergleich zu Literatur-Kriterien darstellen.
-    * Direkter Download aller Grafiken als hochauflösendes **PNG** oder skalierbare **SVG**-Vektorgrafik.
+## **6\. Installation und Ausführung**
 
-#### **Publikation**
-* **Zweck:** Das Kernstück des Tools – die Generierung eines Manuskript-Entwurfs nach höchsten wissenschaftlichen Standards.
-* **Features:**
-    * **Struktur nach *Radiology*-Vorgabe:** Generiert alle Sektionen eines Originalartikels (Abstract, Introduction, etc.).
-    * **Dynamische Texterstellung:** Integriert automatisch alle aktuellen Analyseergebnisse (z.B. `AUC, 0.87; 95% CI: 0.79, 0.94; P < .001`) korrekt formatiert in den Fließtext.
-    * **Einhaltung von Regularien:** Überwacht und zeigt Wortgrenzen für Sektionen wie den Abstract (max. 300 Wörter) an.
-    * **Mehrsprachigkeit:** Generiert den Entwurf wahlweise auf Deutsch oder Englisch.
+Das "Lymphknoten T2 \- Avocado Sign Analyse Tool" ist eine rein clientseitige Webanwendung. Zur Ausführung sind keine serverseitigen Komponenten oder eine spezielle Installation erforderlich.
 
-#### **Export**
-* **Zweck:** Umfassende Exportmöglichkeiten für Daten, Ergebnisse und Grafiken zur Archivierung, Kollaboration und Einreichung.
-* **Features:**
-    * Exporte als CSV, TXT, PNG, SVG.
-    * Generierung einer vollumfänglichen **Excel-Arbeitsmappe (.xlsx)** mit getrennten Blättern für Konfiguration, Rohdaten, Auswertung und Statistiken.
-    * Zusammengefasste **ZIP-Pakete** für eine einfache Weitergabe des kompletten Analyse-Stands.
+1. **Voraussetzungen:** Ein moderner Webbrowser (z.B. aktuelle Versionen von Chrome, Firefox, Edge, Safari).  
+2. **Ausführung:**  
+   * Laden Sie das gesamte Projektverzeichnis herunter oder klonen Sie das Repository.  
+   * Öffnen Sie die Datei index.html im Stammverzeichnis des Projekts mit einem kompatiblen Webbrowser.  
+3. **Abhängigkeiten:** Alle externen Bibliotheken (Bootstrap, D3.js, Tippy.js, PapaParse, JSZip) werden über Content Delivery Networks (CDNs) geladen oder sind direkt im Projekt enthalten und erfordern keine separate Installation.
 
----
+## **7\. Wissenschaftlicher Kontext**
 
-## 6. Lizenz
+Diese Anwendung wurde im Kontext der Forschung zum **Avocado Sign** entwickelt, einem neuartigen MRT-Marker für die Beurteilung des Lymphknotenstatus bei Rektumkarzinompatienten. Sie dient dazu, die diagnostische Leistung dieses Markers systematisch zu analysieren und ihn mit etablierten T2-gewichteten morphologischen Kriterien zu vergleichen. Die Ergebnisse, die mit diesem Tool generiert werden können, sollen zur wissenschaftlichen Diskussion über die Optimierung des präoperativen Stagings des Rektumkarzinoms beitragen.
 
-Dieses Projekt ist unter der **MIT-Lizenz** lizenziert.
+## **8\. Wichtiger Hinweis (Disclaimer)**
+
+Das **Lymphknoten T2 \- Avocado Sign Analyse Tool** ist ausschließlich für **Forschungs- und Evaluationszwecke** bestimmt. Es ist **nicht als Medizinprodukt zugelassen** und darf **unter keinen Umständen für direkte klinische Diagnosen, Therapieentscheidungen oder andere medizinische Anwendungen an Patienten verwendet werden.** Die Verantwortung für die Interpretation und Nutzung der mit diesem Tool generierten Ergebnisse liegt vollständig beim Anwender und muss im Kontext der jeweiligen Studienlimitationen und des aktuellen wissenschaftlichen Kenntnisstandes erfolgen.
+
+## **9\. Autoren und Kontakt**
+
+(Dieser Abschnitt kann von den Hauptentwicklern/Autoren der Studie mit ihren Namen und Kontaktinformationen ergänzt werden.)
+
+* **Hauptentwickler/Studienautoren:** \[Namen und Affiliationen hier einfügen\]  
+* **Kontakt für technische Fragen oder Feedback zur Anwendung:** \[E-Mail-Adresse oder Link hier einfügen\]
+
+## **10\. Lizenz**
+
+(Dieser Abschnitt sollte die Lizenzinformationen für die Software enthalten, z.B. MIT, GPL, etc. Falls keine spezifische Lizenz gewählt wurde, könnte hier "Alle Rechte vorbehalten" oder eine ähnliche Formulierung stehen.)
+
+\[Hier Lizenzinformationen einfügen, falls zutreffend\]
+
+Stand: 05\. Juni 2025
