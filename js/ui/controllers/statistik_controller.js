@@ -2,7 +2,7 @@ const statistikController = (() => {
 
     let mainApp = null;
     let isInitialized = false;
-    let paneElement = null;
+    let paneElement = null; // Reference to the tab pane element
 
     function _handleLayoutToggle() {
         const currentLayout = stateManager.getStatsLayout();
@@ -38,8 +38,20 @@ const statistikController = (() => {
         select1.innerHTML = optionsHTML;
         select2.innerHTML = optionsHTML;
         
-        select1.value = selectedValue1;
-        select2.value = selectedValue2;
+        // Ensure selected values are actually set if they exist in the new options
+        if (kollektive.includes(selectedValue1)) {
+            select1.value = selectedValue1;
+        } else {
+            select1.value = kollektive[0]; // Default to first available kollektiv
+            stateManager.setStatsKollektiv1(kollektive[0]);
+        }
+
+        if (kollektive.includes(selectedValue2)) {
+            select2.value = selectedValue2;
+        } else {
+            select2.value = kollektive.length > 1 ? kollektive[1] : kollektive[0]; // Default to second if exists, else first
+            stateManager.setStatsKollektiv2(kollektive.length > 1 ? kollektive[1] : kollektive[0]);
+        }
     }
     
     function _handleEvents(event) {
@@ -53,6 +65,10 @@ const statistikController = (() => {
 
     function _addEventListeners() {
         if (paneElement) {
+            // Remove existing listeners to prevent duplicates
+            paneElement.removeEventListener('click', _handleEvents);
+            paneElement.removeEventListener('change', _handleEvents);
+            // Add new listeners
             paneElement.addEventListener('click', _handleEvents);
             paneElement.addEventListener('change', _handleEvents);
         }
@@ -80,8 +96,8 @@ const statistikController = (() => {
                 : '<i class="fas fa-user me-1"></i> Einzelansicht Aktiv';
         }
 
-        if (container1) container1.classList.toggle('d-none', layout !== 'vergleich');
-        if (container2) container2.classList.toggle('d-none', layout !== 'vergleich');
+        if (container1) uiHelpers.toggleElementClass(container1.id, 'd-none', layout !== 'vergleich');
+        if (container2) uiHelpers.toggleElementClass(container2.id, 'd-none', layout !== 'vergleich');
 
         _populateSelectors();
     }
@@ -89,17 +105,17 @@ const statistikController = (() => {
     function init(appInterface) {
         if (isInitialized) return;
         mainApp = appInterface;
-        paneElement = document.getElementById('statistik-tab-pane');
+        paneElement = document.getElementById('statistik-tab-pane'); // Get reference to the pane element
         isInitialized = true;
     }
 
     function onTabEnter() {
        _addEventListeners();
-       updateView();
+       updateView(); // Ensure view is updated when tab is entered
     }
 
     function onTabExit() {
-       _removeEventListeners();
+       _removeEventListeners(); // Remove listeners when tab is exited to prevent issues
     }
 
     return Object.freeze({
