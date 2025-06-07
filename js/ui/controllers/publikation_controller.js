@@ -40,19 +40,70 @@ const publikationController = (() => {
     function _handleEvents(event) {
         const target = event.target;
 
-        if (target.id === 'publikation-sprache-switch') {
+        if (target.id === 'publication-sprache-switch') {
             _handleLanguageSwitch(event);
         } else if (target.id === 'publication-bf-metric-select') {
             _handleBfMetricChange(event);
-        } else if (target.closest('#publikation-sections-nav')) {
+        } else if (target.closest('#publication-sections-nav')) {
             _handleSectionNavClick(event);
         } else if (target.closest('#download-publication-section-md')) {
             _handleDownloadClick(event);
         }
     }
 
+    function getPublicationContext(allProcessedData) {
+        const lang = stateManager.getCurrentPublikationLang();
+        const bfMetric = stateManager.getPublikationBfMetric();
+        const appliedT2Criteria = t2CriteriaManager.getCriteria();
+        const appliedT2Logic = t2CriteriaManager.getLogic();
+
+        const stats = {};
+        const kollektive = dataProcessor.getAvailableKollektive();
+        kollektive.forEach(k => {
+            const filtered = dataProcessor.filterDataByKollektiv(allProcessedData, k);
+            const evaluated = t2CriteriaManager.evaluateDatasetWithCriteria(filtered, appliedT2Criteria, appliedT2Logic);
+            stats[k] = statisticsService.calculateAllStats(evaluated, appliedT2Criteria, appliedT2Logic);
+        });
+
+        const bfResult = bruteForceManager.getResultsForKollektiv('Gesamt');
+        let bfStats = null;
+        if (bfResult && bfResult.bestResult) {
+            const gesamtData = dataProcessor.filterDataByKollektiv(allProcessedData, 'Gesamt');
+            const bfEvaluated = t2CriteriaManager.evaluateDatasetWithCriteria(gesamtData, bfResult.bestResult.criteria, bfResult.bestResult.logic);
+            bfStats = statisticsService.calculateDiagnosticPerformance(bfEvaluated, 't2', 'n');
+        }
+        
+        if (stats.Gesamt) {
+            stats.Gesamt.bruteforce = bfStats;
+            const comparisonData = t2CriteriaManager.evaluateDatasetWithCriteria(dataProcessor.filterDataByKollektiv(allProcessedData, 'Gesamt'), bfResult?.bestResult?.criteria, bfResult?.bestResult?.logic);
+            stats.Gesamt.comparison_as_vs_bf = statisticsService.compareDiagnosticMethods(comparisonData, 'as', 't2', 'n');
+        }
+
+        return {
+            lang,
+            stats,
+            bruteForceResult: bfResult,
+            bfMetric,
+            appliedT2Criteria,
+            appliedT2Logic
+        };
+    }
+
+    function renderContent(allProcessedData) {
+        const lang = stateManager.getCurrentPublikationLang();
+        const sectionId = stateManager.getCurrentPublikationSection();
+        const bfMetric = stateManager.getPublikationBfMetric();
+
+        const context = getPublicationContext(allProcessedData);
+        const sectionContent = publicationGeneratorService.generateSection(sectionId, context, 'html');
+        
+        return publicationRenderer.render(lang, sectionId, bfMetric, sectionContent);
+    }
+
     function _addEventListeners() {
         if(paneElement) {
+            paneElement.removeEventListener('change', _handleEvents);
+            paneElement.removeEventListener('click', _handleEvents);
             paneElement.addEventListener('change', _handleEvents);
             paneElement.addEventListener('click', _handleEvents);
         }
@@ -66,17 +117,24 @@ const publikationController = (() => {
     }
     
     function updateView() {
-        const section = stateManager.getPublikationSection();
+        const section = stateManager.getCurrentPublikationSection();
         const container = document.getElementById('publication-bf-metric-container');
         if (container) {
-            const showContainer = section.startsWith('ergebnisse') || section.startsWith('abstract');
-            container.classList.toggle('d-none', !showContainer);
+            const showContainer = section.startsWith('ergebnisse') || section.startsWith('abstract') || section.startsWith('discussion');
+            uiHelpers.toggleElementClass(container.id, 'd-none', !showContainer);
         }
         
         const contentArea = document.getElementById('publication-content-area');
         if (contentArea) {
             contentArea.scrollTop = 0;
         }
+
+        const navLinks = document.querySelectorAll('#publication-sections-nav .nav-link');
+        navLinks.forEach(link => {
+            if (link.dataset.sectionId) {
+                link.classList.toggle('active', link.dataset.sectionId === section);
+            }
+        });
     }
 
     function init(app) {
@@ -99,7 +157,7 @@ const publikationController = (() => {
         init,
         onTabEnter,
         onTabExit,
-        updateView
+        renderContent
     });
 
 })();
