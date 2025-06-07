@@ -1,0 +1,59 @@
+AvocadoSign-Radiology-Optimized/
+|
+├── index.html
+├── README.md
+|
+├── css/
+│   └── style.css
+|
+├── data/
+│   └── patient_data.js
+|
+├── docs/
+│   └── (Inhalte bleiben unverändert)
+|
+├── img/
+│   └── avocado_sign_logo.png       # NEU: Anwendungslogo
+|
+├── js/
+│   ├── app.js
+│   |
+│   ├── config/
+│   │   ├── app_config.js
+│   │   ├── publication_config.js
+│   │   ├── text_config.js
+│   │   └── constants.js              # NEU: Zentrales Modul für Konstanten
+│   |
+│   ├── core/
+│   │   ├── data_manager.js           # NEU: Kombiniert Datenprozessierung und -filterung
+│   │   ├── t2_criteria_manager.js
+│   │   └── study_criteria_manager.js
+│   |
+│   ├── services/
+│   │   ├── statistics_service.js     # ERWEITERT: Robuste CIs, neue Tests
+│   │   ├── export_service.js         # ÜBERARBEITET: Zentraler Download-Manager
+│   │   └── brute_force_manager.js
+│   |
+│   ├── state/
+│   │   └── app_state.js              # NEU: Gekapseltes State Management
+│   |
+│   ├── ui/
+│   │   ├── components/
+│   │   │   ├── charts.js             # NEU: Gekapselte D3.js Chart-Logik
+│   │   │   ├── tooltip.js            # NEU: Gekapselte Tooltip-Logik
+│   │   │   └── common.js             # NEU: Wiederverwendbare UI-Komponenten
+│   │   │
+│   │   ├── tabs/
+│   │   │   ├── data_tab.js
+│   │   │   ├── auswertung_tab.js     # ÜBERARBEITET: Neues Layout
+│   │   │   ├── statistik_tab.js
+│   │   │   ├── praesentation_tab.js
+│   │   │   └── publikation_tab.js    # ÜBERARBEITET: Sticky Sidebar, interaktive Elemente
+│   │   │
+│   │   └── ui_manager.js             # NEU: Orchestriert das UI-Rendering und die Events
+│   |
+│   └── utils/
+│       └── helpers.js                # Umbenannt von utils.js
+|
+└── workers/
+    └── brute_force_worker.js
