@@ -73,13 +73,27 @@ const exportService = (() => {
 
     async function exportBruteForceReport() {
         const { bfResult, currentKollektiv } = await _getCommonExportData();
-        if (!bfResult) {
+        if (!bfResult || !bfResult.bestResult || !bfResult.results) {
             uiHelpers.showToast('Keine Brute-Force-Ergebnisse für das aktuelle Kollektiv vorhanden.', 'warning');
             return;
         }
-        const reportString = `Brute-Force Report für Kollektiv: ${getKollektivDisplayName(currentKollektiv)}\n` +
-                             `Optimierte Metrik: ${bfResult.metric}\n\n` +
-                             payload.results.map((r, i) => `${i+1}. Wert: ${r.metricValue.toFixed(4)} | Logik: ${r.logic} | Kriterien: ${t2CriteriaManager.formatCriteriaForDisplay(r.criteria, r.logic)}`).join('\n');
+        let reportString = `Brute-Force Report für Kollektiv: ${getKollektivDisplayName(currentKollektiv)}\n` +
+                             `Optimierte Metrik: ${bfResult.metric}\n\n`;
+                             
+        if (bfResult.bestResult) {
+            reportString += `Bestes Ergebnis:\n` +
+                            `  Metrikwert: ${formatNumber(bfResult.bestResult.metricValue, 4)}\n` +
+                            `  Logik: ${bfResult.bestResult.logic}\n` +
+                            `  Kriterien: ${t2CriteriaManager.formatCriteriaForDisplay(bfResult.bestResult.criteria, bfResult.bestResult.logic)}\n\n`;
+        }
+
+        if (bfResult.results.length > 0) {
+            reportString += `Top ${Math.min(bfResult.results.length, 10)} Ergebnisse:\n`;
+            bfResult.results.slice(0, 10).forEach((r, i) => {
+                reportString += `  ${i+1}. Wert: ${formatNumber(r.metricValue, 4)} | Logik: ${r.logic} | Kriterien: ${t2CriteriaManager.formatCriteriaForDisplay(r.criteria, r.logic)}\n`;
+            });
+        }
+        
         const filename = _generateFilename('BRUTEFORCE_TXT', { kollektiv: currentKollektiv, extension: 'txt' });
         _downloadFile(reportString, filename, 'text/plain;charset=utf-8');
     }
@@ -107,19 +121,19 @@ const exportService = (() => {
             ['Angewandte T2 Logik', appliedLogic],
             ['Angewandte T2 Kriterien', t2CriteriaManager.formatCriteriaForDisplay(appliedCriteria, appliedLogic)]
         ]);
-        XLSX.utils.book_append_sheet(wb, configSheet, 'Konfiguration');
+        XLSX.utils.book_append_sheet(wb, configSheet, APP_CONFIG.EXPORT_SETTINGS.EXCEL_SHEET_NAME_KONFIG);
         
         const dataSheet = XLSX.utils.json_to_sheet(rawFilteredData);
-        XLSX.utils.book_append_sheet(wb, dataSheet, 'Rohdaten');
+        XLSX.utils.book_append_sheet(wb, dataSheet, APP_CONFIG.EXPORT_SETTINGS.EXCEL_SHEET_NAME_DATEN);
         
         const auswertungSheet = XLSX.utils.json_to_sheet(evaluatedData.map(p => ({
             ...p, lymphknoten_t2: JSON.stringify(p.lymphknoten_t2), lymphknoten_t2_bewertet: JSON.stringify(p.lymphknoten_t2_bewertet)
         })));
-        XLSX.utils.book_append_sheet(wb, auswertungSheet, 'Auswertung');
+        XLSX.utils.book_append_sheet(wb, auswertungSheet, APP_CONFIG.EXPORT_SETTINGS.EXCEL_SHEET_NAME_AUSWERTUNG);
 
         const statsCsv = _generateStatistikCsv(stats, currentKollektiv, appliedCriteria, appliedLogic);
         const statsSheet = XLSX.utils.sheet_add_csv(XLSX.utils.aoa_to_sheet([[]]), statsCsv, {delimiter: ';'});
-        XLSX.utils.book_append_sheet(wb, statsSheet, 'Statistik');
+        XLSX.utils.book_append_sheet(wb, statsSheet, APP_CONFIG.EXPORT_SETTINGS.EXCEL_SHEET_NAME_STATISTIK);
 
         const filename = _generateFilename('XLSX_ZIP', { kollektiv: currentKollektiv, extension: 'xlsx' });
         XLSX.writeFile(wb, filename);
@@ -164,6 +178,136 @@ const exportService = (() => {
         const filename = _generateFilename('TABLE_PNG_EXPORT', { kollektiv: currentKollektiv, extension: 'png', tableName });
         _downloadFile(blob, filename);
     }
+
+    async function exportComprehensiveReport() {
+        // This function would typically generate a full HTML report by combining various parts
+        // For now, it's a placeholder. The complexity requires a dedicated generation logic
+        // similar to publication_generator_service but for a full report structure.
+        uiHelpers.showToast('Die Erstellung des umfassenden Berichts ist noch nicht vollständig implementiert.', 'info');
+        console.warn("exportComprehensiveReport: Implementierung für umfassenden HTML-Bericht ausstehend.");
+        const filename = _generateFilename('COMPREHENSIVE_REPORT_HTML', { kollektiv: stateManager.getCurrentKollektiv(), extension: 'html' });
+        _downloadFile("<html><body><h1>Umfassender Bericht (Platzhalter)</h1><p>Dieser Bericht wird noch implementiert.</p></body></html>", filename, 'text/html;charset=utf-8');
+    }
+
+    async function exportCategoryZip(category) {
+        if (typeof JSZip === 'undefined' || typeof saveAs === 'undefined') {
+            uiHelpers.showToast('ZIP-Export-Bibliotheken (JSZip/FileSaver) nicht geladen.', 'danger');
+            return;
+        }
+
+        const zip = new JSZip();
+        const { currentKollektiv, rawFilteredData, evaluatedData, stats, bfResult, appliedCriteria, appliedLogic } = await _getCommonExportData();
+        const baseFilenameOptions = { kollektiv: currentKollektiv };
+
+        try {
+            switch (category) {
+                case 'all-zip':
+                    // Add Statistik CSV
+                    const statsCsv = _generateStatistikCsv(stats, currentKollektiv, appliedCriteria, appliedLogic);
+                    if (statsCsv) zip.file(_generateFilename('STATS_CSV', { ...baseFilenameOptions, extension: 'csv' }), statsCsv);
+                    
+                    // Add Brute Force TXT
+                    if (bfResult && bfResult.bestResult && bfResult.results) {
+                        let bfReportString = `Brute-Force Report für Kollektiv: ${getKollektivDisplayName(currentKollektiv)}\n` +
+                                             `Optimierte Metrik: ${bfResult.metric}\n\n`;
+                        if (bfResult.bestResult) {
+                            bfReportString += `Bestes Ergebnis:\n` +
+                                            `  Metrikwert: ${formatNumber(bfResult.bestResult.metricValue, 4)}\n` +
+                                            `  Logik: ${bfResult.bestResult.logic}\n` +
+                                            `  Kriterien: ${t2CriteriaManager.formatCriteriaForDisplay(bfResult.bestResult.criteria, bfResult.bestResult.logic)}\n\n`;
+                        }
+                        if (bfResult.results.length > 0) {
+                            bfReportString += `Top ${Math.min(bfResult.results.length, 10)} Ergebnisse:\n`;
+                            bfReportString += bfResult.results.slice(0, 10).map((r, i) =>
+                                `  ${i+1}. Wert: ${formatNumber(r.metricValue, 4)} | Logik: ${r.logic} | Kriterien: ${t2CriteriaManager.formatCriteriaForDisplay(r.criteria, r.logic)}`
+                            ).join('\n');
+                        }
+                        zip.file(_generateFilename('BRUTEFORCE_TXT', { ...baseFilenameOptions, extension: 'txt' }), bfReportString);
+                    }
+
+                    // Add Filtered Data CSV
+                    const filteredDataCsv = Papa.unparse(rawFilteredData, { header: true, delimiter: ';' });
+                    zip.file(_generateFilename('FILTERED_DATA_CSV', { ...baseFilenameOptions, extension: 'csv' }), filteredDataCsv);
+
+                    // Add a placeholder for comprehensive report (if implemented later)
+                    // zip.file(_generateFilename('COMPREHENSIVE_REPORT_HTML', { ...baseFilenameOptions, extension: 'html' }), "<html><body><h1>Umfassender Bericht (Platzhalter)</h1></body></html>");
+                    
+                    // Add Markdown exports (example: descriptive, data, auswertung - if implemented)
+                    // This assumes corresponding generation functions exist for MD, similar to publication_generator_service
+                    // For now, I'll add the publication sections as MD
+                    const pubContext = publikationController.getPublicationContext(dataProcessor.getProcessedData());
+                    const publicationSections = PUBLICATION_CONFIG.sections;
+                    for (const section of publicationSections) {
+                        const content = publicationGeneratorService.generateSection(section.id, pubContext, 'md');
+                        if (content) {
+                            zip.file(_generateFilename(`PUBLIKATION_${section.id.toUpperCase()}_MD`, { ...baseFilenameOptions, extension: 'md', sectionName: section.id }), content);
+                        }
+                    }
+                    
+                    break;
+                case 'png-zip':
+                case 'svg-zip':
+                    const format = category === 'png-zip' ? 'png' : 'svg';
+                    const chartsToExport = document.querySelectorAll('.chart-container svg');
+                    
+                    for (const svgElement of Array.from(chartsToExport)) {
+                        const chartId = svgElement.closest('.chart-container').id;
+                        const chartName = svgElement.closest('.card')?.querySelector('.card-header')?.textContent.trim() || chartId;
+                        let blob;
+                        if (format === 'png') {
+                            blob = await chartRenderer.convertSvgToPngBlob(svgElement);
+                        } else {
+                            blob = await chartRenderer.getSvgBlob(svgElement);
+                        }
+                        if (blob) {
+                            zip.file(`${chartName.replace(/[^a-zA-Z0-9_-]/gi, '_')}.${format}`, blob);
+                        }
+                    }
+                    // Also export tables as PNG in png-zip
+                    if (format === 'png' && APP_CONFIG.EXPORT_SETTINGS.ENABLE_TABLE_PNG_EXPORT) {
+                        const tablesToExport = document.querySelectorAll('.data-table, #auswertung-table');
+                        for (const tableElement of Array.from(tablesToExport)) {
+                            const tableName = tableElement.closest('.card')?.querySelector('.card-header')?.textContent.trim() || tableElement.id;
+                            const canvas = await html2canvas(tableElement, { scale: 2, backgroundColor: '#ffffff' });
+                            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                            if (blob) {
+                                zip.file(`${tableName.replace(/[^a-zA-Z0-9_-]/gi, '_')}.png`, blob);
+                            }
+                        }
+                    }
+                    break;
+                case 'excel-workbook': // This case is actually handled by exportExcelWorkbook directly, not via this zip function
+                    uiHelpers.showToast("Der Excel-Export wird als einzelne Datei generiert, nicht als ZIP-Paket.", 'info');
+                    return;
+            }
+
+            const zipFilename = _generateFilename(category.toUpperCase(), { kollektiv: currentKollektiv, extension: 'zip' });
+            zip.generateAsync({ type: "blob" })
+                .then(function(content) {
+                    saveAs(content, zipFilename);
+                    uiHelpers.showToast(`ZIP-Archiv '${zipFilename}' erfolgreich heruntergeladen.`, 'success');
+                })
+                .catch(error => {
+                    console.error("Fehler beim Erstellen des ZIP-Archivs:", error);
+                    uiHelpers.showToast(`Fehler beim Erstellen des ZIP-Archivs für ${category}.`, 'danger');
+                });
+
+        } catch (error) {
+            console.error(`Fehler beim Exportieren der Kategorie ${category}:`, error);
+            uiHelpers.showToast(`Export für '${category}' fehlgeschlagen. Details in der Konsole.`, 'danger');
+        }
+    }
+
+    async function exportPublicationSection(sectionId, lang) {
+        const pubContext = publikationController.getPublicationContext(dataProcessor.getProcessedData());
+        const content = publicationGeneratorService.generateSection(sectionId, pubContext, 'md', lang); // Pass lang parameter
+        if (content) {
+            const filename = _generateFilename(`PUBLIKATION_${sectionId.toUpperCase()}_MD`, { kollektiv: stateManager.getCurrentKollektiv(), extension: 'md', sectionName: sectionId });
+            _downloadFile(content, filename, 'text/markdown;charset=utf-8');
+        } else {
+            uiHelpers.showToast(`Inhalt für Sektion '${sectionId}' konnte nicht generiert werden.`, 'warning');
+        }
+    }
     
     return Object.freeze({
         exportStatistikCsv,
@@ -171,7 +315,10 @@ const exportService = (() => {
         exportFilteredDataAsCsv,
         exportExcelWorkbook,
         exportSingleChart,
-        exportSingleTable
+        exportSingleTable,
+        exportComprehensiveReport,
+        exportCategoryZip,
+        exportPublicationSection
     });
 
 })();
