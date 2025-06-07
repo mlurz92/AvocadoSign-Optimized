@@ -367,9 +367,17 @@ const statisticsService = (() => {
         const featureKeys = ['form', 'kontur', 'homogenitaet', 'signal'];
         const featureNames = { size: 'Lymphknotengröße', form: 'Form', kontur: 'Kontur', homogenitaet: 'Homogenität', signal: 'Signalintensität' };
 
-        const allLymphNodes = data.flatMap(p => p.lymphknoten_t2_bewertet || []).filter(l => l && typeof l.lk.groesse === 'number' && p.n);
-        const lkSizesNplus = allLymphNodes.filter(l => data.find(p => p.nr === l.lk.patient_nr)?.n === '+').map(l => l.lk.groesse);
-        const lkSizesNminus = allLymphNodes.filter(l => data.find(p => p.nr === l.lk.patient_nr)?.n === '-').map(l => l.lk.groesse);
+        const patientNStatusMap = new Map(data.map(p => [p.nr, p.n]));
+
+        const allLymphNodesWithPatientData = data.flatMap(p => 
+            (p.lymphknoten_t2_bewertet || []).map(lkb => ({
+                ...lkb,
+                n_status: p.n 
+            }))
+        ).filter(l => l && l.lk && typeof l.lk.groesse === 'number' && (l.n_status === '+' || l.n_status === '-'));
+
+        const lkSizesNplus = allLymphNodesWithPatientData.filter(l => l.n_status === '+').map(l => l.lk.groesse);
+        const lkSizesNminus = allLymphNodesWithPatientData.filter(l => l.n_status === '-').map(l => l.lk.groesse);
         associations.size_mwu = { featureName: featureNames.size, ...mannWhitneyU(lkSizesNplus, lkSizesNminus) };
 
         featureKeys.forEach(key => {
