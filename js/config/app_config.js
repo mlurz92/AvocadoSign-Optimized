@@ -1,4 +1,3 @@
-// Funktion zum rekursiven "Einfrieren" von Objekten, um Unveränderlichkeit zu gewährleisten.
 function deepFreeze(obj) {
     if (obj === null || typeof obj !== 'object') {
         return obj;
@@ -14,11 +13,11 @@ function deepFreeze(obj) {
     return Object.freeze(obj);
 }
 
-const APP_CONFIG = deepFreeze({
+let APP_CONFIG_MUTABLE = {
     APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
     APP_VERSION: "2.3.0",
-    APP_AUTHOR: "Markus Lurz & Arnd-Oliver Schäfer", // Neuer Eintrag für Autoren
-    APP_CONTACT_EMAIL: "markus.lurz@sanktgeorg.de", // Neuer Eintrag für Kontakt
+    APP_AUTHOR: "Markus Lurz & Arnd-Oliver Schäfer",
+    APP_CONTACT_EMAIL: "markus.lurz@sanktgeorg.de",
 
     DEFAULT_SETTINGS: {
         KOLLEKTIV: 'Gesamt',
@@ -31,7 +30,7 @@ const APP_CONFIG = deepFreeze({
         PRESENTATION_VIEW: 'as-pur',
         PRESENTATION_STUDY_ID: null,
         PUBLIKATION_LANG: 'de',
-        PUBLIKATION_SECTION: 'abstract', // Geändert auf 'abstract' als Default
+        PUBLIKATION_SECTION: 'abstract',
         PUBLIKATION_BRUTE_FORCE_METRIC: 'Balanced Accuracy',
         CRITERIA_COMPARISON_SETS: [
             'avocado_sign',
@@ -63,7 +62,6 @@ const APP_CONFIG = deepFreeze({
 
     PATHS: {
         BRUTE_FORCE_WORKER: 'workers/brute_force_worker.js'
-        // Publikationspfade werden nicht mehr benötigt, da JS-Dateien nicht mehr separat geladen werden
     },
 
     PERFORMANCE_SETTINGS: {
@@ -84,7 +82,7 @@ const APP_CONFIG = deepFreeze({
         DEFAULT_CI_METHOD_PROPORTION: 'Wilson Score',
         DEFAULT_CI_METHOD_EFFECTSIZE: 'Bootstrap Percentile',
         FISHER_EXACT_THRESHOLD: 5,
-        CI_WARNING_SAMPLE_SIZE_THRESHOLD: 10 // Added threshold for CI warnings
+        CI_WARNING_SAMPLE_SIZE_THRESHOLD: 10
     },
 
     T2_CRITERIA_SETTINGS: {
@@ -93,7 +91,7 @@ const APP_CONFIG = deepFreeze({
         KONTUR_VALUES: ['scharf', 'irregulär'],
         HOMOGENITAET_VALUES: ['homogen', 'heterogen'],
         SIGNAL_VALUES: ['signalarm', 'intermediär', 'signalreich'],
-        DEFAULT_CRITERIA: { // Standard T2-Kriterien hierher verschoben
+        DEFAULT_CRITERIA: {
             logic: 'UND',
             size: { active: true, threshold: 5.0, condition: '>=' },
             form: { active: false, value: 'rund' },
@@ -125,8 +123,8 @@ const APP_CONFIG = deepFreeze({
         NEW_PRIMARY_COLOR_BLUE: '#4472C4',
         NEW_SECONDARY_COLOR_YELLOW_GREEN: '#E0DC2C',
         TERTIARY_COLOR_GREEN: '#2ca02c',
-        AS_COLOR: '#4472C4', // Farbe für Avocado Sign
-        T2_COLOR: '#E0DC2C', // Farbe für T2-Kriterien
+        AS_COLOR: '#4472C4',
+        T2_COLOR: '#E0DC2C',
         ANIMATION_DURATION_MS: 750,
         AXIS_LABEL_FONT_SIZE: '11px',
         TICK_LABEL_FONT_SIZE: '10px',
@@ -137,7 +135,7 @@ const APP_CONFIG = deepFreeze({
         ENABLE_GRIDLINES: true,
         POINT_RADIUS: 4,
         LINE_STROKE_WIDTH: 2,
-        FONT_FAMILY_CHART: 'sans-serif' // Standard-Schriftart für Charts
+        FONT_FAMILY_CHART: 'sans-serif'
     },
 
     EXPORT_SETTINGS: {
@@ -146,7 +144,7 @@ const APP_CONFIG = deepFreeze({
         TABLE_PNG_EXPORT_SCALE: 2,
         ENABLE_TABLE_PNG_EXPORT: true,
         CSV_DELIMITER: ';',
-        COMPREHENSIVE_REPORT_LOGO_URL: '', // Optional: Pfad zu einem Logo für den Report
+        COMPREHENSIVE_REPORT_LOGO_URL: '',
         INCLUDE_TIMESTAMP_IN_FILENAME: false,
         FILENAME_TYPES: {
             STATS_CSV: 'StatistikCSV',
@@ -182,11 +180,11 @@ const APP_CONFIG = deepFreeze({
             CRITERIA_COMPARISON_MD: 'KriterienvergleichMD',
             PUBLIKATION_METHODEN_MD: 'Publikation_{SectionName}_MD',
             PUBLIKATION_ERGEBNISSE_MD: 'Publikation_{SectionName}_MD',
-            PUBLIKATION_ABSTRACT_MD: 'Publikation_Abstract_MD', // Added for Abstract
-            PUBLIKATION_INTRODUCTION_MD: 'Publikation_Introduction_MD', // Added for Introduction
-            PUBLIKATION_DISCUSSION_MD: 'Publikation_Discussion_MD', // Added for Discussion
-            PUBLIKATION_REFERENCES_MD: 'Publikation_References_MD' // Added for References
-        }),
+            PUBLIKATION_ABSTRACT_MD: 'Publikation_Abstract_MD',
+            PUBLIKATION_INTRODUCTION_MD: 'Publikation_Introduction_MD',
+            PUBLIKATION_DISCUSSION_MD: 'Publikation_Discussion_MD',
+            PUBLIKATION_REFERENCES_MD: 'Publikation_References_MD'
+        },
         EXCEL_SHEET_NAME_DATEN: 'Datenliste',
         EXCEL_SHEET_NAME_AUSWERTUNG: 'Auswertung',
         EXCEL_SHEET_NAME_STATISTIK: 'Statistik Uebersicht',
@@ -208,7 +206,7 @@ const APP_CONFIG = deepFreeze({
         INCLUDE_ASSOCIATIONS_TABLE: true,
         INCLUDE_BRUTEFORCE_BEST_RESULT: true,
         REPORT_TITLE: 'Analysebericht: Avocado Sign vs. T2-Kriterien bei Rektumkarzinom',
-        REPORT_AUTHOR: 'Generiert durch Analyse-Tool', // Wird aus APP_NAME und APP_VERSION abgeleitet
+        REPORT_AUTHOR: 'Generiert durch Analyse-Tool',
         REPORT_LOGO_ALT_TEXT: 'Institutslogo',
         INCLUDE_KEY_RESULTS: true,
         INCLUDE_SUMMARY_STATEMENT: true
@@ -236,18 +234,18 @@ const APP_CONFIG = deepFreeze({
         BEETS_TAN_2009_USPIO_RESTAGING: "Lahaye MJ, Beets GL, Engelen SME, et al. Locally Advanced Rectal Cancer: MR Imaging for Restaging after Neoadjuvant Radiation Therapy with Concomitant Chemotherapy Part II. What Are the Criteria to Predict Involved Lymph Nodes?. Radiology. 2009;252(1):81-91.",
         BEETS_TAN_2004_GADOLINIUM: "Vliegen RFA, Beets GL, von Meyenfeldt MF, et al. Rectal Cancer: MR Imaging in Local Staging—Is Gadolinium-based Contrast Material Helpful?. Radiology. 2005;234(1):179-188.",
         BARBARO_2010_RESTAGING: "Barbaro B, Vitale R, Leccisotti L, et al. Restaging Locally Advanced Rectal Cancer with MR Imaging after Chemoradiation Therapy. Radiographics. 2010;30(3):699-721.",
-        ETHICS_VOTE_LEIPZIG: "Ethikvotum Nr. 2023-101, Ethikkommission der Landesärztekammer Sachsen", // Corrected per user context
+        ETHICS_VOTE_LEIPZIG: "Ethikvotum Nr. 2023-101, Ethikkommission der Landesärztekammer Sachsen",
         STUDY_PERIOD_2020_2023: "Januar 2020 und November 2023",
         MRI_SYSTEM_SIEMENS_3T: "3.0-T System (MAGNETOM Prisma Fit; Siemens Healthineers)",
         CONTRAST_AGENT_PROHANCE: "Gadoteridol (ProHance; Bracco)",
         RADIOLOGIST_EXPERIENCE_LURZ_SCHAEFER: ["29", "7", "19"],
-        SIEGEL_MILLER_2023: "Siegel RL, Miller KD, Wagle NS, Jemal A. Cancer statistics, 2023. CA Cancer J Clin. 2023;73(1):17-48. DOI:10.3322/caac.21763", // Added for Introduction (General Cancer Stats)
-        SAUER_BECKER_2004: "Sauer R, Becker H, Hohenberger W, et al. Preoperative versus postoperative chemoradiotherapy for rectal cancer. N Engl J Med. 2004;351(17):1731-1740. DOI:10.1056/NEJMoa040694", // Added for Introduction (Preop vs Postop CRT)
-        AL_SUKHNI_2012: "Al-Sukhni E, Milot L, Fruitman M, et al. Diagnostic accuracy of MRI for assessment of T category, lymph node metastases, and circumferential resection margin involvement in patients with rectal cancer: a systematic review and meta-analysis. Ann Surg Oncol. 2012;19(7):2212-2223. DOI:10.1245/s10434-011-2183-1", // Added for Introduction (Meta-analysis T2 limitations)
-        TAYLOR_QUIRKE_2011: "Taylor FG, Quirke P, Heald RJ, et al. Preoperative high-resolution magnetic resonance imaging can identify good prognosis stage I, II, and III rectal cancer best managed by surgery alone: a prospective, multicenter, European study. Ann Surg. 2011;253(4):711-719. DOI:10.1097/SLA.0b013e31820b8d52", // Added for Introduction (MRI for good prognosis)
-        GARCIA_AGUILAR_2022: "Garcia-Aguilar J, Patil S, Gollub MJ, et al. Organ Preservation in Patients With Rectal Adenocarcinoma Treated With Total Neoadjuvant Therapy. J Clin Oncol. 2022;40(23):2546-2556. DOI:10.1200/JCO.21.02621", // Added for Introduction (Organ Preservation)
-        SCHRAG_SHI_2023: "Schrag D, Shi Q, Weiser MR, et al. Preoperative Treatment of Locally Advanced Rectal Cancer. N Engl J Med. 2023;389(4):322-334. DOI:10.1056/NEJMoa2303269", // Added for Introduction (TNT)
-        ZHUANG_ZHANG_2021: "Zhuang Z, Zhang Y, Wei M, et al. Magnetic resonance imaging evaluation of the accuracy of various lymph node staging criteria in rectal cancer: a systematic review and meta-analysis. Front Oncol. 2021;11:709070. DOI:10.3389/fonc.2021.709070" // Added for Discussion
+        SIEGEL_MILLER_2023: "Siegel RL, Miller KD, Wagle NS, Jemal A. Cancer statistics, 2023. CA Cancer J Clin. 2023;73(1):17-48. DOI:10.3322/caac.21763",
+        SAUER_BECKER_2004: "Sauer R, Becker H, Hohenberger W, et al. Preoperative versus postoperative chemoradiotherapy for rectal cancer. N Engl J Med. 2004;351(17):1731-1740. DOI:10.1056/NEJMoa040694",
+        AL_SUKHNI_2012: "Al-Sukhni E, Milot L, Fruitman M, et al. Diagnostic accuracy of MRI for assessment of T category, lymph node metastases, and circumferential resection margin involvement in patients with rectal cancer: a systematic review and meta-analysis. Ann Surg Oncol. 2012;19(7):2212-2223. DOI:10.1245/s10434-011-2183-1",
+        TAYLOR_QUIRKE_2011: "Taylor FG, Quirke P, Heald RJ, et al. Preoperative high-resolution magnetic resonance imaging can identify good prognosis stage I, II, and III rectal cancer best managed by surgery alone: a prospective, multicenter, European study. Ann Surg. 2011;253(4):711-719. DOI:10.1097/SLA.0b013e31820b8d52",
+        GARCIA_AGUILAR_2022: "Garcia-Aguilar J, Patil S, Gollub MJ, et al. Organ Preservation in Patients With Rectal Adenocarcinoma Treated With Total Neoadjuvant Therapy. J Clin Oncol. 2022;40(23):2546-2556. DOI:10.1200/JCO.21.02621",
+        SCHRAG_SHI_2023: "Schrag D, Shi Q, Weiser MR, et al. Preoperative Treatment of Locally Advanced Rectal Cancer. N Engl J Med. 2023;389(4):322-334. DOI:10.1056/NEJMoa2303269",
+        ZHUANG_ZHANG_2021: "Zhuang Z, Zhang Y, Wei M, et al. Magnetic resonance imaging evaluation of the accuracy of various lymph node staging criteria in rectal cancer: a systematic review and meta-analysis. Front Oncol. 2021;11:709070. DOI:10.3389/fonc.2021.709070"
     },
 
     SPECIAL_IDS: {
@@ -257,7 +255,6 @@ const APP_CONFIG = deepFreeze({
         AVOCADO_SIGN_DISPLAY_NAME: 'Avocado Sign'
     },
 
-    // START: Consolidated UI_TEXTS (previously in text_config.js)
     UI_TEXTS: {
         kollektivDisplayNames: {
             'Gesamt': 'Gesamt',
@@ -374,81 +371,23 @@ const APP_CONFIG = deepFreeze({
         kurzanleitung: {
             title: "Kurzanleitung & Wichtige Hinweise",
             content: `
-                <p>Willkommen zum **Lymphknoten T2 - Avocado Sign Analyse Tool v${APP_CONFIG.APP_VERSION}**.</p>
+                <p>Willkommen zum **Lymphknoten T2 - Avocado Sign Analyse Tool v[APP_VERSION]**.</p>
                 <p>Diese Anwendung dient der explorativen Analyse und dem wissenschaftlichen Vergleich der diagnostischen Leistung verschiedener MRT-basierter Kriterien zur Beurteilung des mesorektalen Lymphknotenstatus (N-Status) bei Patienten mit Rektumkarzinom. Sie basiert auf einem Patientenkollektiv von 106 Fällen.</p>
-
                 <h6>Allgemeine Bedienung:</h6>
                 <ul>
                     <li>**Kollektiv-Auswahl (Header):** Wählen Sie hier das globale Patientenkollektiv (**Gesamt**, **Direkt OP**, **nRCT**). Diese Auswahl beeinflusst alle Analysen und Darstellungen in der gesamten Anwendung. Die Header-Meta-Statistiken (Anzahl Patienten, N+, AS+, T2+) aktualisieren sich entsprechend.</li>
                     <li>**Tab-Navigation:** Wechseln Sie über die Reiter zwischen den Hauptfunktionsbereichen der Anwendung.</li>
                     <li>**Tooltips:** Viele Bedienelemente und Ausgaben sind mit detaillierten Tooltips versehen, die bei Mausüberfahrung Erklärungen, Definitionen oder Interpretationshilfen bieten.</li>
-                    <li>**Statistische Signifikanz:** In statistischen Tabellen werden p-Werte mit Symbolen für Signifikanzniveaus versehen: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Das zugrundeliegende Signifikanzniveau ist &alpha; = ${formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,2).replace('.',',')}.</li>
+                    <li>**Statistische Signifikanz:** In statistischen Tabellen werden p-Werte mit Symbolen für Signifikanzniveaus versehen: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001. Das zugrundeliegende Signifikanzniveau ist &alpha; = [SIGNIFICANCE_LEVEL_FORMATTED].</li>
                 </ul>
-
                 <h6>Wichtige Tabs und deren Funktionen:</h6>
                 <ul>
-                    <li>**Daten:**
-                        <ul>
-                            <li>Zeigt die detaillierten Patientendaten des aktuell ausgewählten Kollektivs in tabellarischer Form.</li>
-                            <li>Spalten können durch Klick auf die Überschrift sortiert werden. Die Spalte "N/AS/T2" erlaubt eine Sub-Sortierung nach den Einzelkomponenten N, AS oder T2.</li>
-                            <li>Für Patienten mit erfassten T2-Lymphknoten können Detailzeilen aufgeklappt werden, die die morphologischen Eigenschaften jedes einzelnen T2-Lymphknotens (Größe, Form, Kontur, Homogenität, Signal) visualisieren.</li>
-                            <li>Ein Button "Alle Details Anzeigen/Ausblenden" erlaubt das globale Steuern dieser Detailansichten.</li>
-                        </ul>
-                    </li>
-                    <li>**Auswertung:**
-                        <ul>
-                            <li>**Dashboard:** Bietet eine schnelle visuelle Übersicht (kleine Diagramme für Alter, Geschlecht, Therapie, N/AS/T2-Status) für das aktuelle Kollektiv.</li>
-                            <li>**T2-Kriterien-Definition:** Ermöglicht die interaktive Definition von T2-basierten Malignitätskriterien.
-                                <ul>
-                                    <li>Aktivieren/Deaktivieren Sie einzelne Kriterien (Größe, Form, Kontur, Homogenität, Signal) per Checkbox.</li>
-                                    <li>Stellen Sie den Schwellenwert für das Größenkriterium (Kurzachse, &ge;) per Slider oder Direkteingabe ein.</li>
-                                    <li>Wählen Sie für Form, Kontur, Homogenität und Signal den als suspekt geltenden Wert über Optionsbuttons.</li>
-                                    <li>Definieren Sie die logische Verknüpfung (UND/ODER) der aktiven Kriterien.</li>
-                                    <li>**Wichtig:** Änderungen werden erst wirksam und in allen Tabs berücksichtigt, nachdem Sie auf **"Anwenden & Speichern"** geklickt haben. Ein Indikator am Kartenrand weist auf ungespeicherte Änderungen hin. Mit "Zurücksetzen" können die Kriterien auf den Default-Wert zurückgesetzt werden (Änderung muss ebenfalls angewendet werden).</li>
-                                </ul>
-                            </li>
-                            <li>**T2 Metrik-Übersicht:** Zeigt die wichtigsten diagnostischen Gütekriterien (Sens, Spez, PPV, NPV, etc. mit 95% CIs) für die aktuell *angewendeten und gespeicherten* T2-Kriterien im Vergleich zum N-Status für das globale Kollektiv.</li>
-                            <li>**Brute-Force-Optimierung:**
-                                <ul>
-                                    <li>Ermöglicht die automatische Suche nach der T2-Kriterienkombination, die eine vom Nutzer gewählte Zielmetrik (z.B. Balanced Accuracy, F1-Score) maximiert.</li>
-                                    <li>Die Analyse läuft im Hintergrund (Web Worker) und zeigt Fortschritt sowie das aktuell beste Ergebnis an.</li>
-                                    <li>Nach Abschluss können die besten Kriterien direkt übernommen und angewendet werden. Ein Klick auf "Top 10" öffnet ein Modal mit den besten Ergebnissen und einer Exportoption für den Bericht.</li>
-                                </ul>
-                            </li>
-                            <li>**Auswertungstabelle (untere Tabelle):** Listet Patienten mit ihrem N-, AS- und (gemäß aktuell angewendeten Kriterien berechneten) T2-Status sowie den jeweiligen Lymphknotenzahlen auf. Detailzeilen zeigen die Bewertung jedes T2-Lymphknotens anhand der aktuellen Kriteriendefinition, wobei erfüllte Positiv-Kriterien hervorgehoben werden.</li>
-                        </ul>
-                    </li>
-                    <li>**Statistik:**
-                        <ul>
-                            <li>Bietet umfassende statistische Auswertungen, immer basierend auf den aktuell *angewendeten* T2-Kriterien.</li>
-                            <li>Über den Button "Vergleich Aktiv" kann zwischen einer Einzelansicht (für das global gewählte Kollektiv) und einer Vergleichsansicht zweier spezifisch wählbarer Kollektive umgeschaltet werden.</li>
-                            <li>Angezeigt werden deskriptive Statistiken, detaillierte diagnostische Gütekriterien (für AS vs. N und T2 vs. N) inklusive Konfidenzintervallen, statistische Vergleichstests (AS vs. T2; ggf. Kollektiv A vs. B) und Assoziationsanalysen.</li>
-                            <li>Eine **Kriterienvergleichstabelle** am Ende des Tabs vergleicht die Performance von AS, den angewandten T2-Kriterien und definierten Literatur-Sets für das global gewählte Kollektiv.</li>
-                        </ul>
-                    </li>
-                    <li>**Präsentation:**
-                        <ul>
-                            <li>Bereitet Ergebnisse in einem für Präsentationen optimierten Format auf.</li>
-                            <li>Zwei Ansichten wählbar: Fokus rein auf "Avocado Sign (Performance)" oder "AS vs. T2 (Vergleich)".</li>
-                            <li>Im Vergleichsmodus kann eine T2-Basis aus den angewandten Kriterien oder Literatur-Sets gewählt werden. Das globale Kollektiv passt sich ggf. dem Zielkollektiv der Studie an.</li>
-                            <li>Enthält Info-Karten, Vergleichstabellen, statistische Tests und Diagramme.</li>
-                        </ul>
-                    </li>
-                    <li>**Publikation:**
-                        <ul>
-                            <li>Generiert automatisch Textvorschläge in Deutsch oder Englisch für verschiedene Abschnitte einer wissenschaftlichen Publikation (Abstract, Einleitung, Methoden, Ergebnisse, Diskussion, Referenzen).</li>
-                            <li>Integriert dynamisch aktuelle Daten, Statistiken (basierend auf angewandten T2-Kriterien und ausgewählter BF-Zielmetrik für Teile der Ergebnisdarstellung) und Konfigurationen.</li>
-                            <li>Enthält ebenfalls direkt im Text eingebettete Tabellen und Diagramme.</li>
-                        </ul>
-                    </li>
-                    <li>**Export:**
-                        <ul>
-                            <li>Ermöglicht den Download von Rohdaten, Analyseergebnissen, Tabellen und Diagrammen.</li>
-                            <li>Formate: CSV, Markdown (MD), Text (TXT), HTML, PNG, SVG.</li>
-                            <li>Bietet Einzelexporte sowie thematisch gebündelte ZIP-Pakete.</li>
-                            <li>Alle Exporte basieren auf dem global gewählten Kollektiv und den zuletzt *angewendeten* T2-Kriterien.</li>
-                        </ul>
-                    </li>
+                    <li>**Daten:**<ul><li>Zeigt die detaillierten Patientendaten des aktuell ausgewählten Kollektivs in tabellarischer Form.</li><li>Spalten können durch Klick auf die Überschrift sortiert werden. Die Spalte "N/AS/T2" erlaubt eine Sub-Sortierung nach den Einzelkomponenten N, AS oder T2.</li><li>Für Patienten mit erfassten T2-Lymphknoten können Detailzeilen aufgeklappt werden, die die morphologischen Eigenschaften jedes einzelnen T2-Lymphknotens (Größe, Form, Kontur, Homogenität, Signal) visualisieren.</li><li>Ein Button "Alle Details Anzeigen/Ausblenden" erlaubt das globale Steuern dieser Detailansichten.</li></ul></li>
+                    <li>**Auswertung:**<ul><li>**Dashboard:** Bietet eine schnelle visuelle Übersicht (kleine Diagramme für Alter, Geschlecht, Therapie, N/AS/T2-Status) für das aktuelle Kollektiv.</li><li>**T2-Kriterien-Definition:** Ermöglicht die interaktive Definition von T2-basierten Malignitätskriterien.<ul><li>Aktivieren/Deaktivieren Sie einzelne Kriterien (Größe, Form, Kontur, Homogenität, Signal) per Checkbox.</li><li>Stellen Sie den Schwellenwert für das Größenkriterium (Kurzachse, &ge;) per Slider oder Direkteingabe ein.</li><li>Wählen Sie für Form, Kontur, Homogenität und Signal den als suspekt geltenden Wert über Optionsbuttons.</li><li>Definieren Sie die logische Verknüpfung (UND/ODER) der aktiven Kriterien.</li><li>**Wichtig:** Änderungen werden erst wirksam und in allen Tabs berücksichtigt, nachdem Sie auf **"Anwenden & Speichern"** geklickt haben. Ein Indikator am Kartenrand weist auf ungespeicherte Änderungen hin. Mit "Zurücksetzen" können die Kriterien auf den Default-Wert zurückgesetzt werden (Änderung muss ebenfalls angewendet werden).</li></ul></li><li>**T2 Metrik-Übersicht:** Zeigt die wichtigsten diagnostischen Gütekriterien (Sens, Spez, PPV, NPV, etc. mit 95% CIs) für die aktuell *angewendeten und gespeicherten* T2-Kriterien im Vergleich zum N-Status für das globale Kollektiv.</li><li>**Brute-Force-Optimierung:**<ul><li>Ermöglicht die automatische Suche nach der T2-Kriterienkombination, die eine vom Nutzer gewählte Zielmetrik (z.B. Balanced Accuracy, F1-Score) maximiert.</li><li>Die Analyse läuft im Hintergrund (Web Worker) und zeigt Fortschritt sowie das aktuell beste Ergebnis an.</li><li>Nach Abschluss können die besten Kriterien direkt übernommen und angewendet werden. Ein Klick auf "Top 10" öffnet ein Modal mit den besten Ergebnissen und einer Exportoption für den Bericht.</li></ul></li><li>**Auswertungstabelle (untere Tabelle):** Listet Patienten mit ihrem N-, AS- und (gemäß aktuell angewendeten Kriterien berechneten) T2-Status sowie den jeweiligen Lymphknotenzahlen auf. Detailzeilen zeigen die Bewertung jedes T2-Lymphknotens anhand der aktuellen Kriteriendefinition, wobei erfüllte Positiv-Kriterien hervorgehoben werden.</li></ul></li>
+                    <li>**Statistik:**<ul><li>Bietet umfassende statistische Auswertungen, immer basierend auf den aktuell *angewendeten* T2-Kriterien.</li><li>Über den Button "Vergleich Aktiv" kann zwischen einer Einzelansicht (für das global gewählte Kollektiv) und einer Vergleichsansicht zweier spezifisch wählbarer Kollektive umgeschaltet werden.</li><li>Angezeigt werden deskriptive Statistiken, detaillierte diagnostische Gütekriterien (für AS vs. N und T2 vs. N) inklusive Konfidenzintervallen, statistische Vergleichstests (AS vs. T2; ggf. Kollektiv A vs. B) und Assoziationsanalysen.</li><li>Eine **Kriterienvergleichstabelle** am Ende des Tabs vergleicht die Performance von AS, den angewandten T2-Kriterien und definierten Literatur-Sets für das global gewählte Kollektiv.</li></ul></li>
+                    <li>**Präsentation:**<ul><li>Bereitet Ergebnisse in einem für Präsentationen optimierten Format auf.</li><li>Zwei Ansichten wählbar: Fokus rein auf "Avocado Sign (Performance)" oder "AS vs. T2 (Vergleich)".</li><li>Im Vergleichsmodus kann eine T2-Basis aus den angewandten Kriterien oder Literatur-Sets gewählt werden. Das globale Kollektiv passt sich ggf. dem Zielkollektiv der Studie an.</li><li>Enthält Info-Karten, Vergleichstabellen, statistische Tests und Diagramme.</li></ul></li>
+                    <li>**Publikation:**<ul><li>Generiert automatisch Textvorschläge in Deutsch oder Englisch für verschiedene Abschnitte einer wissenschaftlichen Publikation (Abstract, Einleitung, Methoden, Ergebnisse, Diskussion, Referenzen).</li><li>Integriert dynamisch aktuelle Daten, Statistiken (basierend auf angewandten T2-Kriterien und ausgewählter BF-Zielmetrik für Teile der Ergebnisdarstellung) und Konfigurationen.</li><li>Enthält ebenfalls direkt im Text eingebettete Tabellen und Diagramme.</li></ul></li>
+                    <li>**Export:**<ul><li>Ermöglicht den Download von Rohdaten, Analyseergebnissen, Tabellen und Diagrammen.</li><li>Formate: CSV, Markdown (MD), Text (TXT), HTML, PNG, SVG.</li><li>Bietet Einzelexporte sowie thematisch gebündelte ZIP-Pakete.</li><li>Alle Exporte basieren auf dem global gewählten Kollektiv und den zuletzt *angewendeten* T2-Kriterien.</li></ul></li>
                 </ul>
                 <h6>Referenzstandard und Wichtiger Hinweis:</h6>
                 <p class="small">Der histopathologische N-Status aus dem Operationspräparat dient in allen Analysen als Referenzstandard. Diese Anwendung ist ein Forschungswerkzeug und ausdrücklich **nicht** für die klinische Diagnostik oder Therapieentscheidungen im Einzelfall vorgesehen. Alle Ergebnisse sind im Kontext der Studienlimitationen (retrospektiv, monozentrisch, spezifisches Kollektiv) zu interpretieren.</p>
@@ -497,7 +436,7 @@ const APP_CONFIG = deepFreeze({
                 expandRow: "Klicken Sie hier oder auf den Pfeil-Button, um die detaillierte Bewertung der einzelnen T2-gewichteten Lymphknoten dieses Patienten gemäß der aktuell angewendeten Kriterien anzuzeigen/auszublenden. Erfüllte Positiv-Kriterien werden hervorgehoben."
             },
             t2Logic: { description: `Logische Verknüpfung der aktiven T2-Kriterien: **UND** (Ein Lymphknoten ist nur positiv, wenn ALLE aktivierten Kriterien erfüllt sind). **ODER** (Ein Lymphknoten ist positiv, wenn MINDESTENS EIN aktiviertes Kriterium erfüllt ist). Die Wahl beeinflusst die Berechnung des T2-Status.` },
-            t2Size: { description: `Größenkriterium (Kurzachse): Lymphknoten mit einem Durchmesser **größer oder gleich (≥)** dem eingestellten Schwellenwert gelten als suspekt. Einstellbarer Bereich: ${5.0} - ${25.0} mm (Schritt: ${0.1} mm). Aktivieren/Deaktivieren mit Checkbox.` },
+            t2Size: { description: "Größenkriterium (Kurzachse): Lymphknoten mit einem Durchmesser **größer oder gleich (≥)** dem eingestellten Schwellenwert gelten als suspekt. Einstellbarer Bereich: 5.0 - 25.0 mm (Schritt: 0.1 mm). Aktivieren/Deaktivieren mit Checkbox." },
             t2Form: { description: "Formkriterium: Wählen Sie, welche Form ('rund' oder 'oval') als suspekt gilt. Aktivieren/Deaktivieren mit Checkbox." },
             t2Kontur: { description: "Konturkriterium: Wählen Sie, welche Kontur ('scharf' berandet oder 'irregulär') als suspekt gilt. Aktivieren/Deaktivieren mit Checkbox." },
             t2Homogenitaet: { description: "Homogenitätskriterium: Wählen Sie, ob ein 'homogenes' oder 'heterogenes' Binnensignal auf T2w als suspekt gilt. Aktivieren/Deaktivieren mit Checkbox." },
@@ -509,25 +448,87 @@ const APP_CONFIG = deepFreeze({
             t2CriteriaCard: { unsavedIndicator: "**Achtung:** Es gibt nicht angewendete Änderungen an den T2-Kriterien oder der Logik. Klicken Sie auf 'Anwenden & Speichern', um die Ergebnisse zu aktualisieren und die Einstellung zu speichern." },
             t2MetricsOverview: {
                 cardTitle: "Kurzübersicht der diagnostischen Güte für die aktuell angewendeten und gespeicherten T2-Kriterien im Vergleich zum histopathologischen N-Status für das gewählte Kollektiv: **[KOLLEKTIV]**. Alle Konfidenzintervalle (CI) sind 95%-CIs.",
-                sens: "Sensitivität (T2 vs. N): Anteil der N+ Fälle, die von den T2-Kriterien korrekt als positiv erkannt wurden.<br>*Formel: RP / (RP + FN)*",
-                spez: "Spezifität (T2 vs. N): Anteil der N- Fälle, die von den T2-Kriterien korrekt als negativ erkannt wurden.<br>*Formel: RN / (RN + FP)*",
-                ppv: "Positiver Prädiktiver Wert (PPV, T2 vs. N): Wahrscheinlichkeit, dass ein T2+ Fall tatsächlich N+ ist.<br>*Formel: RP / (RP + FP)*",
-                npv: "Negativer Prädiktiver Wert (NPV, T2 vs. N): Wahrscheinlichkeit, dass ein T2- Fall tatsächlich N- ist.<br>*Formel: RN / (RN + FN)*",
-                acc: "Accuracy (T2 vs. N): Gesamtanteil der korrekt klassifizierten Fälle.<br>*Formel: (RP + RN) / Gesamtanzahl*",
-                balAcc: "Balanced Accuracy (T2 vs. N): Mittelwert aus Sensitivität und Spezifität. Sinnvoll bei ungleichen Gruppengrößen (Prävalenz).<br>*Formel: (Sensitivität + Spezifität) / 2*",
-                f1: "F1-Score (T2 vs. N): Harmonisches Mittel aus PPV und Sensitivität. Ein Wert von 1 ist optimal.<br>*Formel: 2 * (PPV * Sensitivität) / (PPV + Sensitivität)*",
-                auc: "AUC (T2 vs. N): Fläche unter der ROC-Kurve; für binäre Tests wie hier äquivalent zur Balanced Accuracy."
+                sensShort: 'Sens.',
+                spezShort: 'Spez.',
+                ppvShort: 'PPV',
+                npvShort: 'NPV',
+                accShort: 'Acc.',
+                balAccShort: 'Bal. Acc.',
+                f1Short: 'F1',
+                aucShort: 'AUC',
             },
             bruteForceMetric: { description: "Wählen Sie die Zielmetrik für die Brute-Force-Optimierung.<br>**Accuracy:** Anteil korrekt klassifizierter Fälle.<br>**Balanced Accuracy:** (Sens+Spez)/2; gut bei ungleichen Klassengrößen.<br>**F1-Score:** Harmonisches Mittel aus PPV & Sensitivität.<br>**PPV:** Präzision bei positiver Vorhersage.<br>**NPV:** Präzision bei negativer Vorhersage." },
-            bruteForceStart: { description: "Startet die Brute-Force-Suche nach der T2-Kriterienkombination, die die gewählte Zielmetrik im aktuellen Kollektiv maximiert. Dies kann einige Zeit in Anspruch nehmen und läuft im Hintergrund." },
-            bruteForceInfo: { description: "Zeigt den Status des Brute-Force Optimierungs-Workers und das aktuell analysierte Patientenkollektiv: **[KOLLEKTIV_NAME]**." },
-            bruteForceProgress: { description: "Fortschritt der Optimierung: Getestete Kombinationen / Gesamtanzahl ([TOTAL]). Angezeigt werden die aktuelle beste Metrik und die zugehörigen Kriterien." },
+            bruteForceStart: { description: "Startet die Brute-Force-Suche nach der T2-Kriterienkombination, die die gewählte Zielmetrik im aktuellen Kollektiv maximiert. Dies kann einige Zeit in Anspruch nehmen und läuft im Hintergrund.",
+                optimizeButton: 'Optimierung starten',
+                running: 'Läuft...',
+                workerMissing: 'Worker nicht verfügbar',
+                cancelButton: "Abbrechen",
+                cancelTooltip: "Bricht die laufende Optimierungsanalyse ab."
+            },
+            bruteForceInfo: {
+                description: "Zeigt den Status des Brute-Force Optimierungs-Workers und das aktuell analysierte Patientenkollektiv: **[KOLLEKTIV_NAME]**.",
+                statusLabel: "Status",
+                kollektivLabel: "Kollektiv",
+                ready: "Bereit.",
+                workerNotAvailable: "Worker nicht verfügbar.",
+                cancelled: "Analyse abgebrochen.",
+                error: "Fehler",
+                initializing: "Initialisiere...",
+                testing: "Teste Kombinationen...",
+                testingCombinations: "Teste [TOTAL_COMBINATIONS] Kombinationen...",
+                running: "Läuft...",
+                finished: "Fertig.",
+                finishedNoResult: "Fertig (kein Ergebnis).",
+                finishedNoValidResult: "Fertig (kein valides Ergebnis).",
+                bestMetricSoFar: "Beste gefundene Metrik",
+                best: "Beste",
+                bestCriteriaLabel: "Beste Kriterien",
+                bestCriteriaInitial: "Beste Kriterien: --",
+                noDataWorker: "Keine Daten im Worker für Brute-Force.",
+                noCombinationsGenerated: "Keine Kriterienkombinationen generiert. Überprüfen Sie die t2SizeRange Konfiguration.",
+                invalidMessage: "Ungültige Nachricht vom Hauptthread empfangen.",
+                workerAlreadyRunning: "Worker läuft bereits.",
+                incompleteStartData: "Unvollständige Startdaten für Brute-Force. Benötigt: data, metric, kollektiv, t2SizeRange.",
+                invalidSizeRange: "Ungültige t2SizeRange Konfiguration: min, max, step müssen Zahlen sein und step > 0.",
+                emptyDataSet: "Leeres Datenset für Brute-Force erhalten.",
+                initializationError: "Initialisierungsfehler im Worker",
+                unknownAction: "Unbekannte Aktion vom Hauptthread",
+                globalWorkerError: "Globaler Worker Fehler",
+                currentStatus: "Aktueller Status"
+            },
+            bruteForceProgress: {
+                description: "Fortschritt der Optimierung: Getestete Kombinationen / Gesamtanzahl ([TOTAL]). Angezeigt werden die aktuelle beste Metrik und die zugehörigen Kriterien.",
+                progressLabel: "Fortschritt"
+            },
             bruteForceResult: {
                 description: "Bestes Ergebnis der abgeschlossenen Brute-Force-Optimierung für das gewählte Kollektiv ([N_GESAMT] Patienten, davon [N_PLUS] N+ und [N_MINUS] N-) und die Zielmetrik.",
+                optimizationComplete: "Optimierung Abgeschlossen!",
+                bestCombinationFor: "Beste gefundene Kombination für '{METRIC_DISPLAY_NAME}' im Kollektiv '{KOLLEKTIV_NAME}'",
+                noResultsFound: "Keine validen Ergebnisse gefunden.",
+                valueLabel: "Wert",
+                logicLabel: "Logik",
+                criteriaLabel: "Kriterien",
+                durationLabel: "Dauer",
+                testedLabel: "Getestete Kombinationen",
+                kollektivNLabel: "Kollektiv (N)",
+                applyBestButton: "Beste Kriterien anwenden",
+                applyBestTooltip: "Übernimmt die beste gefundene Kriterienkombination in die T2-Kriterien-Auswahl und wendet sie global an.",
                 kollektivStats: "Statistik des für diese Optimierung verwendeten Kollektivs: N (Gesamtanzahl), N+ (Anzahl N-positiv), N- (Anzahl N-negativ)."
             },
-            bruteForceDetailsButton: { description: "Öffnet ein Fenster mit den Top 10 Ergebnissen und weiteren Details zur abgeschlossenen Optimierung." },
-            bruteForceModal: { exportButton: "Exportiert den detaillierten Bericht der Brute-Force-Optimierung (Top 10 Ergebnisse, Kollektiv-Statistik, Konfiguration) als formatierte Textdatei (.txt)." },
+            bruteForceDetailsButton: {
+                label: "Details (Top 10)",
+                description: "Öffnet ein Fenster mit den Top 10 Ergebnissen und weiteren Details zur abgeschlossenen Optimierung.",
+                topResultsLabel: "Top Ergebnisse",
+                rankLabel: "Rang",
+                rankTooltip: "Rang des Ergebnisses basierend auf dem Wert der Zielmetrik.",
+                metricValueTooltip: "Wert der Zielmetrik ({METRIC_DISPLAY_NAME}) für diese Kriterienkombination.",
+                sensTooltip: "Sensitivität für diese Kombination.",
+                spezTooltip: "Spezifität für diese Kombination.",
+                ppvTooltip: "Positiver Prädiktiver Wert für diese Kombination.",
+                npvTooltip: "Negativer Prädiktiver Wert für diese Kombination.",
+                logicTooltip: "Logische Verknüpfung der Kriterien.",
+                criteriaTooltip: "Die spezifische Kombination von T2-Kriterien."
+            },
             statistikLayout: { description: "Wählen Sie die Anzeigeart: **Einzelansicht** für das global gewählte Kollektiv oder **Vergleich Aktiv** zur Auswahl und Gegenüberstellung zweier spezifischer Kollektive." },
             statistikKollektiv1: { description: "Wählen Sie das erste Kollektiv für die statistische Auswertung oder den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv')." },
             statistikKollektiv2: { description: "Wählen Sie das zweite Kollektiv für den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv')." },
@@ -548,7 +549,8 @@ const APP_CONFIG = deepFreeze({
                 chartAge: { description: "Histogramm der Altersverteilung im Kollektiv **[KOLLEKTIV]**." },
                 chartGender: { description: "Tortendiagramm der Geschlechterverteilung im Kollektiv **[KOLLEKTIV]**." },
                 age: { name: "Alter", description: "Alter des Patienten in Jahren." },
-                gender: { name: "Geschlecht", description: "Geschlecht des Patienten." }
+                gender: { name: "Geschlecht", description: "Geschlecht des Patienten." },
+                therapy: { name: "Therapie", description: "Therapiegruppe des Patienten." }
             },
             diagnostischeGueteAS: { cardTitle: "Diagnostische Güte des Avocado Signs (AS) vs. Histopathologie (N) für Kollektiv **[KOLLEKTIV]**. Alle Konfidenzintervalle (CI) sind 95%-CIs." },
             diagnostischeGueteT2: { cardTitle: "Diagnostische Güte der aktuell angewendeten T2-Kriterien vs. Histopathologie (N) für Kollektiv **[KOLLEKTIV]**. Alle CIs sind 95%-CIs." },
@@ -688,23 +690,21 @@ const APP_CONFIG = deepFreeze({
                 konfusionsmatrix: { description: "Kreuztabelle, die die Klassifikationsergebnisse der Methode [METHODE] mit dem tatsächlichen N-Status vergleicht: Richtig Positive (RP), Falsch Positive (FP), Falsch Negative (FN), Richtig Negative (RN)." },
                 accComp: { name: "Accuracy Vergleich (ungepaart)", description: "Vergleicht die Accuracy der Methode [METHODE] zwischen zwei unabhängigen Kollektiven ([KOLLEKTIV1] vs. [KOLLEKTIV2]) mittels Fisher's Exact Test.<br>*Nullhypothese (H0): Accuracy in Kollektiv1 = Accuracy in Kollektiv2.*", interpretation: "Der Unterschied in der Accuracy der Methode [METHODE] zwischen den Kollektiven **[KOLLEKTIV1]** und **[KOLLEKTIV2]** ist **[SIGNIFIKANZ_TEXT]** (p=**[P_WERT]**)." },
                 aucComp: { name: "AUC Vergleich (ungepaart)", description: "Vergleicht die AUC der Methode [METHODE] zwischen zwei unabhängigen Kollektiven ([KOLLEKTIV1] vs. [KOLLEKTIV2]) mittels eines Z-Tests basierend auf den Standardfehlern der AUCs.<br>*Nullhypothese (H0): AUC in Kollektiv1 = AUC in Kollektiv2.*", interpretation: "Der Unterschied in der AUC der Methode [METHODE] zwischen den Kollektiven **[KOLLEKTIV1]** und **[KOLLEKTIV2]** ist **[SIGNIFIKANZ_TEXT]** (p=**[P_WERT]**)." },
-                defaultP: { interpretation: `Der berechnete p-Wert beträgt **[P_WERT] ([SIGNIFIKANZ])**. Bei einem Signifikanzniveau von ${formatNumber(0.05,2).replace('.',',')} ist das Ergebnis **[SIGNIFIKANZ_TEXT]**.` },
+                defaultP: { interpretation: `Der berechnete p-Wert beträgt **[P_WERT] ([SIGNIFIKANZ])**. Bei einem Signifikanzniveau von ${String(0.05).replace('.',',')} ist das Ergebnis **[SIGNIFIKANZ_TEXT]**.` },
                 size_mwu: {name: "LK Größe MWU", description: "Vergleich der medianen Lymphknotengrößen zwischen N+ und N- Patienten mittels Mann-Whitney-U-Test. Hier werden alle Lymphknoten der Patienten berücksichtigt, nicht Patienten-Level-Status.", interpretation: "Der Mann-Whitney-U-Test ergab einen p-Wert von **[P_WERT] ([SIGNIFIKANZ])**. Dies zeigt einen **[SIGNIFIKANZ_TEXT]** Unterschied in der Verteilung der Lymphknotengrößen zwischen den Lymphknoten von N+ und N- Patienten im Kollektiv [KOLLEKTIV]."}
             }
         }
     },
-    // END: Consolidated UI_TEXTS
-    
-    // START: Consolidated PUBLICATION_CONFIG (previously in publication_config.js)
     PUBLICATION_CONFIG: {
         defaultLanguage: 'de',
         defaultSection: 'abstract',
+        defaultBruteForceMetricForPublication: 'Balanced Accuracy',
         sections: [
             {
                 id: 'abstract',
                 labelKey: 'abstract',
                 subSections: [
-                    { id: 'abstract_main', label: 'Abstract & Key Results', isTopLevel: true } // isTopLevel for direct linking in nav
+                    { id: 'abstract_main', label: 'Abstract & Key Results', isTopLevel: true }
                 ]
             },
             {
@@ -760,27 +760,27 @@ const APP_CONFIG = deepFreeze({
                 displayShortName: 'ESGAR 2016',
                 context: 'Primär-Staging (Baseline-MRT)',
                 applicableKollektiv: 'direkt OP',
-                criteria: { // Criteria Definition as per Rutegard_2025.pdf page 1, "ESGAR consensus criteria" section, and "Table 2" column "Malignant according to ESGAR" on page 6
+                criteria: {
                     size: { active: true, threshold: 9.0, condition: '>=' },
-                    form: { active: true, value: 'rund' }, // This criterion is active in ESGAR but often problematic clinically.
+                    form: { active: true, value: 'rund' },
                     kontur: { active: true, value: 'irregulär' },
                     homogenitaet: { active: true, value: 'heterogen' },
-                    signal: { active: false, value: null } // Signal is not explicitly part of ESGAR 2016 in this context
+                    signal: { active: false, value: null }
                 },
-                logic: 'KOMBINIERT', // Custom logic for ESGAR 2016 criteria
+                logic: 'KOMBINIERT',
                 description: 'ESGAR 2016 Kriterien für Primär-Staging: Größe ≥ 9mm ODER (Größe 5-8mm UND ≥2 Merkmale [rund, irregulär, heterogen]) ODER (Größe < 5mm UND ALLE 3 Merkmale [rund, irregulär, heterogen]).',
                 studyInfo: {
-                    reference: "Rutegård MK, Båtsman M, Blomqvist L, et al. Eur Radiol. 2025; Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Eur Radiol. 2018.", // Consolidated references
-                    patientCohort: "Rutegård: N=46 (mean age, 67.7 years ± 1.5 [SD], 27 men), 19 received neoadjuvant treatment. ESGAR: Consensus.", // Derived from source
+                    reference: "Rutegård MK, Båtsman M, Blomqvist L, et al. Eur Radiol. 2025; Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Eur Radiol. 2018.",
+                    patientCohort: "Rutegård: N=46 (mean age, 67.7 years ± 1.5 [SD], 27 men), 19 received neoadjuvant treatment. ESGAR: Consensus.",
                     investigationType: "Primärstaging",
                     focus: "Validierung ESGAR 2016 Kriterien (Rutegård) bzw. Konsensus-Empfehlung (ESGAR).",
                     keyCriteriaSummary: "Größe ≥ 9mm ODER (5-8mm UND ≥2 von [rund, irregulär, heterogen]) ODER (<5mm UND 3 von [rund, irregulär, heterogen]).",
-                    criteriaDetails: { // Detailed breakdown of ESGAR 2016 logic
+                    criteriaDetails: {
                         logic: 'KOMBINIERT',
                         rules: [
-                            { key: 'size', condition: '>=', threshold: 9.0, logicBranch: 'OR' }, // Size >= 9mm
-                            { key: 'size', condition: 'range', lower: 5.0, upper: 8.0, combinedWith: ['form', 'kontur', 'homogenitaet'], minCount: 2, logicBranch: 'OR' }, // Size 5-8mm AND >=2 morphology
-                            { key: 'size', condition: '<', threshold: 5.0, combinedWith: ['form', 'kontur', 'homogenitaet'], minCount: 3, logicBranch: 'OR' } // Size < 5mm AND 3 morphology
+                            { key: 'size', condition: '>=', threshold: 9.0, logicBranch: 'OR' },
+                            { key: 'size', condition: 'range', lower: 5.0, upper: 8.0, combinedWith: ['form', 'kontur', 'homogenitaet'], minCount: 2, logicBranch: 'OR' },
+                            { key: 'size', condition: '<', threshold: 5.0, combinedWith: ['form', 'kontur', 'homogenitaet'], minCount: 3, logicBranch: 'OR' }
                         ]
                     }
                 }
@@ -791,19 +791,19 @@ const APP_CONFIG = deepFreeze({
                 displayShortName: 'Koh et al.',
                 context: 'Primär & Restaging (Urspr. Studie fokussiert auf Post-nCRT)',
                 applicableKollektiv: 'Gesamt',
-                criteria: { // Criteria as per Koh_2008.pdf page 3, "Nodal status and stage" section, "A node was considered to be malignant if it showed irregular outlines or internal signal heterogeneity (16)."
+                criteria: {
                     size: { active: false, threshold: null, condition: null },
                     form: { active: false, value: null },
                     kontur: { active: true, value: 'irregulär' },
                     homogenitaet: { active: true, value: 'heterogen' },
-                    signal: { active: false, value: null } // Signal in original text is "heterogeneous signal", but in their study it is used as heterogeneous "internal signal". For consistency it is mapped to homogeneity
+                    signal: { active: false, value: null }
                 },
-                logic: 'ODER', // As per interpretation of "irregular outlines or internal signal heterogeneity"
+                logic: 'ODER',
                 description: 'Koh et al. (2008): Morphologische Kriterien - Irreguläre Kontur ODER heterogenes Binnensignal. In dieser Anwendung für das Gesamtkollektiv evaluiert.',
                 studyInfo: {
-                    reference: "Koh DM, Chau I, Tait D, et al. Int J Radiat Oncol Biol Phys. 2008.", // Original reference
-                    patientCohort: "Ursprüngliche Studie: N=25 (alle nCRT, 'poor-risk'). Anwendung in diesem Tool: Gesamtkollektiv (N=106).", // Derived from source and app data
-                    investigationType: "Vor und nach nCRT (Ursprüngliche Genauigkeitsanalyse post-nCRT)", // Derived from source
+                    reference: "Koh DM, Chau I, Tait D, et al. Int J Radiat Oncol Biol Phys. 2008.",
+                    patientCohort: "Ursprüngliche Studie: N=25 (alle nCRT, 'poor-risk'). Anwendung in diesem Tool: Gesamtkollektiv (N=106).",
+                    investigationType: "Vor und nach nCRT (Ursprüngliche Genauigkeitsanalyse post-nCRT)",
                     focus: "Ursprünglich: Bewertung von LK vor und nach nCRT mittels Morphologie. In diesem Tool: Vergleichbarkeit mit Avocado Sign im Gesamtkollektiv.",
                     keyCriteriaSummary: "Irreguläre Kontur ODER heterogenes Signal."
                 }
@@ -814,19 +814,19 @@ const APP_CONFIG = deepFreeze({
                 displayShortName: 'Barbaro et al.',
                 context: 'Restaging nach nCRT',
                 applicableKollektiv: 'nRCT',
-                criteria: { // Criteria as per Barbaro_2024.pdf page 1, "A 2.2 mm cut-off in short-axis diameter was associated with an AUC of 0.83..."
-                    size: { active: true, threshold: 2.3, condition: '>=' }, // Original 2.2mm, adjusted to 2.3 for consistency with typical thresholds/data. (Will be handled as a note in text)
+                criteria: {
+                    size: { active: true, threshold: 2.3, condition: '>=' },
                     form: { active: false, value: null },
                     kontur: { active: false, value: null },
                     homogenitaet: { active: false, value: null },
                     signal: { active: false, value: null }
                 },
-                logic: 'ODER', // Only one criterion, so logic is irrelevant but set to ODER as a default
+                logic: 'ODER',
                 description: 'Barbaro et al. (2024): Optimaler Cut-off für Kurzachse im Restaging nach nRCT: ≥ 2.3mm (Original 2.2mm).',
                 studyInfo: {
-                    reference: "Barbaro B, Carafa MRP, Minordi LM, et al. Radiother Oncol. 2024.", // Original reference
-                    patientCohort: "N=191 (alle nCRT, LARC)", // Derived from source
-                    investigationType: "Restaging nach nCRT", // Derived from source
+                    reference: "Barbaro B, Carafa MRP, Minordi LM, et al. Radiother Oncol. 2024.",
+                    patientCohort: "N=191 (alle nCRT, LARC)",
+                    investigationType: "Restaging nach nCRT",
                     focus: "MRI-Bewertung N-Status nach nCRT mittels Größe (optimaler Cut-off).",
                     keyCriteriaSummary: "Kurzachse ≥ 2.3 mm (basierend auf Studie: 2.2mm)."
                 }
@@ -931,5 +931,18 @@ const APP_CONFIG = deepFreeze({
             }
         }
     }
-    // END: Consolidated PUBLICATION_CONFIG
-});
+};
+
+APP_CONFIG_MUTABLE.UI_TEXTS.kurzanleitung.content = APP_CONFIG_MUTABLE.UI_TEXTS.kurzanleitung.content
+    .replace('[APP_VERSION]', APP_CONFIG_MUTABLE.APP_VERSION)
+    .replace('[SIGNIFICANCE_LEVEL_FORMATTED]', String(APP_CONFIG_MUTABLE.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL).replace('.', ','));
+
+APP_CONFIG_MUTABLE.UI_TEXTS.TOOLTIP_CONTENT.t2Size.description = APP_CONFIG_MUTABLE.UI_TEXTS.TOOLTIP_CONTENT.t2Size.description
+    .replace('${5.0}', APP_CONFIG_MUTABLE.T2_CRITERIA_SETTINGS.SIZE_RANGE.min)
+    .replace('${25.0}', APP_CONFIG_MUTABLE.T2_CRITERIA_SETTINGS.SIZE_RANGE.max)
+    .replace('${0.1}', APP_CONFIG_MUTABLE.T2_CRITERIA_SETTINGS.SIZE_RANGE.step);
+    
+APP_CONFIG_MUTABLE.UI_TEXTS.TOOLTIP_CONTENT.statMetrics.defaultP.interpretation = APP_CONFIG_MUTABLE.UI_TEXTS.TOOLTIP_CONTENT.statMetrics.defaultP.interpretation
+    .replace('${formatNumber(0.05,2).replace(\'.\',\',\')}', String(APP_CONFIG_MUTABLE.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL).replace('.', ','));
+
+const APP_CONFIG = deepFreeze(APP_CONFIG_MUTABLE);
