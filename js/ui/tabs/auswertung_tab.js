@@ -1,8 +1,8 @@
 const auswertungTab = (() => {
 
-    function _createDashboardCards(stats) {
+    function _createDashboardCards(stats, kollektivName) {
         if (!stats || stats.anzahlPatienten === 0) {
-            return '<div class="col-12"><p class="text-muted text-center p-3">Keine Daten für Dashboard verfügbar.</p></div>';
+            return `<div class="col-12"><p class="text-muted text-center p-3">Keine Daten für Dashboard verfügbar.</p></div>`;
         }
         const { alter, geschlecht, therapie, nStatus, asStatus, t2Status } = stats;
         const na = '--';
@@ -11,7 +11,7 @@ const auswertungTab = (() => {
                 cardClass: 'dashboard-card', 
                 bodyClass: 'p-2 text-center', 
                 headerClass: 'card-header-sm' 
-            }).replace('<div class="card-body', `<div class="card-body d-flex flex-column justify-content-center align-items-center"`);
+            });
         
         return `
             <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6">${createCard('Alter (Median)', `<h4 class="m-0">${formatNumber(alter?.median, 0, na)}</h4><span class="text-muted small">Range: ${formatNumber(alter?.min, 0, na)}-${formatNumber(alter?.max, 0, na)}</span>`, 'chart-dash-age')}</div>
@@ -28,19 +28,21 @@ const auswertungTab = (() => {
             const values = APP_CONFIG.T2_CRITERIA_SETTINGS[key.toUpperCase() + '_VALUES'] || [];
             return values.map(value => {
                 const icon = commonComponents.createT2CriteriaIcon(key, value);
-                return `<button class="btn t2-criteria-button" data-criterion="${key}" data-value="${value}">${icon}</button>`;
+                const tooltipText = TEXT_CONFIG.de.tooltips.t2CriteriaButtons[key].replace('{VALUE}', value);
+                return `<button class="btn t2-criteria-button" data-criterion="${key}" data-value="${value}" data-tippy-content="${tooltipText}">${icon}</button>`;
             }).join('');
         };
 
         const createCriteriaCard = (key, title, content) => {
             const isChecked = criteria[key]?.active;
+            const tooltipText = TEXT_CONFIG.de.tooltips.t2CriteriaCheckboxes[key] || `Kriterium ${title} aktivieren/deaktivieren`;
             return `
-                <div class="col-md-6">
+                <div class="col-md-6 col-lg-4">
                     <div class="card h-100">
                         <div class="card-header card-header-sm">
-                            <div class="form-check form-switch form-check-inline">
+                            <div class="form-check form-switch form-check-inline" data-tippy-content="${tooltipText}">
                                 <input class="form-check-input" type="checkbox" id="check-${key}" value="${key}" ${isChecked ? 'checked' : ''}>
-                                <label class="form-check-label" for="check-${key}">${title}</label>
+                                <label class="form-check-label fw-bold" for="check-${key}">${title}</label>
                             </div>
                         </div>
                         <div class="card-body p-2 ${!isChecked ? 'opacity-50' : ''}" id="container-${key}">
@@ -49,7 +51,8 @@ const auswertungTab = (() => {
                     </div>
                 </div>`;
         };
-
+        
+        const sizeThreshold = criteria.size?.threshold ?? APP_CONFIG.T2_CRITERIA_DEFAULTS.size.threshold;
         const sizeContent = `
             <div class="d-flex align-items-center">
                 <span class="me-2 small text-muted">≥</span>
@@ -57,14 +60,9 @@ const auswertungTab = (() => {
                        min="${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min}" 
                        max="${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max}" 
                        step="${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step}" 
-                       value="${criteria.size.threshold}">
-                <input type="number" class="form-control form-control-sm ms-2" id="${CONSTANTS.SELECTORS.INPUT_SIZE.substring(1)}" 
-                       value="${criteria.size.threshold}" 
-                       style="width: 75px;"
-                       min="${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min}" 
-                       max="${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max}" 
-                       step="${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step}">
-                <span class="ms-1">mm</span>
+                       value="${sizeThreshold}">
+                <span id="${CONSTANTS.SELECTORS.VALUE_SIZE.substring(1)}" class="fw-bold ms-2" style="min-width: 35px;">${formatNumber(sizeThreshold, 1)}</span>
+                <span class="ms-1 small text-muted">mm</span>
             </div>`;
             
         const formContent = `<div class="btn-group w-100">${createButtonOptions('form')}</div>`;
@@ -83,14 +81,14 @@ const auswertungTab = (() => {
 
         const logicSwitchChecked = logic === CONSTANTS.LOGIC_OPERATORS.OR ? 'checked' : '';
         const mainCardFooter = `
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="form-check form-switch">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="form-check form-switch" data-tippy-content="${TEXT_CONFIG.de.tooltips.t2Logic}">
                     <input class="form-check-input" type="checkbox" id="${CONSTANTS.SELECTORS.T2_LOGIC_SWITCH.substring(1)}" ${logicSwitchChecked}>
                     <label class="form-check-label" for="${CONSTANTS.SELECTORS.T2_LOGIC_SWITCH.substring(1)}">Logik: <span class="fw-bold" id="${CONSTANTS.SELECTORS.T2_LOGIC_LABEL.substring(1)}">${logic}</span></label>
                 </div>
                 <div>
-                    <button id="${CONSTANTS.SELECTORS.BTN_RESET_CRITERIA.substring(1)}" class="btn btn-sm btn-outline-secondary me-2">Zurücksetzen</button>
-                    <button id="${CONSTANTS.SELECTORS.BTN_APPLY_CRITERIA.substring(1)}" class="btn btn-sm btn-primary">Anwenden & Speichern</button>
+                    <button id="${CONSTANTS.SELECTORS.BTN_RESET_CRITERIA.substring(1)}" class="btn btn-sm btn-outline-secondary me-2" data-tippy-content="${TEXT_CONFIG.de.tooltips.t2Reset}">Zurücksetzen</button>
+                    <button id="${CONSTANTS.SELECTORS.BTN_APPLY_CRITERIA.substring(1)}" class="btn btn-sm btn-primary" data-tippy-content="${TEXT_CONFIG.de.tooltips.t2Apply}">Anwenden & Speichern</button>
                 </div>
             </div>`;
 
@@ -98,29 +96,32 @@ const auswertungTab = (() => {
             CONSTANTS.SELECTORS.T2_CRITERIA_CARD.substring(1),
             'T2-Kriterien Definieren',
             mainCardContent,
-            { footerContent: mainCardFooter }
+            { footerContent: mainCardFooter, bodyClass: 'p-3' }
         );
     }
     
-    function _createAuswertungTableRow(patient, appliedCriteria, appliedLogic) {
-        return tableRenderer.createAuswertungTableRow(patient, appliedCriteria, appliedLogic);
-    }
-
     function render(data, currentCriteria, currentLogic, sortState, currentKollektiv) {
-        if (!data || !currentCriteria || !currentLogic) return '<p class="text-danger p-3">Fehlerhafte Daten für die Auswertungsansicht.</p>';
+        if (!data || !currentCriteria || !currentLogic) {
+            return '<p class="text-danger p-3">Fehlerhafte Daten für die Auswertungsansicht.</p>';
+        }
         
         const stats = statisticsService.calculateDescriptiveStats(data);
-        const dashboardHTML = _createDashboardCards(stats);
+        const dashboardHTML = _createDashboardCards(stats, getKollektivDisplayName(currentKollektiv));
         const criteriaControlsHTML = _createT2CriteriaControls(currentCriteria, currentLogic);
 
         const tableHTML = auswertungTabLogic.createAuswertungTableHTML(data, sortState, currentCriteria, currentLogic);
         const auswertungTableCardHTML = commonComponents.createCard('auswertung-table-card', 'Patientenübersicht & Auswertungsergebnisse', tableHTML, {
             bodyClass: 'p-0',
-            headerButtons: [{ id: CONSTANTS.SELECTORS.AUSWERTUNG_TOGGLE_DETAILS.substring(1), icon: 'fa-chevron-down', tooltip: 'Alle Details ein-/ausblenden', extraAttributes: 'data-action="expand"'}]
+            headerButtons: [{ 
+                id: CONSTANTS.SELECTORS.AUSWERTUNG_TOGGLE_DETAILS.substring(1), 
+                icon: 'fa-chevron-down', 
+                tooltip: TEXT_CONFIG.de.tooltips.datenTable.expandAll, 
+                extraAttributes: 'data-action="expand"'
+            }]
         });
 
         const metricsCardHTML = commonComponents.createCard(CONSTANTS.SELECTORS.T2_METRICS_OVERVIEW.substring(1), 'T2 Gütekriterien (angewandt)', '<p class="text-muted small p-2">Wird berechnet...</p>');
-        const bruteForceCardHTML = uiComponents.createBruteForceCard(currentKollektiv, bruteForceManager.isWorkerAvailable());
+        const bruteForceCardHTML = bruteForceManager.render();
 
         let finalHTML = `
             <div class="row g-3 mb-3">${dashboardHTML}</div>
@@ -138,4 +139,3 @@ const auswertungTab = (() => {
         render
     });
 })();
-
