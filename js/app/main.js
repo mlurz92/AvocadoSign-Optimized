@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'publikation-tab': publikationController,
             'export-tab': exportController
         };
-
+        
         function _updateHeaderStats(stats) {
             uiHelpers.updateElementHTML('header-kollektiv', stats.kollektiv);
             uiHelpers.updateElementHTML('header-anzahl-patienten', stats.anzahlPatienten);
@@ -100,7 +100,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activeTabId === 'auswertung-tab') {
                 const dashboardStats = statisticsService.calculateDescriptiveStats(evaluatedData);
                 const headerStats = dataProcessor.calculateHeaderStats(evaluatedData, stateManager.getCurrentKollektiv());
-
                  if(dashboardStats && dashboardStats.count > 0) {
                     chartRenderer.renderBarChart('dashboard-chart-gender', [{label: 'M', value: dashboardStats.gender.m}, {label: 'W', value: dashboardStats.gender.f}], {yAxisLabel: 'Anzahl'});
                     chartRenderer.renderBarChart('dashboard-chart-therapy', [{label: 'Direkt OP', value: dashboardStats.therapy['direkt OP']}, {label: 'nRCT', value: dashboardStats.therapy.nRCT}], {yAxisLabel: 'Anzahl'});
@@ -115,38 +114,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else if (activeTabId === 'statistik-tab') {
                 const statsLayout = stateManager.getStatsLayout();
+                const appliedCriteria = t2CriteriaManager.getCriteria();
+                const appliedLogic = t2CriteriaManager.getLogic();
+
                 if (statsLayout === 'einzel') {
-                    const stats = statisticsService.calculateAllStats(evaluatedData, t2CriteriaManager.getCriteria(), t2CriteriaManager.getLogic());
-                    const chartData = [
-                        { metric: 'Sensitivität', values: [{ name: 'AS', ...stats.avocadoSign.sens }, { name: 'T2', ...stats.t2.sens }] },
-                        { metric: 'Spezifität', values: [{ name: 'AS', ...stats.avocadoSign.spez }, { name: 'T2', ...stats.t2.spez }] },
-                        { metric: 'PPV', values: [{ name: 'AS', ...stats.avocadoSign.ppv }, { name: 'T2', ...stats.t2.ppv }] },
-                        { metric: 'NPV', values: [{ name: 'AS', ...stats.avocadoSign.npv }, { name: 'T2', ...stats.t2.npv }] },
-                        { metric: 'Accuracy', values: [{ name: 'AS', ...stats.avocadoSign.acc }, { name: 'T2', ...stats.t2.acc }] },
-                        { metric: 'AUC', values: [{ name: 'AS', ...stats.avocadoSign.auc }, { name: 'T2', ...stats.t2.auc }] }
-                    ];
-                    chartRenderer.renderPerformanceComparisonChart(`chart-as-vs-t2-${stateManager.getCurrentKollektiv()}`, chartData, { method1: 'AS', method2: 'T2' });
+                    const stats = statisticsService.calculateAllStats(evaluatedData, appliedCriteria, appliedLogic);
+                    if(stats && stats.avocadoSign && stats.t2) {
+                        const chartData = [
+                            { metric: 'Sensitivität', values: [{ name: 'AS', ...stats.avocadoSign.sens }, { name: 'T2', ...stats.t2.sens }] },
+                            { metric: 'Spezifität', values: [{ name: 'AS', ...stats.avocadoSign.spez }, { name: 'T2', ...stats.t2.spez }] },
+                            { metric: 'PPV', values: [{ name: 'AS', ...stats.avocadoSign.ppv }, { name: 'T2', ...stats.t2.ppv }] },
+                            { metric: 'NPV', values: [{ name: 'AS', ...stats.avocadoSign.npv }, { name: 'T2', ...stats.t2.npv }] },
+                            { metric: 'Accuracy', values: [{ name: 'AS', ...stats.avocadoSign.acc }, { name: 'T2', ...stats.t2.acc }] },
+                            { metric: 'AUC', values: [{ name: 'AS', ...stats.avocadoSign.auc }, { name: 'T2', ...stats.t2.auc }] }
+                        ];
+                        chartRenderer.renderPerformanceComparisonChart(`chart-as-vs-t2-${stateManager.getCurrentKollektiv()}`, chartData, { method1: 'AS', method2: 'T2' });
+                    }
                 } else if (statsLayout === 'vergleich') {
                     const k1 = stateManager.getStatsKollektiv1();
                     const k2 = stateManager.getStatsKollektiv2();
                     const data1 = dataProcessor.filterDataByKollektiv(processedData, k1);
                     const data2 = dataProcessor.filterDataByKollektiv(processedData, k2);
-                    const stats1 = statisticsService.calculateAllStats(data1, t2CriteriaManager.getCriteria(), t2CriteriaManager.getLogic());
-                    const stats2 = statisticsService.calculateAllStats(data2, t2CriteriaManager.getCriteria(), t2CriteriaManager.getLogic());
-
-                    const chartData1 = [
-                        { metric: 'Sens', values: [{ name: 'AS', ...stats1.avocadoSign.sens }, { name: 'T2', ...stats1.t2.sens }] },
-                        { metric: 'Spez', values: [{ name: 'AS', ...stats1.avocadoSign.spez }, { name: 'T2', ...stats1.t2.spez }] },
-                        { metric: 'AUC', values: [{ name: 'AS', ...stats1.avocadoSign.auc }, { name: 'T2', ...stats1.t2.auc }] }
-                    ];
-                     chartRenderer.renderPerformanceComparisonChart(`chart-container-as-vs-t2-${k1}-comp`, chartData1, { method1: 'AS', method2: 'T2' });
-
-                    const chartData2 = [
-                        { metric: 'Sens', values: [{ name: 'AS', ...stats2.avocadoSign.sens }, { name: 'T2', ...stats2.t2.sens }] },
-                        { metric: 'Spez', values: [{ name: 'AS', ...stats2.avocadoSign.spez }, { name: 'T2', ...stats2.t2.spez }] },
-                        { metric: 'AUC', values: [{ name: 'AS', ...stats2.avocadoSign.auc }, { name: 'T2', ...stats2.t2.auc }] }
-                    ];
-                     chartRenderer.renderPerformanceComparisonChart(`chart-container-as-vs-t2-${k2}-comp`, chartData2, { method1: 'AS', method2: 'T2' });
+                    const stats1 = statisticsService.calculateAllStats(data1, appliedCriteria, appliedLogic);
+                    const stats2 = statisticsService.calculateAllStats(data2, appliedCriteria, appliedLogic);
+                    
+                    if (stats1 && stats1.avocadoSign && stats1.t2) {
+                         const chartData1 = [
+                            { metric: 'Sens', values: [{ name: 'AS', ...stats1.avocadoSign.sens }, { name: 'T2', ...stats1.t2.sens }] },
+                            { metric: 'Spez', values: [{ name: 'AS', ...stats1.avocadoSign.spez }, { name: 'T2', ...stats1.t2.spez }] },
+                            { metric: 'AUC', values: [{ name: 'AS', ...stats1.avocadoSign.auc }, { name: 'T2', ...stats1.t2.auc }] }
+                        ];
+                         chartRenderer.renderPerformanceComparisonChart(`chart-container-as-vs-t2-${k1}-compare`, chartData1, { method1: 'AS', method2: 'T2' });
+                    }
+                    if (stats2 && stats2.avocadoSign && stats2.t2) {
+                        const chartData2 = [
+                            { metric: 'Sens', values: [{ name: 'AS', ...stats2.avocadoSign.sens }, { name: 'T2', ...stats2.t2.sens }] },
+                            { metric: 'Spez', values: [{ name: 'AS', ...stats2.avocadoSign.spez }, { name: 'T2', ...stats2.t2.spez }] },
+                            { metric: 'AUC', values: [{ name: 'AS', ...stats2.avocadoSign.auc }, { name: 'T2', ...stats2.t2.auc }] }
+                        ];
+                         chartRenderer.renderPerformanceComparisonChart(`chart-container-as-vs-t2-${k2}-comp`, chartData2, { method1: 'AS', method2: 'T2' });
+                    }
                 }
 
             } else if (activeTabId === 'praesentation-tab') {
@@ -194,6 +201,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 controllers[lastActiveTabId].onTabExit();
             }
 
+            document.querySelectorAll('#app-nav .nav-link.active, .tab-content .tab-pane.active').forEach(el => el.classList.remove('active', 'show'));
+            
+            link.classList.add('active');
+            const newPane = document.getElementById(`${newTabId}-pane`);
+            if(newPane) newPane.classList.add('active', 'show');
+
             stateManager.setActiveTabId(newTabId);
             lastActiveTabId = newTabId;
             updateAndRender();
@@ -215,12 +228,19 @@ document.addEventListener('DOMContentLoaded', () => {
             _updateHeaderStats(headerStats);
             uiHelpers.updateKollektivButtonsUI(currentKollektiv);
             
-            _renderActiveTab(evaluatedData, stateManager.getActiveTabId());
+            const activeTabId = stateManager.getActiveTabId();
+            const activeTab = document.querySelector(`#app-nav a#${activeTabId}`);
+            if (activeTab && !activeTab.classList.contains('active')) {
+                const tab = new bootstrap.Tab(activeTab);
+                tab.show();
+            }
+            
+            _renderActiveTab(evaluatedData, activeTabId);
         }
 
         function init() {
-            processedData = dataProcessor.processPatientData(patientDataRaw);
             stateManager.init();
+            processedData = dataProcessor.processPatientData(patientDataRaw);
             t2CriteriaManager.initialize();
 
             Object.values(controllers).forEach(controller => {
@@ -243,13 +263,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const initialTabId = stateManager.getActiveTabId();
             lastActiveTabId = initialTabId;
-            document.querySelectorAll('#app-nav .nav-link').forEach(l => l.classList.remove('active'));
-            document.querySelectorAll('.tab-content .tab-pane').forEach(p => p.classList.remove('active', 'show'));
-            
             const initialTabEl = document.getElementById(initialTabId);
-            if (initialTabEl) initialTabEl.classList.add('active');
-            const initialPaneEl = document.getElementById(`${initialTabId}-pane`);
-            if (initialPaneEl) initialPaneEl.classList.add('active', 'show');
+            if (initialTabEl) {
+                 const tab = new bootstrap.Tab(initialTabEl);
+                 tab.show();
+            }
 
             if (isFirstRender) {
                 const firstStart = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.FIRST_APP_START);
