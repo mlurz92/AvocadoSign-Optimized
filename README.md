@@ -131,7 +131,7 @@ Zukünftige Entwicklungen könnten die Erweiterung der Datenbasis, die Implement
 ## 6. Autoren und Kontakt
 
 * **Hauptentwickler & Studienautoren:** Markus Lurz
-* **Kontakt für technische Fragen oder Feedback zur Anwendung:** mlurz92@googlemail.com
+* **Kontakt für technische Fragen oder Feedback zur Anwendung:** mlurz92[at]googlemail.com
 
 ## 7. Lizenz
 
