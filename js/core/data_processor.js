@@ -28,12 +28,12 @@ const dataProcessor = (() => {
         const patientNr = typeof patient.nr === 'number' ? patient.nr : index + 1;
 
         processedPatient.nr = patientNr;
-        processedPatient.name = typeof patient.name === 'string' ? patient.name.trim() : 'Unbekannt';
+        processedPatient.name = typeof patient.name === 'string' ? patient.name.trim() : config.UI_TEXTS.global.unknown;
         processedPatient.vorname = typeof patient.vorname === 'string' ? patient.vorname.trim() : '';
         processedPatient.geburtsdatum = patient.geburtsdatum || null;
         processedPatient.untersuchungsdatum = patient.untersuchungsdatum || null;
-        processedPatient.geschlecht = (patient.geschlecht === 'm' || patient.geschlecht === 'f') ? patient.geschlecht : 'unbekannt';
-        processedPatient.therapie = (patient.therapie === 'direkt OP' || patient.therapie === 'nRCT') ? patient.therapie : 'unbekannt';
+        processedPatient.geschlecht = (patient.geschlecht === 'm' || patient.geschlecht === 'f') ? patient.geschlecht : config.UI_TEXTS.global.unknownGender;
+        processedPatient.therapie = (patient.therapie === 'direkt OP' || patient.therapie === 'nRCT') ? patient.therapie : config.UI_TEXTS.global.unknown;
         processedPatient.n = (patient.n === '+' || patient.n === '-') ? patient.n : null;
         processedPatient.as = (patient.as === '+' || patient.as === '-') ? patient.as : null;
 
@@ -81,11 +81,9 @@ const dataProcessor = (() => {
 
     function processPatientData(rawData) {
         if (!Array.isArray(rawData)) {
-            console.error("processPatientData: Ungültige Eingabedaten, Array erwartet.");
             return [];
         }
         if (typeof APP_CONFIG === 'undefined') {
-             console.error("processPatientData: APP_CONFIG ist nicht verfügbar.");
              return [];
         }
 
@@ -94,7 +92,6 @@ const dataProcessor = (() => {
 
     function filterDataByKollektiv(data, kollektiv) {
         if (!Array.isArray(data)) {
-            console.error("filterDataByKollektiv: Ungültige Eingabedaten, Array erwartet.");
             return [];
         }
         const filteredData = (kollektiv && kollektiv !== 'Gesamt')
@@ -106,7 +103,7 @@ const dataProcessor = (() => {
 
     function calculateHeaderStats(data, currentKollektiv) {
          const n = data?.length ?? 0;
-         const kollektivName = getKollektivDisplayName(currentKollektiv);
+         const kollektivName = APP_CONFIG.UI_TEXTS.kollektivDisplayNames[currentKollektiv] || currentKollektiv;
          const placeholder = '--';
 
          if (!Array.isArray(data) || n === 0) {
