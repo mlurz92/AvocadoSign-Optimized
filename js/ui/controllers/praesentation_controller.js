@@ -14,7 +14,7 @@ const praesentationController = (() => {
         stateManager.setPresentationStudyId(newStudyId);
         mainApp.updateAndRender();
     }
-
+    
     function _addEventListeners() {
         const pane = document.getElementById('praesentation-tab-pane');
         if (!pane) return;
@@ -31,22 +31,48 @@ const praesentationController = (() => {
 
     function updateView() {
         const currentView = stateManager.getPresentationView();
-        const selectedStudyId = stateManager.getPresentationStudyId();
-
-        const radioAsPur = document.getElementById('praes-ansicht-as-pur');
-        const radioAsVsT2 = document.getElementById('praes-ansicht-as-vs-t2');
-        if (radioAsPur) radioAsPur.checked = currentView === 'as-pur';
-        if (radioAsVsT2) radioAsVsT2.checked = currentView === 'as-vs-t2';
-        
         const studySelectGroup = document.getElementById('praes-study-select-group');
         if (studySelectGroup) {
             uiHelpers.toggleElementClass(studySelectGroup.id, 'd-none', currentView !== 'as-vs-t2');
         }
+    }
 
-        const studySelect = document.getElementById('praes-study-select');
-        if (studySelect) {
-            studySelect.value = selectedStudyId;
+    function getPresentationData(allProcessedData) {
+        const currentGlobalKollektiv = stateManager.getCurrentKollektiv();
+        const appliedT2Criteria = t2CriteriaManager.getCriteria();
+        const appliedT2Logic = t2CriteriaManager.getLogic();
+
+        const asPurFilteredData = dataProcessor.filterDataByKollektiv(allProcessedData, currentGlobalKollektiv);
+        const asPurEvaluatedData = t2CriteriaManager.evaluateDatasetWithCriteria(asPurFilteredData, appliedT2Criteria, appliedT2Logic);
+        const asPurStats = statisticsService.calculateAllStats(asPurEvaluatedData, appliedT2Criteria, appliedT2Logic);
+
+        const selectedStudyId = stateManager.getPresentationStudyId() || APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
+        const selectedStudy = studyCriteriaManager.getStudyCriteriaSetById(selectedStudyId);
+        
+        let asVsT2Stats = null;
+        let comparisonKollektiv = currentGlobalKollektiv;
+        let evaluatedDataForComparison;
+
+        if (selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) {
+            evaluatedDataForComparison = asPurEvaluatedData;
+        } else if (selectedStudy) {
+            comparisonKollektiv = selectedStudy.applicableKollektiv || currentGlobalKollektiv;
+            const filteredDataForStudy = dataProcessor.filterDataByKollektiv(allProcessedData, comparisonKollektiv);
+            evaluatedDataForComparison = studyCriteriaManager.applyStudyT2CriteriaToDataset(filteredDataForStudy, selectedStudy);
         }
+
+        if (evaluatedDataForComparison) {
+            asVsT2Stats = statisticsService.calculateAllStats(
+                evaluatedDataForComparison,
+                selectedStudy ? selectedStudy.criteria : appliedT2Criteria,
+                selectedStudy ? selectedStudy.logic : appliedT2Logic
+            );
+        }
+        
+        return {
+            asPur: asPurStats,
+            asVsT2: asVsT2Stats
+        };
     }
 
     function init(appInterface) {
@@ -56,9 +82,18 @@ const praesentationController = (() => {
         isInitialized = true;
     }
 
+    function onTabEnter() {
+        updateView();
+    }
+
+    function onTabExit() {
+    }
+
     return Object.freeze({
         init,
-        updateView
+        onTabEnter,
+        onTabExit,
+        getPresentationData
     });
 
 })();
