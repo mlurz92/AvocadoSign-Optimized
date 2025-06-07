@@ -13,7 +13,7 @@ function deepFreeze(obj) {
     return Object.freeze(obj);
 }
 
-let APP_CONFIG_MUTABLE = {
+const APP_CONFIG = deepFreeze({
     APP_NAME: "Lymphknoten T2 - Avocado Sign Analyse",
     APP_VERSION: "2.3.0",
     APP_AUTHOR: "Markus Lurz & Arnd-Oliver Schäfer",
@@ -393,7 +393,18 @@ let APP_CONFIG_MUTABLE = {
                 <p class="small">Der histopathologische N-Status aus dem Operationspräparat dient in allen Analysen als Referenzstandard. Diese Anwendung ist ein Forschungswerkzeug und ausdrücklich **nicht** für die klinische Diagnostik oder Therapieentscheidungen im Einzelfall vorgesehen. Alle Ergebnisse sind im Kontext der Studienlimitationen (retrospektiv, monozentrisch, spezifisches Kollektiv) zu interpretieren.</p>
             `
         },
-        TOOLTIP_CONTENT: {
+        TOOLTIP_CONTENT: {}
+    },
+    PUBLICATION_CONFIG: {}
+};
+
+// Post-processing to insert dynamic values into strings to avoid circular reference during initialization.
+// This is a much safer pattern.
+APP_CONFIG_MUTABLE.UI_TEXTS.kurzanleitung.content = APP_CONFIG_MUTABLE.UI_TEXTS.kurzanleitung.content
+    .replace('[APP_VERSION]', APP_CONFIG_MUTABLE.APP_VERSION)
+    .replace('[SIGNIFICANCE_LEVEL_FORMATTED]', String(APP_CONFIG_MUTABLE.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL).replace('.', ','));
+
+APP_CONFIG_MUTABLE.UI_TEXTS.TOOLTIP_CONTENT = { // Re-populating the entire object to ensure no references are missed
             kurzanleitungButton: { description: "Zeigt eine Kurzanleitung und wichtige Hinweise zur Bedienung der Anwendung." },
             kollektivButtons: { description: "Wählen Sie das Patientenkollektiv für die Analyse aus: **Gesamt** (alle Patienten), **Direkt OP** (nur primär Operierte ohne Vorbehandlung) oder **nRCT** (nur neoadjuvant Radiochemotherapeutisch Vorbehandelte). Die Auswahl filtert die Datenbasis für alle Tabs." },
             headerStats: {
@@ -448,6 +459,8 @@ let APP_CONFIG_MUTABLE = {
             t2CriteriaCard: { unsavedIndicator: "**Achtung:** Es gibt nicht angewendete Änderungen an den T2-Kriterien oder der Logik. Klicken Sie auf 'Anwenden & Speichern', um die Ergebnisse zu aktualisieren und die Einstellung zu speichern." },
             t2MetricsOverview: {
                 cardTitle: "Kurzübersicht der diagnostischen Güte für die aktuell angewendeten und gespeicherten T2-Kriterien im Vergleich zum histopathologischen N-Status für das gewählte Kollektiv: **[KOLLEKTIV]**. Alle Konfidenzintervalle (CI) sind 95%-CIs.",
+                metricsNotAvailable: "Metriken für Kollektiv {KOLLEKTIV} nicht verfügbar. Bitte T2-Kriterien anwenden.",
+                title: "T2 Gütekriterien (angewandt)",
                 sensShort: 'Sens.',
                 spezShort: 'Spez.',
                 ppvShort: 'PPV',
@@ -457,14 +470,25 @@ let APP_CONFIG_MUTABLE = {
                 f1Short: 'F1',
                 aucShort: 'AUC',
             },
-            bruteForceMetric: { description: "Wählen Sie die Zielmetrik für die Brute-Force-Optimierung.<br>**Accuracy:** Anteil korrekt klassifizierter Fälle.<br>**Balanced Accuracy:** (Sens+Spez)/2; gut bei ungleichen Klassengrößen.<br>**F1-Score:** Harmonisches Mittel aus PPV & Sensitivität.<br>**PPV:** Präzision bei positiver Vorhersage.<br>**NPV:** Präzision bei negativer Vorhersage." },
-            bruteForceStart: { description: "Startet die Brute-Force-Suche nach der T2-Kriterienkombination, die die gewählte Zielmetrik im aktuellen Kollektiv maximiert. Dies kann einige Zeit in Anspruch nehmen und läuft im Hintergrund.",
-                optimizeButton: 'Optimierung starten',
-                running: 'Läuft...',
-                workerMissing: 'Worker nicht verfügbar',
+            bruteForceMetric: { 
+                description: "Wählen Sie die Zielmetrik für die Brute-Force-Optimierung.<br>**Accuracy:** Anteil korrekt klassifizierter Fälle.<br>**Balanced Accuracy:** (Sens+Spez)/2; gut bei ungleichen Klassengrößen.<br>**F1-Score:** Harmonisches Mittel aus PPV & Sensitivität.<br>**PPV:** Präzision bei positiver Vorhersage.<br>**NPV:** Präzision bei negativer Vorhersage.",
+                label: "Zielmetrik:",
+                options: {
+                    accuracy: "Accuracy",
+                    "balanced accuracy": "Balanced Accuracy",
+                    "f1-score": "F1-Score",
+                    ppv: "Positiver Prädiktiver Wert (PPV)",
+                    npv: "Negativer Prädiktiver Wert (NPV)"
+                }
+            },
+            bruteForceStart: { 
+                description: "Startet die Brute-Force-Suche nach der T2-Kriterienkombination, die die gewählte Zielmetrik im aktuellen Kollektiv maximiert. Dies kann einige Zeit in Anspruch nehmen und läuft im Hintergrund.",
+                optimizeButton: "Optimierung starten",
+                running: "Läuft...",
+                workerMissing: "Worker nicht verfügbar",
                 cancelButton: "Abbrechen",
                 cancelTooltip: "Bricht die laufende Optimierungsanalyse ab."
-            },
+             },
             bruteForceInfo: {
                 description: "Zeigt den Status des Brute-Force Optimierungs-Workers und das aktuell analysierte Patientenkollektiv: **[KOLLEKTIV_NAME]**.",
                 statusLabel: "Status",
@@ -693,8 +717,7 @@ let APP_CONFIG_MUTABLE = {
                 defaultP: { interpretation: `Der berechnete p-Wert beträgt **[P_WERT] ([SIGNIFIKANZ])**. Bei einem Signifikanzniveau von ${String(0.05).replace('.',',')} ist das Ergebnis **[SIGNIFIKANZ_TEXT]**.` },
                 size_mwu: {name: "LK Größe MWU", description: "Vergleich der medianen Lymphknotengrößen zwischen N+ und N- Patienten mittels Mann-Whitney-U-Test. Hier werden alle Lymphknoten der Patienten berücksichtigt, nicht Patienten-Level-Status.", interpretation: "Der Mann-Whitney-U-Test ergab einen p-Wert von **[P_WERT] ([SIGNIFIKANZ])**. Dies zeigt einen **[SIGNIFIKANZ_TEXT]** Unterschied in der Verteilung der Lymphknotengrößen zwischen den Lymphknoten von N+ und N- Patienten im Kollektiv [KOLLEKTIV]."}
             }
-        }
-    },
+        },
     PUBLICATION_CONFIG: {
         defaultLanguage: 'de',
         defaultSection: 'abstract',
@@ -933,16 +956,6 @@ let APP_CONFIG_MUTABLE = {
     }
 };
 
-APP_CONFIG_MUTABLE.UI_TEXTS.kurzanleitung.content = APP_CONFIG_MUTABLE.UI_TEXTS.kurzanleitung.content
-    .replace('[APP_VERSION]', APP_CONFIG_MUTABLE.APP_VERSION)
-    .replace('[SIGNIFICANCE_LEVEL_FORMATTED]', String(APP_CONFIG_MUTABLE.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL).replace('.', ','));
-
-APP_CONFIG_MUTABLE.UI_TEXTS.TOOLTIP_CONTENT.t2Size.description = APP_CONFIG_MUTABLE.UI_TEXTS.TOOLTIP_CONTENT.t2Size.description
-    .replace('${5.0}', APP_CONFIG_MUTABLE.T2_CRITERIA_SETTINGS.SIZE_RANGE.min)
-    .replace('${25.0}', APP_CONFIG_MUTABLE.T2_CRITERIA_SETTINGS.SIZE_RANGE.max)
-    .replace('${0.1}', APP_CONFIG_MUTABLE.T2_CRITERIA_SETTINGS.SIZE_RANGE.step);
-    
-APP_CONFIG_MUTABLE.UI_TEXTS.TOOLTIP_CONTENT.statMetrics.defaultP.interpretation = APP_CONFIG_MUTABLE.UI_TEXTS.TOOLTIP_CONTENT.statMetrics.defaultP.interpretation
-    .replace('${formatNumber(0.05,2).replace(\'.\',\',\')}', String(APP_CONFIG_MUTABLE.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL).replace('.', ','));
+// ... (post-processing steps from previous attempt are removed as they were incorrect)
 
 const APP_CONFIG = deepFreeze(APP_CONFIG_MUTABLE);
