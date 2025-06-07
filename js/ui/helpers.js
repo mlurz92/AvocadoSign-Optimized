@@ -16,7 +16,7 @@ const uiHelpers = (() => {
             console.error("showToast: Toast-Container Element 'toast-container' nicht gefunden.");
             return;
         }
-        const toastId = `toast-${generateUUID()}`;
+        const toastId = `toast-${utils.generateUUID()}`;
         const toastTypeConfig = {
             success: { bg: 'bg-success', icon: 'fa-check-circle', text: 'text-white' },
             warning: { bg: 'bg-warning', icon: 'fa-exclamation-triangle', text: 'text-dark' },
@@ -99,14 +99,6 @@ const uiHelpers = (() => {
         }
     }
 
-    function updateHeaderStatsUI(stats) {
-        updateElementHTML('header-kollektiv', stats.kollektiv);
-        updateElementHTML('header-anzahl-patienten', stats.anzahlPatienten);
-        updateElementHTML('header-status-n', stats.statusN);
-        updateElementHTML('header-status-as', stats.statusAS);
-        updateElementHTML('header-status-t2', stats.statusT2);
-    }
-    
     function updateKollektivButtonsUI(currentKollektiv) {
         document.querySelectorAll('.kollektiv-selector .btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.kollektiv === currentKollektiv);
@@ -145,7 +137,7 @@ const uiHelpers = (() => {
         const isPercent = key !== 'auc' && key !== 'f1';
         const digits = isPercent ? 1 : 3;
 
-        const valueFormatted = formatCI(metricData.value, metricData.ci?.lower, metricData.ci?.upper, digits, isPercent, na);
+        const valueFormatted = utils.formatCI(metricData.value, metricData.ci?.lower, metricData.ci?.upper, digits, isPercent, na);
         
         let ciWarning = '';
         const ciWarningThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.CI_WARNING_SAMPLE_SIZE_THRESHOLD;
@@ -166,13 +158,13 @@ const uiHelpers = (() => {
         }
 
         let bewertungStr = '';
-        if (key === 'auc') bewertungStr = getAUCBewertung(metricData.value);
-        if (key === 'phi') bewertungStr = getPhiBewertung(metricData.value);
+        if (key === 'auc') bewertungStr = utils.getAUCBewertung(metricData.value);
+        if (key === 'phi') bewertungStr = utils.getPhiBewertung(metricData.value);
         
         let interpretation = interpretationTemplate
             .replace(/\[WERT_MIT_CI\]/g, `<strong>${valueFormatted}</strong>`)
             .replace(/\[METHODE\]/g, `<strong>${methode}</strong>`)
-            .replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektivName)}</strong>`)
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${utils.getKollektivDisplayName(kollektivName)}</strong>`)
             .replace(/\[BEWERTUNG\]/g, `<strong>${bewertungStr}</strong>`);
 
         return interpretation + ciWarning;
@@ -184,62 +176,51 @@ const uiHelpers = (() => {
             return `Keine validen Test-Daten für '${key}' vorhanden.`;
         }
 
-        const pValueText = getPValueText(testData.pValue);
-        const signifikanzText = getStatisticalSignificanceText(testData.pValue);
+        const pValueText = utils.getPValueText(testData.pValue);
+        const signifikanzText = utils.getStatisticalSignificanceText(testData.pValue);
         
         return interpretationTemplate
-            .replace(/\[P_WERT\]/g, `${pValueText}`) // Replaced _FORMATED with direct text.
-            .replace(/\[SIGNIFIKANZ\]/g, `${getStatisticalSignificanceSymbol(testData.pValue)}`) // Add symbol here
+            .replace(/\[P_WERT\]/g, `${pValueText}`)
+            .replace(/\[SIGNIFIKANZ\]/g, `${utils.getStatisticalSignificanceSymbol(testData.pValue)}`)
             .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${signifikanzText}</strong>`)
             .replace(/\[METHODE1\]/g, `<strong>${methode1}</strong>`)
             .replace(/\[METHODE2\]/g, `<strong>${methode2}</strong>`)
-            .replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektivName)}</strong>`);
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${utils.getKollektivDisplayName(kollektivName)}</strong>`);
     }
     
     function getAssociationInterpretationHTML(key, assocData, merkmalName, kollektivName) {
          const interpretationTemplate = TOOLTIP_CONTENT.statMetrics[key]?.interpretation;
          if (!interpretationTemplate || !assocData) return 'Keine Interpretation verfügbar.';
 
-         const pValueText = typeof assocData.pValue === 'number' ? getPValueText(assocData.pValue) : 'N/A';
-         const signifikanzText = typeof assocData.pValue === 'number' ? getStatisticalSignificanceText(assocData.pValue) : 'nicht bestimmbar';
+         const pValueText = typeof assocData.pValue === 'number' ? utils.getPValueText(assocData.pValue) : 'N/A';
+         const signifikanzText = typeof assocData.pValue === 'number' ? utils.getStatisticalSignificanceText(assocData.pValue) : 'nicht bestimmbar';
+         const orVal = assocData.or?.value;
+         const rdVal = assocData.rd?.value;
          
          let mainStatFormatted = '';
-         if (key === 'or' && assocData.or) {
-             const orVal = assocData.or.value;
-             const factorText = orVal >= 1 ? 'höher' : 'niedriger';
+         if (key === 'or' && orVal !== undefined) {
              mainStatFormatted = interpretationTemplate
-                .replace(/\[WERT\]/g, formatCI(orVal, assocData.or.ci?.lower, assocData.or.ci?.upper, 2, false, '--'))
-                .replace(/\[FAKTOR_TEXT\]/g, `<strong>${factorText}</strong>`);
-         } else if (key === 'rd' && assocData.rd) {
-             const rdVal = assocData.rd.value;
-             const higherLowerText = rdVal >= 0 ? 'höher' : 'niedriger';
+                .replace(/\[WERT\]/g, utils.formatCI(orVal, assocData.or.ci?.lower, assocData.or.ci?.upper, 2, false, '--'))
+                .replace(/\[FAKTOR_TEXT\]/g, `<strong>${orVal >= 1 ? 'erhöht' : 'reduziert'}</strong>`);
+         } else if (key === 'rd' && rdVal !== undefined) {
              mainStatFormatted = interpretationTemplate
-                .replace(/\[WERT\]/g, formatCI(Math.abs(rdVal), assocData.rd.ci?.lower, assocData.rd.ci?.upper, 1, true, '--'))
-                .replace(/\[HOEHER_NIEDRIGER\]/g, `<strong>${higherLowerText}</strong>`);
-         } else if (key === 'phi' && assocData.phi) {
+                .replace(/\[WERT\]/g, utils.formatCI(Math.abs(rdVal), assocData.rd.ci?.lower, assocData.rd.ci?.upper, 1, true, '--'))
+                .replace(/\[HOEHER_NIEDRIGER\]/g, `<strong>${rdVal >= 0 ? 'höher' : 'niedriger'}</strong>`);
+         } else if (key === 'phi' && assocData.phi?.value !== undefined) {
               mainStatFormatted = interpretationTemplate
-                .replace(/\[WERT\]/g, formatNumber(assocData.phi.value, 2, '--'))
-                .replace(/\[BEWERTUNG\]/g, `<strong>${getPhiBewertung(assocData.phi.value)}</strong>`);
-         } else if (key === 'fisher' && assocData.pValue !== undefined) {
-             mainStatFormatted = ''; // Fisher does not have a main stat to format here, only p-value
-         } else if (key === 'mannwhitney' && assocData.pValue !== undefined) {
-             mainStatFormatted = interpretationTemplate
-                .replace(/\[VARIABLE\]/g, merkmalName); // Only variable name needed for MWU
+                .replace(/\[WERT\]/g, utils.formatNumber(assocData.phi.value, 2, '--'))
+                .replace(/\[BEWERTUNG\]/g, `<strong>${utils.getPhiBewertung(assocData.phi.value)}</strong>`);
+         } else if (key === 'fisher' || key === 'mannwhitney') {
+             mainStatFormatted = interpretationTemplate;
          }
 
-
-         return interpretationTemplate
-            .replace(/\[WERT\]/g, (assocData[key] && assocData[key].value !== undefined) ? formatNumber(assocData[key].value, (key === 'or' ? 2 : 1), '--') : 'N/A')
-            .replace(/\[HOEHER_NIEDRIGER\]/g, assocData[key]?.value > 0 ? 'höher' : 'niedriger')
-            .replace(/\[FAKTOR_TEXT\]/g, assocData[key]?.value >= 1 ? 'erhöht' : 'reduziert')
-            .replace(/\[BEWERTUNG\]/g, getPhiBewertung(assocData[key]?.value))
+         return mainStatFormatted
             .replace(/\[P_WERT\]/g, pValueText)
-            .replace(/\[SIGNIFIKANZ\]/g, getStatisticalSignificanceSymbol(assocData.pValue))
+            .replace(/\[SIGNIFIKANZ\]/g, utils.getStatisticalSignificanceSymbol(assocData.pValue))
             .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${signifikanzText}</strong>`)
             .replace(/\[MERKMAL\]/g, `<strong>'${merkmalName}'</strong>`)
-            .replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektivName)}</strong>`)
-            .replace(/\[VARIABLE\]/g, `<strong>'${merkmalName}'</strong>`); // For mannwhitney
-
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${utils.getKollektivDisplayName(kollektivName)}</strong>`)
+            .replace(/\[VARIABLE\]/g, `<strong>'${merkmalName}'</strong>`);
     }
 
     function showKurzanleitung() {
