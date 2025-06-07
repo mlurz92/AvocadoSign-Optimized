@@ -90,9 +90,10 @@ function saveToLocalStorage(key, value) {
         localStorage.setItem(key, JSON.stringify(value));
     } catch (e) {
         console.error(`Fehler beim Speichern im Local Storage (Schlüssel: ${key}):`, e);
-        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showToast === 'function') {
-            ui_helpers.showToast(`Speichern der Einstellung '${key}' fehlgeschlagen.`, 'warning');
-        }
+        // Removed specific ui_helpers.showToast here as utils should be independent of UI helpers
+        // if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showToast === 'function') {
+        //     ui_helpers.showToast(`Speichern der Einstellung '${key}' fehlgeschlagen.`, 'warning');
+        // }
     }
 }
 
@@ -378,11 +379,11 @@ function arraysAreEqual(arr1, arr2) {
 function getAUCBewertung(aucValue) {
     const value = parseFloat(aucValue);
     if (isNaN(value) || value < 0 || value > 1) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_bestimmbar || 'N/A';
-    if (value >= 0.9) return 'exzellent';
-    if (value >= 0.8) return 'gut';
-    if (value >= 0.7) return 'moderat';
-    if (value > 0.5) return 'schwach';
-    return 'nicht informativ';
+    if (value >= 0.9) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.exzellent || 'exzellent';
+    if (value >= 0.8) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.gut || 'gut';
+    if (value >= 0.7) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.moderat || 'moderat';
+    if (value > 0.5) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.schwach || 'schwach';
+    return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_informativ || 'nicht informativ';
 }
 
 function getPhiBewertung(phiValue) {
@@ -402,7 +403,19 @@ function getStatusClass(status) {
     return 'status-unknown';
 }
 
-// Exponiere alle relevanten Funktionen global
+// Exponiere alle relevanten Funktionen global, damit sie von anderen Modulen direkt genutzt werden können
+// Dies wird in einer modernen JS-Umgebung oft durch Import/Export Statements ersetzt,
+// aber da die Anwendung auf globalen Funktionen basiert, müssen sie am Window-Objekt bleiben oder
+// über ein Modulmuster wie im Falle von uiHelpers exponiert werden.
+// Da diese Datei als "js/utils/utils.js" direkt im HTML geladen wird
+// und ihre Funktionen von vielen anderen Modulen direkt aufgerufen werden (z.B. formatNumber, cloneDeep),
+// muss sie explizit globale Funktionen erstellen oder ein einziges Objekt exportieren,
+// das dann global zugänglich ist.
+// Ich werde hier die Funktionen direkt am window-Objekt belassen, da dies dem ursprünglichen Designansatz entspricht
+// und die Komplexität der Refaktorierung aller Aufrufe zu einem 'utils' Objekt vermeiden würde.
+// Die Änderung in helpers.js war notwendig, da uiHelpers.updateHeaderStatsUI explizit als Teil des uiHelpers-Objekts aufgerufen wurde.
+
+// Dies ist die Liste der Funktionen, die global zugänglich sein müssen
 window.getKollektivDisplayName = getKollektivDisplayName;
 window.formatNumber = formatNumber;
 window.formatPercent = formatPercent;
