@@ -129,7 +129,7 @@ const dataTab = (() => {
         const tableId = 'daten-table';
         const tableHeader = _createTableHeader(tableId, sortState);
         
-        let tableBody = `<tbody id="${tableId}-body">`;
+        let tableBody = `<tbody id="${CONSTANTS.SELECTORS.DATEN_TABLE_BODY.substring(1)}">`;
         if (data.length === 0) {
             tableBody += `<tr><td colspan="9" class="text-center text-muted p-3">Keine Patienten im ausgewählten Kollektiv gefunden.</td></tr>`;
         } else {
