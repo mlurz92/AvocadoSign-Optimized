@@ -96,12 +96,16 @@ const bruteForceManager = (() => {
         worker = null;
     }
 
-    function init(callbacks = {}) {
+    function setCallbacks(callbacks = {}) {
         onProgressCallback = callbacks.onProgress || null;
         onResultCallback = callbacks.onResult || null;
         onErrorCallback = callbacks.onError || null;
         onCancelledCallback = callbacks.onCancelled || null;
         onStartedCallback = callbacks.onStarted || null;
+    }
+
+    function init(callbacks = {}) {
+        setCallbacks(callbacks);
         allKollektivResults = {};
         return initializeWorker();
     }
@@ -186,6 +190,7 @@ const bruteForceManager = (() => {
         getAllResults,
         isRunning: isAnalysisRunning,
         isWorkerAvailable,
-        terminateWorker
+        terminateWorker,
+        setCallbacks
     });
 })();
