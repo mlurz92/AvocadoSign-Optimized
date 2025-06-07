@@ -11,10 +11,12 @@ const auswertungController = (() => {
 
     function _handleCriteriaInputChange(event) {
         const target = event.target;
-        const criterionKey = target.value;
+        if (!target) return;
+
         const isChecked = target.checked;
 
         if (target.matches('.criteria-checkbox')) {
+            const criterionKey = target.value;
             t2CriteriaManager.setCriteria({ [criterionKey]: { active: isChecked } });
             debouncedUpdate();
         } else if (target.id === 't2-logic-switch') {
@@ -73,7 +75,12 @@ const auswertungController = (() => {
             t2CriteriaManager.setCriteria(criteria, logic);
             debouncedUpdate();
             uiHelpers.showToast('Optimierte Kriterien erfolgreich übernommen.', 'success');
-            uiHelpers.highlightElement('t2-criteria-definition-card');
+            const criteriaCard = document.getElementById('t2-criteria-definition-card');
+            if(criteriaCard) {
+                criteriaCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                criteriaCard.classList.add('highlight-animation');
+                setTimeout(() => criteriaCard.classList.remove('highlight-animation'), 2000);
+            }
         }
     }
 
@@ -90,7 +97,12 @@ const auswertungController = (() => {
         startBtn.classList.toggle('d-none', isRunning);
         cancelBtn.classList.toggle('d-none', !isRunning);
         progressContainer.classList.toggle('d-none', !isRunning);
-        resultContainer.classList.toggle('d-none', isRunning);
+        
+        if(state !== 'progress' && state !== 'started') {
+            resultContainer.classList.remove('d-none');
+        } else {
+             resultContainer.classList.add('d-none');
+        }
         
         switch(state) {
             case 'started':
@@ -112,6 +124,7 @@ const auswertungController = (() => {
                 break;
             case 'error':
                  infoText.innerHTML = `<span class="text-danger">Status: Fehler bei der Optimierung.</span><p class="small text-danger mb-0">${payload.message}</p>`;
+                 progressContainer.innerHTML = '';
                 break;
         }
     }
@@ -161,11 +174,17 @@ const auswertungController = (() => {
     
     function onTabEnter() {
        _addEventListeners();
-       bruteForceManager.setUpdateCallback(updateBruteForceUI);
+       bruteForceManager.setCallbacks({
+           onStarted: (payload) => updateBruteForceUI('started', payload),
+           onProgress: (payload) => updateBruteForceUI('progress', payload),
+           onResult: (payload) => updateBruteForceUI('result', payload),
+           onCancelled: (payload) => updateBruteForceUI('cancelled', payload),
+           onError: (payload) => updateBruteForceUI('error', payload)
+       });
     }
     
     function onTabExit() {
-        bruteForceManager.setUpdateCallback(null);
+        bruteForceManager.setCallbacks({});
     }
 
     return Object.freeze({
