@@ -95,7 +95,7 @@ const dataProcessor = (() => {
     }
 
     function getProcessedData() {
-        return cloneDeep(_processedPatientData);
+        return utils.cloneDeep(_processedPatientData);
     }
 
     function filterDataByKollektiv(data, kollektiv) {
@@ -107,12 +107,12 @@ const dataProcessor = (() => {
             ? data.filter(p => p && p.therapie === kollektiv)
             : data;
 
-        return cloneDeep(filteredData);
+        return utils.cloneDeep(filteredData);
     }
 
     function calculateHeaderStats(data, currentKollektiv) {
          const n = data?.length ?? 0;
-         const kollektivName = getKollektivDisplayName(currentKollektiv);
+         const kollektivName = utils.getKollektivDisplayName(currentKollektiv);
          const placeholder = '--';
 
          if (!Array.isArray(data) || n === 0) {
@@ -130,11 +130,10 @@ const dataProcessor = (() => {
 
          const formatStatus = (pos, neg) => {
              const totalKnown = pos + neg;
-             if (totalKnown === 0 && n > 0 && (pos === 0 && neg === 0)) { // If all are null/undefined for this status
-                const unknownCount = n - totalKnown;
-                if (unknownCount === n) return placeholder; // All unknown
+             if (totalKnown === 0) {
+                return placeholder;
              }
-             return totalKnown > 0 ? `${formatPercent(pos / totalKnown, 1)} (+)` : placeholder;
+             return `${utils.formatPercent(pos / totalKnown, 1)} (+)`
          };
 
          return {
@@ -143,20 +142,20 @@ const dataProcessor = (() => {
             statusN: formatStatus(nPos, nNeg),
             statusAS: formatStatus(asPos, asNeg),
             statusT2: formatStatus(t2Pos, t2Neg),
-            nPos: nPos,
-            nNeg: nNeg,
-            asPos: asPos,
-            asNeg: asNeg,
-            t2Pos: t2Pos,
-            t2Neg: t2Neg
+            nPos,
+            nNeg,
+            asPos,
+            asNeg,
+            t2Pos,
+            t2Neg
          };
     }
 
     function getAvailableKollektive() {
         const kollektive = new Set();
-        kollektive.add('Gesamt'); // Always include Gesamt
+        kollektive.add('Gesamt');
         _processedPatientData.forEach(p => {
-            if (p && typeof p.therapie === 'string') {
+            if (p && typeof p.therapie === 'string' && p.therapie !== 'unbekannt') {
                 kollektive.add(p.therapie);
             }
         });
@@ -167,7 +166,6 @@ const dataProcessor = (() => {
         });
         return sortedKollektive;
     }
-
 
     return Object.freeze({
         processPatientData,
