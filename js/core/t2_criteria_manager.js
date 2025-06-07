@@ -37,7 +37,7 @@ const t2CriteriaManager = (() => {
 
     function resetToDefaults() {
         criteria = getDefaultT2Criteria();
-        setCriteria(criteria, criteria.logic);
+        setCriteria(criteria, criteria.logic); // Apply and save defaults
     }
 
     function formatCriteriaForDisplay(criteriaObj, logic) {
@@ -116,7 +116,7 @@ const t2CriteriaManager = (() => {
             evaluatedPatient.lymphknoten_t2_bewertet = lymphNodes.map(lk => {
                 if (!lk) return null;
                 const checkResult = checkSingleLymphNode(lk, criteriaObj);
-                const activeKeys = Object.keys(criteriaObj).filter(key => key !== 'logic' && criteriaObj[key]?.active);
+                const activeKeys = Object.keys(criteriaObj).filter(key => key !== 'logic' && criteriaObj[key]?.active === true);
                 let lkPasses = false;
 
                 if (activeKeys.length > 0) {
@@ -137,10 +137,13 @@ const t2CriteriaManager = (() => {
             const hasT2Data = lymphNodes.length > 0;
             const hasActiveCriteria = Object.keys(criteriaObj).some(key => key !== 'logic' && criteriaObj[key]?.active);
             
+            // The patient's T2 status is only assigned if there are active criteria AND T2 data.
+            // If no active criteria, the status is '?', signifying it was not evaluated by criteria.
+            // If no T2 data for the patient, but criteria are active, it's '-' (no positive nodes found).
             if (hasActiveCriteria) {
                  evaluatedPatient.t2 = hasT2Data ? (patientT2Positive ? '+' : '-') : '-';
             } else {
-                 evaluatedPatient.t2 = '?';
+                 evaluatedPatient.t2 = '?'; // Not evaluated by criteria
             }
             
             evaluatedPatient.anzahl_t2_lk = lymphNodes.length;
