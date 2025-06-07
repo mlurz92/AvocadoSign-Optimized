@@ -29,12 +29,12 @@ const praesentationRenderer = (() => {
     function _createDemographicsTableHTML(stats) {
         if (!stats) return '<p class="text-muted p-2">Keine Demographiedaten verfügbar.</p>';
         const rows = [
-            { label: 'Anzahl Patienten (n)', value: formatNumber(stats.count, 0) },
-            { label: 'Medianes Alter (Jahre)', value: formatNumber(stats.age.median, 0) },
-            { label: 'Interquartilsabstand Alter', value: `${formatNumber(stats.age.q1, 0)} - ${formatNumber(stats.age.q3, 0)}` },
-            { label: 'Geschlecht (m / w)', value: `${formatNumber(stats.gender.m, 0)} / ${formatNumber(stats.gender.f, 0)}` },
-            { label: 'Therapie (pRCT / nRCT)', value: `${formatNumber(stats.therapy['direkt OP'], 0)} / ${formatNumber(stats.therapy.nRCT, 0)}` },
-            { label: 'Histologie N+ / N-', value: `${formatNumber(stats.nStatus.positive, 0)} / ${formatNumber(stats.nStatus.negative, 0)}` }
+            { label: 'Anzahl Patienten (n)', value: utils.formatNumber(stats.count, 0) },
+            { label: 'Medianes Alter (Jahre)', value: utils.formatNumber(stats.age.median, 0) },
+            { label: 'Interquartilsabstand Alter', value: `${utils.formatNumber(stats.age.q1, 0)} - ${utils.formatNumber(stats.age.q3, 0)}` },
+            { label: 'Geschlecht (m / w)', value: `${utils.formatNumber(stats.gender.m, 0)} / ${utils.formatNumber(stats.gender.f, 0)}` },
+            { label: 'Therapie (pRCT / nRCT)', value: `${utils.formatNumber(stats.therapy['direkt OP'], 0)} / ${utils.formatNumber(stats.therapy.nRCT, 0)}` },
+            { label: 'Histologie N+ / N-', value: `${utils.formatNumber(stats.nStatus.positive, 0)} / ${utils.formatNumber(stats.nStatus.negative, 0)}` }
         ];
         let tableHTML = '<table class="table table-sm table-striped table-borderless mb-0">';
         rows.forEach(row => {
@@ -57,7 +57,7 @@ const praesentationRenderer = (() => {
         let tableHTML = '<table class="table table-sm table-striped table-borderless mb-0">';
         metrics.forEach(metric => {
             const metricData = stats[metric.key];
-            const formattedValue = formatCI(metricData?.value, metricData?.ci?.lower, metricData?.ci?.upper, 1, true, '--');
+            const formattedValue = utils.formatCI(metricData?.value, metricData?.ci?.lower, metricData?.ci?.upper, 1, true, '--');
             const tooltipInterp = uiHelpers.getMetricInterpretationHTML(metric.key, metricData, title, kollektivName);
             tableHTML += `<tr><td class="small">${metric.label}</td><td class="text-end small" data-tippy-content="${tooltipInterp}"><strong>${formattedValue}</strong></td></tr>`;
         });
@@ -79,8 +79,8 @@ const praesentationRenderer = (() => {
             const isPercent = metric !== 'auc';
             const digits = metric === 'auc' ? 3 : 1;
 
-            const asFormatted = formatCI(asData?.value, asData?.ci?.lower, asData?.ci?.upper, digits, isPercent, '--');
-            const t2Formatted = formatCI(t2Data?.value, t2Data?.ci?.lower, t2Data?.ci?.upper, digits, isPercent, '--');
+            const asFormatted = utils.formatCI(asData?.value, asData?.ci?.lower, asData?.ci?.upper, digits, isPercent, '--');
+            const t2Formatted = utils.formatCI(t2Data?.value, t2Data?.ci?.lower, t2Data?.ci?.upper, digits, isPercent, '--');
 
             const asTooltip = uiHelpers.getMetricInterpretationHTML(metric, asData, asTitle, kollektivName);
             const t2Tooltip = uiHelpers.getMetricInterpretationHTML(metric, t2Data, t2Title, kollektivName);
@@ -104,10 +104,10 @@ const praesentationRenderer = (() => {
         ];
         let tableHTML = '<table class="table table-sm table-striped table-borderless mb-0">';
         tests.forEach(test => {
-            const pValueFormatted = getPValueText(test.data.pValue);
-            const sigSymbol = getStatisticalSignificanceSymbol(test.data.pValue);
+            const pValueText = utils.getPValueText(test.data.pValue);
+            const sigSymbol = utils.getStatisticalSignificanceSymbol(test.data.pValue);
             const tooltip = uiHelpers.getTestInterpretationHTML(test.key, test.data, kollektivName, 'Avocado Sign', 'T2');
-            tableHTML += `<tr><td class="small">${test.label}</td><td class="text-end small" data-tippy-content="${tooltip}">p = <strong>${pValueFormatted}</strong> ${sigSymbol}</td></tr>`;
+            tableHTML += `<tr><td class="small">${test.label}</td><td class="text-end small" data-tippy-content="${tooltip}"><strong>${pValueText}</strong> ${sigSymbol}</td></tr>`;
         });
         tableHTML += '</tbody></table>';
         return tableHTML;
@@ -115,12 +115,12 @@ const praesentationRenderer = (() => {
 
     function _createAsPurViewHTML(stats) {
         const currentKollektiv = stateManager.getCurrentKollektiv();
-        const kollektivDisplayName = getKollektivDisplayName(currentKollektiv);
+        const kollektivDisplayName = utils.getKollektivDisplayName(currentKollektiv);
         if (!stats) return '<p class="p-3 text-center text-muted">Statistikdaten für die "AS Pur"-Ansicht konnten nicht geladen werden.</p>';
 
         const demographicsCard = uiComponents.createStatistikCard(
             'praes-demographics-as-pur',
-            'Demographie (Gesamtkollektiv)', // Title remains generic
+            'Demographie (Gesamtkollektiv)',
             _createDemographicsTableHTML(stats.descriptive),
             true, 'praesentation.demographicsCard',
             [{ id: 'download-demographics-as-pur-md', format: 'md', icon: 'fa-file-alt', tooltip: TOOLTIP_CONTENT.praesentation.downloadDemographicsMD.description }]
@@ -128,7 +128,7 @@ const praesentationRenderer = (() => {
 
         const performanceCard = uiComponents.createStatistikCard(
             'praes-performance-as-pur',
-            'Performance Avocado Sign', // Title remains generic
+            'Performance Avocado Sign',
             _createPerformanceTableHTML(stats.avocadoSign, 'Avocado Sign', 'as', kollektivDisplayName),
             true, 'praesentation.asPerformanceCard',
             [{ id: 'download-performance-as-pur-csv', format: 'csv', icon: 'fa-file-csv', tooltip: TOOLTIP_CONTENT.praesentation.downloadPerformanceCSV.description },
@@ -137,9 +137,9 @@ const praesentationRenderer = (() => {
 
         const chartCard = uiComponents.createStatistikCard(
             'praes-chart-container-as-pur',
-            'Performance-Chart', // Title remains generic
+            'Performance-Chart',
             '<div id="praes-chart-as-pur" class="chart-container" style="min-height: 350px;"></div>',
-            true, 'praesentation.asVsT2ChartCard', // Reusing tooltip for chart card
+            true, 'praesentation.asVsT2ChartCard',
             [{ format: 'png', chartId: 'praes-chart-as-pur', chartName: 'Performance_AS_Pur', tooltip: TOOLTIP_CONTENT.praesentation.downloadCompChartPNG.description },
              { format: 'svg', chartId: 'praes-chart-as-pur', chartName: 'Performance_AS_Pur', tooltip: TOOLTIP_CONTENT.praesentation.downloadCompChartSVG.description }]
         );
@@ -148,12 +148,12 @@ const praesentationRenderer = (() => {
     }
 
     function _createAsVsT2ViewHTML(stats, study) {
-        const currentKollektiv = stateManager.getCurrentKollektiv(); // Use global kollektiv for overall context
-        const kollektivDisplayName = getKollektivDisplayName(currentKollektiv);
+        const currentKollektiv = stateManager.getCurrentKollektiv();
+        const kollektivDisplayName = utils.getKollektivDisplayName(currentKollektiv);
         const studyDisplayName = study?.displayShortName || study?.name || 'N/A';
         const studyApplicableKollektiv = study?.applicableKollektiv;
         const displayKollektivForStudy = studyApplicableKollektiv && studyApplicableKollektiv !== currentKollektiv ?
-                                         `${kollektivDisplayName} (Studie: ${getKollektivDisplayName(studyApplicableKollektiv)})` :
+                                         `${kollektivDisplayName} (Studie: ${utils.getKollektivDisplayName(studyApplicableKollektiv)})` :
                                          kollektivDisplayName;
         
         if (!stats || !study) return '<p class="p-3 text-center text-muted">Vergleichsdaten für die ausgewählte Studie konnten nicht geladen werden.</p>';
