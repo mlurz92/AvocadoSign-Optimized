@@ -8,12 +8,8 @@ const statistikTab = (() => {
 
     function _createGueteContent(stats, methode, kollektivName) {
         if (!stats || !stats.matrix) return '<p class="text-muted small p-3">Keine Gütedaten verfügbar.</p>';
-        const { matrix } = stats;
         const matrixId = `matrix-${methode}-${kollektivName.replace(/\s/g, '')}`;
         const rocId = `roc-${methode}-${kollektivName.replace(/\s/g, '')}`;
-        
-        let matrixHTML = `<div class="col-md-5" id="${matrixId}"></div>`;
-        let rocHTML = `<div class="col-md-7" id="${rocId}"></div>`;
         
         const metricsHTML = `
             <div class="col-12 mt-3">
@@ -30,7 +26,7 @@ const statistikTab = (() => {
                 </table>
             </div>`;
 
-        return `<div class="row align-items-center">${matrixHTML}${rocHTML}${metricsHTML}</div>`;
+        return `<div class="row align-items-center"><div class="col-md-5" id="${matrixId}"></div><div class="col-md-7" id="${rocId}"></div>${metricsHTML}</div>`;
     }
 
     function _createVergleichContent(stats, kollektivName, t2ShortName = 'T2') {
