@@ -27,11 +27,12 @@ const publicationRenderer = (() => {
         const sectionLabels = UI_TEXTS.publikationTab.sectionLabels;
 
         sections.forEach(section => {
-            navItems += `<a class="nav-link disabled" href="#">${sectionLabels[section.labelKey] || section.labelKey}</a>`;
             if (section.subSections && section.subSections.length > 0) {
+                // Main section label, not clickable directly if it has sub-sections
+                navItems += `<a class="nav-link disabled fw-bold mt-2" href="#">${sectionLabels[section.labelKey] || section.labelKey}</a>`;
                 navItems += section.subSections.map(subSection => {
                      const isActive = subSection.id === activeSectionId;
-                     return `<a class="nav-link ${isActive ? 'active' : ''}" href="#" data-section-id="${subSection.id}">${subSection.label}</a>`;
+                     return `<a class="nav-link ps-4 ${isActive ? 'active' : ''}" href="#" data-section-id="${subSection.id}">${subSection.label}</a>`;
                 }).join('');
             } else {
                  const isActive = section.id === activeSectionId;
@@ -51,18 +52,35 @@ const publicationRenderer = (() => {
     }
 
     function _createContentAreaHTML(sectionId, content, lang) {
-        const wordCount = content.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean).length;
+        // Remove HTML tags for word count
+        const cleanContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        const wordCount = cleanContent.split(/\s+/).filter(Boolean).length;
         const requirements = APP_CONFIG.PUBLICATION_JOURNAL_REQUIREMENTS;
-        const wordLimit = requirements[`WORD_COUNT_${sectionId.toUpperCase()}_MAX`] || requirements.WORD_COUNT_MAIN_TEXT_MAX;
+        
+        let wordLimitKey = `WORD_COUNT_${sectionId.toUpperCase()}_MAX`;
+        // Handle sub-sections by mapping to main section limits if no specific limit
+        if (!requirements[wordLimitKey]) {
+            if (sectionId.startsWith('abstract')) wordLimitKey = 'WORD_COUNT_ABSTRACT_MAX';
+            else if (sectionId.startsWith('introduction')) wordLimitKey = 'WORD_COUNT_MAIN_TEXT_MAX'; // Usually counts towards main text
+            else if (sectionId.startsWith('methods')) wordLimitKey = 'WORD_COUNT_MAIN_TEXT_MAX';
+            else if (sectionId.startsWith('results')) wordLimitKey = 'WORD_COUNT_MAIN_TEXT_MAX';
+            else if (sectionId.startsWith('discussion')) wordLimitKey = 'WORD_COUNT_MAIN_TEXT_MAX';
+            else if (sectionId.startsWith('references')) wordLimitKey = null; // References usually not word counted
+            else wordLimitKey = null; // Default for unknown sections
+        }
+        
+        const wordLimit = requirements[wordLimitKey];
         const limitExceeded = wordLimit && wordCount > wordLimit;
-        const activeSectionObject = PUBLICATION_CONFIG.sections.flatMap(s => s.subSections || s).find(s => s.id === sectionId);
-        const sectionTitle = activeSectionObject ? activeSectionObject.label : 'Inhalt';
+        
+        const activeSectionObject = PUBLICATION_CONFIG.sections.flatMap(s => s.subSections || (s.id === sectionId ? [s] : [])).find(s => s.id === sectionId);
+        const sectionTitle = activeSectionObject ? activeSectionObject.label : 'Inhalt'; // Fallback for main sections without explicit sub-label
+        const sectionTitleText = UI_TEXTS.publikationTab.sectionLabels[sectionTitle] || sectionTitle; // Use label from text_config if available
 
         return `
             <div class="col-lg-9 publication-main-content-col">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0 mobile-section-title">${sectionTitle}</h4>
+                        <h4 class="mb-0 mobile-section-title">${sectionTitleText}</h4>
                         <div class="d-none d-lg-block">
                             <span class="badge ${limitExceeded ? 'bg-danger' : 'bg-secondary'}" data-tippy-content="Aktuelle Wortzahl / Wortlimit für diese Sektion.">
                                 ${wordCount}${wordLimit ? ` / ${wordLimit}` : ''} Wörter
@@ -76,7 +94,7 @@ const publicationRenderer = (() => {
                         </button>
                     </div>
                     <div class="card-body publication-content" id="publication-content-area">
-                        <h2 class="d-none d-lg-block">${sectionTitle}</h2>
+                        <h2 class="d-none d-lg-block">${sectionTitleText}</h2>
                         ${content}
                     </div>
                 </div>
