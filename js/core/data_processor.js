@@ -1,4 +1,5 @@
 const dataProcessor = (() => {
+    let _processedPatientData = [];
 
     function calculateAge(birthdate, examDate) {
         if (!birthdate || !examDate) {
@@ -89,7 +90,12 @@ const dataProcessor = (() => {
              return rawData.map((p, i) => ({ ...p, nr: p.nr ?? i + 1, error: "Konfigurationsfehler" }));
         }
 
-        return rawData.map((patient, index) => processSinglePatient(patient, index, APP_CONFIG));
+        _processedPatientData = rawData.map((patient, index) => processSinglePatient(patient, index, APP_CONFIG));
+        return _processedPatientData;
+    }
+
+    function getProcessedData() {
+        return cloneDeep(_processedPatientData);
     }
 
     function filterDataByKollektiv(data, kollektiv) {
@@ -146,10 +152,29 @@ const dataProcessor = (() => {
          };
     }
 
+    function getAvailableKollektive() {
+        const kollektive = new Set();
+        kollektive.add('Gesamt'); // Always include Gesamt
+        _processedPatientData.forEach(p => {
+            if (p && typeof p.therapie === 'string') {
+                kollektive.add(p.therapie);
+            }
+        });
+        const sortedKollektive = Array.from(kollektive).sort((a, b) => {
+            if (a === 'Gesamt') return -1;
+            if (b === 'Gesamt') return 1;
+            return a.localeCompare(b);
+        });
+        return sortedKollektive;
+    }
+
+
     return Object.freeze({
         processPatientData,
+        getProcessedData,
         filterDataByKollektiv,
-        calculateHeaderStats
+        calculateHeaderStats,
+        getAvailableKollektive
     });
 
 })();
