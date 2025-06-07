@@ -16,25 +16,25 @@ const exportController = (() => {
         try {
             switch (format) {
                 case 'stats-csv':
-                    exportService.exportStatistikCsv();
+                    await exportService.exportStatistikCsv();
                     break;
                 case 'bruteforce-txt':
-                    exportService.exportBruteForceReport();
+                    await exportService.exportBruteForceReport();
                     break;
                 case 'filtered-data-csv':
-                    exportService.exportFilteredDataAsCsv();
+                    await exportService.exportFilteredDataAsCsv();
                     break;
                 case 'comprehensive-report-html':
-                    exportService.exportComprehensiveReport();
+                    await exportService.exportComprehensiveReport();
                     break;
                 case 'all-zip':
                     await exportService.exportCategoryZip('all-zip');
                     break;
                 case 'png-zip':
-                    await exportService.exportChartsZip('#app-container', 'PNG_ZIP', 'png');
+                    await exportService.exportCategoryZip('png-zip');
                     break;
                 case 'svg-zip':
-                    await exportService.exportChartsZip('#app-container', 'SVG_ZIP', 'svg');
+                    await exportService.exportCategoryZip('svg-zip');
                     break;
                 case 'excel-workbook':
                     await exportService.exportExcelWorkbook();
@@ -97,6 +97,7 @@ const exportController = (() => {
         mainApp = app;
         paneElement = document.getElementById('export-tab-pane');
         
+        // Add global click listener for download buttons in cards
         document.body.addEventListener('click', _handleGlobalDownloadClick);
         isInitialized = true;
     }
