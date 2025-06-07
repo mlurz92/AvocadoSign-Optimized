@@ -138,9 +138,12 @@ document.addEventListener('DOMContentLoaded', () => {
             processedData = dataProcessor.processPatientData(patientDataRaw);
             stateManager.init();
             t2CriteriaManager.initialize();
-            studyT2CriteriaManager.initialize();
 
-            Object.values(controllers).forEach(controller => controller.init(mainAppInterface));
+            Object.values(controllers).forEach(controller => {
+                if (typeof controller.init === 'function') {
+                    controller.init(mainAppInterface);
+                }
+            });
             
             bruteForceManager.init({
                 onProgress: (payload) => auswertungController.updateBruteForceUI('progress', payload),
