@@ -32,7 +32,7 @@ const auswertungTab = (() => {
             return values.map(value => {
                 const icon = commonComponents.createT2CriteriaIcon(key, value);
                 const tooltipText = TEXT_CONFIG.de.tooltips.t2CriteriaButtons[key].replace('{VALUE}', value);
-                return `<button class="btn t2-criteria-button" data-criterion="${key}" data-value="${value}" data-tippy-content="${tooltipText}">${icon} ${value}</button>`;
+                return `<button class="btn btn-sm t2-criteria-button" data-criterion="${key}" data-value="${value}" data-tippy-content="${tooltipText}">${icon} ${value}</button>`;
             }).join('');
         };
 
@@ -64,14 +64,19 @@ const auswertungTab = (() => {
                        max="${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max}" 
                        step="${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step}" 
                        value="${sizeThreshold}">
-                <span id="${CONSTANTS.SELECTORS.VALUE_SIZE.substring(1)}" class="fw-bold ms-2" style="min-width: 35px;">${formatNumber(sizeThreshold, 1)}</span>
+                <input type="number" class="form-control form-control-sm ms-2" id="${CONSTANTS.SELECTORS.INPUT_SIZE.substring(1)}" 
+                       value="${sizeThreshold}" 
+                       style="width: 75px;"
+                       min="${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min}" 
+                       max="${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max}" 
+                       step="${APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.step}">
                 <span class="ms-1 small text-muted">mm</span>
             </div>`;
             
-        const formContent = `<div class="btn-group w-100">${createButtonOptions('form')}</div>`;
-        const konturContent = `<div class="btn-group w-100">${createButtonOptions('kontur')}</div>`;
-        const homogenitaetContent = `<div class="btn-group w-100">${createButtonOptions('homogenitaet')}</div>`;
-        const signalContent = `<div class="btn-group w-100">${createButtonOptions('signal')}</div>`;
+        const formContent = `<div class="btn-group w-100" role="group">${createButtonOptions('form')}</div>`;
+        const konturContent = `<div class="btn-group w-100" role="group">${createButtonOptions('kontur')}</div>`;
+        const homogenitaetContent = `<div class="btn-group w-100" role="group">${createButtonOptions('homogenitaet')}</div>`;
+        const signalContent = `<div class="btn-group w-100" role="group">${createButtonOptions('signal')}</div>`;
 
         const mainCardContent = `
             <div class="row g-2">
