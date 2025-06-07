@@ -30,12 +30,24 @@ const chartRenderer = (() => {
         const config = {
             width: options.width || C.DEFAULT_WIDTH,
             height: options.height || C.DEFAULT_HEIGHT,
-            margin: options.margin || C.DEFAULT_MARGIN,
+            margin: options.margin || C.COMPACT_PIE_MARGIN, // Changed to compact margin for dashboard
             xAxisLabel: options.xAxisLabel || '',
-            yAxisLabel: options.yAxisLabel || ''
+            yAxisLabel: options.yAxisLabel || '',
+            barColor: options.barColor || C.AS_COLOR // Default bar color
         };
         const svg = _createBaseSvg(containerId, config);
         const tooltip = _createTooltip(containerId);
+
+        if (!data || data.length === 0) {
+            svg.append("text")
+                .attr("x", config.width / 2)
+                .attr("y", config.height / 2)
+                .attr("text-anchor", "middle")
+                .style("font-size", "12px")
+                .style("fill", C.ICON_COLOR_INACTIVE)
+                .text("Keine Daten");
+            return;
+        }
 
         const x = d3.scaleBand()
             .range([0, config.width])
@@ -49,6 +61,16 @@ const chartRenderer = (() => {
             .attr("transform", "translate(-5,0)rotate(-30)")
             .style("text-anchor", "end")
             .style("font-size", C.TICK_LABEL_FONT_SIZE);
+        
+        // Add X-axis label
+        if (config.xAxisLabel) {
+            svg.append("text")
+                .attr("x", config.width / 2)
+                .attr("y", config.height + config.margin.bottom - 10)
+                .style("text-anchor", "middle")
+                .style("font-size", C.AXIS_LABEL_FONT_SIZE)
+                .text(config.xAxisLabel);
+        }
 
         const yMax = d3.max(data, d => d.value);
         const y = d3.scaleLinear()
@@ -56,9 +78,21 @@ const chartRenderer = (() => {
             .range([config.height, 0]);
 
         svg.append("g")
-            .call(d3.axisLeft(y).ticks(5))
+            .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0f"))) // Format as integer
             .selectAll("text")
             .style("font-size", C.TICK_LABEL_FONT_SIZE);
+
+        // Add Y-axis label
+        if (config.yAxisLabel) {
+            svg.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 0 - config.margin.left + 10)
+                .attr("x", 0 - (config.height / 2))
+                .attr("dy", "1em")
+                .style("text-anchor", "middle")
+                .style("font-size", C.AXIS_LABEL_FONT_SIZE)
+                .text(config.yAxisLabel);
+        }
             
         svg.selectAll(".bar")
             .data(data)
@@ -69,7 +103,7 @@ const chartRenderer = (() => {
             .attr("width", x.bandwidth())
             .attr("y", d => y(0))
             .attr("height", 0)
-            .attr("fill", C.AS_COLOR)
+            .attr("fill", (d, i) => C.COLOR_SCHEMES.default[i % C.COLOR_SCHEMES.default.length]) // Use color scheme
             .on("mouseover", (event, d) => {
                 tooltip.style("opacity", 1)
                        .html(`<strong>${d.label}</strong><br>${options.yAxisLabel || 'Wert'}: ${formatNumber(d.value, 0)}`)
@@ -93,6 +127,17 @@ const chartRenderer = (() => {
         const svg = _createBaseSvg(containerId, config);
         const tooltip = _createTooltip(containerId);
 
+        if (!data || data.length === 0) {
+            svg.append("text")
+                .attr("x", config.width / 2)
+                .attr("y", config.height / 2)
+                .attr("text-anchor", "middle")
+                .style("font-size", "12px")
+                .style("fill", C.ICON_COLOR_INACTIVE)
+                .text("Keine Daten für Vergleich");
+            return;
+        }
+
         const groups = data.map(d => d.metric);
         const subgroups = [labels.method1, labels.method2];
 
@@ -108,14 +153,26 @@ const chartRenderer = (() => {
             .style("font-size", C.TICK_LABEL_FONT_SIZE);
 
         const y = d3.scaleLinear()
-            .domain([0, 1])
+            .domain([0, 1]) // Metrics like Sens, Spez, AUC are usually between 0 and 1
             .range([config.height, 0]);
 
         svg.append("g")
-            .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0%")))
+            .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0%"))) // Format as percentage
             .selectAll("text")
             .style("font-size", C.TICK_LABEL_FONT_SIZE);
         
+        // Add Y-axis label
+        if (config.yAxisLabel) {
+            svg.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 0 - config.margin.left + 10)
+                .attr("x", 0 - (config.height / 2))
+                .attr("dy", "1em")
+                .style("text-anchor", "middle")
+                .style("font-size", C.AXIS_LABEL_FONT_SIZE)
+                .text(config.yAxisLabel);
+        }
+
         const xSubgroup = d3.scaleBand()
             .domain(subgroups)
             .range([0, x.bandwidth()])
@@ -140,7 +197,7 @@ const chartRenderer = (() => {
             .attr("height", 0)
             .on("mouseover", (event, d) => {
                  tooltip.style("opacity", 1)
-                       .html(`<strong>${d.name} - ${d.key}</strong><br>${config.yAxisLabel}: ${formatCI(d.value, d.ci_lower, d.ci_upper, 1, true)}`)
+                       .html(`<strong>${d.name} - ${d.key}</strong><br>${config.yAxisLabel}: ${formatCI(d.value, d.ci?.lower, d.ci?.upper, d.key === 'AUC' ? 3 : 1, d.key !== 'AUC')}`)
                        .style("left", (event.pageX + 15) + "px")
                        .style("top", (event.pageY - 28) + "px");
             })
@@ -163,10 +220,32 @@ const chartRenderer = (() => {
         errorBars.append("line")
             .attr("x1", d => xSubgroup(d.name) + xSubgroup.bandwidth() / 2)
             .attr("x2", d => xSubgroup(d.name) + xSubgroup.bandwidth() / 2)
-            .attr("y1", d => y(d.ci_lower))
-            .attr("y2", d => y(d.ci_upper))
+            .attr("y1", d => y(d.ci?.lower !== undefined ? d.ci.lower : d.value))
+            .attr("y2", d => y(d.ci?.upper !== undefined ? d.ci.upper : d.value))
             .attr("stroke", "black")
             .attr("stroke-width", 1.5);
+
+        // Add legend
+        const legend = svg.append("g")
+            .attr("font-family", "sans-serif")
+            .attr("font-size", C.LEGEND_FONT_SIZE)
+            .attr("text-anchor", "end")
+            .selectAll("g")
+            .data(subgroups.slice().reverse())
+            .join("g")
+            .attr("transform", (d, i) => `translate(0,${i * 20})`);
+
+        legend.append("rect")
+            .attr("x", config.width - 19)
+            .attr("width", 19)
+            .attr("height", 19)
+            .attr("fill", color);
+
+        legend.append("text")
+            .attr("x", config.width - 24)
+            .attr("y", 9.5)
+            .attr("dy", "0.32em")
+            .text(d => d);
     }
     
     async function getSvgBlob(svgElement) {
@@ -192,10 +271,12 @@ const chartRenderer = (() => {
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const bbox = svgElement.getBBox();
+                    // Use getBoundingClientRect for more accurate dimensions, especially if SVG is scaled by CSS
+                    const bbox = svgElement.getBoundingClientRect();
                     canvas.width = bbox.width * scale;
                     canvas.height = bbox.height * scale;
                     const ctx = canvas.getContext('2d');
+                    // Draw the image
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                     URL.revokeObjectURL(url);
                     canvas.toBlob(resolve, 'image/png');
