@@ -1,4 +1,4 @@
-const studyT2CriteriaManager = (() => {
+const studyCriteriaManager = (() => {
 
     const studyT2CriteriaSets = Object.freeze([
         Object.freeze({
@@ -342,6 +342,11 @@ const studyT2CriteriaManager = (() => {
              return patientCopy;
          }).filter(p => p !== null);
     }
+    
+    function getStudyListForPresentation() {
+        const sets = getAllStudyCriteriaSetsSorted();
+        return sets.map(s => ({ id: s.id, name: s.name, applicableKollektiv: s.applicableKollektiv }));
+    }
 
     function formatStudyCriteriaForDisplay(studyCriteriaSet) {
         if (!studyCriteriaSet) return 'N/A';
@@ -364,7 +369,8 @@ const studyT2CriteriaManager = (() => {
         applyStudyT2CriteriaToPatient,
         applyStudyT2CriteriaToDataset,
         formatStudyCriteriaForDisplay,
-        formatCriteriaForDisplay
+        formatCriteriaForDisplay,
+        getStudyListForPresentation
     });
 
 })();
