@@ -188,7 +188,8 @@ const uiHelpers = (() => {
         const signifikanzText = getStatisticalSignificanceText(testData.pValue);
         
         return interpretationTemplate
-            .replace(/\[P_WERT_FORMATED\]/g, `<strong>${pValueText}</strong>`)
+            .replace(/\[P_WERT\]/g, `${pValueText}`) // Replaced _FORMATED with direct text.
+            .replace(/\[SIGNIFIKANZ\]/g, `${getStatisticalSignificanceSymbol(testData.pValue)}`) // Add symbol here
             .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${signifikanzText}</strong>`)
             .replace(/\[METHODE1\]/g, `<strong>${methode1}</strong>`)
             .replace(/\[METHODE2\]/g, `<strong>${methode2}</strong>`)
@@ -204,20 +205,41 @@ const uiHelpers = (() => {
          
          let mainStatFormatted = '';
          if (key === 'or' && assocData.or) {
-             mainStatFormatted = `Odds Ratio: <strong>${formatCI(assocData.or.value, assocData.or.ci?.lower, assocData.or.ci?.upper, 2, false, '--')}</strong>`;
+             const orVal = assocData.or.value;
+             const factorText = orVal >= 1 ? 'höher' : 'niedriger';
+             mainStatFormatted = interpretationTemplate
+                .replace(/\[WERT\]/g, formatCI(orVal, assocData.or.ci?.lower, assocData.or.ci?.upper, 2, false, '--'))
+                .replace(/\[FAKTOR_TEXT\]/g, `<strong>${factorText}</strong>`);
          } else if (key === 'rd' && assocData.rd) {
-             mainStatFormatted = `Risikodifferenz: <strong>${formatCI(assocData.rd.value, assocData.rd.ci?.lower, assocData.rd.ci?.upper, 1, true, '--')}</strong>`;
+             const rdVal = assocData.rd.value;
+             const higherLowerText = rdVal >= 0 ? 'höher' : 'niedriger';
+             mainStatFormatted = interpretationTemplate
+                .replace(/\[WERT\]/g, formatCI(Math.abs(rdVal), assocData.rd.ci?.lower, assocData.rd.ci?.upper, 1, true, '--'))
+                .replace(/\[HOEHER_NIEDRIGER\]/g, `<strong>${higherLowerText}</strong>`);
          } else if (key === 'phi' && assocData.phi) {
-              const bewertung = getPhiBewertung(assocData.phi.value);
-              mainStatFormatted = `Phi-Koeffizient: <strong>${formatNumber(assocData.phi.value, 2, '--')}</strong> (Assoziationsstärke: <strong>${bewertung}</strong>)`;
+              mainStatFormatted = interpretationTemplate
+                .replace(/\[WERT\]/g, formatNumber(assocData.phi.value, 2, '--'))
+                .replace(/\[BEWERTUNG\]/g, `<strong>${getPhiBewertung(assocData.phi.value)}</strong>`);
+         } else if (key === 'fisher' && assocData.pValue !== undefined) {
+             mainStatFormatted = ''; // Fisher does not have a main stat to format here, only p-value
+         } else if (key === 'mannwhitney' && assocData.pValue !== undefined) {
+             mainStatFormatted = interpretationTemplate
+                .replace(/\[VARIABLE\]/g, merkmalName); // Only variable name needed for MWU
          }
 
+
          return interpretationTemplate
-            .replace(/\[HAUPTWERT_FORMATED\]/g, mainStatFormatted)
-            .replace(/\[P_WERT_FORMATED\]/g, `<strong>${pValueText}</strong>`)
+            .replace(/\[WERT\]/g, (assocData[key] && assocData[key].value !== undefined) ? formatNumber(assocData[key].value, (key === 'or' ? 2 : 1), '--') : 'N/A')
+            .replace(/\[HOEHER_NIEDRIGER\]/g, assocData[key]?.value > 0 ? 'höher' : 'niedriger')
+            .replace(/\[FAKTOR_TEXT\]/g, assocData[key]?.value >= 1 ? 'erhöht' : 'reduziert')
+            .replace(/\[BEWERTUNG\]/g, getPhiBewertung(assocData[key]?.value))
+            .replace(/\[P_WERT\]/g, pValueText)
+            .replace(/\[SIGNIFIKANZ\]/g, getStatisticalSignificanceSymbol(assocData.pValue))
             .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${signifikanzText}</strong>`)
             .replace(/\[MERKMAL\]/g, `<strong>'${merkmalName}'</strong>`)
-            .replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektivName)}</strong>`);
+            .replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektivName)}</strong>`)
+            .replace(/\[VARIABLE\]/g, `<strong>'${merkmalName}'</strong>`); // For mannwhitney
+
     }
 
     function showKurzanleitung() {
