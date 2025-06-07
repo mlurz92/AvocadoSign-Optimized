@@ -774,14 +774,12 @@ const ui_helpers = (() => {
                   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                     <div class="modal-content modal-glass">
                       <div class="modal-header">
-                        <h5 class="modal-title" id="kurzanleitungModalLabel">${APP_CONFIG.UI_TEXTS.kurzanleitung.title}</h5>
+                        <h5 class="modal-title" id="kurzanleitungModalLabel"></h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
                       </div>
-                      <div class="modal-body">
-                        ${APP_CONFIG.UI_TEXTS.kurzanleitung.content.replace('[APP_VERSION]', APP_CONFIG.APP_VERSION).replace('[SIGNIFICANCE_LEVEL_FORMATTED]', formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,2).replace('.',','))}
-                      </div>
+                      <div class="modal-body"></div>
                       <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${APP_CONFIG.UI_TEXTS.kurzanleitung.closeButton}</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">${APP_CONFIG.UI_TEXTS.kurzanleitung.closeButton || 'Schließen'}</button>
                       </div>
                     </div>
                   </div>
@@ -789,23 +787,23 @@ const ui_helpers = (() => {
             document.body.insertAdjacentHTML('beforeend', modalHTML);
             modalElement = document.getElementById('kurzanleitung-modal');
             kurzanleitungModalInstance = new bootstrap.Modal(modalElement);
-        } else {
-            if (modalTitle && APP_CONFIG.UI_TEXTS.kurzanleitung.title) {
-                 modalTitle.innerHTML = APP_CONFIG.UI_TEXTS.kurzanleitung.title;
-            }
-            if (modalBody && APP_CONFIG.UI_TEXTS.kurzanleitung.content) {
-                modalBody.innerHTML = APP_CONFIG.UI_TEXTS.kurzanleitung.content.replace('[APP_VERSION]', APP_CONFIG.APP_VERSION).replace('[SIGNIFICANCE_LEVEL_FORMATTED]', formatNumber(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL,2).replace('.',','));
-            }
-            if (!kurzanleitungModalInstance) {
-                kurzanleitungModalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
-            }
+        } else if (!kurzanleitungModalInstance) {
+            kurzanleitungModalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
         }
     
+        const titleContent = APP_CONFIG.UI_TEXTS.kurzanleitung.title;
+        const bodyContent = APP_CONFIG.UI_TEXTS.kurzanleitung.content
+            .replace('[APP_VERSION]', APP_CONFIG.APP_VERSION)
+            .replace('[SIGNIFICANCE_LEVEL_FORMATTED]', String(APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL).replace('.', ','));
+        
+        if (modalTitle) updateElementHTML('kurzanleitungModalLabel', titleContent);
+        if (modalBody) updateElementHTML(modalBody.id, bodyContent);
+
         if (kurzanleitungModalInstance && modalElement && !modalElement.classList.contains('show')) {
             if (!kurzanleitungFirstShowDone) {
                 modalElement.addEventListener('hidden.bs.modal', () => {
                     if (typeof mainAppInterface !== 'undefined' && typeof mainAppInterface.refreshCurrentTab === 'function') {
-                        const defaultInitialTabId = 'publikation-tab'; 
+                        const defaultInitialTabId = 'data-tab'; 
                         if (typeof state !== 'undefined' && state.getActiveTabId() === defaultInitialTabId) {
                              setTimeout(() => {
                                 mainAppInterface.refreshCurrentTab();
