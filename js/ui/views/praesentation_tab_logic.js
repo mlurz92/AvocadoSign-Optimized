@@ -1,262 +1,314 @@
 const praesentationTabLogic = (() => {
 
-    function _createPresentationView_ASPUR_HTML(presentationData) {
-        const { statsGesamt, statsDirektOP, statsNRCT, kollektiv, statsCurrentKollektiv, patientCount } = presentationData || {};
-        const kollektives = ['Gesamt', 'direkt OP', 'nRCT'];
-        const statsMap = { 'Gesamt': statsGesamt, 'direkt OP': statsDirektOP, 'nRCT': statsNRCT };
-        const currentKollektivName = getKollektivDisplayName(kollektiv);
-        const displayPatientCount = patientCount > 0 ? patientCount : (statsCurrentKollektiv?.matrix?.rp + statsCurrentKollektiv?.matrix?.fp + statsCurrentKollektiv?.matrix?.fn + statsCurrentKollektiv?.matrix?.rn) || 0;
-        const hasDataForCurrent = !!(statsCurrentKollektiv && statsCurrentKollektiv.matrix && statsCurrentKollektiv.matrix.rp !== undefined && displayPatientCount > 0);
+    let currentPresentationView = APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW;
+    let currentPresentationStudyId = APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID;
 
-        const createPerfTableRow = (stats, kollektivKey) => {
-            const kollektivDisplayName = getKollektivDisplayName(kollektivKey);
-            const na = '--';
-            const fCI_p = (m, k) => { const d = (k === 'auc'||k==='f1') ? 3 : 1; const p = !(k === 'auc'||k==='f1'); return formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, d, p, na); };
-            const getInterpretationTT = (mk, st) => { return ui_helpers.getMetricInterpretationHTML(mk, st, 'AS', kollektivDisplayName); };
-            const tt = TOOLTIP_CONTENT.praesentation.asPurPerfTable || {};
+    function init() {
+        _attachEventListeners();
+        _populateStudySelect();
+        ui_helpers.updatePresentationViewSelectorUI(currentPresentationView);
+        ui_helpers.initializeTooltips(document.getElementById('praesentation-tab-pane'));
+    }
 
-            if (!stats || typeof stats.matrix !== 'object') {
-                const nPatientsForThisKollektiv = (kollektivKey === 'Gesamt' ? presentationData.statsGesamt?.matrix : (kollektivKey === 'direkt OP' ? presentationData.statsDirektOP?.matrix : presentationData.statsNRCT?.matrix));
-                const countN = nPatientsForThisKollektiv ? (nPatientsForThisKollektiv.rp + nPatientsForThisKollektiv.fp + nPatientsForThisKollektiv.fn + nPatientsForThisKollektiv.rn) : '?';
-                return `<tr><td class="fw-bold" data-tippy-content="${tt.kollektiv || 'Kollektiv'}">${kollektivDisplayName} (N=${countN})</td><td colspan="6" class="text-muted text-center">Daten fehlen</td></tr>`;
+    function _attachEventListeners() {
+        document.querySelectorAll('input[name="praesentationAnsicht"]').forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                currentPresentationView = event.target.value;
+                state.setPresentationView(currentPresentationView);
+                ui_helpers.updatePresentationViewSelectorUI(currentPresentationView);
+                render(state.getProcessedData());
+            });
+        });
+
+        document.getElementById('praes-study-select')?.addEventListener('change', (event) => {
+            currentPresentationStudyId = event.target.value;
+            state.setPresentationStudyId(currentPresentationStudyId);
+            render(state.getProcessedData());
+        });
+    }
+
+    function _populateStudySelect() {
+        const select = document.getElementById('praes-study-select');
+        if (!select) return;
+
+        let optionsHtml = `<option value="">${APP_CONFIG.UI_TEXTS.praesentation.selectStudyPrompt}</option>`;
+        optionsHtml += `<option value="${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID}" ${currentPresentationStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID ? 'selected' : ''}>${APP_CONFIG.UI_TEXTS.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME}</option>`;
+
+        APP_CONFIG.PUBLICATION_CONFIG.literatureCriteriaSets.forEach(studySet => {
+            optionsHtml += `<option value="${studySet.id}" ${currentPresentationStudyId === studySet.id ? 'selected' : ''}>${studySet.name}</option>`;
+        });
+        select.innerHTML = optionsHtml;
+    }
+
+    function _renderASPerformanceView(processedData) {
+        const targetElement = document.getElementById('praesentation-content');
+        if (!targetElement) return;
+
+        const currentKollektiv = state.getCurrentKollektiv();
+        const dataForKollektiv = dataProcessor.filterDataByKollektiv(processedData, currentKollektiv);
+        const asPerformance = statisticsService.calculateDiagnosticPerformance(dataForKollektiv, 'as', 'n');
+        const deskriptivStats = statisticsService.calculateDescriptiveStats(dataForKollektiv);
+
+        const cardContent = `
+            <div class="row g-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>${APP_CONFIG.UI_TEXTS.praesentation.asPerformanceTitle.replace('[KOLLEKTIV]', ui_helpers.getKollektivDisplayName(currentKollektiv))}</span>
+                            <span class="card-header-buttons">
+                                ${ui_helpers.createHeaderButtonHTML([
+                                    { format: 'md', id: 'download-performance-as-pur-md', icon: 'fab fa-markdown', tooltip: APP_CONFIG.UI_TEXTS.TOOLTIP_CONTENT.praesentation.downloadPerformanceMD },
+                                    { format: 'csv', id: 'download-performance-as-pur-csv', icon: 'fas fa-file-csv', tooltip: APP_CONFIG.UI_TEXTS.TOOLTIP_CONTENT.praesentation.downloadPerformanceCSV },
+                                    { format: 'png', tableId: 'praes-as-performance-table-body', tableName: APP_CONFIG.UI_TEXTS.praesentation.asPerformanceTitle.replace('[KOLLEKTIV]', ui_helpers.getKollektivDisplayName(currentKollektiv)), tooltip: APP_CONFIG.UI_TEXTS.TOOLTIP_CONTENT.praesentation.downloadTablePNG }
+                                ], 'praes-as-perf-header', APP_CONFIG.UI_TEXTS.praesentation.asPerformanceTitle.replace('[KOLLEKTIV]', ui_helpers.getKollektivDisplayName(currentKollektiv)))}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>${APP_CONFIG.UI_TEXTS.global.metric}</th>
+                                            <th class="text-end">${APP_CONFIG.UI_TEXTS.global.value} (95% CI)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="praes-as-performance-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>${APP_CONFIG.UI_TEXTS.praesentation.demographicsTitle.replace('[KOLLEKTIV]', ui_helpers.getKollektivDisplayName(currentKollektiv))}</span>
+                            <span class="card-header-buttons">
+                                ${ui_helpers.createHeaderButtonHTML([
+                                    { format: 'md', id: 'download-demographics-as-pur-md', icon: 'fab fa-markdown', tooltip: APP_CONFIG.UI_TEXTS.TOOLTIP_CONTENT.praesentation.downloadDemographicsMD },
+                                    { format: 'png', tableId: 'praes-demographics-table-body', tableName: APP_CONFIG.UI_TEXTS.praesentation.demographicsTitle.replace('[KOLLEKTIV]', ui_helpers.getKollektivDisplayName(currentKollektiv)), tooltip: APP_CONFIG.UI_TEXTS.TOOLTIP_CONTENT.praesentation.downloadTablePNG }
+                                ], 'praes-demographics-header', APP_CONFIG.UI_TEXTS.praesentation.demographicsTitle.replace('[KOLLEKTIV]', ui_helpers.getKollektivDisplayName(currentKollektiv)))}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:50%;">${APP_CONFIG.UI_TEXTS.global.variable}</th>
+                                            <th class="text-end">${APP_CONFIG.UI_TEXTS.global.value}</th>
+                                            <th class="text-end">${APP_CONFIG.UI_TEXTS.global.value2}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="praes-demographics-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        targetElement.innerHTML = cardContent;
+
+        tableRenderer.renderDiagnosticPerformanceTable(asPerformance, 'praes-as-performance-table-body', { predictionMethod: APP_CONFIG.UI_TEXTS.legendLabels.avocadoSign, kollektiv: currentKollektiv });
+        tableRenderer.renderDescriptiveStatsTable(deskriptivStats, 'praes-demographics-table-body');
+        ui_helpers.initializeTooltips(targetElement);
+    }
+
+    function _renderASvsT2ComparisonView(processedData) {
+        const targetElement = document.getElementById('praesentation-content');
+        if (!targetElement) return;
+
+        const selectedStudyId = currentPresentationStudyId;
+        let t2CriteriaSet = null;
+        let t2DisplayName = '';
+        let t2Kollektiv = state.getCurrentKollektiv();
+
+        if (selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) {
+            t2CriteriaSet = t2CriteriaManager.getAppliedCriteria();
+            t2DisplayName = APP_CONFIG.UI_TEXTS.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME;
+            t2Kollektiv = state.getCurrentKollektiv(); // Applied criteria always on current global collective
+        } else if (selectedStudyId) {
+            t2CriteriaSet = studyT2CriteriaManager.getStudyCriteriaSetById(selectedStudyId);
+            if (t2CriteriaSet) {
+                t2DisplayName = t2CriteriaSet.displayShortName || t2CriteriaSet.name;
+                t2Kollektiv = t2CriteriaSet.applicableKollektiv || state.getCurrentKollektiv();
             }
-            const count = stats.matrix ? (stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn) : 0;
-            return `<tr>
-                        <td class="fw-bold" data-tippy-content="${tt.kollektiv || 'Patientenkollektiv und dessen Größe (N).'}">${kollektivDisplayName} (N=${count})</td>
-                        <td data-tippy-content="${getInterpretationTT('sens', stats.sens)}">${fCI_p(stats.sens, 'sens')}</td>
-                        <td data-tippy-content="${getInterpretationTT('spez', stats.spez)}">${fCI_p(stats.spez, 'spez')}</td>
-                        <td data-tippy-content="${getInterpretationTT('ppv', stats.ppv)}">${fCI_p(stats.ppv, 'ppv')}</td>
-                        <td data-tippy-content="${getInterpretationTT('npv', stats.npv)}">${fCI_p(stats.npv, 'npv')}</td>
-                        <td data-tippy-content="${getInterpretationTT('acc', stats.acc)}">${fCI_p(stats.acc, 'acc')}</td>
-                        <td data-tippy-content="${getInterpretationTT('auc', stats.auc)}">${fCI_p(stats.auc, 'auc')}</td>
-                    </tr>`;
+        }
+
+        const dataForKollektiv = dataProcessor.filterDataByKollektiv(processedData, t2Kollektiv);
+
+        let evaluatedDataT2 = dataForKollektiv;
+        if (t2CriteriaSet) {
+            if (selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) {
+                evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(dataForKollektiv), t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic());
+            } else if (t2CriteriaSet.logic === 'KOMBINIERT' && t2CriteriaSet.id === 'rutegard_et_al_esgar') {
+                 evaluatedDataT2 = studyT2CriteriaManager.applyStudyT2CriteriaToDataset(cloneDeep(dataForKollektiv), t2CriteriaSet);
+            } else {
+                 evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(dataForKollektiv), t2CriteriaSet.criteria, t2CriteriaSet.logic);
+            }
+        } else {
+            evaluatedDataT2 = t2CriteriaManager.evaluateDataset(cloneDeep(dataForKollektiv), {}, 'UND'); // Evaluate with empty criteria
+        }
+
+        const asPerformance = statisticsService.calculateDiagnosticPerformance(dataForKollektiv, 'as', 'n');
+        const t2Performance = statisticsService.calculateDiagnosticPerformance(evaluatedDataT2, 't2', 'n');
+        const comparisonASvsT2 = statisticsService.compareDiagnosticMethods(evaluatedDataT2, 'as', 't2', 'n');
+
+        const metricsToCompare = ['sens', 'spez', 'ppv', 'npv', 'acc', 'auc'];
+        const chartData = metricsToCompare.map(metricKey => {
+            const asVal = asPerformance?.[metricKey]?.value ?? NaN;
+            const t2Val = t2Performance?.[metricKey]?.value ?? NaN;
+            let displayName = APP_CONFIG.UI_TEXTS.t2MetricsOverview[metricKey + 'Short'] || metricKey;
+            return { metric: displayName, AS: asVal, T2: t2Val };
+        }).filter(d => !isNaN(d.AS) || !isNaN(d.T2));
+
+        const studyInfoHtml = t2CriteriaSet && t2CriteriaSet.studyInfo ? `
+            <p class="small mb-1"><strong>${APP_CONFIG.UI_TEXTS.praesentation.t2BasisInfoCard.reference}:</strong> ${t2CriteriaSet.studyInfo.reference || APP_CONFIG.UI_TEXTS.global.notApplicableShort}</p>
+            <p class="small mb-1"><strong>${APP_CONFIG.UI_TEXTS.praesentation.t2BasisInfoCard.patientCohort}:</strong> ${t2CriteriaSet.studyInfo.patientCohort || APP_CONFIG.UI_TEXTS.global.notApplicableShort}</p>
+            <p class="small mb-1"><strong>${APP_CONFIG.UI_TEXTS.praesentation.t2BasisInfoCard.investigationType}:</strong> ${t2CriteriaSet.studyInfo.investigationType || APP_CONFIG.UI_TEXTS.global.notApplicableShort}</p>
+            <p class="small mb-1"><strong>${APP_CONFIG.UI_TEXTS.praesentation.t2BasisInfoCard.focus}:</strong> ${t2CriteriaSet.studyInfo.focus || APP_CONFIG.UI_TEXTS.global.notApplicableShort}</p>
+            <p class="small mb-0"><strong>${APP_CONFIG.UI_TEXTS.praesentation.t2BasisInfoCard.keyCriteriaSummary}:</strong> ${studyT2CriteriaManager.formatCriteriaForDisplay(t2CriteriaSet.criteria, t2CriteriaSet.logic) || APP_CONFIG.UI_TEXTS.global.notApplicableShort}</p>
+        ` : `<p class="text-muted small">${APP_CONFIG.UI_TEXTS.praesentation.noStudySelected}</p>`;
+
+
+        const cardContent = `
+            <div class="row g-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header" data-tippy-content="${APP_CONFIG.UI_TEXTS.TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.description}">
+                            ${APP_CONFIG.UI_TEXTS.praesentation.t2BasisInfoCard.title} (<span class="fw-bold">${t2DisplayName}</span>)
+                        </div>
+                        <div class="card-body">
+                            ${studyInfoHtml}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>${APP_CONFIG.UI_TEXTS.praesentation.comparisonTableTitle.replace('[KOLLEKTIV]', ui_helpers.getKollektivDisplayName(t2Kollektiv))}</span>
+                            <span class="card-header-buttons">
+                                ${ui_helpers.createHeaderButtonHTML([
+                                    { format: 'md', id: `download-comp-table-as-vs-t2-md-${selectedStudyId}`, icon: 'fab fa-markdown', tooltip: APP_CONFIG.UI_TEXTS.TOOLTIP_CONTENT.praesentation.downloadCompTableMD },
+                                    { format: 'csv', id: `download-performance-as-vs-t2-csv-${selectedStudyId}`, icon: 'fas fa-file-csv', tooltip: APP_CONFIG.UI_TEXTS.TOOLTIP_CONTENT.praesentation.downloadPerformanceCSV },
+                                    { format: 'png', tableId: 'praes-as-vs-t2-performance-table-body', tableName: APP_CONFIG.UI_TEXTS.praesentation.comparisonTableTitle.replace('[KOLLEKTIV]', ui_helpers.getKollektivDisplayName(t2Kollektiv)), tooltip: APP_CONFIG.UI_TEXTS.TOOLTIP_CONTENT.praesentation.downloadCompTablePNG }
+                                ], 'praes-as-vs-t2-comp-header', APP_CONFIG.UI_TEXTS.praesentation.comparisonTableTitle.replace('[KOLLEKTIV]', ui_helpers.getKollektivDisplayName(t2Kollektiv)))}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>${APP_CONFIG.UI_TEXTS.praesentation.asVsT2PerfTable.metric}</th>
+                                            <th class="text-end">${APP_CONFIG.UI_TEXTS.praesentation.asVsT2PerfTable.asValue.replace('[KOLLEKTIV_NAME_VERGLEICH]', ui_helpers.getKollektivDisplayName(t2Kollektiv))}</th>
+                                            <th class="text-end">${APP_CONFIG.UI_TEXTS.praesentation.asVsT2PerfTable.t2Value.replace('[T2_SHORT_NAME]', t2DisplayName).replace('[KOLLEKTIV_NAME_VERGLEICH]', ui_helpers.getKollektivDisplayName(t2Kollektiv))}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="praes-as-vs-t2-performance-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>${APP_CONFIG.UI_TEXTS.praesentation.statisticalTestsTitle.replace('[KOLLEKTIV]', ui_helpers.getKollektivDisplayName(t2Kollektiv))}</span>
+                            <span class="card-header-buttons">
+                                ${ui_helpers.createHeaderButtonHTML([
+                                    { format: 'md', id: `download-tests-as-vs-t2-md-${selectedStudyId}`, icon: 'fab fa-markdown', tooltip: APP_CONFIG.UI_TEXTS.TOOLTIP_CONTENT.praesentation.downloadCompTestsMD }
+                                ], 'praes-as-vs-t2-tests-header', APP_CONFIG.UI_TEXTS.praesentation.statisticalTestsTitle.replace('[KOLLEKTIV]', ui_helpers.getKollektivDisplayName(t2Kollektiv)))}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>${APP_CONFIG.UI_TEXTS.praesentation.asVsT2TestTable.test}</th>
+                                            <th class="text-end">${APP_CONFIG.UI_TEXTS.praesentation.asVsT2TestTable.statistic}</th>
+                                            <th class="text-end">${APP_CONFIG.UI_TEXTS.praesentation.asVsT2TestTable.pValue}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="praes-as-vs-t2-tests-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span>${APP_CONFIG.UI_TEXTS.praesentation.comparisonChartTitle.replace('[KOLLEKTIV]', ui_helpers.getKollektivDisplayName(t2Kollektiv))}</span>
+                            <span class="card-header-buttons">
+                                ${ui_helpers.createHeaderButtonHTML([
+                                    { format: 'png', id: `download-comp-chart-as-vs-t2-png-${selectedStudyId}`, icon: 'fas fa-image', tooltip: APP_CONFIG.UI_TEXTS.TOOLTIP_CONTENT.praesentation.downloadCompChartPNG, chartId: `praes-comparison-chart`, chartName: `Vergleich AS vs ${t2DisplayName}` },
+                                    { format: 'svg', id: `download-comp-chart-as-vs-t2-svg-${selectedStudyId}`, icon: 'fas fa-file-code', tooltip: APP_CONFIG.UI_TEXTS.TOOLTIP_CONTENT.praesentation.downloadCompChartSVG, chartId: `praes-comparison-chart`, chartName: `Vergleich AS vs ${t2DisplayName}` }
+                                ], 'praes-as-vs-t2-chart-header', APP_CONFIG.UI_TEXTS.praesentation.comparisonChartTitle.replace('[KOLLEKTIV]', ui_helpers.getKollektivDisplayName(t2Kollektiv)))}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div id="praes-comparison-chart" style="width: 100%; height: 350px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        targetElement.innerHTML = cardContent;
+
+        const formatForDisplay = (valObj, lang = 'de') => {
+            if (!valObj) return APP_CONFIG.UI_TEXTS.global.notApplicableShort;
+            const digits = (valObj.name === APP_CONFIG.UI_TEXTS.t2MetricsOverview.f1Short || valObj.name === APP_CONFIG.UI_TEXTS.t2MetricsOverview.aucShort || valObj.name === APP_CONFIG.UI_TEXTS.t2MetricsOverview.aucShort) ? 3 : 1;
+            const isPercent = !(valObj.name === APP_CONFIG.UI_TEXTS.t2MetricsOverview.f1Short || valObj.name === APP_CONFIG.UI_TEXTS.t2MetricsOverview.aucShort || valObj.name === APP_CONFIG.UI_TEXTS.t2MetricsOverview.aucShort);
+            return formatCI(valObj.value, valObj.ci?.lower, valObj.ci?.upper, digits, isPercent, APP_CONFIG.UI_TEXTS.global.notApplicableShort, lang);
         };
 
-        const perfCSVTooltip = TOOLTIP_CONTENT.praesentation.downloadPerformanceCSV?.description || "Performance-Tabelle als CSV";
-        const perfMDTooltip = TOOLTIP_CONTENT.praesentation.downloadPerformanceMD?.description || "Performance-Tabelle als Markdown";
-        const tablePNGTooltip = TOOLTIP_CONTENT.praesentation.downloadTablePNG?.description || "Tabelle als PNG";
-        const perfChartPNGTooltip = `Chart ('${currentKollektivName}') als PNG herunterladen.`;
-        const perfChartSVGTooltip = `Chart ('${currentKollektivName}') als SVG (Vektorgrafik) herunterladen.`;
-        const chartId = "praes-as-pur-perf-chart";
-        const tableId = "praes-as-pur-perf-table";
-        const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image':'fa-download';
-        const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download';
+        const renderComparisonMetricsTable = (targetTableId, asData, t2Data, comparisonMetrics) => {
+            const tableBody = document.getElementById(targetTableId);
+            if (!tableBody) return;
+            let html = '';
+            comparisonMetrics.forEach(metricKey => {
+                const asMetric = asData?.[metricKey];
+                const t2Metric = t2Data?.[metricKey];
+                let displayName = APP_CONFIG.UI_TEXTS.t2MetricsOverview[metricKey + 'Short'] || metricKey;
+                
+                const asInterpretation = ui_helpers.getMetricInterpretationHTML(metricKey, asMetric, APP_CONFIG.UI_TEXTS.legendLabels.avocadoSign, t2Kollektiv);
+                const t2Interpretation = ui_helpers.getMetricInterpretationHTML(metricKey, t2Metric, t2DisplayName, t2Kollektiv);
 
-        const tooltipKeys = ['kollektiv', 'sens', 'spez', 'ppv', 'npv', 'acc', 'auc'];
-        let tableHTML = `
-            <div class="col-12">
-                <div class="card h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>AS Performance vs. N für alle Kollektive</span>
-                        <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 table-download-png-btn" id="dl-${tableId}-png" data-table-id="${tableId}" data-table-name="Praes_AS_Perf_Uebersicht" data-tippy-content="${tablePNGTooltip}"><i class="fas fa-image"></i></button>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover table-sm small mb-0" id="${tableId}">
-                                <thead class="small">
-                                    <tr>${tooltipKeys.map((key, index) => `<th data-tippy-content="${TOOLTIP_CONTENT.praesentation.asPurPerfTable?.[key] || ui_helpers.getMetricDescriptionHTML(key, 'AS') || ''}">${index === 0 ? 'Kollektiv' : (key.charAt(0).toUpperCase() + key.slice(1) + '. (95% CI)')}</th>`).join('')}</tr>
-                                </thead>
-                                <tbody>${kollektives.map(k => createPerfTableRow(statsMap[k], k)).join('')}</tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="card-footer text-end p-1">
-                        <button class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-pur-csv" data-tippy-content="${perfCSVTooltip}"><i class="fas fa-file-csv me-1"></i>CSV</button>
-                        <button class="btn btn-sm btn-outline-secondary" id="download-performance-as-pur-md" data-tippy-content="${perfMDTooltip}"><i class="fab fa-markdown me-1"></i>MD</button>
-                    </div>
-                </div>
-            </div>`;
-
-        let chartHTML = `
-            <div class="col-lg-8 offset-lg-2">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>Visualisierung Güte (AS vs. N) - Kollektiv: ${currentKollektivName}</span>
-                        <span class="card-header-buttons">
-                            <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="dl-${chartId}-png" data-chart-id="${chartId}" data-format="png" data-chart-name="AS_Performance_${currentKollektivName.replace(/\s+/g, '_')}" data-tippy-content="${perfChartPNGTooltip}"><i class="fas ${dlIconPNG}"></i></button>
-                            <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="dl-${chartId}-svg" data-chart-id="${chartId}" data-format="svg" data-chart-name="AS_Performance_${currentKollektivName.replace(/\s+/g, '_')}" data-tippy-content="${perfChartSVGTooltip}"><i class="fas ${dlIconSVG}"></i></button>
-                        </span>
-                    </div>
-                    <div class="card-body p-1">
-                        <div id="${chartId}" class="praes-chart-container border rounded" style="min-height: 280px;" data-tippy-content="Balkendiagramm der diagnostischen Gütekriterien für Avocado Sign (AS) vs. pathologischen N-Status für das Kollektiv ${currentKollektivName}.">
-                            ${hasDataForCurrent ? '' : `<p class="text-center text-muted p-3">Keine Daten für Chart (${currentKollektivName}).</p>`}
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-
-        return `<div class="row g-3"><div class="col-12"><h3 class="text-center mb-3">Diagnostische Güte - Avocado Sign</h3></div>${tableHTML}${chartHTML}</div>`;
-    }
-
-    function _createPresentationView_ASvsT2_HTML(presentationData, selectedStudyId = null, currentGlobalKollektivForContext = 'Gesamt') {
-        const { statsAS, statsT2, vergleich, comparisonCriteriaSet, kollektivForComparison, patientCountForComparison, t2CriteriaLabelShort, t2CriteriaLabelFull } = presentationData || {};
-        const displayKollektivForComparison = getKollektivDisplayName(kollektivForComparison);
-        const isApplied = selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
-        const appliedName = APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_DISPLAY_NAME || "Eingestellte Kriterien";
-        const t2ShortNameEffective = t2CriteriaLabelShort || (comparisonCriteriaSet?.displayShortName || 'T2');
-
-        let comparisonBasisName = "N/A";
-        let comparisonInfoHTML = '<p class="text-muted small">Bitte wählen Sie eine Vergleichsbasis für die T2-Kriterien.</p>';
-
-        if (selectedStudyId && comparisonCriteriaSet) {
-            const studyInfo = comparisonCriteriaSet.studyInfo;
-            comparisonBasisName = comparisonCriteriaSet.displayShortName || comparisonCriteriaSet.name || (isApplied ? appliedName : selectedStudyId);
-            let criteriaHTML = '<span class="text-muted">Keine Kriteriendetails verfügbar.</span>';
-
-            if (comparisonCriteriaSet.id === 'rutegard_et_al_esgar' && studyInfo?.keyCriteriaSummary) {
-                 criteriaHTML = studyInfo.keyCriteriaSummary;
-            } else if (comparisonCriteriaSet.criteria) {
-                 criteriaHTML = studyT2CriteriaManager.formatCriteriaForDisplay(comparisonCriteriaSet.criteria, comparisonCriteriaSet.logic, false);
-                 if (criteriaHTML === 'Keine aktiven Kriterien' && comparisonCriteriaSet.logic) criteriaHTML += ` (Logik: ${UI_TEXTS.t2LogicDisplayNames[comparisonCriteriaSet.logic] || comparisonCriteriaSet.logic})`;
-                 else if (criteriaHTML !== 'Keine aktiven Kriterien' && comparisonCriteriaSet.logic && comparisonCriteriaSet.logic !== 'KOMBINIERT') criteriaHTML = `<strong>Logik:</strong> ${UI_TEXTS.t2LogicDisplayNames[comparisonCriteriaSet.logic] || comparisonCriteriaSet.logic}<br><strong>Regel(n):</strong> ${criteriaHTML}`;
-            }
-
-            comparisonInfoHTML = `<dl class="row small mb-0">
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.reference || 'Quelle/Publikation der Kriterien.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.reference ? 'Referenz:' : 'Referenz:'}</dt><dd class="col-sm-8">${studyInfo?.reference || (isApplied ? 'Benutzerdefiniert (aktuell im Auswertungstab eingestellt)' : 'N/A')}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.patientCohort || 'Ursprüngliche Studienkohorte bzw. aktuelles Vergleichskollektiv.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.patientCohort ? 'Orig.-Kohorte / Vergleichsbasis:' : 'Orig.-Kohorte / Vergleichsbasis:'}</dt><dd class="col-sm-8">${studyInfo?.patientCohort || `Aktuell: ${displayKollektivForComparison} (N=${patientCountForComparison || '?'})`}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.investigationType || 'Art der Untersuchung in der Originalstudie (z.B. Primärstaging).')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.investigationType ? 'Untersuchungstyp:' : 'Untersuchungstyp:'}</dt><dd class="col-sm-8">${studyInfo?.investigationType || 'N/A'}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.focus || 'Hauptfokus der Originalstudie bzgl. dieser Kriterien.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.focus ? 'Studienfokus:' : 'Studienfokus:'}</dt><dd class="col-sm-8">${studyInfo?.focus || 'N/A'}</dd>
-                                    <dt class="col-sm-4" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.keyCriteriaSummary || 'Zusammenfassung der angewendeten T2-Kriterien und deren Logik.')}">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.keyCriteriaSummary ? 'Kriterien:' : 'Kriterien:'}</dt><dd class="col-sm-8">${criteriaHTML}</dd>
-                                </dl>`;
-        }
-
-        const studySets = typeof studyT2CriteriaManager !== 'undefined' ? studyT2CriteriaManager.getAllStudyCriteriaSets() : [];
-        const appliedOptionHTML = `<option value="${APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID}" ${isApplied ? 'selected' : ''}>-- ${appliedName} --</option>`;
-        const studyOptionsHTML = studySets.map(set => `<option value="${set.id}" ${selectedStudyId === set.id ? 'selected' : ''}>${set.name || set.id}</option>`).join('');
-
-        let resultsHTML = '';
-        const canDisplayResults = !!(selectedStudyId && presentationData && statsAS && statsT2 && vergleich && comparisonCriteriaSet && patientCountForComparison > 0);
-        const na = '--';
-        const dlIconPNG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_PNG ? 'fa-image':'fa-download';
-        const dlIconSVG = APP_CONFIG.EXPORT_SETTINGS.FILENAME_TYPES.CHART_SINGLE_SVG ? 'fa-file-code':'fa-download';
-
-        if (canDisplayResults) {
-            const fPVal = (r,d=3) => { const p = r?.pValue; return (p !== null && !isNaN(p)) ? (p < 0.001 ? '&lt;0.001' : formatNumber(p, d, na)) : na; };
-            const perfCSV = TOOLTIP_CONTENT.praesentation.downloadPerformanceCSV?.description || "Vergleichs-Performance-Tabelle als CSV";
-            const compTableMD = TOOLTIP_CONTENT.praesentation.downloadCompTableMD?.description || "Vergleichs-Metriken als Markdown";
-            const testsMD = TOOLTIP_CONTENT.praesentation.downloadCompTestsMD?.description || "Statistische Vergleichstests als Markdown";
-
-            const chartPNG = TOOLTIP_CONTENT.praesentation.downloadCompChartPNG?.description || `Chart (AS vs. ${t2ShortNameEffective}) als PNG`;
-            const chartSVG = TOOLTIP_CONTENT.praesentation.downloadCompChartSVG?.description || `Chart (AS vs. ${t2ShortNameEffective}) als SVG`;
-            const tablePNG = TOOLTIP_CONTENT.praesentation.downloadTablePNG?.description || "Tabelle als PNG";
-            const compTablePNG = TOOLTIP_CONTENT.praesentation.downloadCompTablePNG?.description || `Vergleichs-Metrik-Tabelle (AS vs. ${t2ShortNameEffective}) als PNG`;
-
-            const compTitle = `Stat. Vergleich (AS vs. ${t2ShortNameEffective})`;
-            const perfTitle = `Vergleich Metriken (AS vs. ${t2ShortNameEffective})`;
-            const chartTitle = `Vergleichs-Chart (AS vs. ${t2ShortNameEffective})`;
-            const perfTableId = "praes-as-vs-t2-comp-table";
-            const testTableId = "praes-as-vs-t2-test-table";
-            const infoCardId = "praes-t2-basis-info-card";
-            const chartContainerId = "praes-comp-chart-container";
-            const chartBaseName = `AS_vs_${(comparisonCriteriaSet?.displayShortName || selectedStudyId || 'T2').replace(/\s+/g, '_')}_Koll_${displayKollektivForComparison.replace(/\s+/g, '_')}`;
-
-            let comparisonTableHTML = `<div class="table-responsive"><table class="table table-sm table-striped small mb-0" id="${perfTableId}"><thead class="small"><tr><th data-tippy-content="${(TOOLTIP_CONTENT.praesentation.asVsT2PerfTable?.metric || 'Diagnostische Metrik.')}">Metrik</th><th data-tippy-content="${(TOOLTIP_CONTENT.praesentation.asVsT2PerfTable?.asValue || 'Wert für Avocado Sign (AS).')}">AS (Wert, 95% CI)</th><th data-tippy-content="${(TOOLTIP_CONTENT.praesentation.asVsT2PerfTable?.t2Value || 'Wert für die ausgewählte T2-Basis.').replace('[T2_SHORT_NAME]', `<strong>${t2ShortNameEffective}</strong>`)}">${t2ShortNameEffective} (Wert, 95% CI)</th></tr></thead><tbody>`;
-            const metrics = ['sens', 'spez', 'ppv', 'npv', 'acc', 'balAcc', 'f1', 'auc'];
-            const metricNames = { sens: 'Sensitivität', spez: 'Spezifität', ppv: 'PPV', npv: 'NPV', acc: 'Accuracy', balAcc: 'Bal. Accuracy', f1: 'F1-Score', auc: 'AUC' };
-            metrics.forEach(key => {
-                 const isRate = !(key === 'f1' || key === 'auc'); const digits = isRate ? 1 : 3;
-                 const valAS = formatCI(statsAS[key]?.value, statsAS[key]?.ci?.lower, statsAS[key]?.ci?.upper, digits, isRate, na);
-                 const valT2 = formatCI(statsT2[key]?.value, statsT2[key]?.ci?.lower, statsT2[key]?.ci?.upper, digits, isRate, na);
-                 const tooltipDesc = ui_helpers.getMetricDescriptionHTML(key, 'Wert');
-                 const tooltipAS = ui_helpers.getMetricInterpretationHTML(key, statsAS[key], 'AS', displayKollektivForComparison);
-                 const tooltipT2 = ui_helpers.getMetricInterpretationHTML(key, statsT2[key], t2ShortNameEffective, displayKollektivForComparison);
-                 comparisonTableHTML += `<tr><td data-tippy-content="${tooltipDesc}">${metricNames[key]}</td><td data-tippy-content="${tooltipAS}">${valAS}</td><td data-tippy-content="${tooltipT2}">${valT2}</td></tr>`;
+                html += `
+                    <tr>
+                        <td class="small">${displayName}</td>
+                        <td class="small text-end has-tooltip" data-tippy-content="${asInterpretation}">${formatForDisplay(asMetric)}</td>
+                        <td class="small text-end has-tooltip" data-tippy-content="${t2Interpretation}">${formatForDisplay(t2Metric)}</td>
+                    </tr>`;
             });
-            comparisonTableHTML += `</tbody></table></div>`;
-            const compTableDownloadBtns = [ {id: `dl-${perfTableId}-png`, icon: 'fa-image', tooltip: compTablePNG, format: 'png', tableId: perfTableId, tableName: `Praes_ASvsT2_Metrics_${(comparisonCriteriaSet?.id || selectedStudyId || 'T2').replace(/\s+/g, '_')}`} ];
-            const comparisonTableCardHTML = uiComponents.createStatistikCard(perfTableId+'_card', perfTitle, comparisonTableHTML, false, 'praesentation.comparisonTableCard', compTableDownloadBtns, perfTableId);
+            tableBody.innerHTML = html;
+        };
+        
+        renderComparisonMetricsTable('praes-as-vs-t2-performance-table-body', asPerformance, t2Performance, metricsToCompare);
+        tableRenderer.renderStatisticalComparisonTable(comparisonASvsT2, 'praes-as-vs-t2-tests-table-body', { kollektiv: t2Kollektiv, t2ShortName: t2DisplayName });
+        chartRenderer.renderComparisonBarChart(chartData, 'praes-comparison-chart', { t2Label: t2DisplayName });
 
-            let testsTableHTML = `<table class="table table-sm table-striped small mb-0" id="${testTableId}"><thead class="small visually-hidden"><tr><th>Test</th><th>Statistik</th><th>p-Wert</th><th>Methode</th></tr></thead><tbody>`;
-            const mcNemarDesc = ui_helpers.getTestDescriptionHTML('mcnemar', t2ShortNameEffective);
-            const mcNemarInterp = ui_helpers.getTestInterpretationHTML('mcnemar', vergleich?.mcnemar, displayKollektivForComparison, t2ShortNameEffective);
-            const delongDesc = ui_helpers.getTestDescriptionHTML('delong', t2ShortNameEffective);
-            const delongInterp = ui_helpers.getTestInterpretationHTML('delong', vergleich?.delong, displayKollektivForComparison, t2ShortNameEffective);
-            testsTableHTML += `<tr><td data-tippy-content="${mcNemarDesc}">McNemar (Acc)</td><td>${formatNumber(vergleich?.mcnemar?.statistic, 3, '--')} (df=${vergleich?.mcnemar?.df || '--'})</td><td data-tippy-content="${mcNemarInterp}"> ${fPVal(vergleich?.mcnemar)} ${getStatisticalSignificanceSymbol(vergleich?.mcnemar?.pValue)}</td><td class="text-muted">${vergleich?.mcnemar?.method || '--'}</td></tr>`;
-            testsTableHTML += `<tr><td data-tippy-content="${delongDesc}">DeLong (AUC)</td><td>Z=${formatNumber(vergleich?.delong?.Z, 3, '--')}</td><td data-tippy-content="${delongInterp}"> ${fPVal(vergleich?.delong)} ${getStatisticalSignificanceSymbol(vergleich?.delong?.pValue)}</td><td class="text-muted">${vergleich?.delong?.method || '--'}</td></tr>`;
-            testsTableHTML += `</tbody></table>`;
-            const testTableDownloadBtns = [ {id: `dl-${testTableId}-png`, icon: 'fa-image', tooltip: tablePNG, format: 'png', tableId: testTableId, tableName: `Praes_ASvsT2_Tests_${(comparisonCriteriaSet?.id || selectedStudyId || 'T2').replace(/\s+/g, '_')}`} ];
-            const testsCardHTML = uiComponents.createStatistikCard(testTableId+'_card', compTitle, testsTableHTML, false, null, testTableDownloadBtns, testTableId);
-
-            resultsHTML = `
-                <div class="row g-3 presentation-comparison-row">
-                     <div class="col-lg-7 col-xl-7 presentation-comparison-col-left">
-                        <div class="card h-100">
-                             <div class="card-header d-flex justify-content-between align-items-center">
-                                 <span>${chartTitle}</span>
-                                 <span class="card-header-buttons">
-                                     <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-vs-t2-png" data-chart-id="${chartContainerId}" data-format="png" data-chart-name="${chartBaseName}" data-tippy-content="${chartPNG}"><i class="fas ${dlIconPNG}"></i></button>
-                                     <button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 chart-download-btn" id="download-chart-as-vs-t2-svg" data-chart-id="${chartContainerId}" data-format="svg" data-chart-name="${chartBaseName}" data-tippy-content="${chartSVG}"><i class="fas ${dlIconSVG}"></i></button>
-                                 </span>
-                             </div>
-                            <div class="card-body p-1 d-flex align-items-center justify-content-center">
-                                 <div id="${chartContainerId}" class="praes-chart-container w-100" style="min-height: 300px;" data-tippy-content="Balkendiagramm: Vergleich der Gütekriterien (AS vs. ${t2ShortNameEffective}) für Kollektiv ${displayKollektivForComparison}.">
-                                     <p class="text-muted small text-center p-3">Lade Vergleichschart...</p>
-                                 </div>
-                            </div>
-                             <div class="card-footer text-end p-1">
-                                <button class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-vs-t2-csv" data-tippy-content="${perfCSV}"><i class="fas fa-file-csv me-1"></i>Tabelle (CSV)</button>
-                                <button class="btn btn-sm btn-outline-secondary" id="download-comp-table-as-vs-t2-md" data-tippy-content="${compTableMD}"><i class="fab fa-markdown me-1"></i>Metriken (MD)</button>
-                           </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-5 col-xl-5 presentation-comparison-col-right d-flex flex-column">
-                         <div class="card mb-3 flex-shrink-0 praes-t2-basis-info-card" id="${infoCardId}" data-tippy-content="${(TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.description || 'Details zur ausgewählten T2-Vergleichsbasis und dem aktuellen Vergleichskollektiv.')}">
-                            <div class="card-header card-header-sm">${TOOLTIP_CONTENT.praesentation.t2BasisInfoCard.title || 'Details zur T2-Vergleichsbasis'}</div>
-                            <div class="card-body p-2">${comparisonInfoHTML}</div>
-                         </div>
-                         <div class="card mb-3 flex-grow-0">
-                             ${comparisonTableCardHTML}
-                         </div>
-                         <div class="card flex-grow-1">
-                              ${testsCardHTML}
-                             <div class="card-footer text-end p-1">
-                                <button class="btn btn-sm btn-outline-secondary" id="download-tests-as-vs-t2-md" data-tippy-content="${testsMD}"><i class="fab fa-markdown me-1"></i>Tests (MD)</button>
-                            </div>
-                         </div>
-                    </div>
-                </div>`;
-        } else if (selectedStudyId && presentationData && patientCountForComparison === 0) {
-            resultsHTML = `<div class="alert alert-warning">Keine Patientendaten für Kollektiv (<strong>${displayKollektivForComparison}</strong>) für diesen Vergleich vorhanden.</div>`;
-        } else if (selectedStudyId && !comparisonCriteriaSet) {
-            resultsHTML = `<div class="alert alert-danger">Fehler: Vergleichs-Kriterien (ID: ${selectedStudyId}) nicht gefunden.</div>`;
-        } else {
-            resultsHTML = `<div class="alert alert-info">Bitte wählen Sie oben eine Vergleichsbasis für das Kollektiv '<strong>${displayKollektivForComparison}</strong>'.</div>`;
-        }
-        const displayGlobalKollektivForContext = getKollektivDisplayName(currentGlobalKollektivForContext);
-        const kollektivHinweis = (kollektivForComparison !== currentGlobalKollektivForContext)
-            ? `(Globales Kollektiv: <strong>${displayGlobalKollektivForContext}</strong>. T2-Vergleichsbasis evaluiert auf <strong>${displayKollektivForComparison}</strong>, N=${patientCountForComparison || '?'}).`
-            : `(N=${patientCountForComparison || '?'})`;
-
-
-        return `<div class="row mb-4"><div class="col-12"><h4 class="text-center mb-1">Vergleich: Avocado Sign vs. T2-Kriterien</h4><p class="text-center text-muted small mb-3">Aktuelles Vergleichskollektiv: <strong>${displayKollektivForComparison}</strong> ${kollektivHinweis}</p><div class="row justify-content-center"><div class="col-md-9 col-lg-7" id="praes-study-select-container"><div class="input-group input-group-sm"><label class="input-group-text" for="praes-study-select">T2-Vergleichsbasis:</label><select class="form-select" id="praes-study-select" data-tippy-content="${TOOLTIP_CONTENT.praesentation.studySelect.description}"><option value="" ${!selectedStudyId ? 'selected' : ''} disabled>-- Bitte wählen --</option>${appliedOptionHTML}<option value="" disabled>--- Publizierte Kriterien ---</option>${studyOptionsHTML}</select></div><div id="praes-study-description" class="mt-2 small text-muted">${comparisonBasisName === 'N/A' ? 'Keine Basis gewählt' : `Aktuelle T2 Basis: <strong>${comparisonBasisName}</strong>`}</div></div></div></div></div><div id="praesentation-as-vs-t2-results">${resultsHTML}</div>`;
+        ui_helpers.initializeTooltips(targetElement);
     }
 
-    function createPresentationTabContent(view, presentationData, selectedStudyId = null, currentGlobalKollektiv = 'Gesamt') {
-        let viewSelectorHTML = `
-            <div class="row mb-4">
-                <div class="col-12 d-flex justify-content-center">
-                    <div class="btn-group btn-group-sm" role="group" aria-label="Präsentationsansicht Auswahl" data-tippy-content="${TOOLTIP_CONTENT.praesentation.viewSelect.description}">
-                        <input type="radio" class="btn-check" name="praesentationAnsicht" id="ansicht-as-pur" autocomplete="off" value="as-pur" ${view === 'as-pur' ? 'checked' : ''}>
-                        <label class="btn btn-outline-primary praes-view-btn" for="ansicht-as-pur"><i class="fas fa-star me-1"></i> Avocado Sign (Performance)</label>
-                        <input type="radio" class="btn-check" name="praesentationAnsicht" id="ansicht-as-vs-t2" value="as-vs-t2" autocomplete="off" ${view === 'as-vs-t2' ? 'checked' : ''}>
-                        <label class="btn btn-outline-primary praes-view-btn" for="ansicht-as-vs-t2"><i class="fas fa-exchange-alt me-1"></i> AS vs. T2 (Vergleich)</label>
-                    </div>
-                </div>
-            </div>`;
 
-        let contentHTML = '';
-        if (view === 'as-pur') {
-            contentHTML = _createPresentationView_ASPUR_HTML(presentationData);
-        } else if (view === 'as-vs-t2') {
-            contentHTML = _createPresentationView_ASvsT2_HTML(presentationData, selectedStudyId, currentGlobalKollektiv);
-        } else {
-            contentHTML = '<div class="alert alert-warning">Unbekannte Ansicht ausgewählt.</div>';
+    function render(processedData) {
+        ui_helpers.updatePresentationViewSelectorUI(currentPresentationView); // Update radio buttons state
+        _populateStudySelect(); // Ensure select is updated with current value
+
+        if (currentPresentationView === 'as-pur') {
+            _renderASPerformanceView(processedData);
+        } else if (currentPresentationView === 'as-vs-t2') {
+            _renderASvsT2ComparisonView(processedData);
         }
-        return viewSelectorHTML + `<div id="praesentation-content-area">${contentHTML}</div>`;
+        ui_helpers.initializeTooltips(document.getElementById('praesentation-tab-pane'));
     }
 
     return Object.freeze({
-        createPresentationTabContent
+        init,
+        render
     });
 
 })();
