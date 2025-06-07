@@ -55,11 +55,11 @@ const tableRenderer = (() => {
                 <td>${patient.vorname || ''}</td>
                 <td class="text-center">${patient.geschlecht === 'm' ? 'M' : (patient.geschlecht === 'f' ? 'W' : 'U')}</td>
                 <td class="text-center">${patient.alter ?? 'N/A'}</td>
-                <td>${getKollektivDisplayName(patient.therapie) || 'N/A'}</td>
+                <td>${utils.getKollektivDisplayName(patient.therapie) || 'N/A'}</td>
                 <td class="text-center">
-                    <span class="status-badge ${getStatusClass(patient.n)}">${patient.n || '?'}</span> |
-                    <span class="status-badge ${getStatusClass(patient.as)}">${patient.as || '?'}</span> |
-                    <span class="status-badge ${getStatusClass(patient.t2)}">${patient.t2 || '?'}</span>
+                    <span class="status-badge ${utils.getStatusClass(patient.n)}">${patient.n || '?'}</span> |
+                    <span class="status-badge ${utils.getStatusClass(patient.as)}">${patient.as || '?'}</span> |
+                    <span class="status-badge ${utils.getStatusClass(patient.t2)}">${patient.t2 || '?'}</span>
                 </td>
                 <td style="white-space: normal; max-width: 300px; overflow-wrap: break-word;">${patient.bemerkung || ''}</td>
             </tr>`;
@@ -90,15 +90,15 @@ const tableRenderer = (() => {
                 </td>
                 <td>${patient.nr ?? 'N/A'}</td>
                 <td>${patient.name || 'N/A'}</td>
-                <td>${getKollektivDisplayName(patient.therapie) || 'N/A'}</td>
+                <td>${utils.getKollektivDisplayName(patient.therapie) || 'N/A'}</td>
                 <td class="text-center">
-                    <span class="status-badge ${getStatusClass(patient.n)}">${patient.n || '?'}</span> |
-                    <span class="status-badge ${getStatusClass(patient.as)}">${patient.as || '?'}</span> |
-                    <span class="status-badge ${getStatusClass(patient.t2)}">${patient.t2 || '?'}</span>
+                    <span class="status-badge ${utils.getStatusClass(patient.n)}">${patient.n || '?'}</span> |
+                    <span class="status-badge ${utils.getStatusClass(patient.as)}">${patient.as || '?'}</span> |
+                    <span class="status-badge ${utils.getStatusClass(patient.t2)}">${patient.t2 || '?'}</span>
                 </td>
-                <td class="text-center">${formatNumber(patient.anzahl_patho_n_plus_lk, 0, '0')} / ${formatNumber(patient.anzahl_patho_lk, 0, '0')}</td>
-                <td class="text-center">${formatNumber(patient.anzahl_as_plus_lk, 0, '0')} / ${formatNumber(patient.anzahl_as_lk, 0, '0')}</td>
-                <td class="text-center">${formatNumber(patient.anzahl_t2_plus_lk, 0, '0')} / ${formatNumber(patient.anzahl_t2_lk, 0, '0')}</td>
+                <td class="text-center">${utils.formatNumber(patient.anzahl_patho_n_plus_lk, 0, '0')} / ${utils.formatNumber(patient.anzahl_patho_lk, 0, '0')}</td>
+                <td class="text-center">${utils.formatNumber(patient.anzahl_as_plus_lk, 0, '0')} / ${utils.formatNumber(patient.anzahl_as_lk, 0, '0')}</td>
+                <td class="text-center">${utils.formatNumber(patient.anzahl_t2_plus_lk, 0, '0')} / ${utils.formatNumber(patient.anzahl_t2_lk, 0, '0')}</td>
             </tr>`;
 
         if (hasT2BewertetData) {
@@ -125,7 +125,7 @@ const tableRenderer = (() => {
             detailHtml += `<div class="col-12 col-md-6 col-lg-4">
                             <div class="sub-row-item border rounded">
                                 <strong class="me-2">LK #${index + 1}:</strong>
-                                <span class="me-2">${uiComponents.getIconForT2Feature('size')}Größe: ${formatNumber(lk.groesse, 1, 'N/A')}mm</span>
+                                <span class="me-2">${uiComponents.getIconForT2Feature('size')}Größe: ${utils.formatNumber(lk.groesse, 1, 'N/A')}mm</span>
                                 <span class="me-2">${uiComponents.getIconForT2Feature('form', lk.form)}Form: ${lk.form || 'N/A'}</span>
                                 <span class="me-2">${uiComponents.getIconForT2Feature('kontur', lk.kontur)}Kontur: ${lk.kontur || 'N/A'}</span>
                                 <span class="me-2">${uiComponents.getIconForT2Feature('homogenitaet', lk.homogenitaet)}Homog.: ${lk.homogenitaet || 'N/A'}</span>
@@ -156,21 +156,17 @@ const tableRenderer = (() => {
             const criteriaKeys = ['size', 'form', 'kontur', 'homogenitaet', 'signal'];
             criteriaKeys.forEach(key => {
                 if (currentCriteria[key]?.active) {
-                    const displayValue = lk[key] !== null && lk[key] !== undefined ? (key === 'size' ? `${formatNumber(lk[key], 1)}mm` : lk[key]) : 'N/A';
-                    const criterionMet = evaluationDetails[key]?.met; // Check if the individual criterion was met
+                    const displayValue = lk[key] !== null && lk[key] !== undefined ? (key === 'size' ? `${utils.formatNumber(lk[key], 1)}mm` : lk[key]) : 'N/A';
                     
-                    // Determine if this specific criterion contributed to the overall positive status
-                    // For 'UND' logic, ALL active criteria must be met AND `criterionMet` must be true.
-                    // For 'ODER' logic, at least ONE active criterion must be met AND `criterionMet` must be true AND `passesOverall` must be true.
                     let isContributing = false;
                     if (currentLogic === 'UND') {
-                        isContributing = (evaluationDetails[key] === true); // 'evaluationDetails[key]' directly holds the boolean result for 'UND'
-                    } else { // 'ODER'
-                        isContributing = (evaluationDetails[key] === true && passesOverall); // For 'ODER', it contributed if it was true AND the LK overall passed
+                        isContributing = (evaluationDetails[key] === true);
+                    } else {
+                        isContributing = (evaluationDetails[key] === true && passesOverall);
                     }
                     
                     const textClass = isContributing ? 'highlight-suspekt-feature' : '';
-                    const icon = uiComponents.getIconForT2Feature(key, lk[key], evaluationDetails[key]); // Pass evaluationDetails[key] (boolean) to getIconForT2Feature
+                    const icon = uiComponents.getIconForT2Feature(key, lk[key], evaluationDetails[key]);
                     const labelText = { size: 'Größe', form: 'Form', kontur: 'Kontur', homogenitaet: 'Homog.', signal: 'Signal' }[key] || key;
                     detailItemHTML += `<span class="me-2 ${textClass}">${icon}${labelText}: ${displayValue}</span>`;
                 }
