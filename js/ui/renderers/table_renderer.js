@@ -157,10 +157,20 @@ const tableRenderer = (() => {
             criteriaKeys.forEach(key => {
                 if (currentCriteria[key]?.active) {
                     const displayValue = lk[key] !== null && lk[key] !== undefined ? (key === 'size' ? `${formatNumber(lk[key], 1)}mm` : lk[key]) : 'N/A';
-                    const criterionMet = evaluationDetails[key]?.met;
-                    const isContributing = (currentLogic === 'UND' && criterionMet === true) || (currentLogic === 'ODER' && criterionMet === true && passesOverall);
+                    const criterionMet = evaluationDetails[key]?.met; // Check if the individual criterion was met
+                    
+                    // Determine if this specific criterion contributed to the overall positive status
+                    // For 'UND' logic, ALL active criteria must be met AND `criterionMet` must be true.
+                    // For 'ODER' logic, at least ONE active criterion must be met AND `criterionMet` must be true AND `passesOverall` must be true.
+                    let isContributing = false;
+                    if (currentLogic === 'UND') {
+                        isContributing = (evaluationDetails[key] === true); // 'evaluationDetails[key]' directly holds the boolean result for 'UND'
+                    } else { // 'ODER'
+                        isContributing = (evaluationDetails[key] === true && passesOverall); // For 'ODER', it contributed if it was true AND the LK overall passed
+                    }
+                    
                     const textClass = isContributing ? 'highlight-suspekt-feature' : '';
-                    const icon = uiComponents.getIconForT2Feature(key, lk[key], criterionMet);
+                    const icon = uiComponents.getIconForT2Feature(key, lk[key], evaluationDetails[key]); // Pass evaluationDetails[key] (boolean) to getIconForT2Feature
                     const labelText = { size: 'Größe', form: 'Form', kontur: 'Kontur', homogenitaet: 'Homog.', signal: 'Signal' }[key] || key;
                     detailItemHTML += `<span class="me-2 ${textClass}">${icon}${labelText}: ${displayValue}</span>`;
                 }
