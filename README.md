@@ -1,98 +1,63 @@
-# Avocado Sign Analyse Tool - Technische Dokumentation
+# Avocado Sign Analyse & Publikations-Tool v3.0
 
-![Status](https://img.shields.io/badge/status-active-success.svg)
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Status](https://img.shields.io/badge/status-stable-success.svg)
+![Lizenz](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Architektur](https://img.shields.io/badge/architektur-MVC--like-blueviolet.svg)
-![Tech Stack](https://img.shields.io/badge/tech-JS%20/%20HTML%20/%20CSS-lightgrey.svg)
+![Technologie](https://img.shields.io/badge/tech-Vanilla%20JS%20|%20D3.js%20|%20Bootstrap-lightgrey.svg)
 
 ---
 
-## 1. Übersicht und Zielsetzung
+## 1. Übersicht und Vision
 
-Das **Avocado Sign Analyse Tool** ist eine hochspezialisierte, interaktive Single-Page-Webanwendung (SPA) für die medizinisch-wissenschaftliche Forschung. Ihr Kernzweck ist die detaillierte, datengestützte Analyse und der statistische Performance-Vergleich von MRT-Kriterien zur Beurteilung des Lymphknotenstatus beim Rektumkarzinom. Die Anwendung wurde entwickelt, um eine systematische, reproduzierbare und effiziente Auswertung zu ermöglichen, die von der interaktiven Kriterienfindung bis zur automatisierten Erstellung eines publikationsreifen Manuskriptentwurfs reicht.
+Das **Avocado Sign Analyse & Publikations-Tool** ist eine hochspezialisierte, interaktive Single-Page-Webanwendung (SPA), die für die medizinisch-wissenschaftliche Forschung konzipiert wurde. Ihr Kernzweck ist die datengestützte Analyse und der statistische Performance-Vergleich von MRT-Kriterien zur Beurteilung des Lymphknotenstatus beim Rektumkarzinom.
+
+Die Anwendung wurde entwickelt, um den gesamten wissenschaftlichen Workflow zu unterstützen: von der explorativen Datenanalyse über die rigorose, interaktive Hypothesenprüfung bis hin zur automatisierten Erstellung eines einreichungsfertigen Manuskriptentwurfs, der speziell auf die hohen Standards des Fachjournals **Radiology** zugeschnitten ist.
 
 ---
 
-## 2. Technologischer Stack & Systemanforderungen
+## 2. Technologie-Stack & Architektur
 
-Die Anwendung ist als reine Client-Side-Anwendung konzipiert, die keine serverseitige Logik oder Datenbank benötigt.
+Die Anwendung ist als reine Client-Side-Anwendung ohne serverseitige Abhängigkeiten konzipiert.
 
 * **Kerntechnologien:**
-    * **JavaScript (ES6+):** Für die gesamte Anwendungslogik und Interaktivität.
-    * **HTML5 & CSS3:** Für die Struktur und das benutzerdefinierte Styling der Benutzeroberfläche.
+    * **JavaScript (ES6+):** Modulare Anwendungslogik, keine Framework-Abhängigkeiten.
+    * **HTML5 & CSS3:** Struktur und benutzerdefiniertes Styling.
 * **Hauptbibliotheken:**
-    * **D3.js (v7):** Zur Erstellung aller dynamischen und interaktiven Datenvisualisierungen und Diagramme.
-    * **Bootstrap (v5.3):** Als responsives UI-Framework für das grundlegende Layout, die Komponenten (Buttons, Karten, Tabs) und das Grid-System.
-    * **Tippy.js (v6):** Zur Implementierung der kontextsensitiven, reichhaltigen Tooltips, die ein wesentlicher Bestandteil der User Experience sind.
-    * **Font Awesome (v6.5):** Für die Icon-Darstellung in der gesamten Anwendung.
-    * **JSZip & FileSaver.js:** Zur clientseitigen Generierung von ZIP-Archiven und zum Auslösen von Datei-Downloads für die Exportfunktionen.
-* **Systemanforderungen:**
-    * Ein moderner, immergrüner Webbrowser (z.B. Google Chrome, Mozilla Firefox, Microsoft Edge) mit aktiviertem JavaScript.
-    * Für eine optimale Performance, insbesondere bei der Brute-Force-Optimierung, wird ein System mit einer zeitgemäßen CPU empfohlen.
+    * **D3.js (v7):** Für alle dynamischen und interaktiven Datenvisualisierungen.
+    * **Bootstrap (v5.3):** Als responsives UI-Framework für Layout und grundlegende Komponenten.
+    * **Tippy.js (v6):** Für kontextsensitive, reichhaltige Tooltips zur Verbesserung der User Experience.
+    * **PapaParse:** Für clientseitiges CSV-Parsing.
+    * **JSZip & FileSaver.js:** Zur clientseitigen Generierung von ZIP-Archiven und zum Auslösen von Datei-Downloads.
+    * **SheetJS (XLSX):** Zur Erstellung von Excel-Arbeitsmappen.
+    * **html2canvas:** Zum Erstellen von PNG-Abbildungen aus HTML-Tabellen.
+
+### Architektur-Konzept
+
+Die Anwendung folgt einem modernen, MVC-ähnlichen Architekturmuster, das auf strikter **Separation of Concerns (SoC)** und einem **unidirektionalen Datenfluss** basiert:
+
+* **Model (Daten & Logik):**
+    * **`core`:** Kapselt die primäre Datenverarbeitungslogik (z.B. `data_processor.js`, `t2_criteria_manager.js`).
+    * **`services`:** Bietet wiederverwendbare Geschäftslogik (z.B. `statistics_service.js`, `export_service.js`, `brute_force_manager.js`).
+* **View (Darstellung):**
+    * **`renderers`:** Eine Schicht von "dummen" Modulen, die ausschließlich dafür verantwortlich sind, Daten in HTML-Strukturen umzuwandeln. Sie enthalten keinerlei Anwendungslogik.
+* **Controller (Steuerung):**
+    * **`controllers`:** Das Bindeglied zwischen Model und View. Sie fangen Benutzerinteraktionen ab, veranlassen Berechnungen im Model und weisen die View an, sich mit den neuen Daten zu aktualisieren.
+    * **`main.js`:** Der zentrale Orchestrator, der den Render-Zyklus steuert und die Interaktion der Module koordiniert.
 
 ---
 
-## 3. Setup & Inbetriebnahme
+## 3. Projektstruktur
 
-Die Inbetriebnahme ist unkompliziert und erfordert keine Build-Prozesse.
-
-1.  **Repository beziehen:** Klonen oder laden Sie das Repository auf Ihr lokales System.
-    ```bash
-    git clone [https://github.com/mlurz92/AvocadoSign-Optimized.git](https://github.com/mlurz92/AvocadoSign-Optimized.git)
-    ```
-2.  **Anwendung starten:**
-    * **Empfohlene Methode (Lokaler Webserver):** Um potenzielle Browser-Sicherheitsbeschränkungen (CORS bei direkten Datei-Zugriffen) zu umgehen, wird der Betrieb über einen lokalen Webserver dringend empfohlen.
-        * Navigieren Sie im Terminal in das Projektverzeichnis.
-        * Starten Sie einen einfachen Server, z.B. mit Python 3:
-            ```bash
-            python -m http.server
-            ```
-        * Öffnen Sie die angezeigte URL (meist `http://localhost:8000`) in Ihrem Browser.
-    * **Alternative Methode:** Öffnen Sie die Datei `index.html` direkt im Browser. Diese Methode kann bei einigen Browsern zu Problemen beim Laden von Modulen führen.
-
----
-
-## 4. Architektur-Konzept
-
-Die Anwendung wurde nach modernen Software-Architektur-Prinzipien grundlegend neugestaltet, um maximale Wartbarkeit, Skalierbarkeit und logische Klarheit zu erreichen.
-
-### 4.1. Design-Philosophie
-
-* **Modularität:** Jede Funktionseinheit ist in einem eigenen, gekapselten Modul untergebracht. Dies reduziert Abhängigkeiten und erleichtert Tests und Erweiterungen.
-* **Separation of Concerns (SoC):** Es besteht eine strikte Trennung zwischen Datenverarbeitung (Core/Services), Anwendungssteuerung (Controller) und Darstellung (Renderer). Kein Modul greift in die Verantwortlichkeiten eines anderen ein.
-* **Single Source of Truth:** Der Anwendungszustand (z.B. aktiver Tab, Sortierreihenfolge, ausgewählte Kriterien) wird zentral im `stateManager` verwaltet. Module lesen aus diesem Zustand, ändern ihn aber nicht direkt, sondern über definierte Schnittstellen.
-
-### 4.2. Das MVC-ähnliche Muster
-
-Die Struktur orientiert sich an einem klassischen Model-View-Controller-Muster:
-
-* **Model:** Die `core`- und `services`-Schichten. Sie repräsentieren die Geschäftslogik.
-    * `core`: Hält die Kernregeln der Datenauswertung (z.B. wie T2-Kriterien angewendet werden).
-    * `services`: Bietet wiederverwendbare Funktionalitäten wie statistische Berechnungen, Export-Logik oder die Kommunikation mit dem Web Worker.
-* **View:** Die `renderers`-Schicht. Diese Module sind "dumm" und ausschließlich dafür verantwortlich, Daten in HTML umzuwandeln. Sie enthalten keinerlei Anwendungslogik.
-* **Controller:** Die `controllers`-Schicht. Sie sind das Bindeglied. Sie lauschen auf UI-Events (z.B. Klicks), delegieren Rechen- und Datenaufgaben an das **Model** (Services/Core) und weisen anschließend die **View** (Renderer) an, sich mit den neuen Daten zu aktualisieren.
-
-### 4.3. Unidirektionaler Datenfluss & Render-Zyklus
-
-Die Anwendung folgt einem klaren, unidirektionalen Datenfluss, der vom zentralen `main.js`-Modul gesteuert wird:
-
-1.  **Aktion:** Ein Benutzer interagiert mit der UI (z.B. Klick auf einen Button).
-2.  **Controller:** Der zuständige Controller fängt das Event ab.
-3.  **Zustandsänderung:** Der Controller aktualisiert den Anwendungszustand über den `stateManager` (z.B. `stateManager.setCurrentKollektiv(...)`).
-4.  **Render-Anstoß:** Der Controller ruft die zentrale `mainApp.updateAndRender()`-Funktion auf.
-5.  **Datenverarbeitung:** `updateAndRender()` holt den neuen Zustand vom `stateManager` und die aufbereiteten Daten vom `dataProcessor`.
-6.  **Rendering:** `updateAndRender()` ruft den zuständigen Renderer (z.B. `dataRenderer.render(...)`) mit den neuen Daten auf, um den HTML-Code zu erzeugen.
-7.  **DOM-Update:** Der erzeugte HTML-Code wird in die Seite eingefügt.
-8.  **Post-Render-Updates:** Notwendige Nacharbeiten werden ausgeführt (z.B. Initialisierung von Tooltips, Aufruf von Controller-Update-Funktionen).
-
----
-
-## 5. Detaillierte Projektstruktur & Modul-Beschreibung
-
-Jede Datei und jedes Verzeichnis hat eine klar definierte Aufgabe.
+Die Verzeichnisstruktur ist klar nach Verantwortlichkeiten getrennt, um maximale Wartbarkeit zu gewährleisten.
 
 ```
 /
+├── data/
+│   └── patient_data.js         # Anonymisierter Rohdatensatz der Studienkohorte.
+├── docs/
+│   ├── ...                     # Wissenschaftliche Artikel und Style Guides.
+├── css/
+│   └── style.css               # Benutzerdefinierte Stylesheets.
 ├── js/
 │   ├── app/
 │   │   ├── main.js             # Orchestriert die gesamte Anwendung, steuert den Render-Zyklus.
@@ -103,7 +68,7 @@ Jede Datei und jedes Verzeichnis hat eine klar definierte Aufgabe.
 │   │   └── text_config.js        # UI-Texte, Tooltips, Labels.
 │   ├── core/
 │   │   ├── data_processor.js   # Filtert und prozessiert den rohen Patientendatensatz.
-│   │   ├── study_criteria_manager.js # Verwaltet die festen T2-Kriteriensets aus publizierten Studien.
+│   │   ├── study_criteria_manager.js # Verwaltet feste T2-Kriteriensets aus publizierten Studien.
 │   │   └── t2_criteria_manager.js  # Verwaltet die interaktiv definierten T2-Kriterien.
 │   ├── services/
 │   │   ├── brute_force_manager.js # Steuert den Web Worker für die Brute-Force-Optimierung.
@@ -111,33 +76,88 @@ Jede Datei und jedes Verzeichnis hat eine klar definierte Aufgabe.
 │   │   ├── publication_generator_service.js # Generiert den wissenschaftlichen Text für den Publikation-Tab.
 │   │   └── statistics_service.js # Führt alle statistischen Berechnungen durch.
 │   ├── ui/
-│   │   ├── controllers/
-│   │   │   ├── auswertung_controller.js # Steuert alle Interaktionen auf dem Auswertung-Tab.
-│   │   │   ├── data_controller.js       # Steuert alle Interaktionen auf dem Daten-Tab.
-│   │   │   ├── export_controller.js     # Steuert alle Interaktionen auf dem Export-Tab.
-│   │   │   ├── praesentation_controller.js # Steuert alle Interaktionen auf dem Präsentation-Tab.
-│   │   │   ├── publikation_controller.js   # Steuert alle Interaktionen auf dem Publikation-Tab.
-│   │   │   └── statistik_controller.js    # Steuert alle Interaktionen auf dem Statistik-Tab.
-│   │   ├── renderers/
-│   │   │   ├── auswertung_renderer.js   # Erzeugt das HTML für den Auswertung-Tab.
-│   │   │   ├── chart_renderer.js        # Erzeugt alle D3.js-Diagramme.
-│   │   │   ├── data_renderer.js         # Erzeugt das HTML für den Daten-Tab.
-│   │   │   ├── export_renderer.js       # Erzeugt das HTML für den Export-Tab.
-│   │   │   ├── praesentation_renderer.js  # Erzeugt das HTML für den Präsentation-Tab.
-│   │   │   ├── publication_renderer.js    # Erzeugt das HTML für den Publikation-Tab.
-│   │   │   ├── statistik_renderer.js      # Erzeugt das HTML für den Statistik-Tab.
-│   │   │   └── table_renderer.js        # Zentraler Generator für Tabellenköpfe und -zeilen.
-│   │   ├── components.js       # Generatoren für kleine, wiederverwendbare UI-Elemente (z.B. Icons, Buttons).
-│   │   └── helpers.js          # Allgemeine UI-Hilfsfunktionen (Toasts, Tooltips, DOM-Manipulation).
+│   │   ├── controllers/        # Steuern die Interaktionen der jeweiligen Tabs.
+│   │   ├── renderers/          # Erzeugen das HTML-Markup für die jeweiligen UI-Teile.
+│   │   ├── components.js       # Generatoren für wiederverwendbare UI-Elemente.
+│   │   └── helpers.js          # Allgemeine UI-Hilfsfunktionen (Toasts, Tooltips).
 │   └── utils/
 │       └── utils.js            # Globale, nicht-UI-bezogene Hilfsfunktionen (Formatierung, IDs).
 ├── workers/
 │   └── brute_force_worker.js # Rechenintensiver Code für die Brute-Force-Optimierung.
-└── index.html                # Einziger HTML-Einstiegspunkt.
+└── index.html                # Einziger HTML-Einstiegspunkt der Anwendung.
 ```
+
+---
+
+## 4. Inbetriebnahme
+
+1.  **Repository beziehen:** Klonen Sie das Repository.
+    ```bash
+    git clone [https://github.com/mlurz92/AvocadoSign-Optimized.git](https://github.com/mlurz92/AvocadoSign-Optimized.git)
+    ```
+2.  **Anwendung starten (dringend empfohlen):**
+    * Navigieren Sie im Terminal in das Projektverzeichnis.
+    * Starten Sie einen lokalen Webserver, z.B. mit Python 3:
+        ```bash
+        python -m http.server
+        ```
+    * Öffnen Sie die angezeigte URL (meist `http://localhost:8000`) in Ihrem Browser.
+
+---
+
+## 5. Funktionsumfang im Detail
+
+### Globale Funktionen
+* **Kollektiv-Auswahl:** Wählen Sie die globale Studienkohorte (`Gesamt`, `Direkt OP`, `nRCT`). Alle Analysen und Visualisierungen in der gesamten Anwendung passen sich dynamisch an.
+* **Statusleiste:** Zeigt Live-Kennzahlen (Patientenanzahl, N/AS/T2-Status) für das gewählte Kollektiv.
+* **Persistenz:** Benutzereinstellungen wie Kriterien, Layouts und Sortierungen bleiben über Sitzungen hinweg erhalten.
+
+### Kernmodule (Tabs)
+
+#### **Daten**
+* **Zweck:** Transparente Darstellung und Exploration der Rohdaten.
+* **Features:** Sortierbare Patiententabelle, aufklappbare Detailansicht mit morphologischen Daten für jeden einzelnen T2-Lymphknoten.
+
+#### **Auswertung**
+* **Zweck:** Die interaktive Werkbank zur Definition, Analyse und Optimierung von diagnostischen Kriterien.
+* **Features:**
+    * **Live-Dashboard** zur visuellen Einordnung der Kohorte.
+    * **Interaktiver Kriterien-Editor** zur Definition von T2-Kriterien (Größe, Form, Kontur, Homogenität, Signal) und deren logischer Verknüpfung (UND/ODER).
+    * **Brute-Force-Optimierung** zur datengestützten Ermittlung der besten Kriterienkombination für eine wählbare Zielmetrik.
+    * **Detail-Tabelle** zur fallbasierten Analyse der Kriterien-Auswirkungen, inklusive Hervorhebung der entscheidenden Merkmale.
+
+#### **Statistik**
+* **Zweck:** Rigorose statistische Auswertung zur Validierung der Ergebnisse für eine Publikation.
+* **Features:**
+    * Umschaltbare Einzel- und Vergleichsansichten für verschiedene Kollektive.
+    * Berechnung aller relevanten diagnostischen Gütekriterien **inklusive 95%-Konfidenzintervallen**.
+    * Durchführung von **McNemar- und DeLong-Tests** zum direkten Vergleich der diagnostischen Methoden.
+    * Detaillierte Assoziationsanalysen zwischen Einzelmerkmalen und dem N-Status.
+    * Interaktive Tooltips mit Definitionen und kontextbezogenen Interpretationen für jede statistische Kennzahl.
+
+#### **Präsentation**
+* **Zweck:** Erstellung von aufbereiteten, publikationsreifen Abbildungen und Tabellen.
+* **Features:**
+    * Fokussierte Ansichten, die das Avocado Sign allein oder im Vergleich zu Literatur-Kriterien darstellen.
+    * Direkter Download aller Grafiken als hochauflösendes **PNG** oder skalierbare **SVG**-Vektorgrafik.
+
+#### **Publikation**
+* **Zweck:** Das Kernstück des Tools – die Generierung eines Manuskript-Entwurfs nach höchsten wissenschaftlichen Standards.
+* **Features:**
+    * **Struktur nach *Radiology*-Vorgabe:** Generiert alle Sektionen eines Originalartikels (Abstract, Introduction, etc.).
+    * **Dynamische Texterstellung:** Integriert automatisch alle aktuellen Analyseergebnisse (z.B. `AUC, 0.87; 95% CI: 0.79, 0.94; P < .001`) korrekt formatiert in den Fließtext.
+    * **Einhaltung von Regularien:** Überwacht und zeigt Wortgrenzen für Sektionen wie den Abstract (max. 300 Wörter) an.
+    * **Mehrsprachigkeit:** Generiert den Entwurf wahlweise auf Deutsch oder Englisch.
+
+#### **Export**
+* **Zweck:** Umfassende Exportmöglichkeiten für Daten, Ergebnisse und Grafiken zur Archivierung, Kollaboration und Einreichung.
+* **Features:**
+    * Exporte als CSV, TXT, PNG, SVG.
+    * Generierung einer vollumfänglichen **Excel-Arbeitsmappe (.xlsx)** mit getrennten Blättern für Konfiguration, Rohdaten, Auswertung und Statistiken.
+    * Zusammengefasste **ZIP-Pakete** für eine einfache Weitergabe des kompletten Analyse-Stands.
 
 ---
 
 ## 6. Lizenz
 
-Dieses Projekt ist unter der **MIT-Lizenz** lizenziert. Dies bedeutet, Sie können den Code frei verwenden, modifizieren und verbreiten, solange der ursprüngliche Copyright-Hinweis beibehalten wird.
+Dieses Projekt ist unter der **MIT-Lizenz** lizenziert.
