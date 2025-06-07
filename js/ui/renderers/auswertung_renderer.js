@@ -1,7 +1,7 @@
 const auswertungRenderer = (() => {
 
     function _createDashboardHTML(dashboardStats, kollektivName) {
-        const displayName = getKollektivDisplayName(kollektivName);
+        const displayName = utils.getKollektivDisplayName(kollektivName);
         let html = `<h3 class="mb-3">Dashboard: Kollektiv ${displayName}</h3><div class="row g-3">`;
 
         if (!dashboardStats || dashboardStats.count === 0) {
@@ -75,7 +75,7 @@ const auswertungRenderer = (() => {
     }
 
     function _createT2MetricsOverviewHTML(stats, kollektivName) {
-        const displayName = getKollektivDisplayName(kollektivName);
+        const displayName = utils.getKollektivDisplayName(kollektivName);
         let contentHTML;
 
         if (!stats || !stats.matrix || stats.matrix.rp === undefined) {
@@ -87,7 +87,7 @@ const auswertungRenderer = (() => {
             metrics.forEach((key, index) => {
                 const metricData = stats[key];
                 const interpretationHTML = uiHelpers.getMetricInterpretationHTML(key, metricData, 'T2 (angewandt)', displayName);
-                const formattedValue = formatCI(metricData?.value, metricData?.ci?.lower, metricData?.ci?.upper, 1, true, '--');
+                const formattedValue = utils.formatCI(metricData?.value, metricData?.ci?.lower, metricData?.ci?.upper, 1, true, '--');
                 contentHTML += `
                     <div class="p-1 flex-fill bd-highlight ${index > 0 ? 'border-start' : ''}" style="min-width: 110px;">
                         <strong data-tippy-content="${uiHelpers.getMetricDescriptionHTML(key, 'T2 (angewandt)')}">${metricDisplayNames[key]}:</strong>
@@ -126,7 +126,7 @@ const auswertungRenderer = (() => {
                         </div>
                     </div>
                     <div id="brute-force-info" class="mt-3 small text-muted">
-                        Status: Bereit für Kollektiv <strong>${getKollektivDisplayName(kollektivName)}</strong>.
+                        Status: Bereit für Kollektiv <strong>${utils.getKollektivDisplayName(kollektivName)}</strong>.
                     </div>
                     <div id="brute-force-progress-container" class="mt-2 d-none"></div>
                     <div id="brute-force-result-container" class="mt-3"></div>
