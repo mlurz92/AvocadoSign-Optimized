@@ -13,7 +13,7 @@ const stateManager = (() => {
         currentStatsKollektiv2: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2,
         currentPresentationView: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW,
         currentPresentationStudyId: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID,
-        activeTabId: 'publikation-tab'
+        activeTabId: 'publikation-tab' // Default to publikation-tab as per index.html
     };
 
     function init() {
@@ -27,11 +27,12 @@ const stateManager = (() => {
             currentStatsKollektiv2: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2) ?? defaultState.currentStatsKollektiv2,
             currentPresentationView: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW) ?? defaultState.currentPresentationView,
             currentPresentationStudyId: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID) ?? defaultState.currentPresentationStudyId,
-            datenTableSort: cloneDeep(defaultState.datenTableSort),
-            auswertungTableSort: cloneDeep(defaultState.auswertungTableSort),
-            activeTabId: defaultState.activeTabId
+            datenTableSort: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_SORT) ?? cloneDeep(defaultState.datenTableSort), // Load sort state
+            auswertungTableSort: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_SORT) ?? cloneDeep(defaultState.auswertungTableSort), // Load sort state
+            activeTabId: defaultState.activeTabId // Managed by Bootstrap, but good to have a default here
         };
-        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) {
+        // Clean up old storage keys if necessary
+        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) { // Example of cleanup for old keys
             localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
         }
         console.log("State Manager initialisiert mit:", currentState);
@@ -70,14 +71,15 @@ const stateManager = (() => {
             return false;
         }
 
-        if (targetSortState.key === key && targetSortState.subKey === subKey) {
-            targetSortState.direction = direction === 'asc' ? 'desc' : 'asc';
-        } else {
+        // Only update if something actually changed or explicitly forced (not applicable here)
+        if (targetSortState.key !== key || targetSortState.subKey !== subKey || targetSortState.direction !== direction) {
             targetSortState.key = key;
             targetSortState.subKey = subKey;
-            targetSortState.direction = 'asc';
+            targetSortState.direction = direction; // Use provided direction directly
+            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS[`${tableType}TableSort`], targetSortState); // Save specific table sort state
+            return true;
         }
-        return true;
+        return false;
     }
 
 
@@ -172,6 +174,8 @@ const stateManager = (() => {
         if ((newView === 'as-pur' || newView === 'as-vs-t2') && currentState.currentPresentationView !== newView) {
             currentState.currentPresentationView = newView;
             saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW, currentState.currentPresentationView);
+            // If switching to AS-Pur, ensure no study is selected.
+            // If switching to AS-vs-T2 and no study is selected, set default to 'applied_criteria'
             if (newView === 'as-pur') {
                 setPresentationStudyId(null);
             } else if (!currentState.currentPresentationStudyId && newView === 'as-vs-t2') {
@@ -187,6 +191,7 @@ const stateManager = (() => {
     }
 
     function setPresentationStudyId(newStudyId) {
+        // Allow setting to null/undefined
         const newStudyIdValue = newStudyId === undefined ? null : newStudyId;
         if (currentState.currentPresentationStudyId !== newStudyIdValue) {
             currentState.currentPresentationStudyId = newStudyIdValue;
