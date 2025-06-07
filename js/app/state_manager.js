@@ -3,8 +3,8 @@ const stateManager = (() => {
 
     const defaultState = {
         currentKollektiv: APP_CONFIG.DEFAULT_SETTINGS.KOLLEKTIV,
-        datenTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT),
-        auswertungTableSort: cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT),
+        datenTableSort: utils.cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.DATEN_TABLE_SORT),
+        auswertungTableSort: utils.cloneDeep(APP_CONFIG.DEFAULT_SETTINGS.AUSWERTUNG_TABLE_SORT),
         currentPublikationLang: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_LANG,
         currentPublikationSection: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION,
         currentPublikationBruteForceMetric: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_BRUTE_FORCE_METRIC,
@@ -13,29 +13,24 @@ const stateManager = (() => {
         currentStatsKollektiv2: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2,
         currentPresentationView: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW,
         currentPresentationStudyId: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID,
-        activeTabId: 'publikation-tab' // Default to publikation-tab as per index.html
+        activeTabId: 'publikation-tab'
     };
 
     function init() {
         currentState = {
-            currentKollektiv: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV) ?? defaultState.currentKollektiv,
-            currentPublikationLang: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG) ?? defaultState.currentPublikationLang,
-            currentPublikationSection: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION) ?? defaultState.currentPublikationSection,
-            currentPublikationBruteForceMetric: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC) ?? defaultState.currentPublikationBruteForceMetric,
-            currentStatsLayout: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT) ?? defaultState.currentStatsLayout,
-            currentStatsKollektiv1: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1) ?? defaultState.currentStatsKollektiv1,
-            currentStatsKollektiv2: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2) ?? defaultState.currentStatsKollektiv2,
-            currentPresentationView: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW) ?? defaultState.currentPresentationView,
-            currentPresentationStudyId: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID) ?? defaultState.currentPresentationStudyId,
-            datenTableSort: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_SORT) ?? cloneDeep(defaultState.datenTableSort), // Load sort state
-            auswertungTableSort: loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_SORT) ?? cloneDeep(defaultState.auswertungTableSort), // Load sort state
-            activeTabId: defaultState.activeTabId // Managed by Bootstrap, but good to have a default here
+            currentKollektiv: utils.loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV) ?? defaultState.currentKollektiv,
+            currentPublikationLang: utils.loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG) ?? defaultState.currentPublikationLang,
+            currentPublikationSection: utils.loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION) ?? defaultState.currentPublikationSection,
+            currentPublikationBruteForceMetric: utils.loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC) ?? defaultState.currentPublikationBruteForceMetric,
+            currentStatsLayout: utils.loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT) ?? defaultState.currentStatsLayout,
+            currentStatsKollektiv1: utils.loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1) ?? defaultState.currentStatsKollektiv1,
+            currentStatsKollektiv2: utils.loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2) ?? defaultState.currentStatsKollektiv2,
+            currentPresentationView: utils.loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW) ?? defaultState.currentPresentationView,
+            currentPresentationStudyId: utils.loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID) ?? defaultState.currentPresentationStudyId,
+            datenTableSort: utils.loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_SORT) ?? utils.cloneDeep(defaultState.datenTableSort),
+            auswertungTableSort: utils.loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_SORT) ?? utils.cloneDeep(defaultState.auswertungTableSort),
+            activeTabId: defaultState.activeTabId
         };
-        // Clean up old storage keys if necessary
-        if (localStorage.getItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG)) { // Example of cleanup for old keys
-            localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.METHODEN_LANG);
-        }
-        console.log("State Manager initialisiert mit:", currentState);
     }
 
     function getCurrentKollektiv() {
@@ -45,7 +40,7 @@ const stateManager = (() => {
     function setCurrentKollektiv(newKollektiv) {
         if (typeof newKollektiv === 'string' && currentState.currentKollektiv !== newKollektiv) {
             currentState.currentKollektiv = newKollektiv;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV, currentState.currentKollektiv);
+            utils.saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.CURRENT_KOLLEKTIV, currentState.currentKollektiv);
             return true;
         }
         return false;
@@ -53,35 +48,37 @@ const stateManager = (() => {
 
     function getSortState(tableType) {
         if (tableType === 'daten') {
-            return cloneDeep(currentState.datenTableSort);
+            return utils.cloneDeep(currentState.datenTableSort);
         }
         if (tableType === 'auswertung') {
-            return cloneDeep(currentState.auswertungTableSort);
+            return utils.cloneDeep(currentState.auswertungTableSort);
         }
         return {};
     }
 
     function setSortState(tableType, { key, subKey, direction }) {
-        let targetSortState;
+        let targetSortStateKey;
+        let targetSortObject;
+
         if (tableType === 'daten') {
-            targetSortState = currentState.datenTableSort;
+            targetSortStateKey = APP_CONFIG.STORAGE_KEYS.DATEN_TABLE_SORT;
+            targetSortObject = currentState.datenTableSort;
         } else if (tableType === 'auswertung') {
-            targetSortState = currentState.auswertungTableSort;
+            targetSortStateKey = APP_CONFIG.STORAGE_KEYS.AUSWERTUNG_TABLE_SORT;
+            targetSortObject = currentState.auswertungTableSort;
         } else {
             return false;
         }
 
-        // Only update if something actually changed or explicitly forced (not applicable here)
-        if (targetSortState.key !== key || targetSortState.subKey !== subKey || targetSortState.direction !== direction) {
-            targetSortState.key = key;
-            targetSortState.subKey = subKey;
-            targetSortState.direction = direction; // Use provided direction directly
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS[`${tableType}TableSort`], targetSortState); // Save specific table sort state
+        if (targetSortObject.key !== key || targetSortObject.subKey !== subKey || targetSortObject.direction !== direction) {
+            targetSortObject.key = key;
+            targetSortObject.subKey = subKey;
+            targetSortObject.direction = direction;
+            utils.saveToLocalStorage(targetSortStateKey, targetSortObject);
             return true;
         }
         return false;
     }
-
 
     function getCurrentPublikationLang() {
         return currentState.currentPublikationLang;
@@ -90,7 +87,7 @@ const stateManager = (() => {
     function setPublikationLang(newLang) {
         if ((newLang === 'de' || newLang === 'en') && currentState.currentPublikationLang !== newLang) {
             currentState.currentPublikationLang = newLang;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG, currentState.currentPublikationLang);
+            utils.saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_LANG, currentState.currentPublikationLang);
             return true;
         }
         return false;
@@ -104,11 +101,8 @@ const stateManager = (() => {
         const isValidSection = PUBLICATION_CONFIG.sections.some(section => section.id === newSectionId || (section.subSections && section.subSections.some(sub => sub.id === newSectionId)));
         if (typeof newSectionId === 'string' && isValidSection && currentState.currentPublikationSection !== newSectionId) {
             currentState.currentPublikationSection = newSectionId;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION, currentState.currentPublikationSection);
+            utils.saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_SECTION, currentState.currentPublikationSection);
             return true;
-        }
-        if (!isValidSection) {
-            console.warn(`setPublikationSection: Ungültige Sektions-ID '${newSectionId}'`);
         }
         return false;
     }
@@ -121,7 +115,7 @@ const stateManager = (() => {
         const isValidMetric = APP_CONFIG.METRIC_OPTIONS.some(m => m.value === newMetric);
         if (isValidMetric && currentState.currentPublikationBruteForceMetric !== newMetric) {
             currentState.currentPublikationBruteForceMetric = newMetric;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC, currentState.currentPublikationBruteForceMetric);
+            utils.saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PUBLIKATION_BRUTE_FORCE_METRIC, currentState.currentPublikationBruteForceMetric);
             return true;
         }
         return false;
@@ -134,7 +128,7 @@ const stateManager = (() => {
     function setStatsLayout(newLayout) {
         if ((newLayout === 'einzel' || newLayout === 'vergleich') && currentState.currentStatsLayout !== newLayout) {
             currentState.currentStatsLayout = newLayout;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT, currentState.currentStatsLayout);
+            utils.saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_LAYOUT, currentState.currentStatsLayout);
             return true;
         }
         return false;
@@ -147,7 +141,7 @@ const stateManager = (() => {
     function setStatsKollektiv1(newKollektiv) {
          if (typeof newKollektiv === 'string' && currentState.currentStatsKollektiv1 !== newKollektiv) {
             currentState.currentStatsKollektiv1 = newKollektiv;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1, currentState.currentStatsKollektiv1);
+            utils.saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV1, currentState.currentStatsKollektiv1);
             return true;
         }
         return false;
@@ -160,7 +154,7 @@ const stateManager = (() => {
     function setStatsKollektiv2(newKollektiv) {
          if (typeof newKollektiv === 'string' && currentState.currentStatsKollektiv2 !== newKollektiv) {
             currentState.currentStatsKollektiv2 = newKollektiv;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2, currentState.currentStatsKollektiv2);
+            utils.saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.STATS_KOLLEKTIV2, currentState.currentStatsKollektiv2);
             return true;
         }
         return false;
@@ -173,9 +167,7 @@ const stateManager = (() => {
     function setPresentationView(newView) {
         if ((newView === 'as-pur' || newView === 'as-vs-t2') && currentState.currentPresentationView !== newView) {
             currentState.currentPresentationView = newView;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW, currentState.currentPresentationView);
-            // If switching to AS-Pur, ensure no study is selected.
-            // If switching to AS-vs-T2 and no study is selected, set default to 'applied_criteria'
+            utils.saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_VIEW, currentState.currentPresentationView);
             if (newView === 'as-pur') {
                 setPresentationStudyId(null);
             } else if (!currentState.currentPresentationStudyId && newView === 'as-vs-t2') {
@@ -191,11 +183,10 @@ const stateManager = (() => {
     }
 
     function setPresentationStudyId(newStudyId) {
-        // Allow setting to null/undefined
         const newStudyIdValue = newStudyId === undefined ? null : newStudyId;
         if (currentState.currentPresentationStudyId !== newStudyIdValue) {
             currentState.currentPresentationStudyId = newStudyIdValue;
-            saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID, currentState.currentPresentationStudyId);
+            utils.saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.PRESENTATION_STUDY_ID, currentState.currentPresentationStudyId);
             return true;
         }
         return false;
@@ -214,11 +205,11 @@ const stateManager = (() => {
     }
 
     function loadStateItem(key) {
-        return loadFromLocalStorage(key);
+        return utils.loadFromLocalStorage(key);
     }
 
     function saveStateItem(key, value) {
-        saveToLocalStorage(key, value);
+        utils.saveToLocalStorage(key, value);
     }
 
     return Object.freeze({
