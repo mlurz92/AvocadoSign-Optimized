@@ -8,7 +8,7 @@ const t2CriteriaManager = (() => {
     function initializeT2CriteriaState() {
         const savedCriteria = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA);
         const savedLogic = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC);
-        const defaultCriteriaObject = getDefaultT2Criteria();
+        const defaultCriteriaObject = APP_CONFIG.T2_CRITERIA_SETTINGS.DEFAULT_CRITERIA;
 
         appliedT2Criteria = deepMerge(cloneDeep(defaultCriteriaObject), savedCriteria || {});
         appliedT2Logic = (savedLogic === 'UND' || savedLogic === 'ODER') ? savedLogic : defaultCriteriaObject.logic;
@@ -40,7 +40,6 @@ const t2CriteriaManager = (() => {
 
     function updateCurrentT2CriterionProperty(key, property, value) {
         if (!currentT2Criteria || !currentT2Criteria.hasOwnProperty(key) || typeof currentT2Criteria[key] !== 'object') {
-            console.warn(`updateCurrentT2CriterionProperty: Ungültiger Kriterienschlüssel '${key}'`);
             return false;
         }
         if (currentT2Criteria[key][property] !== value) {
@@ -53,7 +52,6 @@ const t2CriteriaManager = (() => {
 
      function updateCurrentT2CriteriaValue(key, value) {
          if (!currentT2Criteria || !currentT2Criteria.hasOwnProperty(key) || typeof currentT2Criteria[key] !== 'object') {
-            console.warn(`updateCurrentT2CriteriaValue: Ungültiger Kriterienschlüssel '${key}'`);
             return false;
          }
          let isValidValue = true;
@@ -69,7 +67,6 @@ const t2CriteriaManager = (() => {
              isCriteriaUnsaved = true;
              return true;
          } else if (!isValidValue) {
-             console.warn(`updateCurrentT2CriteriaValue: Ungültiger Wert '${value}' für Kriterium '${key}'`);
          }
          return false;
      }
@@ -77,7 +74,6 @@ const t2CriteriaManager = (() => {
       function updateCurrentT2CriteriaThreshold(value) {
           const numValue = parseFloat(value);
           if (!currentT2Criteria || !currentT2Criteria.size || isNaN(numValue) || !isFinite(numValue)) {
-               console.warn(`updateCurrentT2CriteriaThreshold: Ungültiger Schwellenwert '${value}'`);
               return false;
           }
           const clampedValue = clampNumber(numValue, APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min, APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max);
@@ -92,7 +88,6 @@ const t2CriteriaManager = (() => {
 
      function toggleCurrentT2CriterionActive(key, isActive) {
           if (!currentT2Criteria || !currentT2Criteria.hasOwnProperty(key) || typeof currentT2Criteria[key] !== 'object') {
-            console.warn(`toggleCurrentT2CriterionActive: Ungültiger Kriterienschlüssel '${key}'`);
             return false;
           }
           const isActiveBool = !!isActive;
@@ -114,7 +109,7 @@ const t2CriteriaManager = (() => {
     }
 
     function resetCurrentT2Criteria() {
-        const defaultCriteria = getDefaultT2Criteria();
+        const defaultCriteria = APP_CONFIG.T2_CRITERIA_SETTINGS.DEFAULT_CRITERIA;
         currentT2Criteria = cloneDeep(defaultCriteria);
         currentT2Logic = defaultCriteria.logic;
         isCriteriaUnsaved = true;
@@ -261,11 +256,9 @@ const t2CriteriaManager = (() => {
 
     function evaluateDataset(dataset, criteria, logic) {
         if (!Array.isArray(dataset)) {
-            console.error("evaluateDataset: Ungültige Eingabedaten, Array erwartet.");
             return [];
         }
         if (!criteria || (logic !== 'UND' && logic !== 'ODER')) {
-             console.error("evaluateDataset: Ungültige Kriterien oder Logik.");
              return dataset.map(p => {
                  const pCopy = cloneDeep(p);
                  pCopy.t2 = null;
@@ -304,4 +297,5 @@ const t2CriteriaManager = (() => {
         evaluatePatient: applyT2CriteriaToPatient,
         evaluateDataset: evaluateDataset
     });
+
 })();
