@@ -5,8 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.initializeState(patientDataRaw);
 
     viewRenderer.init();
-    ui_helpers.initializeTooltips(); 
-
+    
     dataTabLogic.init();
     auswertungTabLogic.init();
     statistikTabLogic.init();
