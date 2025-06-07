@@ -3,157 +3,304 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avocado Sign vs. T2 Kriterien Analyse v2.3.0</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <title>Lymphknoten T2 - Avocado Sign Analyse Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css" />
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/themes/light.css" />
     <link rel="stylesheet" href="css/style.css">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🥑%3C/text%3E%3C/svg%3E">
+    <style>
+        :root {
+            --sticky-header-offset: 111px; /* Height of the fixed header + padding */
+        }
+        .publikation-section {
+            padding-bottom: 2rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .publikation-section:last-of-type {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .publication-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+            font-size: 0.85em; /* Smaller font for tables in publication context */
+        }
+        .publication-table th, .publication-table td {
+            border: 1px solid #dee2e6;
+            padding: 0.5em;
+            text-align: left;
+            vertical-align: top;
+        }
+        .publication-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .publication-table caption {
+            caption-side: top;
+            text-align: left;
+            font-weight: bold;
+            font-size: 1.0em;
+            margin-bottom: 0.5em;
+        }
+        .publication-table .text-end {
+            text-align: right;
+        }
+        .publication-table .text-center {
+            text-align: center;
+        }
+        .publication-table td sup {
+            font-size: 0.7em;
+            vertical-align: super;
+            line-height: 0;
+        }
+        .figure-container {
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .figure-container figcaption {
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-top: 0.5rem;
+        }
+        .figure-container svg {
+            max-width: 100%;
+            height: auto;
+            display: block; /* Ensures proper centering */
+            margin: auto;
+        }
+    </style>
 </head>
 <body>
-    <header class="fixed-top shadow-sm">
+    <div class="fixed-top bg-white shadow-sm pt-2 pb-1" style="z-index: 1030;">
         <div class="container-fluid">
-             <h1 class="app-title">Lymphknoten T2 - Avocado Sign</h1>
-             <div class="header-meta ms-md-auto me-md-3">
-                <span data-tippy-content="Aktuell ausgewähltes Analysekollektiv">Kollektiv: <strong id="header-kollektiv">--</strong></span>
-                <span data-tippy-content="Anzahl Patienten im aktuellen Kollektiv">Pat.: <strong id="header-anzahl-patienten">--</strong></span>
-                <span data-tippy-content="Anteil N+ Patienten (Pathologie)">N: <strong id="header-status-n">--</strong></span>
-                <span data-tippy-content="Anteil AS+ Patienten (Vorhersage)">AS: <strong id="header-status-as">--</strong></span>
-                <span data-tippy-content="Anteil T2+ Patienten (angew. Kriterien)">T2: <strong id="header-status-t2">--</strong></span>
-            </div>
-            <div class="d-flex align-items-center">
-                <button class="btn btn-sm btn-outline-secondary me-2" id="btn-kurzanleitung" data-tippy-content="Kurzanleitung anzeigen">
-                    <i class="fas fa-question-circle"></i>
-                </button>
-                <div class="btn-group" role="group" aria-label="Kollektiv Auswahl" data-tippy-content="Wählen Sie das Patientenkollektiv für die Analyse aus.">
-                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-gesamt" data-kollektiv="Gesamt">Gesamt</button>
-                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-direkt-op" data-kollektiv="direkt OP">Direkt OP</button>
-                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-kollektiv-nrct" data-kollektiv="nRCT">nRCT</button>
+            <div class="row align-items-center">
+                <div class="col-md-auto d-flex align-items-center">
+                    <img src="img/avocado_sign_logo.png" alt="Avocado Sign Logo" style="height: 60px; margin-right: 15px;">
+                    <h1 class="h4 mb-0 text-primary">Lymphknoten T2 - Avocado Sign Analyse Tool</h1>
+                </div>
+                <div class="col-md d-flex justify-content-end align-items-center">
+                    <div id="kollektiv-selection" class="btn-group btn-group-sm me-3" role="group" aria-label="Kollektiv Auswahl">
+                        <button type="button" class="btn btn-outline-primary active" data-kollektiv="Gesamt" data-tippy-content="Wählen Sie das gesamte Patientenkollektiv aus.">Gesamt</button>
+                        <button type="button" class="btn btn-outline-primary" data-kollektiv="direkt OP" data-tippy-content="Wählen Sie Patienten, die primär operiert wurden (ohne neoadjuvante Therapie).">Direkt OP</button>
+                        <button type="button" class="btn btn-outline-primary" data-kollektiv="nRCT" data-tippy-content="Wählen Sie Patienten, die eine neoadjuvante Radiochemotherapie (nRCT) erhielten.">nRCT</button>
+                    </div>
+                    <div id="header-stats" class="d-flex align-items-center small text-muted">
+                        <span class="me-3" data-tippy-content="Aktuell betrachtetes Patientenkollektiv.">Kollektiv: <strong id="header-kollektiv">--</strong></span>
+                        <span class="me-3" data-tippy-content="Gesamtzahl der Patienten im ausgewählten Kollektiv.">Pat.: <strong id="header-anzahl-patienten">--</strong></span>
+                        <span class="me-3" data-tippy-content="Anteil der Patienten mit positivem (+) vs. negativem (-) histopathologischem Lymphknotenstatus (N-Status, Pathologie-Referenzstandard) im ausgewählten Kollektiv.">N-Status: <strong id="header-status-n">--</strong></span>
+                        <span class="me-3" data-tippy-content="Anteil der Patienten mit positivem (+) vs. negativem (-) Lymphknotenstatus gemäß Avocado Sign (AS) Vorhersage (basierend auf T1KM-MRT) im ausgewählten Kollektiv.">AS-Status: <strong id="header-status-as">--</strong></span>
+                        <span class="me-3" data-tippy-content="Anteil der Patienten mit positivem (+) vs. negativem (-) Lymphknotenstatus gemäß den aktuell angewendeten T2-Kriterien (siehe Auswertungstab) für das ausgewählte Kollektiv.">T2-Status: <strong id="header-status-t2">--</strong></span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-info ms-3" id="btn-kurzanleitung" data-tippy-content="Zeigt eine Kurzanleitung und wichtige Hinweise zur Bedienung der Anwendung.">
+                        <i class="fas fa-question-circle"></i>
+                    </button>
                 </div>
             </div>
-        </div>
-    </header>
-
-    <nav class="fixed-top navigation-tabs shadow-sm">
-        <div class="container-fluid">
-            <ul class="nav nav-tabs" id="mainTab" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="daten-tab" data-bs-toggle="tab" data-bs-target="#daten-tab-pane" type="button" role="tab" aria-controls="daten-tab-pane" aria-selected="false" data-tippy-content="Patientendaten anzeigen.">
-                        <i class="fas fa-database fa-fw me-1"></i>Daten
-                    </button>
+            <ul class="nav nav-tabs justify-content-center mt-2" id="main-tabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="data-tab" data-bs-toggle="tab" data-bs-target="#data-tab-pane" type="button" role="tab" aria-controls="data-tab-pane" aria-selected="true" data-tippy-content="Zeigt die Liste aller Patientendaten im ausgewählten Kollektiv mit Basisinformationen und Status (N/AS/T2). Ermöglicht das Sortieren und Aufklappen von Details zu T2-Lymphknotenmerkmalen.">Daten</a>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="auswertung-tab" data-bs-toggle="tab" data-bs-target="#auswertung-tab-pane" type="button" role="tab" aria-controls="auswertung-tab-pane" aria-selected="false" data-tippy-content="T2-Kriterien definieren und Ergebnisse auswerten.">
-                        <i class="fas fa-tasks fa-fw me-1"></i>Auswertung
-                    </button>
+                <li class="nav-item">
+                    <a class="nav-link" id="auswertung-tab" data-bs-toggle="tab" data-bs-target="#auswertung-tab-pane" type="button" role="tab" aria-controls="auswertung-tab-pane" aria-selected="false" data-tippy-content="Zentraler Tab zur Definition von T2-Kriterien, Anzeige eines deskriptiven Dashboards, Durchführung der Brute-Force-Optimierung und detaillierte Auswertungsergebnisse pro Patient basierend auf den angewendeten Kriterien.">Auswertung</a>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="statistik-tab" data-bs-toggle="tab" data-bs-target="#statistik-tab-pane" type="button" role="tab" aria-controls="statistik-tab-pane" aria-selected="false" data-tippy-content="Detaillierte statistische Analysen durchführen.">
-                        <i class="fas fa-chart-bar fa-fw me-1"></i>Statistik
-                    </button>
+                <li class="nav-item">
+                    <a class="nav-link" id="statistik-tab" data-bs-toggle="tab" data-bs-target="#statistik-tab-pane" type="button" role="tab" aria-controls="statistik-tab-pane" aria-selected="false" data-tippy-content="Bietet detaillierte statistische Analysen (Gütekriterien, Vergleiche, Assoziationen) für das global gewählte Kollektiv oder einen Vergleich zweier spezifisch wählbarer Kollektive. Alle Konfidenzintervalle (CI) sind 95%-CIs.">Statistik</a>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="praesentation-tab" data-bs-toggle="tab" data-bs-target="#praesentation-tab-pane" type="button" role="tab" aria-controls="praesentation-tab-pane" aria-selected="false" data-tippy-content="Ergebnisse präsentationsfreundlich darstellen.">
-                        <i class="fas fa-slideshare fa-fw me-1"></i>Präsentation
-                    </button>
+                <li class="nav-item">
+                    <a class="nav-link" id="praesentation-tab" data-bs-toggle="tab" data-bs-target="#praesentation-tab-pane" type="button" role="tab" aria-controls="praesentation-tab-pane" aria-selected="false" data-tippy-content="Stellt Analyseergebnisse in einem aufbereiteten, präsentationsfreundlichen Format dar, fokussiert auf den Vergleich des Avocado Signs mit T2-basierten Ansätzen (angewandt oder Literatur).">Präsentation</a>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="publikation-tab" data-bs-toggle="tab" data-bs-target="#publikation-tab-pane" type="button" role="tab" aria-controls="publikation-tab-pane" aria-selected="true" data-tippy-content="Textvorschläge und Materialien für Publikationen generieren.">
-                        <i class="fas fa-feather-alt fa-fw me-1"></i>Publikation
-                    </button>
+                <li class="nav-item">
+                    <a class="nav-link" id="publikation-tab" data-bs-toggle="tab" data-bs-target="#publikation-tab-pane" type="button" role="tab" aria-controls="publikation-tab-pane" aria-selected="false" data-tippy-content="Generiert automatisch Textvorschläge in Deutsch oder Englisch für verschiedene Abschnitte einer wissenschaftlichen Publikation (Abstract, Einleitung, Methoden, Ergebnisse, Diskussion, Referenzen).">Publikation</a>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-tab-pane" type="button" role="tab" aria-controls="export-tab-pane" aria-selected="false" data-tippy-content="Daten und Analyseergebnisse exportieren.">
-                        <i class="fas fa-download fa-fw me-1"></i>Export
-                    </button>
+                <li class="nav-item">
+                    <a class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-tab-pane" type="button" role="tab" aria-controls="export-tab-pane" aria-selected="false" data-tippy-content="Bietet umfangreiche Optionen zum Herunterladen von Rohdaten, Analyseergebnissen, Tabellen und Diagrammen in verschiedenen Dateiformaten.">Export</a>
                 </li>
             </ul>
         </div>
-    </nav>
+    </div>
 
-    <main class="container-fluid main-content" id="app-container">
-        <div class="tab-content" id="mainTabContent">
-            <section class="tab-pane fade" id="daten-tab-pane" role="tabpanel" aria-labelledby="daten-tab" tabindex="0">
-                 <p class="text-center p-5 text-muted">Lade Patientendaten...</p>
-            </section>
+    <div class="container-fluid main-content-area pt-5" id="main-content-wrapper">
+        <div class="tab-content pt-4" id="main-tab-content">
+            <div class="tab-pane fade show active" id="data-tab-pane" role="tabpanel" aria-labelledby="data-tab" tabindex="0">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Patienten Daten</span>
+                        <button class="btn btn-sm btn-outline-secondary" id="daten-toggle-details" data-action="expand" data-tippy-content="Öffnet oder schließt die Detailansicht zu den T2-gewichteten Lymphknotenmerkmalen für alle Patienten in der aktuellen Tabellenansicht. Zeigt Größe, Form, Kontur, Homogenität und Signal für jeden LK.">
+                            Alle Details Anzeigen <i class="fas fa-chevron-down ms-1"></i>
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped table-sm mb-0">
+                                <thead id="daten-table-header">
+                                    <tr>
+                                        <th class="sortable" data-sort-key="nr" data-tippy-content="Sortiert Patienten nach ihrer fortlaufenden Nummer (Patienten-ID).">Nr. <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
+                                        <th class="sortable" data-sort-key="name" data-tippy-content="Sortiert Patienten nach ihrem Nachnamen.">Name <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
+                                        <th class="sortable" data-sort-key="vorname" data-tippy-content="Sortiert Patienten nach ihrem Vornamen.">Vorname <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
+                                        <th class="sortable" data-sort-key="geschlecht" data-tippy-content="Sortiert Patienten nach ihrem Geschlecht.">Geschlecht <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
+                                        <th class="sortable" data-sort-key="alter" data-tippy-content="Sortiert Patienten nach ihrem Alter.">Alter <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
+                                        <th class="sortable" data-sort-key="therapie" data-tippy-content="Sortiert Patienten nach ihrer Therapiegruppe (Direkt OP oder nRCT).">Therapie <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
+                                        <th class="sortable" data-sort-key="status" data-tippy-content="Sortiert Patienten nach ihrem N-, AS- oder T2-Status.">
+                                            Status <i class="fas fa-sort text-muted opacity-50 ms-1"></i><br>
+                                            <span class="sortable-sub-header" data-sub-key="n">N</span>/<span class="sortable-sub-header" data-sub-key="as">AS</span>/<span class="sortable-sub-header" data-sub-key="t2">T2</span>
+                                        </th>
+                                        <th class="sortable" data-sort-key="anzahl_patho_lk" data-tippy-content="Sortiert Patienten nach der Anzahl histopathologisch untersuchter Lymphknoten.">N+ LK / gesamt <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
+                                        <th>Bemerkung</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="daten-table-body">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            <section class="tab-pane fade" id="auswertung-tab-pane" role="tabpanel" aria-labelledby="auswertung-tab" tabindex="0">
-                 <p class="text-center p-5 text-muted">Lade Auswertung...</p>
-            </section>
+            <div class="tab-pane fade" id="auswertung-tab-pane" role="tabpanel" aria-labelledby="auswertung-tab" tabindex="0">
+                <div class="row g-4 mb-4" id="auswertung-dashboard-container">
+                    </div>
+                <div class="row g-4 mb-4">
+                    <div class="col-xl-8" id="t2-criteria-control-container">
+                        </div>
+                    <div class="col-xl-4">
+                         <div id="t2-metrics-overview-container">
+                            </div>
+                    </div>
+                </div>
+                 <div class="row g-4 mb-4" id="brute-force-optimization-container">
+                    </div>
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Auswertung Tabelle (Angewandte T2-Kriterien)</span>
+                        <button class="btn btn-sm btn-outline-secondary" id="auswertung-toggle-details" data-action="expand" data-tippy-content="Öffnet oder schließt die Detailansicht zu den bewerteten T2-Lymphknoten und erfüllten Kriterien für alle Patienten in der aktuellen Tabellenansicht.">
+                            Alle Details Anzeigen <i class="fas fa-chevron-down ms-1"></i>
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped table-sm mb-0">
+                                <thead id="auswertung-table-header">
+                                    <tr>
+                                        <th class="sortable" data-sort-key="nr">Nr. <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
+                                        <th class="sortable" data-sort-key="name">Name <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
+                                        <th class="sortable" data-sort-key="therapie">Therapie <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
+                                        <th class="sortable" data-sort-key="status">
+                                            Status <i class="fas fa-sort text-muted opacity-50 ms-1"></i><br>
+                                            <span class="sortable-sub-header" data-sub-key="n">N</span>/<span class="sortable-sub-header" data-sub-key="as">AS</span>/<span class="sortable-sub-header" data-sub-key="t2">T2</span>
+                                        </th>
+                                        <th class="sortable" data-sort-key="anzahl_patho_lk" data-tippy-content="Anzahl pathologisch positiver (N+) Lymphknoten / Gesamtzahl histopathologisch untersuchter Lymphknoten für diesen Patienten.">N+ LK / gesamt <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
+                                        <th class="sortable" data-sort-key="anzahl_as_lk" data-tippy-content="Anzahl als positiv bewerteter Avocado Sign (AS+) Lymphknoten / Gesamtzahl im T1KM-MRT sichtbarer Lymphknoten für diesen Patienten.">AS+ LK / gesamt <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
+                                        <th class="sortable" data-sort-key="anzahl_t2_lk" data-tippy-content="Anzahl als positiv bewerteter T2-Lymphknoten (gemäß aktuell angewendeter Kriterien) / Gesamtzahl im T2-MRT sichtbarer Lymphknoten für diesen Patienten.">T2+ LK / gesamt <i class="fas fa-sort text-muted opacity-50 ms-1"></i></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="auswertung-table-body">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            <section class="tab-pane fade" id="statistik-tab-pane" role="tabpanel" aria-labelledby="statistik-tab" tabindex="0">
-                 <p class="text-center p-5 text-muted">Lade Statistik...</p>
-            </section>
+            <div class="tab-pane fade" id="statistik-tab-pane" role="tabpanel" aria-labelledby="statistik-tab" tabindex="0">
+                <div class="d-flex justify-content-end align-items-center mb-3">
+                    <div class="me-3" id="statistik-kollektiv-select-1-container" style="display: none;">
+                        <label for="statistik-kollektiv-select-1" class="form-label form-label-sm mb-0 me-1">Kollektiv 1:</label>
+                        <select class="form-select form-select-sm d-inline-block" id="statistik-kollektiv-select-1" style="width: auto;" data-tippy-content="Wählen Sie das erste Kollektiv für die statistische Auswertung oder den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv').">
+                            </select>
+                    </div>
+                    <div class="me-3" id="statistik-kollektiv-select-2-container" style="display: none;">
+                        <label for="statistik-kollektiv-select-2" class="form-label form-label-sm mb-0 me-1">Kollektiv 2:</label>
+                        <select class="form-select form-select-sm d-inline-block" id="statistik-kollektiv-select-2" style="width: auto;" data-tippy-content="Wählen Sie das zweite Kollektiv für den Vergleich (nur aktiv bei Layout 'Vergleich Aktiv').">
+                            </select>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary" id="statistik-toggle-vergleich" data-tippy-content="Schaltet zwischen der detaillierten Einzelansicht für das global gewählte Kollektiv und der Vergleichsansicht zweier spezifisch wählbarer Kollektive um.">
+                        <i class="fas fa-user-cog me-1"></i> Einzelansicht
+                    </button>
+                </div>
+                <div id="statistik-content">
+                    </div>
+            </div>
 
-            <section class="tab-pane fade" id="praesentation-tab-pane" role="tabpanel" aria-labelledby="praesentation-tab" tabindex="0">
-                 <p class="text-center p-5 text-muted">Lade Präsentation...</p>
-            </section>
+            <div class="tab-pane fade" id="praesentation-tab-pane" role="tabpanel" aria-labelledby="praesentation-tab" tabindex="0">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="btn-group" role="group" aria-label="Präsentationsansicht">
+                        <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-as-pur" value="as-pur" autocomplete="off" checked>
+                        <label class="btn btn-outline-primary btn-sm" for="praes-as-pur">Avocado Sign (Performance)</label>
+                        <input type="radio" class="btn-check" name="praesentationAnsicht" id="praes-as-vs-t2" value="as-vs-t2" autocomplete="off">
+                        <label class="btn btn-outline-primary btn-sm" for="praes-as-vs-t2">AS vs. T2 (Vergleich)</label>
+                    </div>
+                    <div id="praes-study-select-container" style="display: none;">
+                        <label for="praes-study-select" class="form-label form-label-sm mb-0 me-1">T2 Vergleichsbasis:</label>
+                        <select class="form-select form-select-sm d-inline-block" id="praes-study-select" style="width: auto;" data-tippy-content="Wählen Sie eine T2-Kriterienbasis für den Vergleich mit dem Avocado Sign. Optionen: aktuell in der App eingestellte Kriterien oder vordefinierte Sets aus publizierten Studien. Die Auswahl aktualisiert die untenstehenden Vergleiche. Das globale Kollektiv passt sich ggf. dem Zielkollektiv der Studie an.">
+                            </select>
+                    </div>
+                </div>
+                <div id="praesentation-content">
+                    </div>
+            </div>
 
-            <section class="tab-pane fade show active" id="publikation-tab-pane" role="tabpanel" aria-labelledby="publikation-tab" tabindex="0">
-                 <p class="text-center p-5 text-muted">Lade Publikationswerkzeuge...</p>
-            </section>
+            <div class="tab-pane fade" id="publikation-tab-pane" role="tabpanel" aria-labelledby="publikation-tab" tabindex="0">
+                <div id="publikation-header-section">
+                    </div>
+                <div class="row">
+                    <div class="col-12" id="publikation-main-content">
+                        </div>
+                </div>
+            </div>
 
-            <section class="tab-pane fade" id="export-tab-pane" role="tabpanel" aria-labelledby="export-tab" tabindex="0">
-                 <p class="text-center p-5 text-muted">Lade Exportoptionen...</p>
-            </section>
+            <div class="tab-pane fade" id="export-tab-pane" role="tabpanel" aria-labelledby="export-tab" tabindex="0">
+                <div id="export-options-container">
+                    </div>
+            </div>
         </div>
-    </main>
+    </div>
 
-    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
-        <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+    <div id="loading-spinner" class="d-none">
+        <div class="spinner-overlay"></div>
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
     </div>
 
     <div class="modal fade" id="brute-force-modal" tabindex="-1" aria-labelledby="bruteForceModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content modal-glass">
-          <div class="modal-header">
-            <h5 class="modal-title" id="bruteForceModalLabel">Brute-Force Optimierungsergebnisse</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen" data-tippy-content="Schließt dieses Fenster."></button>
-          </div>
-          <div class="modal-body">
-             <p class="text-center text-muted">Ergebnisse werden geladen...</p>
-          </div>
-          <div class="modal-footer">
-             <button type="button" class="btn btn-outline-primary btn-sm" id="export-bruteforce-modal-txt" disabled data-tippy-content="Exportiert den detaillierten Brute-Force-Bericht als TXT.">
-                 <i class="fas fa-file-alt me-1"></i> Bericht exportieren (.txt)
-             </button>
-            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" data-tippy-content="Schließt dieses Fenster ohne weitere Aktion.">Schließen</button>
-          </div>
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content modal-glass">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bruteForceModalLabel">Brute-Force Optimierung Ergebnisse</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="brute-force-modal-body">
+                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="export-bruteforce-modal-txt" data-tippy-content="Exportiert den detaillierten Bericht der Brute-Force-Optimierung (Top 10 Ergebnisse, Kollektiv-Statistik, Konfiguration) als formatierte Textdatei (.txt).">
+                        <i class="fas fa-file-alt me-1"></i> Export als TXT
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
 
-    <div class="modal fade" id="kurzanleitung-modal" tabindex="-1" aria-labelledby="kurzanleitungModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content modal-glass">
-          <div class="modal-header">
-            <h5 class="modal-title" id="kurzanleitungModalLabel">Kurzanleitung & Wichtige Hinweise</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
-          </div>
-          <div class="modal-body">
-            <p>Lade Kurzanleitung...</p>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Schließen</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container" style="z-index: 1050;"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
     <script src="data/data.js"></script>
 
-    <script src="js/utils/utils.js"></script>
-
     <script src="js/config/app_config.js"></script>
-    <script src="js/config/text_config.js"></script>
-    <script src="js/config/publication_config.js"></script>
+
+    <script src="js/utils/utils.js"></script>
 
     <script src="js/core/data_processor.js"></script>
     <script src="js/core/t2_criteria_manager.js"></script>
@@ -163,32 +310,30 @@
     <script src="js/services/brute_force_manager.js"></script>
     <script src="js/services/export_service.js"></script>
 
-    <script src="js/ui/core/ui_helpers.js"></script>
-    <script src="js/ui/core/ui_components.js"></script>
-
-    <script src="js/ui/renderers/table_renderer.js"></script>
+    <script src="js/ui/helpers/ui_helpers.js"></script>
+    <script src="js/ui/components/ui_components.js"></script>
     <script src="js/ui/renderers/chart_renderer.js"></script>
+    <script src="js/ui/renderers/table_renderer.js"></script>
     <script src="js/ui/renderers/publication/publication_text_generator.js"></script>
     <script src="js/ui/renderers/publication/publication_tables.js"></script>
     <script src="js/ui/renderers/publication/publication_figures.js"></script>
     <script src="js/ui/renderers/publication/publication_renderer.js"></script>
-
-    <script src="js/ui/view_logic/data_tab_logic.js"></script>
-    <script src="js/ui/view_logic/auswertung_tab_logic.js"></script>
-    <script src="js/ui/view_logic/statistik_tab_logic.js"></script>
-    <script src="js/ui/view_logic/praesentation_tab_logic.js"></script>
-    <script src="js/ui/view_logic/publikation_tab_logic.js"></script>
-
-    <script src="js/ui/event_handlers/general_event_handlers.js"></script>
-    <script src="js/ui/event_handlers/auswertung_event_handlers.js"></script>
-    <script src="js/ui/event_handlers/statistik_event_handlers.js"></script>
-    <script src="js/ui/event_handlers/praesentation_event_handlers.js"></script>
-    <script src="js/ui/event_handlers/publikation_event_handlers.js"></script>
-
-    <script src="js/ui/view_renderer.js"></script>
+    <script src="js/ui/renderers/view_renderer.js"></script>
+    
+    <script src="js/ui/views/data_tab_logic.js"></script>
+    <script src="js/ui/views/auswertung_tab_logic.js"></script>
+    <script src="js/ui/views/statistik_tab_logic.js"></script>
+    <script src="js/ui/views/praesentation_tab_logic.js"></script>
+    <script src="js/ui/views/publikation_tab_logic.js"></script>
 
     <script src="js/app/state.js"></script>
-    <script src="js/app/main.js"></script>
 
+    <script src="js/ui/handlers/general_event_handlers.js"></script>
+    <script src="js/ui/handlers/auswertung_event_handlers.js"></script>
+    <script src="js/ui/handlers/statistik_event_handlers.js"></script>
+    <script src="js/ui/handlers/praesentation_event_handlers.js"></script>
+    <script src="js/ui/handlers/publikation_event_handlers.js"></script>
+
+    <script src="js/app/main.js"></script>
 </body>
 </html>
