@@ -90,7 +90,7 @@ const auswertungRenderer = (() => {
                 const formattedValue = formatCI(metricData?.value, metricData?.ci?.lower, metricData?.ci?.upper, 1, true, '--');
                 contentHTML += `
                     <div class="p-1 flex-fill bd-highlight ${index > 0 ? 'border-start' : ''}" style="min-width: 110px;">
-                        <strong data-tippy-content="${getMetricDescriptionHTML(key, 'T2 (angewandt)')}">${metricDisplayNames[key]}:</strong>
+                        <strong data-tippy-content="${uiHelpers.getMetricDescriptionHTML(key, 'T2 (angewandt)')}">${metricDisplayNames[key]}:</strong>
                         <span data-tippy-content="${interpretationHTML}"> ${formattedValue}</span>
                     </div>`;
             });
@@ -106,7 +106,7 @@ const auswertungRenderer = (() => {
     }
 
     function _createBruteForcePanelHTML(isWorkerAvailable, kollektivName) {
-        const metricOptions = METRIC_OPTIONS.map(opt => `<option value="${opt.value}" ${opt.value === APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC ? 'selected' : ''}>${opt.label}</option>`).join('');
+        const metricOptions = APP_CONFIG.METRIC_OPTIONS.map(opt => `<option value="${opt.value}" ${opt.value === APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC ? 'selected' : ''}>${opt.label}</option>`).join('');
         return `
             <h3 class="mb-3">Brute-Force Optimierung für T2-Kriterien</h3>
             <div class="card mb-4">
