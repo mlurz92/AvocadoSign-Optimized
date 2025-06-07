@@ -4,8 +4,8 @@ const statistikRenderer = (() => {
         if (!data || !data.count) return '<p class="text-muted p-2">Keine deskriptiven Daten verfügbar.</p>';
         
         const rows = [
-            { label: 'Anzahl Patienten', value: formatNumber(data.count, 0) },
-            { label: 'Alter (Median, IQR)', value: `${formatNumber(data.age.median, 0)} (${formatNumber(data.age.q1, 0)} - ${formatNumber(data.age.q3, 0)})` },
+            { label: 'Anzahl Patienten', value: utils.formatNumber(data.count, 0) },
+            { label: 'Alter (Median, IQR)', value: `${utils.formatNumber(data.age.median, 0)} (${utils.formatNumber(data.age.q1, 0)} - ${utils.formatNumber(data.age.q3, 0)})` },
             { label: 'Geschlechterverteilung (m/w)', value: `${data.gender.m || 0} / ${data.gender.f || 0}` },
             { label: 'Therapie (Direkt OP/nRCT)', value: `${data.therapy['direkt OP'] || 0} / ${data.therapy.nRCT || 0}` }
         ];
@@ -35,7 +35,7 @@ const statistikRenderer = (() => {
 
     function _createPerformanceTabelleHTML(data, key, kollektiv, title) {
         if (!data || !data.matrix) return `<p class="text-muted p-2">Keine Performancedaten für ${title} verfügbar.</p>`;
-        const kollektivName = getKollektivDisplayName(kollektiv);
+        const kollektivName = utils.getKollektivDisplayName(kollektiv);
 
         const metrics = [
             { key: 'sens', label: 'Sensitivität' }, { key: 'spez', label: 'Spezifität' },
@@ -51,7 +51,7 @@ const statistikRenderer = (() => {
             
             const isPercent = metric.key !== 'auc' && metric.key !== 'f1';
             const digits = isPercent ? 1 : 3;
-            const formattedValue = formatCI(metricData.value, metricData.ci?.lower, metricData.ci?.upper, digits, isPercent, '--');
+            const formattedValue = utils.formatCI(metricData.value, metricData.ci?.lower, metricData.ci?.upper, digits, isPercent, '--');
             const tooltipDesc = uiHelpers.getMetricDescriptionHTML(metric.key, title);
             const tooltipInterp = uiHelpers.getMetricInterpretationHTML(metric.key, metricData, title, kollektivName);
 
@@ -67,15 +67,15 @@ const statistikRenderer = (() => {
 
     function _createVergleichstestsTabelleHTML(data, kollektiv) {
         if (!data || (!data.mcnemar && !data.delong)) return '<p class="text-muted p-2">Keine Vergleichsdaten verfügbar.</p>';
-        const kollektivName = getKollektivDisplayName(kollektiv);
+        const kollektivName = utils.getKollektivDisplayName(kollektiv);
         const tests = [];
         if (data.mcnemar) tests.push({ key: 'mcnemar', label: 'McNemar-Test (Sens/Spez)', data: data.mcnemar });
         if (data.delong) tests.push({ key: 'delong', label: 'DeLong-Test (AUC)', data: data.delong });
 
         let tableHTML = '<table class="table table-sm table-borderless table-striped mb-0">';
         tests.forEach(test => {
-            const pValueFormatted = getPValueText(test.data.pValue);
-            const tooltipDesc = uiHelpers.getMetricDescriptionHTML(test.key, 'T2'); // Assuming T2 as method for comparison
+            const pValueFormatted = utils.getPValueText(test.data.pValue);
+            const tooltipDesc = uiHelpers.getMetricDescriptionHTML(test.key, 'T2');
             const tooltipInterp = uiHelpers.getTestInterpretationHTML(test.key, test.data, kollektivName, 'Avocado Sign', 'T2');
 
             tableHTML += `<tr>
@@ -88,7 +88,7 @@ const statistikRenderer = (() => {
 
     function _createAssoziationsTabelleHTML(data, kollektiv) {
         if (!data || Object.keys(data).length === 0) return '<p class="text-muted p-2">Keine Assoziationsdaten verfügbar.</p>';
-        const kollektivName = getKollektivDisplayName(kollektiv);
+        const kollektivName = utils.getKollektivDisplayName(kollektiv);
         
         const tests = ['size_mwu', 'form', 'kontur', 'homogenitaet', 'signal'].map(key => {
             if (!data[key] || data[key].pValue === undefined || isNaN(data[key].pValue)) return null;
@@ -101,10 +101,9 @@ const statistikRenderer = (() => {
 
         if (tests.length === 0) return '<p class="text-muted p-2">Keine aktiven Assoziationsdaten verfügbar.</p>';
 
-
         let tableHTML = '<table class="table table-sm table-borderless table-striped mb-0">';
         tests.forEach(test => {
-            const pValueFormatted = getPValueText(test.data.pValue);
+            const pValueFormatted = utils.getPValueText(test.data.pValue);
             const tooltipDesc = uiHelpers.getMetricDescriptionHTML(test.key, 'N-Status');
             const tooltipInterp = uiHelpers.getAssociationInterpretationHTML(test.key, test.data, test.label, kollektivName);
 
@@ -117,7 +116,7 @@ const statistikRenderer = (() => {
     }
 
     function _renderEinzelLayout(stats, kollektiv) {
-        const kollektivName = getKollektivDisplayName(kollektiv);
+        const kollektivName = utils.getKollektivDisplayName(kollektiv);
         const chartDownloadButtons = [
             { format: 'png', chartId: `chart-as-vs-t2-${kollektiv}`, chartName: `Performance_Vergleich_${kollektiv}`, tooltip: TOOLTIP_CONTENT.praesentation.downloadCompChartPNG.description },
             { format: 'svg', chartId: `chart-as-vs-t2-${kollektiv}`, chartName: `Performance_Vergleich_${kollektiv}`, tooltip: TOOLTIP_CONTENT.praesentation.downloadCompChartSVG.description }
@@ -138,10 +137,9 @@ const statistikRenderer = (() => {
         if (!stats.kollektiv1 || !stats.kollektiv2) {
             return `<p class="p-3 text-center text-muted">Statistikdaten für den Vergleichsmodus konnten nicht geladen werden.</p>`;
         }
-        const kollektiv1Name = getKollektivDisplayName(kollektiv1);
-        const kollektiv2Name = getKollektivDisplayName(kollektiv2);
+        const kollektiv1Name = utils.getKollektivDisplayName(kollektiv1);
+        const kollektiv2Name = utils.getKollektivDisplayName(kollektiv2);
 
-        // Define specific download buttons for comparison layout charts if needed, or reuse generic ones
         const chartDownloadButtonsK1 = [
             { format: 'png', chartId: `chart-as-vs-t2-${kollektiv1}-compare`, chartName: `Performance_Vergleich_${kollektiv1}`, tooltip: TOOLTIP_CONTENT.praesentation.downloadCompChartPNG.description },
             { format: 'svg', chartId: `chart-as-vs-t2-${kollektiv1}-compare`, chartName: `Performance_Vergleich_${kollektiv1}`, tooltip: TOOLTIP_CONTENT.praesentation.downloadCompChartSVG.description }
