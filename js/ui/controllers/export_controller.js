@@ -14,34 +14,7 @@ const exportController = (() => {
         uiHelpers.showToast(`Export für '${format}' wird generiert...`, 'info', 2000);
 
         try {
-            switch (format) {
-                case 'stats-csv':
-                    await exportService.exportStatistikCsv();
-                    break;
-                case 'bruteforce-txt':
-                    await exportService.exportBruteForceReport();
-                    break;
-                case 'filtered-data-csv':
-                    await exportService.exportFilteredDataAsCsv();
-                    break;
-                case 'comprehensive-report-html':
-                    await exportService.exportComprehensiveReport();
-                    break;
-                case 'all-zip':
-                    await exportService.exportCategoryZip('all-zip');
-                    break;
-                case 'png-zip':
-                    await exportService.exportCategoryZip('png-zip');
-                    break;
-                case 'svg-zip':
-                    await exportService.exportCategoryZip('svg-zip');
-                    break;
-                case 'excel-workbook':
-                    await exportService.exportExcelWorkbook();
-                    break;
-                default:
-                    uiHelpers.showToast(`Unbekanntes Exportformat: ${format}`, 'warning');
-            }
+            await exportService.generateExport(format);
         } catch (error) {
             console.error(`Fehler beim Exportieren des Formats ${format}:`, error);
             uiHelpers.showToast(`Export für '${format}' fehlgeschlagen. Details in der Konsole.`, 'danger');
@@ -60,18 +33,18 @@ const exportController = (() => {
         try {
             if (chartId) {
                 await exportService.exportSingleChart(chartId, format);
-            } else if (tableId) {
-                await exportService.exportSingleTable(tableId, tableName, format);
+            } else if (tableId && tableName && format === 'png') {
+                await exportService.exportSingleTableAsPng(tableId, tableName);
             }
         } catch (error) {
-            console.error(`Fehler beim globalen Export des Formats ${format}:`, error);
+            console.error(`Fehler beim globalen Export des Formats ${format} für Element #${chartId || tableId}:`, error);
             uiHelpers.showToast(`Export fehlgeschlagen. Details in der Konsole.`, 'danger');
         }
     }
 
     function updateView() {
         const hasBruteForceResults = Object.keys(bruteForceManager.getAllResults()).length > 0;
-        const hasData = dataProcessor.getProcessedData().length > 0;
+        const hasData = mainApp.getProcessedData().length > 0;
 
         const buttonConfigs = [
             { id: 'export-stats-csv', condition: hasData },
@@ -97,7 +70,8 @@ const exportController = (() => {
         mainApp = app;
         paneElement = document.getElementById('export-tab-pane');
         
-        // Add global click listener for download buttons in cards
+        exportService.init(mainApp);
+
         document.body.addEventListener('click', _handleGlobalDownloadClick);
         isInitialized = true;
     }
