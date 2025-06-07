@@ -34,7 +34,7 @@ const exportRenderer = (() => {
 
     function render(hasBruteForceResults, canExportDataDependent) {
         const kollektiv = stateManager.getCurrentKollektiv();
-        const tt = (key) => TOOLTIP_CONTENT.exportTab[key]?.description.replace('[KOLLEKTIV]', `<strong>${getKollektivDisplayName(kollektiv)}</strong>`) || '';
+        const tt = (key) => TOOLTIP_CONTENT.exportTab[key]?.description.replace(/\[KOLLEKTIV\]/g, `<strong>${getKollektivDisplayName(kollektiv)}</strong>`) || '';
 
         const singleExports = [
             {
