@@ -7,7 +7,7 @@ const t2CriteriaManager = (() => {
         
         let loadedCriteria = getDefaultT2Criteria();
         if (savedCriteria) {
-            loadedCriteria = deepMerge(loadedCriteria, savedCriteria);
+            loadedCriteria = utils.deepMerge(loadedCriteria, savedCriteria);
         }
         if (savedLogic) {
             loadedCriteria.logic = savedLogic;
@@ -16,7 +16,7 @@ const t2CriteriaManager = (() => {
     }
 
     function getCriteria() {
-        return cloneDeep(criteria);
+        return utils.cloneDeep(criteria);
     }
     
     function getLogic() {
@@ -25,7 +25,7 @@ const t2CriteriaManager = (() => {
 
     function setCriteria(newCriteria, newLogic) {
         if (newCriteria) {
-            criteria = deepMerge(criteria, newCriteria);
+            criteria = utils.deepMerge(criteria, newCriteria);
         }
         if (newLogic) {
             criteria.logic = newLogic;
@@ -37,7 +37,7 @@ const t2CriteriaManager = (() => {
 
     function resetToDefaults() {
         criteria = getDefaultT2Criteria();
-        setCriteria(criteria, criteria.logic); // Apply and save defaults
+        setCriteria(criteria, criteria.logic);
     }
 
     function formatCriteriaForDisplay(criteriaObj, logic) {
@@ -51,7 +51,7 @@ const t2CriteriaManager = (() => {
 
         const formatValue = (key, criterion) => {
             if (!criterion) return '?';
-            if (key === 'size') return `${criterion.condition || '>='}${formatNumber(criterion.threshold, 1)}mm`;
+            if (key === 'size') return `${criterion.condition || '>='}${utils.formatNumber(criterion.threshold, 1)}mm`;
             return criterion.value || '?';
         };
 
@@ -108,7 +108,7 @@ const t2CriteriaManager = (() => {
         if (!Array.isArray(dataset)) return [];
         return dataset.map(patient => {
             if (!patient) return null;
-            const evaluatedPatient = cloneDeep(patient);
+            const evaluatedPatient = utils.cloneDeep(patient);
             let patientT2Positive = false;
             let t2PlusLkCount = 0;
             const lymphNodes = evaluatedPatient.lymphknoten_t2 || [];
@@ -137,13 +137,10 @@ const t2CriteriaManager = (() => {
             const hasT2Data = lymphNodes.length > 0;
             const hasActiveCriteria = Object.keys(criteriaObj).some(key => key !== 'logic' && criteriaObj[key]?.active);
             
-            // The patient's T2 status is only assigned if there are active criteria AND T2 data.
-            // If no active criteria, the status is '?', signifying it was not evaluated by criteria.
-            // If no T2 data for the patient, but criteria are active, it's '-' (no positive nodes found).
             if (hasActiveCriteria) {
                  evaluatedPatient.t2 = hasT2Data ? (patientT2Positive ? '+' : '-') : '-';
             } else {
-                 evaluatedPatient.t2 = '?'; // Not evaluated by criteria
+                 evaluatedPatient.t2 = '?';
             }
             
             evaluatedPatient.anzahl_t2_lk = lymphNodes.length;
