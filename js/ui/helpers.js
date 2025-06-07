@@ -92,6 +92,13 @@ const uiHelpers = (() => {
         }
     }
 
+    function toggleElementClass(elementId, className, force) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.classList.toggle(className, force);
+        }
+    }
+
     function updateHeaderStatsUI(stats) {
         updateElementHTML('header-kollektiv', stats.kollektiv);
         updateElementHTML('header-anzahl-patienten', stats.anzahlPatienten);
@@ -237,14 +244,14 @@ const uiHelpers = (() => {
         initializeTooltips,
         destroyTooltips,
         updateElementHTML,
-        updateHeaderStatsUI,
         updateKollektivButtonsUI,
         attachRowCollapseListeners,
         showKurzanleitung,
         getMetricDescriptionHTML,
         getMetricInterpretationHTML,
         getTestInterpretationHTML,
-        getAssociationInterpretationHTML
+        getAssociationInterpretationHTML,
+        toggleElementClass
     });
 
 })();
