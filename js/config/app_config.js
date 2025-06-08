@@ -1,6 +1,7 @@
 const APP_CONFIG = Object.freeze({
     APP_NAME: "Avocado Sign vs. T2 Kriterien Analyse",
     APP_VERSION: "2.5.0",
+    APP_LOGO_PATH: "img/avocado_sign_logo.png",
 
     T2_CRITERIA_DEFAULTS: Object.freeze({
         logic: CONSTANTS.LOGIC_OPERATORS.UND,
@@ -59,7 +60,7 @@ const APP_CONFIG = Object.freeze({
 
     EXPORT: Object.freeze({
         DATE_FORMAT: 'YYYYMMDD',
-        FILENAME_TEMPLATE: 'AvocadoSignT2_{TYPE}_{KOLLEKTIV}_{DATE}.{EXT}',
+        FILENAME_TEMPLATE: 'AvocadoSign_v2_5_{TYPE}_{KOLLEKTIV}_{DATE}.{EXT}',
         CSV_DELIMITER: ';',
         TABLE_PNG_SCALE: 2,
         FILENAME_TYPES: Object.freeze({
