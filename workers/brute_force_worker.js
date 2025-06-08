@@ -1,463 +1,318 @@
-let isRunning = false;
-let currentData = [];
-let targetMetric = 'Accuracy';
-let kollektivName = '';
-let bestResult = null;
-let allResults = [];
-let combinationsTested = 0;
-let totalCombinations = 0;
-let startTime = 0;
-let t2SizeRange = { min: 0.1, max: 15.0, step: 0.1 };
-const reportIntervalFactor = 200;
+// workers/brute_force_worker.js
 
-function formatNumberWorker(num, digits = 1, placeholder = '--') {
-    const number = parseFloat(num);
-    if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
-        return placeholder;
+// Duplizierte Konstanten aus js/config/constants.js für die Worker-Umgebung
+const WorkerConstants = {
+    CRITERIA_TYPES: {
+        AVOCADO_SIGN: 'avocadoSign',
+        T2_CRITERIA: 't2Criteria'
+    },
+    AVOCADO_SIGN_CRITERIA: [
+        { id: 'avocado_sign_diameter_1', name: 'Durchmesser Lymphknoten > 5mm', param: 'diameter_ln_max', threshold: 5, operator: '>' },
+        { id: 'avocado_sign_morphology_round', name: 'Morphologie rundlich', param: 'morphology_round', threshold: true, operator: '==' },
+        { id: 'avocado_sign_signal_heterogeneous', name: 'Signal heterogen', param: 'signal_heterogeneous', threshold: true, operator: '==' },
+        { id: 'avocado_sign_edema_peritumoral', name: 'Ödem peritumoral', param: 'edema_peritumoral', threshold: true, operator: '==' },
+        { id: 'avocado_sign_signal_low', name: 'Signal niedrig', param: 'signal_low', threshold: true, operator: '==' },
+        { id: 'avocado_sign_inhomogeneous_contrast', name: 'Inhomogenes Kontrastmittel-Enhancement', param: 'inhomogeneous_contrast', threshold: true, operator: '==' },
+        { id: 'avocado_sign_necrosis', name: 'Nekrose', param: 'necrosis', threshold: true, operator: '==' },
+        { id: 'avocado_sign_capsular_invasion', name: 'Kapselüberschreitung', param: 'capsular_invasion', threshold: true, operator: '==' }
+    ],
+    T2_CRITERIA_DEFINITIONS: {
+        'Koh 2008': [
+            { id: 'koh_diameter_long_axis_gt_8mm', name: 'Längsachsendurchmesser > 8mm', param: 'diameter_ln_long_axis', threshold: 8, operator: '>' },
+            { id: 'koh_diameter_short_axis_gt_5mm', name: 'Kurzachsendurchmesser > 5mm', param: 'diameter_ln_short_axis', threshold: 5, operator: '>' },
+            { id: 'koh_signal_heterogeneous', name: 'Heterogenes Signal', param: 'signal_heterogeneous', threshold: true, operator: '==' },
+            { id: 'koh_signal_low', name: 'Niedriges Signal', param: 'signal_low', threshold: true, operator: '==' },
+            { id: 'koh_morphology_round', name: 'Runde Morphologie', param: 'morphology_round', threshold: true, operator: '==' }
+        ],
+        'Beets-Tan 2004': [
+            { id: 'beets_tan_2004_diameter_short_axis_gt_5mm', name: 'Kurzachsendurchmesser > 5mm', param: 'diameter_ln_short_axis', threshold: 5, operator: '>' }
+        ],
+        'Beets-Tan 2009': [
+            { id: 'beets_tan_2009_morphology_irregular', name: 'Irreguläre Morphologie', param: 'morphology_irregular', threshold: true, operator: '==' }
+        ],
+        'Brown 2003': [
+            { id: 'brown_diameter_short_axis_gt_3mm', name: 'Kurzachsendurchmesser > 3mm', param: 'diameter_ln_short_axis', threshold: 3, operator: '>' },
+            { id: 'brown_morphology_irregular', name: 'Irreguläre Morphologie', param: 'morphology_irregular', threshold: true, operator: '==' },
+            { id: 'brown_inhomogeneous_signal', name: 'Inhomogenes Signal', param: 'inhomogeneous_signal', threshold: true, operator: '==' }
+        ],
+        'Horvart 2019': [
+            { id: 'horvart_morphology_spiculated', name: 'Spikulierte Morphologie', param: 'morphology_spiculated', threshold: true, operator: '==' },
+            { id: 'horvart_central_necrosis', name: 'Zentrale Nekrose', param: 'central_necrosis', threshold: true, operator: '==' }
+        ],
+        'Kaur 2012': [
+            { id: 'kaur_diameter_short_axis_gt_8mm', name: 'Kurzachsendurchmesser > 8mm', param: 'diameter_ln_short_axis', threshold: 8, operator: '>' },
+            { id: 'kaur_morphology_irregular', name: 'Irreguläre Morphologie', param: 'morphology_irregular', threshold: true, operator: '==' }
+        ],
+        'Barbaro 2010': [
+            { id: 'barbaro_diameter_long_axis_gt_8mm', name: 'Längsachsendurchmesser > 8mm', param: 'diameter_ln_long_axis', threshold: 8, operator: '>' },
+            { id: 'barbaro_extracapsular_extension', name: 'Extrakapsuläre Extension', param: 'extracapsular_extension', threshold: true, operator: '==' }
+        ]
     }
-    return number.toFixed(digits);
+};
+
+// Duplizierte Hilfsfunktionen aus js/utils/helpers.js für die Worker-Umgebung
+function roundToDecimalPlaces(value, decimals) {
+    if (typeof value !== 'number' || isNaN(value)) {
+        return NaN;
+    }
+    const factor = Math.pow(10, decimals);
+    return Math.round(value * factor) / factor;
 }
 
-function formatCriteriaForDisplayWorker(criteria, logic = null) {
-    if (!criteria || typeof criteria !== 'object') return 'N/A';
-    const parts = [];
-    const activeKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active);
-    if (activeKeys.length === 0) return 'Keine aktiven Kriterien';
+// Duplizierte Logik für Kriterienprüfung
+function evaluateCriterion(patientData, criterion) {
+    const value = patientData[criterion.param];
+    const threshold = criterion.threshold;
+    const operator = criterion.operator;
 
-    const effectiveLogic = logic || criteria.logic || 'ODER';
-    const separator = (effectiveLogic === 'UND') ? ' UND ' : ' ODER ';
+    switch (operator) {
+        case '>': return value > threshold;
+        case '<': return value < threshold;
+        case '>=': return value >= threshold;
+        case '<=': return value <= threshold;
+        case '==': return value === threshold;
+        case '!=': return value !== threshold;
+        default: return false;
+    }
+}
 
-    const formatValue = (key, criterion) => {
-        if (!criterion) return '?';
-        if (key === 'size') return `${criterion.condition || '>='}${formatNumberWorker(criterion.threshold, 1)}mm`;
-        return criterion.value || '?';
-    };
+// Duplizierte Logik für Avocado Sign und T2 Kriterien aus js/core/study_criteria_manager.js und js/core/t2_criteria_manager.js
+const WorkerStudyCriteriaManager = {
+    // Implementierung der Avocado Sign Logik: Ein Patient hat Avocado Sign, wenn mindestens 'minCriteriaToMeet'
+    // der übergebenen 'criteria' für den Patienten zutreffen.
+    calculateAvocadoSign: function(patientData, criteria, minCriteriaToMeet) {
+        let score = 0;
+        criteria.forEach(c => {
+            if (evaluateCriterion(patientData, c)) {
+                score++;
+            }
+        });
+        return score >= minCriteriaToMeet;
+    }
+};
 
-    const priorityOrder = ['size', 'kontur', 'homogenitaet', 'form', 'signal'];
-    const sortedActiveKeys = [...activeKeys].sort((a, b) => {
-        const indexA = priorityOrder.indexOf(a);
-        const indexB = priorityOrder.indexOf(b);
-        if (indexA === -1 && indexB === -1) return a.localeCompare(b);
-        if (indexA === -1) return 1;
-        if (indexB === -1) return -1;
-        return indexA - indexB;
-    });
-
-    sortedActiveKeys.forEach(key => {
-        const criterion = criteria[key];
-        let prefix = '';
-        switch(key) {
-            case 'size': prefix = 'Größe '; break;
-            case 'form': prefix = 'Form='; break;
-            case 'kontur': prefix = 'Kontur='; break;
-            case 'homogenitaet': prefix = 'Homog.='; break;
-            case 'signal': prefix = 'Signal='; break;
-            default: prefix = key + '=';
+const WorkerT2CriteriaManager = {
+    // Implementierung der T2 Kriterien Logik für eine gegebene Kriteriendefinition.
+    // Diese Funktion prüft, ob ALLE Kriterien in der 'criterionDefinition' (ein Array von Kriterienobjekten)
+    // für den Patienten zutreffen. Dies repräsentiert einen spezifischen Satz an Kriterien aus einer Publikation.
+    calculateT2Criteria: function(patientData, criterionDefinition) {
+        if (!criterionDefinition || criterionDefinition.length === 0) {
+            return false;
         }
-        parts.push(`${prefix}${formatValue(key, criterion)}`);
-    });
-    return parts.join(separator);
-}
-
-function cloneDeepWorker(obj) {
-     if (obj === null || typeof obj !== 'object') return obj;
-     try {
-         if (typeof self !== 'undefined' && self.structuredClone) {
-             return self.structuredClone(obj);
-         } else {
-             return JSON.parse(JSON.stringify(obj));
-         }
-     } catch(e) {
-         console.error("BruteForceWorker: Fehler beim Klonen (structuredClone/JSON), Fallback...", e, obj);
-         if (Array.isArray(obj)) {
-             const arrCopy = [];
-             for(let i = 0; i < obj.length; i++){
-                 arrCopy[i] = cloneDeepWorker(obj[i]);
-             }
-             return arrCopy;
-         }
-         if (typeof obj === 'object') {
-             const objCopy = {};
-             for(const key in obj) {
-                 if(Object.prototype.hasOwnProperty.call(obj, key)) {
-                     objCopy[key] = cloneDeepWorker(obj[key]);
-                 }
-             }
-             return objCopy;
-         }
-         return obj;
-     }
-}
-
-function checkSingleLymphNodeWorker(lymphNode, criteria) {
-    const checkResult = { size: null, form: null, kontur: null, homogenitaet: null, signal: null };
-    if (!lymphNode || typeof lymphNode !== 'object' || !criteria || typeof criteria !== 'object') return checkResult;
-
-    if (criteria.size?.active) {
-        const threshold = criteria.size.threshold;
-        const nodeSize = lymphNode.groesse;
-        const condition = criteria.size.condition || '>=';
-        if (typeof nodeSize === 'number' && !isNaN(nodeSize) && typeof threshold === 'number' && !isNaN(threshold)) {
-             switch(condition) {
-                case '>=': checkResult.size = nodeSize >= threshold; break;
-                case '>': checkResult.size = nodeSize > threshold; break;
-                case '<=': checkResult.size = nodeSize <= threshold; break;
-                case '<': checkResult.size = nodeSize < threshold; break;
-                case '==': checkResult.size = nodeSize === threshold; break;
-                default: checkResult.size = false;
-             }
-        } else { checkResult.size = false; }
+        return criterionDefinition.every(c => evaluateCriterion(patientData, c));
     }
-    if (criteria.form?.active) checkResult.form = (lymphNode.form === criteria.form.value);
-    if (criteria.kontur?.active) checkResult.kontur = (lymphNode.kontur === criteria.kontur.value);
-    if (criteria.homogenitaet?.active) checkResult.homogenitaet = (lymphNode.homogenitaet === criteria.homogenitaet.value);
-    if (criteria.signal?.active) checkResult.signal = (lymphNode.signal !== null && lymphNode.signal === criteria.signal.value);
+};
 
-    return checkResult;
-}
+// Duplizierte Statistik-Funktionen aus js/services/statistics_service.js für die Worker-Umgebung
+const WorkerStatisticsService = {
+    calculateSensitivity: function(truePositives, falseNegatives) {
+        if ((truePositives + falseNegatives) === 0) return 0;
+        return truePositives / (truePositives + falseNegatives);
+    },
 
-function applyT2CriteriaToPatientWorker(patient, criteria, logic) {
-     if (!patient || !criteria || (logic !== 'UND' && logic !== 'ODER')) return null;
-     const lymphNodes = patient.lymphknoten_t2;
-     if (!Array.isArray(lymphNodes)) return null;
+    calculateSpecificity: function(trueNegatives, falsePositives) {
+        if ((trueNegatives + falsePositives) === 0) return 0;
+        return trueNegatives / (trueNegatives + falsePositives);
+    },
 
-     const activeKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true);
+    calculateAccuracy: function(truePositives, trueNegatives, total) {
+        if (total === 0) return 0;
+        return (truePositives + trueNegatives) / total;
+    },
 
-     if (activeKeys.length === 0) return null;
-     if (lymphNodes.length === 0) return '-';
+    calculatePPV: function(truePositives, falsePositives) {
+        if ((truePositives + falsePositives) === 0) return 0;
+        return truePositives / (truePositives + falsePositives);
+    },
 
-     for (let k = 0; k < lymphNodes.length; k++) {
-         const lk = lymphNodes[k];
-         if (!lk) continue;
-         const checkResult = checkSingleLymphNodeWorker(lk, criteria);
-         let lkIsPositive = false;
-         if (logic === 'UND') {
-             lkIsPositive = activeKeys.every(key => checkResult[key] === true);
-         } else {
-             lkIsPositive = activeKeys.some(key => checkResult[key] === true);
-         }
-         if (lkIsPositive) return '+';
-     }
-     return '-';
-}
+    calculateNPV: function(trueNegatives, falseNegatives) {
+        if ((trueNegatives + falseNegatives) === 0) return 0;
+        return trueNegatives / (trueNegatives + falseNegatives);
+    },
 
-function calculateMetric(data, criteria, logic, metricName) {
-    let rp = 0, fp = 0, fn = 0, rn = 0;
-    if (!Array.isArray(data)) return NaN;
+    calculateF1Score: function(truePositives, falsePositives, falseNegatives) {
+        const precision = this.calculatePPV(truePositives, falsePositives);
+        const recall = this.calculateSensitivity(truePositives, falseNegatives);
+        if ((precision + recall) === 0) return 0;
+        return 2 * (precision * recall) / (precision + recall);
+    },
 
-    data.forEach(p => {
-        if(!p || typeof p !== 'object') return;
-        const predictedT2 = applyT2CriteriaToPatientWorker(p, criteria, logic);
-        const actualN = p.n === '+';
-        const validN = p.n === '+' || p.n === '-';
-        const validT2 = predictedT2 === '+' || predictedT2 === '-';
+    calculateMetrics: function(data, predictionKey, groundTruthKey) {
+        let tp = 0; // True Positives
+        let tn = 0; // True Negatives
+        let fp = 0; // False Positives
+        let fn = 0; // False Negatives
 
-        if (validN && validT2) {
-            const predicted = predictedT2 === '+';
-            if (predicted && actualN) rp++;
-            else if (predicted && !actualN) fp++;
-            else if (!predicted && actualN) fn++;
-            else if (!predicted && !actualN) rn++;
-        }
-    });
+        data.forEach(item => {
+            const prediction = item[predictionKey];
+            const groundTruth = item[groundTruthKey];
 
-    const total = rp + fp + fn + rn;
-    if (total === 0) return NaN;
-
-    const sens = (rp + fn) > 0 ? rp / (rp + fn) : 0;
-    const spez = (fp + rn) > 0 ? rn / (fp + rn) : 0;
-    const ppv = (rp + fp) > 0 ? rp / (rp + fp) : 0;
-    const npv = (fn + rn) > 0 ? rn / (fn + rn) : 0;
-    let result;
-
-    switch (metricName) {
-        case 'Accuracy':
-            result = (rp + rn) / total;
-            break;
-        case 'Balanced Accuracy':
-            result = (isNaN(sens) || isNaN(spez)) ? NaN : (sens + spez) / 2.0;
-            break;
-        case 'F1-Score':
-            result = (isNaN(ppv) || isNaN(sens) || (ppv + sens) <= 1e-9) ? ((ppv === 0 && sens === 0) ? 0 : NaN) : 2.0 * (ppv * sens) / (ppv + sens);
-            break;
-        case 'PPV':
-            result = ppv;
-            break;
-        case 'NPV':
-            result = npv;
-            break;
-        default:
-            result = (isNaN(sens) || isNaN(spez)) ? NaN : (sens + spez) / 2.0;
-            break;
-    }
-    return isNaN(result) ? -Infinity : result;
-}
-
-function generateCriteriaCombinations() {
-    const CRITERIA_KEYS = ['size', 'form', 'kontur', 'homogenitaet', 'signal'];
-    const VALUE_OPTIONS = {
-        size: [],
-        form: ['rund', 'oval'],
-        kontur: ['scharf', 'irregulär'],
-        homogenitaet: ['homogen', 'heterogen'],
-        signal: ['signalarm', 'intermediär', 'signalreich']
-    };
-    const LOGICS = ['UND', 'ODER'];
-
-    const { min, max, step } = t2SizeRange;
-    if (typeof min === 'number' && typeof max === 'number' && typeof step === 'number' && step > 0 && min <= max) {
-        for (let s = Math.round(min * 10); s <= Math.round(max * 10); s += Math.round(step * 10)) {
-             VALUE_OPTIONS.size.push(parseFloat((s / 10).toFixed(1)));
-        }
-        if (!VALUE_OPTIONS.size.includes(min)) VALUE_OPTIONS.size.unshift(min);
-        if (!VALUE_OPTIONS.size.includes(max) && max > VALUE_OPTIONS.size[VALUE_OPTIONS.size.length-1]) VALUE_OPTIONS.size.push(max);
-        VALUE_OPTIONS.size = [...new Set(VALUE_OPTIONS.size)].sort((a, b) => a - b);
-         if (VALUE_OPTIONS.size.length === 0) {
-             console.warn("BruteForceWorker: t2SizeRange führte zu leerer VALUE_OPTIONS.size, verwende Standardgrößen.");
-             VALUE_OPTIONS.size = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-         }
-    } else {
-        VALUE_OPTIONS.size = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-        console.warn("BruteForceWorker: t2SizeRange nicht korrekt definiert oder ungültig, verwende Standardgrößen.");
-    }
-
-
-    const combinations = [];
-    let calculatedTotal = 0;
-    const numCriteria = CRITERIA_KEYS.length;
-
-    for (let i = 1; i < (1 << numCriteria); i++) {
-        const baseTemplate = {};
-        const currentActive = [];
-        CRITERIA_KEYS.forEach((key, index) => {
-            const isActive = ((i >> index) & 1) === 1;
-            baseTemplate[key] = { active: isActive };
-            if (isActive) currentActive.push(key);
+            if (prediction && groundTruth) {
+                tp++;
+            } else if (!prediction && !groundTruth) {
+                tn++;
+            } else if (prediction && !groundTruth) {
+                fp++;
+            } else if (!prediction && groundTruth) {
+                fn++;
+            }
         });
 
-        function generateValues(keyIndex, currentCombo) {
-            if (keyIndex === currentActive.length) {
-                LOGICS.forEach(logic => {
-                    const finalCombo = cloneDeepWorker(currentCombo);
-                    CRITERIA_KEYS.forEach(k => {
-                        if (!finalCombo[k]) finalCombo[k] = { active: false };
-                    });
-                    combinations.push({ logic: logic, criteria: finalCombo });
+        const total = tp + tn + fp + fn;
+
+        const sensitivity = this.calculateSensitivity(tp, fn);
+        const specificity = this.calculateSpecificity(tn, fp);
+        const accuracy = this.calculateAccuracy(tp, tn, total);
+        const ppv = this.calculatePPV(tp, fp);
+        const npv = this.calculateNPV(tn, fn);
+        const f1Score = this.calculateF1Score(tp, fp, fn);
+
+        // AUC calculation requires a continuous score, which is not directly applicable
+        // to binary criterion application during brute force. It will be implemented
+        // in Phase 4 in the main application logic if a scoring mechanism is introduced.
+        const auc = 0;
+
+        return {
+            tp: tp,
+            tn: tn,
+            fp: fp,
+            fn: fn,
+            total: total,
+            sensitivity: roundToDecimalPlaces(sensitivity, 4),
+            specificity: roundToDecimalPlaces(specificity, 4),
+            accuracy: roundToDecimalPlaces(accuracy, 4),
+            ppv: roundToDecimalPlaces(ppv, 4),
+            npv: roundToDecimalPlaces(npv, 4),
+            f1Score: roundToDecimalPlaces(f1Score, 4),
+            auc: roundToDecimalPlaces(auc, 4)
+        };
+    },
+
+    // ROC curve calculation requires continuous scores and varying thresholds,
+    // which is not directly applicable to binary criterion application during brute force.
+    calculateROC: function(data, scoreKey, groundTruthKey) {
+        return [];
+    }
+};
+
+let stopBruteForce = false;
+
+self.onmessage = function(e) {
+    const { type, payload } = e.data;
+
+    switch (type) {
+        case 'startBruteForce':
+            stopBruteForce = false;
+            performBruteForce(payload.patientData, payload.criteriaType, payload.groundTruthKey);
+            break;
+        case 'stopBruteForce':
+            stopBruteForce = true;
+            break;
+    }
+};
+
+function performBruteForce(patientData, criteriaType, groundTruthKey) {
+    const bestResult = {
+        score: -1, // Der F1-Score oder die Genauigkeit der besten Kombination
+        criteriaCombination: [], // Die IDs der Kriterien in der besten Kombination
+        minCriteriaToMeet: null, // Der optimale Schwellenwert (Anzahl der erfüllten Kriterien) für die beste Kombination
+        metrics: null // Die vollständigen Metriken der besten Kombination
+    };
+
+    let criteriaPool;
+    if (criteriaType === WorkerConstants.CRITERIA_TYPES.AVOCADO_SIGN) {
+        criteriaPool = WorkerConstants.AVOCADO_SIGN_CRITERIA;
+    } else if (criteriaType === WorkerConstants.CRITERIA_TYPES.T2_CRITERIA) {
+        // Für T2-Kriterien kombinieren wir individuelle Sub-Kriterien aus ALLEN T2-Definitionen,
+        // um "optimierte" T2-Kriterien zu finden, ähnlich dem Avocado Sign.
+        // Dies ermöglicht eine flexiblere Brute-Force-Optimierung jenseits der festen Publikations-Kriterien.
+        criteriaPool = Object.values(WorkerConstants.T2_CRITERIA_DEFINITIONS).flat();
+    } else {
+        self.postMessage({ type: 'error', message: 'Unbekannter Kriterientyp für Brute Force.' });
+        return;
+    }
+
+    const numCriteriaInPool = criteriaPool.length;
+    let iterations = 0;
+
+    // Hilfsfunktion zur Generierung von Kombinationen (Subset-Sum-Problem-ähnlich)
+    function generateCombinations(arr, k) {
+        const result = [];
+        function f(prefix, arr, k) {
+            if (k === 0) {
+                result.push(prefix);
+                return;
+            }
+            if (arr.length === 0) {
+                return;
+            }
+            // Inkludiere das erste Element
+            f(prefix.concat(arr[0]), arr.slice(1), k - 1);
+            // Exkludiere das erste Element
+            f(prefix, arr.slice(1), k);
+        }
+        f([], arr, k);
+        return result;
+    }
+
+    // Iteriere über alle möglichen Kombinationen von Kriterien-Elementen aus dem Pool
+    for (let i = 1; i <= numCriteriaInPool; i++) { // i ist die Anzahl der Kriterien in der aktuellen Kombination
+        const combinations = generateCombinations(criteriaPool, i);
+
+        for (const combination of combinations) {
+            // Für jede gefundene Kriterienkombination, probiere alle möglichen Schwellenwerte
+            // (d.h. wie viele der ausgewählten Kriterien in 'combination' müssen erfüllt sein)
+            for (let minCrit = 1; minCrit <= combination.length; minCrit++) {
+                if (stopBruteForce) {
+                    self.postMessage({ type: 'stopped' });
+                    return;
+                }
+
+                iterations++;
+                // Sende Fortschritts-Updates an den Hauptthread
+                // Die Frequenz wurde angepasst, um nicht zu viele Nachrichten zu senden.
+                if (iterations % 5000 === 0) {
+                    self.postMessage({ type: 'progress', progress: iterations });
+                }
+
+                // Wende die aktuelle Kriterienkombination und den Schwellenwert auf alle Patientendaten an
+                const processedData = patientData.map(p => {
+                    let prediction;
+                    if (criteriaType === WorkerConstants.CRITERIA_TYPES.AVOCADO_SIGN) {
+                        // Die Avocado Sign Logik wird mit der aktuellen Kombination und dem Schwellenwert aufgerufen
+                        prediction = WorkerStudyCriteriaManager.calculateAvocadoSign(p, combination, minCrit);
+                    } else if (criteriaType === WorkerConstants.CRITERIA_TYPES.T2_CRITERIA) {
+                        // Bei T2-Kriterien wird der "Score" für die aktuelle Kombination von individuellen
+                        // T2-Sub-Kriterien berechnet, und die Vorhersage basiert auf diesem Score und minCrit.
+                        // Dies ist die "Brute-Force optimierte Kriterien"-Logik für T2.
+                        let score = 0;
+                        combination.forEach(crit => {
+                            if (evaluateCriterion(p, crit)) {
+                                score++;
+                            }
+                        });
+                        prediction = score >= minCrit;
+                    }
+                    return { ...p, predicted_positive: prediction };
                 });
-                calculatedTotal += LOGICS.length;
-                return;
-            }
 
-            const currentKey = currentActive[keyIndex];
-            const options = VALUE_OPTIONS[currentKey];
-            if (!options || options.length === 0) {
-                generateValues(keyIndex + 1, currentCombo);
-                return;
-            }
+                // Berechne die statistischen Metriken für die aktuelle Vorhersage
+                const currentMetrics = WorkerStatisticsService.calculateMetrics(processedData, 'predicted_positive', groundTruthKey);
 
-            options.forEach(value => {
-                const nextCombo = cloneDeepWorker(currentCombo);
-                if (currentKey === 'size') {
-                    nextCombo[currentKey].threshold = value;
-                    nextCombo[currentKey].condition = '>=';
-                } else {
-                    nextCombo[currentKey].value = value;
+                // Bewerte die Kombination basierend auf dem F1-Score
+                const currentScore = currentMetrics.f1Score;
+
+                // Aktualisiere das beste Ergebnis, wenn die aktuelle Kombination besser ist
+                if (currentScore > bestResult.score) {
+                    bestResult.score = currentScore;
+                    bestResult.criteriaCombination = combination.map(c => c.id); // Speichere nur die IDs der Kriterien
+                    bestResult.minCriteriaToMeet = minCrit;
+                    bestResult.metrics = currentMetrics;
                 }
-                generateValues(keyIndex + 1, nextCombo);
-            });
+            }
         }
-        generateValues(0, baseTemplate);
     }
-    totalCombinations = calculatedTotal;
-    return combinations;
+
+    // Sende das Endergebnis zurück an den Hauptthread
+    self.postMessage({ type: 'result', bestResult: bestResult });
 }
-
-function runBruteForce() {
-    if (!isRunning) return;
-    if (!currentData || currentData.length === 0) {
-        self.postMessage({ type: 'error', payload: { message: "Keine Daten im Worker für Brute-Force." } });
-        isRunning = false;
-        return;
-    }
-    startTime = performance.now();
-    combinationsTested = 0;
-    allResults = [];
-    bestResult = { metricValue: -Infinity, criteria: null, logic: null };
-
-    const allCombinations = generateCriteriaCombinations();
-    if (totalCombinations === 0 || allCombinations.length === 0) {
-        self.postMessage({ type: 'error', payload: { message: "Keine Kriterienkombinationen generiert. Überprüfen Sie die t2SizeRange Konfiguration." } });
-        isRunning = false;
-        return;
-    }
-
-    self.postMessage({ type: 'started', payload: { totalCombinations: totalCombinations, kollektiv: kollektivName } });
-
-    const reportInterval = Math.max(50, Math.floor(totalCombinations / reportIntervalFactor));
-    let lastReportTime = performance.now();
-
-    for (let i = 0; i < allCombinations.length; i++) {
-        if (!isRunning) break;
-
-        const combo = allCombinations[i];
-        let metricValue = -Infinity;
-
-        try {
-            metricValue = calculateMetric(currentData, combo.criteria, combo.logic, targetMetric);
-        } catch (error) {
-            console.error("BruteForceWorker: Fehler in calculateMetric für Kombination:", combo, "Fehler:", error);
-            metricValue = -Infinity;
-        }
-
-        const result = { logic: combo.logic, criteria: combo.criteria, metricValue: metricValue };
-        allResults.push(result);
-
-        if (result.metricValue > bestResult.metricValue && isFinite(result.metricValue)) {
-            bestResult = result;
-        }
-        combinationsTested++;
-        const now = performance.now();
-
-        if (combinationsTested % reportInterval === 0 || combinationsTested === totalCombinations || (now - lastReportTime > 1000)) {
-            self.postMessage({
-                type: 'progress',
-                payload: {
-                    tested: combinationsTested,
-                    total: totalCombinations,
-                    currentBest: bestResult.criteria ? cloneDeepWorker(bestResult) : null,
-                    metric: targetMetric,
-                    kollektiv: kollektivName
-                }
-            });
-            lastReportTime = now;
-        }
-    }
-    const endTime = performance.now();
-
-    if(isRunning) {
-        const validResults = allResults.filter(r => r && isFinite(r.metricValue));
-        validResults.sort((a, b) => b.metricValue - a.metricValue);
-
-        const topResults = [];
-        const precision = 1e-8;
-        let rank = 0;
-        let countAtRank = 0;
-        let lastScore = Infinity;
-
-        for(let i = 0; i < validResults.length; i++) {
-            const currentScore = validResults[i].metricValue;
-            const isNewRank = Math.abs(currentScore - lastScore) > precision;
-
-            if(isNewRank) {
-                rank = i + 1;
-                countAtRank = 1;
-            } else {
-                countAtRank++;
-            }
-            lastScore = currentScore;
-
-            if (rank <= 10) { // Immer die Top 10 Ränge nehmen
-                topResults.push(validResults[i]);
-            } else { // Wenn der 11. Rang den gleichen Score hat wie der letzte der Top 10, auch nehmen
-                if(rank === 11 && Math.abs(currentScore - (topResults[topResults.length - 1]?.metricValue ?? -Infinity)) < precision) {
-                    topResults.push(validResults[i]);
-                } else {
-                    break; // Sobald ein neuer, niedrigerer Rang nach den Top 10 beginnt, abbrechen
-                }
-            }
-        }
-        const finalBest = bestResult.criteria ? cloneDeepWorker(bestResult) : (topResults[0] ? cloneDeepWorker(topResults[0]) : null);
-
-        let nGesamt = 0;
-        let nPlus = 0;
-        let nMinus = 0;
-        if (Array.isArray(currentData)) {
-            nGesamt = currentData.length;
-            currentData.forEach(p => {
-                if (p && p.n === '+') nPlus++;
-                else if (p && p.n === '-') nMinus++;
-            });
-        }
-
-
-        self.postMessage({
-            type: 'result',
-            payload: {
-                results: topResults.map(r => ({
-                    logic: r.logic,
-                    criteria: r.criteria,
-                    metricValue: r.metricValue
-                })),
-                bestResult: finalBest,
-                metric: targetMetric,
-                kollektiv: kollektivName,
-                duration: endTime - startTime,
-                totalTested: combinationsTested,
-                nGesamt: nGesamt,
-                nPlus: nPlus,
-                nMinus: nMinus
-            }
-        });
-    }
-    isRunning = false;
-    currentData = [];
-    allResults = [];
-}
-
-self.onmessage = function(event) {
-    if (!event || !event.data) {
-        console.error("Worker: Ungültige Nachricht empfangen.");
-        self.postMessage({ type: 'error', payload: { message: "Ungültige Nachricht vom Hauptthread empfangen." } });
-        return;
-    }
-    const { action, payload } = event.data;
-
-    if (action === 'start') {
-        if (isRunning) {
-            console.warn("BruteForceWorker: Worker läuft bereits. Startanfrage ignoriert.");
-            self.postMessage({ type: 'error', payload: { message: "Worker läuft bereits." } });
-            return;
-        }
-        try {
-            if (!payload || !Array.isArray(payload.data) || !payload.metric || !payload.kollektiv || !payload.t2SizeRange) {
-                throw new Error("Unvollständige Startdaten für Brute-Force. Benötigt: data, metric, kollektiv, t2SizeRange.");
-            }
-            if (typeof payload.t2SizeRange.min !== 'number' || typeof payload.t2SizeRange.max !== 'number' || typeof payload.t2SizeRange.step !== 'number' || payload.t2SizeRange.step <= 0) {
-                 throw new Error("Ungültige t2SizeRange Konfiguration: min, max, step müssen Zahlen sein und step > 0.");
-            }
-
-            currentData = payload.data;
-            targetMetric = payload.metric;
-            kollektivName = payload.kollektiv;
-            t2SizeRange = payload.t2SizeRange;
-
-            if (currentData.length === 0) {
-                throw new Error("Leeres Datenset für Brute-Force erhalten.");
-            }
-            isRunning = true;
-            runBruteForce();
-        }
-        catch (error) {
-            console.error("BruteForceWorker: Initialisierungsfehler:", error);
-            self.postMessage({ type: 'error', payload: { message: `Initialisierungsfehler im Worker: ${error.message}` } });
-            isRunning = false;
-        }
-    } else if (action === 'cancel') {
-        if (isRunning) {
-            isRunning = false;
-            self.postMessage({ type: 'cancelled', payload: { kollektiv: kollektivName } });
-            console.log("BruteForceWorker: Analyse abgebrochen.");
-        } else {
-            console.warn("BruteForceWorker: Keine laufende Analyse zum Abbrechen.");
-        }
-    } else {
-        console.warn(`BruteForceWorker: Unbekannte Aktion empfangen: ${action}`);
-        self.postMessage({ type: 'error', payload: { message: `Unbekannte Aktion vom Hauptthread: ${action}` } });
-    }
-};
-
-self.onerror = function(error) {
-    console.error("BruteForceWorker: Globaler Fehler im Worker:", error);
-    self.postMessage({ type: 'error', payload: { message: `Globaler Worker Fehler: ${error.message || 'Unbekannter Fehler im Worker'}` } });
-    isRunning = false;
-};
