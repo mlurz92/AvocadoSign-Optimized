@@ -128,7 +128,7 @@ const exportService = (() => {
         if (!stats || !stats.deskriptiv) return null;
         const csvData = []; const na = 'N/A';
         const fv = (v, d) => utils.formatNumber(v, d, na, true);
-        const fCI = (o, d, isP) => !o || o.lower === null || o.upper === null ? [na, na] : [fv(o.lower, d), fv(o.upper, d)];
+        const fCI = (o, d) => !o || o.lower === null || o.upper === null ? [na, na] : [fv(o.lower, d), fv(o.upper, d)];
         
         csvData.push(['Parameter', 'Wert']);
         csvData.push(['Kollektiv', utils.getKollektivDisplayName(kollektiv)]);
@@ -215,7 +215,14 @@ const exportService = (() => {
                 ui_helpers.showToast(`Statistik exportiert: ${filename}`, 'success');
             }
         },
-        exportTableMarkdown,
+        exportTableMarkdown: (dataOrStats, tableType, kollektiv, criteria, logic, options) => {
+            const mdString = _generateMarkdownTableString(dataOrStats, tableType, kollektiv, criteria, logic, options);
+            const typeKey = `${tableType.toUpperCase()}_MD`;
+            const filename = generateFilename(typeKey, kollektiv, 'md', options);
+             if (_downloadFile(mdString, filename, 'text/markdown;charset=utf-8;')) {
+                ui_helpers.showToast(`Tabelle als Markdown exportiert: ${filename}`, 'success');
+            }
+        },
         exportSingleChart: _exportSingleChart,
         exportCategoryZip: _exportCategoryZip
     });
