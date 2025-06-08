@@ -7,7 +7,7 @@ const statistikTabLogic = (() => {
         const na = '--';
         const fv = (val, dig = 1) => utils.formatNumber(val, dig, na);
         const fP = (val, dig = 1) => utils.formatPercent(val, dig, na);
-        const fLK = (lkData) => `${fv(lkData?.median,1)} (${fv(lkData?.min,0)}-${fv(lkData?.max,0)})`;
+        const fLK = (lkData) => `${fv(lkData?.median,1)} (${fv(lkData?.min,0)}–${fv(lkData?.max,0)})`;
         const ageChartId = `chart-stat-age-${indexSuffix}`;
         const genderChartId = `chart-stat-gender-${indexSuffix}`;
         const displayKollektivName = utils.getKollektivDisplayName(kollektivName);
@@ -94,11 +94,95 @@ const statistikTabLogic = (() => {
                 <tr><td data-tippy-content="${ui_helpers.getTestDescriptionHTML('delong', t2ShortName)}">DeLong (AUC)</td><td>Z=${utils.formatNumber(stats.delong?.Z, 3, na, true)}</td><td data-tippy-content="${ui_helpers.getTestInterpretationHTML('delong', stats.delong, displayKollektivName, t2ShortName)}">${utils.getPValueText(stats.delong?.pValue)} ${utils.getStatisticalSignificanceSymbol(stats.delong?.pValue)}</td><td>${stats.delong?.method || na}</td></tr>
             </tbody></table></div>`;
     }
+
+    function createAssoziationContentHTML(stats, kollektivName, criteria) {
+        if (!stats || Object.keys(stats).length === 0) return '<p class="text-muted small p-3">Keine Assoziationsdaten verfügbar.</p>';
+        const na = '--';
+        const displayKollektivName = utils.getKollektivDisplayName(kollektivName);
+        let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped small mb-0 caption-top" id="table-assoziation-${kollektivName.replace(/\s+/g, '_')}">
+            <caption>Assoziation zwischen Merkmalen und N-Status (+/-) für Kollektiv ${displayKollektivName}</caption>
+            <thead><tr><th>Merkmal</th><th>OR (95%-KI)</th><th>Phi (φ)</th><th>p-Wert</th><th>Test</th></tr></thead><tbody>`;
+
+        const addRow = (key, assocObj, isActive = true) => {
+            if (!assocObj) return '';
+            const orStr = utils.formatCI(assocObj.or?.value, assocObj.or?.ci?.lower, assocObj.or?.ci?.upper, 2, false, na);
+            const phiStr = utils.formatNumber(assocObj.phi?.value, 2, na, true);
+            const pStr = utils.getPValueText(assocObj.pValue);
+            const sigSymbol = utils.getStatisticalSignificanceSymbol(assocObj.pValue);
+            const aktivText = isActive ? '' : ' <small class="text-muted">(inaktiv)</small>';
+            return `<tr>
+                <td data-tippy-content="${ui_helpers.getAssociationInterpretationHTML(key, assocObj, assocObj.featureName, displayKollektivName)}">${assocObj.featureName}${aktivText}</td>
+                <td data-tippy-content="${ui_helpers.getAssociationInterpretationHTML('or', assocObj, assocObj.featureName, displayKollektivName)}">${orStr}</td>
+                <td data-tippy-content="${ui_helpers.getAssociationInterpretationHTML('phi', assocObj, assocObj.featureName, displayKollektivName)}">${phiStr}</td>
+                <td data-tippy-content="${ui_helpers.getAssociationInterpretationHTML('pvalue', assocObj, assocObj.featureName, displayKollektivName)}">${pStr} ${sigSymbol}</td>
+                <td data-tippy-content="${ui_helpers.getTestDescriptionHTML(assocObj.testName?.includes('Fisher') ? 'fisher' : 'default', t2ShortName)}">${assocObj.testName || na}</td>
+            </tr>`;
+        };
+
+        if (stats.as) tableHTML += addRow('as', stats.as);
+        if (stats.size_mwu?.testName) {
+            tableHTML += `<tr>
+                <td data-tippy-content="${ui_helpers.getAssociationInterpretationHTML('size_mwu', stats.size_mwu, stats.size_mwu.featureName, displayKollektivName)}">${stats.size_mwu.featureName}</td>
+                <td>${na}</td><td>${na}</td>
+                <td data-tippy-content="${ui_helpers.getAssociationInterpretationHTML('pvalue', stats.size_mwu, stats.size_mwu.featureName, displayKollektivName)}">${utils.getPValueText(stats.size_mwu.pValue)} ${utils.getStatisticalSignificanceSymbol(stats.size_mwu.pValue)}</td>
+                <td data-tippy-content="${ui_helpers.getTestDescriptionHTML('mannwhitney')}">${stats.size_mwu.testName}</td>
+            </tr>`;
+        }
+        ['size', 'form', 'kontur', 'homogenitaet', 'signal'].forEach(key => {
+            if (stats[key]) tableHTML += addRow(key, stats[key], criteria[key]?.active);
+        });
+        tableHTML += `</tbody></table></div>`;
+        return tableHTML;
+    }
     
+    function createVergleichKollektiveContentHTML(stats, kollektiv1Name, kollektiv2Name) {
+        if (!stats || !stats.accuracyComparison || !stats.aucComparison) return '<p class="text-muted small p-3">Keine Kollektiv-Vergleichsdaten verfügbar.</p>';
+        const na = '--';
+        const kollektiv1Display = utils.getKollektivDisplayName(kollektiv1Name); 
+        const kollektiv2Display = utils.getKollektivDisplayName(kollektiv2Name);
+        const accAS = stats.accuracyComparison?.as; 
+        const accT2 = stats.accuracyComparison?.t2;
+        const aucAS = stats.aucComparison?.as; 
+        const aucT2 = stats.aucComparison?.t2;
+
+        return `<div class="table-responsive px-2"><table class="table table-sm table-striped small mb-0">
+            <caption>Vergleich zw. ${kollektiv1Display} und ${kollektiv2Display}</caption>
+            <thead><tr><th>Vergleich</th><th>Methode</th><th>p-Wert</th><th>Test</th></tr></thead><tbody>
+                <tr><td>Accuracy</td><td>AS</td><td data-tippy-content="${ui_helpers.getTestInterpretationHTML('accComp', accAS, 'AS')}">${utils.getPValueText(accAS?.pValue)} ${utils.getStatisticalSignificanceSymbol(accAS?.pValue)}</td><td>${accAS?.testName || na}</td></tr>
+                <tr><td>Accuracy</td><td>T2</td><td data-tippy-content="${ui_helpers.getTestInterpretationHTML('accComp', accT2, 'T2')}">${utils.getPValueText(accT2?.pValue)} ${utils.getStatisticalSignificanceSymbol(accT2?.pValue)}</td><td>${accT2?.testName || na}</td></tr>
+                <tr><td>AUC</td><td>AS</td><td data-tippy-content="${ui_helpers.getTestInterpretationHTML('aucComp', aucAS, 'AS')}">${utils.getPValueText(aucAS?.pValue)} ${utils.getStatisticalSignificanceSymbol(aucAS?.pValue)}</td><td>${aucAS?.method || na}</td></tr>
+                <tr><td>AUC</td><td>T2</td><td data-tippy-content="${ui_helpers.getTestInterpretationHTML('aucComp', aucT2, 'T2')}">${utils.getPValueText(aucT2?.pValue)} ${utils.getStatisticalSignificanceSymbol(aucT2?.pValue)}</td><td>${aucT2?.method || na}</td></tr>
+            </tbody></table></div>`;
+    }
+
+    function createCriteriaComparisonTableHTML(results, globalKollektivName) {
+         if (!Array.isArray(results) || results.length === 0) return '<p class="text-muted small p-3">Keine Daten für Kriterienvergleich verfügbar.</p>';
+         const headers = ['Methode/Kriteriensatz', 'Sens.', 'Spez.', 'PPV', 'NPV', 'Acc.', 'AUC/BalAcc'];
+         let tableHTML = `<div class="table-responsive px-2"><table class="table table-sm table-striped table-hover small caption-top">
+            <caption>Vergleich für globales Kollektiv: ${utils.getKollektivDisplayName(globalKollektivName)}</caption>
+            <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+         results.forEach(result => {
+             const rowClass = result.id === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID ? 'table-primary' : (result.id === APP_CONFIG.SPECIAL_IDS.AVOCADO_SIGN_ID ? 'table-info' : '');
+             tableHTML += `<tr class="${rowClass}">
+                             <td class="fw-bold">${result.name}</td>
+                             <td>${utils.formatPercent(result.sens, 1)}</td>
+                             <td>${utils.formatPercent(result.spez, 1)}</td>
+                             <td>${utils.formatPercent(result.ppv, 1)}</td>
+                             <td>${utils.formatPercent(result.npv, 1)}</td>
+                             <td>${utils.formatPercent(result.acc, 1)}</td>
+                             <td>${utils.formatNumber(result.auc, 3, '--', true)}</td>
+                           </tr>`;
+         });
+         tableHTML += `</tbody></table></div>`;
+         return tableHTML;
+    }
+
     return Object.freeze({
         createDeskriptiveStatistikContentHTML,
         createGueteContentHTML,
-        createVergleichContentHTML
+        createVergleichContentHTML,
+        createAssoziationContentHTML,
+        createVergleichKollektiveContentHTML,
+        createCriteriaComparisonTableHTML
     });
-
 })();
