@@ -1,10 +1,11 @@
 const praesentationTab = (() => {
 
     function _createViewSelectorHTML(view) {
+        const tooltipText = TEXT_CONFIG.de.tooltips.praesentation.viewSelect;
         return `
             <div class="row mb-4">
                 <div class="col-12 d-flex justify-content-center">
-                    <div class="btn-group btn-group-sm" role="group">
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Präsentationsansicht Auswahl" data-tippy-content="${tooltipText}">
                         <input type="radio" class="btn-check" name="praesentationAnsicht" id="ansicht-as-pur" value="as-pur" ${view === 'as-pur' ? 'checked' : ''}>
                         <label class="btn btn-outline-primary praes-view-btn" for="ansicht-as-pur"><i class="fas fa-star me-1"></i> Avocado Sign Performance</label>
                         
@@ -79,13 +80,13 @@ const praesentationTab = (() => {
         const metricsTable = `<div class="table-responsive"><table class="table table-sm small"><thead><tr><th>Metrik</th><th>AS (95% KI)</th><th>${t2CriteriaLabelShort} (95% KI)</th></tr></thead><tbody>${metricsTableBody}</tbody></table></div>`;
         const metricsCard = commonComponents.createCard('praes-metrics-card', `Vergleichsmetriken (Kollektiv: ${getKollektivDisplayName(kollektivForComparison)})`, metricsTable, { bodyClass: 'p-0', footerContent: _createASvsT2ExportButtons()});
         
-        const pValMcNemar = formatNumber(vergleich?.mcnemar?.pValue, 3, '--');
-        const pValDeLong = formatNumber(vergleich?.delong?.pValue, 3, '--');
+        const pValMcNemar = getPValueText(vergleich?.mcnemar?.pValue);
+        const pValDeLong = getPValueText(vergleich?.delong?.pValue);
         const testsTable = `
             <table class="table table-sm small">
                 <tbody>
-                    <tr><td>McNemar (Accuracy)</td><td>p = ${pValMcNemar}</td></tr>
-                    <tr><td>DeLong (AUC)</td><td>p = ${pValDeLong}</td></tr>
+                    <tr><td data-tippy-content="${tooltip.getTestDescriptionHTML('mcnemar', t2CriteriaLabelShort)}">McNemar (Accuracy)</td><td>p = ${pValMcNemar}</td></tr>
+                    <tr><td data-tippy-content="${tooltip.getTestDescriptionHTML('delong', t2CriteriaLabelShort)}">DeLong (AUC)</td><td>p = ${pValDeLong}</td></tr>
                 </tbody>
             </table>`;
         const testsCard = commonComponents.createCard('praes-tests-card', 'Statistische Tests', testsTable, {bodyClass: 'p-2'});
