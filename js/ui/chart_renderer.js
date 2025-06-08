@@ -2,7 +2,9 @@ const chartRenderer = (() => {
 
     function _createSvgContainer(targetElementId, options = {}) {
         const container = d3.select(`#${targetElementId}`);
-        if (container.empty() || !container.node()) return null;
+        if (container.empty() || !container.node()) {
+            return null;
+        }
         container.selectAll("svg").remove();
         container.html('');
 
@@ -63,13 +65,14 @@ const chartRenderer = (() => {
             chartArea.append('text').attr('x', innerWidth / 2).attr('y', innerHeight / 2).attr('text-anchor', 'middle').attr('class', 'text-muted small').text('Keine Altersdaten verfügbar.');
             return;
         }
+
         const x = d3.scaleLinear().domain(d3.extent(ageData)).nice().range([0, innerWidth]);
         const histogram = d3.histogram().value(d => d).domain(x.domain()).thresholds(x.ticks(Math.max(5, Math.floor(innerWidth / 30))));
         const bins = histogram(ageData.filter(d => !isNaN(d)));
         const y = d3.scaleLinear().domain([0, d3.max(bins, d => d.length)]).nice().range([innerHeight, 0]);
 
-        chartArea.append("g").attr("class", "x-axis").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x).tickSizeOuter(0));
-        chartArea.append("g").attr("class", "y-axis").call(d3.axisLeft(y).ticks(5).tickSizeOuter(0));
+        chartArea.append("g").attr("class", "x-axis axis").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x).tickSizeOuter(0));
+        chartArea.append("g").attr("class", "y-axis axis").call(d3.axisLeft(y).ticks(5).tickSizeOuter(0));
         svg.append("text").attr("class", "axis-label").attr("text-anchor", "middle").attr("x", margin.left + innerWidth / 2).attr("y", height - margin.bottom / 2 + 15).text(UI_TEXTS.axisLabels.age);
         svg.append("text").attr("class", "axis-label").attr("text-anchor", "middle").attr("transform", `translate(${margin.left / 2 - 10}, ${margin.top + innerHeight / 2}) rotate(-90)`).text(UI_TEXTS.axisLabels.patientCount);
 
@@ -82,7 +85,7 @@ const chartRenderer = (() => {
             .attr("fill", barColor)
             .on("mouseover", (event, d) => {
                 tooltip.transition().style("opacity", .95);
-                tooltip.html(`Alter: ${d.x0}-${d.x1}<br>Anzahl: ${d.length}`)
+                tooltip.html(`Alter: ${d.x0} - ${d.x1}<br>Anzahl: ${d.length}`)
                     .style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 28) + "px");
                 d3.select(event.currentTarget).attr("fill", APP_CONFIG.CHART_SETTINGS.T2_COLOR);
             })
@@ -94,7 +97,7 @@ const chartRenderer = (() => {
             .attr("y", d => y(d.length))
             .attr("height", d => innerHeight - y(d.length));
     }
-    
+
     function renderPieChart(data, targetElementId, options = {}) {
         const containerSetup = _createSvgContainer(targetElementId, options);
         if (!containerSetup) return;
@@ -106,10 +109,10 @@ const chartRenderer = (() => {
             return;
         }
 
-        const radius = Math.min(innerWidth, innerHeight) / 2;
+        const radius = Math.min(innerWidth, innerHeight) / 2 * 0.9;
         const pie = d3.pie().value(d => d.value).sort(null);
-        const arc = d3.arc().innerRadius(0).outerRadius(radius);
-        const color = d3.scaleOrdinal(APP_CONFIG.CHART_SETTINGS.AS_COLOR, APP_CONFIG.CHART_SETTINGS.T2_COLOR, d3.schemeSet3);
+        const arc = d3.arc().innerRadius(options.innerRadiusFactor ? radius * options.innerRadiusFactor : 0).outerRadius(radius);
+        const color = d3.scaleOrdinal([APP_CONFIG.CHART_SETTINGS.AS_COLOR, APP_CONFIG.CHART_SETTINGS.T2_COLOR, ...d3.schemeSet3]);
 
         const g = chartArea.append("g").attr("transform", `translate(${innerWidth / 2}, ${innerHeight / 2})`);
         g.selectAll("path").data(pie(validData)).enter().append("path")
@@ -133,48 +136,48 @@ const chartRenderer = (() => {
     }
 
     function renderComparisonBarChart(chartData, targetElementId, options = {}, t2Label = 'T2') {
-        const containerSetup = _createSvgContainer(targetElementId, options);
-        if (!containerSetup) return;
-        const { svg, chartArea, innerWidth, innerHeight, margin } = containerSetup;
-        const tooltip = _createTooltip();
+         const containerSetup = _createSvgContainer(targetElementId, options);
+         if (!containerSetup) return;
+         const { chartArea, innerWidth, innerHeight } = containerSetup;
+         const tooltip = _createTooltip();
 
-        if (!Array.isArray(chartData) || chartData.length === 0) {
+         if (!Array.isArray(chartData) || chartData.length === 0) {
              chartArea.append('text').attr('x', innerWidth / 2).attr('y', innerHeight / 2).attr('text-anchor', 'middle').text('Keine Vergleichsdaten.');
              return;
-        }
+         }
 
-        const groups = chartData.map(d => d.metric);
-        const subgroups = ['AS', 'T2'];
-        const x0 = d3.scaleBand().domain(groups).range([0, innerWidth]).padding(0.2);
-        const x1 = d3.scaleBand().domain(subgroups).range([0, x0.bandwidth()]).padding(0.05);
-        const y = d3.scaleLinear().domain([0, 1]).nice().range([innerHeight, 0]);
-        const color = d3.scaleOrdinal().domain(subgroups).range([APP_CONFIG.CHART_SETTINGS.AS_COLOR, APP_CONFIG.CHART_SETTINGS.T2_COLOR]);
+         const groups = chartData.map(d => d.metric);
+         const subgroups = ['AS', 'T2'];
+         const x0 = d3.scaleBand().domain(groups).range([0, innerWidth]).padding(0.2);
+         const x1 = d3.scaleBand().domain(subgroups).range([0, x0.bandwidth()]).padding(0.05);
+         const y = d3.scaleLinear().domain([0, 1]).nice().range([innerHeight, 0]);
+         const color = d3.scaleOrdinal().domain(subgroups).range([APP_CONFIG.CHART_SETTINGS.AS_COLOR, APP_CONFIG.CHART_SETTINGS.T2_COLOR]);
 
-        chartArea.append("g").attr("class", "x-axis").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x0).tickSizeOuter(0));
-        chartArea.append("g").attr("class", "y-axis").call(d3.axisLeft(y).ticks(5, "%"));
+         chartArea.append("g").attr("class", "x-axis").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x0).tickSizeOuter(0));
+         chartArea.append("g").attr("class", "y-axis").call(d3.axisLeft(y).ticks(5, "%"));
 
-        const slice = chartArea.selectAll(".slice").data(chartData).enter().append("g")
-            .attr("transform", d => `translate(${x0(d.metric)},0)`);
+         const slice = chartArea.selectAll(".slice").data(chartData).enter().append("g")
+             .attr("transform", d => `translate(${x0(d.metric)},0)`);
 
-        slice.selectAll("rect").data(d => subgroups.map(key => ({key: key, value: d[key]}))).enter().append("rect")
-            .attr("x", d => x1(d.key))
-            .attr("y", innerHeight)
-            .attr("width", x1.bandwidth())
-            .attr("height", 0)
-            .attr("fill", d => color(d.key))
-            .on("mouseover", (event, d) => {
-                tooltip.transition().style("opacity", .95);
-                tooltip.html(`${d.key === 'AS' ? UI_TEXTS.legendLabels.avocadoSign : t2Label}: ${utils.formatPercent(d.value)}`)
-                    .style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 28) + "px");
-                d3.select(event.currentTarget).style("opacity", 0.8);
-            })
-            .on("mouseout", (event) => {
-                tooltip.transition().style("opacity", 0);
-                d3.select(event.currentTarget).style("opacity", 1);
-            })
-            .transition().duration(APP_CONFIG.CHART_SETTINGS.ANIMATION_DURATION_MS).ease(d3.easeCubicOut)
-            .attr("y", d => y(d.value))
-            .attr("height", d => innerHeight - y(d.value));
+         slice.selectAll("rect").data(d => subgroups.map(key => ({key: key, value: d[key]}))).enter().append("rect")
+             .attr("x", d => x1(d.key))
+             .attr("y", innerHeight)
+             .attr("width", x1.bandwidth())
+             .attr("height", 0)
+             .attr("fill", d => color(d.key))
+             .on("mouseover", (event, d) => {
+                 tooltip.transition().style("opacity", .95);
+                 tooltip.html(`${d.key === 'AS' ? UI_TEXTS.legendLabels.avocadoSign : t2Label}: ${utils.formatPercent(d.value)}`)
+                     .style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 28) + "px");
+                 d3.select(event.currentTarget).style("opacity", 0.8);
+             })
+             .on("mouseout", (event) => {
+                 tooltip.transition().style("opacity", 0);
+                 d3.select(event.currentTarget).style("opacity", 1);
+             })
+             .transition().duration(APP_CONFIG.CHART_SETTINGS.ANIMATION_DURATION_MS).ease(d3.easeCubicOut)
+             .attr("y", d => y(d.value))
+             .attr("height", d => innerHeight - y(d.value));
     }
     
     function renderROCCurve(rocData, targetElementId, options = {}) {
