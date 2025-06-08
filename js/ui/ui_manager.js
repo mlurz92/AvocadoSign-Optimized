@@ -5,8 +5,8 @@ const uiManager = (() => {
     function _updateHeaderUI() {
         const state = appState.getState();
         const allData = _mainAppInterface.getProcessedData();
-        const currentData = dataManager.filterDataByKollektiv(allData, state.currentKollektiv);
-        const headerStats = dataManager.calculateHeaderStats(currentData, state.currentKollektiv);
+        const currentData = dataManager.filterDataByKollektiv(allData, state.getCurrentKollektiv()); // Use state.getCurrentKollektiv()
+        const headerStats = dataManager.calculateHeaderStats(currentData, state.getCurrentKollektiv()); // Use state.getCurrentKollektiv()
 
         document.querySelector(CONSTANTS.SELECTORS.HEADER_KOLLEKTIV).textContent = headerStats.kollektiv;
         document.querySelector(CONSTANTS.SELECTORS.HEADER_ANZAHL_PATIENTEN).textContent = headerStats.anzahlPatienten;
@@ -15,7 +15,7 @@ const uiManager = (() => {
         document.querySelector(CONSTANTS.SELECTORS.HEADER_STATUS_T2).textContent = headerStats.statusT2;
         
         document.querySelectorAll(CONSTANTS.SELECTORS.KOLLEKTIV_BUTTONS).forEach(btn => {
-            btn.classList.toggle(CONSTANTS.CLASSES.ACTIVE, btn.dataset.kollektiv === state.currentKollektiv);
+            btn.classList.toggle(CONSTANTS.CLASSES.ACTIVE, btn.dataset.kollektiv === state.getCurrentKollektiv()); // Use state.getCurrentKollektiv()
         });
     }
 
@@ -31,7 +31,7 @@ const uiManager = (() => {
             try {
                 const state = appState.getState();
                 const allData = _mainAppInterface.getProcessedData();
-                const currentData = dataManager.filterDataByKollektiv(allData, state.currentKollektiv);
+                const currentData = dataManager.filterDataByKollektiv(allData, state.getCurrentKollektiv());
                 const bfResults = bruteForceManager.getAllResults();
                 const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
                 const appliedLogic = t2CriteriaManager.getAppliedLogic();
@@ -40,24 +40,25 @@ const uiManager = (() => {
 
                 switch (tabId) {
                     case 'daten-tab':
-                        contentHTML = dataTab.render(currentData, state.datenTableSort);
+                        contentHTML = dataTab.render(currentData, state.getDatenTableSort());
                         break;
                     case 'auswertung-tab':
-                        contentHTML = auswertungTab.render(currentData, t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic(), state.auswertungTableSort, state.currentKollektiv);
+                        contentHTML = auswertungTab.render(currentData, t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic(), state.getAuswertungTableSort(), state.getCurrentKollektiv());
                         break;
                     case 'statistik-tab':
-                        contentHTML = statistikTab.render(allData, state.currentStatsLayout, state.currentStatsKollektiv1, state.currentStatsKollektiv2, state.currentKollektiv);
+                        // Statistik-Tab benötigt das gesamte Rohdatenset, um Kollektive dynamisch zu filtern und zu vergleichen
+                        contentHTML = statistikTab.render(allData, state.getStatsLayout(), state.getStatsKollektiv1(), state.getStatsKollektiv2(), state.getCurrentKollektiv());
                         break;
                     case 'praesentation-tab':
-                        const presentationData = _mainAppInterface.getPresentationData();
-                        contentHTML = praesentationTab.render(state.currentPresentationView, state.currentPresentationStudyId, state.currentKollektiv, presentationData);
+                        const presentationData = _mainAppInterface.getPresentationData(); // Call new function
+                        contentHTML = praesentationTab.render(presentationData.view, presentationData, presentationData.selectedStudyId, presentationData.kollektiv);
                         break;
                     case 'publikation-tab':
-                        const publicationData = _mainAppInterface.getPublicationData();
-                        contentHTML = publikationTab.render(publicationData.allKollektivStats, publicationData.commonData, state.currentPublikationLang, state.currentPublikationSection, state.currentPublikationBruteForceMetric);
+                        const publicationData = _mainAppInterface.getPublicationData(); // Call new function
+                        contentHTML = publikationTab.render(publicationData.allKollektivStats, publicationData.commonData, publicationData.lang, publicationData.activeSectionId, publicationData.bruteForceMetric);
                         break;
                     case 'export-tab':
-                        contentHTML = exportTab.render(state.currentKollektiv, bfResults);
+                        contentHTML = exportTab.render(state.getCurrentKollektiv(), bfResults);
                         break;
                     default:
                         contentHTML = `<p class="text-warning p-3">Unbekannter Tab: ${tabId}</p>`;
@@ -84,17 +85,17 @@ const uiManager = (() => {
                 }
                 break;
             case 'statistik-tab':
-                _updateStatistikCharts(allData);
+                _updateStatistikCharts(allData); // Call update charts for Statistik Tab
                 break;
             case 'publikation-tab':
                 const scrollSpyTarget = document.querySelector(CONSTANTS.SELECTORS.PUBLIKATION_SECTIONS_NAV);
                 if (scrollSpyTarget) {
                     new bootstrap.ScrollSpy(document.body, {
                         target: CONSTANTS.SELECTORS.PUBLIKATION_SECTIONS_NAV,
-                        offset: 150
+                        offset: parseInt(APP_CONFIG.UI_SETTINGS.STICKY_HEADER_OFFSET) + 1 // Adjust offset for sticky header
                     });
                 }
-                publikationTab.updateDynamicChartsForPublicationTab(appState.getState().currentPublikationSection);
+                publikationTabLogic.updateDynamicChartsForPublicationTab(appState.getPublikationSection()); // Corrected: publikationTab to publikationTabLogic
                 break;
         }
     }
@@ -112,37 +113,73 @@ const uiManager = (() => {
     }
 
     function _updateStatistikCharts(allData) {
-        // Implementation for rendering charts in statistik tab
+        const state = appState.getState();
+        const kollektiveToRender = state.currentStatsLayout === 'einzel' ? [state.currentKollektiv] : [state.currentStatsKollektiv1, state.currentStatsKollektiv2];
+        
+        kollektiveToRender.forEach((kolId, index) => {
+            const data = dataManager.filterDataByKollektiv(allData, kolId);
+            const appliedCriteria = t2CriteriaManager.getAppliedCriteria();
+            const appliedLogic = t2CriteriaManager.getAppliedLogic();
+            const evaluatedData = t2CriteriaManager.evaluateDataset(data, appliedCriteria, appliedLogic);
+            const stats = statisticsService.calculateAllStatsForPublication(evaluatedData, appliedCriteria, appliedLogic, bruteForceManager.getAllResults())[kolId];
+            
+            if(stats){
+                charts.renderConfusionMatrix(stats.gueteAS.matrix, `matrix-AS-${index}`);
+                charts.renderROCCurve(stats.gueteAS.rocData, `roc-AS-${index}`, { auc: stats.gueteAS.auc.value }); // Assuming rocData exists
+                charts.renderConfusionMatrix(stats.gueteT2_angewandt.matrix, `matrix-T2-${index}`);
+                charts.renderROCCurve(stats.gueteT2_angewandt.rocData, `roc-T2-${index}`, { auc: stats.gueteT2_angewandt.auc.value, color: APP_CONFIG.CHART_SETTINGS.T2_COLOR }); // Assuming rocData exists
+            }
+        });
     }
 
     function _handleTabChange(event) {
         if(event.target && event.target.id){
+            // Store active tab ID
             appState.setActiveTabId(event.target.id);
-            _renderTabContent(event.target.id);
+            // Render content for the new tab
+            _renderTab(event.target.id);
         }
     }
     
     function _handleAppEvents(event) {
         const { type, target } = event;
-        let delegated = false;
         
+        // Global event handling (delegation)
         if(type === 'click') {
-            if(target.closest('[data-kollektiv]')) { generalEventHandlers.handleKollektivChange(target.closest('[data-kollektiv]').dataset.kollektiv, _mainAppInterface); delegated = true; }
-            else if(target.closest('th[data-sort-key]')) { generalEventHandlers.handleSortClick(target.closest('th[data-sort-key]'), target.closest('.sortable-sub-header'), _mainAppInterface); delegated = true; }
-            else if(target.closest(CONSTANTS.SELECTORS.BTN_KURANLEITUNG)) { generalEventHandlers.handleKurzanleitungClick(); delegated = true; }
+            if(target.closest('[data-kollektiv]')) { 
+                generalEventHandlers.handleKollektivChange(target.closest('[data-kollektiv]').dataset.kollektiv, _mainAppInterface); 
+                return; // Event handled, prevent further delegation for this click
+            }
+            if(target.closest('th[data-sort-key]')) { 
+                generalEventHandlers.handleSortClick(target.closest('th[data-sort-key]'), target.closest('.sortable-sub-header'), _mainAppInterface); 
+                return; // Event handled
+            }
+            if(target.closest(CONSTANTS.SELECTORS.BTN_KURANLEITUNG)) {
+                generalEventHandlers.handleKurzanleitungClick();
+                return;
+            }
+            // Add other global click handlers here
         }
 
-        if(target.closest(CONSTANTS.SELECTORS.AUSWERTUNG_TAB_PANE)) auswertungEventHandlers.handle(event, _mainAppInterface);
-        else if(target.closest(CONSTANTS.SELECTORS.STATISTIK_TAB_PANE)) statistikEventHandlers.handle(event, _mainAppInterface);
-        else if(target.closest(CONSTANTS.SELECTORS.PRAESENTATION_TAB_PANE)) praesentationEventHandlers.handle(event, _mainAppInterface);
-        else if(target.closest(CONSTANTS.SELECTORS.PUBLIKATION_TAB_PANE)) publikationEventHandlers.handle(event, _mainAppInterface);
-        else if(target.closest(CONSTANTS.SELECTORS.EXPORT_TAB_PANE)) exportEventHandlers.handle(event, _mainAppInterface);
+        // Delegate to specific tab handlers
+        const auswertungPane = target.closest(CONSTANTS.SELECTORS.AUSWERTUNG_TAB_PANE);
+        const statistikPane = target.closest(CONSTANTS.SELECTORS.STATISTIK_TAB_PANE);
+        const praesentationPane = target.closest(CONSTANTS.SELECTORS.PRAESENTATION_TAB_PANE);
+        const publikationPane = target.closest(CONSTANTS.SELECTORS.PUBLIKATION_TAB_PANE);
+        const exportPane = target.closest(CONSTANTS.SELECTORS.EXPORT_TAB_PANE);
+
+        if(auswertungPane) auswertungEventHandlers.handle(event, _mainAppInterface);
+        else if(statistikPane) statistikEventHandlers.handle(event, _mainAppInterface);
+        else if(praesentationPane) praesentationEventHandlers.handle(event, _mainAppInterface);
+        else if(publikationPane) publikationEventHandlers.handle(event, _mainAppInterface);
+        else if(exportPane) exportEventHandlers.handle(event, _mainAppInterface);
     }
     
     function attachCollapseEventListeners(scopeSelector) {
         const parent = document.querySelector(scopeSelector);
         if (!parent) return;
 
+        // Use event delegation for collapse events
         parent.addEventListener('show.bs.collapse', e => {
             const triggerRow = e.target.closest('tr.sub-row')?.previousElementSibling;
             const icon = triggerRow?.querySelector('.row-toggle-icon');
@@ -159,28 +196,32 @@ const uiManager = (() => {
         if (_isInitialized) return;
         _mainAppInterface = mainAppInterface;
         
-        document.querySelector(CONSTANTS.SELECTORS.MAIN_TAB_NAV)?.addEventListener('show.bs.tab', _handleTabChange);
+        // Attach event listeners
+        document.querySelector(CONSTANTS.SELECTORS.MAIN_TAB_NAV)?.addEventListener('shown.bs.tab', _handleTabChange); // Bootstrap's 'shown.bs.tab' is better than 'show.bs.tab'
         document.body.addEventListener('click', _handleAppEvents);
-        document.body.addEventListener('change', _handleAppEvents);
-        document.body.addEventListener('input', _handleAppEvents);
+        document.body.addEventListener('change', _handleAppEvents); // For select, checkbox, radio
+        document.body.addEventListener('input', _handleAppEvents); // For range slider
         
+        // Set initial tab and render
         const initialTabId = appState.getActiveTabId();
         const tabEl = document.getElementById(initialTabId);
         if(tabEl) {
             new bootstrap.Tab(tabEl).show();
-            _renderTabContent(initialTabId);
+            // _renderTab is called by the 'shown.bs.tab' event handler, so no need to call it directly here after showing tab
         } else {
             const fallbackTabEl = document.getElementById('publikation-tab');
             new bootstrap.Tab(fallbackTabEl).show();
-            _renderTabContent('publikation-tab');
+            // _renderTab('publikation-tab'); // Will be called by event handler
         }
         _updateHeaderUI();
+        ui_helpers.showKurzanleitung(); // Show kurzanleitung modal on app start
+
         _isInitialized = true;
     }
     
     return Object.freeze({
         init,
-        renderTab: _renderTabContent,
+        renderTab: _renderTab,
         updateHeader: _updateHeaderUI,
         attachCollapseEventListeners
     });
