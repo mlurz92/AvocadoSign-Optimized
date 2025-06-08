@@ -1,8 +1,7 @@
 const statistikEventHandlers = (() => {
 
-    function handleStatsLayoutToggle(button, mainAppInterface) {
-        if (!button || !mainAppInterface || typeof mainAppInterface.refreshCurrentTab !== 'function' || typeof mainAppInterface.updateGlobalUIState !== 'function') {
-            console.error("statistikEventHandlers.handleStatsLayoutToggle: Ungültige Parameter.");
+    function handleStatsLayoutToggle(button, appController) {
+        if (!button || !appController || typeof appController.updateGlobalUIState !== 'function' || typeof appController.refreshCurrentTab !== 'function') {
             return;
         }
         
@@ -10,17 +9,16 @@ const statistikEventHandlers = (() => {
             const isPressed = button.classList.contains('active');
             const newLayout = isPressed ? 'vergleich' : 'einzel';
             if (state.setCurrentStatsLayout(newLayout)) {
-                mainAppInterface.updateGlobalUIState();
+                appController.updateGlobalUIState();
                 if (state.getActiveTabId() === 'statistik-tab') {
-                    mainAppInterface.refreshCurrentTab();
+                    appController.refreshCurrentTab();
                 }
             }
         }, 50);
     }
 
-    function handleStatistikKollektivChange(selectElement, mainAppInterface) {
-        if (!selectElement || !mainAppInterface || typeof mainAppInterface.refreshCurrentTab !== 'function') {
-             console.error("statistikEventHandlers.handleStatistikKollektivChange: Ungültige Parameter.");
+    function handleStatistikKollektivChange(selectElement, appController) {
+        if (!selectElement || !appController || typeof appController.refreshCurrentTab !== 'function') {
             return;
         }
 
@@ -34,7 +32,7 @@ const statistikEventHandlers = (() => {
         }
 
         if (needsRender && state.getCurrentStatsLayout() === 'vergleich' && state.getActiveTabId() === 'statistik-tab') {
-            mainAppInterface.refreshCurrentTab();
+            appController.refreshCurrentTab();
         }
     }
 
