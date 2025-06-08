@@ -1,7 +1,9 @@
 const uiComponents = (() => {
 
     function _createHeaderButtonHTML(buttons, targetId, defaultTitle = 'Element') {
-        if (!Array.isArray(buttons) || buttons.length === 0 || !targetId) return '';
+        if (!Array.isArray(buttons) || buttons.length === 0 || !targetId) {
+            return '';
+        }
         return buttons.map(btn => {
             const iconClass = btn.icon || 'fa-download';
             const safeChartName = String(btn.chartName || defaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '');
@@ -23,7 +25,7 @@ const uiComponents = (() => {
     function createDashboardCard(title, content, chartId = null, cardClasses = '', headerClasses = '', bodyClasses = '', downloadButtons = []) {
         const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, chartId || title.replace(/\s/g, '_'), title);
         const tooltipKey = (chartId || title).replace(/^chart-dash-/, '').replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
-        const tooltipContent = TOOLTIP_CONTENT.deskriptiveStatistik[tooltipKey]?.description || title;
+        const tooltipContent = (TOOLTIP_CONTENT.deskriptiveStatistik[tooltipKey]?.description || title).replace('[KOLLEKTIV]', 'dem aktuellen Kollektiv');
 
         return `
             <div class="col-xl-2 col-lg-4 col-md-4 col-sm-6 dashboard-card-col ${cardClasses}">
@@ -55,7 +57,7 @@ const uiComponents = (() => {
                         data-criterion="${key}" data-value="${value}" 
                         data-tippy-content="${TOOLTIP_CONTENT[`t2${key.charAt(0).toUpperCase() + key.slice(1)}`]?.description || ''}"
                         ${isChecked ? '' : 'disabled'}>
-                    ${ui_helpers.getT2IconSVG(key, value)}
+                    ${ui_helpers.getT2IconSVG(key, value)} ${value}
                 </button>
             `).join('');
         };
@@ -106,6 +108,8 @@ const uiComponents = (() => {
     function createBruteForceCard(currentKollektivName, workerAvailable) {
         const disabledAttribute = !workerAvailable ? 'disabled' : '';
         const startButtonText = workerAvailable ? '<i class="fas fa-cogs me-1"></i> Optimierung starten' : '<i class="fas fa-times-circle me-1"></i> Worker nicht verfügbar';
+        const metricOptions = PUBLICATION_CONFIG.bruteForceMetricsForPublication.map(opt => `<option value="${opt.value}" ${opt.value === APP_CONFIG.DEFAULT_SETTINGS.BRUTE_FORCE_METRIC ? 'selected' : ''}>${opt.label}</option>`).join('');
+
         return `
         <div class="col-12">
             <div class="card">
@@ -114,7 +118,7 @@ const uiComponents = (() => {
                     <div class="row g-3 align-items-end mb-3">
                         <div class="col-md-4">
                             <label for="brute-force-metric" class="form-label form-label-sm">Zielmetrik:</label>
-                            <select class="form-select form-select-sm" id="brute-force-metric" data-tippy-content="${TOOLTIP_CONTENT.bruteForceMetric.description}"></select>
+                            <select class="form-select form-select-sm" id="brute-force-metric" data-tippy-content="${TOOLTIP_CONTENT.bruteForceMetric.description}">${metricOptions}</select>
                         </div>
                         <div class="col-md-4">
                              <button class="btn btn-primary btn-sm w-100" id="btn-start-brute-force" ${disabledAttribute}>${startButtonText}</button>
@@ -129,11 +133,67 @@ const uiComponents = (() => {
             </div>
         </div>`;
     }
+
+    function createStatistikCard(id, title, content = '', addPadding = true, tooltipKey = null, downloadButtons = [], tableId = null) {
+        const cardTooltipHtml = tooltipKey && TOOLTIP_CONTENT[tooltipKey]?.cardTitle ? `data-tippy-content="${TOOLTIP_CONTENT[tooltipKey].cardTitle.replace('[KOLLEKTIV]', '<strong>[KOLLEKTIV_PLACEHOLDER]</strong>')}"` : `data-tippy-content="${title}"`;
+        const headerButtonHtml = _createHeaderButtonHTML(downloadButtons, id + '-content', title);
+
+        return `
+            <div class="col-12 stat-card" id="${id}-card-container">
+                <div class="card h-100">
+                    <div class="card-header" ${cardTooltipHtml}>
+                         ${title}
+                         <span class="float-end card-header-buttons">${headerButtonHtml}</span>
+                     </div>
+                    <div class="card-body ${addPadding ? '' : 'p-0'}">
+                        <div id="${id}-content">${content}</div>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    function createPublikationTabHeader() {
+        const lang = state.getCurrentPublikationLang();
+        const currentBfMetric = state.getCurrentPublikationBruteForceMetric();
+        const sectionNavItems = PUBLICATION_CONFIG.sections.map(mainSection => `
+            <li class="nav-item">
+                <a class="nav-link py-2 publikation-section-link" href="#" data-section-id="${mainSection.id}" data-tippy-content="${TOOLTIP_CONTENT.publikationTabTooltips[mainSection.id]?.description || ''}">
+                    ${UI_TEXTS.publikationTab.sectionLabels[mainSection.labelKey]}
+                </a>
+            </li>`).join('');
+        const bfMetricOptions = PUBLICATION_CONFIG.bruteForceMetricsForPublication.map(opt =>
+            `<option value="${opt.value}" ${opt.value === currentBfMetric ? 'selected' : ''}>${opt.label}</option>`
+        ).join('');
+
+        return `
+            <div class="row mb-3 sticky-top bg-light py-2 shadow-sm" style="top: var(--sticky-header-offset);">
+                <div class="col-md-3">
+                    <h5 class="mb-2">Abschnitte</h5>
+                    <nav id="publikation-sections-nav" class="nav flex-column nav-pills">${sectionNavItems}</nav>
+                </div>
+                <div class="col-md-9">
+                    <div class="d-flex justify-content-end align-items-center mb-2">
+                        <div class="me-3">
+                           <label for="publikation-bf-metric-select" class="form-label form-label-sm mb-0 me-1">${UI_TEXTS.publikationTab.bruteForceMetricSelectLabel}</label>
+                           <select class="form-select form-select-sm d-inline-block" id="publikation-bf-metric-select" style="width: auto;">${bfMetricOptions}</select>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="publikation-sprache-switch" ${lang === 'en' ? 'checked' : ''}>
+                            <label class="form-check-label fw-bold" for="publikation-sprache-switch" id="publikation-sprache-label">${UI_TEXTS.publikationTab.spracheSwitchLabel[lang]}</label>
+                        </div>
+                    </div>
+                    <div id="publikation-content-area" class="bg-white p-3 border rounded">
+                        <p class="text-muted">Bitte wählen Sie einen Abschnitt.</p>
+                    </div>
+                </div>
+            </div>`;
+    }
     
     return Object.freeze({
         createDashboardCard,
         createT2CriteriaControls,
-        createBruteForceCard
+        createBruteForceCard,
+        createStatistikCard,
+        createPublikationTabHeader
     });
-
 })();
