@@ -3,7 +3,7 @@ const exportService = (() => {
     function _generateFilename(typeKey, kollektiv, extension, options = {}) {
         const dateStr = getCurrentDateString('YYYYMMDD');
         const safeKollektiv = getKollektivDisplayName(kollektiv).replace(/[^a-z0-9_-]/gi, '_').replace(/_+/g, '_');
-        let filenameType = CONSTANTS.EXPORT.FILENAME_TYPES[typeKey] || typeKey || 'Export';
+        let filenameType = CONSTANTS.SELECTORS[typeKey] || typeKey || 'Export';
 
         if (options.chartName) {
             filenameType = filenameType.replace('{ChartName}', options.chartName.replace(/[^a-z0-9_-]/gi, '_').substring(0, 30));
@@ -56,8 +56,9 @@ const exportService = (() => {
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                canvas.width = (svgElement.clientWidth || svgElement.width.baseVal.value) * scale;
-                canvas.height = (svgElement.clientHeight || svgElement.height.baseVal.value) * scale;
+                const bbox = svgElement.getBBox();
+                canvas.width = bbox.width * scale;
+                canvas.height = bbox.height * scale;
                 const ctx = canvas.getContext('2d');
                 ctx.fillStyle = APP_CONFIG.CHART_SETTINGS.PLOT_BACKGROUND_COLOR;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
