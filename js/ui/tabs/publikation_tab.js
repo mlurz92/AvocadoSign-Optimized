@@ -22,17 +22,19 @@ const publikationTab = (() => {
 
     function _createSectionNavigation(activeSectionId) {
         const navItems = PUBLICATION_CONFIG.sections.map(mainSection => {
-            const subSectionLinks = mainSection.subSections.map(subSection => `
+            const subSectionLinks = mainSection.subSections.map(subSection => {
+                const isActive = subSection.id === activeSectionId;
+                return `
                 <li>
-                    <a class="nav-link ps-3 py-1 publikation-section-link" href="#pub-content-${subSection.id}" data-section-id="${subSection.id}">
+                    <a class="nav-link ps-3 py-1 publikation-section-link ${isActive ? 'active' : ''}" href="#pub-content-${subSection.id}" data-section-id="${subSection.id}">
                         ${subSection.label}
                     </a>
-                </li>
-            `).join('');
+                </li>`;
+            }).join('');
 
             return `
                 <li class="nav-item">
-                    <a class="nav-link fw-bold mt-2" href="#pub-main-content-${mainSection.id}" data-section-id="${mainSection.id}">
+                    <a class="nav-link fw-bold mt-2 disabled" href="#pub-main-content-${mainSection.id}" data-section-id="${mainSection.id}">
                         ${TEXT_CONFIG.de.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}
                     </a>
                     <ul class="nav flex-column">${subSectionLinks}</ul>
@@ -40,12 +42,12 @@ const publikationTab = (() => {
         }).join('');
 
         return `
-            <nav id="${CONSTANTS.SELECTORS.PUBLIKATION_SECTIONS_NAV.substring(1)}" class="nav flex-column nav-pills position-sticky" style="top: calc(var(--sticky-header-offset) + 1rem);">
+            <nav id="${CONSTANTS.SELECTORS.PUBLIKATION_SECTIONS_NAV.substring(1)}" class="nav flex-column nav-pills position-sticky" style="top: calc(var(--sticky-header-offset, 111px) + 1rem); max-height: calc(100vh - var(--sticky-header-offset, 111px) - 2rem); overflow-y: auto;">
                 ${navItems}
             </nav>`;
     }
 
-    function _createContentArea(allKollektivStats, commonData, lang, activeSectionId) {
+    function _createContentArea(allKollektivStats, commonData, lang) {
         let contentHtml = '';
         PUBLICATION_CONFIG.sections.forEach(mainSection => {
             contentHtml += `<section id="pub-main-content-${mainSection.id}" class="publication-main-section mb-5">`;
@@ -62,8 +64,10 @@ const publikationTab = (() => {
                     tableContent = publicationTables.renderLiteraturT2KriterienTabelle(lang);
                 } else if (subSection.id === 'ergebnisse_patientencharakteristika') {
                     tableContent = publicationTables.renderPatientenCharakteristikaTabelle(allKollektivStats, lang);
-                    figureContent = publicationFigures.renderAgeDistributionChart(allKollektivStats.Gesamt?.deskriptiv?.alterData || [], PUBLICATION_CONFIG.publicationElements.ergebnisse.alterVerteilungChart.id, { height: 250 }, lang)
-                                + publicationFigures.renderGenderDistributionChart(allKollektivStats.Gesamt?.deskriptiv?.geschlecht, PUBLICATION_CONFIG.publicationElements.ergebnisse.geschlechtVerteilungChart.id, { height: 250 }, lang);
+                    figureContent = `<div class="row mt-4 g-3">
+                        <div class="col-md-6">${publicationFigures.renderAgeDistributionChart(allKollektivStats.Gesamt?.deskriptiv?.alterData || [], PUBLICATION_CONFIG.publicationElements.ergebnisse.alterVerteilungChart.id, { height: 250 }, lang)}</div>
+                        <div class="col-md-6">${publicationFigures.renderGenderDistributionChart(allKollektivStats.Gesamt?.deskriptiv?.geschlecht, PUBLICATION_CONFIG.publicationElements.ergebnisse.geschlechtVerteilungChart.id, { height: 250 }, lang)}</div>
+                    </div>`;
                 } else if (['ergebnisse_as_diagnostische_guete', 'ergebnisse_t2_literatur_diagnostische_guete', 'ergebnisse_t2_optimiert_diagnostische_guete', 'ergebnisse_vergleich_as_vs_t2'].includes(subSection.id)) {
                     tableContent = publicationTables.renderDiagnostischeGueteTabellen(allKollektivStats, lang, subSection.id, commonData);
                 }
