@@ -30,6 +30,7 @@ const praesentationTab = (() => {
         const { statsGesamt, statsDirektOP, statsNRCT, kollektiv, statsCurrentKollektiv } = presentationData;
         const kollektives = [CONSTANTS.KOLEKTIV.GESAMT, CONSTANTS.KOLEKTIV.DIREKT_OP, CONSTANTS.KOLEKTIV.NRCT];
         const statsMap = { [CONSTANTS.KOLEKTIV.GESAMT]: statsGesamt, [CONSTANTS.KOLEKTIV.DIREKT_OP]: statsDirektOP, [CONSTANTS.KOLEKTIV.NRCT]: statsNRCT };
+        const currentKollektivName = getKollektivDisplayName(kollektiv);
 
         const createPerfTableRow = (stats, kollektivKey) => {
             const kollektivDisplayName = getKollektivDisplayName(kollektivKey);
