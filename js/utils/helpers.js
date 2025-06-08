@@ -1,9 +1,55 @@
-function getKollektivDisplayName(kollektivId) {
-    const displayName = UI_TEXTS?.kollektivDisplayNames?.[kollektivId] || kollektivId || 'Unbekannt';
-    return displayName;
+// Temporäre oder initiale Definitionen für APP_CONFIG und UI_TEXTS
+// Diese sollten später in separate Konfigurationsdateien ausgelagert und importiert werden.
+const APP_CONFIG = {
+    STATISTICAL_CONSTANTS: {
+        SIGNIFICANCE_SYMBOLS: [
+            { threshold: 0.001, symbol: '***' },
+            { threshold: 0.01, symbol: '**' },
+            { threshold: 0.05, symbol: '*' }
+        ],
+        SIGNIFICANCE_LEVEL: 0.05
+    }
+};
+
+const UI_TEXTS = {
+    kollektivDisplayNames: {
+        'Gesamt': 'Gesamtpopulation',
+        'Direkt OP': 'Direkt OP Kollektiv',
+        'nRCT': 'nRCT Kollektiv'
+    },
+    statMetrics: {
+        signifikanzTexte: {
+            SIGNIFIKANT: 'statistisch signifikant',
+            NICHT_SIGNIFIKANT: 'statistisch nicht signifikant'
+        },
+        assoziationStaerkeTexte: {
+            nicht_bestimmbar: 'nicht bestimmbar',
+            stark: 'stark',
+            moderat: 'moderat',
+            schwach: 'schwach',
+            sehr_schwach: 'sehr schwach'
+        }
+    }
+};
+
+export function calculateAge(birthDateString, examinationDateString) {
+    const birthDate = new Date(birthDateString);
+    const examinationDate = new Date(examinationDateString);
+
+    if (isNaN(birthDate.getTime()) || isNaN(examinationDate.getTime())) {
+        return null;
+    }
+
+    let age = examinationDate.getFullYear() - birthDate.getFullYear();
+    const monthDifference = examinationDate.getMonth() - birthDate.getMonth();
+
+    if (monthDifference < 0 || (monthDifference === 0 && examinationDate.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
 }
 
-function formatNumber(num, digits = 1, placeholder = '--', useStandardFormat = false) {
+export function formatNumber(num, digits = 1, placeholder = '--', useStandardFormat = false) {
     const number = parseFloat(num);
     if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
         return placeholder;
@@ -17,12 +63,11 @@ function formatNumber(num, digits = 1, placeholder = '--', useStandardFormat = f
             maximumFractionDigits: digits
         });
     } catch (e) {
-        console.error("Fehler bei formatNumber mit de-DE Locale:", e);
         return number.toFixed(digits);
     }
 }
 
-function formatPercent(num, digits = 1, placeholder = '--%') {
+export function formatPercent(num, digits = 1, placeholder = '--%') {
     const number = parseFloat(num);
     if (num === null || num === undefined || isNaN(number) || !isFinite(number)) {
         return placeholder;
@@ -34,16 +79,15 @@ function formatPercent(num, digits = 1, placeholder = '--%') {
             maximumFractionDigits: digits
         }).format(number);
     } catch (e) {
-        console.error("Fehler bei formatPercent mit de-DE Locale:", e);
         return (number * 100).toFixed(digits) + '%';
     }
 }
 
-function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeholder = '--') {
+export function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeholder = '--') {
     const formatFn = isPercent ? formatPercent : formatNumber;
-    const formattedValue = formatFn(value, digits, placeholder, !isPercent); // Use standard format for non-percent numbers in CI
+    const formattedValue = formatFn(value, digits, placeholder, !isPercent);
 
-    if (formattedValue === placeholder && !(value === 0 && placeholder === '--')) { // Allow 0 to be formatted
+    if (formattedValue === placeholder && !(value === 0 && placeholder === '--')) {
         return placeholder;
     }
     
@@ -52,21 +96,20 @@ function formatCI(value, ciLower, ciUpper, digits = 1, isPercent = false, placeh
          valueToDisplay = formattedValue.replace('%','');
     }
 
-
     const formattedLower = formatFn(ciLower, digits, null, !isPercent);
     const formattedUpper = formatFn(ciUpper, digits, null, !isPercent);
 
     if (formattedLower !== null && formattedUpper !== null) {
         const lowerStr = isPercent ? String(formattedLower).replace('%','') : String(formattedLower);
         const upperStr = isPercent ? String(formattedUpper).replace('%','') : String(formattedUpper);
-        const ciStr = `(${lowerStr}\u00A0-\u00A0${upperStr})`; // Non-breaking space
+        const ciStr = `(${lowerStr}\u00A0-\u00A0${upperStr})`;
         return `${valueToDisplay} ${ciStr}${isPercent ? '%' : ''}`;
     } else {
-        return formattedValue; // Return value with % if applicable and CI is not available
+        return formattedValue;
     }
 }
 
-function getCurrentDateString(format = 'YYYY-MM-DD') {
+export function getCurrentDateString(format = 'YYYY-MM-DD') {
     const date = new Date();
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -81,42 +124,33 @@ function getCurrentDateString(format = 'YYYY-MM-DD') {
     return `${year}-${month}-${day}`;
 }
 
-function saveToLocalStorage(key, value) {
+export function saveToLocalStorage(key, value) {
     if (typeof key !== 'string' || key.length === 0) {
-        console.error("saveToLocalStorage: Ungültiger Schlüssel angegeben.");
         return;
     }
     try {
         localStorage.setItem(key, JSON.stringify(value));
     } catch (e) {
-        console.error(`Fehler beim Speichern im Local Storage (Schlüssel: ${key}):`, e);
-        if (typeof ui_helpers !== 'undefined' && typeof ui_helpers.showToast === 'function') {
-            ui_helpers.showToast(`Speichern der Einstellung '${key}' fehlgeschlagen.`, 'warning');
-        }
     }
 }
 
-function loadFromLocalStorage(key) {
+export function loadFromLocalStorage(key) {
     if (typeof key !== 'string' || key.length === 0) {
-        console.error("loadFromLocalStorage: Ungültiger Schlüssel angegeben.");
         return null;
     }
     try {
         const item = localStorage.getItem(key);
         return (item !== null && item !== undefined) ? JSON.parse(item) : null;
     } catch (e) {
-        console.warn(`Fehler beim Laden aus dem Local Storage (Schlüssel: ${key}): ${e.message}. Lösche ggf. Eintrag.`);
         try {
             localStorage.removeItem(key);
-            console.log(`Fehlerhafter Eintrag für Schlüssel '${key}' aus Local Storage entfernt.`);
         } catch (removeError) {
-             console.error(`Fehler beim Entfernen des fehlerhaften Eintrags (Schlüssel: ${key}):`, removeError);
         }
         return null;
     }
 }
 
-function debounce(func, wait) {
+export function debounce(func, wait) {
   let timeoutId = null;
   return function executedFunction(...args) {
     const context = this;
@@ -133,7 +167,7 @@ function isObject(item) {
     return (item !== null && typeof item === 'object' && !Array.isArray(item));
 }
 
-function cloneDeep(obj) {
+export function deepClone(obj) {
     if (obj === null || typeof obj !== 'object') {
         return obj;
     }
@@ -144,31 +178,30 @@ function cloneDeep(obj) {
             return JSON.parse(JSON.stringify(obj));
          }
     } catch (e) {
-        console.warn("Fehler beim Deep Cloning via structuredClone/JSON, versuche Fallback:", e);
         if (Array.isArray(obj)) {
              const arrCopy = [];
              for(let i = 0; i < obj.length; i++){
-                 arrCopy[i] = cloneDeep(obj[i]);
+                 arrCopy[i] = deepClone(obj[i]);
              }
              return arrCopy;
-         };
+         }
         if (typeof obj === 'object') {
              const objCopy = {};
              for(const key in obj) {
                  if(Object.prototype.hasOwnProperty.call(obj, key)) {
-                     objCopy[key] = cloneDeep(obj[key]);
+                     objCopy[key] = deepClone(obj[key]);
                  }
              }
              return objCopy;
-         };
+         }
         return obj;
     }
 }
 
-function deepMerge(target, ...sources) {
-    let output = cloneDeep(target);
+export function deepMerge(target, ...sources) {
+    let output = deepClone(target);
     sources.forEach(source => {
-        const sourceCopy = cloneDeep(source);
+        const sourceCopy = deepClone(source);
         if (isObject(output) && isObject(sourceCopy)) {
             Object.keys(sourceCopy).forEach(key => {
                 const targetValue = output[key];
@@ -190,19 +223,18 @@ function deepMerge(target, ...sources) {
     return output;
 }
 
-function getObjectValueByPath(obj, path) {
+export function getObjectValueByPath(obj, path) {
     if (!obj || typeof path !== 'string') {
         return undefined;
     }
     try {
         return path.split('.').reduce((acc, part) => acc && acc[part], obj);
     } catch (e) {
-        console.warn(`Fehler beim Zugriff auf Pfad '${path}':`, e);
         return undefined;
     }
 }
 
-function getSortFunction(key, direction = 'asc', subKey = null) {
+export function getSortFunction(key, direction = 'asc', subKey = null) {
     const dirModifier = direction === 'asc' ? 1 : -1;
 
     return (a, b) => {
@@ -277,22 +309,20 @@ function getSortFunction(key, direction = 'asc', subKey = null) {
              try {
                  return String(valA).localeCompare(String(valB), 'de-DE', { sensitivity: 'base', numeric: true }) * dirModifier;
              } catch (e) {
-                  console.warn("Fallback string comparison failed:", e);
                   if (valA < valB) return -1 * dirModifier;
                   if (valA > valB) return 1 * dirModifier;
                   return 0;
              }
 
         } catch (error) {
-             console.error("Fehler während der Sortierung:", error, "Key:", key, "SubKey:", subKey, "A:", a, "B:", b);
              return 0;
         }
     };
 }
 
-function getStatisticalSignificanceSymbol(pValue) {
+export function getStatisticalSignificanceSymbol(pValue) {
     if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return '';
-    const significanceLevels = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS; // Bereits absteigend sortiert
+    const significanceLevels = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS;
     const overallSignificanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL;
 
     for (const level of significanceLevels) {
@@ -300,31 +330,31 @@ function getStatisticalSignificanceSymbol(pValue) {
             return level.symbol;
         }
     }
-    if (pValue < overallSignificanceLevel) { // Falls kein Symbol in der Liste passt, aber unter dem allgemeinen Niveau
-        return significanceLevels[significanceLevels.length - 1]?.symbol || '*'; // Fallback zum geringsten definierten Symbol
+    if (pValue < overallSignificanceLevel) {
+        return significanceLevels[significanceLevels.length - 1]?.symbol || '*';
     }
-    return 'ns'; // not significant
+    return 'ns';
 }
 
-function getStatisticalSignificanceText(pValue, significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL) {
+export function getStatisticalSignificanceText(pValue, significanceLevel = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_LEVEL) {
      if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return '';
      const level = significanceLevel;
      return pValue < level
-         ? UI_TEXTS.statMetrics.signifikanzTexte.SIGNIFIKANT || 'statistisch signifikant'
-         : UI_TEXTS.statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT || 'statistisch nicht signifikant';
+         ? UI_TEXTS.statMetrics.signifikanzTexte.SIGNIFIKANT
+         : UI_TEXTS.statMetrics.signifikanzTexte.NICHT_SIGNIFIKANT;
 }
 
-function getPValueText(pValue, lang = 'de') {
+export function getPValueText(pValue, lang = 'de') {
     if (pValue === null || pValue === undefined || isNaN(pValue) || !isFinite(pValue)) return 'N/A';
 
-    const pLessThanThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS[0]?.threshold || 0.001; // kleinster Schwellenwert für 'p < ...'
+    const pLessThanThreshold = APP_CONFIG.STATISTICAL_CONSTANTS.SIGNIFICANCE_SYMBOLS[0]?.threshold || 0.001;
     if (pValue < pLessThanThreshold) {
         const thresholdStr = String(pLessThanThreshold).replace('.', lang === 'de' ? ',' : '.');
         return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','.')}`;
     }
 
-    let pFormatted = formatNumber(pValue, 3, 'N/A', true); // useStandardFormat = true
-    if (pFormatted === '0.000' && pLessThanThreshold === 0.001) { // Spezifischer Fall, wenn p sehr klein, aber nicht <0.001 laut Formatierung
+    let pFormatted = formatNumber(pValue, 3, 'N/A', true);
+    if (pFormatted === '0.000' && pLessThanThreshold === 0.001) {
          const thresholdStr = String(pLessThanThreshold).replace('.', lang === 'de' ? ',' : '.');
          return lang === 'de' ? `p < ${thresholdStr}` : `P < ${thresholdStr.replace('0,','.')}`;
     }
@@ -335,7 +365,7 @@ function getPValueText(pValue, lang = 'de') {
     return `p = ${pFormatted}`;
 }
 
-function generateUUID() {
+export function generateUUID() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();
     } else {
@@ -355,18 +385,17 @@ function generateUUID() {
     }
 }
 
-function clampNumber(num, min, max) {
+export function clampNumber(num, min, max) {
     const number = parseFloat(num);
     const minVal = parseFloat(min);
     const maxVal = parseFloat(max);
     if(isNaN(number) || isNaN(minVal) || isNaN(maxVal)) {
-        console.warn(`Ungültige Eingabe für clampNumber: num=${num}, min=${min}, max=${max}`);
         return NaN;
-    };
+    }
     return Math.min(Math.max(number, minVal), maxVal);
 }
 
-function arraysAreEqual(arr1, arr2) {
+export function arraysAreEqual(arr1, arr2) {
     if (!Array.isArray(arr1) || !Array.isArray(arr2)) return false;
     if (arr1.length !== arr2.length) return false;
     for (let i = 0; i < arr1.length; i++) {
@@ -375,9 +404,9 @@ function arraysAreEqual(arr1, arr2) {
     return true;
 }
 
-function getAUCBewertung(aucValue) {
+export function getAUCBewertung(aucValue) {
     const value = parseFloat(aucValue);
-    if (isNaN(value) || value < 0 || value > 1) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_bestimmbar || 'N/A';
+    if (isNaN(value) || value < 0 || value > 1) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_bestimmbar;
     if (value >= 0.9) return 'exzellent';
     if (value >= 0.8) return 'gut';
     if (value >= 0.7) return 'moderat';
@@ -385,13 +414,13 @@ function getAUCBewertung(aucValue) {
     return 'nicht informativ';
 }
 
-function getPhiBewertung(phiValue) {
+export function getPhiBewertung(phiValue) {
     const value = parseFloat(phiValue);
-    if (isNaN(value)) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_bestimmbar || 'N/A';
+    if (isNaN(value)) return UI_TEXTS.statMetrics.assoziationStaerkeTexte.nicht_bestimmbar;
     const absPhi = Math.abs(value);
-    const texts = UI_TEXTS.statMetrics.assoziationStaerkeTexte || {};
-    if (absPhi >= 0.5) return texts.stark || 'stark';
-    if (absPhi >= 0.3) return texts.moderat || 'moderat';
-    if (absPhi >= 0.1) return texts.schwach || 'schwach';
-    return texts.sehr_schwach || 'sehr schwach';
+    const texts = UI_TEXTS.statMetrics.assoziationStaerkeTexte;
+    if (absPhi >= 0.5) return texts.stark;
+    if (absPhi >= 0.3) return texts.moderat;
+    if (absPhi >= 0.1) return texts.schwach;
+    return texts.sehr_schwach;
 }
