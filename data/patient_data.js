@@ -1,4 +1,4 @@
-const patientDataRaw = [
+export const patientData = [
   {
     nr: 1,
     name: "John",
