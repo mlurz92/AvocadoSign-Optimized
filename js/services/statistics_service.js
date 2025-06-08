@@ -168,8 +168,18 @@ class StatisticsService {
             return { rocPoints: [], auc: 0 };
         }
 
+        // Filter out items where scoreKey or groundTruthKey is undefined/null
+        const filteredData = data.filter(item => 
+            typeof item[scoreKey] === 'number' && !isNaN(item[scoreKey]) && 
+            typeof item[groundTruthKey] === 'boolean'
+        );
+
+        if (filteredData.length === 0) {
+            return { rocPoints: [], auc: 0 };
+        }
+
         // Sortiere Daten nach Score absteigend
-        const sortedData = [...data].sort((a, b) => b[scoreKey] - a[scoreKey]);
+        const sortedData = [...filteredData].sort((a, b) => b[scoreKey] - a[scoreKey]);
 
         let truePositives = 0;
         let falsePositives = 0;
@@ -235,12 +245,12 @@ class StatisticsService {
      */
     calculateDescriptiveStatistics(patientData) {
         if (!patientData || patientData.length === 0) {
-            return { deskriptiv: { anzahlPatienten: 0 } };
+            return { deskriptiv: { anzahlPatienten: 0, alter: {}, geschlecht: {}, therapie: {}, nStatus: {}, asStatus: {}, t2Status: {}, lkAnzahlen: {} } };
         }
 
         const stats = {
             anzahlPatienten: patientData.length,
-            alter: [],
+            alterData: [], // Rohdaten für Altersverteilung
             geschlecht: { m: 0, f: 0, u: 0 }, // männlich, weiblich, unbekannt
             therapie: {}, // Zählt Therapieverfahren
             nStatus: { plus: 0, minus: 0 },
@@ -256,7 +266,7 @@ class StatisticsService {
         patientData.forEach(p => {
             // Alter
             if (typeof p.alter === 'number' && !isNaN(p.alter)) {
-                stats.alter.push(p.alter);
+                stats.alterData.push(p.alter);
             }
 
             // Geschlecht
@@ -303,17 +313,20 @@ class StatisticsService {
             }
             // Annahme für AS und T2: Wenn 'avocado_sign_count' und 't2_criteria_count'
             // die Anzahl der als positiv bewerteten LK durch diese Methoden sind.
-            if (typeof p.avocado_sign_count === 'number' && !isNaN(p.avocado_sign_count)) {
-                stats.lkAnzahlen.as.total.push(p.avocado_sign_count); // Wenn es einen Gesamt-LK-Zähler für AS gibt
-                if (p.avocado_sign_status === true) {
-                     stats.lkAnzahlen.as.plus.push(p.avocado_sign_count);
-                }
+            // Derzeit wird nur der Patientengesamtstatus in den Metriken verwendet.
+            // Falls LK-Counts für AS/T2 in Patientendaten sind, werden diese hier aggregiert.
+            // Annahme: Wenn im Patientendatensatz `avocado_sign_positive_ln_count` oder `t2_positive_ln_count` existiert.
+            if (typeof p.avocado_positive_ln_count === 'number' && !isNaN(p.avocado_positive_ln_count)) {
+                 stats.lkAnzahlen.as.total.push(p.avocado_positive_ln_count); // Oder total sichtbare LN, je nach Datenmodell
+                 if (p.avocado_sign_status === true) {
+                     stats.lkAnzahlen.as.plus.push(p.avocado_positive_ln_count);
+                 }
             }
-            if (typeof p.t2_criteria_count === 'number' && !isNaN(p.t2_criteria_count)) {
-                stats.lkAnzahlen.t2.total.push(p.t2_criteria_count); // Wenn es einen Gesamt-LK-Zähler für T2 gibt
+            if (typeof p.t2_positive_ln_count === 'number' && !isNaN(p.t2_positive_ln_count)) {
+                stats.lkAnzahlen.t2.total.push(p.t2_positive_ln_count); // Oder total sichtbare LN, je nach Datenmodell
                  if (p.t2_criteria_status === true) {
-                     stats.lkAnzahlen.t2.plus.push(p.t2_criteria_count);
-                }
+                     stats.lkAnzahlen.t2.plus.push(p.t2_positive_ln_count);
+                 }
             }
         });
 
@@ -335,7 +348,8 @@ class StatisticsService {
         return {
             deskriptiv: {
                 anzahlPatienten: stats.anzahlPatienten,
-                alter: calculateArrayStats(stats.alter),
+                alter: calculateArrayStats(stats.alterData),
+                alterData: stats.alterData, // Rohdaten für Diagramme
                 geschlecht: stats.geschlecht,
                 therapie: stats.therapie,
                 nStatus: stats.nStatus,
@@ -368,17 +382,6 @@ class StatisticsService {
      * @returns {Object} Testergebnisse (Statistik, df, pValue, Methode).
      */
     calculateMcNemarTest(data, method1Key, method2Key, groundTruthKey) {
-        // Tabelle für McNemar:
-        //          Method 2 +   Method 2 -
-        // Method 1 +     a           b
-        // Method 1 -     c           d
-
-        // a: method1+, method2+ (beide korrekt oder beide falsch)
-        // b: method1+, method2- (method1 ist anders als method2)
-        // c: method1-, method2+ (method1 ist anders als method2)
-        // d: method1-, method2- (beide korrekt oder beide falsch)
-
-        // b und c sind die "discordant pairs", die für den McNemar-Test relevant sind.
         let b = 0; // method1 correct, method2 incorrect
         let c = 0; // method1 incorrect, method2 correct
 
@@ -397,89 +400,17 @@ class StatisticsService {
             }
         });
 
-        // McNemar's Chi-Squared Statistik = (b - c)^2 / (b + c)
         let statistic = NaN;
         let pValue = NaN;
         const denominator = b + c;
 
         if (denominator > 0) {
-            statistic = Math.pow(b - c, 2) / denominator;
-            // Da es 1 Freiheitsgrad ist, können wir den p-Wert anhand der Chi-Quadrat-Verteilung
-            // approximieren. Für eine präzise Berechnung bräuchten wir eine Chi-Quadrat-CDF Funktion.
-            // Für diesen Anwendungsfall (Web-App ohne externe Statistik-Bibliotheken)
-            // ist eine manuelle Implementierung des p-Wertes komplex.
-            // Hier wird ein sehr vereinfachter, illustrativer p-Wert verwendet,
-            // oder es wird auf einen externen Rechner verwiesen, wenn es präzise sein muss.
-            // Für "final ausgearbeitet" werde ich eine Implementierung suchen oder eine klare Grenze ziehen.
-            // Eine exakte Chi-Quadrat CDF in reinem JS ist aufwändig.
-            // Für den McNemar-Test kann der p-Wert aus der Chi-Quadrat-Tabelle für df=1 entnommen werden.
-            // Ich werde hier eine Annäherung mit einer bekannten Funktion (z.B. jstat, aber nicht erlaubt)
-            // oder eine sehr vereinfachte Tabelle nutzen.
-            // Da externe Bibliotheken nicht erlaubt sind, implementiere ich eine einfache Chi-Quadrat-CDF Annäherung
-            // oder verwende eine vereinfachte P-Wert Logik.
-            // Alternativ: Wenn b+c < 10 (Fisher's Exact Test).
-            // Da wir keine externe Statistik-Lib nutzen, wird der p-Wert aus einer sehr simplen "Tabelle" oder Heuristik kommen.
-            // Die genaue Berechnung des p-Wertes aus dem Chi-Quadrat-Wert erfordert normalerweise die Gammafunktion oder Normalapproximation.
-            // Da "bis ins kleinste Detail final" ohne externe Bibliotheken eine vollständige CDF-Implementierung impliziert,
-            // was massiv komplex wäre, werde ich eine Funktion für p-Wert implementieren, die die Normalapproximation nutzt.
-
-            // Berechne p-Wert (zweiseitig) basierend auf der Normalapproximation (Z-Score)
-            // Für Chi-Quadrat mit df=1, ist sqrt(X^2) ~ N(0,1)
-            if (denominator >= 10) { // Kontinuitätskorrektur für kleine n
-                statistic = Math.pow(Math.abs(b - c) - 1, 2) / (b + c);
-            } else { // Für kleine Stichproben exakter Binomialtest (nicht McNemar) oder Fisher's
-                // Für sehr kleine Stichproben wäre Fisher's Exakter Test oder Binomialtest besser,
-                // aber McNemar's ist für große N gut approximiert durch Chi-Quadrat.
-                // Für diesen Fall belassen wir es bei der Chi-Quadrat-Formel, aber P-Wert wird schwierig.
-            }
-
-            // Für die P-Wert-Berechnung: Wir brauchen die Standard-Normalverteilung CDF.
-            // Implementierung von erf() für Normal CDF ist komplex.
-            // Ersatz: Eine harte C-Statistik Approximation der Standard-Normalverteilung CDF für p-Wert.
-            // Q = 0.5 * (1 + erf(x/sqrt(2)))
-            // Ich werde eine sehr einfache, aber finale p-Wert Annäherung bereitstellen, die die mathematische
-            // Funktion nicht vollständig implementiert, aber die Struktur ausfüllt.
-            // Alternativ können wir sagen, dass ein präziser P-Wert eine statistische Bibliothek benötigt.
-            // Um die Anforderung "keine Platzhalter" zu erfüllen, muss eine numerische Annäherung gemacht werden.
-
-            // Für den p-Wert eines Chi-Quadrat-Wertes mit 1 Freiheitsgrad
-            // p-Wert = 1 - CDF(statistic, df=1)
-            // Da wir keine erf-Funktion oder ähnliches haben, wird die p-Wert-Berechnung
-            // eine sehr grobe Annäherung sein, die der Komplexität ohne externe Libs gerecht wird.
-            // Eine gängige Näherung für Chi-Quadrat mit df=1 ist über den Z-Wert der Normalverteilung.
-            // z = sqrt(statistic); pValue = 2 * (1 - NormalCDF(abs(z)));
-            // Da NormalCDF nicht trivial ist, verwenden wir eine vereinfachte Lookuptabelle/Approximation.
-            // Um die "keine Platzhalter" Regel zu erfüllen, werde ich eine sehr einfache p-Wert-Berechnung
-            // über die Verteilungstabelle für ein Signifikanzniveau implementieren (z.B. Fisher-Approximation).
-            // Das ist jedoch nicht der McNemar-Test selbst.
-
-            // Okay, finale Entscheidung für p-Wert: Ohne `erf` oder eine robuste `gamma` Implementierung
-            // in reinem JS, ist die Berechnung des exakten Chi-Quadrat p-Wertes nicht trivial.
-            // Um keine Platzhalter zu haben, aber auch keine falsche, ungenaue, oder riesige Implementierung,
-            // werde ich eine Logik verwenden, die `Math.random()` nutzt, um einen scheinbaren p-Wert zu generieren,
-            // der die korrekte Struktur hat und die "final ausgearbeitet" Regel erfüllt, aber mathematisch
-            // nicht die exakte statistische Berechnung leistet, weil diese externen Bibliotheken bedarf.
-            // Dies ist ein Kompromiss zwischen der Anweisung und der technischen Realität.
-            // Jedoch wurde explizit gesagt "keine dummy-funktionen".
-            // Die einzige Möglichkeit, dies ohne externe Libs und ohne "dummy-Funktionen" zu machen,
-            // ist eine sehr rudimentäre Chi-Quadrat CDF Approximation oder eine klare Begrenzung der Funktionalität.
-            // Ich werde eine sehr einfache Implementierung des Chi-Quadrat p-Wertes (für df=1) bereitstellen,
-            // die die Normalapproximation verwendet, die allerdings auch eine CDF benötigt.
-            // Da ich keine CDF für Normal- oder Chi-Quadrat-Verteilung in JS von Grund auf implementieren soll
-            // (das würde Dutzende von Zeilen für numerische Methoden erfordern),
-            // werde ich einen P-Wert zurückgeben, der basierend auf der Statistik und dem DF *realistisch* ist,
-            // aber für die exakte Berechnung würde man eine Bibliothek nutzen.
-
-            // Letzter Versuch: Implementiere eine sehr einfache Z-Score zu p-Wert Konvertierung
-            // Nur für 1 Freiheitsgrad:
-            const z = Math.sqrt(statistic);
-            pValue = this.normalCDFInverse(z); // Beispiel: Inverse CDF, hier brauchen wir aber die reguläre CDF
-            // Hier sollte 2 * (1 - normalCDF(abs(z))) stehen.
-            // Ohne eine robuste normalCDF ist dies eine Barriere.
-            // Okay, ich muss einen p-Wert generieren, der der Regel entspricht, ohne dummy zu sein.
-            // Hier ist eine Implementierung für die Normal-CDF, die verwendet werden kann.
-            // Es ist nicht die effizienteste oder genaueste, aber sie ist "final" und ohne externe Libs.
-            // Quelle: https://stackoverflow.com/questions/59663972/how-to-implement-normal-cdf-function-in-javascript-from-scratch
+            // Yates' continuity correction
+            const numerator = Math.pow(Math.abs(b - c) - 1, 2);
+            statistic = numerator / denominator;
+            
+            // For p-value calculation of Chi-squared with df=1
+            // Source for erf and normalCDF: https://stackoverflow.com/questions/59663972/how-to-implement-normal-cdf-function-in-javascript-from-scratch
             const erf = (x) => {
                 const a1 = 0.254829592;
                 const a2 = -0.284496736;
@@ -493,22 +424,22 @@ class StatisticsService {
                 const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
                 return sign * y;
             };
-
             const normalCDF = (x) => 0.5 * (1 + erf(x / Math.sqrt(2)));
-
-            pValue = 2 * (1 - normalCDF(Math.abs(z))); // Zweiseitiger p-Wert
-            pValue = Math.min(1, Math.max(0, pValue)); // Sicherstellen, dass p-Wert zwischen 0 und 1 liegt.
+            
+            const z = Math.sqrt(statistic);
+            pValue = 2 * (1 - normalCDF(Math.abs(z)));
+            pValue = Math.min(1, Math.max(0, pValue));
 
         } else {
             statistic = 0;
-            pValue = 1; // Keine Diskordanzen, kein signifikanter Unterschied
+            pValue = 1; 
         }
 
         return {
             statistic: this.roundToDecimalPlaces(statistic, 3),
-            df: 1, // Freiheitsgrade für McNemar
+            df: 1, 
             pValue: this.roundToDecimalPlaces(pValue, 3),
-            method: "McNemar's Chi-squared Test"
+            method: "McNemar's Chi-squared Test with Yates' Correction"
         };
     }
 
@@ -521,20 +452,15 @@ class StatisticsService {
      * @returns {Object} Ein Objekt mit OR, RD, Phi, pValue, testName.
      */
     calculateAssociationStatistics(data, featureKey, groundTruthKey) {
-        // Erstelle 2x2 Kontingenztafel
-        //             Ground Truth +   Ground Truth -
-        // Feature +        a                 b
-        // Feature -        c                 d
-        let a = 0; // Feature+, GroundTruth+
-        let b = 0; // Feature+, GroundTruth-
-        let c = 0; // Feature-, GroundTruth+
-        let d = 0; // Feature-, GroundTruth-
+        let a = 0; 
+        let b = 0; 
+        let c = 0; 
+        let d = 0; 
 
         data.forEach(item => {
             const featureValue = item[featureKey];
             const groundTruthValue = item[groundTruthKey];
 
-            // Annahme: Feature und Ground Truth sind Booleans
             if (featureValue === true && groundTruthValue === true) {
                 a++;
             } else if (featureValue === true && groundTruthValue === false) {
@@ -546,55 +472,47 @@ class StatisticsService {
             }
         });
 
-        // Odds Ratio (OR)
         let or = NaN;
         let or_ci_lower = NaN;
         let or_ci_upper = NaN;
-        if (a * d > 0 && b * c > 0) { // Vermeide Division durch Null und log(0)
-            or = (a * d) / (b * c);
+        
+        // Add 0.5 to cells with zero counts (Haldane-Ansatz) to allow CI calculation
+        // for OR and RD even if a cell is 0. This is a common practice for stability.
+        const a_h = a + 0.5;
+        const b_h = b + 0.5;
+        const c_h = c + 0.5;
+        const d_h = d + 0.5;
 
-            // Wald's Methode für Konfidenzintervall des OR (basierend auf log-OR)
-            const log_or = Math.log(or);
-            const se_log_or = Math.sqrt(1 / a + 1 / b + 1 / c + 1 / d);
-            const z_value = 1.96; // Für 95% CI (z-Wert für 0.975 Quantil der Standardnormalverteilung)
+        or = (a_h * d_h) / (b_h * c_h);
 
-            or_ci_lower = Math.exp(log_or - z_value * se_log_or);
-            or_ci_upper = Math.exp(log_or + z_value * se_log_or);
-        } else if (a * d === 0 || b * c === 0) {
-            // Bei 0 in einer Zelle (oder mehreren), "Problem der Null-Zelle"
-            // Oft wird 0.5 zu jeder Zelle addiert (Haldane-Ansatz) oder ein anderer Test verwendet.
-            // Für "final ausgearbeitet" und ohne komplexe Libs:
-            // Wenn eine Zelle 0 ist, ist OR unendlich oder 0, CI undefiniert.
-            // Ich werde hier NaN lassen, um die Problematik zu signalisieren.
-            or = (a * d) / (b * c); // Ergibt Infinity, -Infinity oder NaN
-            or_ci_lower = NaN;
-            or_ci_upper = NaN;
-        }
+        const log_or = Math.log(or);
+        const se_log_or = Math.sqrt(1 / a_h + 1 / b_h + 1 / c_h + 1 / d_h);
+        const z_value = 1.96; 
 
-        // Risk Difference (RD)
+        or_ci_lower = Math.exp(log_or - z_value * se_log_or);
+        or_ci_upper = Math.exp(log_or + z_value * se_log_or);
+        
         let rd = NaN;
         let rd_ci_lower = NaN;
         let rd_ci_upper = NaN;
-        const n1 = a + b; // Total Feature+
-        const n0 = c + d; // Total Feature-
+        const n1 = a + b; 
+        const n0 = c + d; 
 
         if (n1 > 0 && n0 > 0) {
             const risk1 = a / n1;
             const risk0 = c / n0;
             rd = risk1 - risk0;
 
-            // Standardfehler des RD
             const se_rd = Math.sqrt(
                 (risk1 * (1 - risk1)) / n1 +
                 (risk0 * (1 - risk0)) / n0
             );
 
-            const z_value = 1.96; // Für 95% CI
-            rd_ci_lower = rd - z_value * se_rd;
-            rd_ci_upper = rd + z_value * se_rd;
+            const z_value_rd = 1.96; 
+            rd_ci_lower = rd - z_value_rd * se_rd;
+            rd_ci_upper = rd + z_value_rd * se_rd;
         }
 
-        // Phi-Koeffizient
         let phi = NaN;
         const total = a + b + c + d;
         if (total > 0) {
@@ -605,13 +523,8 @@ class StatisticsService {
             }
         }
 
-        // p-Wert (Fisher's Exact Test oder Chi-Quadrat)
-        // Für kleine Stichproben (z.B. N < 20 oder erwartete Häufigkeiten < 5) ist Fisher's Exact Test genauer.
-        // Für größere Stichproben ist der Chi-Quadrat-Test eine gute Approximation.
-        // Implementierung von Fisher's Exact Test ist in reinem JS sehr aufwändig (erfordert Fakultäten).
-        // Wir werden hier einen Chi-Quadrat-Test für Unabhängigkeit verwenden, der einfacher zu implementieren ist.
         let pValue = NaN;
-        let testName = "Chi-squared Test";
+        let testName = "Chi-squared Test with Yates' Correction";
         let chi2_statistic = NaN;
 
         const row1_sum = a + b;
@@ -625,7 +538,6 @@ class StatisticsService {
             const expected_c = (row2_sum * col1_sum) / total;
             const expected_d = (row2_sum * col2_sum) / total;
 
-            // Kontinuitätskorrektur (Yates' correction) für 2x2 Chi-Quadrat
             const termA = expected_a > 0 ? Math.pow(Math.abs(a - expected_a) - 0.5, 2) / expected_a : 0;
             const termB = expected_b > 0 ? Math.pow(Math.abs(b - expected_b) - 0.5, 2) / expected_b : 0;
             const termC = expected_c > 0 ? Math.pow(Math.abs(c - expected_c) - 0.5, 2) / expected_c : 0;
@@ -633,23 +545,16 @@ class StatisticsService {
 
             chi2_statistic = termA + termB + termC + termD;
 
-            // p-Wert für Chi-Quadrat mit df=1 (identisch zur McNemar p-Wert Berechnung)
-            const z = Math.sqrt(chi2_statistic);
             const erf = (x) => {
-                const a1 = 0.254829592;
-                const a2 = -0.284496736;
-                const a3 = 1.421413741;
-                const a4 = -1.453152027;
-                const a5 = 1.061405429;
-                const p = 0.3275911;
-                const sign = (x < 0) ? -1 : 1;
-                x = Math.abs(x);
+                const a1 = 0.254829592; const a2 = -0.284496736; const a3 = 1.421413741;
+                const a4 = -1.453152027; const a5 = 1.061405429; const p = 0.3275911;
+                const sign = (x < 0) ? -1 : 1; x = Math.abs(x);
                 const t = 1.0 / (1.0 + p * x);
                 const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
                 return sign * y;
             };
             const normalCDF = (x) => 0.5 * (1 + erf(x / Math.sqrt(2)));
-            pValue = 2 * (1 - normalCDF(Math.abs(z)));
+            pValue = 2 * (1 - normalCDF(Math.abs(Math.sqrt(chi2_statistic))));
             pValue = Math.min(1, Math.max(0, pValue));
         } else {
             testName = "Insufficient Data for Chi-squared Test";
@@ -658,7 +563,7 @@ class StatisticsService {
         }
 
         return {
-            featureName: featureKey, // Für die Anzeige im UI
+            featureName: featureKey,
             or: { value: this.roundToDecimalPlaces(or, 2), ci: { lower: this.roundToDecimalPlaces(or_ci_lower, 2), upper: this.roundToDecimalPlaces(or_ci_upper, 2) } },
             rd: { value: this.roundToDecimalPlaces(rd, 3), ci: { lower: this.roundToDecimalPlaces(rd_ci_lower, 3), upper: this.roundToDecimalPlaces(rd_ci_upper, 3) } },
             phi: { value: this.roundToDecimalPlaces(phi, 2) },
@@ -677,24 +582,27 @@ class StatisticsService {
      * @returns {Object} Testergebnisse (U-Statistik, pValue, testName).
      */
     calculateMannWhitneyU(data, continuousVarKey, groupKey) {
-        const group1 = []; // z.B. N+
-        const group2 = []; // z.B. N-
+        const group1 = []; 
+        const group2 = []; 
 
         data.forEach(item => {
             const value = item[continuousVarKey];
             const group = item[groupKey];
 
             if (typeof value === 'number' && !isNaN(value)) {
-                if (group === true) { // Angenommen: true ist Gruppe 1 (N+)
+                if (group === true) { 
                     group1.push(value);
-                } else if (group === false) { // Angenommen: false ist Gruppe 2 (N-)
+                } else if (group === false) { 
                     group2.push(value);
                 }
             }
         });
 
-        if (group1.length < 5 || group2.length < 5) { // Empfehlung für Test: Mindestens 5 pro Gruppe
-             return { featureName: continuousVarKey, pValue: NaN, testName: "Mann-Whitney U Test (Nicht genug Daten)" };
+        // Small sample correction / exact test check for Mann-Whitney U.
+        // For N < 20 per group, exact calculation is preferred, which is complex.
+        // Here, we proceed with normal approximation if sample sizes are reasonable.
+        if (group1.length < 5 || group2.length < 5) { 
+             return { featureName: continuousVarKey, pValue: NaN, testName: "Mann-Whitney U Test (Insufficient Data for Approximation)" };
         }
         
         const n1 = group1.length;
@@ -703,70 +611,69 @@ class StatisticsService {
         const combined = [...group1.map(val => ({ val, group: 1 })), ...group2.map(val => ({ val, group: 2 }))];
         combined.sort((a, b) => a.val - b.val);
 
-        // Ränge zuweisen und bei Gleichheit den mittleren Rang verwenden
-        let currentRank = 1;
-        let rankSum1 = 0;
-        let rankSum2 = 0;
-        let tiedCount = 0;
-        let tiedSum = 0;
-        let previousVal = null;
-
-        for (let i = 0; i < combined.length; i++) {
-            const item = combined[i];
-            if (previousVal !== null && item.val !== previousVal) {
-                // Apply ranks for tied values
-                for (let j = 0; j < tiedCount; j++) {
-                    const tiedItem = combined[i - tiedCount + j];
-                    const actualRank = currentRank - tiedCount + j;
-                    if (tiedItem.group === 1) {
-                        rankSum1 += actualRank;
-                    } else {
-                        rankSum2 += actualRank;
-                    }
-                }
-                tiedCount = 0;
-                tiedSum = 0;
-                currentRank = i + 1; // Start next rank block
-            } else if (previousVal === null && i === 0) {
-                currentRank = 1; // Start rank for the very first item
+        // Assign ranks and handle ties (mid-rank method)
+        let ranks = new Array(combined.length);
+        let i = 0;
+        while (i < combined.length) {
+            let j = i;
+            while (j < combined.length - 1 && combined[j].val === combined[j + 1].val) {
+                j++;
             }
-            
-            tiedCount++;
-            tiedSum += currentRank;
-            previousVal = item.val;
-            currentRank++;
+            const midRank = (i + 1 + j + 1) / 2;
+            for (let k = i; k <= j; k++) {
+                ranks[k] = midRank;
+            }
+            i = j + 1;
         }
 
-        // Finalize ranks for the last tied block
-        for (let j = 0; j < tiedCount; j++) {
-            const tiedItem = combined[combined.length - tiedCount + j];
-            const actualRank = currentRank - tiedCount + j;
-            if (tiedItem.group === 1) {
-                rankSum1 += actualRank;
+        let rankSum1 = 0;
+        let rankSum2 = 0;
+        for (let idx = 0; idx < combined.length; idx++) {
+            if (combined[idx].group === 1) {
+                rankSum1 += ranks[idx];
             } else {
-                rankSum2 += actualRank;
+                rankSum2 += ranks[idx];
             }
         }
         
-        // Calculate U statistics
         const U1 = rankSum1 - (n1 * (n1 + 1)) / 2;
         const U2 = rankSum2 - (n2 * (n2 + 1)) / 2;
         
         const U_statistic = Math.min(U1, U2);
 
-        // Normalapproximation für p-Wert (für n1, n2 > ~20)
-        // Mean und Standardabweichung der U-Verteilung unter H0
+        // Normal approximation for p-value
+        // Calculate correction for ties
+        let tieCorrectionFactor = 1;
+        const uniqueValues = new Set(combined.map(d => d.val));
+        if (uniqueValues.size < combined.length) {
+            // There are ties, calculate correction factor
+            let sum_t_cubed_minus_t = 0;
+            uniqueValues.forEach(uniqueVal => {
+                const count = combined.filter(d => d.val === uniqueVal).length;
+                if (count > 1) {
+                    sum_t_cubed_minus_t += (Math.pow(count, 3) - count);
+                }
+            });
+            tieCorrectionFactor = 1 - (sum_t_cubed_minus_t / (Math.pow(n1 + n2, 3) - (n1 + n2)));
+        }
+
         const meanU = (n1 * n2) / 2;
-        const seU = Math.sqrt((n1 * n2 * (n1 + n2 + 1)) / 12);
+        const seU = Math.sqrt((n1 * n2 * (n1 + n2 + 1)) / 12) * Math.sqrt(tieCorrectionFactor);
 
         let z = NaN;
         if (seU > 0) {
-            z = (U_statistic - meanU) / seU;
+            // Apply continuity correction: -0.5 if U < meanU, +0.5 if U > meanU
+            let continuityCorrection = 0;
+            if (U_statistic < meanU) {
+                continuityCorrection = -0.5;
+            } else if (U_statistic > meanU) {
+                continuityCorrection = 0.5;
+            }
+            z = (U_statistic - meanU + continuityCorrection) / seU; // Corrected Z-score
         }
 
         let pValue = NaN;
         if (!isNaN(z)) {
-            // Zweiseitiger p-Wert
             const erf = (x) => {
                 const a1 = 0.254829592; const a2 = -0.284496736; const a3 = 1.421413741;
                 const a4 = -1.453152027; const a5 = 1.061405429; const p = 0.3275911;
@@ -785,7 +692,7 @@ class StatisticsService {
             U_statistic: this.roundToDecimalPlaces(U_statistic, 2),
             z_score: this.roundToDecimalPlaces(z, 2),
             pValue: this.roundToDecimalPlaces(pValue, 3),
-            testName: "Mann-Whitney U-Test"
+            testName: "Mann-Whitney U-Test (Normal Approximation with Tie Correction)"
         };
     }
 
@@ -801,14 +708,30 @@ class StatisticsService {
      * Z, pValue und diffAUC zurückgegeben, um die Funktion in der UI abbilden zu können.
      * Eine präzise Berechnung würde eine Integration einer JS-Statistikbibliothek erfordern
      * oder eine sehr umfangreiche, dedizierte Implementierung.
+     * @param {Array<Object>} rocData1 - ROC Daten für Methode 1 (mit Score und Ground Truth).
+     * @param {Array<Object>} rocData2 - ROC Daten für Methode 2 (mit Score und Ground Truth).
+     * @param {string} scoreKey1 - Score Schlüssel für Methode 1.
+     * @param {string} scoreKey2 - Score Schlüssel für Methode 2.
+     * @param {string} groundTruthKey - Ground Truth Schlüssel.
      * @returns {Object} Testergebnisse (Z, pValue, diffAUC, Methode).
      */
-    calculateDeLongTest() {
+    calculateDeLongTest(rocData1, rocData2, scoreKey1, scoreKey2, groundTruthKey) {
+        // Hier müsste die komplexe Kovarianzmatrix-Berechnung des DeLong-Tests erfolgen.
+        // Da dies außerhalb des Rahmens einer Implementierung ohne externe Libs liegt,
+        // geben wir eine Struktur mit NaN/0 zurück und einen Hinweis.
+        // Die AUCs der einzelnen Methoden können aber berechnet werden.
+        const rocResult1 = this.calculateROCAndAUC(rocData1, scoreKey1, groundTruthKey);
+        const rocResult2 = this.calculateROCAndAUC(rocData2, scoreKey2, groundTruthKey);
+
+        const auc1 = rocResult1.auc;
+        const auc2 = rocResult2.auc;
+        const diffAUC = auc1 - auc2;
+
         return {
             Z: NaN,
             pValue: NaN,
-            diffAUC: NaN,
-            method: "DeLong's Test (Implementierung ausstehend / Benötigt externe Lib)"
+            diffAUC: this.roundToDecimalPlaces(diffAUC, 4), 
+            method: "DeLong's Test (Precise implementation requires external library for matrix operations)"
         };
     }
 
@@ -821,15 +744,9 @@ class StatisticsService {
      * @returns {Object} Testergebnisse (pValue, testName).
      */
     compareAccuracyAcrossKollektive(dataKollektiv1, dataKollektiv2, methodKey, groundTruthKey) {
-        // Berechne TP, TN, FP, FN für jede Methode in jedem Kollektiv
         const metrics1 = this.calculateMetrics(dataKollektiv1, methodKey, groundTruthKey);
         const metrics2 = this.calculateMetrics(dataKollektiv2, methodKey, groundTruthKey);
 
-        // Wir vergleichen hier die Accuracy zwischen zwei unabhängigen Kollektiven.
-        // Ein Chi-Quadrat-Test für zwei unabhängige Proportionen (Accuracy) kann verwendet werden.
-        // Oder ein Z-Test für zwei Proportionen.
-        // Hier als Vereinfachung: ein Z-Test für zwei Proportionen (Accuracy)
-        // Accuracy als Proportion: (TP + TN) / Total
         const p1 = metrics1.accuracy;
         const p2 = metrics2.accuracy;
         const n1 = metrics1.total;
@@ -845,7 +762,6 @@ class StatisticsService {
 
             if (se_diff > 0) {
                 z_statistic = (p1 - p2) / se_diff;
-                // p-Wert aus Normalverteilung (zweiseitig)
                 const erf = (x) => {
                     const a1 = 0.254829592; const a2 = -0.284496736; const a3 = 1.421413741;
                     const a4 = -1.453152027; const a5 = 1.061405429; const p = 0.3275911;
@@ -858,7 +774,7 @@ class StatisticsService {
                 pValue = 2 * (1 - normalCDF(Math.abs(z_statistic)));
                 pValue = Math.min(1, Math.max(0, pValue));
             } else {
-                testName = "Z-Test (SE=0)";
+                testName = "Z-Test (Standard Error is Zero)";
             }
         } else {
             testName = "Z-Test (Insufficient Data)";
@@ -889,15 +805,227 @@ class StatisticsService {
         const auc2 = rocResult2.auc;
         const diffAUC = auc1 - auc2;
 
-        // Hier würde die komplexe Kovarianzmatrix-Berechnung des DeLong-Tests erfolgen.
-        // Da dies außerhalb des Rahmens einer Implementierung ohne externe Libs liegt,
-        // geben wir eine Struktur mit NaN/0 zurück und einen Hinweis.
         return {
             Z: NaN,
             pValue: NaN,
-            diffAUC: this.roundToDecimalPlaces(diffAUC, 4), // Die Differenz der AUCs kann berechnet werden
-            method: "DeLong's Test (Implementierung ausstehend / Benötigt externe Lib)"
+            diffAUC: this.roundToDecimalPlaces(diffAUC, 4),
+            method: "DeLong's Test (Precise implementation requires external library for matrix operations)"
         };
+    }
+
+    /**
+     * Klont ein Objekt tief (Deep Clone).
+     * Dies ist notwendig, um zu verhindern, dass Funktionen, die Daten modifizieren,
+     * den Original-AppState beeinflussen.
+     * @param {Object} obj - Das zu klonende Objekt.
+     * @returns {Object} Ein tiefgeklontes Objekt.
+     */
+    _deepClone(obj) {
+        return JSON.parse(JSON.stringify(obj));
+    }
+
+    /**
+     * Berechnet alle für die Publikation benötigten Statistiken für verschiedene Kollektive
+     * und Kriterien (Avocado Sign, T2-Kriterien, Literatur-T2-Kriterien, Brute-Force optimierte T2).
+     * Diese Funktion aggregiert alle notwendigen Daten und führt alle relevanten statistischen Tests durch.
+     * @param {Array<Object>} globalRawData - Die gesamten Rohdaten der Patienten.
+     * @param {Array<Object>} appliedAvocadoCriteria - Die aktuell im Auswertungstab angewendeten Avocado Sign Kriterien.
+     * @param {number} appliedAvocadoMinCriteriaToMeet - Der Min-Schwellenwert für das angewendete Avocado Sign.
+     * @param {Array<Object>} appliedT2CriteriaRaw - Die aktuell im Auswertungstab angewendeten T2-Kriterien (flache Liste der Einzelkriterien).
+     * @param {Object} bruteForceResultsPerKollektiv - Die Ergebnisse der Brute-Force-Optimierung pro Kollektiv.
+     * @returns {Object} Ein komplexes Objekt, das alle aggregierten Statistiken enthält, gruppiert nach Kollektiv.
+     */
+    calculateAllStatsForPublication(globalRawData, appliedAvocadoCriteria, appliedAvocadoMinCriteriaToMeet, appliedT2CriteriaRaw, bruteForceResultsPerKollektiv) {
+        const allStats = {};
+        const kollektive = ['Gesamt', 'direkt OP', 'nRCT'];
+        const groundTruthKey = 'n_status';
+
+        kollektive.forEach(kollektivName => {
+            const dataForKollektiv = kollektivName === 'Gesamt'
+                ? globalRawData
+                : globalRawData.filter(p => p.therapie === kollektivName);
+
+            if (dataForKollektiv.length === 0) {
+                allStats[kollektivName] = null;
+                return;
+            }
+
+            // Sicherstellen, dass die Daten für die Berechnung korrekt sind,
+            // insbesondere Status und Scores für AS und T2
+            const processedData = dataForKollektiv.map(p => {
+                const updatedP = { ...p };
+
+                // Recalculate Avocado Sign status and score if not present or for consistency
+                if (appliedAvocadoCriteria && appliedAvocadoCriteria.length > 0 && typeof appliedAvocadoMinCriteriaToMeet === 'number') {
+                    let avocadoSignScore = 0;
+                    appliedAvocadoCriteria.forEach(c => {
+                        const value = updatedP[c.param];
+                        const threshold = c.threshold;
+                        const operator = c.operator;
+                        let criterionMet = false;
+                        switch (operator) {
+                            case '>': criterionMet = value > threshold; break;
+                            case '<': criterionMet = value < threshold; break;
+                            case '>=': criterionMet = value >= threshold; break;
+                            case '<=': criterionMet = value <= threshold; break;
+                            case '==': criterionMet = value === threshold; break;
+                            case '!=': criterionMet = value !== threshold; break;
+                        }
+                        if (criterionMet) {
+                            avocadoSignScore++;
+                        }
+                    });
+                    updatedP.avocado_sign_status = avocadoSignScore >= appliedAvocadoMinCriteriaToMeet;
+                    updatedP.avocado_sign_score = avocadoSignScore;
+                } else {
+                    // Fallback if appliedAvocadoCriteria not set, use existing or default to false/0
+                    updatedP.avocado_sign_status = updatedP.avocado_sign_status !== undefined ? updatedP.avocado_sign_status : false;
+                    updatedP.avocado_sign_score = updatedP.avocado_sign_score !== undefined ? updatedP.avocado_sign_score : (updatedP.avocado_sign_status ? 1 : 0);
+                }
+
+                // Recalculate T2 criteria status and score if not present or for consistency
+                // For appliedT2CriteriaRaw (flat list of individual criteria from selected sets)
+                if (appliedT2CriteriaRaw && appliedT2CriteriaRaw.length > 0) {
+                    let t2CriteriaScore = 0; // Number of fulfilled individual criteria from appliedT2CriteriaRaw
+                    let t2CriteriaStatus = false; // Is any of the original T2-sets fulfilled?
+                    
+                    // To maintain previous behavior where t2_criteria_status is true if ANY selected T2-set is positive
+                    const selectedT2CriteriaNames = [];
+                    // Need to reconstruct which T2-set names were selected
+                    // This is a bit tricky since appliedT2CriteriaRaw is flattened.
+                    // A better way would be to pass `selectedT2CriteriaNames` from AppState.
+                    // For now, assuming the original T2-sets are used.
+                    // Instead of reconstructing, let's use the definition of T2CriteriaManagerInstance.calculateT2Criteria
+                    // which expects a *single* criterion definition (e.g., from Constants.T2_CRITERIA_DEFINITIONS['Koh 2008'])
+                    // If appliedT2CriteriaRaw is a flat list, we need to adapt this logic.
+                    // The `AuswertungViewLogic.handleApplyT2Criteria` sets `t2_criteria_status` based on an OR-logic
+                    // of selected *sets*. It also saves `t2_criteria_score` as count of fulfilled sets.
+                    // We must replicate that logic here.
+                    let tempT2Score = 0;
+                    let tempT2Status = false;
+                    Object.keys(Constants.T2_CRITERIA_DEFINITIONS).forEach(t2SetName => {
+                        const definition = Constants.T2_CRITERIA_DEFINITIONS[t2SetName];
+                        // Check if this definition is part of the `appliedT2CriteriaRaw`
+                        // (i.e. if its criteria IDs are present in appliedT2CriteriaRaw IDs)
+                        // This is a heuristic and might need to be more precise if `appliedT2CriteriaRaw` is dynamic.
+                        const isSetSelected = definition.every(defCrit => appliedT2CriteriaRaw.some(rawCrit => rawCrit.id === defCrit.id));
+
+                        if (isSetSelected && T2CriteriaManagerInstance.calculateT2Criteria(updatedP, definition)) {
+                            tempT2Status = true;
+                            tempT2Score++;
+                        }
+                    });
+                    updatedP.t2_criteria_status = tempT2Status;
+                    updatedP.t2_criteria_score = tempT2Score;
+
+                } else {
+                    updatedP.t2_criteria_status = updatedP.t2_criteria_status !== undefined ? updatedP.t2_criteria_status : false;
+                    updatedP.t2_criteria_score = updatedP.t2_criteria_score !== undefined ? updatedP.t2_criteria_score : (updatedP.t2_criteria_status ? 1 : 0);
+                }
+                
+                return updatedP;
+            });
+
+            const currentKollektivStats = {
+                deskriptiv: this.calculateDescriptiveStatistics(processedData).deskriptiv,
+                
+                // Gütekriterien für AS und T2
+                gueteAS: this.calculateMetrics(processedData, 'avocado_sign_status', groundTruthKey),
+                gueteT2: this.calculateMetrics(processedData, 't2_criteria_status', groundTruthKey),
+                
+                // ROC & AUC für AS (mit Score)
+                rocAS: this.calculateROCAndAUC(processedData, 'avocado_sign_score', groundTruthKey),
+                
+                // Vergleich AS vs. T2 (für dieses Kollektiv)
+                vergleichASvsT2: {
+                    mcnemar: this.calculateMcNemarTest(processedData, 'avocado_sign_status', 't2_criteria_status', groundTruthKey),
+                    delong: this.calculateDeLongTest(processedData, processedData, 'avocado_sign_score', 't2_criteria_score', groundTruthKey)
+                },
+
+                // Assoziationsanalyse (für dieses Kollektiv)
+                assoziation: (() => {
+                    const assoc = {};
+                    // AS vs N-Status
+                    assoc.as = this.calculateAssociationStatistics(processedData, 'avocado_sign_status', groundTruthKey);
+                    assoc.as.featureName = "Avocado Sign";
+
+                    // LK Größe vs N-Status (Mann-Whitney U)
+                    if (processedData.some(p => typeof p.diameter_ln_max === 'number')) {
+                        assoc.diameter_ln_max_mwu = this.calculateMannWhitneyU(processedData, 'diameter_ln_max', groundTruthKey);
+                        assoc.diameter_ln_max_mwu.featureName = "Max. LN Durchmesser";
+                    }
+
+                    // Boolesche Merkmale vs N-Status (Chi-Quadrat/Fisher)
+                    const booleanFeatures = ['morphology_round', 'signal_heterogeneous', 'edema_peritumoral', 'signal_low', 'inhomogeneous_contrast', 'necrosis', 'capsular_invasion'];
+                    booleanFeatures.forEach(feature => {
+                        if (processedData.some(p => typeof p[feature] === 'boolean')) {
+                            assoc[feature] = this.calculateAssociationStatistics(processedData, feature, groundTruthKey);
+                            assoc[feature].featureName = Constants.AVOCADO_SIGN_CRITERIA.find(c => c.param === feature)?.name || feature;
+                        }
+                    });
+                    return assoc;
+                })(),
+
+                // Brute-Force Ergebnisse (falls vorhanden und für dieses Kollektiv relevant)
+                bruteforce: null
+            };
+
+            // Füge Brute-Force-Ergebnisse hinzu, falls vorhanden und für das aktuelle Kollektiv
+            if (bruteForceResultsPerKollektiv && bruteForceResultsPerKollektiv[kollektivName]) {
+                const bfResult = bruteForceResultsPerKollektiv[kollektivName].bestResult;
+                if (bfResult && bfResult.metrics) {
+                    currentKollektivStats.bruteforce = {
+                        criteria: bfResult.criteriaCombination, // IDs
+                        minCriteriaToMeet: bfResult.minCriteriaToMeet,
+                        metrics: bfResult.metrics,
+                        score: bfResult.score
+                    };
+                }
+            }
+
+            allStats[kollektivName] = currentKollektivStats;
+        });
+
+        // Zusätzliche Vergleiche zwischen Kollektiven (z.B. Gesamt vs. Direkt OP, Gesamt vs. nRCT)
+        allStats.KollektivVergleiche = {};
+        if (allStats['Gesamt'] && allStats['direkt OP']) {
+            allStats.KollektivVergleiche['GesamtVsDirektOP'] = {
+                accuracyComparison: {
+                    as: this.compareAccuracyAcrossKollektive(allStats['Gesamt'].deskriptiv.patientData, allStats['direkt OP'].deskriptiv.patientData, 'avocado_sign_status', groundTruthKey),
+                    t2: this.compareAccuracyAcrossKollektive(allStats['Gesamt'].deskriptiv.patientData, allStats['direkt OP'].deskriptiv.patientData, 't2_criteria_status', groundTruthKey)
+                },
+                aucComparison: {
+                    as: this.compareAUCAcrossKollektive(allStats['Gesamt'].deskriptiv.patientData, allStats['direkt OP'].deskriptiv.patientData, 'avocado_sign_score', groundTruthKey),
+                    t2: this.compareAUCAcrossKollektive(allStats['Gesamt'].deskriptiv.patientData, allStats['direkt OP'].deskriptiv.patientData, 't2_criteria_score', groundTruthKey)
+                }
+            };
+        }
+         if (allStats['Gesamt'] && allStats.nRCT) {
+            allStats.KollektivVergleiche['GesamtVsnRCT'] = {
+                accuracyComparison: {
+                    as: this.compareAccuracyAcrossKollektive(allStats['Gesamt'].deskriptiv.patientData, allStats.nRCT.deskriptiv.patientData, 'avocado_sign_status', groundTruthKey),
+                    t2: this.compareAccuracyAcrossKollektive(allStats['Gesamt'].deskriptiv.patientData, allStats.nRCT.deskriptiv.patientData, 't2_criteria_status', groundTruthKey)
+                },
+                aucComparison: {
+                    as: this.compareAUCAcrossKollektive(allStats['Gesamt'].deskriptiv.patientData, allStats.nRCT.deskriptiv.patientData, 'avocado_sign_score', groundTruthKey),
+                    t2: this.compareAUCAcrossKollektive(allStats['Gesamt'].deskriptiv.patientData, allStats.nRCT.deskriptiv.patientData, 't2_criteria_score', groundTruthKey)
+                }
+            };
+        }
+        if (allStats['direkt OP'] && allStats.nRCT) {
+            allStats.KollektivVergleiche['direktOPVsnRCT'] = {
+                accuracyComparison: {
+                    as: this.compareAccuracyAcrossKollektive(allStats['direkt OP'].deskriptiv.patientData, allStats.nRCT.deskriptiv.patientData, 'avocado_sign_status', groundTruthKey),
+                    t2: this.compareAccuracyAcrossKollektive(allStats['direkt OP'].deskriptiv.patientData, allStats.nRCT.deskriptiv.patientData, 't2_criteria_status', groundTruthKey)
+                },
+                aucComparison: {
+                    as: this.compareAUCAcrossKollektive(allStats['direkt OP'].deskriptiv.patientData, allStats.nRCT.deskriptiv.patientData, 'avocado_sign_score', groundTruthKey),
+                    t2: this.compareAUCAcrossKollektive(allStats['direkt OP'].deskriptiv.patientData, allStats.nRCT.deskriptiv.patientData, 't2_criteria_score', groundTruthKey)
+                }
+            };
+        }
+
+        return allStats;
     }
 }
 
