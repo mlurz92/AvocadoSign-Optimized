@@ -9,7 +9,7 @@ const publikationTab = (() => {
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <div class="form-check form-switch" data-tippy-content="${TEXT_CONFIG.de.tooltips.publikationTab.spracheSwitch}">
                     <input class="form-check-input" type="checkbox" role="switch" id="${CONSTANTS.SELECTORS.PUBLIKATION_SPRACHE_SWITCH.substring(1)}" ${lang === 'en' ? 'checked' : ''}>
-                    <label class="form-check-label fw-bold" for="${CONSTANTS.SELECTORS.PUBLIKATION_SPRACHE_SWITCH.substring(1)}">${TEXT_CONFIG.de.publikationTab.spracheSwitchLabel[lang]}</label>
+                    <label class="form-check-label fw-bold" for="${CONSTANTS.SELECTORS.PUBLIKATION_SPRACHE_SWITCH.substring(1)}" id="publikation-sprache-label">${TEXT_CONFIG.de.publikationTab.spracheSwitchLabel[lang]}</label>
                 </div>
                 <div data-tippy-content="${TEXT_CONFIG.de.tooltips.publikationTab.bruteForceMetricSelect}">
                    <label for="${CONSTANTS.SELECTORS.PUBLIKATION_BF_METRIC_SELECT.substring(1)}" class="form-label form-label-sm mb-0 me-1">${TEXT_CONFIG.de.publikationTab.bruteForceMetricSelectLabel}</label>
@@ -22,21 +22,17 @@ const publikationTab = (() => {
 
     function _createSectionNavigation(activeSectionId) {
         const navItems = PUBLICATION_CONFIG.sections.map(mainSection => {
-            const subSectionLinks = mainSection.subSections.map(subSection => {
-                const isActive = subSection.id === activeSectionId;
-                return `
+            const subSectionLinks = mainSection.subSections.map(subSection => `
                 <li>
-                    <a class="nav-link ps-3 py-1 publikation-section-link ${isActive ? 'active' : ''}" href="#pub-content-${subSection.id}" data-section-id="${subSection.id}">
+                    <a class="nav-link ps-3 py-1 publikation-section-link" href="#pub-content-${subSection.id}" data-section-id="${subSection.id}">
                         ${subSection.label}
                     </a>
-                </li>`;
-            }).join('');
+                </li>
+            `).join('');
 
             return `
                 <li class="nav-item">
-                    <a class="nav-link fw-bold mt-2 disabled" href="#pub-main-content-${mainSection.id}" data-section-id="${mainSection.id}">
-                        ${TEXT_CONFIG.de.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}
-                    </a>
+                    <span class="nav-link fw-bold mt-2 disabled text-dark opacity-75">${TEXT_CONFIG.de.publikationTab.sectionLabels[mainSection.labelKey] || mainSection.labelKey}</span>
                     <ul class="nav flex-column">${subSectionLinks}</ul>
                 </li>`;
         }).join('');
@@ -91,7 +87,7 @@ const publikationTab = (() => {
 
         const headerControls = _createHeaderControls(lang, bfMetric);
         const navigation = _createSectionNavigation(activeSectionId);
-        const content = _createContentArea(allKollektivStats, commonData, lang, activeSectionId);
+        const content = _createContentArea(allKollektivStats, commonData, lang);
         
         const exportButtonHTML = `
             <div class="d-flex justify-content-end mt-4">
@@ -106,7 +102,7 @@ const publikationTab = (() => {
                 <div class="col-md-3">
                     ${navigation}
                 </div>
-                <div class="col-md-9">
+                <div class="col-md-9" data-bs-spy="scroll" data-bs-target="${CONSTANTS.SELECTORS.PUBLIKATION_SECTIONS_NAV}" data-bs-offset="150" tabindex="0">
                     ${headerControls}
                     <div id="${CONSTANTS.SELECTORS.PUBLIKATION_CONTENT_AREA.substring(1)}">
                         ${content}
