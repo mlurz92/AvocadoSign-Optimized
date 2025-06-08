@@ -343,3 +343,102 @@ function getPhiBewertung(phiValue) {
     if (absPhi >= 0.1) return texts.schwach || 'schwach';
     return texts.sehr_schwach || 'sehr schwach';
 }
+
+// Neue Helferfunktionen für Tooltip-Texte
+function getMetricDescriptionHTML(metricKey, methodName) {
+    const metricConfig = UI_TEXTS.statMetrics[metricKey];
+    if (!metricConfig || !metricConfig.description) return '';
+    return metricConfig.description.replace(/\[METHODE\]/g, `<strong>${methodName}</strong>`);
+}
+
+function getMetricInterpretationHTML(metricKey, metricStats, methodName, kollektivName) {
+    const metricConfig = UI_TEXTS.statMetrics[metricKey];
+    if (!metricConfig || !metricConfig.interpretation || !metricStats) return '';
+
+    let interpretationText = metricConfig.interpretation.replace(/\[METHODE\]/g, `<strong>${methodName}</strong>`)
+        .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`);
+    
+    if (metricStats.value !== undefined) {
+        let formattedValue;
+        if (metricKey === 'auc' || metricKey === 'f1' || metricKey === 'balAcc') {
+            formattedValue = formatNumber(metricStats.value, 3, 'N/A', true);
+        } else {
+            formattedValue = formatPercent(metricStats.value, 1, 'N/A');
+        }
+        interpretationText = interpretationText.replace(/\[WERT\]/g, `<strong>${formattedValue}</strong>`);
+    }
+    if (metricStats.ci?.lower !== undefined && metricStats.ci?.upper !== undefined) {
+        let formattedLower, formattedUpper;
+        if (metricKey === 'auc' || metricKey === 'f1' || metricKey === 'balAcc') {
+            formattedLower = formatNumber(metricStats.ci.lower, 3, 'N/A', true);
+            formattedUpper = formatNumber(metricStats.ci.upper, 3, 'N/A', true);
+        } else {
+            formattedLower = formatPercent(metricStats.ci.lower, 1, 'N/A');
+            formattedUpper = formatPercent(metricStats.ci.upper, 1, 'N/A');
+        }
+        interpretationText = interpretationText.replace(/\[LOWER\]/g, formattedLower)
+                                                .replace(/\[UPPER\]/g, formattedUpper)
+                                                .replace(/\[METHOD_CI\]/g, metricStats.ci.method || 'Bootstrap');
+    }
+    if (metricKey === 'auc') {
+        interpretationText = interpretationText.replace(/\[BEWERTUNG\]/g, getAUCBewertung(metricStats.value));
+    }
+
+    return interpretationText;
+}
+
+function getTestDescriptionHTML(testKey, t2ShortName = 'T2') {
+    const testConfig = UI_TEXTS.statMetrics[testKey];
+    if (!testConfig || !testConfig.description) return '';
+    return testConfig.description.replace(/\[T2_SHORT_NAME\]/g, `<strong>${t2ShortName}</strong>`);
+}
+
+function getTestInterpretationHTML(testKey, testStats, kollektivName, t2ShortName = 'T2') {
+    const testConfig = UI_TEXTS.statMetrics[testKey];
+    if (!testConfig || !testConfig.interpretation || !testStats) return '';
+
+    let interpretationText = testConfig.interpretation
+        .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`)
+        .replace(/\[T2_SHORT_NAME\]/g, `<strong>${t2ShortName}</strong>`);
+
+    if (testStats.pValue !== undefined) {
+        interpretationText = interpretationText.replace(/\[P_WERT\]/g, `<strong>${getPValueText(testStats.pValue, 'de', false)}</strong>`)
+                                                .replace(/\[SIGNIFIKANZ\]/g, `<strong>${getStatisticalSignificanceSymbol(testStats.pValue)}</strong>`)
+                                                .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${getStatisticalSignificanceText(testStats.pValue)}</strong>`);
+    }
+    return interpretationText;
+}
+
+function getAssociationInterpretationHTML(assocKey, assocStats, featureName, kollektivName) {
+    const assocConfig = UI_TEXTS.statMetrics[assocKey];
+    if (!assocConfig || !assocConfig.interpretation || !assocStats) return '';
+
+    let interpretationText = assocConfig.interpretation.replace(/\[MERKMAL\]/g, `<strong>${featureName}</strong>`)
+        .replace(/\[KOLLEKTIV\]/g, `<strong>${kollektivName}</strong>`);
+    
+    if (assocKey === 'or') {
+        interpretationText = interpretationText.replace(/\[WERT\]/g, `<strong>${formatNumber(assocStats.or?.value, 2, 'N/A')}</strong>`)
+                                                .replace(/\[LOWER\]/g, formatNumber(assocStats.or?.ci?.lower, 2, 'N/A'))
+                                                .replace(/\[UPPER\]/g, formatNumber(assocStats.or?.ci?.upper, 2, 'N/A'))
+                                                .replace(/\[P_WERT\]/g, getPValueText(assocStats.pValue, 'de', false))
+                                                .replace(/\[SIGNIFIKANZ\]/g, getStatisticalSignificanceSymbol(assocStats.pValue))
+                                                .replace(/\[FAKTOR_TEXT\]/g, assocStats.or?.value > 1 ? UI_TEXTS.statMetrics.orFaktorTexte.ERHOEHT : (assocStats.or?.value < 1 ? UI_TEXTS.statMetrics.orFaktorTexte.VERRINGERT : UI_TEXTS.statMetrics.orFaktorTexte.UNVERAENDERT));
+    } else if (assocKey === 'rd') {
+        interpretationText = interpretationText.replace(/\[WERT\]/g, `<strong>${formatNumber(assocStats.rd?.value * 100, 1, 'N/A')}</strong>`)
+                                                .replace(/\[LOWER\]/g, formatNumber(assocStats.rd?.ci?.lower * 100, 1, 'N/A'))
+                                                .replace(/\[UPPER\]/g, formatNumber(assocStats.rd?.ci?.upper * 100, 1, 'N/A'))
+                                                .replace(/\[HOEHER_NIEDRIGER\]/g, assocStats.rd?.value > 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.HOEHER : (assocStats.rd?.value < 0 ? UI_TEXTS.statMetrics.rdRichtungTexte.NIEDRIGER : UI_TEXTS.statMetrics.rdRichtungTexte.GLEICH));
+    } else if (assocKey === 'phi') {
+        interpretationText = interpretationText.replace(/\[WERT\]/g, `<strong>${formatNumber(assocStats.phi?.value, 2, 'N/A')}</strong>`)
+                                                .replace(/\[BEWERTUNG\]/g, getPhiBewertung(assocStats.phi?.value));
+    } else if (assocKey === 'fisher' || assocKey === 'mannwhitney') {
+        interpretationText = interpretationText.replace(/\[P_WERT\]/g, `<strong>${getPValueText(assocStats.pValue, 'de', false)}</strong>`)
+                                                .replace(/\[SIGNIFIKANZ\]/g, `<strong>${getStatisticalSignificanceSymbol(assocStats.pValue)}</strong>`)
+                                                .replace(/\[SIGNIFIKANZ_TEXT\]/g, `<strong>${getStatisticalSignificanceText(assocStats.pValue)}</strong>`);
+        if (assocKey === 'mannwhitney') {
+            interpretationText = interpretationText.replace(/\[VARIABLE\]/g, `<strong>${featureName}</strong>`);
+        }
+    }
+
+    return interpretationText;
+}
