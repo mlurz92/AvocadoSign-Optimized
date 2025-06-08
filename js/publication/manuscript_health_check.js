@@ -9,7 +9,8 @@ const manuscriptHealthCheck = (() => {
 
     function _countWords(text) {
         if (!text || typeof text !== 'string') return 0;
-        return text.trim().split(/\s+/).length;
+        const cleanedText = text.replace(/<[^>]*>?/gm, ' ');
+        return cleanedText.trim().split(/\s+/).filter(Boolean).length;
     }
 
     function _checkWordCount(text, limit, sectionName) {
@@ -28,7 +29,8 @@ const manuscriptHealthCheck = (() => {
         const foundTerms = new Set();
         const regex = new RegExp(`\\b(${rules.FORBIDDEN_TERMS.join('|')})\\b`, 'gi');
         let match;
-        while ((match = regex.exec(text)) !== null) {
+        const cleanedText = text.replace(/<[^>]*>?/gm, ' ');
+        while ((match = regex.exec(cleanedText)) !== null) {
             foundTerms.add(match[0].toLowerCase());
         }
 
@@ -63,17 +65,23 @@ const manuscriptHealthCheck = (() => {
             const abstractText = textContent.match(/<div class="abstract-content">(.*?)<\/div>/s)?.[1] || '';
             const keyResultsText = textContent.match(/<ul class="key-results-list">(.*?)<\/ul>/s)?.[1] || '';
             
-            issues.push(_checkWordCount(abstractText.replace(/<[^>]*>?/gm, ' '), rules.WORD_COUNT_ABSTRACT_MAX, 'Abstract'));
-            issues.push(_checkWordCount(keyResultsText.replace(/<[^>]*>?/gm, ' '), rules.WORD_COUNT_KEY_RESULTS_MAX, 'Key Results'));
+            issues.push(_checkWordCount(abstractText, rules.WORD_COUNT_ABSTRACT_MAX, 'Abstract'));
+            issues.push(_checkWordCount(keyResultsText, rules.WORD_COUNT_KEY_RESULTS_MAX, 'Key Results'));
+            issues.push(_checkForbiddenTerms(textContent, UI_TEXTS.publikationTab.sectionLabels.abstract));
         } else if (sectionId === 'references') {
              textContent = publicationTextGenerator.getSectionText('references_main', lang, allKollektivStats, commonData);
              issues.push(_checkReferenceCount(textContent));
+             issues.push(_checkForbiddenTerms(textContent, UI_TEXTS.publikationTab.sectionLabels.references));
+        } else {
+            const mainSection = PUBLICATION_CONFIG.sections.find(s => s.id === sectionId);
+            if (mainSection && mainSection.subSections) {
+                mainSection.subSections.forEach(sub => {
+                    textContent += publicationTextGenerator.getSectionText(sub.id, lang, allKollektivStats, commonData);
+                });
+                issues.push(_checkForbiddenTerms(textContent, UI_TEXTS.publikationTab.sectionLabels[sectionId]));
+            }
         }
         
-        if(textContent) {
-            issues.push(_checkForbiddenTerms(textContent.toLowerCase(), UI_TEXTS.publikationTab.sectionLabels[sectionId]));
-        }
-
         return issues.filter(issue => issue !== null);
     }
     
