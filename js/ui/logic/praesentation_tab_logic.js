@@ -12,7 +12,7 @@ const praesentationTabLogic = (() => {
             const fCI_p = (m, k) => utils.formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, (k === 'auc'||k==='f1') ? 3 : 1, !(k === 'auc'||k==='f1'), na);
             const tt = TOOLTIP_CONTENT.praesentation.asPurPerfTable || {};
             if (!stats || !stats.matrix) {
-                const n = allKollektivStats?.[kollektivKey]?.deskriptiv?.anzahlPatienten || '?';
+                const n = stats?.n_trials || '?';
                 return `<tr><td class="fw-bold" data-tippy-content="${tt.kollektiv || ''}">${kollektivDisplayName} (N=${n})</td><td colspan="6" class="text-muted text-center">Keine validen Daten</td></tr>`;
             }
             const count = stats.matrix.rp + stats.matrix.fp + stats.matrix.fn + stats.matrix.rn;
@@ -57,7 +57,7 @@ const praesentationTabLogic = (() => {
     }
 
     function _createPresentationView_ASvsT2_HTML(presentationData, selectedStudyId, currentGlobalKollektivForContext) {
-        const { statsAS, statsT2, vergleich, comparisonCriteriaSet, kollektivForComparison, t2CriteriaLabelShort, t2CriteriaLabelFull } = presentationData || {};
+        const { statsAS, statsT2, vergleich, comparisonCriteriaSet, kollektivForComparison, patientCountForComparison, t2CriteriaLabelShort, t2CriteriaLabelFull } = presentationData || {};
         const displayKollektivForComparison = utils.getKollektivDisplayName(kollektivForComparison);
         const isApplied = selectedStudyId === APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID;
         let comparisonInfoHTML = '<p class="text-muted small">Bitte wählen Sie eine Vergleichsbasis.</p>';
@@ -67,7 +67,7 @@ const praesentationTabLogic = (() => {
             const criteriaHTML = studyT2CriteriaManager.formatCriteriaForDisplay(comparisonCriteriaSet.criteria, comparisonCriteriaSet.logic, false);
             comparisonInfoHTML = `<dl class="row small mb-0">
                                     <dt class="col-sm-4">Referenz:</dt><dd class="col-sm-8">${studyInfo?.reference || (isApplied ? 'Benutzerdefiniert' : 'N/A')}</dd>
-                                    <dt class="col-sm-4">Vergleichsbasis:</dt><dd class="col-sm-8">${studyInfo?.patientCohort || `Aktuell: ${displayKollektivForComparison}`}</dd>
+                                    <dt class="col-sm-4">Vergleichsbasis:</dt><dd class="col-sm-8">${studyInfo?.patientCohort || `Aktuell: ${displayKollektivForComparison} (N=${patientCountForComparison || '?'})`}</dd>
                                     <dt class="col-sm-4">Kriterien:</dt><dd class="col-sm-8">${criteriaHTML}</dd>
                                 </dl>`;
         }
@@ -118,9 +118,9 @@ const praesentationTabLogic = (() => {
                 <div class="col-12 d-flex justify-content-center">
                     <div class="btn-group btn-group-sm" role="group">
                         <input type="radio" class="btn-check" name="praesentationAnsicht" id="ansicht-as-pur" value="as-pur" ${view === 'as-pur' ? 'checked' : ''}>
-                        <label class="btn btn-outline-primary" for="ansicht-as-pur">AS Performance</label>
+                        <label class="btn btn-outline-primary" for="ansicht-as-pur"><i class="fas fa-star me-1"></i>AS Performance</label>
                         <input type="radio" class="btn-check" name="praesentationAnsicht" id="ansicht-as-vs-t2" value="as-vs-t2" ${view === 'as-vs-t2' ? 'checked' : ''}>
-                        <label class="btn btn-outline-primary" for="ansicht-as-vs-t2">AS vs. T2 Vergleich</label>
+                        <label class="btn btn-outline-primary" for="ansicht-as-vs-t2"><i class="fas fa-exchange-alt me-1"></i>AS vs. T2 Vergleich</label>
                     </div>
                 </div>
             </div>`;
