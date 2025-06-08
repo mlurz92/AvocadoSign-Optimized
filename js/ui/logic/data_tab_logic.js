@@ -12,7 +12,7 @@ const dataTabLogic = (() => {
                     sortIconHTML = `<i class="fas ${sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-primary ms-1"></i>`;
                 }
             }
-            
+
             const baseTooltipContent = col.tooltip || col.label;
             const subHeaders = col.subKeys ? col.subKeys.map(sk => {
                  const isActiveSubSort = sortState.key === col.key && sk.key === sortState.subKey;
