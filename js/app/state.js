@@ -13,7 +13,7 @@ const state = (() => {
         currentStatsKollektiv2: APP_CONFIG.DEFAULT_SETTINGS.STATS_KOLLEKTIV2,
         currentPresentationView: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_VIEW,
         currentPresentationStudyId: APP_CONFIG.DEFAULT_SETTINGS.PRESENTATION_STUDY_ID,
-        activeTabId: APP_CONFIG.DEFAULT_SETTINGS.PUBLIKATION_SECTION
+        activeTabId: 'publikation-tab'
     });
 
     function init() {
@@ -36,15 +36,6 @@ const state = (() => {
     function _setter(key, storageKey, newValue) {
         if (currentState[key] !== newValue) {
             currentState[key] = newValue;
-            utils.saveToLocalStorage(storageKey, newValue);
-            return true;
-        }
-        return false;
-    }
-    
-    function _setterObject(key, storageKey, newValue) {
-        if (JSON.stringify(currentState[key]) !== JSON.stringify(newValue)) {
-            currentState[key] = utils.cloneDeep(newValue);
             utils.saveToLocalStorage(storageKey, newValue);
             return true;
         }
