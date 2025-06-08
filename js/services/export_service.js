@@ -3,7 +3,7 @@ const exportService = (() => {
     function _generateFilename(typeKey, kollektiv, extension, options = {}) {
         const dateStr = getCurrentDateString('YYYYMMDD');
         const safeKollektiv = getKollektivDisplayName(kollektiv).replace(/[^a-z0-9_-]/gi, '_').replace(/_+/g, '_');
-        let filenameType = CONSTANTS.SELECTORS[typeKey] || typeKey || 'Export';
+        let filenameType = APP_CONFIG.EXPORT.FILENAME_TYPES[typeKey] || typeKey || 'Export';
 
         if (options.chartName) {
             filenameType = filenameType.replace('{ChartName}', options.chartName.replace(/[^a-z0-9_-]/gi, '_').substring(0, 30));
@@ -87,20 +87,27 @@ const exportService = (() => {
 
     function _generateStatistikCSV(stats, kollektiv, criteria, logic) {
         if (!stats || !stats.deskriptiv) return null;
-        const csvData = [];
-        // Implementation für CSV-Generierung...
+        // This function will be fully implemented to generate a detailed CSV from the stats object.
+        const csvData = [
+            ['Kategorie', 'Metrik', 'Wert', 'CI Lower', 'CI Upper', 'Methode']
+        ];
+        // ... full implementation would follow here
         return Papa.unparse(csvData, { delimiter: APP_CONFIG.EXPORT.CSV_DELIMITER });
     }
 
     function _generateBruteForceTXT(resultsData) {
         if (!resultsData || !resultsData.results) return null;
-        // Implementation für TXT-Generierung...
-        return "Brute-Force-Bericht...";
+        // This function will be fully implemented to generate a detailed text report.
+        let report = `Brute-Force Report\nKollektiv: ${resultsData.kollektiv}\n`;
+        resultsData.results.forEach(res => {
+            report += `Metrik: ${res.metricValue.toFixed(4)}, Logik: ${res.logic}\n`;
+        });
+        return report;
     }
 
     function _generateMarkdownTable(dataOrStats, tableType, options = {}) {
-        // Implementation für Markdown-Tabellen...
-        return "## Markdown Tabelle\n\n| Header | Header |\n|---|---|\n| Data | Data |";
+        // This function will be fully implemented to generate various markdown tables.
+        return `## ${options.title || tableType}\n\n| Header | Header |\n|---|---|\n| Data | Data |`;
     }
 
     async function exportFullPublicationMarkdown(allKollektivStats, commonData, lang) {
