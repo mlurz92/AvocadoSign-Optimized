@@ -63,11 +63,11 @@ const publicationController = (() => {
     }
 
     function _updateDynamicContent(section, lang, bfMetric) {
-        _renderDynamicCharts(section);
+        _renderDynamicCharts(section, lang);
         _runAndRenderHealthCheck(section, lang, bfMetric);
     }
 
-    function _renderDynamicCharts(mainSectionId) {
+    function _renderDynamicCharts(mainSectionId, lang) {
         if (!allKollektivStats) return;
         const mainSectionConfig = PUBLICATION_CONFIG.sections.find(s => s.id === mainSectionId);
         if (!mainSectionConfig?.subSections) return;
@@ -76,8 +76,13 @@ const publicationController = (() => {
             if (subSection.id === 'ergebnisse_patientencharakteristika') {
                 const gesamtStats = allKollektivStats['Gesamt']?.deskriptiv;
                 if (gesamtStats) {
-                    chartRenderer.renderAgeDistributionChart(gesamtStats.alterData, 'pub-figure-results-1a-alter-verteilung-chart-area', {}, 'de');
-                    chartRenderer.renderPieChart(Object.entries(gesamtStats.geschlecht).map(([k,v]) => ({label: k, value: v})), 'pub-figure-results-1b-geschlecht-verteilung-chart-area', {innerRadiusFactor: 0}, 'de');
+                    chartRenderer.renderAgeDistributionChart(gesamtStats.alterData, 'pub-figure-results-1a-alter-verteilung-chart-area', {}, lang);
+                    
+                    const genderDataForChart = Object.entries(gesamtStats.geschlecht).map(([key, value]) => {
+                        const labelKey = key === 'm' ? 'male' : (key === 'f' ? 'female' : 'unknownGender');
+                        return { label: UI_TEXTS.legendLabels[labelKey], value: value };
+                    });
+                    chartRenderer.renderPieChart(genderDataForChart, 'pub-figure-results-1b-geschlecht-verteilung-chart-area', {innerRadiusFactor: 0}, lang);
                 }
             } else if (subSection.id === 'ergebnisse_vergleich_as_vs_t2') {
                 ['Gesamt', 'direkt OP', 'nRCT'].forEach(kolId => {
@@ -104,7 +109,10 @@ const publicationController = (() => {
             const newContainer = document.createElement('div');
             newContainer.id = 'manuscript-health-check-container';
             newContainer.className = 'mt-4';
-            document.querySelector('#publikation-tab-pane .col-md-3')?.appendChild(newContainer);
+            const navColumn = document.querySelector('#publikation-tab-pane .col-md-3');
+            if (navColumn) {
+                navColumn.appendChild(newContainer);
+            }
         }
         
         const commonData = _getCommonDataForGenerator();
