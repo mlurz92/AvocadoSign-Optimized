@@ -10,40 +10,8 @@ const bruteForceManager = (() => {
     let onCancelledCallback = null;
     let onStartedCallback = null;
 
-    function initializeWorker() {
-        if (!window.Worker) {
-            console.error("BruteForceManager: Web Worker nicht unterstützt.");
-            if (onErrorCallback) onErrorCallback({ message: 'Web Worker nicht unterstützt.' });
-            return false;
-        }
-        try {
-            if (worker) {
-                worker.terminate();
-                worker = null;
-            }
-            worker = new Worker(APP_CONFIG.PATHS.BRUTE_FORCE_WORKER);
-            worker.onmessage = handleWorkerMessage;
-            worker.onerror = handleWorkerError;
-            worker.onmessageerror = (e) => {
-                console.error("BruteForceManager: Worker messageerror:", e);
-                if (onErrorCallback) onErrorCallback({ message: 'Worker-Kommunikationsfehler (messageerror).' });
-                 isRunningState = false;
-                 currentKollektivRunning = null;
-                 worker = null;
-            };
-            console.log("BruteForceManager: Worker erfolgreich initialisiert.");
-            return true;
-        } catch (e) {
-            console.error("BruteForceManager: Fehler bei der Worker-Initialisierung:", e);
-            worker = null;
-            if (onErrorCallback) onErrorCallback({ message: `Worker-Initialisierungsfehler: ${e.message}` });
-            return false;
-        }
-    }
-
-    function handleWorkerMessage(event) {
+    function _handleWorkerMessage(event) {
         if (!event || !event.data) {
-            console.warn("BruteForceManager: Ungültige Nachricht vom Worker empfangen.");
             return;
         }
         const { type, payload } = event.data;
@@ -61,39 +29,53 @@ const bruteForceManager = (() => {
                 isRunningState = false;
                 const resultKollektiv = payload?.kollektiv || currentKollektivRunning;
                 if (resultKollektiv && payload && payload.bestResult) {
-                    allKollektivResults[resultKollektiv] = cloneDeep(payload);
-                } else {
-                    console.warn("BruteForceManager: Unvollständiges Ergebnis vom Worker, Kollektiv-Info fehlt oder kein bestResult. Payload:", payload, "CurrentKollektivRunning:", currentKollektivRunning);
+                    allKollektivResults[resultKollektiv] = utils.cloneDeep(payload);
                 }
                 currentKollektivRunning = null;
                 if (onResultCallback) onResultCallback(payload);
                 break;
             case 'cancelled':
                 isRunningState = false;
-                const cancelledKollektiv = payload?.kollektiv || currentKollektivRunning;
-                console.log(`BruteForceManager: Analyse für Kollektiv '${cancelledKollektiv}' abgebrochen.`);
                 currentKollektivRunning = null;
                 if (onCancelledCallback) onCancelledCallback(payload);
                 break;
             case 'error':
                 isRunningState = false;
-                const errorKollektiv = payload?.kollektiv || currentKollektivRunning;
-                console.error(`BruteForceManager: Fehler vom Worker für Kollektiv '${errorKollektiv}':`, payload?.message);
                 currentKollektivRunning = null;
                 if (onErrorCallback) onErrorCallback(payload);
                 break;
             default:
-                console.warn(`BruteForceManager: Unbekannter Nachrichtentyp vom Worker: ${type}`, payload);
+                break;
         }
     }
 
-    function handleWorkerError(error) {
-        console.error("BruteForceManager: Globaler Fehler im Brute Force Worker:", error);
+    function _handleWorkerError(error) {
         isRunningState = false;
         const erroredKollektiv = currentKollektivRunning;
         currentKollektivRunning = null;
         if (onErrorCallback) onErrorCallback({ message: error.message || 'Unbekannter Worker-Fehler', kollektiv: erroredKollektiv });
         worker = null;
+    }
+
+    function _initializeWorker() {
+        if (!window.Worker) {
+            if (onErrorCallback) onErrorCallback({ message: 'Web Worker nicht unterstützt.' });
+            return false;
+        }
+        try {
+            if (worker) {
+                worker.terminate();
+                worker = null;
+            }
+            worker = new Worker(APP_CONFIG.PATHS.BRUTE_FORCE_WORKER);
+            worker.onmessage = _handleWorkerMessage;
+            worker.onerror = _handleWorkerError;
+            return true;
+        } catch (e) {
+            worker = null;
+            if (onErrorCallback) onErrorCallback({ message: `Worker-Initialisierungsfehler: ${e.message}` });
+            return false;
+        }
     }
 
     function init(callbacks = {}) {
@@ -103,25 +85,22 @@ const bruteForceManager = (() => {
         onCancelledCallback = callbacks.onCancelled || null;
         onStartedCallback = callbacks.onStarted || null;
         allKollektivResults = {};
-        return initializeWorker();
+        return _initializeWorker();
     }
 
     function startAnalysis(data, metric, kollektiv) {
         if (isRunningState) {
-            console.warn("BruteForceManager: Analyse läuft bereits. Startanfrage ignoriert.");
             if (onErrorCallback) onErrorCallback({ message: "Eine Optimierung läuft bereits.", kollektiv: kollektiv });
             return false;
         }
         if (!worker) {
-            const workerInitialized = initializeWorker();
+            const workerInitialized = _initializeWorker();
             if (!workerInitialized) {
-                console.error("BruteForceManager: Worker nicht verfügbar und konnte nicht initialisiert werden. Start abgebrochen.");
                 if (onErrorCallback) onErrorCallback({ message: "Worker nicht verfügbar und Initialisierung fehlgeschlagen.", kollektiv: kollektiv });
                 return false;
             }
         }
         if (!data || data.length === 0) {
-            console.warn("BruteForceManager: Keine Daten für die Analyse übergeben.");
              if (onErrorCallback) onErrorCallback({ message: "Keine Daten für Optimierung übergeben.", kollektiv: kollektiv });
             return false;
         }
@@ -138,44 +117,31 @@ const bruteForceManager = (() => {
                 t2SizeRange: APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE
             }
         });
-        console.log(`BruteForceManager: Analyse gestartet für Kollektiv '${kollektiv}' mit Metrik '${metric}'.`);
         return true;
     }
 
     function cancelAnalysis() {
         if (!isRunningState || !worker) {
-            console.warn("BruteForceManager: Keine laufende Analyse zum Abbrechen oder Worker nicht verfügbar.");
             return false;
         }
         worker.postMessage({ action: 'cancel' });
-        console.log("BruteForceManager: Abbruchanfrage an Worker gesendet.");
         return true;
     }
 
     function getResultsForKollektiv(kollektivId) {
-        return allKollektivResults[kollektivId] ? cloneDeep(allKollektivResults[kollektivId]) : null;
+        return allKollektivResults[kollektivId] ? utils.cloneDeep(allKollektivResults[kollektivId]) : null;
     }
 
     function getAllResults() {
-        return cloneDeep(allKollektivResults);
+        return utils.cloneDeep(allKollektivResults);
     }
 
-    function isAnalysisRunning() {
+    function isRunning() {
         return isRunningState;
     }
 
     function isWorkerAvailable() {
         return !!worker;
-    }
-
-    function terminateWorker() {
-        if (worker) {
-            worker.terminate();
-            worker = null;
-            isRunningState = false;
-            currentKollektivRunning = null;
-            console.log("BruteForceManager: Worker terminiert.");
-        }
     }
 
     return Object.freeze({
@@ -184,8 +150,7 @@ const bruteForceManager = (() => {
         cancelAnalysis,
         getResultsForKollektiv,
         getAllResults,
-        isRunning: isAnalysisRunning,
-        isWorkerAvailable,
-        terminateWorker
+        isRunning,
+        isWorkerAvailable
     });
 })();
