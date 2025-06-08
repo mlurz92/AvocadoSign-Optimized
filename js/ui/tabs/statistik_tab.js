@@ -23,7 +23,7 @@ const statistikTab = (() => {
                 </div>
             </div>`;
 
-        return `<div class="row align-items-center g-2"><div class="col-md-6" id="${matrixId}" style="min-height: 180px;"></div><div class="col-md-6" id="${rocId}" style="min-height: 180px;"></div>${metricsHTML}</div>`;
+        return `<div class="row align-items-center g-2"><div class="col-md-5" id="${matrixId}" style="min-height: 180px;"></div><div class="col-md-7" id="${rocId}" style="min-height: 180px;"></div>${metricsHTML}</div>`;
     }
 
     function _createVergleichContent(stats, kollektivName, t2ShortName = 'T2') {
@@ -88,13 +88,13 @@ const statistikTab = (() => {
             let cardsHTML = `<h4 class="mb-3 border-bottom pb-2">${kollektivName} (N=${stats?.deskriptiv.anzahlPatienten || 0})</h4>`;
             
             if (!stats) {
-                cardsHTML += `<p class="text-muted">Keine ausreichenden Daten für eine statistische Analyse in diesem Kollektiv.</p>`;
+                cardsHTML += `<p class="text-muted">Keine Daten für dieses Kollektiv.</p>`;
                 col.innerHTML = cardsHTML;
                 contentArea.appendChild(col);
                 return;
             }
 
-            cardsHTML += commonComponents.createCard(`deskriptiv-${index}`, `Deskriptive Statistik`, uiViewLogic.createDeskriptiveStatistikContentHTML(stats, index, kollektivName));
+            cardsHTML += commonComponents.createCard(`deskriptiv-${index}`, `Deskriptive Statistik`, uiViewLogic.createDeskriptiveStatistikContentHTML(stats));
             cardsHTML += commonComponents.createCard(`guete-as-${index}`, `Güte Avocado Sign`, _createGueteContent(stats.gueteAS, 'AS', kollektivName, index));
             cardsHTML += commonComponents.createCard(`guete-t2-${index}`, `Güte T2-Kriterien (angewandt)`, _createGueteContent(stats.gueteT2_angewandt, 'T2', kollektivName, index));
             cardsHTML += commonComponents.createCard(`vergleich-as-t2-${index}`, `Vergleich AS vs. T2`, _createVergleichContent(stats.vergleichASvsT2_angewandt, kollektivName));
@@ -102,7 +102,6 @@ const statistikTab = (() => {
             col.innerHTML = cardsHTML;
             contentArea.appendChild(col);
             
-            // Render charts after HTML is in the DOM
             setTimeout(() => {
                 charts.renderConfusionMatrix(stats.gueteAS.matrix, `#matrix-AS-${index}`);
                 charts.renderROCCurve(stats.rocAS, `#roc-AS-${index}`, { auc: stats.gueteAS.auc.value });
