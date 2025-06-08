@@ -131,12 +131,37 @@ class AuswertungViewLogic {
         this.appliedAvocadoMinCriteriaToMeet = minCriteriaToMeet;
 
         const updatedData = patientData.map(patient => {
-            const avocadoSignStatus = StudyCriteriaManagerInstance.calculateAvocadoSign(
-                patient,
-                selectedAvocadoCriteria,
-                minCriteriaToMeet
-            );
-            return { ...patient, avocado_sign_status: avocadoSignStatus };
+            // Berechne den kontinuierlichen Score (Anzahl der erfüllten Kriterien)
+            let avocadoSignScore = 0;
+            selectedAvocadoCriteria.forEach(c => {
+                // Diese Logik ist eine Duplikation der evaluateCriterion im StudyCriteriaManager.
+                // Es wird hier direkt implementiert, um den Score zu erhalten, anstatt nur true/false.
+                const value = patient[c.param];
+                const threshold = c.threshold;
+                const operator = c.operator;
+
+                let criterionMet = false;
+                switch (operator) {
+                    case '>': criterionMet = value > threshold; break;
+                    case '<': criterionMet = value < threshold; break;
+                    case '>=': criterionMet = value >= threshold; break;
+                    case '<=': criterionMet = value <= threshold; break;
+                    case '==': criterionMet = value === threshold; break;
+                    case '!=': criterionMet = value !== threshold; break;
+                    default: criterionMet = false; break;
+                }
+                if (criterionMet) {
+                    avocadoSignScore++;
+                }
+            });
+
+            const avocadoSignStatus = avocadoSignScore >= minCriteriaToMeet;
+
+            return { 
+                ...patient, 
+                avocado_sign_status: avocadoSignStatus,
+                avocado_sign_score: avocadoSignScore // Speichere den kontinuierlichen Score
+            };
         });
 
         AppState.setPatientData(updatedData);
@@ -170,14 +195,20 @@ class AuswertungViewLogic {
             // Ein Patient ist T2-positiv, wenn er FÜR MINDESTENS EINE der ausgewählten T2-Kriterien-Definitionen positiv ist.
             // Dies ist eine "ODER"-Verknüpfung der ausgewählten Publikations-Kriterien.
             let t2CriteriaStatus = false;
+            let t2CriteriaScore = 0; // Kontinuierlicher Score für T2-Kriterien (z.B. Anzahl erfüllter Sets)
+
             for (const name of selectedT2CriteriaNames) {
                 const criterionDefinition = Constants.T2_CRITERIA_DEFINITIONS[name];
                 if (T2CriteriaManagerInstance.calculateT2Criteria(patient, criterionDefinition)) {
                     t2CriteriaStatus = true;
-                    break; // Sobald eine Definition zutrifft, ist der Patient T2-positiv
+                    t2CriteriaScore++; // Erhöhe den Score, wenn ein T2-Set erfüllt ist
                 }
             }
-            return { ...patient, t2_criteria_status: t2CriteriaStatus };
+            return { 
+                ...patient, 
+                t2_criteria_status: t2CriteriaStatus,
+                t2_criteria_score: t2CriteriaScore // Speichere den kontinuierlichen Score
+            };
         });
 
         AppState.setPatientData(updatedData);
@@ -331,7 +362,9 @@ class AuswertungViewLogic {
                         <li><strong>Kapselüberschreitung:</strong> ${patient.capsular_invasion !== undefined ? (patient.capsular_invasion ? 'Ja' : 'Nein') : 'N/A'}</li>
                         <li><strong>Pathologischer N-Status:</strong> ${patient.n_status !== undefined ? (patient.n_status ? 'Positiv' : 'Negativ') : 'N/A'}</li>
                         <li><strong>Avocado Sign Status:</strong> ${patient.avocado_sign_status !== undefined ? (patient.avocado_sign_status ? 'Positiv' : 'Negativ') : 'N/A'}</li>
+                        <li><strong>Avocado Sign Score:</strong> ${patient.avocado_sign_score !== undefined ? patient.avocado_sign_score : 'N/A'}</li>
                         <li><strong>T2-Kriterien Status:</strong> ${patient.t2_criteria_status !== undefined ? (patient.t2_criteria_status ? 'Positiv' : 'Negativ') : 'N/A'}</li>
+                        <li><strong>T2-Kriterien Score:</strong> ${patient.t2_criteria_score !== undefined ? patient.t2_criteria_score : 'N/A'}</li>
                         ${patient.additional_details ? `<li><strong>Zusätzliche Details:</strong> ${patient.additional_details}</li>` : ''}
                     </ul>
                 </div>
