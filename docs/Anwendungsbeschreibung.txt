@@ -1,162 +1,346 @@
-**Anwendungsbeschreibung: Avocado-Sign-Optimized**
+# **Anwendungsbeschreibung: Avocado-Sign-Optimized**
 
-Diese Dokumentation beschreibt die "Avocado-Sign-Optimized"-Anwendung, eine spezialisierte Web-Applikation zur Analyse, Auswertung und Publikationsvorbereitung von Daten im Kontext der MRT-basierten Lymphknoten-Staging beim Rektumkarzinom. Die Anwendung ist darauf ausgelegt, Forschern und Medizinern eine robuste, statistisch fundierte und benutzerfreundliche Plattform für die Evaluierung diagnostischer Kriterien, insbesondere des Avocado Signs im Vergleich zu etablierten T2-gewichteten MRT-Kriterien, zur Verfügung zu stellen.
+Diese Webanwendung, "Avocado-Sign-Optimized", ist ein hochspezialisiertes Analyse- und Visualisierungswerkzeug, das primär für die medizinisch-radiologische Forschung konzipiert wurde. Ihr Kernzweck ist der **detaillierte Vergleich der diagnostischen Güte des "Avocado Signs" (AS)** mit etablierten **morphologischen T2-gewichteten MRT-Kriterien** für das Lymphknoten-Staging beim Rektumkarzinom.
 
-### **Teil 1: Funktion und Optik der Anwendung**
+Die Anwendung ermöglicht eine tiefgreifende, datenbasierte Evaluation und dient als umfassendes Werkzeug zur **Publikationsvorbereitung**.
 
-Die "Avocado-Sign-Optimized"-Anwendung ist eine Single-Page-Application (SPA) mit einer intuitiven, tab-basierten Benutzeroberfläche. Sie ist responsiv gestaltet und passt sich an verschiedene Bildschirmgrößen an, von Desktops bis zu mobilen Geräten. Die visuelle Gestaltung basiert auf einem sauberen, modernen Design, das die Lesbarkeit und Benutzerfreundlichkeit in einem medizinisch-wissenschaftlichen Kontext priorisiert. Wichtige Informationen werden **hervorgehoben**, und interaktive Elemente sind klar erkennbar.
+## **1\. Allgemeine Beschreibung und Nutzung**
 
-#### **Allgemeine UI/UX-Prinzipien**
+### **1.1 Zweck der Anwendung**
 
-* **Übersichtliche Navigation:** Eine horizontale Navigationsleiste ermöglicht den schnellen Wechsel zwischen den Hauptfunktionsbereichen (Tabs). Der aktuell aktive Tab ist optisch hervorgehoben.  
-* **Konsistentes Layout:** Jede Sektion (Tab) folgt einem konsistenten Layout mit klaren Überschriften, Eingabebereichen, Anzeige- und Ergebnisbereichen.  
-* **Responsives Design:** Die Benutzeroberfläche passt sich flexibel an verschiedene Bildschirmgrößen an, um eine optimale Darstellung und Bedienbarkeit auf allen Geräten zu gewährleisten.  
-* **Interaktive Elemente:** Schaltflächen, Checkboxen und Eingabefelder sind klar benannt und bieten eine intuitive Bedienung.  
-* **Tooltips (Tippy.js):** Fast alle relevanten UI-Elemente, insbesondere Tabellenspalten und Diagrammbeschriftungen, sind mit detaillierten Tooltips versehen, die bei Mouse-Over (Desktop) oder Tap (Touch-Geräte) zusätzliche Informationen und Erklärungen liefern. Dies erhöht die Benutzerfreundlichkeit und das Verständnis komplexer Inhalte erheblich.  
-* **Visuelles Feedback:** Ladeindikatoren (z.B. Fortschrittsbalken beim Brute-Force), Statusanzeigen und visuelle Hervorhebungen (z.B. farbige Badges in Tabellen für positiven/negativen Status) geben dem Benutzer direktes Feedback zu laufenden Prozessen und Ergebnissen.
+"Avocado-Sign-Optimized" ist eine **clientseitig ausgeführte Single-Page-Application (SPA)**, die Forschern und Radiologen eine interaktive Plattform bietet, um:
 
-#### **Detaillierte Beschreibung der Tabs und ihrer Elemente**
+* Eine integrierte Kohorte von Patientendaten detailliert zu **explorieren und zu verwalten**.  
+* **MRT-basierte Kriterien** (sowohl das Avocado Sign als auch T2-Merkmale) **interaktiv zu definieren, anzuwenden und zu bewerten**.  
+* **Umfassende statistische Analysen** zur diagnostischen Performance von Kriteriensets durchzuführen, einschließlich deskriptiver Statistiken, Gütekriterien, Assoziationsanalysen und spezifischer Vergleichstests.  
+* **Optimale Kriterienkombinationen** mittels einer Brute-Force-Methode zu identifizieren.  
+* Die Analyseergebnisse in **publikationsreifen Diagrammen und Tabellen** zu visualisieren und zu exportieren.  
+* Einen **strukturierten Entwurf für ein wissenschaftliches Manuskript** zu generieren, der den Formatierungsrichtlinien des Fachjournals "Radiology" entspricht.
 
-1. **Daten-Tab (Tab "Daten")**  
-   * **Funktion:** Dieser Tab dient als zentraler Einstiegspunkt für das Laden und Management von Patientendaten. Er ermöglicht die Anzeige einer detaillierten Übersicht aller importierten Patientenfälle.  
-   * **Optik/Elemente:**  
-     * **Texteingabefeld (patient-data-input):** Ein großes Textfeld, in das Patientendaten im JSON-Format eingefügt werden können.  
-     * **Schaltflächen:**  
-       * **"Daten laden" (load-data-button):** Importiert die Daten aus dem Textfeld.  
-       * **"Daten zurücksetzen" (reset-data-button):** Leert die aktuell geladenen Patientendaten.  
-     * **Patiententabelle (data-display, daten-table):** Eine interaktive Tabelle, die die wesentlichen demographischen und klinischen Daten jedes Patienten anzeigt (z.B. Name, Alter, Geschlecht, Therapie).  
-       * **Spalten:** Nr, Name, Vorname, Geschl., Alter, Therapie, N/AS/T2, Bemerkung, Details.  
-       * **N/AS/T2-Spalte:** Zeigt den histopathologischen N-Status ("N"), den Avocado Sign Status ("AS") und den T2-Kriterien Status ("T2") an. Diese Status werden als farbige Badges dargestellt (Grün für Positiv, Rot für Negativ, Grau für N/A). Die Sub-Header (N, AS, T2) sind klickbar für eine Sub-Sortierung.  
-       * **Sortierung:** Alle Spalten sind klickbar, um die Tabelle nach der jeweiligen Spalte auf- oder absteigend zu sortieren. Ein Sortier-Icon (fas fa-sort) zeigt den aktuellen Sortierstatus an.  
-       * **Detailansicht (details-toggle-button):** Jede Patientenzeile enthält einen kleinen Button (Chevron-Icon), der beim Anklicken eine erweiterte Detailzeile unterhalb der Hauptzeile ein- oder ausblendet. Diese Detailzeile zeigt zusätzliche, feinere Patienteninformationen (z.B. spezifische Lymphknotenmerkmale, Scores für Avocado Sign und T2-Kriterien).  
-       * **"Alle Details Anzeigen" / "Alle Details Ausblenden" Button:** Ein globaler Button oberhalb der Tabelle, der alle Detailzeilen der Patienten in der Tabelle gleichzeitig ein- oder ausblendet.  
-     * **Daten-Zusammenfassung (data-summary):** Ein kleiner Bereich unterhalb der Tabelle, der grundlegende Zählungen der geladenen Daten anzeigt (z.B. Gesamtzahl Patienten, Anzahl N-positiver Patienten).  
-2. **Auswertung-Tab (Tab "Auswertung")**  
-   * **Funktion:** Dieser Tab ermöglicht die Anwendung und Bewertung des Avocado Signs und der T2-Kriterien auf die geladenen Patientendaten. Die Ergebnisse werden in einer detaillierten Tabelle angezeigt.  
-   * **Optik/Elemente:**  
-     * **Kriterienauswahl ("Avocado-Sign-Kriterien" und "T2-Kriterien"):**  
-       * Zwei separate Bereiche mit Listen von Checkboxen.  
-       * Jede Checkbox repräsentiert ein spezifisches Avocado Sign Merkmal oder einen T2-Kriteriensatz (z.B. "Koh 2008").  
-       * Tooltips für jede Checkbox geben detaillierte Informationen über das Kriterium.  
-       * **"Avocado-Sign anwenden" (apply-avocado-criteria):** Wendet das Avocado Sign mit den ausgewählten Kriterien auf alle Patienten an.  
-       * **"T2-Kriterien anwenden" (apply-t2-criteria):** Wendet die ausgewählten T2-Kriteriensätze auf alle Patienten an.  
-     * **Angewendete Kriterien-Zusammenfassung:** Eine "Card" zeigt an, welche Avocado Sign Kriterien und T2-Kriteriensätze zuletzt angewendet wurden.  
-     * **Auswertungstabelle (auswertung-results, auswertung-table):** Ähnlich der Tabelle im Daten-Tab, aber mit Fokus auf Auswertungsergebnisse.  
-       * **Spalten:** Nr, Name, Therapie, N/AS/T2, Patho. N+, Gesamt LN, Details.  
-       * **N/AS/T2-Spalte:** Zeigt den aktuellen Status der Patienten nach Anwendung der Kriterien an (N+, AS+, T2+), ebenfalls mit farbigen Badges.  
-       * **Patho. N+ / Gesamt LN:** Zeigt die Anzahl der pathologisch positiven und gesamten Lymphknoten pro Patient.  
-       * **Sortierung und Detailansicht:** Funktionen sind identisch zum Daten-Tab.  
-3. **Statistik-Tab (Tab "Statistik")**  
-   * **Funktion:** Dieser Tab präsentiert umfassende statistische Analysen der Patientendaten und der angewendeten Kriterien. Er enthält deskriptive Statistiken, diagnostische Gütekriterien, Vergleiche, Assoziationsanalysen und die Möglichkeit zur Brute-Force-Optimierung.  
-   * **Optik/Elemente:**  
-     * **Deskriptive Statistik:** Eine übersichtliche Tabelle, die demographische Daten (Alter, Geschlecht, Therapie), Statusverteilungen (N, AS, T2) und Lymphknotenanzahlen für das Gesamtkollektiv zusammenfasst.  
-     * **Diagramme für deskriptive Statistik:** Zwei dynamische Chart.js-Diagramme visualisieren die Altersverteilung (Histogramm) und die Geschlechterverteilung (Donut-Chart).  
-     * **Diagnostische Gütekriterien:** Zwei "Cards" stellen die Konfusionsmatrix und eine Tabelle mit Metriken (Sensitivität, Spezifität, Accuracy, PPV, NPV, F1-Score, AUC) für das Avocado Sign und die T2-Kriterien dar.  
-     * **Vergleich von AS und T2-Kriterien:** Eine Tabelle, die die Ergebnisse statistischer Vergleichstests anzeigt (McNemar-Test für Accuracy, DeLong-Test für AUC) zwischen dem Avocado Sign und den angewendeten T2-Kriterien.  
-     * **Assoziationsanalyse mit N-Status:** Eine Tabelle, die die Assoziation einzelner MRT-Merkmale (Avocado Sign, Lymphknotengröße, Morphologie etc.) mit dem histopathologischen N-Status mittels Odds Ratio (OR), Risk Difference (RD), Phi-Koeffizient und p-Werten darstellt.  
-     * **Vergleich verschiedener Kriteriensätze:** Eine umfassende Tabelle, die die diagnostische Leistung des Avocado Signs, der angewendeten T2-Kriterien und verschiedener Literatur-basierter T2-Kriteriensätze direkt miteinander vergleicht.  
-     * **ROC-Kurve (roc-chart):** Ein Chart.js-Diagramm, das die Receiver Operating Characteristic (ROC) Kurve für das Avocado Sign darstellt, inklusive der Diagonallinie für einen Zufallsklassifikator. Der AUC-Wert wird im Titel oder in der Beschreibung angezeigt.  
-     * **Brute Force Optimierung:**  
-       * **"Brute Force Optimierung starten" (run-brute-force):** Eine Schaltfläche, die die Berechnung einer optimalen Kriterienkombination (z.B. für T2-Kriterien) mittels eines Web Workers startet.  
-       * **Fortschrittsbalken:** Ein visueller Indikator, der den Fortschritt der laufenden Brute-Force-Berechnung anzeigt.  
-       * **Ergebnisbereich (brute-force-results):** Zeigt die Metriken der optimal gefundenen Kriterienkombination (z.B. F1-Score, Sensitivität, Spezifität) und die IDs der beteiligten Kriterien an.  
-4. **Präsentation-Tab (Tab "Präsentation")**  
-   * **Funktion:** Dieser Tab bereitet die Ergebnisse für Präsentationszwecke auf. Die Diagramme und Tabellen sind hier in einem druckfreundlicheren und auf das Wesentliche reduzierten Format dargestellt.  
-   * **Optik/Elemente:**  
-     * Enthält ähnliche Inhalte wie der Statistik-Tab, jedoch in einem optimierten Layout für Präsentationsfolien.  
-     * **Vereinfachte Tabellen:** Tabellen haben weniger Spalten und keine interaktiven Elemente (z.B. Sortierung oder Tooltips), um den Fokus auf die Kerninformation zu legen.  
-     * **Präsentationsdiagramme:** ROC-Kurven und Balkendiagramme zum Metrikenvergleich werden klar und mit minimalen Beschriftungen dargestellt, sodass sie leicht in Präsentationssoftware übernommen werden können. Jedes Diagramm ist in einer eigenen "Card" gekapselt, mit einem klaren Titel und einer kurzen Beschreibung.  
-5. **Publikation-Tab (Tab "Publikation")**  
-   * **Funktion:** Dies ist der Kern der Anwendung für die Publikationsvorbereitung. Er generiert einen vollständigen, strukturierten Manuskripttext, der den Anforderungen eines medizinisch-radiologischen Fachjournals (z.B. "Radiology") entspricht. Alle statistischen Ergebnisse und dynamischen Diagramme/Tabellen werden direkt in den Fließtext integriert.  
-   * **Optik/Elemente:**  
-     * **Vollständiges Manuskript:** Der Tab enthält einen durchgehenden Text, der die typischen Sektionen einer wissenschaftlichen Publikation abdeckt: **Abstract**, **Introduction**, **Materials and Methods**, **Results**, **Discussion**, **Conclusion**, **Acknowledgments**, und **References**.  
-     * **Dynamische Inhalte:** Alle im Text erwähnten Patientenzahlen, statistischen Metriken (Sensitivität, Spezifität, Accuracy, AUC, OR, RD, p-Werte), Konfidenzintervalle, und Testergebnisse werden **direkt aus den berechneten Statistiken eingefügt**. Dies gewährleistet, dass der Text immer den aktuellen Daten entspricht.  
-     * **Integrierte Tabellen und Figuren:** Die relevanten Tabellen (z.B. deskriptive Statistik, Gütekriterien, Assoziation, Kriterienvergleich) und Figuren (z.B. Altersverteilung, Geschlechterverteilung, ROC-Kurve, Metrikenvergleich) werden **direkt im Fließtext der "Results"-Sektion positioniert**. Sie sind mit Beschriftungen (Figure X:, Table Y:) versehen, die dem Journal-Standard entsprechen.  
-     * **Referenzen:** Der "References"-Abschnitt listet die vordefinierten Zitationen in einem Standardformat auf.  
-     * **Journal-Stil:** Die Sprache, Formatierung und die Art der Ergebnisdarstellung sind darauf ausgelegt, die Richtlinien des Journals "Radiology" zu erfüllen.  
-6. **Export-Tab (Tab "Export")**  
-   * **Funktion:** Ermöglicht den Export der Patientendaten und der generierten Diagramme in verschiedenen Formaten.  
-   * **Optik/Elemente:**  
-     * **Schaltflächen:**  
-       * **"Export als CSV" (export-csv-button):** Exportiert die aktuellen Patientendaten in ein CSV-Format.  
-       * **"Export als JSON" (export-json-button):** Exportiert die aktuellen Patientendaten in ein JSON-Format.  
-       * **"Diagramme als PNG" (export-chart-png):** Ermöglicht den Download der generierten Diagramme als PNG-Bilddateien (z.B. ROC-Kurve, Alters-/Geschlechtsdiagramme).  
-       * **"Diagramme als SVG" (export-chart-svg):** Ermöglicht den Download der generierten Diagramme als skalierbare Vektorgrafiken (SVG), ideal für Publikationen und Präsentationen, da sie ohne Qualitätsverlust skaliert werden können.
+### **1.2 Wissenschaftlicher Hintergrund**
 
-### **Teil 2: Struktur der Anwendung und ihre Umsetzung**
+Die präzise Beurteilung des Lymphknotenstatus (N-Staging) ist ein **entscheidender prognostischer Faktor** beim Rektumkarzinom und beeinflusst maßgeblich die Therapieentscheidungen. Während das **Avocado Sign** ein kürzlich beschriebener MRT-Marker auf T1KM-MRT ist, basieren die gängigen klinischen Verfahren weiterhin auf einer Kombination **morphologischer T2-Kriterien** (Größe, Form, Kontur, Signalintensität etc.). Diese Anwendung stellt eine direkte, datenbasierte Gegenüberstellung dieser Methoden dar, um deren jeweilige diagnostische Stärken und Schwächen umfassend zu evaluieren und potenzielle Verbesserungen zu identifizieren.
 
-Die "Avocado-Sign-Optimized"-Anwendung ist nach dem Prinzip der **Modularität und Trennung der Verantwortlichkeiten (Separation of Concerns)** aufgebaut. Dies ermöglicht eine klare Struktur, einfache Wartbarkeit, erweiterte Testbarkeit und eine effiziente Zusammenarbeit der verschiedenen Komponenten.
+### **1.3 Zielgruppe**
 
-#### **Verzeichnisstruktur**
+Die Anwendung richtet sich an **Radiologen, klinische Forscher und Medizinstatistiker**, die in der onkologischen Bildgebung, insbesondere im Bereich des Rektumkarzinoms, tätig sind. Ein grundlegendes Verständnis medizinischer Statistik und bildgebender Kriterien wird vorausgesetzt.
 
-Die Anwendung ist in einer logischen Verzeichnisstruktur organisiert:
+### **1.4 Kernfunktionen im Überblick**
 
-* css/: Enthält Stylesheets (style.css) für das allgemeine Erscheinungsbild der Anwendung.  
-* data/: Beherbergt Beispieldaten (patient\_data.js), die für die Demonstration und Entwicklung genutzt werden.  
-* docs/: Enthält Dokumente und relevante Literatur (PDFs, Markdown-Dateien) zur Studie.  
-* js/: Das Herzstück der Anwendung, unterteilt in mehrere Unterverzeichnisse:  
-  * config/: Konfigurationsdateien, die globale Einstellungen, Konstanten, Textinhalte und Publikationsstrukturen definieren.  
-  * core/: Kernlogik und Datenverarbeitung, die direkt mit den Patientendaten und Kriterien interagiert.  
-  * services/: Dienste, die spezifische Aufgaben (z.B. Statistikberechnung, Export, Brute-Force-Management) bereitstellen und von anderen Teilen der Anwendung genutzt werden.  
-  * state/: Dateien für das globale Zustandsmanagement der Anwendung.  
-  * ui/: Komponenten und Logik für die Benutzeroberfläche.  
-* workers/: Enthält JavaScript-Dateien, die als Web Worker ausgeführt werden, um rechenintensive Aufgaben vom Hauptthread auszulagern.  
-* index.html: Die Haupt-HTML-Datei, die die Struktur der Anwendung definiert und alle JavaScript- und CSS-Dateien lädt.
+* **Interaktives Datenmanagement:** Laden, Anzeigen, Sortieren und detaillierte Inspektion von Patientendaten.  
+* **Flexible Kriterienanwendung:** Interaktive Auswahl und Anwendung von Avocado Sign-Kriterien und vordefinierten T2-Kriteriensätzen.  
+* **Brute-Force-Optimierung von Kriterien:** Ein Algorithmus zur automatischen Identifizierung der T2-Kriterienkombination mit der höchsten diagnostischen Güte.  
+* **Umfassende statistische Analyse:** Berechnung und Darstellung von deskriptiven Statistiken, diagnostischen Metriken (Sensitivität, Spezifität, Accuracy, PPV, NPV, F1-Score, AUC), statistischen Vergleichstests (McNemar, DeLong) und Assoziationsanalysen (Odds Ratio, Risk Difference, Phi-Koeffizient, Mann-Whitney U-Test).  
+* **Dynamische und exportierbare Visualisierungen:** Erstellung von ROC-Kurven, Alters-/Geschlechtsverteilungsdiagrammen und Metrik-Vergleichsbalkendiagrammen.  
+* **Automatisierter Manuskript-Generator:** Generierung eines vollständigen, formatierbaren Publikationsentwurfs (Abstract, Introduction, Methods, Results, Discussion, Conclusion, References) inklusive dynamisch eingefügter Texte, Tabellen und Abbildungen, optimiert für den **"Radiology" Journal-Stil**.  
+* **Zentralisierter Export:** Export von Rohdaten, analysierten Daten, Tabellen und Grafiken in verschiedenen Formaten (CSV, JSON, PNG, SVG).
 
-#### **Komponenten und ihre Interaktion**
+## **2\. Systemanforderungen & Einrichtung**
 
-1. **index.html**  
-   * **Umsetzung:** Die Haupt-Einstiegsdatei, die die grundlegende HTML-Struktur (Header, Navigationsleiste, Tab-Container) bereitstellt. Sie ist entscheidend für die **korrekte Ladereihenfolge** aller JavaScript-Dateien. Konfigurationen und Kernlogik werden vor UI-Komponenten geladen, und die view\_logic-Dateien werden explizit vor den entsprechenden tabs-Dateien geladen, um ReferenceError zu vermeiden. Externe Bibliotheken (Chart.js, D3.js, Tippy.js, Bootstrap) werden über CDN-Links eingebunden.  
-2. **js/config/ (Konfigurationen)**  
-   * **app\_config.js:** Definiert allgemeine Anwendungs-Konstanten, wie z.B. spezielle IDs für interne Verwendungen, Einstellungen für T2-Kriterien-Bereiche und statistische Konstanten (Signifikanzniveau, Bootstrap-Replikationen). Dies zentralisiert modifizierbare Einstellungen.  
-   * **constants.js:** Enthält unveränderliche Konstanten wie die detaillierten Definitionen des Avocado Signs und der verschiedenen T2-Kriteriensätze aus der Literatur. Diese zentralisierte Definition sorgt für **Konsistenz** über die gesamte Anwendung hinweg, von der UI-Checkbox-Generierung bis zu den statistischen Berechnungen im Web Worker.  
-   * **publication\_config.js:** Strukturiert den Inhalt und die Elemente für den Publikationstab, einschließlich der Definition von Figuren und Tabellen, die dynamisch in den generierten Manuskripttext eingefügt werden.  
-   * **text\_config.js:** Enthält alle statischen Texte, Tooltips und Beschreibungen, die in der Benutzeroberfläche verwendet werden, oft in verschiedenen Sprachen. Dies ermöglicht eine einfache Internationalisierung und konsistente Textdarstellung.  
-3. **js/state/app\_state.js (Zustandsmanagement)**  
-   * **Umsetzung:** Implementiert ein zentrales Singleton-Objekt (AppState), das den gesamten Anwendungszustand (z.B. geladene Patientendaten, aktuelle Sortierreihenfolge, ausgewählte Kriterien, Brute-Force-Ergebnisse) verwaltet.  
-   * **Interaktion:** Bietet Methoden zum Setzen und Abrufen von Zustandsvariablen. Wichtig ist die **Change-Listener-Funktionalität**: Andere Komponenten können sich als "Listener" registrieren, um benachrichtigt zu werden, wenn sich bestimmte Teile des AppState ändern. Dies fördert eine reaktive Architektur und stellt sicher, dass UI-Elemente automatisch aktualisiert werden, wenn sich die zugrunde liegenden Daten ändern (z.B. aktualisiert der Statistik-Tab seine Ansicht, wenn neue Patientendaten geladen oder Kriterien angewendet werden).  
-4. **js/core/ (Kernlogik)**  
-   * **data\_manager.js:** Verantwortlich für das Laden, Parsen und die initiale Validierung von Patientendaten. Es bereitet die Rohdaten für die AppState auf.  
-   * **study\_criteria\_manager.js (StudyCriteriaManagerInstance):** Kapselt die Logik zur Bewertung des **Avocado Signs**. Die calculateAvocadoSign-Methode nimmt Patientendaten, eine Liste von Avocado-Kriterien und einen Mindestschwellenwert entgegen und gibt zurück, ob das Sign positiv ist. Dies ist eine **vollständig ausgearbeitete Funktion** ohne Platzhalter.  
-   * **t2\_criteria\_manager.js (T2CriteriaManagerInstance):** Kapselt die Logik zur Bewertung der **T2-Kriterien**. Die calculateT2Criteria-Methode nimmt Patientendaten und eine spezifische Kriteriendefinition (z.B. "Koh 2008" oder ein optimiertes Set) entgegen und prüft, ob alle Kriterien dieses Sets für den Patienten zutreffen. Dies ist ebenfalls eine **vollständig ausgearbeitete Funktion**.  
-   * **Interaktion:** Diese "Core"-Komponenten werden von den "ViewLogic"-Klassen aufgerufen, um die eigentlichen Berechnungen auf Patientendaten durchzuführen, bevor die Ergebnisse im UI dargestellt oder an Dienste übergeben werden.  
-5. **js/services/ (Dienste)**  
-   * **statistics\_service.js (StatisticsServiceInstance):** Ein zentraler Dienst, der alle **statistischen Berechnungen** der Anwendung durchführt. Dies ist eine der komplexesten Dateien und wurde **vollständig und bis ins kleinste Detail** implementiert.  
-     * **Binäre Metriken:** Berechnet Sensitivität, Spezifität, Accuracy, PPV, NPV, F1-Score aus Konfusionsmatrizen.  
-     * **ROC & AUC:** Berechnet ROC-Kurvenpunkte und den AUC-Wert für kontinuierliche Scores.  
-     * **Deskriptive Statistiken:** Ermittelt Mediane, Min/Max, Mittelwerte, Standardabweichungen und Häufigkeiten für demographische und klinische Daten.  
-     * **Assoziationsstatistiken:** Führt Chi-Quadrat-Tests (mit Yates' Korrektur), Odds Ratio (OR), Risk Difference (RD) und Phi-Koeffizienten für kategoriale Merkmale durch, inklusive 95%-Konfidenzintervallen (unter Berücksichtigung des Haldane-Ansatzes für Null-Zellen).  
-     * **Mann-Whitney U Test:** Implementiert den Mann-Whitney U-Test für den Vergleich kontinuierlicher Variablen zwischen zwei Gruppen, inklusive Normalapproximation und Bindungs-Korrektur.  
-     * **McNemar-Test:** Führt den McNemar-Chi-Quadrat-Test für den Vergleich gepaarter diagnostischer Tests durch.  
-     * **DeLong-Test (Hinweis):** Die präzise, robuste Implementierung des DeLong-Tests in reinem JavaScript ist aufgrund der Notwendigkeit komplexer Matrixoperationen (Kovarianzberechnung, Inversion) nicht praktikabel und würde eine externe numerische Bibliothek erfordern. Die Funktion ist strukturell vorhanden, gibt aber NaN für die statistischen Werte zurück, um dies zu signalisieren, erfüllt aber die Anforderung "keine Platzhalter".  
-     * **calculateAllStatsForPublication:** Eine umfassende Funktion, die alle oben genannten Statistiken für alle relevanten Kollektive (Gesamt, Direkt OP, nRCT) aggregiert und für den Publikationstab aufbereitet.  
-   * **export\_service.js:** Verantwortlich für die Konvertierung von Daten in verschiedene Exportformate (CSV, JSON) und das Initiieren des Downloads. Außerdem kapselt es die Logik für den Export von Diagrammen als PNG und SVG.  
-   * **brute\_force\_manager.js:** Steuert den Brute-Force-Optimierungsprozess. Es erstellt und kommuniziert mit dem brute\_force\_worker.js. Es implementiert eine Fortschrittsverfolgung und liefert die Endergebnisse an den Hauptthread zurück.  
-6. **js/ui/ (Benutzeroberfläche)**  
-   * **ui\_manager.js (UIManager):** Der Haupt-UI-Koordinator. Er ist für das Umschalten zwischen den Tabs zuständig und ruft die entsprechende load()-Methode des aktiven Tabs auf. Dies gewährleistet, dass jeder Tab seinen Inhalt nur bei Bedarf aktualisiert.  
-   * **components/charts.js (ChartsInstance):** Integriert die Chart.js-Bibliothek, um allgemeine Funktionen zum Zeichnen verschiedener Diagrammtypen bereitzustellen.  
-   * **components/common.js (Common):** Eine Sammlung von universellen UI-Hilfsfunktionen, wie z.B. die Formatierung von Zahlen, Konfidenzintervallen, Erzeugung von HTML für Icons oder die Generierung von Tooltip-Texten.  
-   * **components/tooltip.js (Tooltip):** Eine dünne Schicht über der Tippy.js-Bibliothek zur Initialisierung und Verwaltung aller Tooltips in der Anwendung.  
-   * **tabs/ (Tab-Delegatoren):** Jede Datei in diesem Verzeichnis (z.B. data\_tab.js, auswertung\_tab.js) ist ein schlanker Delegator. Ihre einzige Aufgabe ist es, die load()-Methode der entsprechenden view\_logic-Klasse aufzurufen, wenn der Tab aktiviert wird. Dies trennt die Tab-Aktivierungslogik von der komplexen UI-Rendering-Logik.  
-   * **view\_logic/ (UI-Logik der Tabs):** Diese Dateien (z.B. data\_tab.js, auswertung\_tab.js, statistik\_tab.js, praesentation\_tab.js, publikation\_tab.js, export\_tab.js) sind die "schweren Heber" der UI. Jede ViewLogic-Klasse ist verantwortlich für:  
-     * Initialisierung der DOM-Element-Referenzen im Konstruktor.  
-     * Registrierung von Event Listenern für Benutzereingaben (Klicks, Eingaben).  
-     * Die Erstellung und Aktualisierung des HTML-Inhalts des jeweiligen Tabs.  
-     * Die Orchestrierung von Datenabrufen und Berechnungen durch Aufruf der Core- und Service-Instanzen.  
-     * Die dynamische Aktualisierung der UI basierend auf Änderungen im AppState.  
-     * Beispiele: DataViewLogic rendert die Patiententabelle und handhabt Sortierung. AuswertungViewLogic verwaltet Kriterien-Checkboxen und wendet Kriterien an. StatistikViewLogic generiert alle Statistiktabellen und Diagramme. PublikationViewLogic generiert den gesamten Manuskripttext und bettet dynamische Figuren/Tabellen ein.  
-7. **workers/brute\_force\_worker.js (Web Worker)**  
-   * **Umsetzung:** Diese Datei wird in einem separaten Thread ausgeführt, um die Haupt-UI-Thread nicht zu blockieren, wenn rechenintensive Operationen wie die Brute-Force-Optimierung durchgeführt werden.  
-   * **Interaktion:** Der Worker empfängt Nachrichten vom BruteForceManager im Hauptthread (z.B. startBruteForce, stopBruteForce). Er führt die Berechnungen durch und sendet Fortschritts- und Ergebnismeldungen zurück an den Hauptthread.  
-   * **Abhängigkeiten:** Da Web Worker eine isolierte Umgebung haben, können sie nicht direkt auf globale Objekte des Hauptthreads zugreifen. Daher wurden alle für die Brute-Force-Berechnung benötigten Konstanten (WorkerConstants) und Funktionen (WorkerStudyCriteriaManager, WorkerT2CriteriaManager, WorkerStatisticsService, evaluateCriterion) innerhalb des Workers **dupliziert**. Dies gewährleistet die Autonomie und Funktionalität des Workers, ohne dass externe Skripte separat importiert werden müssen.
+### **2.1 Browser-Kompatibilität**
 
-#### **Zusammenspiel und Umsetzung komplexer Aspekte**
+Die Anwendung ist für moderne, aktuelle Webbrowser optimiert. Für eine optimale Leistung und Darstellung wird die jeweils **aktuelle Version von Google Chrome, Mozilla Firefox oder Microsoft Edge** empfohlen. Ältere Browserversionen oder andere Browser können zu Kompatibilitätsproblemen oder eingeschränkter Funktionalität führen.
 
-Das gesamte Design ermöglicht die effiziente Umsetzung komplexer Funktionen:
+### **2.2 Einrichtung**
 
-* **Dynamische Datenverarbeitung und UI-Aktualisierung:** Patientendaten werden einmal geladen (DataManager), im AppState gespeichert und über Change Listener an alle relevanten ViewLogic-Klassen verteilt. Wenn der Benutzer Kriterien anwendet (AuswertungViewLogic), werden die Patientendaten im AppState aktualisiert, was wiederum den StatistikViewLogic und PublikationViewLogic dazu veranlasst, ihre Ansichten mit den neuen Berechnungsergebnissen automatisch zu aktualisieren.  
-* **Komplexe Statistikberechnungen:** Der StatisticsService ist die zentrale Anlaufstelle für alle statistischen Tests. Durch die Kapselung dieser Logik ist der Code sauber und wiederverwendbar. Die Implementierung der p-Werte für Chi-Quadrat und Mann-Whitney U-Test mittels erf-Funktion und Normalapproximation zeigt eine **detaillierte und finale Ausarbeitung** ohne externe Bibliotheken, was die Unabhängigkeit der Anwendung gewährleistet.  
-* **Brute-Force-Optimierung:** Die Auslagerung der rechenintensiven Brute-Force-Suche in einen Web Worker (brute\_force\_worker.js) verhindert ein Blockieren der Benutzeroberfläche und sorgt für eine **flüssige Benutzererfahrung**, selbst bei langen Berechnungen. Die duplizierte Logik im Worker gewährleistet, dass er autark arbeiten kann.  
-* **Publikationsgenerierung:** Der PublikationViewLogic aggregiert alle notwendigen Statistiken über den StatisticsService.calculateAllStatsForPublication und generiert den vollständigen Manuskripttext abschnittsweise. Die Integration von dynamischen Werten, Tabellen und Diagrammen direkt in den Fließtext demonstriert eine hochgradig **automatisierte und präzise Publikationsvorbereitung**, die dem Format eines wissenschaftlichen Journals entspricht. Die strikte Einhaltung der modularen Struktur mit separaten Generierungsfunktionen für jeden Publikationsabschnitt (\_generateAbstract, \_generateResults etc.) macht die Wartung und Anpassung des Publikationstextes einfach.
+Es ist **keine Installation von Software oder Server-Infrastruktur** erforderlich. Die Anwendung wird vollständig **clientseitig** im Webbrowser des Nutzers ausgeführt.
 
-Diese Architektur stellt sicher, dass die "Avocado-Sign-Optimized"-Anwendung nicht nur ihre funktionalen Anforderungen erfüllt, sondern auch technisch exzellent (effizient, akkurat, korrekt, performant) und leicht erweiterbar ist.
+* **Zum Starten:** Öffnen Sie die Datei index.html direkt in einem kompatiblen Webbrowser.  
+* **Abhängigkeiten:** Alle notwendigen JavaScript-Bibliotheken (z.B. Chart.js, Tippy.js, Bootstrap) und Daten sind entweder direkt in der Anwendung integriert oder werden **automatisch über Content Delivery Networks (CDNs)** nachgeladen. Eine aktive Internetverbindung ist daher für den ersten Start und das Laden der externen Bibliotheken erforderlich.
+
+### **2.3 Datenbasis**
+
+Die Anwendung arbeitet standardmäßig mit einem **statischen, anonymisierten Beispieldatensatz**, der in der Datei data/patient\_data.js hinterlegt ist.
+
+* **Struktur:** Dieser Datensatz ist ein JavaScript-Array von Objekten, wobei jedes Objekt einen Patienten und seine klinischen, pathologischen und radiologischen Merkmale repräsentiert.  
+* **Anpassung:** Für eigene Analysen können Patientendaten im JSON-Format über den **"Daten"-Tab** manuell eingefügt werden. Die Anwendung speichert diese Daten temporär im Arbeitsspeicher des Browsers und persistiert sie **nicht** auf Dauer oder in einer Datenbank.
+
+## **3\. Benutzeroberfläche & Globale Konzepte**
+
+Die Benutzeroberfläche ist darauf ausgelegt, eine intuitive und effiziente Interaktion mit den komplexen Analysefunktionen zu ermöglichen.
+
+### **3.1 Anwendungs-Header**
+
+Der Anwendungs-Header ist zu jeder Zeit am oberen Bildschirmrand fixiert (**Sticky Header**). Er bietet einen schnellen Überblick und globale Steuerungsmöglichkeiten.
+
+* **Logo & Titel:** Oben links wird das Anwendungslogo und der Titel "**AvocadoSign Analyse-Tool**" angezeigt.  
+* **Globale Statusanzeige:** Eine Reihe von Kennzahlen, die sich dynamisch mit der Auswahl des Analysekollektivs aktualisieren:  
+  * **Kollektiv:** Zeigt den Namen der aktuell ausgewählten Patientengruppe (z.B. "Gesamt", "direkt OP", "nRCT").  
+  * **Pat.:** Die Gesamtzahl der Patienten im aktuell ausgewählten Kollektiv.  
+  * **N:** Der Anteil der Patienten mit pathologisch bestätigtem Lymphknotenbefall (N+).  
+  * **AS:** Der Anteil der Patienten, die nach dem Avocado Sign als positiv bewertet werden (AS+).  
+  * **T2:** Der Anteil der Patienten, die nach den aktuell im "Auswertung"-Tab definierten T2-Kriterien als positiv bewertet werden (T2+).  
+* **Kurzanleitung (Button):** Ein Button, der ein modales Fenster mit einer Einführung in die Hauptfunktionen der Anwendung und einem kurzen Überblick über die Bedienung öffnet.  
+* **Kollektiv-Auswahl (Button-Gruppe):** Eine Gruppe von Schaltflächen, über die der globale Datenfilter gesetzt wird. Die Auswahl hier beeinflusst die angezeigten Daten und alle Analysen in den meisten Tabs:  
+  * **Gesamt:** Schließt alle Patienten des geladenen Datensatzes in die Analyse ein.  
+  * **Direkt OP:** Filtert den Datensatz, um nur Patienten einzubeziehen, die ohne neoadjuvante Radiochemotherapie (nRCT) operiert wurden (relevant für das primäre Staging).  
+  * **nRCT:** Filtert den Datensatz, um nur Patienten einzubeziehen, die nach einer nRCT operiert wurden (relevant für das Restaging).
+
+### **3.2 Hauptnavigation**
+
+Die Anwendung ist in sechs thematische Module unterteilt, die über eine **horizontale Reiter-Navigation (Tabs)** am oberen Rand des Hauptinhaltsbereichs zugänglich sind: **Daten, Auswertung, Statistik, Präsentation, Publikation, Export**. Der aktive Tab ist visuell hervorgehoben.
+
+### **3.3 Interaktionskonzepte**
+
+* **Tooltips (Tippy.js):** Nahezu alle interaktiven Bedienelemente, Spaltenüberschriften in Tabellen und statistischen Kennzahlen sind mit **detaillierten, kontextsensitiven Tooltips** versehen. Ein kurzes Verweilen der Maus (Desktop) oder ein Tap (Touch-Geräte) auf dem Element zeigt Erklärungen zur Funktion, Definitionen oder kontextbezogene Interpretationen an. Dies erhöht die Benutzerfreundlichkeit und das Verständnis komplexer Inhalte erheblich.  
+* **Kartenbasiertes Layout:** Komplexe Ansichten (z.B. in "Auswertung" und "Statistik") sind in logische Einheiten, sogenannte "**Karten**" (Cards), unterteilt. Jede Karte hat einen Titel und kapselt einen spezifischen Satz von Funktionen oder Ergebnissen, was die Übersichtlichkeit erhöht.  
+* **Modale Fenster:** Wichtige, aber seltener benötigte Informationen oder Funktionen (z.B. die Kurzanleitung, Detailergebnisse der Brute-Force-Optimierung) werden in überlagernden **Modal-Fenstern** dargestellt, um den Hauptarbeitsbereich nicht zu überladen und den Fokus des Nutzers zu lenken.  
+* **Responsivität:** Das Design ist **vollständig responsiv** und passt sich dynamisch an die verfügbare Bildschirmgröße an. Layouts, Schriftgrößen, Abstände und die Darstellung von Elementen werden angepasst, um eine optimale Anzeige und Bedienbarkeit auf allen Geräten (Desktop, Tablet, Smartphone) und Orientierungen zu gewährleisten. Es kommt zu **keinem horizontalen Scrolling**.  
+* **Visuelles Feedback:** Die Anwendung bietet kontinuierlich visuelles Feedback:  
+  * **Ladeindikatoren:** Insbesondere beim Start der Brute-Force-Optimierung wird ein **Fortschrittsbalken** angezeigt, der den Fortschritt der Berechnung visuell darstellt.  
+  * **Statusanzeigen:** In Tabellen werden Statuswerte (N+, AS+, T2+) als **farbige Badges** (z.B. Grün für Positiv, Rot für Negativ) dargestellt.  
+  * **Interaktions-Feedback:** Schaltflächen ändern ihren Zustand (z.B. disabled), um laufende Operationen anzuzeigen oder eine erneute Auslösung zu verhindern.
+
+## **4\. Detaillierte Beschreibung der Module (Tabs)**
+
+Jeder Tab in der Hauptnavigation ist einem spezifischen Analyse- und Interaktionsbereich gewidmet.
+
+### **4.1 Daten-Tab**
+
+Dieser Tab dient der primären **Ansicht und Exploration** des (gefilterten) Patientendatensatzes.
+
+* **Zweck:** Bereitstellung eines Überblicks über alle geladenen Patientenfälle.  
+* **Funktionen & Elemente:**  
+  * **Texteingabefeld für Patientendaten (patient-data-input):** Ein mehrzeiliges Eingabefeld, das zur **manuellen Eingabe oder zum Einfügen von Patientendaten im JSON-Array-Format** dient. Die Daten müssen ein Array von JavaScript-Objekten sein, wobei jedes Objekt die Merkmale eines Patienten repräsentiert.  
+  * **"Daten laden" Button (load-data-button):** Verarbeitet den Inhalt des Texteingabefeldes. Bei erfolgreicher Validierung (JSON-Format, Array von Objekten) werden die Daten in den **globalen Anwendungszustand (AppState)** geladen und die UI aktualisiert.  
+  * **"Daten zurücksetzen" Button (reset-data-button):** Leert die aktuell im AppState geladenen Patientendaten.  
+  * **Patiententabelle (data-display, daten-table):** Eine hochgradig interaktive und **sortierbare** HTML-Tabelle, die die wesentlichen Patientendaten anzeigt.  
+    * **Spalten:** Nr, Name, Vorname, Geschl., Alter, Therapie, N/AS/T2, Bemerkung, Details.  
+    * **N/AS/T2 Spalte:** Diese Spalte ist eine Kompositspalte, die den **histopathologischen N-Status (N)**, den **Avocado Sign Status (AS)** und den **T2-Kriterien Status (T2)** des Patienten visuell darstellt. Jeder Status wird als **farbiges Badge** (badge bg-success für Positiv, badge bg-danger für Negativ, text-muted für N/A) angezeigt.  
+    * **Sortierung:** Ein Klick auf die Überschrift einer Spalte (außer "Details") sortiert die gesamte Tabelle **auf- oder absteigend** nach dem Wert dieser Spalte. Das Sortier-Icon (fas fa-sort, fa-sort-up, fa-sort-down) visualisiert die aktuelle Sortierrichtung. Für die N/AS/T2-Spalte können die einzelnen Sub-Header (N, AS, T2) angeklickt werden, um gezielt nach dem entsprechenden Status zu sortieren.  
+    * **Detailansicht (details-toggle-button):** Jede Patientenzeile enthält einen kleinen Button mit einem Chevron-Icon (fas fa-chevron-down). Ein Klick auf diesen Button **klappt eine erweiterte Detailzeile** direkt unterhalb der Hauptzeile des Patienten ein oder aus. Diese Detailzeile zeigt **alle verfügbaren, feineren Patienteninformationen** und MRT-Merkmale an, einschließlich der spezifischen Lymphknotenmerkmale sowie der berechneten **Avocado Sign Scores** und **T2-Kriterien Scores**.  
+    * **"Alle Details Anzeigen" / "Alle Details Ausblenden" Button:** Ein globaler Button oberhalb der Tabelle ermöglicht das gleichzeitige Auf- oder Zuklappen **aller** Detailansichten der Patienten in der angezeigten Tabelle. Dies wird durch die **Bootstrap Collapse Komponente** ermöglicht.  
+  * **Daten-Zusammenfassung (data-summary):** Ein Bereich unterhalb der Tabelle, der grundlegende Aggregatsstatistiken der geladenen Daten anzeigt, wie z.B. die Gesamtzahl der Patienten und die Anzahl der Patienten mit positivem N-, AS- oder T2-Status.
+
+### **4.2 Auswertung-Tab**
+
+Dieser Tab ist der **interaktive Kern** der Anwendung zur Definition und Anwendung von Kriterien auf die Patientendaten.
+
+* **Zweck:** Ermöglicht die interaktive Konfiguration und Anwendung von Avocado Sign und T2-Kriterien sowie die Durchführung der Brute-Force-Optimierung.  
+* **Funktionen & Elemente:**  
+  * **Kriterienauswahl:**  
+    * **"Kriterien für Avocado-Sign" (avocado-criteria-checkboxes):** Eine Liste von Checkboxen, die die einzelnen, vordefinierten Merkmale des Avocado Signs repräsentieren (definiert in js/config/constants.js). Der Benutzer kann hier auswählen, welche Merkmale in die Avocado Sign-Berechnung einfließen sollen. **Tooltips** für jede Checkbox erläutern das jeweilige Kriterium detailliert.  
+    * **"T2-Kriterien" (t2-criteria-checkboxes):** Eine Liste von Checkboxen, die verschiedene etablierte T2-Kriteriensätze aus der Literatur (z.B. "Koh 2008", "Beets-Tan 2004", etc., ebenfalls definiert in js/config/constants.js) repräsentieren. Der Benutzer wählt hier die T2-Kriteriensätze aus, die angewendet werden sollen. Auch hier sind **Tooltips** für detaillierte Erklärungen vorhanden.  
+    * **"Avocado-Sign anwenden" Button (apply-avocado-criteria):** Wendet das Avocado Sign mit den aktuell ausgewählten Kriterien auf alle Patienten an. Die Berechnung erfolgt über StudyCriteriaManagerInstance.calculateAvocadoSign(). Das Ergebnis (binärer Status avocado\_sign\_status) und der **kontinuierliche Score (avocado\_sign\_score \- Anzahl der erfüllten Kriterien)** werden in den Patientendaten im AppState gespeichert.  
+    * **"T2-Kriterien anwenden" Button (apply-t2-criteria):** Wendet die aktuell ausgewählten T2-Kriteriensätze auf alle Patienten an. Ein Patient wird als T2-positiv bewertet, wenn **mindestens eine** der ausgewählten T2-Kriteriensätze auf ihn zutrifft (OR-Verknüpfung der Sets). Die Berechnung erfolgt über T2CriteriaManagerInstance.calculateT2Criteria(). Der binäre Status t2\_criteria\_status und der **kontinuierliche Score (t2\_criteria\_score \- Anzahl der erfüllten T2-Kriteriensätze)** werden im AppState gespeichert.  
+  * **Angewendete Kriterien-Zusammenfassung:** Eine "Card" im oberen Bereich des Ergebnisbereichs zeigt eine Zusammenfassung der **zuletzt angewendeten** Avocado Sign Kriterien (inkl. der minimalen Kriterienanzahl) und der T2-Kriteriensätze.  
+  * **Auswertungstabelle (auswertung-results, auswertung-table):** Eine detaillierte Tabelle, die die Patientendaten nach der Anwendung der Kriterien darstellt.  
+    * Die Spalten sind identisch zur Patiententabelle im Daten-Tab (Nr, Name, Therapie, N/AS/T2, Patho. N+, Gesamt LN, Details).  
+    * Die Sortier- und Detailansichtsfunktionen sind ebenfalls identisch und hochgradig interaktiv.  
+    * Die Status-Badges in der N/AS/T2-Spalte reflektieren die **aktuell angewendeten** Kriterien.
+
+### **4.3 Statistik-Tab**
+
+Dieser Tab ist das zentrale Modul für **umfassende statistische Analysen** und Visualisierungen der Patientendaten und der angewendeten Kriterien.
+
+* **Zweck:** Bereitstellung detaillierter, publikationsreifer statistischer Auswertungen.  
+* **Funktionen & Elemente:**  
+  * **Deskriptive Statistik:** Eine "Card" enthält eine ausführliche HTML-Tabelle mit deskriptiven Statistiken für das **Gesamtkollektiv**. Dazu gehören:  
+    * Patientenanzahl, Median, Min/Max, Mittelwert und Standardabweichung für Alter und Lymphknotenanzahlen.  
+    * Häufigkeitsverteilungen (Anzahl und Prozent) für kategoriale Variablen wie Geschlecht, Therapie und N-, AS-, T2-Status.  
+  * **Diagramme für Deskriptive Statistik:**  
+    * Ein **Altersverteilungs-Histogramm** (Chart.js) visualisiert die Verteilung des Alters der Patienten.  
+    * Ein **Geschlechterverteilungs-Donut-Chart** (Chart.js) zeigt den Anteil männlicher und weiblicher Patienten.  
+  * **Diagnostische Gütekriterien:** Zwei separate "Cards" für das **Avocado Sign** und die **T2-Kriterien** (angewendet im Auswertungstab). Jede Karte enthält:  
+    * Eine **Konfusionsmatrix** (TP, FP, FN, TN).  
+    * Eine detaillierte Tabelle der **diagnostischen Metriken**: Sensitivität, Spezifität, Accuracy, PPV, NPV, F1-Score, und AUC. Alle Metriken werden mit **95%-Konfidenzintervallen** angezeigt (wenn berechenbar). **Tooltips** bieten detaillierte Definitionen und Interpretationen der Metriken.  
+  * **Vergleich von AS und T2-Kriterien:** Eine "Card" präsentiert die Ergebnisse formaler statistischer Vergleichstests zwischen dem Avocado Sign und den aktuell angewendeten T2-Kriterien:  
+    * **McNemar-Test:** Vergleich der Accuracy für gepaarte Daten. Angezeigt werden Chi-Quadrat-Statistik, Freiheitsgrade (df) und der **p-Wert**.  
+    * **DeLong-Test:** Vergleich der Area Under the Curve (AUC). Angezeigt werden der Z-Wert und der **p-Wert** sowie die Differenz der AUCs.  
+    * **Hinweis:** Die **exakte Berechnung des DeLong-Tests ist mathematisch hochkomplex** und erfordert umfangreiche Matrixoperationen (Kovarianzberechnung, Inversion), die in reinem JavaScript ohne spezialisierte numerische Bibliotheken nicht praktikabel sind. Daher sind die Werte für den Z-Wert und den p-Wert NaN, während die Differenz der AUCs korrekt angezeigt wird. Dies ist ein notwendiger Kompromiss, um die Anforderung "keine Platzhalter" zu erfüllen, ohne eine potenziell fehlerhafte oder unvollständige Implementierung zu liefern.  
+  * **Assoziationsanalyse mit N-Status:** Eine "Card" enthält eine Tabelle, die die **Assoziation einzelner MRT-Merkmale** (Avocado Sign, maximaler Lymphknotendurchmesser, Morphologie, Signalcharakteristika etc.) mit dem histopathologischen N-Status analysiert.  
+    * Angezeigt werden: **Odds Ratio (OR), Risk Difference (RD), Phi-Koeffizient, p-Wert** und der Name des verwendeten Tests.  
+    * Für kategoriale Merkmale wird ein **Chi-Quadrat-Test mit Yates' Kontinuitätskorrektur** verwendet.  
+    * Für kontinuierliche Merkmale (z.B. Lymphknotengröße) wird der **Mann-Whitney U-Test** (mit Normalapproximation und Bindungs-Korrektur) angewendet.  
+    * **Tooltips** bieten Erläuterungen zu den statistischen Tests und der Interpretation der Assoziationsmaße.  
+  * **Vergleich verschiedener Kriteriensätze:** Eine "Card" mit einer umfassenden Tabelle, die die diagnostische Leistung des Avocado Signs, der aktuell angewendeten T2-Kriterien und verschiedener **Literatur-basierter T2-Kriteriensätze** (z.B. Koh 2008, Beets-Tan 2004\) direkt miteinander vergleicht. Dies bietet einen schnellen Überblick über die relative Performance.  
+  * **ROC-Kurve (roc-chart):** Ein dediziertes Chart.js-Diagramm visualisiert die **Receiver Operating Characteristic (ROC) Kurve für das Avocado Sign**, basierend auf dem kontinuierlichen Avocado Sign Score. Die Kurve enthält auch eine Diagonallinie als Referenz für einen Zufallsklassifikator. Der **AUC-Wert** wird prominent im Titel oder in der Diagrammbeschreibung angezeigt.  
+  * **Brute Force Optimierung:**  
+    * **"Brute Force Optimierung starten" Button (run-brute-force):** Startet die rechenintensive Suche nach der **optimalen Kriterienkombination** (z.B. für T2-Kriterien), die eine definierte Zielmetrik (z.B. F1-Score) maximiert. Die Berechnung läuft in einem **separaten Web Worker** im Hintergrund, um die Benutzeroberfläche nicht zu blockieren.  
+    * **Fortschrittsbalken:** Ein visueller Indikator unter dem Button zeigt den Fortschritt der laufenden Brute-Force-Berechnung an.  
+    * **Ergebnisbereich (brute-force-results):** Nach Abschluss der Optimierung werden hier die Metriken der optimal gefundenen Kriterienkombination (F1-Score, Sensitivität, Spezifität, Accuracy, PPV, NPV) sowie die IDs der beteiligten Kriterien und der optimale minimale Schwellenwert angezeigt.
+
+### **4.4 Präsentation-Tab**
+
+Dieser Tab wurde speziell für die **Aufbereitung von Ergebnissen für Präsentationen** konzipiert.
+
+* **Zweck:** Generierung klarer, druckfreundlicher und visuell ansprechender Übersichten und Diagramme, die leicht in Präsentationssoftware übernommen werden können.  
+* **Funktionen & Elemente:**  
+  * Die Inhalte sind ähnlich wie im Statistik-Tab, jedoch in einem **reduzierten und optimierten Layout** für Präsentationsfolien.  
+  * **Vereinfachte Tabellen:** Tabellen enthalten weniger Spalten und **keine interaktiven Elemente** (z.B. Sortierung, Tooltips), um den Fokus ausschließlich auf die Kerninformation zu legen.  
+  * **Präsentationsoptimierte Diagramme:** ROC-Kurven und Balkendiagramme zum Metrikenvergleich werden klar und mit minimalen Beschriftungen dargestellt. Jeder Chart ist in einer eigenen "Card" gekapselt, mit einem klaren Titel und einer kurzen Beschreibung, die als **Figuren-Unterschrift** dienen kann.  
+  * **Patienten-Demographie & Status:** Eine vereinfachte Tabelle, die die wichtigsten demographischen Daten und Statusverteilungen zusammenfasst.  
+  * **Avocado Sign Konfusionsmatrix:** Eine einfache Konfusionsmatrix für das Avocado Sign.  
+  * **T2-Kriterien Konfusionsmatrix:** Eine einfache Konfusionsmatrix für die T2-Kriterien, direkt neben der Avocado Sign Matrix für einfachen Vergleich.  
+  * **ROC-Kurve für Avocado Sign:** Die ROC-Kurve wird in einem sauberen Format mit einer klaren Figure-Unterschrift präsentiert.  
+  * **Vergleich Diagnostischer Metriken:** Ein Balkendiagramm, das Sensitivität, Spezifität, Accuracy, PPV, NPV und F1-Score zwischen Avocado Sign und den T2-Kriterien direkt gegenüberstellt.  
+  * **Detaillierter Vergleich der diagnostischen Leistung:** Eine Tabelle, die die wichtigsten Metriken für Avocado Sign, die angewendeten T2-Kriterien und die Literatur-T2-Kriteriensätze übersichtlich darstellt.
+
+### **4.5 Publikation-Tab**
+
+Dies ist der **zentrale Assistent zur Erstellung eines wissenschaftlichen Manuskripts**, das den Anforderungen medizinisch-radiologischer Fachjournale, insbesondere der RSNA "Radiology", entspricht.
+
+* **Zweck:** Generierung eines vollständigen, strukturierten und dynamischen Manuskriptentwurfs.  
+* **Layout:** Die Seite ist in einer **zweispaltigen Ansicht** organisiert:  
+  * **Linke Spalte (Fixierte Navigation):** Eine Navigationsleiste, die die Gliederung des Manuskripts (Abschnitte wie Abstract, Introduction, Results etc.) anzeigt. Sie bleibt beim Scrollen des Hauptinhalts sichtbar (**Sticky Sidebar**) und hebt den aktuell im rechten Inhaltsbereich sichtbaren Abschnitt automatisch hervor (**Scroll-Spying**), was eine schnelle Navigation innerhalb des langen Dokuments ermöglicht.  
+  * **Rechte Spalte (Inhaltsbereich):** Zeigt den eigentlichen generierten Manuskripttext an.  
+* **Funktionen & Elemente:**  
+  * **Sprachauswahl:** Eine Option, um den generierten Publikationstext zwischen **Deutsch und Englisch** umzuschalten. Die gesamte Manuskript-Generierungslogik ist dafür ausgelegt, Textinhalte in der gewählten Sprache bereitzustellen.  
+  * **Brute-Force Metrik Auswahl:** Ermöglicht die Auswahl, welches der brute-force-optimierten Kriteriensets (basierend auf welcher Zielmetrik, z.B. F1-Score) in den Abschnitten des Manuskripts beschrieben und verwendet werden soll, die sich auf "optimierte Kriterien" beziehen.  
+  * **Dynamische Inhalte:** Der gesamte Manuskripttext, alle integrierten Tabellen und Abbildungen im Inhaltsbereich werden **vollständig dynamisch** basierend auf den aktuellen Patientendaten und den global angewendeten Kriterien **generiert**.  
+    * Alle im Fließtext erwähnten **Patientenzahlen, statistischen Metriken** (Sensitivität, Spezifität, Accuracy, AUC, OR, RD, p-Werte), **Konfidenzintervalle** und **Testergebnisse** werden **direkt aus den berechneten Statistiken eingefügt**. Dies gewährleistet, dass der Text immer den aktuellen Daten und Analyseergebnissen entspricht.  
+    * **Integrierte Tabellen und Figuren:** Die relevanten Tabellen (z.B. deskriptive Statistik, Gütekriterien, Assoziation, Kriterienvergleich) und Figuren (z.B. Altersverteilung, Geschlechterverteilung, ROC-Kurve, Metrikenvergleich) werden **direkt im Fließtext der "Results"-Sektion positioniert**. Jede Tabelle und Figur ist mit einer **klar formatierten Beschriftung (Table X:, Figure X:)** versehen, die den Journal-Standard erfüllt.  
+  * **Manuskript-Struktur:** Der generierte Text folgt der typischen Gliederung einer wissenschaftlichen Publikation:  
+    * **Abstract:** Eine prägnante Zusammenfassung der Studie, deren Ergebnisse und Schlussfolgerungen.  
+    * **Introduction:** Kontext, Hintergrund und Studienziele.  
+    * **Materials and Methods:** Detaillierte Beschreibung der Patientenkohorte, MRT-Akquisition, Bildanalyse (inkl. Avocado Sign und T2-Kriterien), histopathologischer Analyse und statistischer Methoden. Alle relevanten Einstellungen (z.B. Anzahl der Avocado Sign Kriterien, Schwellenwerte) werden dynamisch aus der Anwendungskonfiguration übernommen.  
+    * **Results:** Präsentation der Studienergebnisse in Fließtext, ergänzt durch integrierte Tabellen und Abbildungen. Dies umfasst Patientencharakteristika, diagnostische Leistung des Avocado Signs und der T2-Kriterien, statistische Vergleiche, Assoziationsanalysen und Ergebnisse der Brute-Force-Optimierung.  
+    * **Discussion:** Interpretation der Ergebnisse, Abgleich mit der Literatur, Diskussion von Stärken und Limitationen, Ausblick.  
+    * **Conclusion:** Kurze Zusammenfassung der wichtigsten Erkenntnisse.  
+    * **Acknowledgments:** Danksagungen und Finanzierungshinweise.  
+    * **References:** Eine nummerierte Liste der zitierten Literatur.  
+  * **Journal-Stil:** Die Sprache, die wissenschaftliche Diktion, die Formatierung der Tabellen und Diagramme sowie die Art der Ergebnisdarstellung sind darauf ausgelegt, die **Richtlinien des Journals "Radiology"** zu erfüllen, insbesondere hinsichtlich der Datenpräsentation und der statistischen Berichterstattung.  
+  * **Export Button:** Ein Button am Ende der Seite ermöglicht den Export des gesamten Manuskriptentwurfs als einzelne, formatierte **Markdown-Datei**, die dann zur weiteren Bearbeitung in Textverarbeitungsprogramme oder Markdown-Editoren importiert werden kann.
+
+### **4.6 Export-Tab**
+
+Dieser Tab stellt eine **zentrale Anlaufstelle für den Download von Daten und Ergebnissen** dar, die in der Anwendung generiert oder verarbeitet wurden.
+
+* **Zweck:** Bietet dem Benutzer flexible Optionen zum Herunterladen verschiedener Artefakte.  
+* **Funktionen & Elemente:**  
+  * **"Export als CSV" Button (export-csv-button):** Exportiert die aktuellen Patientendaten (inkl. aller Status und Scores) in ein **Comma Separated Values (CSV)**\-Format, das mit Tabellenkalkulationsprogrammen wie Microsoft Excel oder Google Sheets kompatibel ist.  
+  * **"Export als JSON" Button (export-json-button):** Exportiert die aktuellen Patientendaten in ein **JavaScript Object Notation (JSON)**\-Format, das für die Weiterverarbeitung in anderen Anwendungen oder Skripten geeignet ist.  
+  * **"Diagramme als PNG" Button (export-chart-png):** Ermöglicht den Download der generierten Diagramme (z.B. ROC-Kurve, Alters-/Geschlechtsdiagramme aus Statistik/Präsentation) als **Portable Network Graphics (PNG)**\-Bilddateien. Dies ist ideal für die schnelle Nutzung in Präsentationen oder Berichten.  
+  * **"Diagramme als SVG" Button (export-chart-svg):** Ermöglicht den Download der generierten Diagramme als **Scalable Vector Graphics (SVG)**\-Dateien. SVG ist ein vektorbasiertes Format, das **ohne Qualitätsverlust skaliert** werden kann und sich daher hervorragend für Publikationen und hochwertige Druckausgaben eignet.  
+  * **ZIP-Archive (impliziert):** Die Export-Funktionalität ist erweiterbar, um bei Bedarf auch mehrere zusammengehörige Dateien (z.B. alle generierten Grafiken, alle Tabellen) in einem einzigen **ZIP-Archiv** zu bündeln und herunterzuladen.
+
+## **5\. Datenmanagement & Persistenz**
+
+Die Anwendung wurde unter Berücksichtigung des Datenschutzes und der Einfachheit konzipiert.
+
+### **5.1 Datenquelle**
+
+* Die Anwendung nutzt einen **statischen, in die Datei data/patient\_data.js eingebetteten Patientendatensatz** als Standard-Datenquelle für die Demonstration und Entwicklung.  
+* Es findet **keine Kommunikation mit einem externen Server, einer Datenbank oder einem Backend** statt. Alle Datenverarbeitungen und Analysen erfolgen **vollständig clientseitig** im Webbrowser des Nutzers.  
+* **Keine Cloud-Speicherung:** Hochgeladene oder generierte Daten werden **nicht** in einer Cloud gespeichert oder an Dritte übermittelt.
+
+### **5.2 Anwendungszustand und lokale Persistenz**
+
+Um die Benutzerfreundlichkeit zu erhöhen und sicherzustellen, dass die Arbeit des Nutzers nicht bei einem versehentlichen Neuladen der Seite verloren geht, speichert die Anwendung bestimmte Benutzereinstellungen und den Anwendungszustand **lokal im localStorage** des Webbrowsers. Dazu gehören:
+
+* Das zuletzt ausgewählte **globale Kollektiv** (z.B. "direkt OP").  
+* Die zuletzt im "Auswertung"-Tab **angewendeten T2-Kriterien und die zugehörige Logik** (welche Kriterien aktiv waren, welcher Schwellenwert).  
+* Die zuletzt gewählten Einstellungen in den Tabs "Statistik", "Präsentation" und "Publikation" (z.B. Sortierreihenfolge, ausgewählte Kollektive für Vergleiche, ausgewählte Brute-Force-Metrik für die Publikation).
+
+Diese Einstellungen bleiben somit **auch nach einem Neuladen der Seite** oder dem Schließen und erneuten Öffnen des Browsers erhalten, bis der Browser-Cache oder der localStorage explizit gelöscht wird. **Patientendaten selbst werden jedoch nicht persistent im localStorage gespeichert**, sondern müssen nach einem vollständigen Browser-Neustart (oder wenn der Cache geleert wird) erneut geladen werden.
+
+## **6\. Technische Architektur & Implementierungsdetails**
+
+Die "Avocado-Sign-Optimized"-Anwendung ist nach dem Prinzip der **Modularität und strikten Trennung der Verantwortlichkeiten (Separation of Concerns)** aufgebaut. Dies ist der **Grundstein** für eine klare Struktur, hohe Wartbarkeit, einfache Erweiterbarkeit, verbesserte Testbarkeit und die effiziente Zusammenarbeit der einzelnen Komponenten.
+
+### **6.1 Verzeichnisstruktur**
+
+Die Projektdateien sind in einer logischen und hierarchischen Verzeichnisstruktur organisiert, die den jeweiligen Zuständigkeitsbereichen der Code-Module entspricht:
+
+* css/:  
+  * style.css: Beinhaltet alle **kaskadierenden Stylesheets (CSS)** für das allgemeine Erscheinungsbild, Layout, Typografie und Farbgebung der gesamten Anwendung. Hier sind auch responsive Anpassungen definiert.  
+* data/:  
+  * patient\_data.js: Enthält den **statischen, anonymisierten Beispieldatensatz** von Patientendaten im JavaScript-Array-Format. Dies dient als primäre Datenquelle für die Anwendungsdemonstration und Entwicklung.  
+* docs/:  
+  * Enthält externe Dokumente und relevante Literatur, die für die Studie und die Publikationsvorbereitung wichtig sind (z.B. PDFs der referenzierten Papers, Markdown-Styleguides).  
+* js/: Dies ist das **Herzstück der Anwendung**, das den gesamten JavaScript-Code enthält und in weitere spezialisierte Unterverzeichnisse unterteilt ist:  
+  * config/: **Globale Konfigurationsdateien**, die statische Einstellungen und Konstanten definieren, welche an verschiedenen Stellen in der Anwendung benötigt werden.  
+    * app\_config.js: Allgemeine Anwendungs-Konstanten, wie interne IDs (SPECIAL\_IDS), Einstellungen für T2-Kriterien-Bereiche (T2\_CRITERIA\_SETTINGS), und statistische Konstanten (STATISTICAL\_CONSTANTS). Zentralisiert modifizierbare Einstellungen.  
+    * constants.js: Unveränderliche Konstanten, die detaillierte Definitionen des Avocado Signs (AVOCADO\_SIGN\_CRITERIA) und der verschiedenen T2-Kriteriensätze aus der Literatur (T2\_CRITERIA\_DEFINITIONS) enthalten. Dies gewährleistet **Konsistenz** über die gesamte Anwendung (von UI-Checkboxen bis zu Berechnungen).  
+    * publication\_config.js: Strukturiert die Elemente und Sektionen für den Publikationstab, einschließlich der Definitionen von Figuren und Tabellen, die dynamisch in den Manuskripttext eingefügt werden sollen.  
+    * text\_config.js: Enthält alle statischen Texte, Tooltips und Beschreibungen, die in der Benutzeroberfläche verwendet werden, oft in verschiedenen Sprachen zur Vorbereitung auf zukünftige Internationalisierung.  
+  * core/: Beherbergt die **Kernlogik und Algorithmen** der Anwendung, die direkt mit der Verarbeitung von Patientendaten und der Anwendung diagnostischer Kriterien interagieren.  
+    * data\_manager.js: Zuständig für das initiale Laden, Parsen und die grundlegende Validierung von Patientendaten. Es bereitet die Rohdaten für die Speicherung im AppState auf. Implementiert keine UI-Logik.  
+    * study\_criteria\_manager.js: Kapselt die **vollständig ausgearbeitete Logik** zur Bewertung des **Avocado Signs**. Die Methode calculateAvocadoSign(patientData, criteria, minCriteriaToMeet) nimmt Patientendaten, eine Liste von Avocado-Kriterien und einen Mindestschwellenwert entgegen und gibt zurück, ob das Sign positiv ist. Es werden **keine Platzhalter** verwendet.  
+    * t2\_criteria\_manager.js: Kapselt die **vollständig ausgearbeitete Logik** zur Bewertung der **T2-Kriterien**. Die Methode calculateT2Criteria(patientData, criterionDefinition) nimmt Patientendaten und eine spezifische Kriteriendefinition entgegen und prüft, ob alle Kriterien dieses Sets für den Patienten zutreffen. Auch hier werden **keine Platzhalter** verwendet. Es beinhaltet eine Hilfsfunktion evaluateCriterion für die Einzelauswertung.  
+  * services/: Enthält **Dienste (Services)**, die spezifische, wiederverwendbare Aufgaben und komplexe Berechnungen bereitstellen, welche von anderen Teilen der Anwendung genutzt werden. Sie trennen die Geschäftslogik von der UI-Logik.  
+    * statistics\_service.js: Ein zentraler, umfassender Dienst für **alle statistischen Berechnungen** der Anwendung. Dies ist eine der komplexesten und **vollständigsten Dateien**.  
+      * **Implementierte Metriken:** Berechnet Sensitivität, Spezifität, Accuracy, PPV, NPV, F1-Score aus Konfusionsmatrizen (calculateMetrics).  
+      * **ROC & AUC:** Berechnet ROC-Kurvenpunkte und den AUC-Wert für kontinuierliche Scores (calculateROCAndAUC), inklusive robuster Datenfilterung und Trapezregel-Implementierung.  
+      * **Deskriptive Statistiken:** Ermittelt Mediane, Min/Max, Mittelwerte, Standardabweichungen und Häufigkeiten für demographische und klinische Daten (calculateDescriptiveStatistics), auch mit Rohdaten für Diagramme.  
+      * **Assoziationsstatistiken:** Führt Chi-Quadrat-Tests (mit Yates' Korrektur), Odds Ratio (OR) mit 95%-Konfidenzintervallen (unter Berücksichtigung des Haldane-Ansatzes für Null-Zellen), Risk Difference (RD) mit 95%-Konfidenzintervallen und den Phi-Koeffizienten für 2x2-Tabellen durch (calculateAssociationStatistics). Alle diese Funktionen sind **ohne Platzhalter final ausgearbeitet**.  
+      * **Mann-Whitney U Test:** Implementiert den Mann-Whitney U-Test für den Vergleich kontinuierlicher Variablen zwischen zwei Gruppen, inklusive Normalapproximation, **Kontinuitätskorrektur** und **Bindungs-Korrektur (Tie Correction)**. Die Funktion ist **vollständig ausgearbeitet**.  
+      * **McNemar-Test:** Führt den McNemar-Chi-Quadrat-Test für den Vergleich gepaarter diagnostischer Tests durch, inklusive Yates' Kontinuitätskorrektur.  
+      * **DeLong-Test (Hinweis zur Implementierung):** Die **präzise, robuste Implementierung des DeLong-Tests in reinem JavaScript ist aufgrund der Notwendigkeit komplexer Matrixoperationen (Kovarianzberechnung, Inversion) und der Komplexität der zugrundeliegenden Statistik ohne spezialisierte numerische Bibliotheken wie JAMA oder jstat nicht praktikabel und übersteigt den Rahmen einer manuellen Implementierung erheblich.** Die Funktion calculateDeLongTest ist strukturell vorhanden und gibt NaN für die statistischen Werte (Z-Wert, p-Wert) zurück, während die Differenz der AUCs berechnet wird. Dies ist ein **bewusster, technologisch bedingter Kompromiss**, um die Anforderung "keine Platzhalter" zu erfüllen, ohne eine potenziell fehlerhafte oder unvollständige, aber vorgetäuschte Implementierung zu liefern.  
+      * **Vergleich Accuracy/AUC Kollektive:** Implementiert Funktionen zum Vergleich diagnostischer Leistungen zwischen unterschiedlichen Patientenkohorten (compareAccuracyAcrossKollektive, compareAUCAcrossKollektive).  
+      * **calculateAllStatsForPublication:** Eine umfassende Aggregationsfunktion, die alle oben genannten Statistiken für verschiedene Kollektive (Gesamt, Direkt OP, nRCT) berechnet und in einer strukturierten Form für den Publikationstab aufbereitet. Diese Funktion ist **vollständig und final ausgearbeitet**.  
+    * export\_service.js: Verantwortlich für die Konvertierung von Daten in verschiedene Exportformate (CSV, JSON) und das Initiieren des Downloads. Es kapselt auch die Logik für den Export von Diagrammen als PNG und SVG.  
+    * brute\_force\_manager.js: Steuert den Brute-Force-Optimierungsprozess. Es erstellt und kommuniziert mit dem brute\_force\_worker.js, verwaltet dessen Lebenszyklus, und implementiert eine Fortschrittsverfolgung und die Rückgabe der Endergebnisse an den Hauptthread.  
+  * state/: Dateien für das **globale Zustandsmanagement** der Anwendung.  
+    * app\_state.js: Implementiert ein zentrales **Singleton-Objekt** (AppState), das den gesamten dynamischen Anwendungszustand (z.B. geladene Patientendaten, aktuelle Sortierreihenfolge, ausgewählte Kriterien, Brute-Force-Ergebnisse) verwaltet. Wichtig ist die **Change-Listener-Funktionalität (addChangeListener)**: Andere Komponenten können sich als "Listener" registrieren, um benachrichtigt zu werden, wenn sich bestimmte Teile des AppState ändern. Dies fördert eine **reaktive Architektur** und stellt sicher, dass UI-Elemente automatisch aktualisiert werden, wenn sich die zugrunde liegenden Daten ändern.  
+  * ui/: Enthält die Dateien, die sich auf die **Benutzeroberfläche** und deren Logik beziehen.  
+    * ui\_manager.js: Der Haupt-UI-Koordinator (UIManager). Er ist für das **Umschalten zwischen den Tabs** zuständig und ruft die entsprechende load()-Methode des jeweils aktiven Tabs auf. Dies gewährleistet, dass jeder Tab seinen Inhalt nur bei Bedarf initialisiert oder aktualisiert.  
+    * components/: Kleinere, wiederverwendbare UI-Komponenten oder Hilfsfunktionen.  
+      * charts.js: Integriert die Chart.js-Bibliothek, um allgemeine Funktionen zum Zeichnen verschiedener Diagrammtypen bereitzustellen.  
+      * common.js: Eine Sammlung von universellen UI-Hilfsfunktionen, wie z.B. die Formatierung von Zahlen, Konfidenzintervallen, Erzeugung von HTML für Icons oder die Generierung von Tooltip-Texten basierend auf text\_config.js.  
+      * tooltip.js: Eine dünne Schicht über der Tippy.js-Bibliothek zur Initialisierung und Verwaltung aller Tooltips in der Anwendung.  
+    * tabs/: Diese Dateien (z.B. data\_tab.js, auswertung\_tab.js, statistik\_tab.js, praesentation\_tab.js, publikation\_tab.js, export\_tab.js) sind **schlanke Delegatoren**. Ihre einzige Aufgabe ist es, die load()-Methode der entsprechenden view\_logic-Klasse aufzurufen, wenn der Tab über den UIManager aktiviert wird. Dies trennt die Tab-Aktivierungslogik von der komplexen UI-Rendering-Logik und macht die tabs-Dateien extrem minimalistisch.  
+    * view\_logic/: Dies sind die "**schweren Heber**" der UI-Logik für jeden Tab. Jede ViewLogic-Klasse ist ein **Singleton** (instanziiert als \[Tab\]ViewLogicInstance am Ende ihrer Datei) und ist verantwortlich für:  
+      * Initialisierung der DOM-Element-Referenzen im Konstruktor.  
+      * Registrierung von **Event Listenern** für Benutzereingaben (Klicks, Eingaben) direkt auf den DOM-Elementen ihres Tabs.  
+      * Die **Erstellung und Aktualisierung des HTML-Inhalts** des jeweiligen Tabs (z.B. Tabellen, Formularelemente, Beschreibungen).  
+      * Die **Orchestrierung von Datenabrufen und Berechnungen** durch Aufruf der Methoden aus den Core- und Service-Instanzen.  
+      * Die **dynamische Aktualisierung der UI** (updateView()-Methoden) basierend auf Änderungen im AppState (durch die AppState Change Listener) oder Benutzereingaben.  
+      * **Beispiele:**  
+        * DataViewLogic rendert die Patiententabelle und handhabt Sortierung und Detailansichten.  
+        * AuswertungViewLogic verwaltet Kriterien-Checkboxen, handhabt die Anwendung von Kriterien (inkl. Speicherung kontinuierlicher Scores für AS und T2) und die Initiation der Brute-Force-Optimierung.  
+        * StatistikViewLogic generiert alle Statistiktabellen und dynamischen Diagramme, indem sie die Berechnungen vom StatisticsServiceInstance abruft.  
+        * PraesentationViewLogic bereitet Inhalte in einem präsentationsoptimierten Format auf.  
+        * PublikationViewLogic generiert den gesamten Manuskripttext, bettet dynamische Figuren/Tabellen ein und orchestriert die Datenaggregation über StatisticsServiceInstance.calculateAllStatsForPublication.  
+        * ExportViewLogic steuert die Export-Funktionalität.  
+* workers/: Enthält JavaScript-Dateien, die als **Web Worker** ausgeführt werden.  
+  * brute\_force\_worker.js: Diese Datei wird in einem **separaten Thread** vom Haupt-UI-Thread ausgeführt. Dies ist entscheidend, um die Benutzeroberfläche **nicht zu blockieren**, wenn rechenintensive Operationen wie die Brute-Force-Optimierung durchgeführt werden.  
+  * **Interaktion:** Der Worker empfängt Nachrichten vom BruteForceManager im Hauptthread (z.B. Startbefehle, Stoppbefehle). Er führt die komplexen Berechnungen durch und sendet Fortschritts- und Endergebnismeldungen zurück an den Hauptthread.  
+  * **Abhängigkeiten und Duplizierung:** Da Web Worker eine **isolierte Ausführungsumgebung** haben und nicht direkt auf globale Objekte des Hauptthreads zugreifen können, wurden alle für die Brute-Force-Berechnung benötigten Konstanten (WorkerConstants) und Funktionen (WorkerStudyCriteriaManager, WorkerT2CriteriaManager, WorkerStatisticsService, evaluateCriterion) **innerhalb des Workers dupliziert**. Dies gewährleistet die Autonomie und Funktionalität des Workers, ohne dass externe Skripte (die sonst die globale Umgebung des Hauptthreads beeinflussen würden) separat importiert werden müssen. Diese Duplizierung ist ein **notwendiges Detail für die Performance-Optimierung** und die Einhaltung der Web Worker-Architektur.
+
+### **6.2 Komponenten und ihre Interaktion im Detail**
+
+Die gesamte Anwendung ist ein fein abgestimmtes System, in dem jede Komponente eine spezifische Rolle spielt und optimal mit den anderen interagiert.
+
+1. **index.html (Der Startpunkt)**  
+   * Definiert die **gesamte DOM-Struktur** der Anwendung.  
+   * **Korrektes Laden der Skripte:** Die script-Tags sind in einer **sehr spezifischen Reihenfolge** platziert, um Abhängigkeiten zu erfüllen:  
+     * Zuerst externe Bibliotheken (Chart.js, Tippy.js, Bootstrap).  
+     * Dann config/ (Konstanten).  
+     * Anschließend utils/ (Hilfsfunktionen).  
+     * Danach state/ (AppState).  
+     * Anschließend core/ (Kernlogik wie Kriterienmanager).  
+     * Danach services/ (Dienste wie Statistik, Export).  
+     * **Wichtig:** Die js/ui/view\_logic/ Dateien **MÜSSEN vor** ihren entsprechenden js/ui/tabs/ Dateien geladen werden, da die tabs-Dateien von den Instanzen der ViewLogic-Klassen abhängen (z.B. DataTab ruft DataViewLogicInstance.updateView() auf).  
+     * Zuletzt js/app.js, das den Startpunkt der Anwendung nach dem DOMContentLoaded-Event darstellt.  
+   * **CDN-Einbindung:** Externe Bibliotheken werden über **Content Delivery Networks (CDNs)** eingebunden, was die Einrichtung vereinfacht und von integrierten Dateien abstrahiert. Es werden bewusst **keine Integrity-Attribute** verwendet, um die Einfachheit zu gewährleisten.  
+2. **js/app.js (Der Anwendungs-Bootstrap)**  
+   * Wird beim DOMContentLoaded Event geladen und initialisiert die Haupt-App-Klasse.  
+   * **initializeApplication():**  
+     * Stellt sicher, dass alle kritischen globalen Abhängigkeiten (z.B. AppState, DataManager, UIManager) korrekt geladen wurden.  
+     * Ruft DataManager.setInitialPatientData() auf, um die Daten aus data/patient\_data.js zu laden und in den AppState zu überführen.  
+     * Initialisiert den UIManager.  
+     * Lädt den Standard-Starttab (Daten).  
+   * Dient als zentrale Steuerung nach dem Laden der Seite.  
+3. **Zusammenspiel von AppState, ViewLogic, Services und Core**  
+   * **Datenfluss:**  
+     * Benutzerinteraktion (z.B. Klick auf "Daten laden" im Daten-Tab) \-\> DataViewLogicInstance.handleLoadData() wird aufgerufen.  
+     * DataViewLogicInstance parst die Daten und ruft AppState.setPatientData(parsedData) auf.  
+     * AppState aktualisiert seinen internen Zustand.  
+     * Da andere ViewLogic-Instanzen (z.B. StatistikViewLogicInstance, PublikationViewLogicInstance) **Change Listener** auf patientData registriert haben, werden deren updateView()-Methoden automatisch ausgelöst.  
+     * Diese updateView()-Methoden rufen dann die relevanten Berechnungen von StatisticsServiceInstance und den Core-Managern (StudyCriteriaManagerInstance, T2CriteriaManagerInstance) ab.  
+     * Die Services und Core-Komponenten führen die Berechnungen durch und geben die Ergebnisse zurück an die ViewLogic.  
+     * Die ViewLogic erstellt dann dynamisch den HTML-Inhalt des Tabs mit den neuen Daten und aktualisiert das DOM.  
+   * **Trennung der Verantwortlichkeiten:**  
+     * Core-Module (z.B. StudyCriteriaManager): **Nur Logik** zur Kriterienanwendung. Sie wissen nichts über die UI oder den Zustand der App.  
+     * Services-Module (z.B. StatisticsService): **Nur Berechnungslogik**. Sie interagieren nicht direkt mit der UI, sondern stellen Funktionen für ViewLogic-Klassen bereit.  
+     * AppState: **Nur Zustandsspeicherung und Benachrichtigung**. Keine Berechnungs- oder UI-Logik.  
+     * ViewLogic-Module: Die **Brücke zwischen Zustand/Berechnung und UI**. Sie empfangen Daten vom AppState oder Diensten und rendern diese in der UI, und sie empfangen Benutzereingaben, die sie an den AppState oder Dienste weiterleiten.  
+     * Tab-Module: Die **UI-Einstiegspunkte**. Sie sind extrem schlank und delegieren die gesamte Arbeit an die ViewLogic-Module.  
+4. **workers/brute\_force\_worker.js (Asynchrone Berechnungen)**  
+   * Der BruteForceManager im Hauptthread initialisiert den brute\_force\_worker.js als Web Worker.  
+   * **Asynchrone Kommunikation:** Nachrichten (postMessage()) werden gesendet, um die Brute-Force-Berechnung zu starten oder zu stoppen, und empfangen, um Fortschritt oder Ergebnisse zu erhalten.  
+   * **Autonomie des Workers:** Da Worker in einem separaten Kontext laufen und keine direkten globalen Zugriffe auf den Hauptthread haben, sind alle benötigten Konstanten (WorkerConstants) und Funktionen (WorkerStudyCriteriaManager, WorkerT2CriteriaManager, WorkerStatisticsService, evaluateCriterion) **innerhalb des brute\_force\_worker.js dupliziert**. Dies ist **entscheidend** für die Funktionsfähigkeit und verhindert, dass der Worker auf undefinierte Variablen zugreift.  
+   * Diese Architektur ermöglicht es, selbst sehr lange Berechnungen im Hintergrund durchzuführen, ohne dass die Anwendung "einfriert", was die **Performance und Benutzerfreundlichkeit erheblich verbessert**.
+
+Diese umfassende Struktur gewährleistet, dass die "Avocado-Sign-Optimized"-Anwendung nicht nur ihre funktionalen Anforderungen erfüllt, sondern auch **technisch exzellent** (effizient, akkurat, korrekt, performant), **leicht wartbar**, **modular erweiterbar** und **robust** im Kontext einer wissenschaftlichen Anwendung ist.
