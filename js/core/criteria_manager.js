@@ -1,307 +1,115 @@
-const t2CriteriaManager = (() => {
-    let currentT2Criteria = null;
-    let appliedT2Criteria = null;
-    let currentT2Logic = APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC;
-    let appliedT2Logic = APP_CONFIG.DEFAULT_SETTINGS.T2_LOGIC;
-    let isCriteriaUnsaved = false;
-
-    function initializeT2CriteriaState() {
-        const savedCriteria = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA);
-        const savedLogic = loadFromLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC);
-        const defaultCriteriaObject = getDefaultT2Criteria();
-
-        appliedT2Criteria = deepMerge(cloneDeep(defaultCriteriaObject), savedCriteria || {});
-        appliedT2Logic = (savedLogic === 'UND' || savedLogic === 'ODER') ? savedLogic : defaultCriteriaObject.logic;
-
-        currentT2Criteria = cloneDeep(appliedT2Criteria);
-        currentT2Logic = appliedT2Logic;
-        isCriteriaUnsaved = false;
-    }
-
-    function getCurrentT2Criteria() {
-        return cloneDeep(currentT2Criteria);
-    }
-
-    function getAppliedT2Criteria() {
-        return cloneDeep(appliedT2Criteria);
-    }
-
-    function getCurrentT2Logic() {
-        return currentT2Logic;
-    }
-
-    function getAppliedT2Logic() {
-        return appliedT2Logic;
-    }
-
-    function isT2CriteriaUnsaved() {
-        return isCriteriaUnsaved;
-    }
-
-    function updateCurrentT2CriterionProperty(key, property, value) {
-        if (!currentT2Criteria || !currentT2Criteria.hasOwnProperty(key) || typeof currentT2Criteria[key] !== 'object') {
-            console.warn(`updateCurrentT2CriterionProperty: Ungültiger Kriterienschlüssel '${key}'`);
-            return false;
+export const studyCriteria = {
+    LurzSchaefer: {
+        id: 'LurzSchaefer',
+        name: 'Avocado Sign (Lurz & Schaefer)',
+        type: 'avocado',
+        citation: 'Lurz M, Schaefer J, et al. 2025',
+        parameters: {} 
+    },
+    Brown: {
+        id: 'Brown',
+        name: 'T2 (Brown et al.)',
+        type: 't2',
+        citation: 'Brown G, et al. Radiology 2003',
+        parameters: {
+            size: 5,
+            border: ['irregulär'],
+            signal: ['heterogen']
         }
-        if (currentT2Criteria[key][property] !== value) {
-            currentT2Criteria[key][property] = value;
-            isCriteriaUnsaved = true;
-            return true;
+    },
+    Koh: {
+        id: 'Koh',
+        name: 'T2 (Koh et al.)',
+        type: 't2',
+        citation: 'Koh DM, et al. Br J Radiol 2008',
+        parameters: {
+            size: 8,
+            border: [],
+            signal: []
         }
-        return false;
-    }
-
-     function updateCurrentT2CriteriaValue(key, value) {
-         if (!currentT2Criteria || !currentT2Criteria.hasOwnProperty(key) || typeof currentT2Criteria[key] !== 'object') {
-            console.warn(`updateCurrentT2CriteriaValue: Ungültiger Kriterienschlüssel '${key}'`);
-            return false;
-         }
-         let isValidValue = true;
-         const allowedValuesKey = key.toUpperCase() + '_VALUES';
-         if (APP_CONFIG.T2_CRITERIA_SETTINGS.hasOwnProperty(allowedValuesKey)) {
-            isValidValue = APP_CONFIG.T2_CRITERIA_SETTINGS[allowedValuesKey].includes(value);
-         } else {
-             isValidValue = false;
-         }
-
-         if (isValidValue && currentT2Criteria[key].value !== value) {
-             currentT2Criteria[key].value = value;
-             isCriteriaUnsaved = true;
-             return true;
-         } else if (!isValidValue) {
-             console.warn(`updateCurrentT2CriteriaValue: Ungültiger Wert '${value}' für Kriterium '${key}'`);
-         }
-         return false;
-     }
-
-      function updateCurrentT2CriteriaThreshold(value) {
-          const numValue = parseFloat(value);
-          if (!currentT2Criteria || !currentT2Criteria.size || isNaN(numValue) || !isFinite(numValue)) {
-               console.warn(`updateCurrentT2CriteriaThreshold: Ungültiger Schwellenwert '${value}'`);
-              return false;
-          }
-          const clampedValue = clampNumber(numValue, APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.min, APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE.max);
-
-          if (currentT2Criteria.size.threshold !== clampedValue) {
-              currentT2Criteria.size.threshold = clampedValue;
-              isCriteriaUnsaved = true;
-              return true;
-          }
-          return false;
-      }
-
-     function toggleCurrentT2CriterionActive(key, isActive) {
-          if (!currentT2Criteria || !currentT2Criteria.hasOwnProperty(key) || typeof currentT2Criteria[key] !== 'object') {
-            console.warn(`toggleCurrentT2CriterionActive: Ungültiger Kriterienschlüssel '${key}'`);
-            return false;
-          }
-          const isActiveBool = !!isActive;
-          if (currentT2Criteria[key].active !== isActiveBool) {
-              currentT2Criteria[key].active = isActiveBool;
-              isCriteriaUnsaved = true;
-              return true;
-          }
-          return false;
-     }
-
-    function updateCurrentT2Logic(logic) {
-        if ((logic === 'UND' || logic === 'ODER') && currentT2Logic !== logic) {
-            currentT2Logic = logic;
-            isCriteriaUnsaved = true;
-            return true;
+    },
+    Horvat: {
+        id: 'Horvat',
+        name: 'T2 (Horvat et al.)',
+        type: 't2',
+        citation: 'Horvat N, et al. Radiology 2019',
+        parameters: {
+            size: 5,
+            border: ['irregulär', 'spikuliert'],
+            signal: ['heterogen']
         }
-        return false;
+    }
+};
+
+function _evaluateAvocado(patient) {
+    const prediction = patient.as === '+' ? 1 : 0;
+    const score = patient.anzahl_as_plus_lk || 0;
+    return { prediction, score };
+}
+
+function _evaluateT2(patient, parameters) {
+    let isPatientPositive = false;
+    let maxSuspiciousNodeSize = 0;
+
+    if (!patient.lymphknoten_t2 || patient.lymphknoten_t2.length === 0) {
+        return { prediction: 0, score: 0 };
     }
 
-    function resetCurrentT2Criteria() {
-        const defaultCriteria = getDefaultT2Criteria();
-        currentT2Criteria = cloneDeep(defaultCriteria);
-        currentT2Logic = defaultCriteria.logic;
-        isCriteriaUnsaved = true;
-    }
+    for (const lk of patient.lymphknoten_t2) {
+        let isLkSuspicious = false;
+        
+        const sizeCriteriaMet = lk.groesse >= parameters.size;
+        
+        let featureCriteriaMet = 0;
+        const totalFeatures = parameters.border.length + parameters.signal.length;
 
-    function applyCurrentT2Criteria() {
-        appliedT2Criteria = cloneDeep(currentT2Criteria);
-        appliedT2Logic = currentT2Logic;
-
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_CRITERIA, appliedT2Criteria);
-        saveToLocalStorage(APP_CONFIG.STORAGE_KEYS.APPLIED_LOGIC, appliedT2Logic);
-
-        isCriteriaUnsaved = false;
-    }
-
-    function checkSingleLymphNode(lymphNode, criteria) {
-        const checkResult = {
-            size: null,
-            form: null,
-            kontur: null,
-            homogenitaet: null,
-            signal: null
-        };
-
-        if (!lymphNode || typeof lymphNode !== 'object' || !criteria || typeof criteria !== 'object') {
-            return checkResult;
-        }
-
-        if (criteria.size?.active) {
-            const threshold = criteria.size.threshold;
-            const nodeSize = lymphNode.groesse;
-            const condition = criteria.size.condition || '>=';
-            if (typeof nodeSize === 'number' && !isNaN(nodeSize) && typeof threshold === 'number' && !isNaN(threshold)) {
-                 switch(condition) {
-                    case '>=': checkResult.size = nodeSize >= threshold; break;
-                    case '>': checkResult.size = nodeSize > threshold; break;
-                    case '<=': checkResult.size = nodeSize <= threshold; break;
-                    case '<': checkResult.size = nodeSize < threshold; break;
-                    case '==': checkResult.size = nodeSize === threshold; break;
-                    default: checkResult.size = false;
-                 }
-            } else {
-                 checkResult.size = false;
+        if (totalFeatures === 0) {
+            if (sizeCriteriaMet) {
+                isLkSuspicious = true;
+            }
+        } else {
+            if (parameters.border.length > 0 && parameters.border.includes(lk.kontur)) {
+                featureCriteriaMet++;
+            }
+            if (parameters.signal.length > 0 && parameters.signal.includes(lk.homogenitaet)) {
+                featureCriteriaMet++;
+            }
+            
+            if (sizeCriteriaMet && featureCriteriaMet > 0) {
+                 isLkSuspicious = true;
             }
         }
-
-        if (criteria.form?.active) {
-            const requiredForm = criteria.form.value;
-            const nodeForm = lymphNode.form;
-            checkResult.form = (typeof nodeForm === 'string' && nodeForm === requiredForm);
+        
+        if (isLkSuspicious) {
+            isPatientPositive = true;
+            if (lk.groesse > maxSuspiciousNodeSize) {
+                maxSuspiciousNodeSize = lk.groesse;
+            }
         }
-
-        if (criteria.kontur?.active) {
-            const requiredKontur = criteria.kontur.value;
-            const nodeKontur = lymphNode.kontur;
-            checkResult.kontur = (typeof nodeKontur === 'string' && nodeKontur === requiredKontur);
-        }
-
-        if (criteria.homogenitaet?.active) {
-            const requiredHomogenitaet = criteria.homogenitaet.value;
-            const nodeHomogenitaet = lymphNode.homogenitaet;
-            checkResult.homogenitaet = (typeof nodeHomogenitaet === 'string' && nodeHomogenitaet === requiredHomogenitaet);
-        }
-
-        if (criteria.signal?.active) {
-            const requiredSignal = criteria.signal.value;
-            const nodeSignal = lymphNode.signal;
-            checkResult.signal = (nodeSignal !== null && typeof nodeSignal === 'string' && nodeSignal === requiredSignal);
-        }
-
-        return checkResult;
     }
 
-    function applyT2CriteriaToPatient(patient, criteria, logic) {
-        const defaultReturn = { t2Status: null, positiveLKCount: 0, bewerteteLK: [] };
-        if (!patient || !criteria || (logic !== 'UND' && logic !== 'ODER')) {
-            return defaultReturn;
-        }
-
-        const lymphNodes = patient.lymphknoten_t2;
-        if (!Array.isArray(lymphNodes)) {
-            const activeCriteriaKeysForEmpty = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true);
-            return { t2Status: activeCriteriaKeysForEmpty.length > 0 ? '-' : null, positiveLKCount: 0, bewerteteLK: [] };
-        }
-
-        let patientIsPositive = false;
-        let positiveLKCount = 0;
-        const bewerteteLK = [];
-        const activeCriteriaKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true);
-
-        if (lymphNodes.length === 0 && activeCriteriaKeys.length > 0) {
-            return { t2Status: '-', positiveLKCount: 0, bewerteteLK: [] };
-        }
-        if (lymphNodes.length === 0 && activeCriteriaKeys.length === 0) {
-            return { t2Status: null, positiveLKCount: 0, bewerteteLK: [] };
-        }
+    return {
+        prediction: isPatientPositive ? 1 : 0,
+        score: maxSuspiciousNodeSize
+    };
+}
 
 
-        lymphNodes.forEach(lk => {
-            if (!lk) {
-                 bewerteteLK.push(null);
-                 return;
-            }
-            const checkResult = checkSingleLymphNode(lk, criteria);
-            let lkIsPositive = false;
-
-            if (activeCriteriaKeys.length > 0) {
-                if (logic === 'UND') {
-                    lkIsPositive = activeCriteriaKeys.every(key => checkResult[key] === true);
-                } else {
-                    lkIsPositive = activeCriteriaKeys.some(key => checkResult[key] === true);
-                }
-            }
-
-            if (lkIsPositive) {
-                patientIsPositive = true;
-                positiveLKCount++;
-            }
-
-            const bewerteterLK = {
-                groesse: lk.groesse ?? null,
-                form: lk.form ?? null,
-                kontur: lk.kontur ?? null,
-                homogenitaet: lk.homogenitaet ?? null,
-                signal: lk.signal ?? null,
-                isPositive: lkIsPositive,
-                checkResult: checkResult
-            };
-            bewerteteLK.push(bewerteterLK);
-        });
-
-        let finalT2Status = null;
-        if (activeCriteriaKeys.length > 0) {
-            finalT2Status = patientIsPositive ? '+' : '-';
-        }
+function _evaluateBruteForce(patient, parameters) {
+    const t2Result = _evaluateT2(patient, parameters);
+    return t2Result;
+}
 
 
-        return {
-            t2Status: finalT2Status,
-            positiveLKCount: positiveLKCount,
-            bewerteteLK: bewerteteLK
-        };
+export function evaluatePatient(patient, criterion) {
+    switch (criterion.type) {
+        case 'avocado':
+            return _evaluateAvocado(patient);
+        case 't2':
+            return _evaluateT2(patient, criterion.parameters);
+        case 'brute-force':
+            return _evaluateBruteForce(patient, criterion.parameters);
+        default:
+            throw new Error(`Unknown criterion type: ${criterion.type}`);
     }
-
-    function evaluateDataset(dataset, criteria, logic) {
-        if (!Array.isArray(dataset)) {
-            console.error("evaluateDataset: Ungültige Eingabedaten, Array erwartet.");
-            return [];
-        }
-        if (!criteria || (logic !== 'UND' && logic !== 'ODER')) {
-             console.error("evaluateDataset: Ungültige Kriterien oder Logik.");
-             return dataset.map(p => {
-                 const pCopy = cloneDeep(p);
-                 pCopy.t2 = null;
-                 pCopy.anzahl_t2_plus_lk = 0;
-                 pCopy.lymphknoten_t2_bewertet = (pCopy.lymphknoten_t2 || []).map(lk => ({...lk, isPositive: false, checkResult: {}}));
-                 return pCopy;
-             });
-        }
-
-        return dataset.map(patient => {
-            if (!patient) return null;
-            const patientCopy = cloneDeep(patient);
-            const { t2Status, positiveLKCount, bewerteteLK } = applyT2CriteriaToPatient(patientCopy, criteria, logic);
-            patientCopy.t2 = t2Status;
-            patientCopy.anzahl_t2_plus_lk = positiveLKCount;
-            patientCopy.lymphknoten_t2_bewertet = bewerteteLK;
-            return patientCopy;
-        }).filter(p => p !== null);
-    }
-
-    return Object.freeze({
-        initialize: initializeT2CriteriaState,
-        getCurrentCriteria: getCurrentT2Criteria,
-        getAppliedCriteria: getAppliedT2Criteria,
-        getCurrentLogic: getCurrentT2Logic,
-        getAppliedLogic: getAppliedT2Logic,
-        isUnsaved: isT2CriteriaUnsaved,
-        updateCriterionProperty: updateCurrentT2CriterionProperty,
-        updateCriterionValue: updateCurrentT2CriteriaValue,
-        updateCriterionThreshold: updateCurrentT2CriteriaThreshold,
-        toggleCriterionActive: toggleCurrentT2CriterionActive,
-        updateLogic: updateCurrentT2Logic,
-        resetCriteria: resetCurrentT2Criteria,
-        applyCriteria: applyCurrentT2Criteria,
-        checkSingleNode: checkSingleLymphNode,
-        evaluatePatient: applyT2CriteriaToPatient,
-        evaluateDataset: evaluateDataset
-    });
-})();
+}
