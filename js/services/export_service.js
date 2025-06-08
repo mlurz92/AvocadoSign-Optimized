@@ -1,192 +1,338 @@
-const uiManager = (() => {
+const exportService = (() => {
 
-    let _mainAppInterface = {};
+    // Funktion zum Konvertieren von HTML-Tabellen in CSV
+    function tableToCSV(tableId, delimiter = ';') {
+        const table = document.getElementById(tableId);
+        if (!table) {
+            console.error(`Tabelle mit ID '${tableId}' nicht gefunden für CSV Export.`);
+            return '';
+        }
 
-    function _updateHeaderUI() {
-        const state = appState.getState();
-        const allData = _mainAppInterface.getProcessedData();
-        const currentData = dataManager.filterDataByKollektiv(allData, state.currentKollektiv);
-        const headerStats = dataManager.calculateHeaderStats(currentData, state.currentKollektiv);
+        let csv = [];
+        const rows = table.querySelectorAll('tr');
 
-        document.querySelector(CONSTANTS.SELECTORS.HEADER_KOLLEKTIV).textContent = headerStats.kollektiv;
-        document.querySelector(CONSTANTS.SELECTORS.HEADER_ANZAHL_PATIENTEN).textContent = headerStats.anzahlPatienten;
-        document.querySelector(CONSTANTS.SELECTORS.HEADER_STATUS_N).textContent = headerStats.statusN;
-        document.querySelector(CONSTANTS.SELECTORS.HEADER_STATUS_AS).textContent = headerStats.statusAS;
-        document.querySelector(CONSTANTS.SELECTORS.HEADER_STATUS_T2).textContent = headerStats.statusT2;
-        
-        document.querySelectorAll(CONSTANTS.SELECTORS.KOLLEKTIV_BUTTONS).forEach(btn => {
-            btn.classList.toggle(CONSTANTS.CLASSES.ACTIVE, btn.dataset.kollektiv === state.currentKollektiv);
+        rows.forEach(row => {
+            let rowData = [];
+            row.querySelectorAll('th, td').forEach(cell => {
+                // Bereinigen von HTML und Trimmen von Leerzeichen
+                let text = cell.innerText.trim();
+                // Anführungszeichen escapen und Zelle in Anführungszeichen setzen, wenn sie das Trennzeichen enthält
+                if (text.includes(delimiter) || text.includes('\n') || text.includes('"')) {
+                    text = '"' + text.replace(/"/g, '""') + '"';
+                }
+                rowData.push(text);
+            });
+            csv.push(rowData.join(delimiter));
         });
+        return csv.join('\n');
     }
 
-    function _renderTabContent(tabId) {
-        const paneId = `${tabId}-pane`;
-        const container = document.getElementById(paneId);
-        if (!container) return;
+    // Funktion zum Konvertieren von Datenobjekten in CSV (generische Funktion)
+    function dataToCSV(data, columns, delimiter = ';') {
+        if (!Array.isArray(data) || data.length === 0) {
+            return '';
+        }
 
-        container.innerHTML = `<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Lade...</span></div></div>`;
-        
-        const state = appState.getState();
-        const allData = _mainAppInterface.getProcessedData();
-        const currentData = dataManager.filterDataByKollektiv(allData, state.currentKollektiv);
-        const bfResults = bruteForceManager.getAllResults();
+        let csv = [];
+        const header = columns.map(col => col.label).join(delimiter);
+        csv.push(header);
 
-        let contentHTML = '';
-        
+        data.forEach(row => {
+            let rowData = [];
+            columns.forEach(col => {
+                let value = row[col.key];
+                if (typeof value === 'object' && value !== null) {
+                    // Spezielle Handhabung für verschachtelte Objekte, z.B. für T2-Kriterien oder Metriken
+                    if (col.key.startsWith('t2Criteria_')) {
+                        const criterionKey = col.key.substring('t2Criteria_'.length);
+                        if (value[criterionKey] && value[criterionKey].active) {
+                            if (criterionKey === 'size') {
+                                value = `Size>=${value[criterionKey].threshold}`;
+                            } else {
+                                value = value[criterionKey].value;
+                            }
+                        } else {
+                            value = ''; // Kriterium inaktiv
+                        }
+                    } else if (value.value !== undefined) {
+                        value = formatNumber(value.value, 3, ''); // Metrik-Werte
+                    } else {
+                        value = JSON.stringify(value); // Fallback für generische Objekte
+                    }
+                } else if (value === null || value === undefined) {
+                    value = '';
+                } else if (typeof value === 'string' && (value.includes(delimiter) || value.includes('\n') || value.includes('"'))) {
+                    value = '"' + value.replace(/"/g, '""') + '"';
+                }
+                rowData.push(value);
+            });
+            csv.push(rowData.join(delimiter));
+        });
+        return csv.join('\n');
+    }
+
+    // Exportieren von Inhalten als Datei
+    function downloadFile(content, filename, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // Dateinamen generieren
+    function generateFilename(type, kollektiv, studyId = null, chartName = null, tableName = null) {
+        let filename = APP_CONFIG.EXPORT.FILENAME_TEMPLATE;
+        const date = getCurrentDateString(APP_CONFIG.EXPORT.DATE_FORMAT);
+        const ext = APP_CONFIG.EXPORT.FILENAME_TYPES[type]?.ext || type.split('.').pop() || 'txt';
+        let typeName = APP_CONFIG.EXPORT.FILENAME_TYPES[type] || type;
+
+        if (studyId && typeName.includes('{StudyID}')) {
+            typeName = typeName.replace('{StudyID}', studyId);
+        }
+        if (chartName && typeName.includes('{ChartName}')) {
+            typeName = typeName.replace('{ChartName}', chartName);
+        }
+        if (tableName && typeName.includes('{TableName}')) {
+            typeName = typeName.replace('{TableName}', tableName);
+        }
+
+        filename = filename
+            .replace('{TYPE}', typeName)
+            .replace('{KOLLEKTIV}', kollektiv.replace(/\s+/g, '_'))
+            .replace('{DATE}', date)
+            .replace('{EXT}', ext);
+
+        return filename;
+    }
+
+    // Export als CSV
+    function exportCSV(tableId, data, columns, kollektiv, type, filenameSuffix = '') {
+        const content = tableId ? tableToCSV(tableId, APP_CONFIG.EXPORT.CSV_DELIMITER) : dataToCSV(data, columns, APP_CONFIG.EXPORT.CSV_DELIMITER);
+        const filename = generateFilename(type, kollektiv, null, null, filenameSuffix);
+        downloadFile(content, filename, 'text/csv;charset=utf-8;');
+        ui_helpers.showToast(`'${filename}' erfolgreich exportiert!`, 'success');
+    }
+
+    // Export als Markdown
+    function exportMarkdown(content, kollektiv, type, filenameSuffix = '') {
+        const filename = generateFilename(type, kollektiv, null, null, filenameSuffix);
+        downloadFile(content, filename, 'text/markdown;charset=utf-8;');
+        ui_helpers.showToast(`'${filename}' erfolgreich exportiert!`, 'success');
+    }
+    
+    // Export als Text (für Brute-Force Report)
+    function exportText(content, kollektiv, type, filenameSuffix = '') {
+        const filename = generateFilename(type, kollektiv, null, null, filenameSuffix);
+        downloadFile(content, filename, 'text/plain;charset=utf-8;');
+        ui_helpers.showToast(`'${filename}' erfolgreich exportiert!`, 'success');
+    }
+
+    // Export als PNG für Charts oder Tabellen
+    async function exportPng(elementId, kollektiv, type, filenameSuffix = '') {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            console.error(`Element mit ID '${elementId}' nicht gefunden für PNG Export.`);
+            ui_helpers.showToast('Fehler beim Exportieren als PNG: Element nicht gefunden.', 'danger');
+            return;
+        }
+
         try {
-            switch (tabId) {
-                case 'daten-tab':
-                    contentHTML = dataTab.render(currentData, state.datenTableSort);
+            const canvas = await html2canvas(element, { scale: APP_CONFIG.EXPORT.TABLE_PNG_SCALE, useCORS: true, logging: false });
+            const dataURL = canvas.toDataURL('image/png');
+            const filename = generateFilename(type, kollektiv, null, filenameSuffix, filenameSuffix);
+            downloadFile(dataURL, filename, 'image/png');
+            ui_helpers.showToast(`'${filename}' erfolgreich exportiert!`, 'success');
+        } catch (error) {
+            console.error('Fehler beim Exportieren des PNG:', error);
+            ui_helpers.showToast(`Fehler beim Exportieren von '${filenameSuffix}' als PNG.`, 'danger');
+        }
+    }
+
+    // Export als SVG (nur für D3.js SVGs)
+    function exportSvg(elementId, kollektiv, type, filenameSuffix = '') {
+        const container = document.getElementById(elementId);
+        if (!container) {
+            console.error(`SVG-Container mit ID '${elementId}' nicht gefunden für SVG Export.`);
+            ui_helpers.showToast('Fehler beim Exportieren als SVG: Element nicht gefunden.', 'danger');
+            return;
+        }
+        
+        const svgElement = container.querySelector('svg');
+        if (!svgElement) {
+            console.error(`SVG-Element nicht gefunden innerhalb des Containers mit ID '${elementId}'.`);
+            ui_helpers.showToast('Fehler beim Exportieren als SVG: SVG-Element nicht gefunden.', 'danger');
+            return;
+        }
+
+        const serializer = new XMLSerializer();
+        let svgString = serializer.serializeToString(svgElement);
+
+        // Hinzufügen des XML-Headers und DTD für standalone SVG
+        svgString = '<?xml version="1.0" standalone="no"?>\n' +
+                    '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n' +
+                    svgString;
+
+        const filename = generateFilename(type, kollektiv, null, filenameSuffix, filenameSuffix);
+        downloadFile(svgString, filename, 'image/svg+xml;charset=utf-8;');
+        ui_helpers.showToast(`'${filename}' erfolgreich exportiert!`, 'success');
+    }
+
+    // Bündel-Export als ZIP-Archiv
+    async function exportCategoryZip(category, allRawData, bruteForceResults, currentKollektiv, appliedCriteria, appliedLogic) {
+        const zip = new JSZip();
+        const date = getCurrentDateString(APP_CONFIG.EXPORT.DATE_FORMAT);
+        const kollektivFormatted = currentKollektiv.replace(/\s+/g, '_');
+        const filename = APP_CONFIG.EXPORT.FILENAME_TEMPLATE
+                            .replace('{TYPE}', APP_CONFIG.EXPORT.FILENAME_TYPES[`ZIP_${category.toUpperCase()}`] || `Export_${category}`)
+                            .replace('{KOLLEKTIV}', kollektivFormatted)
+                            .replace('{DATE}', date)
+                            .replace('{EXT}', 'zip');
+
+        ui_helpers.showToast(`Erstelle ZIP-Archiv für '${category}'...`, 'info', 5000);
+
+        try {
+            const dataForKollektiv = dataManager.filterDataByKollektiv(allRawData, currentKollektiv);
+            const evaluatedDataForKollektiv = t2CriteriaManager.evaluateDataset(dataForKollektiv, appliedCriteria, appliedLogic);
+            const allStats = statisticsService.calculateAllStatsForPublication(allRawData, appliedCriteria, appliedLogic, bruteForceResults);
+            const currentStats = allStats[currentKollektiv];
+            const currentKollektivStatsForPub = allStats[currentKollektiv];
+
+            switch (category) {
+                case 'csv':
+                    if (currentStats) {
+                        const statsCsvContent = statisticsService.getAllStatsAsCSV(currentStats, currentKollektiv, appliedCriteria, appliedLogic, bruteForceResults);
+                        zip.file(generateFilename(APP_CONFIG.EXPORT.FILENAME_TYPES.STATS_CSV, currentKollektiv), statsCsvContent);
+                    }
+                    if (evaluatedDataForKollektiv) {
+                        const patientDataColumns = [
+                            { key: 'nr', label: 'Nr' }, { key: 'name', label: 'Name' }, { key: 'vorname', label: 'Vorname' },
+                            { key: 'geschlecht', label: 'Geschlecht' }, { key: 'alter', label: 'Alter' }, { key: 'therapie', label: 'Therapie' },
+                            { key: 'n', label: 'N_Status_Patho' }, { key: 'as', label: 'AS_Status' }, { key: 't2', label: 'T2_Status_Applied' },
+                            { key: 'anzahl_patho_n_plus_lk', label: 'Anzahl_Patho_Nplus_LK' }, { key: 'anzahl_patho_lk', label: 'Anzahl_Patho_LK_Gesamt' },
+                            { key: 'anzahl_as_plus_lk', label: 'Anzahl_ASplus_LK' }, { key: 'anzahl_as_lk', label: 'Anzahl_AS_LK_Gesamt' },
+                            { key: 'anzahl_t2_plus_lk', label: 'Anzahl_T2plus_LK_Applied' }, { key: 'anzahl_t2_lk', label: 'Anzahl_T2_LK_Gesamt' },
+                            { key: 'bemerkung', label: 'Bemerkung' }
+                        ];
+                        const patientDataCsvContent = dataToCSV(evaluatedDataForKollektiv, patientDataColumns, APP_CONFIG.EXPORT.CSV_DELIMITER);
+                        zip.file(generateFilename(APP_CONFIG.EXPORT.FILENAME_TYPES.FILTERED_DATA_CSV, currentKollektiv), patientDataCsvContent);
+                    }
                     break;
-                case 'auswertung-tab':
-                    contentHTML = auswertungTab.render(currentData, t2CriteriaManager.getCurrentCriteria(), t2CriteriaManager.getCurrentLogic(), state.auswertungTableSort, state.currentKollektiv);
+
+                case 'md':
+                    if (currentStats) {
+                        const deskriptivMdContent = publicationTextGenerator.getSectionText('ergebnisse_patientencharakteristika', 'de', allStats, { bruteForceMetricForPublication: 'Balanced Accuracy' });
+                        zip.file(generateFilename(APP_CONFIG.EXPORT.FILENAME_TYPES.DESKRIPTIV_MD, currentKollektiv), deskriptivMdContent);
+                    }
+                    const dataTabContent = dataTab.render(evaluatedDataForKollektiv, { key: null, direction: 'asc' });
+                    const dataTable = document.createElement('div');
+                    dataTable.innerHTML = dataTabContent;
+                    zip.file(generateFilename(APP_CONFIG.EXPORT.FILENAME_TYPES.DATEN_MD, currentKollektiv), common.convertHtmlTableToMarkdown(dataTable.querySelector('#daten-table')));
+
+                    const auswertungTabContent = auswertungTab.render(evaluatedDataForKollektiv, appliedCriteria, appliedLogic, { key: null, direction: 'asc' }, currentKollektiv);
+                    const auswertungTable = document.createElement('div');
+                    auswertungTable.innerHTML = auswertungTabContent;
+                    zip.file(generateFilename(APP_CONFIG.EXPORT.FILENAME_TYPES.AUSWERTUNG_MD, currentKollektiv), common.convertHtmlTableToMarkdown(auswertungTable.querySelector('#auswertung-table')));
+
+                    const publicationTextContent = publicationRenderer.renderSectionContent('all', 'de', allStats, { bruteForceMetricForPublication: PUBLICATION_CONFIG.defaultBruteForceMetricForPublication }, { currentKollektiv: currentKollektiv });
+                    zip.file(generateFilename(APP_CONFIG.EXPORT.FILENAME_TYPES.PUBLICATION_FULL_MD, currentKollektiv), publicationTextContent);
                     break;
-                case 'statistik-tab':
-                    contentHTML = statistikTab.render(allData, state.currentStatsLayout, state.currentStatsKollektiv1, state.currentStatsKollektiv2, state.currentKollektiv);
+
+                case 'png':
+                case 'svg':
+                    const chartIds = [
+                        'chart-dash-age', 'chart-dash-gender', 'chart-dash-therapy',
+                        'chart-dash-status-n', 'chart-dash-status-as', 'chart-dash-status-t2',
+                        'matrix-AS-0', 'roc-AS-0', 'matrix-T2-0', 'roc-T2-0',
+                        'matrix-AS-1', 'roc-AS-1', 'matrix-T2-1', 'roc-T2-1',
+                        'praes-as-pur-perf-chart', 'praes-comp-chart-container'
+                    ];
+                    
+                    const tableIds = [
+                        'praes-as-pur-perf-table', 'praes-as-vs-t2-comp-table', 'praes-as-vs-t2-test-table'
+                    ];
+
+                    for (const id of chartIds) {
+                        const element = document.getElementById(id);
+                        if (element && element.querySelector('svg')) {
+                            const filename = id.includes('dash') ? `Dashboard_${id.replace('chart-dash-', '')}` : id;
+                            if (category === 'png') {
+                                const canvas = await html2canvas(element, { scale: APP_CONFIG.EXPORT.TABLE_PNG_SCALE, useCORS: true, logging: false });
+                                zip.file(generateFilename(APP_CONFIG.EXPORT.FILENAME_TYPES.CHART_PNG, currentKollektiv, null, filename), canvas.toDataURL('image/png').split('base64,')[1], { base64: true });
+                            } else { // SVG
+                                const svgElement = element.querySelector('svg');
+                                const serializer = new XMLSerializer();
+                                let svgString = serializer.serializeToString(svgElement);
+                                svgString = '<?xml version="1.0" standalone="no"?>\n' +
+                                            '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n' +
+                                            svgString;
+                                zip.file(generateFilename(APP_CONFIG.EXPORT.FILENAME_TYPES.CHART_SVG, currentKollektiv, null, filename), svgString);
+                            }
+                        }
+                    }
+
+                    if (category === 'png') {
+                        for (const id of tableIds) {
+                            const element = document.getElementById(id);
+                             if (element) {
+                                const filename = id.replace('praes-', '').replace('-table', '');
+                                const canvas = await html2canvas(element, { scale: APP_CONFIG.EXPORT.TABLE_PNG_SCALE, useCORS: true, logging: false });
+                                zip.file(generateFilename(APP_CONFIG.EXPORT.FILENAME_TYPES.TABLE_PNG, currentKollektiv, null, filename), canvas.toDataURL('image/png').split('base64,')[1], { base64: true });
+                            }
+                        }
+                    }
                     break;
-                case 'praesentation-tab':
-                    contentHTML = praesentationTab.render(state.currentPresentationView, state.currentPresentationStudyId, state.currentKollektiv, allData);
-                    break;
-                case 'publikation-tab':
-                    contentHTML = publikationTab.render(allData, bfResults, state.currentPublikationLang, state.currentPublikationSection, state.currentPublikationBruteForceMetric);
-                    break;
-                case 'export-tab':
-                    contentHTML = exportTab.render(state.currentKollektiv);
+                case 'all':
+                    // Rekursiver Aufruf, um alle Kategorien zu zippen
+                    await exportCategoryZip('csv', allRawData, bruteForceResults, currentKollektiv, appliedCriteria, appliedLogic).then(csvZip => {
+                        zip.file('csv_exports.zip', csvZip);
+                    });
+                    await exportCategoryZip('md', allRawData, bruteForceResults, currentKollektiv, appliedCriteria, appliedLogic).then(mdZip => {
+                        zip.file('markdown_exports.zip', mdZip);
+                    });
+                    await exportCategoryZip('png', allRawData, bruteForceResults, currentKollektiv, appliedCriteria, appliedLogic).then(pngZip => {
+                        zip.file('png_exports.zip', pngZip);
+                    });
+                    await exportCategoryZip('svg', allRawData, bruteForceResults, currentKollektiv, appliedCriteria, appliedLogic).then(svgZip => {
+                        zip.file('svg_exports.zip', svgZip);
+                    });
+                    // Direkte Dateien hinzufügen, die nicht in Kategorien fallen
+                    if (bruteForceResults && bruteForceResults[currentKollektiv]) {
+                        const bfReportContent = bruteForceManager.getBruteForceReportContent(bruteForceResults[currentKollektiv], currentKollektiv, 'de');
+                        zip.file(generateFilename(APP_CONFIG.EXPORT.FILENAME_TYPES.BRUTEFORCE_TXT, currentKollektiv), bfReportContent);
+                    }
                     break;
                 default:
-                    contentHTML = `<p class="text-warning">Unbekannter Tab: ${tabId}</p>`;
+                    ui_helpers.showToast(`Unbekannte Export-Kategorie: ${category}`, 'danger');
+                    return;
             }
-            container.innerHTML = contentHTML;
-            _postRender(tabId, currentData, allData, bfResults);
+
+            zip.generateAsync({ type: "blob" }).then(content => {
+                downloadFile(content, filename, 'application/zip');
+                ui_helpers.showToast(`ZIP-Archiv '${filename}' erfolgreich erstellt und heruntergeladen.`, 'success', 5000);
+            }).catch(error => {
+                console.error("Fehler beim Erstellen des ZIP-Archivs:", error);
+                ui_helpers.showToast('Fehler beim Erstellen des ZIP-Archivs.', 'danger');
+            });
+
         } catch (error) {
-            container.innerHTML = `<div class="alert alert-danger m-3">Fehler beim Laden des Tabs ${tabId}: ${error.message}</div>`;
+            console.error(`Fehler beim Exportieren der Kategorie '${category}':`, error);
+            ui_helpers.showToast(`Fehler beim Exportieren der Kategorie '${category}'.`, 'danger');
         }
     }
 
-    function _postRender(tabId, currentData, allData, bfResults) {
-        tooltip.init(document.getElementById(`${tabId}-pane`));
-        
-        switch (tabId) {
-            case 'daten-tab':
-            case 'auswertung-tab':
-                uiManager.attachCollapseEventListeners(`#${tabId}-body`);
-                if(tabId === 'auswertung-tab') {
-                    _updateAuswertungDashboard(currentData);
-                }
-                break;
-            case 'statistik-tab':
-                _updateStatistikCharts(allData);
-                break;
-            case 'publikation-tab':
-                const scrollSpyTarget = document.querySelector(CONSTANTS.SELECTORS.PUBLIKATION_SECTIONS_NAV);
-                if (scrollSpyTarget) {
-                    new bootstrap.ScrollSpy(document.body, {
-                        target: CONSTANTS.SELECTORS.PUBLIKATION_SECTIONS_NAV,
-                        offset: 150
-                    });
-                }
-                break;
-        }
-    }
 
-    function _updateAuswertungDashboard(data) {
-        const stats = statisticsService.calculateDescriptiveStats(data);
-        if (!stats) return;
-        
-        charts.renderAgeDistributionChart(stats.alter.alterData, 'chart-dash-age');
-        charts.renderPieChart([{label: 'm', value: stats.geschlecht.m}, {label: 'w', value: stats.geschlecht.f}], 'chart-dash-gender');
-        charts.renderPieChart([{label: 'direkt OP', value: stats.therapie['direkt OP']}, {label: 'nRCT', value: stats.therapie.nRCT}], 'chart-dash-therapy');
-        charts.renderPieChart([{label: 'N+', value: stats.nStatus.plus}, {label: 'N-', value: stats.nStatus.minus}], 'chart-dash-status-n');
-        charts.renderPieChart([{label: 'AS+', value: stats.asStatus.plus}, {label: 'AS-', value: stats.asStatus.minus}], 'chart-dash-status-as');
-        charts.renderPieChart([{label: 'T2+', value: stats.t2Status.plus}, {label: 'T2-', value: stats.t2Status.minus}], 'chart-dash-status-t2');
-    }
-
-    function _updateStatistikCharts(allData) {
-        const state = appState.getState();
-        const kollektiveToRender = state.currentStatsLayout === 'einzel' ? [state.currentKollektiv] : [state.currentStatsKollektiv1, state.currentStatsKollektiv2];
-        
-        kollektiveToRender.forEach((kolId, index) => {
-            const data = dataManager.filterDataByKollektiv(allData, kolId);
-            const stats = statisticsService.calculateAllStatsForPublication(data, t2CriteriaManager.getAppliedCriteria(), t2CriteriaManager.getAppliedLogic(), bruteForceManager.getAllResults())[kolId];
-            if(stats){
-                charts.renderConfusionMatrix(stats.gueteAS.matrix, `matrix-AS-${index}`);
-                charts.renderROCCurve(stats.rocAS, `roc-AS-${index}`, { auc: stats.gueteAS.auc.value });
-                charts.renderConfusionMatrix(stats.gueteT2_angewandt.matrix, `matrix-T2-${index}`);
-                charts.renderROCCurve(stats.rocT2, `roc-T2-${index}`, { auc: stats.gueteT2_angewandt.auc.value, color: APP_CONFIG.CHART_SETTINGS.T2_COLOR });
-            }
-        });
-    }
-
-    function _handleTabChange(event) {
-        if(event.target.id){
-            appState.setActiveTabId(event.target.id);
-            _renderTabContent(event.target.id);
-        }
-    }
-    
-    function _handleAppEvents(event) {
-        const target = event.target;
-        const kollektivBtn = target.closest('[data-kollektiv]');
-        const sortHeader = target.closest('th[data-sort-key]');
-        
-        if (kollektivBtn) {
-            _mainAppInterface.handleGlobalKollektivChange(kollektivBtn.dataset.kollektiv);
-            return;
-        }
-
-        if(sortHeader){
-            const subKey = target.closest('.sortable-sub-header')?.dataset.subKey || null;
-            _mainAppInterface.handleSortRequest(sortHeader.closest('table').id.includes('daten') ? 'daten' : 'auswertung', sortHeader.dataset.sortKey, subKey);
-            return;
-        }
-
-        // Delegating to specific handlers
-        if(target.closest(CONSTANTS.SELECTORS.AUSWERTUNG_TAB_PANE)) auswertungEventHandlers.handle(event, _mainAppInterface);
-        if(target.closest(CONSTANTS.SELECTORS.STATISTIK_TAB_PANE)) statistikEventHandlers.handle(event, _mainAppInterface);
-        if(target.closest(CONSTANTS.SELECTORS.PRAESENTATION_TAB_PANE)) praesentationEventHandlers.handle(event, _mainAppInterface);
-        if(target.closest(CONSTANTS.SELECTORS.PUBLIKATION_TAB_PANE)) publikationEventHandlers.handle(event, _mainAppInterface);
-        if(target.closest(CONSTANTS.SELECTORS.EXPORT_TAB_PANE)) exportEventHandlers.handle(event, _mainAppInterface);
-
-        generalEventHandlers.handle(event, _mainAppInterface);
-    }
-    
-    function attachCollapseEventListeners(tableBodySelector) {
-        const tableBody = document.querySelector(tableBodySelector);
-        if (tableBody) {
-            tableBody.addEventListener('show.bs.collapse', e => {
-                const triggerRow = e.target.closest('tr.sub-row')?.previousElementSibling;
-                triggerRow?.querySelector('.row-toggle-icon')?.classList.replace('fa-chevron-down', 'fa-chevron-up');
-            });
-            tableBody.addEventListener('hide.bs.collapse', e => {
-                const triggerRow = e.target.closest('tr.sub-row')?.previousElementSibling;
-                triggerRow?.querySelector('.row-toggle-icon')?.classList.replace('fa-chevron-up', 'fa-chevron-down');
-            });
-        }
-    }
-
-    function init(mainAppInterface) {
-        _mainAppInterface = mainAppInterface;
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelector(CONSTANTS.SELECTORS.MAIN_TAB_NAV).addEventListener('show.bs.tab', _handleTabChange);
-            document.body.addEventListener('click', _handleAppEvents);
-            document.body.addEventListener('change', _handleAppEvents); // For select, checkbox, radio
-            document.body.addEventListener('input', _handleAppEvents); // For range slider
-
-            const initialTab = appState.getActiveTabId() || 'publikation-tab';
-            const tabEl = document.getElementById(initialTab);
-            if (tabEl) {
-                new bootstrap.Tab(tabEl).show();
-            } else {
-                new bootstrap.Tab(document.getElementById('publikation-tab')).show();
-            }
-            _updateHeaderUI();
-        });
-    }
-    
     return Object.freeze({
-        init,
-        renderTab: _renderTabContent,
-        updateHeader: _updateHeaderUI,
-        attachCollapseEventListeners
+        exportCSV,
+        exportMarkdown,
+        exportText,
+        exportPng,
+        exportSvg,
+        exportCategoryZip
     });
+
 })();
