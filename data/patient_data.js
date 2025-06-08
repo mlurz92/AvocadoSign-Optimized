@@ -4935,7 +4935,7 @@ export const patientData = [
         signal: "signalarm",
       },
     ],
-    alter: 62, // Adjusted age calculation slightly based on exact date
+    alter: 62, 
   },
   {
     nr: 89,
