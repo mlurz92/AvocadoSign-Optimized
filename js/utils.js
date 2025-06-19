@@ -301,15 +301,17 @@ function getORInterpretation(orValue) {
 }
 
 function escapeHTML(text) {
-    if (typeof text !== 'string') return text === null ? '' : String(text);
+    const str = String(text ?? '');
+
     const map = {
         '&': '&amp;',
         '<': '&lt;',
         '>': '&gt;',
         '"': '&quot;',
-        "'": '&#39;' // Using &#39; for better compatibility than &apos;
+        "'": '&#39;'
     };
-    return text.replace(/[&<>"']/g, match => map[match]);
+
+    return str.replace(/[&<>"']/g, match => map[match]);
 }
 
 function getDefinitionTooltip(metricKey) {

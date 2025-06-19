@@ -15,7 +15,7 @@ class App {
             
             Object.entries(this.libraryStatus).forEach(([lib, status]) => {
                 if (!status && ['JSZip', 'htmlToDocx', 'html2canvas'].includes(lib)) {
-                     window.uiManager.showToast(`Warning: Library '${lib}' failed to load. Some export features may be unavailable.`, 'warning', 5000);
+                     window.uiManager.showToast(`Warning: Library '${lib}' failed to load. Some features may be unavailable.`, 'warning', 5000);
                 }
             });
 
@@ -63,14 +63,14 @@ class App {
             const internalModules = { 
                 state: window.state, t2CriteriaManager: window.t2CriteriaManager, studyT2CriteriaManager: window.studyT2CriteriaManager, 
                 dataProcessor: window.dataProcessor, statisticsService: window.statisticsService, bruteForceManager: window.bruteForceManager, 
-                exportService: window.exportService, publicationHelpers: window.publicationHelpers, titlePageGenerator: window.titlePageGenerator, 
+                publicationHelpers: window.publicationHelpers, titlePageGenerator: window.titlePageGenerator, 
                 abstractGenerator: window.abstractGenerator, introductionGenerator: window.introductionGenerator, methodsGenerator: window.methodsGenerator, 
                 resultsGenerator: window.resultsGenerator, discussionGenerator: window.discussionGenerator, referencesGenerator: window.referencesGenerator, 
                 stardGenerator: window.stardGenerator, publicationService: window.publicationService, uiManager: window.uiManager, 
                 uiComponents: window.uiComponents, tableRenderer: window.tableRenderer, chartRenderer: window.chartRenderer, 
                 flowchartRenderer: window.flowchartRenderer, dataTab: window.dataTab, analysisTab: window.analysisTab, 
                 statisticsTab: window.statisticsTab, comparisonTab: window.comparisonTab, publicationTab: window.publicationTab, 
-                exportTab: window.exportTab, eventManager: window.eventManager, APP_CONFIG: window.APP_CONFIG, 
+                eventManager: window.eventManager, APP_CONFIG: window.APP_CONFIG, 
                 PUBLICATION_CONFIG: window.PUBLICATION_CONFIG
             };
             for (const dep in internalModules) {
@@ -84,11 +84,7 @@ class App {
 
             const librariesToWaitFor = {
                 d3: () => !!window.d3,
-                tippy: () => !!window.tippy,
-                Papa: () => !!window.Papa,
-                JSZip: () => !!window.JSZip,
-                htmlToDocx: () => !!window.htmlToDocx,
-                html2canvas: () => !!window.html2canvas
+                tippy: () => !!window.tippy
             };
 
             const pollInterval = 100;
@@ -240,9 +236,6 @@ class App {
         } else if (activeTabId === 'publication') {
             window.uiManager.updatePublicationUI(window.state.getPublicationSection(), window.state.getPublicationBruteForceMetric());
         }
-        
-        const bfResults = window.bruteForceManager.getAllResults();
-        window.uiManager.updateExportButtonStates(activeTabId, !!bfResults && Object.keys(bfResults).length > 0, this.currentCohortData.length > 0, this.libraryStatus);
     }
 
     processTabChange(tabId) {
@@ -276,7 +269,6 @@ class App {
             case 'statistics': window.uiManager.renderTabContent('statistics', () => window.statisticsTab.render(this.processedData, criteria, logic, window.state.getStatsLayout(), window.state.getStatsCohort1(), window.state.getStatsCohort2(), globalCohort)); break;
             case 'comparison': window.uiManager.renderTabContent('comparison', () => window.comparisonTab.render(window.state.getComparisonView(), currentComparisonData, window.state.getComparisonStudyId(), globalCohort, this.processedData, criteria, logic)); break;
             case 'publication': window.uiManager.renderTabContent('publication', () => window.publicationTab.render(publicationData, window.state.getPublicationSection())); break;
-            case 'export': window.uiManager.renderTabContent('export', () => window.exportTab.render(globalCohort)); break;
         }
     }
 
@@ -366,35 +358,6 @@ class App {
         window.uiManager.initializeTooltips(document.getElementById('brute-force-modal-body'));
         if (this.bruteForceModal) {
             this.bruteForceModal.show();
-        }
-    }
-    
-    handleSingleExport(exportType) {
-        const cohort = window.state.getActiveCohortId();
-        const data = this.processedData;
-        const bfResults = window.bruteForceManager.getAllResults();
-        const criteria = window.t2CriteriaManager.getAppliedCriteria();
-        const logic = window.t2CriteriaManager.getAppliedLogic();
-        
-        const currentFilteredData = window.dataProcessor.filterDataByCohort(data, cohort);
-        const evaluatedCurrentFilteredData = window.t2CriteriaManager.evaluateDataset(currentFilteredData, criteria, logic);
-        
-        const exporter = {
-            'stats-csv': () => window.exportService.exportStatistikCSV(this.allPublicationStats[cohort], cohort, criteria, logic),
-            'bruteforce-txt': () => {
-                const metric = document.getElementById('brute-force-metric')?.value;
-                window.exportService.exportBruteForceReport(bfResults[cohort] ? bfResults[cohort][metric] : null)
-            },
-            'datatable-md': () => window.exportService.exportTableMarkdown(currentFilteredData, 'daten', cohort),
-            'analysistable-md': () => window.exportService.exportTableMarkdown(evaluatedCurrentFilteredData, 'auswertung', cohort, criteria, logic),
-            'filtered-data-csv': () => window.exportService.exportFilteredDataCSV(currentFilteredData, cohort),
-            'comprehensive-report-html': () => window.exportService.exportComprehensiveReportHTML(data, bfResults, cohort, criteria, logic)
-        };
-
-        if (exporter[exportType]) {
-            exporter[exportType]();
-        } else {
-            window.uiManager.showToast(`Export type '${exportType}' not recognized.`, 'warning');
         }
     }
 

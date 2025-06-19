@@ -1,35 +1,58 @@
 window.uiComponents = (() => {
 
     function createHeaderButtonHTML(buttons, targetId, defaultTitle = 'Element') {
-        let headerButtonHtml = '';
-        if (buttons && buttons.length > 0 && targetId) {
-            headerButtonHtml = buttons.map(btn => {
-                const btnId = btn.id || `dl-${targetId.replace(/[^a-zA-Z0-9_-]/g, '')}-${btn.format || 'action'}`;
-                const iconClass = btn.icon || 'fa-download';
-                let tooltip = btn.tooltip || `Download as ${String(btn.format || 'action').toUpperCase()}`;
-
-                const safeDefaultTitle = String(defaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
-                const safeChartName = String(btn.chartName || safeDefaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
-                const safeTableName = String(btn.tableName || safeDefaultTitle).replace(/[^a-zA-Z0-9_-\s]/gi, '').substring(0, 50);
-
-                const dataAttributes = [];
-                if (btn.chartId) dataAttributes.push(`data-chart-id="${btn.chartId}"`);
-                if (btn.tableId) dataAttributes.push(`data-table-id="${btn.tableId}"`);
-                if (btn.tableName) dataAttributes.push(`data-table-name="${safeTableName.replace(/\s/g, '_')}"`);
-                else if (btn.chartId) dataAttributes.push(`data-chart-name="${safeChartName.replace(/\s/g, '_')}"`);
-                else dataAttributes.push(`data-default-name="${safeDefaultTitle.replace(/\s/g, '_')}"`);
-                if (btn.format) dataAttributes.push(`data-format="${btn.format}"`);
-
-                return `<button class="btn btn-sm btn-outline-secondary p-0 px-1 border-0 ${btn.tableId ? 'table-download-png-btn' : (btn.chartId ? 'chart-download-btn' : '')}" id="${btnId}" ${dataAttributes.join(' ')} data-tippy-content="${tooltip}"><i class="fas ${iconClass}"></i></button>`;
-            }).join('');
+        if (!Array.isArray(buttons) || buttons.length === 0) {
+            return '';
         }
-        return headerButtonHtml;
+
+        const sanitizedFilename = defaultTitle.replace(/[^a-z0-9]/gi, '_').replace(/_{2,}/g, '_');
+
+        return buttons.map(button => {
+            if (!button || !button.type) return '';
+            let buttonHTML = '';
+            switch (button.type) {
+                case 'download-png':
+                    buttonHTML = `<button class="btn btn-sm btn-outline-secondary p-0 px-2" 
+                                        data-action="download-chart-png" 
+                                        data-target-id="${targetId}" 
+                                        data-filename="${sanitizedFilename}.png" 
+                                        data-tippy-content="Download as PNG">
+                                    <i class="fas fa-file-image"></i>
+                                </button>`;
+                    break;
+                case 'download-svg':
+                     buttonHTML = `<button class="btn btn-sm btn-outline-secondary p-0 px-2" 
+                                        data-action="download-chart-svg" 
+                                        data-target-id="${targetId}" 
+                                        data-filename="${sanitizedFilename}.svg" 
+                                        data-tippy-content="Download as SVG">
+                                    <i class="fas fa-file-code"></i>
+                                 </button>`;
+                    break;
+                case 'download-csv':
+                     buttonHTML = `<button class="btn btn-sm btn-outline-secondary p-0 px-2" 
+                                        data-action="download-table-csv" 
+                                        data-target-id="${targetId}" 
+                                        data-filename="${sanitizedFilename}.csv" 
+                                        data-tippy-content="Download as CSV">
+                                    <i class="fas fa-file-csv"></i>
+                                 </button>`;
+                    break;
+            }
+            return buttonHTML;
+        }).join('');
     }
 
     function createDashboardCard(title, content, chartId = null, cardClasses = '', headerClasses = '', bodyClasses = '', downloadButtons = [], cohortDisplayName = '') {
         const headerButtonHtml = createHeaderButtonHTML(downloadButtons, chartId || title.replace(/[^a-z0-9]/gi, '_'), title);
-        const tooltipKey = chartId ? chartId.replace(/^chart-dash-/, '') : title.toLowerCase().replace(/\s+/g, '');
-        let tooltipContent = window.APP_CONFIG.UI_TEXTS.tooltips.descriptiveStatistics[tooltipKey]?.description || title || '';
+        const tooltipKey = chartId ? chartId.replace(/^chart-dash-/, '').replace(/-/g, '') : title.toLowerCase().replace(/\s+/g, '');
+        
+        const tooltipConfig = window.APP_CONFIG.UI_TEXTS.tooltips.descriptiveStatistics;
+        let tooltipContent = title || '';
+        if (tooltipConfig && tooltipConfig[tooltipKey] && tooltipConfig[tooltipKey].description) {
+            tooltipContent = tooltipConfig[tooltipKey].description;
+        }
+
         if (cohortDisplayName) {
             tooltipContent = tooltipContent.replace('[COHORT]', `<strong>${cohortDisplayName}</strong>`);
         }
@@ -130,7 +153,7 @@ window.uiComponents = (() => {
 
     function createStatisticsCard(id, title, content = '', addPadding = true, tooltipKey = null, downloadButtons = [], tableId = null, cohortId = '') {
         let cardTooltipHtml = `data-tippy-content="${title}"`;
-        if (tooltipKey && window.APP_CONFIG.UI_TEXTS.tooltips[tooltipKey]?.cardTitle) {
+        if (tooltipKey && window.APP_CONFIG.UI_TEXTS.tooltips[tooltipKey] && window.APP_CONFIG.UI_TEXTS.tooltips[tooltipKey].cardTitle) {
             let tooltipTemplate = window.APP_CONFIG.UI_TEXTS.tooltips[tooltipKey].cardTitle;
             let cohortName = cohortId ? getCohortDisplayName(cohortId) : 'the current cohort';
             let finalTooltip = tooltipTemplate.replace('[COHORT]', `<strong>${cohortName}</strong>`);
@@ -438,11 +461,12 @@ window.uiComponents = (() => {
 
     function createAnalysisContextBannerHTML(context, patientCount) {
         if (!context) return '';
-        const { cohortId } = context;
+        const { cohortId, criteriaName } = context;
         const cohortName = getCohortDisplayName(cohortId);
         const count = patientCount ?? '?';
         
         let text = window.APP_CONFIG.UI_TEXTS.analysisContextBanner.text
+            .replace('[CRITERIA_NAME]', criteriaName || 'the selected criteria')
             .replace('[COHORT_NAME]', cohortName)
             .replace('[COUNT]', count);
         

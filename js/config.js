@@ -90,7 +90,8 @@ window.APP_CONFIG = Object.freeze({
         TOOLTIP_DELAY: Object.freeze([300, 100]),
         TOAST_DURATION_MS: 4500,
         TRANSITION_DURATION_MS: 350,
-        STICKY_HEADER_OFFSET: '111px'
+        STICKY_HEADER_OFFSET: '111px',
+        HIDDEN_CHART_CONTAINER_ID: 'hidden-chart-export-container'
     }),
     CHART_SETTINGS: Object.freeze({
         DEFAULT_WIDTH: 450,
@@ -106,38 +107,6 @@ window.APP_CONFIG = Object.freeze({
         TOOLTIP_FONT_SIZE: '11px',
         PLOT_BACKGROUND_COLOR: '#ffffff',
         ENABLE_GRIDLINES: true
-    }),
-    EXPORT_SETTINGS: Object.freeze({
-        DATE_FORMAT: 'YYYYMMDD',
-        FILENAME_TEMPLATE: 'AvocadoSignT2_{TYPE}_{KOLLEKTIV}_{DATE}.{EXT}',
-        TABLE_PNG_EXPORT_SCALE: 2,
-        ENABLE_TABLE_PNG_EXPORT: true,
-        CSV_DELIMITER: ';',
-        FILENAME_TYPES: Object.freeze({
-            STATS_CSV: 'Statistics_CSV',
-            BRUTEFORCE_TXT: 'BruteForce_Report_TXT',
-            DESCRIPTIVE_MD: 'Descriptive_Statistics_MD',
-            DATEN_MD: 'Data_List_MD',
-            AUSWERTUNG_MD: 'Analysis_Table_MD',
-            FILTERED_DATA_CSV: 'Filtered_Data_CSV',
-            COMPREHENSIVE_REPORT_HTML: 'Comprehensive_Report_HTML',
-            CHART_SINGLE_PNG: '{ChartName}_PNG',
-            CHART_SINGLE_SVG: '{ChartName}_SVG',
-            TABLE_PNG_EXPORT: '{TableName}_PNG',
-            COMP_AS_PERF_CSV: 'Comp_AS_Performance_CSV',
-            COMP_AS_PERF_MD: 'Comp_AS_Performance_MD',
-            COMP_AS_VS_T2_PERF_CSV: 'Comp_Performance_ASvsT2_{StudyID}_CSV',
-            COMP_AS_VS_T2_COMP_MD: 'Comp_Metrics_ASvsT2_{StudyID}_MD',
-            COMP_AS_VS_T2_TESTS_MD: 'Comp_Tests_ASvsT2_{StudyID}_MD',
-            CRITERIA_COMPARISON_MD: 'Criteria_Comparison_MD',
-            PUBLICATION_SECTION_MD: 'Publication_Section_{SectionName}_MD',
-            RADIOLOGY_SUBMISSION_ZIP: 'Radiology_Submission_Package_ZIP',
-            ALL_ZIP: 'Complete_Export_ZIP',
-            CSV_ZIP: 'CSV_Package_ZIP',
-            MD_ZIP: 'Markdown_Package_ZIP',
-            PNG_ZIP: 'Image_Package_PNG_ZIP',
-            SVG_ZIP: 'Vector_Package_SVG_ZIP'
-        })
     }),
     REPORT_SETTINGS: Object.freeze({
         REPORT_TITLE: 'Comprehensive Analysis Report',
@@ -162,15 +131,18 @@ window.APP_CONFIG = Object.freeze({
         AVOCADO_SIGN_DISPLAY_NAME: 'Avocado Sign'
     }),
     REFERENCES_FOR_PUBLICATION: Object.freeze({
-        Lurz_Schaefer_2025: { id: 1, text: "Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025. doi:10.1007/s00330-025-11462-y" },
-        Sauer_2004: { id: 2, text: "Sauer R, Becker H, Hohenberger W, et al. Preoperative versus postoperative chemoradiotherapy for rectal cancer. N Engl J Med. 2004;351:1731–1740. doi:10.1056/NEJMoa040694" },
-        Habr_Gama_2019: { id: 3, text: "Habr-Gama A, São Julião GP, Vailati BB, et al. Organ preservation in cT2N0 rectal cancer after neoadjuvant chemoradiation therapy: the impact of radiation therapy dose-escalation and consolidation chemotherapy. Ann Surg. 2019;269:102–107. doi:10.1097/SLA.0000000000002447" },
-        Beets_Tan_2018: { id: 4, text: "Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for clinical management of rectal cancer: updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. Eur Radiol. 2018;28:1465–1475. doi:10.1007/s00330-017-5026-2" },
-        Al_Sukhni_2012: { id: 5, text: "Al-Sukhni E, Milot L, Fruitman M, et al. Diagnostic accuracy of MRI for assessment of T category, lymph node metastases, and circumferential resection margin involvement in patients with rectal cancer: a systematic review and meta-analysis. Ann Surg Oncol. 2012;19:2212–2223. doi:10.1245/s10434-011-2210-5" },
-        Rutegard_2025: { id: 6, text: "Rutegård J, Hallberg L, Carlsson J, Olsson J, Jarnheimer A. Anatomically matched mesorectal nodal structures: evaluation of the 2016 ESGAR consensus criteria. Eur Radiol. 2025. doi:10.1007/s00330-024-11357-1" },
-        Hao_2025: { id: 7, text: "Hao Y, Zheng J, Li W, et al. Ultra-high b-value DWI in rectal cancer: image quality assessment and regional lymph node prediction based on radiomics. Eur Radiol. 2025;35:49–60. doi:10.1007/s00330-024-10958-3" },
+        Sauer_2004: { id: 1, text: "Sauer R, Becker H, Hohenberger W, et al. Preoperative versus postoperative chemoradiotherapy for rectal cancer. N Engl J Med. 2004;351:1731–1740. doi:10.1056/NEJMoa040694" },
+        Habr_Gama_2019: { id: 2, text: "Habr-Gama A, São Julião GP, Vailati BB, et al. Organ preservation in cT2N0 rectal cancer after neoadjuvant chemoradiation therapy: the impact of radiation therapy dose-escalation and consolidation chemotherapy. Ann Surg. 2019;269:102–107. doi:10.1097/SLA.0000000000002447" },
+        Beets_Tan_2018: { id: 3, text: "Beets-Tan RGH, Lambregts DMJ, Maas M, et al. Magnetic resonance imaging for clinical management of rectal cancer: updated recommendations from the 2016 European Society of Gastrointestinal and Abdominal Radiology (ESGAR) consensus meeting. Eur Radiol. 2018;28:1465–1475. doi:10.1007/s00330-017-5026-2" },
+        Al_Sukhni_2012: { id: 4, text: "Al-Sukhni E, Milot L, Fruitman M, et al. Diagnostic accuracy of MRI for assessment of T category, lymph node metastases, and circumferential resection margin involvement in patients with rectal cancer: a systematic review and meta-analysis. Ann Surg Oncol. 2012;19:2212–2223. doi:10.1245/s10434-011-2210-5" },
+        Rutegard_2025: { id: 5, text: "Rutegård J, Hallberg L, Carlsson J, Olsson J, Jarnheimer A. Anatomically matched mesorectal nodal structures: evaluation of the 2016 ESGAR consensus criteria. Eur Radiol. 2025. doi:10.1007/s00330-024-11357-1" },
+        Hao_2025: { id: 6, text: "Hao Y, Zheng J, Li W, et al. Ultra-high b-value DWI in rectal cancer: image quality assessment and regional lymph node prediction based on radiomics. Eur Radiol. 2025;35:49–60. doi:10.1007/s00330-024-10958-3" },
+        Lurz_Schaefer_2025: { id: 7, text: "Lurz M, Schäfer AO. The Avocado Sign: A novel imaging marker for nodal staging in rectal cancer. Eur Radiol. 2025. doi:10.1007/s00330-025-11462-y" },
         Koh_2008: { id: 8, text: "Koh DM, Chau I, Tait D, Wotherspoon A, Cunningham D, Brown G. Evaluating mesorectal lymph nodes in rectal cancer before and after neoadjuvant chemoradiation using thin-section T2-weighted magnetic resonance imaging. Int J Radiat Oncol Biol Phys. 2008;71:456–461. doi:10.1016/j.ijrobp.2007.10.016" },
-        Barbaro_2024: { id: 9, text: "Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: a single center experience. Radiother Oncol. 2024;193:110124. doi:10.1016/j.radonc.2024.110124" }
+        Barbaro_2024: { id: 9, text: "Barbaro B, Carafa MRP, Minordi LM, et al. Magnetic resonance imaging for assessment of rectal cancer nodes after chemoradiotherapy: a single center experience. Radiother Oncol. 2024;193:110124. doi:10.1016/j.radonc.2024.110124" },
+        Schrag_2023: { id: 10, text: "Schrag D, Shi Q, Weiser MR, et al. Preoperative treatment of locally advanced rectal cancer. N Engl J Med. 2023;389:322–334. doi:10.1056/NEJMoa2303269" },
+        Garcia_Aguilar_2022: { id: 11, text: "Garcia-Aguilar J, Patil S, Gollub MJ, et al. Organ preservation in patients with rectal adenocarcinoma treated with total neoadjuvant therapy. J Clin Oncol. 2022;40:2546–2556. doi:10.1200/JCO.22.00032" },
+        Horvat_2019: { id: 12, text: "Horvat N, Carlos Tavares Rocha C, Oliveira B, et al. MRI of rectal cancer: radiomics analysis to predict lymph node metastasis and tumor response to neoadjuvant therapy. Radiology. 2019;292(3):633-643. doi:10.1148/radiol.2019182622" }
     }),
     UI_TEXTS: Object.freeze({
         analysisContextBanner: {
@@ -297,14 +269,6 @@ window.APP_CONFIG = Object.freeze({
                     not_significant: "not statistically significant"
                 }
             },
-            descriptiveStatistics: {
-                ageDistribution: { description: "Histogram showing the distribution of patient ages in the [COHORT] cohort." },
-                genderDistribution: { description: "Pie chart illustrating the distribution of male and female patients in the [COHORT] cohort." },
-                therapyDistribution: { description: "Pie chart showing the distribution of treatment approaches in the [COHORT] cohort." },
-                statusN: { description: "Distribution of final pathological N-Status in the [COHORT] cohort." },
-                statusAS: { description: "Distribution of the Avocado Sign status in the [COHORT] cohort." },
-                statusT2: { description: "Distribution of the T2-criteria status based on current settings in the [COHORT] cohort." }
-            },
             dataTab: {
                 nr: "Patient's sequential ID number.",
                 name: "Patient's last name (anonymized/coded).",
@@ -328,29 +292,24 @@ window.APP_CONFIG = Object.freeze({
                 expandAll: "Expand or collapse the detail view of the evaluated T2-weighted lymph nodes and the fulfilled criteria for all patients in the current table view.",
                 expandRow: "Click here or the arrow button to show/hide the detailed evaluation of this patient's individual T2-weighted lymph nodes according to the currently applied criteria. Fulfilled positive criteria are highlighted."
             },
+            descriptiveStatistics: {
+                'age': { description: 'Distribution of patient ages in the [COHORT] cohort.' },
+                'gender': { description: 'Distribution of patient sex in the [COHORT] cohort.' },
+                'therapy': { description: 'Distribution of pre-surgical therapy in the [COHORT] cohort.' },
+                'status-n': { description: 'Distribution of final histopathological N-Status in the [COHORT] cohort.' },
+                'status-as': { description: 'Distribution of Avocado Sign status in the [COHORT] cohort.' },
+                'status-t2': { description: 'Distribution of T2-weighted criteria status in the [COHORT] cohort.' },
+                'criteriaComparisonTable': { cardTitle: 'Comparison of diagnostic performance between the Avocado Sign and various T2-weighted criteria sets for the [COHORT] cohort. P-values represent the statistical comparison of each set\'s AUC against the Avocado Sign\'s AUC.' }
+            },
             t2Logic: { description: "Logical operator for active T2 criteria: <strong>AND</strong> (A lymph node is positive only if ALL active criteria are met). <strong>OR</strong> (A lymph node is positive if AT LEAST ONE active criterion is met). The choice affects the T2 status calculation." },
             t2Size: { description: "Size criterion (short axis): Lymph nodes with a diameter <strong>greater than or equal to (≥)</strong> the set threshold are considered suspicious. Adjustable range: [MIN] - [MAX] mm (step: [STEP] mm). Enable/disable with checkbox." },
             t2Shape: { description: "Shape criterion: Select which shape ('round' or 'oval') is considered suspicious. Enable/disable with checkbox." },
             t2Border: { description: "Border criterion: Select which border ('sharp' or 'irregular') is considered suspicious. Enable/disable with checkbox." },
-            t2Homogeneity: { description: "Homogeneity criterion: Select whether 'homogeneous' or 'heterogeneous' internal signal on T2w is considered suspicious. Enable/disable with checkbox." },
+            t2Homogeneity: { description: "Homogeneity criterion: Select whether 'homogeneous' or 'heterogeneous' internal signal on T2w is considered suspicious. Nodes with non-assessable signal (value 'null') never fulfill this criterion. Enable/disable with checkbox." },
             t2Signal: { description: "Signal criterion: Select which T2 signal intensity ('low', 'intermediate', or 'high') relative to surrounding muscle is considered suspicious. Nodes with non-assessable signal (value 'null') never fulfill this criterion. Enable/disable with checkbox." },
             t2Actions: {
                 reset: "Resets the logic and all criteria to their default settings. The changes are not yet applied.",
                 apply: "Apply the currently set T2 criteria and logic to the entire dataset. This updates the T2 columns in the tables, all statistical analyses, and charts. The setting is also saved for future sessions."
-            },
-            exportTab: {
-                description: "Allows exporting analysis results, tables, and charts based on the currently selected global cohort ([COHORT]) and the currently applied T2 criteria.",
-                statscsv: { description: "Detailed table of all calculated statistical metrics (descriptive, AS & T2 performance, comparisons, associations) from the Statistics tab as a CSV file.", type: 'STATS_CSV', ext: "csv" },
-                bruteforcetxt: { description: "Detailed report of the last brute-force optimization for the current cohort (Top 10 results, configuration) as a text file (.txt), if performed.", type: 'BRUTEFORCE_TXT', ext: "txt" },
-                datamd: { description: "Current data list (Data tab) as a Markdown table (.md).", type: 'DATA_MD', ext: "md" },
-                analysismd: { description: "Current analysis table (Analysis tab, incl. T2 results) as a Markdown (.md) file.", type: 'ANALYSIS_MD', ext: "md" },
-                filtereddatacsv: { description: "Raw data of the currently selected cohort (incl. T2 evaluation) as a CSV file (.csv).", type: 'FILTERED_DATA_CSV', ext: "csv" },
-                comprehensivereport_html: { description: "Comprehensive analysis report as an HTML file (statistics, configurations, charts), printable.", type: 'COMPREHENSIVE_REPORT_HTML', ext: "html" },
-                allzip: { description: "All available single files (Statistics CSV, BruteForce TXT, all MDs, Raw Data CSV, HTML Report) in one ZIP archive.", type: 'ALL_ZIP', ext: "zip"},
-                csvzip: { description: "All available CSV files (Statistics, Raw Data) in one ZIP archive.", type: 'CSV_ZIP', ext: "zip"},
-                mdzip: { description: "All available Markdown files (Descriptive, Data, Analysis, Publication Texts) in one ZIP archive.", type: 'MD_ZIP', ext: "md"},
-                pngzip: { description: "All currently visible charts (Statistics, Analysis, Comparison) and selected tables as individual PNG files (ZIP archive).", type: 'PNG_ZIP', ext: "zip" },
-                svgzip: { description: "All currently visible charts (Statistics, Analysis, Comparison) as individual SVG files (ZIP archive).", type: 'SVG_ZIP', ext: "zip"}
             }
         })
     }),
@@ -477,7 +436,7 @@ window.PUBLICATION_CONFIG = Object.freeze({
                 signal: { active: false }
             },
             studyInfo: {
-                reference: 'Rutegård et al. [6]',
+                reference: 'Rutegård et al. [5]',
                 patientCohort: 'Surgery Alone (n=46)',
                 investigationType: 'Prospective, Node-by-Node',
                 focus: 'Validation of combined ESGAR 2016 criteria',

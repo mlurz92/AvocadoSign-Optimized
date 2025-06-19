@@ -28,31 +28,6 @@ window.eventManager = (() => {
         }
     }
 
-    function handleExportClick(button) {
-        const exportType = button.id.replace('export-', '');
-        if (exportType.endsWith('-zip')) {
-            const category = exportType.replace('-zip', '');
-            if (category === 'radiology-submission') {
-                window.exportService.exportRadiologySubmissionPackage(
-                    app.getProcessedData(),
-                    app.allPublicationStats,
-                    window.bruteForceManager.getAllResults()
-                );
-            } else {
-                window.exportService.exportCategoryZip(
-                    category, 
-                    app.getProcessedData(), 
-                    window.bruteForceManager.getAllResults(), 
-                    window.state.getActiveCohortId(), 
-                    window.t2CriteriaManager.getAppliedCriteria(), 
-                    window.t2CriteriaManager.getAppliedLogic()
-                );
-            }
-        } else {
-            app.handleSingleExport(exportType);
-        }
-    }
-
     function handleBodyClick(event) {
         const target = event.target;
         const button = target.closest('button');
@@ -105,15 +80,7 @@ window.eventManager = (() => {
                  if (metricSelect) app.showBruteForceDetails(metricSelect.value);
             },
             'statistics-toggle-single': () => handleStatsLayoutToggle('einzel'),
-            'statistics-toggle-comparison': () => handleStatsLayoutToggle('vergleich'),
-            'export-bruteforce-modal-txt': () => {
-                const metric = button.dataset.metric;
-                if (metric) {
-                    const cohortId = window.state.getActiveCohortId();
-                    const resultData = window.bruteForceManager.getResultsForCohortAndMetric(cohortId, metric);
-                    window.exportService.exportBruteForceReport(resultData);
-                }
-            }
+            'statistics-toggle-comparison': () => handleStatsLayoutToggle('vergleich')
         };
 
         if (singleClickActions[button.id]) {
@@ -126,31 +93,6 @@ window.eventManager = (() => {
                 window.uiManager.updateT2CriteriaControlsUI(window.t2CriteriaManager.getCurrentCriteria(), window.t2CriteriaManager.getCurrentLogic());
                 window.uiManager.markCriteriaSavedIndicator(window.t2CriteriaManager.isUnsaved());
             }
-            return;
-        }
-
-        if (button.classList.contains('chart-download-btn')) {
-            window.exportService.exportSingleChart(
-                button.dataset.chartId, 
-                button.dataset.format, 
-                window.state.getActiveCohortId(), 
-                { chartName: button.dataset.chartName || button.dataset.defaultName }
-            );
-            return;
-        }
-
-        if (button.classList.contains('table-download-png-btn')) {
-            window.exportService.exportTablePNG(button.dataset.tableId, window.state.getActiveCohortId(), 'TABLE_PNG_EXPORT', button.dataset.tableName);
-            return;
-        }
-
-        if (button.closest('#export-pane') && button.id.startsWith('export-')) {
-            handleExportClick(button);
-            return;
-        }
-
-        if (button.closest('#comparison-tab-pane') && button.id.startsWith('download-')) {
-            window.exportService.exportComparisonData(button.id, app.getComparisonDataForExport(), window.state.getCurrentCohort());
             return;
         }
     }

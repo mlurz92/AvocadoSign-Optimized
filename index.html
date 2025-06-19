@@ -14,10 +14,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" defer></script>
     <script src="https://unpkg.com/tippy.js@6" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
-    <script src="https://unpkg.com/html-to-docx@1.8.0/dist/html-to-docx.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
 </head>
 <body>
     <header class="fixed-top shadow-sm">
@@ -44,7 +40,6 @@
                 <li class="nav-item" role="presentation"><button class="nav-link" id="statistics-tab" data-bs-toggle="tab" data-bs-target="#statistics-pane" type="button" role="tab"><i class="fas fa-chart-bar fa-fw me-1"></i>Statistics</button></li>
                 <li class="nav-item" role="presentation"><button class="nav-link" id="comparison-tab" data-bs-toggle="tab" data-bs-target="#comparison-pane" type="button" role="tab"><i class="fas fa-chart-line fa-fw me-1"></i>Comparison</button></li>
                 <li class="nav-item" role="presentation"><button class="nav-link active" id="publication-tab" data-bs-toggle="tab" data-bs-target="#publication-pane" type="button" role="tab"><i class="fas fa-feather-alt fa-fw me-1"></i>Publication</button></li>
-                <li class="nav-item" role="presentation"><button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-pane" type="button" role="tab"><i class="fas fa-download fa-fw me-1"></i>Export</button></li>
             </ul>
         </div>
     </nav>
@@ -56,7 +51,6 @@
             <section class="tab-pane fade" id="statistics-pane" role="tabpanel" aria-labelledby="statistics-tab" tabindex="0"><p class="text-center p-5 text-muted">Loading Statistics...</p></section>
             <section class="tab-pane fade" id="comparison-pane" role="tabpanel" aria-labelledby="comparison-tab" tabindex="0"><p class="text-center p-5 text-muted">Loading Comparison View...</p></section>
             <section class="tab-pane fade show active" id="publication-pane" role="tabpanel" aria-labelledby="publication-tab" tabindex="0"><p class="text-center p-5 text-muted">Loading Publication Tools...</p></section>
-            <section class="tab-pane fade" id="export-pane" role="tabpanel" aria-labelledby="export-tab" tabindex="0"><p class="text-center p-5 text-muted">Loading Export Options...</p></section>
         </div>
     </main>
 
@@ -67,7 +61,7 @@
         <div class="modal-content modal-glass">
           <div class="modal-header"><h5 class="modal-title" id="bruteForceModalLabel">Brute-Force Optimization Results</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
           <div class="modal-body" id="brute-force-modal-body"><p class="text-center text-muted">Results will be loaded here...</p></div>
-          <div class="modal-footer"><button type="button" class="btn btn-outline-primary btn-sm" id="export-bruteforce-modal-txt" disabled><i class="fas fa-file-alt me-1"></i> Export Report (.txt)</button><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button></div>
+          <div class="modal-footer"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button></div>
         </div>
       </div>
     </div>
@@ -99,9 +93,6 @@
 
                         <dt class="col-sm-3"><i class="fas fa-feather-alt fa-fw me-1"></i>Publication</dt>
                         <dd class="col-sm-9">The primary module for generating a manuscript draft. It automatically assembles text, tables, and figures formatted according to *Radiology* journal guidelines, incorporating the latest analysis results.</dd>
-
-                        <dt class="col-sm-3"><i class="fas fa-download fa-fw me-1"></i>Export</dt>
-                        <dd class="col-sm-9">A central hub to download all data, tables, charts, and generated publication texts in various formats (CSV, MD, PNG, SVG, DOCX).</dd>
                     </dl>
                     <hr>
                     <p class="small text-muted"><strong>Disclaimer:</strong> This is a research tool only. Do not use for clinical diagnosis or treatment decisions.</p>
@@ -113,6 +104,9 @@
         </div>
     </div>
     
+    <!-- Hidden container for off-screen chart rendering during export -->
+    <div id="hidden-chart-export-container" style="position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px; overflow: hidden;"></div>
+
     <!-- Application Scripts -->
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
@@ -135,7 +129,6 @@
     <script src="js/services/publication_service/references_generator.js"></script>
     <script src="js/services/publication_service/stard_generator.js"></script>
     <script src="js/services/publication_service.js"></script>
-    <script src="js/services/export_service.js"></script>
     
     <script src="js/ui/components/ui_components.js"></script>
     <script src="js/ui/components/table_renderer.js"></script>
@@ -147,7 +140,6 @@
     <script src="js/ui/tabs/statistics_tab.js"></script>
     <script src="js/ui/tabs/comparison_tab.js"></script>
     <script src="js/ui/tabs/publication_tab.js"></script>
-    <script src="js/ui/tabs/export_tab.js"></script>
 
     <script src="js/ui/ui_manager.js"></script>
     

@@ -42,7 +42,7 @@ window.comparisonTab = (() => {
         let tableHTML = `
             <div class="col-12">
                 <div class="card h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center"><span>AS Performance vs. N for All Cohorts</span>${window.uiComponents.createHeaderButtonHTML([{id: `dl-${tableId}-png`, icon: 'fa-image', format: 'png', tableId: tableId, tableName: `Comp_AS_Perf_Overview`}], tableId, "AS_Performance_Overview")}</div>
+                    <div class="card-header d-flex justify-content-between align-items-center"><span>AS Performance vs. N for All Cohorts</span>${window.uiComponents.createHeaderButtonHTML([], tableId, "AS_Performance_Overview")}</div>
                     <div class="card-body p-0"><div class="table-responsive"><table class="table table-striped table-hover table-sm small mb-0" id="${tableId}">
                         <thead class="small"><tr>
                             <th data-tippy-content="Patient cohort and its size (N).">Cohort</th>
@@ -55,10 +55,6 @@ window.comparisonTab = (() => {
                         </tr></thead>
                         <tbody>${cohortsData.map(c => createPerfTableRow(c.stats, c.id)).join('')}</tbody>
                     </table></div></div>
-                    <div class="card-footer text-end p-1">
-                        <button class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-pur-csv"><i class="fas fa-file-csv me-1"></i>CSV</button>
-                        <button class="btn btn-sm btn-outline-secondary" id="download-performance-as-pur-md"><i class="fab fa-markdown me-1"></i>MD</button>
-                    </div>
                 </div>
             </div>`;
 
@@ -66,7 +62,7 @@ window.comparisonTab = (() => {
             <div class="col-lg-8 offset-lg-2">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center"><span>Performance Visualization (AS vs. N) - Cohort: ${currentCohortName}</span>
-                        <span class="card-header-buttons">${window.uiComponents.createHeaderButtonHTML([{id: `dl-${chartId}-png`, icon: 'fa-image', format: 'png', chartId: chartId, chartName: `AS_Performance_${currentCohortName.replace(/\s+/g, '_')}`}, {id: `dl-${chartId}-svg`, icon: 'fa-file-code', format: 'svg', chartId: chartId, chartName: `AS_Performance_${currentCohortName.replace(/\s+/g, '_')}`}], chartId, "AS_Performance_Chart")}</span>
+                        <span class="card-header-buttons">${window.uiComponents.createHeaderButtonHTML([], chartId, "AS_Performance_Chart")}</span>
                     </div>
                     <div class="card-body p-1"><div id="${chartId}" class="comp-chart-container border rounded" style="min-height: 280px;">${hasDataForCurrent ? '' : `<p class="text-center text-muted p-3">No data for chart (${currentCohortName}).</p>`}</div></div>
                 </div>
@@ -109,7 +105,7 @@ window.comparisonTab = (() => {
                 comparisonTableHTML += `<tr><td data-tippy-content="${getDefinitionTooltip(key)}">${metricNames[key]}</td><td data-tippy-content="${getInterpretationTooltip(key, performanceAS[key])}">${valAS}</td><td data-tippy-content="${getInterpretationTooltip(key, performanceT2[key])}">${valT2}</td></tr>`;
             });
             comparisonTableHTML += `</tbody></table></div>`;
-            const comparisonTableCardHTML = window.uiComponents.createStatisticsCard('comp-as-vs-t2-comp-table_card', `Performance Metrics (AS vs. ${t2ShortNameEffective})`, comparisonTableHTML, false, null, [{id: `dl-comp-as-vs-t2-comp-table-png`, icon: 'fa-image', format: 'png', tableId: 'comp-as-vs-t2-comp-table', tableName: `Comp_ASvsT2_Metrics_${comparisonCriteriaSet?.id || 'T2'}`}]);
+            const comparisonTableCardHTML = window.uiComponents.createStatisticsCard('comp-as-vs-t2-comp-table_card', `Performance Metrics (AS vs. ${t2ShortNameEffective})`, comparisonTableHTML, false, null, []);
             
             const mcnemarTooltip = getInterpretationTooltip('pValue', {value: comparison.mcnemar?.pValue, testName: 'McNemar'}, { method1: 'AS', method2: t2ShortNameEffective, metricName: 'Accuracy'});
             const delongTooltip = getInterpretationTooltip('pValue', {value: comparison.delong?.pValue, testName: 'DeLong'}, { method1: 'AS', method2: t2ShortNameEffective, metricName: 'AUC'});
@@ -118,7 +114,7 @@ window.comparisonTab = (() => {
             testsTableHTML += `<tr><td data-tippy-content="${getDefinitionTooltip('mcnemar')}">McNemar (Acc)</td><td>${formatNumber(comparison?.mcnemar?.statistic, 3, na_stat, true)} (df=${comparison?.mcnemar?.df || na_stat})</td><td data-tippy-content="${mcnemarTooltip}">${getPValueText(comparison?.mcnemar?.pValue, false)} ${getStatisticalSignificanceSymbol(comparison?.mcnemar?.pValue)}</td><td>${comparison?.mcnemar?.method || na_stat}</td></tr>`;
             testsTableHTML += `<tr><td data-tippy-content="${getDefinitionTooltip('delong')}">DeLong (AUC)</td><td>Z=${formatNumber(comparison?.delong?.Z, 3, na_stat, true)}</td><td data-tippy-content="${delongTooltip}">${getPValueText(comparison?.delong?.pValue, false)} ${getStatisticalSignificanceSymbol(comparison?.delong?.pValue)}</td><td>${comparison?.delong?.method || na_stat}</td></tr>`;
             testsTableHTML += `</tbody></table>`;
-            const testsCardHTML = window.uiComponents.createStatisticsCard('comp-as-vs-t2-test-table_card', `Statistical Comparison (AS vs. ${t2ShortNameEffective})`, testsTableHTML, false, null, [{id: `dl-comp-as-vs-t2-test-table-png`, icon: 'fa-image', format: 'png', tableId: 'comp-as-vs-t2-test-table', tableName: `Comp_ASvsT2_Tests_${comparisonCriteriaSet?.id || 'T2'}`}]);
+            const testsCardHTML = window.uiComponents.createStatisticsCard('comp-as-vs-t2-test-table_card', `Statistical Comparison (AS vs. ${t2ShortNameEffective})`, testsTableHTML, false, null, []);
             
             const chartContainerId = "comp-chart-container";
             const chartBaseName = `AS_vs_${(comparisonCriteriaSet?.displayShortName || selectedStudyId || 'T2').replace(/\s+/g, '_')}_Cohort_${displayCohortForComparison.replace(/\s+/g, '_')}`;
@@ -127,16 +123,15 @@ window.comparisonTab = (() => {
                      <div class="col-lg-7 col-xl-7 comparison-col-left">
                         <div class="card h-100">
                              <div class="card-header d-flex justify-content-between align-items-center"><span>Comparison Chart (AS vs. ${t2ShortNameEffective})</span>
-                                 <span class="card-header-buttons">${window.uiComponents.createHeaderButtonHTML([{id: `download-chart-as-vs-t2-png`, icon: 'fa-image', format: 'png', chartId: chartContainerId, chartName: chartBaseName}, {id: `download-chart-as-vs-t2-svg`, icon: 'fa-file-code', format: 'svg', chartId: chartContainerId, chartName: chartBaseName}], chartContainerId, "AS_vs_T2_Comparison_Chart")}</span>
+                                 <span class="card-header-buttons">${window.uiComponents.createHeaderButtonHTML([], chartContainerId, "AS_vs_T2_Comparison_Chart")}</span>
                              </div>
                             <div class="card-body p-1 d-flex align-items-center justify-content-center"><div id="${chartContainerId}" class="comp-chart-container w-100" style="min-height: 300px;"><p class="text-muted small text-center p-3">Loading comparison chart...</p></div></div>
-                            <div class="card-footer text-end p-1"><button class="btn btn-sm btn-outline-secondary me-1" id="download-performance-as-vs-t2-csv"><i class="fas fa-file-csv me-1"></i>Table (CSV)</button><button class="btn btn-sm btn-outline-secondary" id="download-comp-table-as-vs-t2-md"><i class="fab fa-markdown me-1"></i>Metrics (MD)</button></div>
                         </div>
                     </div>
                     <div class="col-lg-5 col-xl-5 comparison-col-right d-flex flex-column">
                          <div class="card mb-3 flex-shrink-0" id="comp-t2-basis-info-card"><div class="card-header card-header-sm">T2 Comparison Basis Details</div><div class="card-body p-2">${comparisonInfoHTML}</div></div>
                          <div class="card mb-3 flex-grow-0">${comparisonTableCardHTML}</div>
-                         <div class="card flex-grow-1">${testsCardHTML}<div class="card-footer text-end p-1"><button class="btn btn-sm btn-outline-secondary" id="download-tests-as-vs-t2-md"><i class="fab fa-markdown me-1"></i>Tests (MD)</button></div></div>
+                         <div class="card flex-grow-1">${testsCardHTML}</div>
                     </div>
                 </div>`;
         } else {

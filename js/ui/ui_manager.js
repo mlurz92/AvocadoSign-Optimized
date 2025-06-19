@@ -323,57 +323,6 @@ window.uiManager = (() => {
         
         updateElementHTML(runnerCardContainer.id, runnerCardHTML);
     }
-    
-    function updateExportButtonStates(currentTabId, hasBruteForceResults, hasPatientData, libraryStatus) {
-        if (!window.APP_CONFIG) return;
-        const exportPane = document.getElementById('export-pane');
-        if (!exportPane) return;
-
-        const isExportTab = currentTabId === 'export';
-        const buttons = exportPane.querySelectorAll('button[id^="export-"]');
-
-        buttons.forEach(button => {
-            const exportType = button.dataset.exportType;
-            let shouldBeEnabled = false;
-
-            switch (exportType) {
-                case 'stats-csv':
-                case 'filtered-data-csv':
-                case 'datatable-md':
-                case 'analysistable-md':
-                    shouldBeEnabled = hasPatientData;
-                    break;
-                case 'comprehensivereport-html':
-                    shouldBeEnabled = hasPatientData && libraryStatus.html2canvas;
-                    break;
-                case 'bruteforce-txt':
-                    shouldBeEnabled = hasBruteForceResults;
-                    break;
-                case 'all-zip':
-                case 'csv-zip':
-                case 'md-zip':
-                case 'png-zip':
-                case 'svg-zip':
-                    shouldBeEnabled = hasPatientData && libraryStatus.JSZip;
-                    break;
-                case 'radiology-submission-zip':
-                    shouldBeEnabled = hasPatientData && libraryStatus.JSZip && libraryStatus.htmlToDocx;
-                    break;
-                default:
-                    shouldBeEnabled = hasPatientData;
-                    break;
-            }
-            button.disabled = !shouldBeEnabled;
-
-            if (isExportTab) {
-                const tooltipInstance = button._tippy;
-                if (tooltipInstance) {
-                    if (!shouldBeEnabled) tooltipInstance.enable();
-                    else tooltipInstance.enable();
-                }
-            }
-        });
-    }
 
     function updateComparisonViewUI(view, selectedStudyId) {
         if (!window.APP_CONFIG || !window.utils || !window.studyT2CriteriaManager) return;
@@ -449,7 +398,6 @@ window.uiManager = (() => {
         updateT2CriteriaControlsUI,
         markCriteriaSavedIndicator,
         updateBruteForceUI,
-        updateExportButtonStates,
         updateComparisonViewUI,
         updatePublicationUI,
         showQuickGuide,

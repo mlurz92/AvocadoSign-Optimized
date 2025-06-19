@@ -1,4 +1,4 @@
-# Nodal Staging Analysis Tool (v4.0.0)
+# Nodal Staging Analysis Tool (v4.1.0)
 
 This repository contains the source code for the "Nodal Staging: Avocado Sign vs. T2 Criteria" analysis tool, a client-side web application for advanced research in medical imaging.
 
@@ -16,7 +16,6 @@ This application is a specialized research instrument designed for the in-depth,
 *   **Automated Criteria Optimization:** An integrated brute-force algorithm, running in a dedicated Web Worker, to systematically identify the mathematically optimal criteria combination for a user-selected diagnostic metric.
 *   **Comprehensive Statistical Analysis:** Automated calculation of all relevant diagnostic performance metrics (Sensitivity, Specificity, PPV, NPV, Accuracy, AUC) including 95% confidence intervals and statistical comparison tests (e.g., DeLong, McNemar).
 *   **Publication Assistant:** A dedicated module that generates formatted, English-language text, tables, and figures for a scientific manuscript, precisely adhering to the style guidelines of the journal *Radiology*.
-*   **Versatile Data Export:** A central hub for downloading raw data, analysis results, tables, charts, and publication texts in various standard formats (CSV, Markdown, TXT, PNG, SVG, DOCX).
 
 ### 1.3. Disclaimer: Research Instrument Only
 **This application is designed exclusively for research and educational purposes.** The presented data, statistics, and generated texts are based on a static, pseudonymized research dataset. **The results must not, under any circumstances, be used for clinical diagnosis, direct treatment decisions, or any other primary medical applications.** The scientific and clinical responsibility for the interpretation and use of the generated results lies solely with the user.
@@ -43,7 +42,7 @@ The application follows a modular architecture that separates data logic, servic
 2.  **State Manager (`state.js`):** Manages the global application state (e.g., active cohort, sort order) and a temporary `analysisContext` to ensure methodologically sound comparisons.
 3.  **App Controller (`main.js`):** Orchestrates the data flow. Upon state changes, it triggers data filtering, recalculation of all statistics, and re-rendering of the UI, passing the correct data context to each module.
 4.  **Core Modules (`core/`):** Process and evaluate the raw data (`data_processor.js`, `t2_criteria_manager.js`, `study_criteria_manager.js`).
-5.  **Service Layer (`services/`):** Contains the complex business logic for statistics, export, brute-force optimization, and publication generation. The `publication_service.js` module specifically orchestrates a suite of sub-modules within `services/publication_service/` to assemble the manuscript.
+5.  **Service Layer (`services/`):** Contains the complex business logic for statistics, brute-force optimization, and publication generation. The `publication_service.js` module specifically orchestrates a suite of sub-modules within `services/publication_service/` to assemble the manuscript.
 6.  **UI Layer (`ui/`):** Responsible for rendering all data and components based on the data provided by the App Controller.
 
 ### 3.2. Directory Structure
@@ -85,7 +84,6 @@ The application follows a modular architecture that separates data logic, servic
 │   │   │   ├── stard_generator.js
 │   │   │   └── title_page_generator.js
 │   │   ├── brute_force_manager.js
-│   │   ├── export_service.js
 │   │   ├── publication_service.js
 │   │   └── statistics_service.js
 │   ├── ui/
@@ -98,7 +96,6 @@ The application follows a modular architecture that separates data logic, servic
 │   │   │   ├── analysis_tab.js
 │   │   │   ├── comparison_tab.js
 │   │   │   ├── data_tab.js
-│   │   │   ├── export_tab.js
 │   │   │   ├── publication_tab.js
 │   │   │   └── statistics_tab.js
 │   │   ├── event_manager.js

@@ -1,4 +1,4 @@
-# Nodal Staging Analysis Tool: Application Guide (Version 4.0.0)
+# Nodal Staging Analysis Tool: Application Guide (Version 4.1.0)
 
 ## 1. Introduction
 
@@ -16,7 +16,7 @@ The application supports the entire research workflow, from data exploration and
 
 ### 1.3. System Requirements & Setup
 *   **System Requirements:** A modern desktop web browser (e.g., latest versions of Google Chrome, Mozilla Firefox, Microsoft Edge, or Safari). Support for Web Workers is required for full functionality (brute-force optimization).
-*   **Setup:** No server-side component or installation is necessary. The application is launched by opening the `index.html` file directly in the browser. An internet connection is required for the initial loading of external libraries (e.g., Bootstrap, D3.js, JSZip) from Content Delivery Networks (CDNs). Some advanced features, particularly in the Export tab, may be unavailable without an active internet connection.
+*   **Setup:** No server-side component or installation is necessary. The application is launched by opening the `index.html` file directly in the browser. An internet connection is required for the initial loading of external libraries (e.g., Bootstrap, D3.js) from Content Delivery Networks (CDNs).
 
 ## 2. Global UI Concepts
 
@@ -24,7 +24,7 @@ The user interface is designed to support an intuitive and efficient scientific 
 
 ### 2.1. Application Layout
 *   **Header:** A fixed header contains the application title and the global cohort selection controls.
-*   **Navigation Bar (Tabs):** A horizontal tab navigation allows for quick switching between the six main modules of the application.
+*   **Navigation Bar (Tabs):** A horizontal tab navigation allows for quick switching between the five main modules of the application.
 *   **Content Area:** The central workspace where the specific content and tools of the currently active tab are displayed.
 
 ### 2.2. Global Cohort Selection vs. Analysis Context
@@ -46,7 +46,7 @@ This system ensures that direct statistical tests (like DeLong or McNemar) are a
 
 ## 3. The Application Modules in Detail (Tabs)
 
-The application is divided into six main modules, accessible via the navigation bar.
+The application is divided into five main modules, accessible via the navigation bar.
 
 ### 3.1. Data Tab
 *   **Purpose:** To display and explore the underlying patient dataset based on the **Global Cohort Selection**.
@@ -83,7 +83,7 @@ The application is divided into six main modules, accessible via the navigation 
     *   **View Selection:** Focuses on either the standalone performance of the AS ("AS Performance") or the direct comparison with T2 criteria ("AS vs. T2 Comparison").
     *   **T2 Comparison Basis:** In "AS vs. T2" mode, the user can choose to compare the AS against the interactively set criteria or one of the predefined literature criteria sets.
     *   **Automatic Context Switching:** When a literature-based criterion is selected for comparison, the application automatically establishes an **Analysis Context**. It locks the cohort to the one most appropriate for that criterion (e.g., "Surgery alone" for ESGAR criteria) to ensure a methodologically sound comparison. The UI provides clear feedback about this automatic switch, and the global cohort selectors in the header are disabled.
-    *   **Dynamic Content:** Automatically generates comparison tables, statistical tests, and a bar chart based on the active context. All elements are exportable as CSV, Markdown, PNG, oder SVG.
+    *   **Dynamic Content:** Automatically generates comparison tables, statistical tests, and a bar chart based on the active context.
 
 ### 3.5. Publication Tab
 *   **Purpose:** An assistant for creating a scientific manuscript according to the style guidelines of the journal *Radiology*.
@@ -94,14 +94,6 @@ The application is divided into six main modules, accessible via the navigation 
     *   **BF Metric Selection:** A dropdown menu allows the user to select which brute-force optimization result should be cited in the text.
     *   **Word Count Monitoring:** The navigation sidebar displays a live word/item count for each section with a defined limit, providing color-coded feedback (green/orange/red) to aid in adhering to journal guidelines.
 
-### 3.6. Export Tab
-*   **Purpose:** A central hub for exporting all relevant data and results.
-*   **Components & Workflow:**
-    *   **Export Categories:** Options are divided into "Single Exports" and "Export Packages (.zip)".
-    *   **Context-Sensitivity:** All exports are based on the currently selected global cohort. Unavailable exports (e.g., a brute-force report if one has never been run) are disabled.
-    *   **Available Exports:** Include filtered raw data (CSV), analysis tables (MD), statistics reports (CSV), brute-force reports (TXT), a comprehensive HTML analysis report, and ZIP archives bundling all graphics or Markdown texts.
-    *   **Radiology Submission Package:** A dedicated export option that generates a ZIP archive containing a fully formatted manuscript (`.docx`) and all figures (`.svg`, etc.) ready for submission to the *Radiology* journal. Note: This feature requires an active internet connection to load necessary libraries.
-
 ## 4. Technical Appendix
 
 ### 4.1. Key Technologies
@@ -110,7 +102,6 @@ The application is divided into six main modules, accessible via the navigation 
 *   **Data Visualization:** D3.js
 *   **Asynchronous Computation:** Web Workers
 *   **UI Enhancements:** Tippy.js
-*   **File Processing:** PapaParse, JSZip, html-to-docx, html2canvas
 
 ### 4.2. Glossary
 *   **AS:** Avocado Sign

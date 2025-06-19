@@ -198,7 +198,7 @@ window.statisticsTab = (() => {
                 outerRow.appendChild(col);
                 const innerContainer = col.querySelector(`#${innerRowId}`);
 
-                innerContainer.innerHTML += window.uiComponents.createStatisticsCard(`descriptive-stats-${i}`, 'Descriptive Statistics', createDescriptiveStatsContentHTML(stats, i, cohortId), true, null, [{id: `dl-desc-table-${i}-png`, icon: 'fa-image', format: 'png', tableId: `table-descriptive-demographics-${i}`, tableName: `Descriptive_Demographics_${cohortId.replace(/\s+/g, '_')}`}], `table-descriptive-demographics-${i}`);
+                innerContainer.innerHTML += window.uiComponents.createStatisticsCard(`descriptive-stats-${i}`, 'Descriptive Statistics', createDescriptiveStatsContentHTML(stats, i, cohortId), true, null, [], `table-descriptive-demographics-${i}`);
 
                 const fCI_p_stat = (m, k) => { const d = (k === 'auc' || k ==='f1' || k==='youden' || k === 'balAcc') ? 3 : 1; const p = !(k === 'auc'||k==='f1'||k==='youden' || k === 'balAcc'); return formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, d, p, na_stat); };
                 
@@ -273,10 +273,10 @@ window.statisticsTab = (() => {
                     return html;
                 };
 
-                innerContainer.innerHTML += window.uiComponents.createStatisticsCard(`performance-as-${i}`, 'Diagnostic Performance: Avocado Sign (vs. N)', createPerfTableHTML(stats.performanceAS), false, null, [{id: `dl-as-perf-table-${i}-png`, icon: 'fa-image', format: 'png', tableId: `performance-as-${i}-content table`, tableName: `AS_Performance_${cohortId.replace(/\s+/g, '_')}`}], `performance-as-${i}-content table`);
-                innerContainer.innerHTML += window.uiComponents.createStatisticsCard(`performance-t2-${i}`, `Diagnostic Performance: ${formattedAppliedT2Long} vs. N`, createPerfTableHTML(stats.performanceT2Applied), false, null, [{id: `dl-t2-perf-table-${i}-png`, icon: 'fa-image', format: 'png', tableId: `performance-t2-${i}-content table`, tableName: `T2_Applied_Performance_${cohortId.replace(/\s+/g, '_')}`}], `performance-t2-${i}-content table`);
-                innerContainer.innerHTML += window.uiComponents.createStatisticsCard(`comparison-as-t2-${i}`, `Statistical Comparison: AS vs. ${formattedAppliedT2Short}`, createCompTableHTML(stats.comparisonASvsT2Applied), false, null, [{id: `dl-comp-as-t2-table-${i}-png`, icon: 'fa-image', format: 'png', tableId: `comparison-as-t2-${i}-content table`, tableName: `Comp_AS_T2_Applied_${cohortId.replace(/\s+/g, '_')}`}], `comparison-as-t2-${i}-content table`);
-                innerContainer.innerHTML += window.uiComponents.createStatisticsCard(`associations-${i}`, 'Association with N-Status', createAssocTableHTML(stats.associationsApplied, appliedCriteria), false, null, [{id: `dl-assoc-table-${i}-png`, icon: 'fa-image', format: 'png', tableId: `associations-${i}-content table`, tableName: `Associations_${cohortId.replace(/\s+/g, '_')}`}], `associations-${i}-content table`);
+                innerContainer.innerHTML += window.uiComponents.createStatisticsCard(`performance-as-${i}`, 'Diagnostic Performance: Avocado Sign (vs. N)', createPerfTableHTML(stats.performanceAS), false, null, [], `performance-as-${i}-content table`);
+                innerContainer.innerHTML += window.uiComponents.createStatisticsCard(`performance-t2-${i}`, `Diagnostic Performance: ${formattedAppliedT2Long} vs. N`, createPerfTableHTML(stats.performanceT2Applied), false, null, [], `performance-t2-${i}-content table`);
+                innerContainer.innerHTML += window.uiComponents.createStatisticsCard(`comparison-as-t2-${i}`, `Statistical Comparison: AS vs. ${formattedAppliedT2Short}`, createCompTableHTML(stats.comparisonASvsT2Applied), false, null, [], `comparison-as-t2-${i}-content table`);
+                innerContainer.innerHTML += window.uiComponents.createStatisticsCard(`associations-${i}`, 'Association with N-Status', createAssocTableHTML(stats.associationsApplied, appliedCriteria), false, null, [], `associations-${i}-content table`);
             } else {
                  col.innerHTML = `<h4 class="mb-3">Cohort: ${getCohortDisplayName(cohortId)}</h4><div class="alert alert-warning small p-2">No data for this cohort.</div>`;
                  outerRow.appendChild(col);
@@ -311,7 +311,7 @@ window.statisticsTab = (() => {
                     </tbody>
                  </table></div>`;
              }
-             compCard.innerHTML = window.uiComponents.createStatisticsCard('cohort-comparison', `Cohort Comparison: ${getCohortDisplayName(cohort1)} vs. ${getCohortDisplayName(cohort2)}`, compContent, false, null, [{id: 'dl-cohort-comp-table-png', icon: 'fa-image', format: 'png', tableId: 'cohort-comparison-content table', tableName: `Cohort_Comparison_${cohort1}_vs_${cohort2}`}], 'cohort-comparison-content table');
+             compCard.innerHTML = window.uiComponents.createStatisticsCard('cohort-comparison', `Cohort Comparison: ${getCohortDisplayName(cohort1)} vs. ${getCohortDisplayName(cohort2)}`, compContent, false, null, [], 'cohort-comparison-content table');
              outerRow.appendChild(compCard);
         }
 
@@ -324,7 +324,7 @@ window.statisticsTab = (() => {
                 createCriteriaComparisonTableHTML(allCohortStats, globalCohort, appliedCriteria, appliedLogic),
                 false,
                 'criteriaComparisonTable',
-                [{id: 'dl-criteria-comp-table-png', icon: 'fa-image', format: 'png', tableId: 'criteria-comparison-content table', tableName: `Criteria_Comparison_${globalCohort.replace(/\s+/g, '_')}`}],
+                [],
                 'criteria-comparison-content table'
             );
             outerRow.appendChild(criteriaComparisonCard);

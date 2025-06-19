@@ -141,12 +141,12 @@ window.state = (() => {
                 studyIdChanged = _setter('comparisonStudyId', window.APP_CONFIG.STORAGE_KEYS.COMPARISON_STUDY_ID, defaultStudyId);
                 const studySet = window.studyT2CriteriaManager.getStudyCriteriaSetById(defaultStudyId);
                 if (studySet?.applicableCohort) {
-                    setAnalysisContext({ cohortId: studySet.applicableCohort, reason: `Comparison with ${studySet.name}` });
+                    setAnalysisContext({ cohortId: studySet.applicableCohort, criteriaName: studySet.name });
                 }
             } else {
                 const studySet = window.studyT2CriteriaManager.getStudyCriteriaSetById(currentState.comparisonStudyId);
                  if (studySet?.applicableCohort) {
-                    setAnalysisContext({ cohortId: studySet.applicableCohort, reason: `Comparison with ${studySet.name}` });
+                    setAnalysisContext({ cohortId: studySet.applicableCohort, criteriaName: studySet.name });
                 }
             }
         }
@@ -161,7 +161,7 @@ window.state = (() => {
             if (newStudyId && newStudyId !== window.APP_CONFIG.SPECIAL_IDS.APPLIED_CRITERIA_STUDY_ID) {
                 const studySet = window.studyT2CriteriaManager.getStudyCriteriaSetById(newStudyId);
                 if (studySet?.applicableCohort) {
-                    setAnalysisContext({ cohortId: studySet.applicableCohort, reason: `Comparison with ${studySet.name}` });
+                    setAnalysisContext({ cohortId: studySet.applicableCohort, criteriaName: studySet.name });
                 } else {
                     clearAnalysisContext();
                 }

@@ -85,7 +85,7 @@ window.methodsGenerator = (() => {
             
         const comparisonText = window.APP_CONFIG.UI_TEXTS.PUBLICATION_TEXTS.STATISTICAL_ANALYSIS_COMPARISON
             .replace('[APP_VERSION]', appVersion)
-            .replace('[P_LEVEL]', helpers.formatPValueForPublication(statisticalSignificanceLevel));
+            .replace('[P_LEVEL]', helpers.formatPValueForPublication(statisticalSignificanceLevel).replace(/<em/g, '').replace(/<\/em>/g, ''));
 
         return `
             <h3 id="methoden_statistische_analyse_methoden">Statistical Analysis</h3>
