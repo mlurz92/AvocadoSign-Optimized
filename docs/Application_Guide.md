@@ -9,7 +9,7 @@ The scientific focus of the application is the rigorous evaluation of the innova
 *   Established, literature-based T2-weighted (T2w) morphological criteria.
 *   Data-driven, cohort-optimized T2w criteria, determined via an integrated brute-force analysis.
 
-The application supports the entire research workflow, from data exploration and detailed statistical analysis to the generation of manuscript drafts formatted according to the publication requirements of medical imaging journals (e.g., *Radiology*).
+The application supports the entire research workflow, from data exploration and detailed statistical analysis to the generation of manuscript drafts and export packages formatted according to the publication requirements of medical imaging journals (e.g., *Radiology*).
 
 ### 1.2. Important Notice: Research Instrument
 **Disclaimer:** This application is designed exclusively for **research and educational purposes**. The data, statistics, and generated texts are based on a static, pseudonymized research dataset. **The results must not be used for clinical diagnostics, direct treatment decisions, or other primary medical applications.** The scientific and clinical responsibility for the interpretation and use of the generated results lies solely with the user.
@@ -24,7 +24,7 @@ The user interface is designed to support an intuitive and efficient scientific 
 
 ### 2.1. Application Layout
 *   **Header:** A fixed header contains the application title and the global cohort selection controls.
-*   **Navigation Bar (Tabs):** A horizontal tab navigation allows for quick switching between the five main modules of the application.
+*   **Navigation Bar (Tabs):** A horizontal tab navigation allows for quick switching between the main modules of the application.
 *   **Content Area:** The central workspace where the specific content and tools of the currently active tab are displayed.
 
 ### 2.2. Global Cohort Selection vs. Analysis Context
@@ -46,7 +46,7 @@ This system ensures that direct statistical tests (like DeLong or McNemar) are a
 
 ## 3. The Application Modules in Detail (Tabs)
 
-The application is divided into five main modules, accessible via the navigation bar.
+The application is divided into six main modules, accessible via the navigation bar.
 
 ### 3.1. Data Tab
 *   **Purpose:** To display and explore the underlying patient dataset based on the **Global Cohort Selection**.
@@ -93,6 +93,13 @@ The application is divided into five main modules, accessible via the navigation
     *   **Embedded Content:** Tables and figures are generated directly within the text flow, including a rendered flowchart in the results section and a STARD checklist.
     *   **BF Metric Selection:** A dropdown menu allows the user to select which brute-force optimization result should be cited in the text.
     *   **Word Count Monitoring:** The navigation sidebar displays a live word/item count for each section with a defined limit, providing color-coded feedback (green/orange/red) to aid in adhering to journal guidelines.
+
+### 3.6. Export Tab
+*   **Purpose:** Provides tools to download all generated data, results, and publication materials for offline use, archiving, or submission.
+*   **Components & Workflow:**
+    *   **Single Exports:** Allows for the download of individual files, such as a CSV of the current statistics, a text report of the Brute-Force analysis, or a Markdown version of the data table.
+    *   **Export Packages:** Bundles multiple related files into a single ZIP archive for convenience. This includes packages for all generated graphics (PNG or SVG), all tables, or all files at once.
+    *   **Radiology Submission Package:** A specialized one-click export that creates a complete, structured ZIP archive ready for submission to the *Radiology* journal. This package includes the full manuscript formatted as a `.docx` file, all figures in the required high-resolution format, and any other necessary submission documents.
 
 ## 4. Technical Appendix
 

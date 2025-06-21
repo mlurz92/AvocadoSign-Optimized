@@ -1,0 +1,16 @@
+### Schrag et al. (2023) - The PROSPECT Trial (NEJM)
+
+*   **Purpose:** To determine whether neoadjuvant chemotherapy (FOLFOX) alone is noninferior to neoadjuvant chemoradiotherapy (CRT) for patients with locally advanced rectal cancer who are candidates for sphincter-sparing surgery. The goal was to selectively use CRT only for patients with an inadequate response to chemotherapy, thereby reducing radiation-related toxicity.
+
+*   **Methods:** A multicenter, randomized, phase 3 noninferiority trial (PROSPECT). 1128 patients with clinical stage T2 node-positive, T3 node-negative, or T3 node-positive rectal cancer were randomly assigned to receive either:
+    1.  **Chemoradiotherapy Group:** Standard pelvic CRT (50.4 Gy) plus capecitabine.
+    2.  **Chemotherapy Group:** Six cycles of FOLFOX, followed by restaging. CRT was administered only if the tumor volume reduction was less than 20%.
+    All patients subsequently underwent total mesorectal excision.
+
+*   **Key Findings:**
+    *   **Noninferiority:** At a median follow-up of 58 months, the 5-year disease-free survival was 80.8% in the chemotherapy group and 78.6% in the chemoradiotherapy group. The hazard ratio was 0.92 (95% CI, 0.74 to 1.14), which met the noninferiority criterion.
+    *   **Radiation Avoidance:** In the chemotherapy-alone arm, 91% of patients did not require radiation therapy.
+    *   **Local Recurrence:** The 5-year local recurrence rates were very low and similar in both groups: 1.8% in the chemotherapy group and 1.6% in the chemoradiotherapy group.
+    *   **Toxicity:** Patients in the chemotherapy group reported less diarrhea and better bowel function, and had lower rates of long-term neuropathy.
+
+*   **Conclusion:** For patients with locally advanced rectal cancer, neoadjuvant FOLFOX chemotherapy is noninferior to standard chemoradiotherapy. This approach allows for the selective omission of radiation therapy in the majority of patients without compromising disease-free survival or local control, thereby reducing treatment-related side effects. This highlights the importance of accurate initial staging to select appropriate candidates for such de-escalation strategies.

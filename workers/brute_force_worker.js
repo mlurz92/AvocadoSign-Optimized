@@ -128,7 +128,13 @@ function calculateMetric(data, criteria, logic, metricName) {
             result = (isNaN(sens) || isNaN(spec)) ? NaN : (sens + spec) / 2.0;
             break;
         case 'F1-Score':
-            result = (isNaN(ppv) || isNaN(sens) || (ppv + sens) <= 1e-9) ? ((ppv === 0 && sens === 0) ? 0 : NaN) : 2.0 * (ppv * sens) / (ppv + sens);
+            if (isNaN(ppv) || isNaN(sens)) {
+                result = NaN;
+            } else if (ppv + sens < 1e-9) {
+                result = 0.0;
+            } else {
+                result = 2.0 * (ppv * sens) / (ppv + sens);
+            }
             break;
         case 'PPV':
             result = ppv;

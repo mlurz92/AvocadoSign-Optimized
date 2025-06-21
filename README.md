@@ -16,6 +16,7 @@ This application is a specialized research instrument designed for the in-depth,
 *   **Automated Criteria Optimization:** An integrated brute-force algorithm, running in a dedicated Web Worker, to systematically identify the mathematically optimal criteria combination for a user-selected diagnostic metric.
 *   **Comprehensive Statistical Analysis:** Automated calculation of all relevant diagnostic performance metrics (Sensitivity, Specificity, PPV, NPV, Accuracy, AUC) including 95% confidence intervals and statistical comparison tests (e.g., DeLong, McNemar).
 *   **Publication Assistant:** A dedicated module that generates formatted, English-language text, tables, and figures for a scientific manuscript, precisely adhering to the style guidelines of the journal *Radiology*.
+*   **Integrated Export Tools:** A comprehensive export module to download all generated data, results, and publication materials, including a pre-packaged ZIP archive for journal submission.
 
 ### 1.3. Disclaimer: Research Instrument Only
 **This application is designed exclusively for research and educational purposes.** The presented data, statistics, and generated texts are based on a static, pseudonymized research dataset. **The results must not, under any circumstances, be used for clinical diagnosis, direct treatment decisions, or any other primary medical applications.** The scientific and clinical responsibility for the interpretation and use of the generated results lies solely with the user.
@@ -58,12 +59,14 @@ The application follows a modular architecture that separates data logic, servic
 ├── docs/
 │   ├── Application_Guide.md
 │   ├── Barbaro_2024_summary.txt
+│   ├── Garcia-Aguilar_2022_summary.txt
 │   ├── Koh_2008_summary.txt
 │   ├── Lurz_Schaefer_AvocadoSign_2025.pdf.txt
 │   ├── Lurz_Schaefer_AvocadoSign_2025_summary.txt
 │   ├── Radiology_Publication_Instructions_for_Authors.md
 │   ├── Radiology_Scientific_Style_Guide.md
-│   └── Rutegard_2025_summary.txt
+│   ├── Rutegard_2025_summary.txt
+│   └── Schrag_2023_summary.txt
 ├── js/
 │   ├── app/
 │   │   ├── main.js
@@ -96,6 +99,7 @@ The application follows a modular architecture that separates data logic, servic
 │   │   │   ├── analysis_tab.js
 │   │   │   ├── comparison_tab.js
 │   │   │   ├── data_tab.js
+│   │   │   ├── export_tab.js
 │   │   │   ├── publication_tab.js
 │   │   │   └── statistics_tab.js
 │   │   ├── event_manager.js
