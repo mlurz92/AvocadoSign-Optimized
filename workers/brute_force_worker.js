@@ -7,7 +7,7 @@ let allResults = [];
 let combinationsTested = 0;
 let totalCombinations = 0;
 let startTime = 0;
-let t2SizeRange = { min: 0.1, max: 15.0, step: 0.1 };
+let t2SizeRange = { min: 0.1, max: 25.0, step: 0.1 };
 const reportIntervalFactor = 200;
 
 function cloneDeep(obj) {
@@ -43,10 +43,11 @@ function checkNode(lymphNode, criteria) {
     const checkResult = { size: null, shape: null, border: null, homogeneity: null, signal: null };
     if (!lymphNode || typeof lymphNode !== 'object' || !criteria || typeof criteria !== 'object') return checkResult;
 
-    if (criteria.size?.active) {
+    if (criteria.size && criteria.size.active) {
         const threshold = criteria.size.threshold;
         const nodeSize = lymphNode.size;
         const condition = criteria.size.condition || '>=';
+        
         if (typeof nodeSize === 'number' && !isNaN(nodeSize) && typeof threshold === 'number' && !isNaN(threshold)) {
             switch (condition) {
                 case '>=': checkResult.size = nodeSize >= threshold; break;
@@ -56,12 +57,28 @@ function checkNode(lymphNode, criteria) {
                 case '==': checkResult.size = nodeSize === threshold; break;
                 default: checkResult.size = false;
             }
-        } else { checkResult.size = false; }
+        } else {
+            checkResult.size = false;
+        }
     }
-    if (criteria.shape?.active) checkResult.shape = (lymphNode.shape === criteria.shape.value);
-    if (criteria.border?.active) checkResult.border = (lymphNode.border === criteria.border.value);
-    if (criteria.homogeneity?.active) checkResult.homogeneity = (lymphNode.homogeneity === criteria.homogeneity.value);
-    if (criteria.signal?.active) checkResult.signal = (lymphNode.signal !== null && lymphNode.signal === criteria.signal.value);
+
+    if (criteria.shape && criteria.shape.active) {
+        checkResult.shape = (lymphNode.shape === criteria.shape.value);
+    }
+    
+    if (criteria.border && criteria.border.active) {
+        checkResult.border = (lymphNode.border === criteria.border.value);
+    }
+    
+    if (criteria.homogeneity && criteria.homogeneity.active) {
+        checkResult.homogeneity = (lymphNode.homogeneity === criteria.homogeneity.value);
+    }
+    
+    if (criteria.signal && criteria.signal.active) {
+        // Explicitly handle null signal values as not fulfilling the criterion
+        // Mirrors logic in t2_criteria_manager.js
+        checkResult.signal = (lymphNode.signal !== null && lymphNode.signal !== undefined && lymphNode.signal === criteria.signal.value);
+    }
 
     return checkResult;
 }
@@ -69,23 +86,27 @@ function checkNode(lymphNode, criteria) {
 function applyCriteriaToPatient(patient, criteria, logic) {
     if (!patient || !criteria || (logic !== 'AND' && logic !== 'OR')) return null;
     const lymphNodes = patient.t2Nodes;
-    if (!Array.isArray(lymphNodes)) return null;
+    
+    // If no nodes are present, patient is T2 negative by definition
+    if (!Array.isArray(lymphNodes) || lymphNodes.length === 0) return '-';
 
-    const activeKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active === true);
+    const activeKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key] && criteria[key].active === true);
 
     if (activeKeys.length === 0) return null;
-    if (lymphNodes.length === 0) return '-';
 
     for (let k = 0; k < lymphNodes.length; k++) {
         const lk = lymphNodes[k];
         if (!lk) continue;
+        
         const checkResult = checkNode(lk, criteria);
         let lkIsPositive = false;
+        
         if (logic === 'AND') {
             lkIsPositive = activeKeys.every(key => checkResult[key] === true);
         } else {
             lkIsPositive = activeKeys.some(key => checkResult[key] === true);
         }
+        
         if (lkIsPositive) return '+';
     }
     return '-';
@@ -97,13 +118,15 @@ function calculateMetric(data, criteria, logic, metricName) {
 
     data.forEach(p => {
         if (!p || typeof p !== 'object') return;
+        
         const predictedT2 = applyCriteriaToPatient(p, criteria, logic);
-        const actualN = p.nStatus === '+';
         const validN = p.nStatus === '+' || p.nStatus === '-';
         const validT2 = predictedT2 === '+' || predictedT2 === '-';
 
         if (validN && validT2) {
+            const actualN = p.nStatus === '+';
             const predicted = predictedT2 === '+';
+            
             if (predicted && actualN) tp++;
             else if (predicted && !actualN) fp++;
             else if (!predicted && actualN) fn++;
@@ -114,17 +137,21 @@ function calculateMetric(data, criteria, logic, metricName) {
     const total = tp + fp + fn + tn;
     if (total === 0) return NaN;
 
-    const sens = (tp + fn) > 0 ? tp / (tp + fn) : 0;
-    const spec = (fp + tn) > 0 ? tn / (fp + tn) : 0;
-    const ppv = (tp + fp) > 0 ? tp / (tp + fp) : 0;
-    const npv = (fn + tn) > 0 ? tn / (fn + tn) : 0;
-    let result;
+    // Use NaN for undefined metrics instead of 0 to avoid optimization bias in unbalanced subsets
+    const sens = (tp + fn) > 0 ? tp / (tp + fn) : NaN;
+    const spec = (fp + tn) > 0 ? tn / (fp + tn) : NaN;
+    const ppv = (tp + fp) > 0 ? tp / (tp + fp) : NaN;
+    const npv = (fn + tn) > 0 ? tn / (fn + tn) : NaN;
+    
+    let result = -Infinity;
 
     switch (metricName) {
         case 'Accuracy':
             result = (tp + tn) / total;
             break;
         case 'Balanced Accuracy':
+        case 'AUC': 
+            // For binary classification with a single threshold point, AUC is equivalent to Balanced Accuracy
             result = (isNaN(sens) || isNaN(spec)) ? NaN : (sens + spec) / 2.0;
             break;
         case 'F1-Score':
@@ -137,18 +164,20 @@ function calculateMetric(data, criteria, logic, metricName) {
             }
             break;
         case 'PPV':
-            result = ppv;
+            result = isNaN(ppv) ? -Infinity : ppv;
             break;
         case 'NPV':
-            result = npv;
+            result = isNaN(npv) ? -Infinity : npv;
             break;
         case 'Youden-Index':
             result = (isNaN(sens) || isNaN(spec)) ? NaN : (sens + spec - 1);
             break;
         default:
+            // Default to Balanced Accuracy/AUC if unknown metric
             result = (isNaN(sens) || isNaN(spec)) ? NaN : (sens + spec) / 2.0;
             break;
     }
+    
     return isNaN(result) ? -Infinity : result;
 }
 
@@ -165,24 +194,39 @@ function generateCriteriaCombinations() {
 
     const { min, max, step } = t2SizeRange;
     if (typeof min === 'number' && typeof max === 'number' && typeof step === 'number' && step > 0 && min <= max) {
-        const stepInTenths = Math.max(1, Math.round(step * 10));
-        for (let s = Math.round(min * 10); s <= Math.round(max * 10); s += stepInTenths) {
-            VALUE_OPTIONS.size.push(parseFloat((s / 10).toFixed(1)));
+        // Use integer arithmetic to generate steps to avoid floating point errors
+        const multiplier = 10; 
+        const startInt = Math.round(min * multiplier);
+        const endInt = Math.round(max * multiplier);
+        const stepInt = Math.max(1, Math.round(step * multiplier));
+        
+        for (let s = startInt; s <= endInt; s += stepInt) {
+            VALUE_OPTIONS.size.push(parseFloat((s / multiplier).toFixed(1)));
         }
+        // Deduplicate and sort
         VALUE_OPTIONS.size = [...new Set(VALUE_OPTIONS.size)].sort((a, b) => a - b);
     }
     
+    // Fallback if size generation failed
     if (VALUE_OPTIONS.size.length === 0) {
-        VALUE_OPTIONS.size = Array.from({ length: Math.round((15.0 - 1.0)/0.1) + 1 }, (_, i) => 1.0 + i * 0.1);
+        const fallbackMultiplier = 10;
+        const fallbackStart = 1; // 0.1
+        const fallbackEnd = 250; // 25.0
+        for (let i = fallbackStart; i <= fallbackEnd; i++) {
+            VALUE_OPTIONS.size.push(parseFloat((i / fallbackMultiplier).toFixed(1)));
+        }
     }
     
     const combinations = [];
     let calculatedTotal = 0;
     const numCriteria = CRITERIA_KEYS.length;
 
+    // Iterate through all subsets of criteria (power set)
+    // i represents the bitmask of active criteria
     for (let i = 1; i < (1 << numCriteria); i++) {
         const activeKeys = [];
         const baseTemplate = {};
+        
         CRITERIA_KEYS.forEach((key, index) => {
             const isActive = ((i >> index) & 1) === 1;
             baseTemplate[key] = { active: isActive };
@@ -190,6 +234,8 @@ function generateCriteriaCombinations() {
         });
 
         let combinationsForSubset = [];
+        
+        // Recursive function to generate all value combinations for the active criteria
         function generateValues(keyIndex, currentCombo) {
             if (keyIndex === activeKeys.length) {
                 combinationsForSubset.push(currentCombo);
@@ -198,7 +244,9 @@ function generateCriteriaCombinations() {
 
             const currentKey = activeKeys[keyIndex];
             const options = VALUE_OPTIONS[currentKey];
-            options.forEach(value => {
+            
+            for (let j = 0; j < options.length; j++) {
+                const value = options[j];
                 const nextCombo = cloneDeep(currentCombo);
                 if (currentKey === 'size') {
                     nextCombo[currentKey].threshold = value;
@@ -207,26 +255,37 @@ function generateCriteriaCombinations() {
                     nextCombo[currentKey].value = value;
                 }
                 generateValues(keyIndex + 1, nextCombo);
-            });
+            }
         }
+        
         generateValues(0, baseTemplate);
 
-        calculatedTotal += combinationsForSubset.length * LOGICS.length;
+        // Optimization: If only 1 criterion is active, 'AND' and 'OR' yield identical results.
+        // We only calculate 'AND' to prevent duplicate results and inflated progress counts.
+        const applicableLogics = (activeKeys.length === 1) ? ['AND'] : LOGICS;
+        
+        calculatedTotal += combinationsForSubset.length * applicableLogics.length;
 
-        combinationsForSubset.forEach(combo => {
-            LOGICS.forEach(logic => {
+        for (let j = 0; j < combinationsForSubset.length; j++) {
+            const combo = combinationsForSubset[j];
+            for (let l = 0; l < applicableLogics.length; l++) {
+                const logic = applicableLogics[l];
                 const finalCombo = { logic: logic, criteria: cloneDeep(combo) };
-                CRITERIA_KEYS.forEach(k => {
-                    if (!finalCombo.criteria[k]) finalCombo.criteria[k] = { active: false };
-                });
+                
+                // Ensure inactive criteria are present in the object with active: false
+                for (let k = 0; k < CRITERIA_KEYS.length; k++) {
+                    const key = CRITERIA_KEYS[k];
+                    if (!finalCombo.criteria[key]) {
+                        finalCombo.criteria[key] = { active: false };
+                    }
+                }
                 combinations.push(finalCombo);
-            });
-        });
+            }
+        }
     }
 
     return { combinations, total: calculatedTotal };
 }
-
 
 function runBruteForce() {
     if (!isRunning) return;
@@ -235,6 +294,7 @@ function runBruteForce() {
         isRunning = false;
         return;
     }
+    
     startTime = performance.now();
     combinationsTested = 0;
     allResults = [];
@@ -269,9 +329,10 @@ function runBruteForce() {
         const result = { logic: combo.logic, criteria: combo.criteria, metricValue: metricValue };
         allResults.push(result);
 
-        if (result.metricValue > bestResult.metricValue && isFinite(result.metricValue)) {
-            bestResult = result;
+        if (isFinite(result.metricValue) && result.metricValue > bestResult.metricValue) {
+            bestResult = cloneDeep(result);
         }
+        
         combinationsTested++;
         const now = performance.now();
 
@@ -289,40 +350,38 @@ function runBruteForce() {
             lastReportTime = now;
         }
     }
+    
     const endTime = performance.now();
 
     if (isRunning) {
+        // Sort results to find top 10
         const validResults = allResults.filter(r => r && isFinite(r.metricValue));
         validResults.sort((a, b) => b.metricValue - a.metricValue);
 
         const topResults = [];
         const precision = 1e-8;
         let rank = 0;
-        let countAtRank = 0;
+        // Logic to include ties for top 10 ranks
         let lastScore = Infinity;
 
         for (let i = 0; i < validResults.length; i++) {
             const currentScore = validResults[i].metricValue;
+            // Check if score changed significantly (using epsilon for float comparison)
             const isNewRank = Math.abs(currentScore - lastScore) > precision;
 
             if (isNewRank) {
-                rank = i + 1;
-                countAtRank = 1;
-            } else {
-                countAtRank++;
+                rank++;
             }
+            
             lastScore = currentScore;
 
             if (rank <= 10) {
                 topResults.push(validResults[i]);
             } else {
-                if (rank === 11 && Math.abs(currentScore - (topResults[topResults.length - 1]?.metricValue ?? -Infinity)) < precision) {
-                    topResults.push(validResults[i]);
-                } else {
-                    break;
-                }
+                break;
             }
         }
+        
         const finalBest = bestResult.criteria ? cloneDeep(bestResult) : (topResults[0] ? cloneDeep(topResults[0]) : null);
 
         let nTotal = 0;
@@ -355,6 +414,7 @@ function runBruteForce() {
             }
         });
     }
+    
     isRunning = false;
     currentData = [];
     allResults = [];
@@ -388,6 +448,7 @@ self.onmessage = function(event) {
             if (currentData.length === 0) {
                 throw new Error("Empty dataset received for brute-force analysis.");
             }
+            
             isRunning = true;
             runBruteForce();
         } catch (error) {

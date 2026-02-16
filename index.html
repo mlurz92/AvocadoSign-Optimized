@@ -1,548 +1,199 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>China Explorer 2025 | Ultimativer Reise-Guide</title>
-    
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;700;900&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <title>Avocado Sign vs. T2 Criteria Analysis v5.3.0-ajr-analysis-only</title>
 
-    <style>
-        :root {
-            --china-red: #C41E3A;
-            --china-gold: #D4AF37;
-            --dark-bg: #121212;
-            --card-bg: rgba(30, 30, 30, 0.7);
-            --text-main: #f0f0f0;
-            --blur: 15px;
-        }
+    <meta name="theme-color" content="#005f73"/>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nodal Staging">
+    <link rel="apple-touch-icon" href="data/logo-192.png">
 
-        body {
-            background-color: var(--dark-bg);
-            color: var(--text-main);
-            font-family: 'Roboto', sans-serif;
-            overflow-x: hidden;
-        }
+    <link rel="manifest" href="manifest.json">
 
-        h1, h2, h3, h4 {
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-        }
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="data/logo.svg">
 
-        /* --- Custom Scrollbar --- */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: var(--china-red); border-radius: 4px; }
-
-        /* --- Hero Section --- */
-        .hero-section {
-            height: 100vh;
-            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.8)), url('https://images.unsplash.com/photo-1508804185872-d7badad00f7d?q=80&w=1920&auto=format&fit=crop');
-            background-size: cover;
-            background-attachment: fixed;
-            background-position: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero-title {
-            font-size: 5rem;
-            text-transform: uppercase;
-            background: linear-gradient(to right, #fff, var(--china-gold));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            opacity: 0; /* GSAP animates this */
-            text-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        /* --- Navigation --- */
-        .navbar-custom {
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .nav-link { color: #fff !important; transition: 0.3s; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 1px; }
-        .nav-link:hover, .nav-link.active { color: var(--china-red) !important; }
-
-        /* --- Cards & Glassmorphism --- */
-        .glass-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(var(--blur));
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 2rem;
-            height: 100%;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .glass-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 40px rgba(196, 30, 58, 0.2);
-            border-color: var(--china-red);
-        }
-
-        /* --- Route Timeline --- */
-        .timeline {
-            position: relative;
-            padding: 2rem 0;
-        }
-        .timeline::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 50%;
-            width: 2px; height: 100%;
-            background: var(--china-gold);
-            transform: translateX(-50%);
-        }
-        .timeline-item {
-            margin-bottom: 3rem;
-            position: relative;
-            width: 50%;
-        }
-        .timeline-item.left { left: 0; padding-right: 2rem; text-align: right; }
-        .timeline-item.right { left: 50%; padding-left: 2rem; }
-        
-        .timeline-marker {
-            position: absolute;
-            top: 0;
-            width: 20px; height: 20px;
-            background: var(--china-red);
-            border: 2px solid var(--china-gold);
-            border-radius: 50%;
-            z-index: 2;
-        }
-        .left .timeline-marker { right: -10px; }
-        .right .timeline-marker { left: -10px; }
-
-        /* --- Interactive Tabs --- */
-        .route-tabs .nav-link {
-            border: 1px solid rgba(255,255,255,0.2);
-            margin-right: 10px;
-            border-radius: 30px;
-            color: #fff;
-        }
-        .route-tabs .nav-link.active {
-            background-color: var(--china-red);
-            border-color: var(--china-red);
-            color: white !important;
-        }
-
-        /* --- Warning Box --- */
-        .warning-box {
-            border-left: 4px solid var(--china-red);
-            background: linear-gradient(90deg, rgba(196,30,58,0.1), transparent);
-            padding: 1rem;
-        }
-
-        /* --- Mobile Responsiveness --- */
-        @media (max-width: 768px) {
-            .hero-title { font-size: 3rem; }
-            .timeline::before { left: 20px; }
-            .timeline-item { width: 100%; left: 0; padding-left: 50px; text-align: left; }
-            .timeline-item.left { padding-right: 0; }
-            .left .timeline-marker, .right .timeline-marker { left: 10px; }
-        }
-
-        /* --- Utilities --- */
-        .text-gold { color: var(--china-gold); }
-        .icon-lg { font-size: 2.5rem; margin-bottom: 1rem; color: var(--china-red); }
-        .tag { background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; margin-right: 5px; }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" defer></script>
+    <script src="https://unpkg.com/tippy.js@6" defer></script>
 </head>
-<body data-bs-spy="scroll" data-bs-target="#mainNav" data-bs-offset="100">
-
-    <nav id="mainNav" class="navbar navbar-expand-lg navbar-dark fixed-top navbar-custom">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="#"><i class="fas fa-dragon text-danger"></i> CHINA <span class="text-gold">EXPLORER</span></a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link" href="#logistics">Logistik</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#routes">Routen</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#insider">Insider</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#survival">Survival</a></li>
-                </ul>
+<body>
+    <header class="fixed-top shadow-sm">
+        <div class="container-fluid">
+             <h1 class="app-title">Nodal Staging: Avocado Sign vs. T2</h1>
+             <div class="d-flex align-items-center ms-auto">
+                <button class="btn btn-sm btn-outline-secondary me-2" id="btn-quick-guide" data-tippy-content="Show Quick Guide">
+                    <i class="fas fa-question-circle"></i>
+                </button>
+                <div class="btn-group" role="group" aria-label="Cohort Selection" data-tippy-content="Select the patient cohort for analysis.">
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-cohort-Overall" data-cohort="Overall">Overall</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-cohort-surgeryAlone" data-cohort="surgeryAlone">Surgery alone</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-cohort-neoadjuvantTherapy" data-cohort="neoadjuvantTherapy">Neoadjuvant therapy</button>
+                </div>
             </div>
-        </div>
-    </nav>
-
-    <header class="hero-section">
-        <div class="container">
-            <h1 class="hero-title">Reisen in China<br><span style="font-size: 0.5em; letter-spacing: 5px; color: #fff; display:block; margin-top:20px;">Der ultimative Guide 2025/2026</span></h1>
-            <p class="lead mt-4 text-white opacity-75" id="hero-subtitle">Vollständige Routen. Technische Logistik. Echte Insider-Tipps.</p>
-            <a href="#logistics" class="btn btn-outline-light btn-lg mt-4 rounded-pill px-5">Starten <i class="fas fa-arrow-down ms-2"></i></a>
         </div>
     </header>
 
-    <section id="logistics" class="py-5">
-        <div class="container py-5">
-            <h2 class="text-center mb-5 display-4"><i class="fas fa-passport text-gold"></i> Das Digitale Überlebenspaket</h2>
-            <div class="row g-4">
-                
-                <div class="col-md-6 col-lg-4">
-                    <div class="glass-card gs-reveal">
-                        <i class="fas fa-id-card icon-lg"></i>
-                        <h4>Visum & Einreise</h4>
-                        <ul class="list-unstyled mt-3">
-                            <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>15 Tage Visumfrei:</strong> Für DE-Bürger (bis Ende 2025). Pass muss >6 Monate gültig sein.</li>
-                            <li class="mb-2"><i class="fas fa-exclamation-triangle text-warning me-2"></i><strong>>15 Tage:</strong> L-Visum beim Visa Center beantragen.</li>
-                        </ul>
-                    </div>
-                </div>
+    <nav class="navigation-tabs shadow-sm">
+        <div class="container-fluid">
+            <ul class="nav nav-tabs" id="main-tabs" role="tablist">
+                <li class="nav-item" role="presentation"><button class="nav-link" id="data-tab" data-bs-toggle="tab" data-bs-target="#data-pane" type="button" role="tab"><i class="fas fa-database fa-fw me-1"></i>Data</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link active" id="analysis-tab" data-bs-toggle="tab" data-bs-target="#analysis-pane" type="button" role="tab"><i class="fas fa-tasks fa-fw me-1"></i>Analysis</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" id="statistics-tab" data-bs-toggle="tab" data-bs-target="#statistics-pane" type="button" role="tab"><i class="fas fa-chart-bar fa-fw me-1"></i>Statistics</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" id="comparison-tab" data-bs-toggle="tab" data-bs-target="#comparison-pane" type="button" role="tab"><i class="fas fa-chart-line fa-fw me-1"></i>Comparison</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" id="insights-tab" data-bs-toggle="tab" data-bs-target="#insights-pane" type="button" role="tab"><i class="fas fa-lightbulb fa-fw me-1"></i>Insights</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export-pane" type="button" role="tab"><i class="fas fa-download fa-fw me-1"></i>Export</button></li>
+            </ul>
+        </div>
+    </nav>
 
-                <div class="col-md-6 col-lg-4">
-                    <div class="glass-card gs-reveal">
-                        <i class="fas fa-wifi icon-lg"></i>
-                        <h4>Internet & Great Firewall</h4>
-                        <p class="small text-muted">Westliche Apps sind blockiert.</p>
-                        <ul class="list-unstyled">
-                            <li class="mb-2"><strong class="text-gold">Option A (Empfohlen):</strong> eSIM (Holafly/Airalo). Routet über HK/Singapur, umgeht Zensur automatisch.</li>
-                            <li class="mb-2"><strong>Option B:</strong> VPN (Astrill VPN). Muss <em>vor</em> Einreise installiert werden.</li>
-                        </ul>
-                    </div>
-                </div>
+    <main class="container-fluid main-content" id="app-container">
+        <div class="tab-content" id="main-tab-content">
+            <section class="tab-pane fade" id="data-pane" role="tabpanel" aria-labelledby="data-tab" tabindex="0"><p class="text-center p-5 text-muted">Loading Patient Data...</p></section>
+            <section class="tab-pane fade show active" id="analysis-pane" role="tabpanel" aria-labelledby="analysis-tab" tabindex="0"><p class="text-center p-5 text-muted">Loading Analysis Tools...</p></section>
+            <section class="tab-pane fade" id="statistics-pane" role="tabpanel" aria-labelledby="statistics-tab" tabindex="0"><p class="text-center p-5 text-muted">Loading Statistics...</p></section>
+            <section class="tab-pane fade" id="comparison-pane" role="tabpanel" aria-labelledby="comparison-tab" tabindex="0"><p class="text-center p-5 text-muted">Loading Comparison View...</p></section>
+            <section class="tab-pane fade" id="insights-pane" role="tabpanel" aria-labelledby="insights-tab" tabindex="0"><p class="text-center p-5 text-muted">Loading Insights...</p></section>
+            <section class="tab-pane fade" id="export-pane" role="tabpanel" aria-labelledby="export-tab" tabindex="0"><p class="text-center p-5 text-muted">Loading Export Tools...</p></section>
+        </div>
+    </main>
 
-                <div class="col-md-6 col-lg-4">
-                    <div class="glass-card gs-reveal">
-                        <i class="fab fa-alipay icon-lg"></i>
-                        <h4>Bezahlen (Cashless)</h4>
-                        <p class="small">Bargeld wird kaum akzeptiert.</p>
-                        <div class="d-grid gap-2">
-                            <div class="bg-dark p-2 rounded border border-secondary">
-                                <i class="fab fa-alipay text-primary"></i> <strong>Alipay</strong><br>
-                                <small>Kreditkarte hinterlegen + Pass-Verifizierung.</small>
-                            </div>
-                            <div class="bg-dark p-2 rounded border border-secondary">
-                                <i class="fab fa-weixin text-success"></i> <strong>WeChat Pay</strong><br>
-                                <small>Alternativ. Wichtig für Miniapps.</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100"><div id="toast-container"></div></div>
 
-                <div class="col-md-6 col-lg-6">
-                    <div class="glass-card gs-reveal">
-                        <i class="fas fa-map-marked-alt icon-lg"></i>
-                        <h4>Navigation & Transport</h4>
-                        <div class="row">
-                            <div class="col-6">
-                                <h6>Karten</h6>
-                                <ul class="small list-unstyled">
-                                    <li><span class="tag">Apple Maps</span> (Englisch, gut)</li>
-                                    <li><span class="tag">Amap</span> (Chinesisch, beste Daten)</li>
-                                    <li><span class="tag">Metroman</span> (U-Bahn Eng)</li>
-                                </ul>
-                            </div>
-                            <div class="col-6">
-                                <h6>Buchung</h6>
-                                <ul class="small list-unstyled">
-                                    <li><span class="tag">Trip.com</span> (Züge & Hotels, Pflicht!)</li>
-                                    <li><span class="tag">DiDi</span> (Uber-Klon, via Alipay)</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
+    <div class="modal fade" id="brute-force-modal" tabindex="-1" aria-labelledby="bruteForceModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content modal-glass">
+          <div class="modal-header"><h5 class="modal-title" id="bruteForceModalLabel">Brute-Force Optimization Results</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+          <div class="modal-body" id="brute-force-modal-body"><p class="text-center text-muted">Results will be loaded here...</p></div>
+          <div class="modal-footer"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal fade" id="quick-guide-modal" tabindex="-1" aria-labelledby="quickGuideModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content modal-glass">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="quickGuideModalLabel"><i class="fas fa-question-circle me-2"></i>Quick Guide</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+                <div class="modal-body">
+                    <h6>Global Controls & Analysis Context</h6>
+                    <p class="small">Use the buttons in the top header to select the patient <strong>Global Cohort</strong> for general exploration in the Data and Analysis tabs. For specific, methodologically valid comparisons (e.g., in the Comparison tab), the application automatically activates an <strong>Analysis Context</strong>. This locks the cohort to the appropriate group for the selected comparison (e.g., 'Surgery alone' for ESGAR criteria) and temporarily disables the global cohort buttons to ensure scientific rigor.</p>
+                    <hr>
+                    <h6>Tabs Overview</h6>
+                    <dl class="row small">
+                        <dt class="col-sm-3"><i class="fas fa-database fa-fw me-1"></i>Data</dt>
+                        <dd class="col-sm-9">View and sort the raw patient data based on the selected Global Cohort. Click on a row to expand and see individual T2 lymph node features.</dd>
 
-                <div class="col-md-6 col-lg-6">
-                    <div class="glass-card gs-reveal">
-                        <i class="fas fa-battery-full icon-lg"></i>
-                        <h4>Strom & Powerbanks</h4>
-                        <p>Da alles über das Handy läuft (Bezahlen, Tickets), ist ein leerer Akku eine Katastrophe.</p>
-                        <p class="small"><i class="fas fa-lightbulb text-gold"></i> <strong>Tipp:</strong> Nutzen Sie die blauen "Meituan" oder gelben Powerbank-Stationen in jedem Restaurant/Kiosk. Scan per Alipay, mitnehmen, woanders zurückgeben (ca. 4 RMB/Std).</p>
-                    </div>
+                        <dt class="col-sm-3"><i class="fas fa-tasks fa-fw me-1"></i>Analysis</dt>
+                        <dd class="col-sm-9">Interactively define T2 malignancy criteria and see their real-time impact on diagnostic performance for the selected Global Cohort. Run the <strong>Brute-Force Optimization</strong> to find the mathematically best criteria for a selected metric.</dd>
+
+                        <dt class="col-sm-3"><i class="fas fa-chart-bar fa-fw me-1"></i>Statistics</dt>
+                        <dd class="col-sm-9">Get a comprehensive statistical breakdown. In 'Single View', it uses the Global Cohort. In 'Comparison View', you can select two cohorts for a direct comparison.</dd>
+
+                        <dt class="col-sm-3"><i class="fas fa-chart-line fa-fw me-1"></i>Comparison</dt>
+                        <dd class="col-sm-9">Visually compare the performance of the Avocado Sign against either your currently applied T2 criteria or established criteria from the literature. This tab uses the <strong>Analysis Context</strong> to ensure all comparisons are performed on the correct, methodologically sound patient cohort.</dd>
+
+                        <dt class="col-sm-3"><i class="fas fa-lightbulb fa-fw me-1"></i>Insights</dt>
+                        <dd class="col-sm-9">Perform advanced analyses such as Post-hoc Power Analysis, Mismatch Analysis to compare methods, and Feature Importance to understand the contribution of individual T2 criteria.</dd>
+                        
+                        <dt class="col-sm-3"><i class="fas fa-download fa-fw me-1"></i>Export</dt>
+                        <dd class="col-sm-9">Export the analysis results, tables, and charts in various formats (SVG) for use in other applications.</dd>
+                    </dl>
+                    <hr>
+                    <p class="small text-muted"><strong>Disclaimer:</strong> This is a research tool only. Do not use for clinical diagnosis or treatment decisions.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it!</button>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
-    <section id="routes" class="py-5 bg-black">
-        <div class="container">
-            <div class="text-center mb-5">
-                <h2 class="display-4 text-white">Reiserouten 2025</h2>
-                <p class="text-muted">Wähle deine Erfahrung</p>
-                
-                <ul class="nav nav-pills justify-content-center route-tabs mb-4" id="routeTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="route1-tab" data-bs-toggle="pill" data-bs-target="#route1" type="button" role="tab">Route 1: Klassiker (14 Tage)</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="route2-tab" data-bs-toggle="pill" data-bs-target="#route2" type="button" role="tab">Route 2: Avatar & Natur (15 Tage)</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="route3-tab" data-bs-toggle="pill" data-bs-target="#route3" type="button" role="tab">Route 3: Yunnan / Slow Travel</button>
-                    </li>
-                </ul>
+    <div class="modal fade" id="auto-bf-prompt-modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="autoBfPromptModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-glass">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="autoBfPromptModalLabel"><i class="fas fa-cogs me-2"></i>Initial Analysis Setup</h5>
+                </div>
+                <div class="modal-body">
+                    <p>Welcome! It looks like this is your first time running the analysis, or the cached results are missing.</p>
+                    <p>To enable all analysis features, the application needs to perform a one-time "Brute-Force Optimization" for each patient cohort. This process may take a few minutes depending on your computer's performance.</p>
+                    <p class="fw-bold">Would you like to run this initial analysis now?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="btn-decline-auto-bf">No, I'll do it manually later</button>
+                    <button type="button" class="btn btn-primary" id="btn-confirm-auto-bf"><i class="fas fa-rocket me-2"></i>Yes, start the analysis</button>
+                </div>
             </div>
+        </div>
+    </div>
 
-            <div class="tab-content" id="routeContent">
-                
-                <div class="tab-pane fade show active" id="route1" role="tabpanel">
-                    <div class="alert alert-dark border-gold text-center">
-                        <strong>Fokus:</strong> Kaiserliche Geschichte, Megacitys, Karstberge. Ideal für Einsteiger.
-                    </div>
-                    <div class="timeline">
-                        <div class="timeline-item left gs-route">
-                            <div class="timeline-marker"></div>
-                            <h3 class="text-gold">Tag 1-4: Peking (Beijing)</h3>
-                            <p><strong>Das imperiale Herz.</strong></p>
-                            <ul class="list-unstyled small">
-                                <li><i class="fas fa-star text-danger"></i> <strong>Verbotene Stadt:</strong> Tickets exakt 7 Tage vorher 20:00 buchen!</li>
-                                <li><i class="fas fa-hiking text-danger"></i> <strong>Große Mauer:</strong> Abschnitt Mutianyu mit Seilbahn & Sommerrodelbahn.</li>
-                                <li><i class="fas fa-utensils text-danger"></i> <strong>Essen:</strong> Pekingente bei <em>Siji Minfu</em>.</li>
-                            </ul>
-                        </div>
-                        <div class="timeline-item right gs-route">
-                            <div class="timeline-marker"></div>
-                            <h3 class="text-gold">Tag 5-6: Xi'an</h3>
-                            <p><strong>Ende der Seidenstraße.</strong> (Zug: 4,5 Std)</p>
-                            <ul class="list-unstyled small">
-                                <li><strong>Terrakotta-Armee:</strong> Weit draußen. Halle 1 ist Highlight.</li>
-                                <li><strong>Aktivität:</strong> Radfahren auf der Stadtmauer (14km).</li>
-                                <li><strong>Food:</strong> Muslimisches Viertel (Biang Biang Nudeln).</li>
-                            </ul>
-                        </div>
-                        <div class="timeline-item left gs-route">
-                            <div class="timeline-marker"></div>
-                            <h3 class="text-gold">Tag 7-9: Guilin & Yangshuo</h3>
-                            <p><strong>Die 20-Yuan-Note Landschaft.</strong></p>
-                            <ul class="list-unstyled small">
-                                <li><strong>Li-Fluss:</strong> 4-Sterne-Boot von Guilin nach Yangshuo buchen.</li>
-                                <li><strong>Yangshuo:</strong> E-Scooter durchs Yulong-Tal mieten.</li>
-                                <li><strong>Foto:</strong> Xianggong Hill zum Sonnenaufgang.</li>
-                            </ul>
-                        </div>
-                        <div class="timeline-item right gs-route">
-                            <div class="timeline-marker"></div>
-                            <h3 class="text-gold">Tag 10-14: Shanghai</h3>
-                            <p><strong>Die Zukunft.</strong></p>
-                            <ul class="list-unstyled small">
-                                <li><strong>The Bund & Pudong:</strong> Skyline Views.</li>
-                                <li><strong>Suzhou (Tagestrip):</strong> Venedig des Ostens, Gärten.</li>
-                                <li><strong>Shanghai Tower:</strong> Höchste Plattform der Welt.</li>
-                            </ul>
-                        </div>
-                    </div>
+    <div class="modal fade" id="auto-bf-progress-modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="autoBfProgressModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-glass">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="autoBfProgressModalLabel"><i class="fas fa-sync-alt fa-spin me-2"></i>Performing Initial Analysis...</h5>
                 </div>
-
-                <div class="tab-pane fade" id="route2" role="tabpanel">
-                     <div class="alert alert-dark border-gold text-center">
-                        <strong>Fokus:</strong> Pandas, Nationalparks, Scharfes Essen.
-                    </div>
-                    <div class="timeline">
-                        <div class="timeline-item left">
-                            <div class="timeline-marker"></div>
-                            <h3 class="text-gold">Tag 1-3: Chengdu</h3>
-                            <p><strong>Pandas & Schärfe.</strong></p>
-                            <p class="small">Panda Base um 7:30 Uhr besuchen! Später schlafen sie. Leshan Buddha (größter Steinbuddha) per Boot.</p>
-                        </div>
-                        <div class="timeline-item right">
-                            <div class="timeline-marker"></div>
-                            <h3 class="text-gold">Tag 4-6: Jiuzhaigou</h3>
-                            <p><strong>Tal der neun Dörfer.</strong> Türkise Seen.</p>
-                            <p class="small">Neue Zugstrecke ab Chengdu. Wandern im Nationalpark (Five Flower Lake).</p>
-                        </div>
-                        <div class="timeline-item left">
-                            <div class="timeline-marker"></div>
-                            <h3 class="text-gold">Tag 7-10: Zhangjiajie</h3>
-                            <p><strong>Avatar-Berge.</strong></p>
-                            <p class="small">National Forest Park (Hallelujah Mountain), Tianmen Mountain (999 Stufen, Himmelstor), Glasbrücke.</p>
-                        </div>
-                        <div class="timeline-item right">
-                            <div class="timeline-marker"></div>
-                            <h3 class="text-gold">Tag 11-12: Fenghuang</h3>
-                            <p><strong>Phönix-Altstadt.</strong></p>
-                            <p class="small">Häuser auf Stelzen, extrem fotogen bei Nacht. Traditionelle Kleidung leihen.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="tab-pane fade" id="route3" role="tabpanel">
-                     <div class="alert alert-dark border-gold text-center">
-                        <strong>Fokus:</strong> Ethnische Minderheiten, Himalaya, Backpacker-Vibe.
-                    </div>
-                    <div class="timeline">
-                        <div class="timeline-item left">
-                            <div class="timeline-marker"></div>
-                            <h3 class="text-gold">Tag 1-3: Kunming</h3>
-                            <p>Steinwald (Shilin) Karstformationen.</p>
-                        </div>
-                        <div class="timeline-item right">
-                            <div class="timeline-marker"></div>
-                            <h3 class="text-gold">Tag 4-6: Dali</h3>
-                            <p><strong>Hippie-Vibe am See.</strong></p>
-                            <p class="small">E-Scooter um den Erhai-See. Altstadt und Drei Pagoden.</p>
-                        </div>
-                        <div class="timeline-item left">
-                            <div class="timeline-marker"></div>
-                            <h3 class="text-gold">Tag 7-11: Lijiang & Tigersprung</h3>
-                            <p>UNESCO Altstadt (früh aufstehen!).</p>
-                            <p class="small">Wanderung Tiger Leaping Gorge (Upper Trail, Übernachtung im Halfway Guesthouse).</p>
-                        </div>
-                        <div class="timeline-item right">
-                            <div class="timeline-marker"></div>
-                            <h3 class="text-gold">Tag 12-14: Shangri-La</h3>
-                            <p><strong>Tibetischer Einfluss (3160m).</strong></p>
-                            <p class="small">Songzanlin Kloster ("kleiner Potala"), Yak-Hotpot, Pudacuo Park.</p>
+                <div class="modal-body text-center">
+                    <p>Please wait while the application calculates the optimal T2 criteria for each cohort. This should not be interrupted.</p>
+                    <div id="auto-bf-progress-status" class="mt-3">
+                        <p class="mb-1">Initializing...</p>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
-    <section id="survival" class="py-5">
-        <div class="container">
-            <h2 class="text-center mb-5 display-4">Insider Wissen & Warnungen</h2>
-            <div class="row g-4">
-                
-                <div class="col-md-4">
-                    <div class="glass-card h-100 gs-reveal">
-                        <div class="text-center"><i class="fas fa-toilet icon-lg text-warning"></i></div>
-                        <h4 class="text-center">Die Toiletten-Realität</h4>
-                        <p class="small mt-3">Außerhalb von Luxushotels gilt: <strong>Hocktoiletten</strong> (Squat Toilets). Es gibt <strong>kein</strong> Papier auf öffentlichen WCs. <br><br><strong>Survival-Kit:</strong> Immer Taschentücher und Desinfektionsgel dabei haben!</p>
-                    </div>
-                </div>
+    <div id="hidden-chart-export-container" style="position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px; overflow: hidden;"></div>
 
-                <div class="col-md-4">
-                    <div class="glass-card h-100 gs-reveal">
-                        <div class="text-center"><i class="fas fa-user-secret icon-lg text-danger"></i></div>
-                        <h4 class="text-center">Scam Alert</h4>
-                        <ul class="list-unstyled small mt-3">
-                            <li class="mb-2"><strong>Tea House Scam:</strong> Überfreundliche "Studenten" in Peking/Shanghai wollen Englisch üben -> führen dich ins Teehaus -> 500€ Rechnung. <strong>Nie mitgehen!</strong></li>
-                            <li><strong>Taxi:</strong> Nie "Black Taxis" nehmen. Nur <strong>DiDi</strong> via Alipay rufen oder auf Taximeter bestehen ("Da Biao").</li>
-                        </ul>
-                    </div>
-                </div>
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="data/data.js"></script>
+    
+    <script src="js/core/data_processor.js"></script>
+    <script src="js/core/t2_criteria_manager.js"></script>
+    <script src="js/core/study_criteria_manager.js"></script>
 
-                <div class="col-md-4">
-                    <div class="glass-card h-100 gs-reveal">
-                        <div class="text-center"><i class="fas fa-calendar-times icon-lg text-danger"></i></div>
-                        <h4 class="text-center">No-Go Reisezeiten</h4>
-                        <p class="small mt-3 text-center">Vermeiden Sie diese Daten um jeden Preis (Menschenmassen!):</p>
-                        <ul class="list-unstyled small text-center">
-                            <li><strong>Chinese New Year</strong> (Jan/Feb)</li>
-                            <li><strong>National Day Week</strong> (1.-7. Oktober)</li>
-                        </ul>
-                    </div>
-                </div>
+    <script src="js/services/statistics_service.js"></script>
+    <script src="js/services/brute_force_manager.js"></script>
+    <script src="js/services/export_service.js"></script>
+    
+    <script src="js/ui/components/ui_components.js"></script>
+    <script src="js/ui/components/table_renderer.js"></script>
+    <script src="js/ui/components/chart_renderer.js"></script>
+    <script src="js/ui/components/flowchart_renderer.js"></script>
+    
+    <script src="js/ui/tabs/data_tab.js"></script>
+    <script src="js/ui/tabs/analysis_tab.js"></script>
+    <script src="js/ui/tabs/statistics_tab.js"></script>
+    <script src="js/ui/tabs/comparison_tab.js"></script>
+    <script src="js/ui/tabs/insights_tab.js"></script>
+    <script src="js/ui/tabs/export_tab.js"></script>
 
-                <div class="col-12 mt-4">
-                    <div class="glass-card gs-reveal">
-                        <div class="row align-items-center">
-                            <div class="col-md-6">
-                                <h5><i class="fas fa-language text-gold"></i> Sprachbarriere knacken</h5>
-                                <p class="small">Niemand spricht Englisch (auch nicht Taxifahrer). Nutzen Sie <strong>DeepL</strong> oder die integrierte Translate-Funktion in <strong>Alipay/WeChat</strong> (Voice-to-Text). Adressen immer auf Chinesisch (Schriftzeichen) vorzeigen.</p>
-                            </div>
-                            <div class="col-md-6 border-start border-secondary">
-                                <h5><i class="fas fa-train text-gold"></i> High-Speed Rail Protokoll</h5>
-                                <p class="small">Wie Fliegen: 60 Min vorher da sein. Passkontrolle am <strong>"Manual Lane"</strong> (Automaten lesen oft keine Reisepässe).</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <footer class="bg-black py-4 text-center border-top border-secondary">
-        <div class="container">
-            <p class="text-muted small">Generiert von Gemini AI | Datenstand 2025/2026</p>
-            <p class="text-muted small">Alle Angaben ohne Gewähr. Visabestimmungen können sich ändern.</p>
-        </div>
-    </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
-
+    <script src="js/ui/ui_manager.js"></script>
+    
+    <script src="js/app/state.js"></script>
+    <script src="js/app/main.js"></script>
+    
+    <script src="js/ui/event_manager.js"></script>
+    
     <script>
-        // GSAP Animations Registration
-        gsap.registerPlugin(ScrollTrigger);
-
-        // 1. Hero Text Reveal
-        const tl = gsap.timeline();
-        tl.to(".hero-title", { opacity: 1, y: -20, duration: 1.5, ease: "power3.out" })
-          .from("#hero-subtitle", { opacity: 0, y: 20, duration: 1 }, "-=1");
-
-        // 2. Reveal Cards on Scroll
-        gsap.utils.toArray('.gs-reveal').forEach(element => {
-            gsap.from(element, {
-                scrollTrigger: {
-                    trigger: element,
-                    start: "top 85%",
-                    toggleActions: "play none none reverse"
-                },
-                y: 50,
-                opacity: 0,
-                duration: 0.8,
-                ease: "power2.out"
-            });
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = new App();
+            app.init();
         });
-
-        // 3. Timeline Items Animation
-        // This function re-initializes animations when tabs are switched
-        function initTimelineAnimations() {
-            // Kill old triggers to avoid conflict
-            ScrollTrigger.getAll().forEach(t => {
-                if(t.vars.trigger && t.vars.trigger.classList.contains('gs-route')) {
-                    t.kill();
-                }
-            });
-
-            // Re-apply to currently visible timeline items
-            const activePane = document.querySelector('.tab-pane.active');
-            if(activePane) {
-                const items = activePane.querySelectorAll('.timeline-item');
-                items.forEach((item, i) => {
-                    gsap.fromTo(item, 
-                        { opacity: 0, x: i % 2 === 0 ? -50 : 50 },
-                        {
-                            opacity: 1, 
-                            x: 0,
-                            duration: 0.8,
-                            scrollTrigger: {
-                                trigger: item,
-                                start: "top 80%",
-                                toggleActions: "play none none reverse"
-                            }
-                        }
-                    );
-                });
-            }
-        }
-
-        // Initialize on load
-        window.addEventListener('load', initTimelineAnimations);
-
-        // Re-init on Tab Switch
-        const tabEl = document.querySelectorAll('button[data-bs-toggle="pill"]');
-        tabEl.forEach(tab => {
-            tab.addEventListener('shown.bs.tab', function (event) {
-                // Short timeout to allow DOM to update visibility
-                setTimeout(initTimelineAnimations, 100);
-            });
-        });
-
-        // 4. Parallax Effect for Backgrounds
-        gsap.to(".hero-section", {
-            backgroundPosition: "50% 100%",
-            ease: "none",
-            scrollTrigger: {
-                trigger: ".hero-section",
-                start: "top top",
-                end: "bottom top",
-                scrub: true
-            }
-        });
-
     </script>
+
 </body>
 </html>

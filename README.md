@@ -1,127 +1,204 @@
-# Nodal Staging Analysis Tool (v4.1.0)
+# Nodal Staging Analysis Tool: Avocado Sign vs. T2 Criteria
 
-This repository contains the source code for the "Nodal Staging: Avocado Sign vs. T2 Criteria" analysis tool, a client-side web application for advanced research in medical imaging.
+![Version](https://img.shields.io/badge/version-5.3.0--analysis--only-blue)
+![Architecture](https://img.shields.io/badge/architecture-client--side--SPA-orange)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/status-production--ready-success)
 
-For a comprehensive guide on the scientific background, application features, and user workflow, please refer to the detailed **[Application Guide](./docs/Application_Guide.md)**.
+## 1. Executive Summary & Scientific Purpose
 
-## 1. Introduction
+The **AvocadoSign Insights** application is a specialized, high-performance research tool designed for the rigorous statistical evaluation of MRI-based nodal staging in rectal cancer. Its primary purpose is to compare the diagnostic accuracy of the **"Avocado Sign"** (a novel morphological marker) against standard and experimental **T2-weighted MRI criteria**.
 
-### 1.1. Project Purpose
-This application is a specialized research instrument designed for the in-depth, reproducible analysis and comparison of diagnostic performance between different MRI-based criteria for assessing mesorectal lymph node status (N-status) in rectal cancer. Its primary scientific goal is to rigorously evaluate the contrast-based **Avocado Sign (AS)** against a spectrum of T2-weighted (T2w) morphological criteria.
+Unlike static statistical software, this tool features a **Reactive Analysis Engine** that allows researchers to:
+1.  **Dynamically Redefine Malignancy:** Instantly observe how changing T2 criteria thresholds (e.g., size cutoff, border irregularity) impacts diagnostic performance.
+2.  **Optimize Algorithmically:** Use brute-force permutation testing to discover mathematically optimal criteria sets.
+3.  **Compare Methodologies:** Perform head-to-head statistical comparisons (McNemar, ROC) between the Avocado Sign and literature benchmarks.
 
-### 1.2. Core Features
-*   **Interactive Data Exploration:** A high-performance, filterable table view of the patient dataset.
-*   **Flexible Criteria Definition:** A dynamic control panel for defining and combining T2w malignancy criteria.
-*   **Methodologically Sound Comparisons:** An "Analysis Context" system ensures that all statistical comparisons between diagnostic methods are performed on the correct, identical patient cohorts, a critical requirement for scientific validity.
-*   **Automated Criteria Optimization:** An integrated brute-force algorithm, running in a dedicated Web Worker, to systematically identify the mathematically optimal criteria combination for a user-selected diagnostic metric.
-*   **Comprehensive Statistical Analysis:** Automated calculation of all relevant diagnostic performance metrics (Sensitivity, Specificity, PPV, NPV, Accuracy, AUC) including 95% confidence intervals and statistical comparison tests (e.g., DeLong, McNemar).
-*   **Publication Assistant:** A dedicated module that generates formatted, English-language text, tables, and figures for a scientific manuscript, precisely adhering to the style guidelines of the journal *Radiology*.
-*   **Integrated Export Tools:** A comprehensive export module to download all generated data, results, and publication materials, including a pre-packaged ZIP archive for journal submission.
+---
 
-### 1.3. Disclaimer: Research Instrument Only
-**This application is designed exclusively for research and educational purposes.** The presented data, statistics, and generated texts are based on a static, pseudonymized research dataset. **The results must not, under any circumstances, be used for clinical diagnosis, direct treatment decisions, or any other primary medical applications.** The scientific and clinical responsibility for the interpretation and use of the generated results lies solely with the user.
+## 2. Technical Architecture
 
-## 2. Setup and Usage
+The application is built as a **modern, server-less Single Page Application (SPA)** that runs entirely in the client's browser.
 
-### 2.1. System Requirements
-*   A modern desktop web browser (e.g., Google Chrome, Mozilla Firefox, Microsoft Edge, or Safari).
-*   Web Worker support is required for the brute-force optimization feature.
+* **Core:** Vanilla JavaScript (ES6+), adhering to a modular Service-Oriented Architecture.
+* **No Build Step:** The application uses native ES Modules (`import/export`). It can be hosted on any static file server or run locally without Node.js compilation.
+* **Multithreading:** Computationally intensive tasks (Brute-Force Optimization) are offloaded to **Web Workers** to ensure the UI remains responsive (60fps) during calculations.
+* **Dependencies:**
+    * **D3.js (v7):** For high-precision, vector-based data visualization (ROC curves, Histograms, Flowcharts).
+    * **Bootstrap 5.3:** For the responsive grid system and UI components (Modals, Toasts).
+    * **Tippy.js:** For context-aware tooltips.
+    * **FontAwesome 6:** For UI iconography.
 
-### 2.2. Installation
-No installation or server-side setup is required. The application runs entirely in the client's browser.
+---
 
-1.  Clone or download this repository.
-2.  Open the `index.html` file in a compatible web browser.
-3.  An internet connection is needed on the first run to load external libraries (e.g., Bootstrap, D3.js) from their respective CDNs.
+## 3. Data Model & Input Specification
 
-## 3. Technical Overview
+The application consumes a raw dataset (`data/data.js`) structured as a JSON array. Each patient object adheres to the following schema:
 
-### 3.1. Application Architecture
-The application follows a modular architecture that separates data logic, service functions, and UI rendering:
-
-1.  **Event Handler (`event_manager.js`):** Captures user interactions and dispatches them to the App Controller.
-2.  **State Manager (`state.js`):** Manages the global application state (e.g., active cohort, sort order) and a temporary `analysisContext` to ensure methodologically sound comparisons.
-3.  **App Controller (`main.js`):** Orchestrates the data flow. Upon state changes, it triggers data filtering, recalculation of all statistics, and re-rendering of the UI, passing the correct data context to each module.
-4.  **Core Modules (`core/`):** Process and evaluate the raw data (`data_processor.js`, `t2_criteria_manager.js`, `study_criteria_manager.js`).
-5.  **Service Layer (`services/`):** Contains the complex business logic for statistics, brute-force optimization, and publication generation. The `publication_service.js` module specifically orchestrates a suite of sub-modules within `services/publication_service/` to assemble the manuscript.
-6.  **UI Layer (`ui/`):** Responsible for rendering all data and components based on the data provided by the App Controller.
-
-### 3.2. Directory Structure
-<details>
-<summary>Click to expand a full list of all project files and their locations.</summary>
+```json
+{
+  "id": "String (Unique Patient ID)",
+  "nStatus": "String ('N0', 'N1', 'N1a', 'N1b', 'N2', 'N2a', 'N2b')",
+  "t2Nodes": [
+    {
+      "size": "Number (Short-axis diameter in mm)",
+      "shape": "String ('round' | 'oval' | 'irregular')",
+      "border": "String ('smooth' | 'irregular' | 'spiculated')",
+      "signal": "String ('homogeneous' | 'heterogeneous')",
+      "avocadoSign": "Boolean (true = positive sign, false = negative)"
+    }
+  ]
+}
 
 ```
-/
-├── css/
-│   └── style.css
-├── data/
-│   └── data.js
-├── docs/
-│   ├── Application_Guide.md
-│   ├── Barbaro_2024_summary.txt
-│   ├── Garcia-Aguilar_2022_summary.txt
-│   ├── Koh_2008_summary.txt
-│   ├── Lurz_Schaefer_AvocadoSign_2025.pdf.txt
-│   ├── Lurz_Schaefer_AvocadoSign_2025_summary.txt
-│   ├── Radiology_Publication_Instructions_for_Authors.md
-│   ├── Radiology_Scientific_Style_Guide.md
-│   ├── Rutegard_2025_summary.txt
-│   └── Schrag_2023_summary.txt
-├── js/
-│   ├── app/
-│   │   ├── main.js
-│   │   └── state.js
-│   ├── core/
-│   │   ├── data_processor.js
-│   │   ├── study_criteria_manager.js
-│   │   └── t2_criteria_manager.js
-│   ├── services/
-│   │   ├── publication_service/
-│   │   │   ├── abstract_generator.js
-│   │   │   ├── discussion_generator.js
-│   │   │   ├── introduction_generator.js
-│   │   │   ├── methods_generator.js
-│   │   │   ├── publication_helpers.js
-│   │   │   ├── references_generator.js
-│   │   │   ├── results_generator.js
-│   │   │   ├── stard_generator.js
-│   │   │   └── title_page_generator.js
-│   │   ├── brute_force_manager.js
-│   │   ├── publication_service.js
-│   │   └── statistics_service.js
-│   ├── ui/
-│   │   ├── components/
-│   │   │   ├── chart_renderer.js
-│   │   │   ├── flowchart_renderer.js
-│   │   │   ├── table_renderer.js
-│   │   │   └── ui_components.js
-│   │   ├── tabs/
-│   │   │   ├── analysis_tab.js
-│   │   │   ├── comparison_tab.js
-│   │   │   ├── data_tab.js
-│   │   │   ├── export_tab.js
-│   │   │   ├── publication_tab.js
-│   │   │   └── statistics_tab.js
-│   │   ├── event_manager.js
-│   │   └── ui_manager.js
-│   ├── config.js
-│   └── utils.js
-├── workers/
-│   └── brute_force_worker.js
-├── index.html
-└── README.md
-```
 
-</details>
+* **N-Stage Parsing:** The application automatically maps detailed N-stages (e.g., N1a, N2b) to binary outcomes (N+ vs. N0) for statistical analysis.
+* **Node Aggregation:** Patient-level diagnosis is determined by the "worst" node. If *any* node meets the malignancy criteria, the patient is classified as positive.
 
-### 3.3. Glossary
-*   **AS:** Avocado Sign
-*   **AUC:** Area Under the Curve
-*   **BF:** Brute-Force
-*   **CI:** Confidence Interval
-*   **nRCT:** Neoadjuvant Chemoradiotherapy
-*   **NPV:** Negative Predictive Value
-*   **OR:** Odds Ratio
-*   **PPV:** Positive Predictive Value
-*   **RD:** Risk Difference
-*   **T2w:** T2-weighted
+---
+
+## 4. Comprehensive Feature Walkthrough
+
+### 4.1. Global Controls & Cohort Management
+
+Located in the sticky header, these controls affect the entire application state:
+
+* **Cohort Selection:** Instantly filters the dataset into:
+* **Overall:** Full dataset ().
+* **Surgery Alone:** Patients with primary surgery (). Useful for assessing native nodal morphology without treatment artifacts.
+* **Neoadjuvant Therapy:** Patients treated with CRT/TNT (). Useful for assessing restaging accuracy.
+
+
+* **Quick Guide:** Modal overlay explaining core concepts.
+
+### 4.2. Data Tab (Raw Data Inspection)
+
+A tabular view of the filtered dataset.
+
+* **Columns:** Patient ID, pN Status (Ground Truth), T2 Status (Computed based on current criteria), Avocado Sign Status.
+* **Interactivity:**
+* **Sorting:** Multi-level sorting (e.g., by N-Status, then Size).
+* **Row Expansion:** Clicking a patient row reveals the specific attributes (Size, Shape, etc.) of every lymph node associated with that patient.
+
+
+
+### 4.3. Analysis Tab (The Core Engine)
+
+This tab controls the definition of "T2 Malignancy".
+
+#### A. Manual Criteria Builder
+
+* **Size Threshold:** A slider/input control allowing precision adjustment in **0.5mm increments**.
+* **Morphological Features:** Boolean toggles for **Shape** (Round/Irregular), **Border** (Irregular/Spiculated), **Heterogeneity**, and **Signal Intensity**.
+* **Logic Gate:**
+* **OR Logic:** Malignant if (Size > Threshold) **OR** (Any selected feature is present). *High Sensitivity.*
+* **AND Logic:** Malignant if (Size > Threshold) **AND** (Any selected feature is present). *High Specificity.*
+
+
+* **Real-Time Feedback:** Updating any control immediately triggers a recalculation of the Confusion Matrix and Key Metrics (Sens/Spec/Acc).
+
+#### B. Brute-Force Optimization
+
+An algorithmic tool to find the "Best Case" T2 criteria.
+
+* **Methodology:** The system generates every possible permutation of:
+* Size thresholds (min to max in 0.5mm steps).
+* Combinations of the 4 morphological features ( subsets).
+* Logic operators (AND/OR).
+
+
+* **Execution:** Runs asynchronously in a dedicated Web Worker to prevent UI freezing.
+* **Target Metrics:** Optimization can be targeted for:
+* **Balanced Accuracy:** .
+* **Youden Index:** .
+* **F1-Score:** Harmonic mean of PPV and Sensitivity.
+* **AUC:** Area Under the ROC Curve.
+
+
+* **Result Management:** The top 10 performing combinations are displayed. Users can "Apply" the best result directly to the Manual Criteria Builder. Results are cached per cohort.
+
+### 4.4. Statistics Tab (Detailed Evaluation)
+
+Offers two layout modes: **Single View** (Current Cohort) and **Comparison View** (Side-by-Side).
+
+* **Descriptive Statistics:**
+* **Demographics:** Age distribution (Histogram with KDE approximation), Sex (Pie Chart).
+* **Tumor Characteristics:** T-Stage distribution, Distance from Anal Verge.
+
+
+* **Diagnostic Performance:**
+* **Confusion Matrix:** Absolute counts of TP, TN, FP, FN.
+* **Detailed Metrics Table:** Calculates Sensitivity, Specificity, PPV, NPV, Positive/Negative Likelihood Ratios (LR+, LR-), Accuracy, Youden Index.
+* **Confidence Intervals:** All metrics include **95% Confidence Intervals** calculated using the **Wilson Score Interval** method for robust estimation even at small sample sizes.
+
+
+* **Visualization:**
+* **ROC Curve:** Interactive SVG plot with AUC calculation.
+* **Feature Importance (Forest Plot):** Calculates **Odds Ratios (OR)** for each individual T2 feature to quantify its association with malignancy (pN+).
+* **Flowchart:** A Sankey-like diagram visualizing the flow of patients from the Total Cohort -> Index Test Result -> Reference Standard validation.
+
+
+
+### 4.5. Comparison Tab (Hypothesis Testing)
+
+Facilitates rigorous statistical comparison between the Avocado Sign and T2 Criteria.
+
+* **Analysis Context:** When a comparison is active, the application "locks" the global cohort to ensure valid, apples-to-apples comparisons (e.g., comparing against ESGAR criteria forces the context to the cohort applicable to ESGAR).
+* **Comparison Modes:**
+* **vs. User Defined:** Compare against the current settings in the Analysis Tab.
+* **vs. Literature:** Compare against built-in definitions (ESGAR, Mercury Study, Brown et al.).
+* **vs. Brute-Force:** Compare against the mathematically optimal T2 criteria found earlier.
+
+
+* **Statistical Tests:**
+* **McNemar's Test:** Calculates the  statistic and P-value for paired nominal data to test if the difference in accuracy is significant.
+* **DeLong's Method (Equivalent):** Statistical comparison of AUCs.
+
+
+* **Visual Output:** Overlaid ROC curves and grouped bar charts (Sensitivity/Specificity).
+
+### 4.6. Insights Tab (Deep Dive)
+
+* **Mismatch Analysis:** Generates lists of specific patients where the diagnostic methods disagree:
+* *Avocado Superior:* (AS correct, T2 incorrect).
+* *T2 Superior:* (T2 correct, AS incorrect).
+* Useful for case reviews to understand failure modes.
+
+
+* **Added Value Analysis:**
+* Analyzes the performance of the Avocado Sign **within the subgroup of T2-False Positives** (Specificity rescue).
+* Analyzes performance **within T2-False Negatives** (Sensitivity rescue).
+
+
+* **Power Analysis:** Post-hoc calculation of statistical power () based on sample size, , and observed effect size.
+
+### 4.7. Export Tab
+
+* **Vector Export:** Allows downloading all generated charts as **SVG files**.
+* **Clean-up:** Automatically strips UI-specific styling (shadows, backgrounds) to produce publication-ready figures.
+
+---
+
+## 5. Mathematical Methodology
+
+The application employs rigorous statistical methods:
+
+* **Confidence Intervals:** Wilson Score Interval (continuity corrected where appropriate).
+* **Odds Ratio (OR):**  from the  contingency table.
+* **Likelihood Ratios:** ; .
+* **McNemar's Test:**  for discordant pairs.
+
+---
+
+## 6. Installation & Usage
+
+1. **Clone:** Clone the repository to a local machine.
+2. **Data Setup:** Ensure `data/data.js` is populated with valid JSON data.
+3. **Run:** Open `index.html` in any modern browser (Chrome, Firefox, Edge, Safari).
+* *Note:* Due to CORS policies on some browsers, strict file:// access might be restricted for Web Workers. It is recommended to use a simple local server (e.g., VS Code Live Server, or `python -m http.server`).
+
+
+
+---
+
+*© 2025 Medical Research Tool - Avocado Sign Project*

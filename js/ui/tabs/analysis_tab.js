@@ -115,8 +115,8 @@ window.analysisTab = (() => {
         let dashboardCardsHTML = '';
         if (stats && stats.descriptive && stats.descriptive.patientCount > 0) {
             const desc = stats.descriptive;
-            const formattedAppliedT2 = window.studyT2CriteriaManager.formatCriteriaForDisplay(currentCriteria, currentLogic, true);
-            const t2DashboardTitle = `T2-Status (${formattedAppliedT2})`;
+            const formattedAppliedT2 = window.studyT2CriteriaManager.formatCriteriaForDisplay(window.t2CriteriaManager.getAppliedCriteria(), window.t2CriteriaManager.getAppliedLogic(), true);
+            const t2DashboardTitle = `${window.APP_CONFIG.UI_TEXTS.chartTitles.statusT2} (${formattedAppliedT2})`;
 
             dashboardCardsHTML = `
                 ${window.uiComponents.createDashboardCard(window.APP_CONFIG.UI_TEXTS.chartTitles.ageDistribution, `<p class="mb-0 small">Median: ${formatNumber(desc.age?.median, 1)} (${formatNumber(desc.age?.min, 0)} - ${formatNumber(desc.age?.max, 0)})</p>`, 'chart-dash-age', '', '', 'p-1', [], cohortDisplayName)}
@@ -146,12 +146,12 @@ window.analysisTab = (() => {
 
         if (statsT2) {
             const fCI = (m, d=1, p=true) => {
-                const digits = (m?.name === 'auc') ? 3 : ((m?.name === 'f1') ? 3 : d); 
+                const digits = (m?.name === 'auc' || m?.name === 'f1') ? 3 : d; 
                 return formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, digits, p, '--');
             };
             
             const formattedCurrentT2 = window.studyT2CriteriaManager.formatCriteriaForDisplay(currentCriteria, currentLogic, true);
-            const perfCardTitle = `Diagnostic Performance (Current T2: ${formattedCurrentT2})`;
+            const perfCardTitle = `Diagnostic Performance (Current T2 Criteria: ${formattedCurrentT2})`;
 
             const metricsTable = `
                 <div class="table-responsive">

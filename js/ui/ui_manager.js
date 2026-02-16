@@ -1,5 +1,31 @@
 window.uiManager = (() => {
 
+    function updateLayoutMetrics() {
+        const header = document.querySelector('header.fixed-top');
+        const nav = document.querySelector('nav.navigation-tabs');
+        if (!header || !nav || !document.body) return;
+
+        const root = document.documentElement;
+        const isMobileLayout = typeof window.matchMedia === 'function'
+            ? window.matchMedia('(max-width: 991.98px)').matches
+            : window.innerWidth <= 991;
+
+        const headerHeight = Math.ceil(header.getBoundingClientRect().height);
+        const navHeight = Math.ceil(nav.getBoundingClientRect().height);
+
+        root.style.setProperty('--header-height', `${headerHeight}px`);
+        root.style.setProperty('--nav-height', `${navHeight}px`);
+
+        if (isMobileLayout) {
+            document.body.style.setProperty('--sticky-header-offset', '0px');
+            nav.style.top = '';
+            return;
+        }
+
+        document.body.style.setProperty('--sticky-header-offset', `${headerHeight + navHeight}px`);
+        nav.style.top = `${headerHeight}px`;
+    }
+
     function updateCohortButtonsUI(currentCohortId, isLocked) {
         if (!window.APP_CONFIG) return;
         const cohortButtonGroup = document.querySelector('.btn-group[aria-label="Cohort Selection"]');
@@ -151,17 +177,17 @@ window.uiManager = (() => {
                         }
                     });
                     if (subKeyMatched) {
-                        sortIcon.classList.add(sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
                         sortIcon.classList.remove('text-muted', 'opacity-50', 'fa-sort');
+                        sortIcon.classList.add(sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
                         sortIcon.classList.add('text-primary');
                     } else {
                         sortIcon.classList.add('fa-sort', 'text-muted', 'opacity-50');
                         sortIcon.classList.remove('text-primary', 'fa-sort-up', 'fa-sort-down');
                     }
                 } else {
-                    sortIcon.classList.add(sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
-                    sortIcon.classList.remove('text-muted', 'opacity-50', 'fa-sort');
-                    sortIcon.classList.add('text-primary');
+                     sortIcon.classList.remove('text-muted', 'opacity-50', 'fa-sort');
+                     sortIcon.classList.add(sortState.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
+                     sortIcon.classList.add('text-primary');
                 }
             } else {
                 sortIcon.classList.add('fa-sort', 'text-muted', 'opacity-50');
@@ -336,21 +362,7 @@ window.uiManager = (() => {
         }
     }
 
-    function updatePublicationUI(currentSectionId, currentBruteForceMetric) {
-        if (!window.APP_CONFIG || !window.PUBLICATION_CONFIG) return;
-        
-        const navContainer = document.getElementById('publication-sections-nav');
-        if (navContainer) {
-            navContainer.innerHTML = window.uiComponents.createPublicationNav(currentSectionId);
-            initializeTooltips(navContainer);
-        }
-
-        const bfMetricSelect = document.getElementById('publication-bf-metric-select');
-        if (bfMetricSelect) {
-            bfMetricSelect.innerHTML = window.APP_CONFIG.AVAILABLE_BRUTE_FORCE_METRICS.map(m =>
-                `<option value="${m.value}" ${m.value === currentBruteForceMetric ? 'selected' : ''}>${m.label}</option>`
-            ).join('');
-        }
+    function updateExportUI() {
     }
 
     function showQuickGuide() {
@@ -383,7 +395,52 @@ window.uiManager = (() => {
         }
     }
 
+    function showAutoBfPrompt() {
+        const modalElement = document.getElementById('auto-bf-prompt-modal');
+        if (!modalElement) return;
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modal.show();
+    }
+
+    function showAutoBfProgress() {
+        const modalElement = document.getElementById('auto-bf-progress-modal');
+        if (!modalElement) return;
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modal.show();
+    }
+
+    function updateAutoBfProgress(statusText, percentage) {
+        const statusContainer = document.getElementById('auto-bf-progress-status');
+        if (!statusContainer) return;
+        const progressBar = statusContainer.querySelector('.progress-bar');
+        const statusP = statusContainer.querySelector('p');
+
+        if (statusP) {
+            statusP.innerHTML = statusText;
+        }
+        if (progressBar) {
+            const p = Math.max(0, Math.min(100, percentage));
+            progressBar.style.width = `${p}%`;
+            progressBar.setAttribute('aria-valuenow', p);
+            progressBar.textContent = `${Math.round(p)}%`;
+        }
+    }
+
+    function hideAutoBfModals() {
+        const promptModalEl = document.getElementById('auto-bf-prompt-modal');
+        if (promptModalEl) {
+            const modal = bootstrap.Modal.getInstance(promptModalEl);
+            if (modal) modal.hide();
+        }
+        const progressModalEl = document.getElementById('auto-bf-progress-modal');
+        if (progressModalEl) {
+            const modal = bootstrap.Modal.getInstance(progressModalEl);
+            if (modal) modal.hide();
+        }
+    }
+
     return Object.freeze({
+        updateLayoutMetrics,
         updateCohortButtonsUI,
         renderTabContent,
         attachRowCollapseListeners,
@@ -396,9 +453,13 @@ window.uiManager = (() => {
         markCriteriaSavedIndicator,
         updateBruteForceUI,
         updateComparisonViewUI,
-        updatePublicationUI,
+        updateExportUI,
         showQuickGuide,
         updateElementHTML,
-        highlightElement
+        highlightElement,
+        showAutoBfPrompt,
+        showAutoBfProgress,
+        updateAutoBfProgress,
+        hideAutoBfModals
     });
 })();

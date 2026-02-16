@@ -5836,4 +5836,778 @@ window.patientDataRaw = [
     ],
     age: 64,
   },
+  {
+    id: 107,
+    lastName: "Makarova",
+    firstName: "Inna",
+    birthDate: "1975-07-09",
+    sex: "f",
+    therapy: "neoadjuvantTherapy",
+    examDate: "2023-02-16",
+    asStatus: "-",
+    asPositiveNodeCount: 0,
+    asTotalNodeCount: 0,
+    nStatus: "-",
+    pathologyPositiveNodeCount: 0,
+    pathologyTotalNodeCount: 15,
+    notes: "",
+    t2Nodes: [],
+    age: 48
+  },
+  {
+    id: 108,
+    lastName: "Zoschke",
+    firstName: "Karin",
+    birthDate: "1953-09-25",
+    sex: "f",
+    therapy: "neoadjuvantTherapy",
+    examDate: "2022-06-07",
+    asStatus: "+",
+    asPositiveNodeCount: 3,
+    asTotalNodeCount: 3,
+    nStatus: "+",
+    pathologyPositiveNodeCount: 2,
+    pathologyTotalNodeCount: 15,
+    notes: "",
+    t2Nodes: [
+      {
+        size: 6.6,
+        shape: "round",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 4.2,
+        shape: "round",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      }
+    ],
+    age: 69
+  },
+  {
+    id: 109,
+    lastName: "Christoph",
+    firstName: "Gernot",
+    birthDate: "1940-07-23",
+    sex: "m",
+    therapy: "surgeryAlone",
+    examDate: "2023-03-28",
+    asStatus: "-",
+    asPositiveNodeCount: 0,
+    asTotalNodeCount: 3,
+    nStatus: "+",
+    pathologyPositiveNodeCount: 2,
+    pathologyTotalNodeCount: 23,
+    notes: "",
+    t2Nodes: [
+      {
+        size: 2.2,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "intermediateSignal"
+      },
+      {
+        size: 2.1,
+        shape: "round",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 2.2,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 4.5,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      }
+    ],
+    age: 83
+  },
+  {
+    id: 110,
+    lastName: "Reisdorf",
+    firstName: "Rainer",
+    birthDate: "1957-06-17",
+    sex: "m",
+    therapy: "neoadjuvantTherapy",
+    examDate: "2023-05-22",
+    asStatus: "-",
+    asPositiveNodeCount: 0,
+    asTotalNodeCount: 0,
+    nStatus: "-",
+    pathologyPositiveNodeCount: 0,
+    pathologyTotalNodeCount: 18,
+    notes: "",
+    t2Nodes: [],
+    age: 66
+  },
+  {
+    id: 111,
+    lastName: "Mühlbach",
+    firstName: "Frank",
+    birthDate: "1957-07-22",
+    sex: "m",
+    therapy: "neoadjuvantTherapy",
+    examDate: "2023-11-02",
+    asStatus: "+",
+    asPositiveNodeCount: 3,
+    asTotalNodeCount: 5,
+    nStatus: "+",
+    pathologyPositiveNodeCount: 5,
+    pathologyTotalNodeCount: 14,
+    notes: "",
+    t2Nodes: [
+      {
+        size: 8.1,
+        shape: "round",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 5.2,
+        shape: "round",
+        border: "sharp",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 3.5,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 3.6,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 3.0,
+        shape: "round",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 12.6,
+        shape: "round",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "highSignal"
+      }
+    ],
+    age: 66
+  },
+  {
+    id: 112,
+    lastName: "Hohl",
+    firstName: "Roland",
+    birthDate: "1957-03-29",
+    sex: "m",
+    therapy: "surgeryAlone",
+    examDate: "2023-12-07",
+    asStatus: "+",
+    asPositiveNodeCount: 25,
+    asTotalNodeCount: 35,
+    nStatus: "+",
+    pathologyPositiveNodeCount: 20,
+    pathologyTotalNodeCount: 39,
+    notes: "LK Diskriminierung in KM deulich besser",
+    t2Nodes: [
+      {
+        size: 15.0,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 9.1,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 39.5,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 10.7,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 12.9,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 6.4,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 9.4,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 18.8,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 9.0,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 15.4,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 12.9,
+        shape: "round",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 8.9,
+        shape: "round",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 12.9,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 8.8,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 11.7,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 10.4,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 10.2,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 8.0,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 13.2,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 8.7,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 9.6,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 7.4,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 13.1,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 9.6,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 16.4,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 12.4,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 13.3,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 17.8,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      }
+    ],
+    age: 66
+  },
+  {
+    id: 113,
+    lastName: "Köhler",
+    firstName: "Heiko",
+    birthDate: "1962-01-18",
+    sex: "m",
+    therapy: "neoadjuvantTherapy",
+    examDate: "2024-09-19",
+    asStatus: "+",
+    asPositiveNodeCount: 1,
+    asTotalNodeCount: 2,
+    nStatus: "+",
+    pathologyPositiveNodeCount: 1,
+    pathologyTotalNodeCount: 10,
+    notes: "",
+    t2Nodes: [
+      {
+        size: 10.0,
+        shape: "round",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 4.0,
+        shape: "round",
+        border: "irregular",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      }
+    ],
+    age: 62
+  },
+  {
+    id: 114,
+    lastName: "Kämpfe",
+    firstName: "Heiko",
+    birthDate: "1969-02-20",
+    sex: "m",
+    therapy: "neoadjuvantTherapy",
+    examDate: "2024-01-18",
+    asStatus: "-",
+    asPositiveNodeCount: 0,
+    asTotalNodeCount: 2,
+    nStatus: "-",
+    pathologyPositiveNodeCount: 0,
+    pathologyTotalNodeCount: 2,
+    notes: "",
+    t2Nodes: [
+      {
+        size: 2.5,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      }
+    ],
+    age: 55
+  },
+  {
+    id: 115,
+    lastName: "Schulze",
+    firstName: "Gisela",
+    birthDate: "1947-04-03",
+    sex: "f",
+    therapy: "neoadjuvantTherapy",
+    examDate: "2024-01-19",
+    asStatus: "-",
+    asPositiveNodeCount: 0,
+    asTotalNodeCount: 0,
+    nStatus: "-",
+    pathologyPositiveNodeCount: 0,
+    pathologyTotalNodeCount: 8,
+    notes: "",
+    t2Nodes: [],
+    age: 77
+  },
+  {
+    id: 116,
+    lastName: "Jagusch",
+    firstName: "Hartmut",
+    birthDate: "1963-11-06",
+    sex: "m",
+    therapy: "neoadjuvantTherapy",
+    examDate: "2024-02-07",
+    asStatus: "-",
+    asPositiveNodeCount: 0,
+    asTotalNodeCount: 5,
+    nStatus: "-",
+    pathologyPositiveNodeCount: 0,
+    pathologyTotalNodeCount: 13,
+    notes: "",
+    t2Nodes: [
+      {
+        size: 2.0,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 3.1,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 2.7,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 4.3,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 1.9,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      }
+    ],
+    age: 61
+  },
+  {
+    id: 117,
+    lastName: "Löbner",
+    firstName: "Christine",
+    birthDate: "1944-07-29",
+    sex: "f",
+    therapy: "surgeryAlone",
+    examDate: "2024-12-11",
+    asStatus: "-",
+    asPositiveNodeCount: 0,
+    asTotalNodeCount: 2,
+    nStatus: "-",
+    pathologyPositiveNodeCount: 0,
+    pathologyTotalNodeCount: 13,
+    notes: "",
+    t2Nodes: [
+      {
+        size: 1.5,
+        shape: "round",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 2.6,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      }
+    ],
+    age: 80
+  },
+  {
+    id: 118,
+    lastName: "Grüschow",
+    firstName: "Rüdiger",
+    birthDate: "1946-03-28",
+    sex: "m",
+    therapy: "neoadjuvantTherapy",
+    examDate: "2025-05-19",
+    asStatus: "+",
+    asPositiveNodeCount: 8,
+    asTotalNodeCount: 10,
+    nStatus: "+",
+    pathologyPositiveNodeCount: 6,
+    pathologyTotalNodeCount: 23,
+    notes: "",
+    t2Nodes: [
+      {
+        size: 4.3,
+        shape: "round",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 5.6,
+        shape: "round",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 4.7,
+        shape: "round",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 5.8,
+        shape: "round",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 3.9,
+        shape: "round",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 8.9,
+        shape: "round",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 8.3,
+        shape: "round",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 5.1,
+        shape: "round",
+        border: "irregular",
+        homogeneity: "heterogeneous",
+        signal: null
+      }
+    ],
+    age: 79
+  },
+  {
+    id: 119,
+    lastName: "Brunner",
+    firstName: "Horst",
+    birthDate: "1945-12-25",
+    sex: "m",
+    therapy: "surgeryAlone",
+    examDate: "2025-02-20",
+    asStatus: "+",
+    asPositiveNodeCount: 4,
+    asTotalNodeCount: 15,
+    nStatus: "+",
+    pathologyPositiveNodeCount: 2,
+    pathologyTotalNodeCount: 17,
+    notes: "",
+    t2Nodes: [
+      {
+        size: 4.0,
+        shape: "round",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 2.5,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 3.4,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 4.0,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 4.6,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 3.5,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 3.5,
+        shape: "oval",
+        border: "irregular",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 6.5,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 3.4,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 4.3,
+        shape: "round",
+        border: "sharp",
+        homogeneity: "heterogeneous",
+        signal: null
+      },
+      {
+        size: 2.5,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 5.5,
+        shape: "round",
+        border: "sharp",
+        homogeneity: "heterogeneous",
+        signal: null
+      }
+    ],
+    age: 80
+  },
+  {
+    id: 120,
+    lastName: "Cierpka",
+    firstName: "Horst",
+    birthDate: "1944-09-02",
+    sex: "m",
+    therapy: "surgeryAlone",
+    examDate: "2025-03-31",
+    asStatus: "+",
+    asPositiveNodeCount: 2,
+    asTotalNodeCount: 3,
+    nStatus: "+",
+    pathologyPositiveNodeCount: 5,
+    pathologyTotalNodeCount: 12,
+    notes: "",
+    t2Nodes: [
+      {
+        size: 3.7,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 3.7,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      },
+      {
+        size: 4.0,
+        shape: "oval",
+        border: "sharp",
+        homogeneity: "homogeneous",
+        signal: "lowSignal"
+      }
+    ],
+    age: 81
+  }
 ];

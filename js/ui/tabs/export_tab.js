@@ -1,87 +1,28 @@
 window.exportTab = (() => {
 
-    const createExportButton = (config) => {
-        if (!config || !config.id) return '';
-        const tooltipConfigKey = config.tooltipKey || config.id.replace(/-/g, '');
-        const tooltipConfig = window.APP_CONFIG.UI_TEXTS.tooltips.exportTab[tooltipConfigKey];
-        
-        const description = config.description || tooltipConfig?.description || 'No description available.';
-        const type = config.type || tooltipConfig?.type || 'UNKNOWN';
-        const ext = config.ext || tooltipConfig?.ext || 'EXT';
-
+    function render() {
         return `
-            <div class="col-md-6 mb-3">
-                <div class="d-flex align-items-center">
-                    <button id="export-${config.id}" class="btn ${config.btnClass || 'btn-primary'} btn-sm me-3" data-export-type="${config.id}" data-tippy-content="${description}">
-                        <i class="fas ${config.icon} fa-fw me-2"></i>${config.label}
-                    </button>
-                    <div>
-                        <p class="mb-0 fw-bold">${type} (.${ext})</p>
-                        <p class="mb-0 small text-muted">${description}</p>
-                    </div>
-                </div>
-            </div>`;
-    };
-
-    function render(currentCohort) {
-        const cohortDisplayName = getCohortDisplayName(currentCohort);
-        const descriptionTextTemplate = window.APP_CONFIG.UI_TEXTS.tooltips.exportTab.description;
-        const finalDescriptionText = descriptionTextTemplate.replace('[COHORT]', `<strong>${cohortDisplayName}</strong>`);
-
-        const singleExports = [
-            { id: 'stats-csv', label: 'Statistics', icon: 'fa-chart-pie', tooltipKey: 'statscsv' },
-            { id: 'bruteforce-txt', label: 'Brute-Force Report', icon: 'fa-cogs', tooltipKey: 'bruteforcetxt' },
-            { id: 'datatable-md', label: 'Data List', icon: 'fa-database', tooltipKey: 'datamd' },
-            { id: 'analysistable-md', label: 'Analysis Table', icon: 'fa-tasks', tooltipKey: 'analysismd' },
-            { id: 'filtered-data-csv', label: 'Filtered Raw Data', icon: 'fa-filter', tooltipKey: 'filtereddatacsv' },
-            { id: 'comprehensive-report-html', label: 'Comprehensive HTML Report', icon: 'fa-file-invoice', tooltipKey: 'comprehensivereport_html' }
-        ];
-
-        const packageExports = [
-            { id: 'all-zip', label: 'All Files Package', icon: 'fa-file-archive', tooltipKey: 'allzip' },
-            { id: 'csv-zip', label: 'CSV Files Package', icon: 'fa-file-csv', tooltipKey: 'csvzip' },
-            { id: 'md-zip', label: 'Markdown Files Package', icon: 'fa-file-alt', tooltipKey: 'mdzip' },
-            { id: 'png-zip', label: 'PNG Graphics Package', icon: 'fa-images', tooltipKey: 'pngzip' },
-            { id: 'svg-zip', label: 'SVG Graphics Package', icon: 'fa-vector-square', tooltipKey: 'svgzip' },
-            { 
-                id: 'radiology-submission-zip', 
-                label: 'Radiology Submission Package', 
-                icon: 'fa-paper-plane', 
-                btnClass: 'btn-success',
-                description: 'Generates a complete, structured ZIP archive ready for submission to the *Radiology* journal, including the manuscript as a .docx file and all figures.',
-                type: 'SUBMISSION_PACKAGE',
-                ext: 'zip'
-            }
-        ];
-
-        const singleExportsHTML = singleExports.map(createExportButton).join('');
-        const packageExportsHTML = packageExports.map(createExportButton).join('');
-
-        return `
-            <div class="container-fluid">
-                <div class="row">
-                    <div class="col-12">
-                        <div class="alert alert-info small" role="alert">
-                            <i class="fas fa-info-circle me-2"></i>
-                            ${finalDescriptionText}
-                        </div>
-                    </div>
-                </div>
-
-                <h3 class="mt-4 mb-3">Single Exports</h3>
-                <div class="card">
-                    <div class="card-body">
-                        <div class="row">
-                            ${singleExportsHTML}
-                        </div>
-                    </div>
-                </div>
-
-                <h3 class="mt-5 mb-3">Export Packages (.zip)</h3>
-                <div class="card">
-                    <div class="card-body">
-                         <div class="row">
-                            ${packageExportsHTML}
+            <div class="container-fluid p-4">
+                <h4 class="mb-4"><i class="fas fa-download me-2"></i>Export Results</h4>
+                <div class="row g-4">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="card-body text-center p-4">
+                                <div class="mb-3 text-primary">
+                                    <i class="fas fa-chart-pie fa-3x"></i>
+                                </div>
+                                <h5 class="card-title">Analysis Charts</h5>
+                                <p class="card-text text-muted small my-3">
+                                    Export all generated charts (Demographics, Feature Importance, Comparisons, Flowcharts) as high-quality SVG vector graphics for use in presentations or external documents.
+                                </p>
+                                <div class="alert alert-light border small text-start" role="alert">
+                                    <i class="fas fa-info-circle me-1 text-info"></i>
+                                    <strong>Note:</strong> Charts are generated based on the current state of the <em>Statistics</em> and <em>Comparison</em> tabs.
+                                </div>
+                                <button id="btn-export-charts" class="btn btn-primary w-100">
+                                    <i class="fas fa-file-export me-2"></i>Export Charts (SVG)
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -89,8 +30,7 @@ window.exportTab = (() => {
         `;
     }
 
-    return {
+    return Object.freeze({
         render
-    };
-
+    });
 })();

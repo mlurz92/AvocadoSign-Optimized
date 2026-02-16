@@ -105,12 +105,13 @@ window.t2CriteriaManager = (() => {
 
     function checkNode(lymphNode, criteria) {
         const checkResult = { size: null, shape: null, border: null, homogeneity: null, signal: null };
-        if (!lymphNode || !criteria) return checkResult;
+        if (!lymphNode || typeof lymphNode !== 'object' || !criteria) return checkResult;
 
-        if (criteria.size?.active) {
+        if (criteria.size && criteria.size.active) {
             const threshold = criteria.size.threshold;
             const nodeSize = lymphNode.size;
             const condition = criteria.size.condition || '>=';
+            
             if (typeof nodeSize === 'number' && !isNaN(nodeSize) && typeof threshold === 'number' && !isNaN(threshold)) {
                 switch (condition) {
                     case '>=': checkResult.size = nodeSize >= threshold; break;
@@ -125,10 +126,22 @@ window.t2CriteriaManager = (() => {
             }
         }
 
-        if (criteria.shape?.active) checkResult.shape = (lymphNode.shape === criteria.shape.value);
-        if (criteria.border?.active) checkResult.border = (lymphNode.border === criteria.border.value);
-        if (criteria.homogeneity?.active) checkResult.homogeneity = (lymphNode.homogeneity === criteria.homogeneity.value);
-        if (criteria.signal?.active) checkResult.signal = (lymphNode.signal !== null && lymphNode.signal === criteria.signal.value);
+        if (criteria.shape && criteria.shape.active) {
+            checkResult.shape = (lymphNode.shape === criteria.shape.value);
+        }
+        
+        if (criteria.border && criteria.border.active) {
+            checkResult.border = (lymphNode.border === criteria.border.value);
+        }
+        
+        if (criteria.homogeneity && criteria.homogeneity.active) {
+            checkResult.homogeneity = (lymphNode.homogeneity === criteria.homogeneity.value);
+        }
+        
+        if (criteria.signal && criteria.signal.active) {
+            // Explicitly handle null signal values as not fulfilling the criterion
+            checkResult.signal = (lymphNode.signal !== null && lymphNode.signal !== undefined && lymphNode.signal === criteria.signal.value);
+        }
 
         return checkResult;
     }
@@ -138,13 +151,15 @@ window.t2CriteriaManager = (() => {
         if (!patient || !criteria || (logic !== 'AND' && logic !== 'OR')) return defaultReturn;
 
         const lymphNodes = patient.t2Nodes;
-        const activeKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key]?.active);
+        const activeKeys = Object.keys(criteria).filter(key => key !== 'logic' && criteria[key] && criteria[key].active);
 
         if (activeKeys.length === 0) {
-             return { t2Status: null, positiveNodeCount: 0, evaluatedNodes: (lymphNodes || []).map(lk => ({...lk, isPositive: false, checkResult: {}})) };
+             const evaluatedNodes = (lymphNodes || []).map(lk => ({...lk, isPositive: false, checkResult: {}}));
+             return { t2Status: null, positiveNodeCount: 0, evaluatedNodes: evaluatedNodes };
         }
         
         if (!Array.isArray(lymphNodes) || lymphNodes.length === 0) {
+            // Patients with no visible T2 nodes are classified as T2-negative by definition
             return { t2Status: '-', positiveNodeCount: 0, evaluatedNodes: [] };
         }
 
@@ -154,14 +169,18 @@ window.t2CriteriaManager = (() => {
             if (!lk) return null;
             const checkResult = checkNode(lk, criteria);
             
-            let isNodePositive = (logic === 'AND')
-                ? activeKeys.every(key => checkResult[key] === true)
-                : activeKeys.some(key => checkResult[key] === true);
+            let isNodePositive = false;
+            if (logic === 'AND') {
+                isNodePositive = activeKeys.every(key => checkResult[key] === true);
+            } else {
+                isNodePositive = activeKeys.some(key => checkResult[key] === true);
+            }
 
             if (isNodePositive) {
                 patientIsPositive = true;
                 positiveNodeCount++;
             }
+            
             return { ...lk, isPositive: isNodePositive, checkResult };
         }).filter(node => node !== null);
 
@@ -174,6 +193,8 @@ window.t2CriteriaManager = (() => {
 
     function evaluateDataset(dataset, criteria, logic) {
         if (!Array.isArray(dataset)) return [];
+        
+        // Optimize: If criteria or logic are invalid, return base state immediately
         if (!criteria || (logic !== 'AND' && logic !== 'OR')) {
             return dataset.map(p => ({
                 ...cloneDeep(p),

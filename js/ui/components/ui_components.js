@@ -34,6 +34,7 @@ window.uiComponents = (() => {
         const sizeThreshold = initialCriteria.size?.threshold ?? defaultCriteria.size.threshold;
         const { min, max, step } = window.APP_CONFIG.T2_CRITERIA_SETTINGS.SIZE_RANGE;
         const formattedThresholdForInput = formatNumber(sizeThreshold, 1, '5.0', true);
+        const tooltips = window.APP_CONFIG.UI_TEXTS.tooltips;
 
         const createButtonOptions = (key, isChecked, criterionLabel) => {
             const valuesKey = key.toUpperCase() + '_VALUES';
@@ -52,7 +53,7 @@ window.uiComponents = (() => {
 
         const createCriteriaGroup = (key, label, tooltipKey, contentGenerator) => {
             const isChecked = initialCriteria[key]?.active === true;
-            let tooltip = window.APP_CONFIG.UI_TEXTS.tooltips[tooltipKey]?.description || label;
+            let tooltip = tooltips[tooltipKey]?.description || label;
             if (tooltipKey === 't2Size') {
                 tooltip = tooltip.replace('[MIN]', min).replace('[MAX]', max).replace('[STEP]', step);
             }
@@ -72,8 +73,8 @@ window.uiComponents = (() => {
         return `
             <div class="card criteria-card" id="t2-criteria-card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Define T2 Malignancy Criteria</span>
-                    <div class="form-check form-switch" data-tippy-content="${window.APP_CONFIG.UI_TEXTS.tooltips.t2Logic.description}">
+                    <span>Define T2 Criteria</span>
+                    <div class="form-check form-switch" data-tippy-content="${tooltips.t2Logic.description}">
                          <label class="form-check-label small me-2" for="t2-logic-switch" id="t2-logic-label-prefix">Logic:</label>
                          <input class="form-check-input" type="checkbox" role="switch" id="t2-logic-switch" ${logicChecked ? 'checked' : ''}>
                          <label class="form-check-label fw-bold" for="t2-logic-switch" id="t2-logic-label">${window.APP_CONFIG.UI_TEXTS.t2LogicDisplayNames[initialLogic] || initialLogic}</label>
@@ -94,10 +95,10 @@ window.uiComponents = (() => {
                         ${createCriteriaGroup('homogeneity', 'Homogeneity', 't2Homogeneity', createButtonOptions)}
                         ${createCriteriaGroup('signal', 'Signal', 't2Signal', createButtonOptions)}
                         <div class="col-12 d-flex justify-content-end align-items-center border-top pt-3 mt-3">
-                            <button class="btn btn-sm btn-outline-secondary me-2" id="btn-reset-criteria" data-tippy-content="${window.APP_CONFIG.UI_TEXTS.tooltips.t2Actions.reset}">
+                            <button class="btn btn-sm btn-outline-secondary me-2" id="btn-reset-criteria" data-tippy-content="${tooltips.t2Actions.reset}">
                                 <i class="fas fa-undo me-1"></i> Reset to Default
                             </button>
-                            <button class="btn btn-sm btn-primary" id="btn-apply-criteria" data-tippy-content="${window.APP_CONFIG.UI_TEXTS.tooltips.t2Actions.apply}">
+                            <button class="btn btn-sm btn-primary" id="btn-apply-criteria" data-tippy-content="${tooltips.t2Actions.apply}">
                                 <i class="fas fa-check me-1"></i> Apply & Save
                             </button>
                         </div>
@@ -108,8 +109,8 @@ window.uiComponents = (() => {
 
     function createStatisticsCard(id, title, content = '', addPadding = true, tooltipKey = null, cohortId = '') {
         let cardTooltipHtml = `data-tippy-content="${title}"`;
-        if (tooltipKey && window.APP_CONFIG.UI_TEXTS.tooltips[tooltipKey] && window.APP_CONFIG.UI_TEXTS.tooltips[tooltipKey].cardTitle) {
-            let tooltipTemplate = window.APP_CONFIG.UI_TEXTS.tooltips[tooltipKey].cardTitle;
+        if (tooltipKey && window.APP_CONFIG.UI_TEXTS.tooltips.descriptiveStatistics && window.APP_CONFIG.UI_TEXTS.tooltips.descriptiveStatistics[tooltipKey] && window.APP_CONFIG.UI_TEXTS.tooltips.descriptiveStatistics[tooltipKey].cardTitle) {
+            let tooltipTemplate = window.APP_CONFIG.UI_TEXTS.tooltips.descriptiveStatistics[tooltipKey].cardTitle;
             let cohortName = cohortId ? getCohortDisplayName(cohortId) : 'the current cohort';
             let finalTooltip = tooltipTemplate.replace('[COHORT]', `<strong>${cohortName}</strong>`);
             cardTooltipHtml = `data-tippy-content="${finalTooltip}"`;
@@ -126,42 +127,6 @@ window.uiComponents = (() => {
                     </div>
                 </div>
             </div>`;
-    }
-
-    function createPublicationNav(currentSectionId) {
-        const navItems = window.PUBLICATION_CONFIG.sections.map(mainSection => {
-            const sectionLabel = window.APP_CONFIG.UI_TEXTS.publicationTab.sectionLabels[mainSection.labelKey] || mainSection.id.replace(/_/g, ' ');
-            const isMainActive = mainSection.id === currentSectionId || (mainSection.subSections && mainSection.subSections.some(sub => sub.id === currentSectionId));
-            
-            let subNavHTML = '';
-            if (isMainActive && mainSection.subSections && mainSection.subSections.length > 0) {
-                subNavHTML += '<ul class="nav flex-column ps-3 mt-1 mb-2">';
-                mainSection.subSections.forEach(sub => {
-                    const isSubActive = sub.id === currentSectionId;
-                    subNavHTML += `
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-sub py-1 publication-section-link ${isSubActive ? 'active' : ''}" href="#" data-section-id="${sub.id}" data-tippy-content="${sub.label}">
-                                ${sub.label}
-                            </a>
-                        </li>`;
-                });
-                subNavHTML += '</ul>';
-            }
-            
-            const mainLinkClass = (mainSection.subSections && mainSection.subSections.length > 0) ? 'nav-link-main' : '';
-            const wordCountSpan = mainSection.limit ? '<span class="word-count-indicator"></span>' : '';
-
-            return `
-                <li class="nav-item">
-                    <a class="nav-link py-2 publication-section-link d-flex justify-content-between align-items-center ${mainLinkClass} ${isMainActive && !subNavHTML ? 'active' : ''}" href="#" data-section-id="${mainSection.id}" data-tippy-content="${sectionLabel}">
-                        ${sectionLabel}
-                        ${wordCountSpan}
-                    </a>
-                    ${subNavHTML}
-                </li>`;
-        }).join('');
-
-        return `<nav id="publication-sections-nav" class="nav flex-column nav-pills">${navItems}</nav>`;
     }
 
     function createBruteForceModalContent(resultsData) {
@@ -276,29 +241,35 @@ window.uiComponents = (() => {
         cohortOrder.forEach(cohortId => {
             if (allBfResultsByCohort[cohortId]) {
                 const cohortResults = allBfResultsByCohort[cohortId];
-                Object.keys(cohortResults).forEach(metricName => {
-                    const result = cohortResults[metricName];
-                    if(result && result.bestResult) {
-                        hasContent = true;
-                        tableHTML += `
-                            <tr>
-                                <td>${getCohortDisplayName(cohortId)}</td>
-                                <td>${metricName}</td>
-                                <td>${formatNumber(result.bestResult.metricValue, 4, na, true)}</td>
-                                <td><code>${formatCriteriaFunc(result.bestResult.criteria, result.bestResult.logic, true)}</code></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary p-0 px-2" 
-                                            data-action="apply-saved-bf" 
-                                            data-cohort="${cohortId}" 
-                                            data-metric="${metricName}"
-                                            data-tippy-content="Apply this set of criteria to the 'Define T2 Malignancy Criteria' panel.">
-                                        Apply
-                                    </button>
-                                </td>
-                            </tr>
-                        `;
-                    }
-                });
+                const cohortMetrics = Object.keys(cohortResults);
+                
+                if (cohortMetrics.length > 0) {
+                    hasContent = true;
+                    tableHTML += `<tr><td colspan="5" class="text-start table-group-divider fw-bold pt-2">${getCohortDisplayName(cohortId)}</td></tr>`;
+
+                    cohortMetrics.sort((a,b) => a.localeCompare(b)).forEach(metricName => {
+                        const result = cohortResults[metricName];
+                        if(result && result.bestResult) {
+                            tableHTML += `
+                                <tr>
+                                    <td></td>
+                                    <td>${metricName}</td>
+                                    <td>${formatNumber(result.bestResult.metricValue, 4, na, true)}</td>
+                                    <td><code>${formatCriteriaFunc(result.bestResult.criteria, result.bestResult.logic, true)}</code></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary p-0 px-2" 
+                                                data-action="apply-saved-bf" 
+                                                data-cohort="${cohortId}" 
+                                                data-metric="${metricName}"
+                                                data-tippy-content="Apply this set of criteria to the 'Define T2 Criteria' panel.">
+                                            Apply
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                    });
+                }
             }
         });
 
@@ -431,14 +402,312 @@ window.uiComponents = (() => {
         `;
     }
 
+    function createAddedValueCardHTML(addedValueStats, t2SetName) {
+        const na = window.APP_CONFIG.NA_PLACEHOLDER;
+        const fCI_p = (m, k) => { 
+            const d = (k === 'auc' || k === 'f1' || k ==='youden' || k === 'balAcc') ? 3 : 1; 
+            const p = !(k === 'auc' || k === 'f1' || k ==='youden' || k === 'balAcc'); 
+            return formatCI(m?.value, m?.ci?.lower, m?.ci?.upper, d, p, na); 
+        };
+        
+        const fpData = addedValueStats?.t2FalsePositives;
+        const fnData = addedValueStats?.t2FalseNegatives;
+
+        if (!fpData || !fnData) {
+            return '<p class="text-muted small p-2">Added value analysis data not available.</p>';
+        }
+
+        const fpPerf = fpData.performanceAS;
+        const fnPerf = fnData.performanceAS;
+
+        return `
+            <div class="table-responsive">
+                <table class="table table-sm table-striped small mb-0">
+                    <thead class="small">
+                        <tr>
+                            <th data-tippy-content="Analysis of subgroups where the initial T2 criteria failed.">Subgroup (T2 Failure)</th>
+                            <th data-tippy-content="Number of patients in this subgroup.">N</th>
+                            <th data-tippy-content="Specificity of the Avocado Sign within this subgroup.">AS Specificity (95% CI)</th>
+                            <th data-tippy-content="Sensitivity of the Avocado Sign within this subgroup.">AS Sensitivity (95% CI)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>T2 False Positives (T2+, N-)</td>
+                            <td>${fpData.count}</td>
+                            <td data-tippy-content="Of the ${fpData.count} patients incorrectly flagged by T2 criteria, the Avocado Sign correctly identified ${formatPercent(fpPerf?.spec?.value, 1)} as negative.">${fCI_p(fpPerf?.spec, 'spec')}</td>
+                            <td>${na}</td>
+                        </tr>
+                        <tr>
+                            <td>T2 False Negatives (T2-, N+)</td>
+                            <td>${fnData.count}</td>
+                            <td>${na}</td>
+                            <td data-tippy-content="Of the ${fnData.count} patients missed by T2 criteria, the Avocado Sign correctly identified ${formatPercent(fnPerf?.sens?.value, 1)} as positive.">${fCI_p(fnPerf?.sens, 'sens')}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>`;
+    }
+
+    function createPowerAnalysisCardHTML(selectedStudyId) {
+        const texts = window.APP_CONFIG.UI_TEXTS.insightsTab.powerAnalysis;
+        const allStudySets = window.studyT2CriteriaManager.getAllStudyCriteriaSets();
+        const allBfResults = window.bruteForceManager.getAllResults();
+
+        let optionsHTML = '';
+        const createOptions = (sets) => sets.map(set => `<option value="${set.id}" ${selectedStudyId === set.id ? 'selected' : ''}>${set.name || set.id}</option>`).join('');
+
+        const groupedLitSets = allStudySets.reduce((acc, set) => {
+            const group = set.group || 'Other Literature Criteria';
+            if (!acc[group]) acc[group] = [];
+            acc[group].push(set);
+            return acc;
+        }, {});
+
+        const bfOptionsHTML = Object.keys(allBfResults).map(cohortId => {
+            const metric = window.APP_CONFIG.DEFAULT_SETTINGS.PUBLICATION_BRUTE_FORCE_METRIC;
+            if (allBfResults[cohortId]?.[metric]) {
+                const bfId = `bf_${cohortId}`;
+                return `<option value="${bfId}" ${selectedStudyId === bfId ? 'selected' : ''}>Best Case T2 (${getCohortDisplayName(cohortId)})</option>`;
+            }
+            return '';
+        }).join('');
+        
+        optionsHTML += `<optgroup label="Data-driven Best-Case Criteria">${bfOptionsHTML}</optgroup>`;
+        
+        const groupOrder = ['ESGAR Criteria', 'Other Literature Criteria'];
+        groupOrder.forEach(groupName => {
+            if (groupedLitSets[groupName]) {
+                optionsHTML += `<optgroup label="${groupName}">${createOptions(groupedLitSets[groupName])}</optgroup>`;
+            }
+        });
+
+        return `
+            <div class="row g-4">
+                <div class="col-md-5">
+                    <h6>Controls</h6>
+                    <div class="mb-3">
+                        <label for="power-analysis-study-select" class="form-label small">${texts.selectLabel}</label>
+                        <select class="form-select form-select-sm" id="power-analysis-study-select">${optionsHTML}</select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">${texts.modeLabel}</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="power-analysis-mode" id="power-mode-posthoc" value="posthoc" checked>
+                            <label class="form-check-label small" for="power-mode-posthoc">${texts.postHocModeLabel}</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="power-analysis-mode" id="power-mode-samplesize" value="samplesize">
+                            <label class="form-check-label small" for="power-mode-samplesize">${texts.sampleSizeModeLabel}</label>
+                        </div>
+                    </div>
+                    <div id="power-analysis-inputs"></div>
+                </div>
+                <div class="col-md-7 d-flex align-items-center justify-content-center bg-light rounded p-4">
+                    <div id="power-analysis-results" class="w-100"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    function createNodeCountAnalysisCardHTML(selectedLitSetId) {
+        const texts = window.APP_CONFIG.UI_TEXTS.insightsTab.nodeCountAnalysis;
+        const allStudySets = window.studyT2CriteriaManager.getAllStudyCriteriaSets();
+        
+        const createOptions = (sets) => sets.map(set => `<option value="${set.id}" ${selectedLitSetId === set.id ? 'selected' : ''}>${set.name || set.id}</option>`).join('');
+
+        const groupedLitSets = allStudySets.reduce((acc, set) => {
+            const group = set.group || 'Other Literature Criteria';
+            if (!acc[group]) acc[group] = [];
+            acc[group].push(set);
+            return acc;
+        }, {});
+        
+        let optionsHTML = '';
+        const groupOrder = ['ESGAR Criteria', 'Other Literature Criteria'];
+        groupOrder.forEach(groupName => {
+            if (groupedLitSets[groupName]) {
+                optionsHTML += `<optgroup label="${groupName}">${createOptions(groupedLitSets[groupName])}</optgroup>`;
+            }
+        });
+
+        return `
+            <div class="row g-4">
+                <div class="col-md-5">
+                    <h6>Controls</h6>
+                    <div class="mb-3">
+                        <label for="node-count-lit-set-select" class="form-label small">${texts.selectLabel}</label>
+                        <select class="form-select form-select-sm" id="node-count-lit-set-select">${optionsHTML}</select>
+                    </div>
+                </div>
+                <div class="col-md-7">
+                    <div id="node-count-analysis-results" class="w-100">
+                        <p class="text-muted small">Select a criteria set to view aggregate lymph node counts.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // --- NEW: Mismatch Analysis Component ---
+    function createMismatchAnalysisCardHTML(mismatchData) {
+        if (!mismatchData) return '<p class="text-muted small p-2">Mismatch data not available.</p>';
+        
+        const { falseNegatives, discordance } = mismatchData;
+        const texts = window.APP_CONFIG.UI_TEXTS.insightsTab.mismatchAnalysis;
+        const na = window.APP_CONFIG.NA_PLACEHOLDER;
+
+        // 1. Mismatch Matrix (Discordance)
+        const createDiscordanceCard = (title, count, description) => `
+            <div class="card h-100 border text-center">
+                <div class="card-body p-2 d-flex flex-column justify-content-center">
+                    <h6 class="card-subtitle mb-2 text-muted small">${title}</h6>
+                    <h3 class="card-title text-primary">${count}</h3>
+                    <p class="card-text small text-muted">${description}</p>
+                </div>
+            </div>
+        `;
+
+        const discordanceHTML = `
+            <div class="row g-2 mb-4">
+                <div class="col-md-3">${createDiscordanceCard(texts.concordantCorrect, discordance.bothCorrect.length, 'Both AS and T2 classified correctly.')}</div>
+                <div class="col-md-3">${createDiscordanceCard(texts.asSuperior, discordance.asCorrect.length, 'AS correct, T2 incorrect.')}</div>
+                <div class="col-md-3">${createDiscordanceCard(texts.t2Superior, discordance.t2Correct.length, 'T2 correct, AS incorrect.')}</div>
+                <div class="col-md-3">${createDiscordanceCard(texts.concordantIncorrect, discordance.bothWrong.length, 'Both AS and T2 classified incorrectly.')}</div>
+            </div>
+        `;
+
+        // 2. False Negatives Table
+        let fnRows = '';
+        if (falseNegatives && falseNegatives.length > 0) {
+            fnRows = falseNegatives.map(p => `
+                <tr>
+                    <td>${p.id}</td>
+                    <td>${p.age} / ${p.sex}</td>
+                    <td>${getCohortDisplayName(p.therapy)}</td>
+                    <td>${p.nStatus} (${p.countPathologyNodesPositive}/${p.countPathologyNodes})</td>
+                    <td>${formatNumber(p.maxNodeSize, 1, na)} mm</td>
+                    <td>${p.countT2Nodes}</td>
+                    <td><small class="text-muted">${p.notes || ''}</small></td>
+                </tr>
+            `).join('');
+        } else {
+            fnRows = '<tr><td colspan="7" class="text-center text-muted">No AS-False Negatives found (AS correctly identified all N+ patients).</td></tr>';
+        }
+
+        const fnTableHTML = `
+            <h6 class="mb-2">${texts.fnAnalysis} (AS-/N+, n=${falseNegatives.length})</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped small table-hover border">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Age/Sex</th>
+                            <th>Cohort</th>
+                            <th>Pathology (Pos/Total)</th>
+                            <th>Max T2 Size</th>
+                            <th>T2 Nodes</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>${fnRows}</tbody>
+                </table>
+            </div>
+        `;
+
+        return `
+            <div class="container-fluid p-0">
+                <p class="small text-muted mb-3">${texts.description}</p>
+                ${discordanceHTML}
+                ${fnTableHTML}
+            </div>
+        `;
+    }
+
+    // --- NEW: Size Analysis Component ---
+    function createSizeAnalysisCardHTML(sizeData) {
+        if (!sizeData) return '<p class="text-muted small p-2">Size analysis data not available.</p>';
+        const texts = window.APP_CONFIG.UI_TEXTS.insightsTab.sizeAnalysis;
+        const na = window.APP_CONFIG.NA_PLACEHOLDER;
+
+        // Statistics Table
+        const createStatsRow = (label, stats) => `
+            <tr>
+                <td>${label}</td>
+                <td>${formatNumber(stats.n, 0, na)}</td>
+                <td>${formatNumber(stats.mean, 1, na)} ± ${formatNumber(stats.sd, 1, na)}</td>
+                <td>${formatNumber(stats.median, 1, na)}</td>
+                <td>${formatNumber(stats.min, 1, na)} - ${formatNumber(stats.max, 1, na)}</td>
+            </tr>
+        `;
+
+        const statsTableHTML = `
+            <h6 class="mb-2">Descriptive Statistics (Short-axis Diameter, mm)</h6>
+            <div class="table-responsive mb-4">
+                <table class="table table-sm table-striped small table-hover border">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Group</th>
+                            <th>Count (Nodes)</th>
+                            <th>Mean ± SD</th>
+                            <th>Median</th>
+                            <th>Range</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${createStatsRow('All Nodes', sizeData.all.stats)}
+                        ${createStatsRow('Pathology Positive (N+, Patient-level proxy)', sizeData.nPos.stats)}
+                        ${createStatsRow('Pathology Negative (N-, Patient-level proxy)', sizeData.nNeg.stats)}
+                        ${createStatsRow('Avocado Sign Positive (AS+, Patient-level proxy)', sizeData.asPos.stats)}
+                        ${createStatsRow('Avocado Sign Negative (AS-, Patient-level proxy)', sizeData.asNeg.stats)}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        // Charts
+        const chartsHTML = `
+            <div class="row g-4 mb-4">
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header small fw-bold">${texts.sizeDistChart}</div>
+                        <div class="card-body p-2 d-flex align-items-center justify-content-center">
+                            <div id="chart-size-distribution" class="w-100" style="height: 300px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header small fw-bold">${texts.sizeBoxPlot}</div>
+                        <div class="card-body p-2 d-flex align-items-center justify-content-center">
+                            <div id="chart-size-boxplot" class="w-100" style="height: 300px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return `
+            <div class="container-fluid p-0">
+                <p class="small text-muted mb-3">${texts.description}</p>
+                ${statsTableHTML}
+                ${chartsHTML}
+            </div>
+        `;
+    }
+
     return Object.freeze({
         createDashboardCard,
         createT2CriteriaControls,
         createStatisticsCard,
-        createPublicationNav,
         createBruteForceModalContent,
         createBruteForceOverviewTableHTML,
         createBruteForceRunnerCardHTML,
-        createAnalysisContextBannerHTML
+        createAnalysisContextBannerHTML,
+        createAddedValueCardHTML,
+        createPowerAnalysisCardHTML,
+        createNodeCountAnalysisCardHTML,
+        createMismatchAnalysisCardHTML,
+        createSizeAnalysisCardHTML
     });
 })();

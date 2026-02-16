@@ -1,18 +1,18 @@
 window.publicationService = (() => {
 
     const contentGenerators = {
-        'title_main': window.titlePageGenerator.generateTitlePageHTML,
-        'abstract_main': window.abstractGenerator.generateAbstractHTML,
-        'introduction_main': window.introductionGenerator.generateIntroductionHTML,
-        'methoden_studienanlage_ethik': window.methodsGenerator.generateStudyDesignHTML,
-        'methoden_mrt_protokoll_akquisition': window.methodsGenerator.generateMriProtocolAndImageAnalysisHTML,
-        'methoden_vergleichskriterien_t2': window.methodsGenerator.generateComparativeCriteriaHTML,
-        'methoden_referenzstandard_histopathologie': window.methodsGenerator.generateReferenceStandardHTML,
-        'methoden_statistische_analyse_methoden': window.methodsGenerator.generateStatisticalAnalysisHTML,
-        'ergebnisse_patientencharakteristika': window.resultsGenerator.generatePatientCharacteristicsHTML,
-        'ergebnisse_vergleich_as_vs_t2': window.resultsGenerator.generateComparisonHTML,
-        'discussion_main': window.discussionGenerator.generateDiscussionHTML,
-        'stard_checklist': window.stardGenerator.renderStardChecklist
+        'title_main': window.generators.titlePageGenerator.generateTitlePageHTML,
+        'abstract_main': window.generators.abstractGenerator.generateAbstractHTML,
+        'introduction_main': window.generators.introductionGenerator.generateIntroductionHTML,
+        'methoden_studienanlage_ethik': window.generators.methodsGenerator.generateStudyDesignHTML,
+        'methoden_mrt_protokoll_akquisition': window.generators.methodsGenerator.generateMriProtocolAndImageAnalysisHTML,
+        'methoden_vergleichskriterien_t2': window.generators.methodsGenerator.generateComparativeCriteriaHTML,
+        'methoden_referenzstandard_histopathologie': window.generators.methodsGenerator.generateReferenceStandardHTML,
+        'methoden_statistische_analyse_methoden': window.generators.methodsGenerator.generateStatisticalAnalysisHTML,
+        'ergebnisse_patientencharakteristika': window.generators.resultsGenerator.generatePatientCharacteristicsHTML,
+        'ergebnisse_vergleich_as_vs_t2': window.generators.resultsGenerator.generateComparisonHTML,
+        'discussion_main': window.generators.discussionGenerator.generateDiscussionHTML,
+        'stard_checklist': window.generators.stardGenerator.renderStardChecklist
     };
 
     function _generateAbbreviationsHTML(fullHtmlContent) {
@@ -20,14 +20,25 @@ window.publicationService = (() => {
             'AS': 'Avocado Sign',
             'AUC': 'Area under the receiver operating characteristic curve',
             'CI': 'Confidence interval',
-            'nCRT': 'neoadjuvant chemoradiotherapy',
-            'T2w': 'T2-weighted',
-            'VIBE': 'volumetric interpolated breath-hold examination',
             'DWI': 'diffusion-weighted imaging',
+            'ER': 'European Radiology',
             'ESGAR': 'European Society of Gastrointestinal and Abdominal Radiology',
-            'STARD': 'Standards for Reporting of Diagnostic Accuracy Studies'
+            'ESR': 'European Society of Radiology',
+            'GDPR': 'General Data Protection Regulation',
+            'IQR': 'Interquartile Range',
+            'MDT': 'Multidisciplinary Tumour Board',
+            'nCRT': 'neoadjuvant chemoradiotherapy',
+            'NPV': 'Negative predictive value',
+            'PPV': 'Positive predictive value',
+            'SD': 'Standard Deviation',
+            'STARD': 'Standards for Reporting of Diagnostic Accuracy Studies',
+            'T2w': 'T2-weighted',
+            'TNT': 'Total Neoadjuvant Therapy',
+            'TSE': 'turbo spin-echo',
+            'VIBE': 'volumetric interpolated breath-hold examination'
         };
 
+        const coreAbbreviations = new Set(['AS', 'AUC', 'CI', 'DWI', 'ESGAR', 'ESR', 'GDPR', 'nCRT', 'NPV', 'PPV', 'T2w', 'TNT']);
         const textContent = fullHtmlContent.replace(/<[^>]+>/g, ' ');
         const counts = {};
 
@@ -38,8 +49,12 @@ window.publicationService = (() => {
         });
 
         const validAbbreviations = Object.entries(counts)
-            .filter(([abbr, count]) => count >= 5)
-            .sort((a, b) => b[1] - a[1])
+            .filter(([abbr, count]) => {
+                if (!potentialAbbreviations[abbr]) return false;
+                const isCore = coreAbbreviations.has(abbr);
+                return (isCore && count > 0) || count >= 5;
+            })
+            .sort((a, b) => a[0].localeCompare(b[0]))
             .slice(0, 10)
             .map(([abbr]) => `<li><strong>${abbr}</strong> = ${potentialAbbreviations[abbr]}</li>`)
             .join('');
@@ -59,7 +74,6 @@ window.publicationService = (() => {
             try {
                 return generator(stats, commonData);
             } catch (error) {
-                console.error(`Error in generator for section '${sectionId}':`, error);
                 return `<div class="alert alert-danger">An error occurred while generating content for section '${sectionId}'. Check console for details.</div>`;
             }
         }
@@ -73,7 +87,6 @@ window.publicationService = (() => {
                     try {
                         combinedHTML += subGenerator(stats, commonData);
                     } catch (error) {
-                        console.error(`Error in sub-generator for section '${sub.id}' (part of '${sectionId}'):`, error);
                         combinedHTML += `<div class="alert alert-danger">An error occurred while generating content for sub-section '${sub.label}'. Check console for details.</div>`;
                     }
                 }
@@ -93,40 +106,32 @@ window.publicationService = (() => {
             return '<div class="alert alert-warning">Statistical data or common configuration is missing for publication generation.</div>';
         }
 
-        let titlePageHTML = generateSectionHTML('title_main', allCohortStats, commonData);
-        let mainContentHTML = '';
-
+        let mainBodyHTML = '';
         window.PUBLICATION_CONFIG.sections.forEach(section => {
-            if (section.id === 'references_main' || section.id === 'title_main' || section.id === 'stard_checklist') {
+            if (['title_main', 'references_main', 'stard_checklist'].includes(section.id)) {
                 return;
             }
-
             const sectionLabel = window.APP_CONFIG.UI_TEXTS.publicationTab.sectionLabels[section.labelKey] || section.labelKey;
-            
-            mainContentHTML += `<section id="${section.id}">`;
-            mainContentHTML += `<h2>${sectionLabel}</h2>`;
-            mainContentHTML += generateSectionHTML(section.id, allCohortStats, commonData);
-            mainContentHTML += `</section>`;
+            mainBodyHTML += `<section id="${section.id}"><h2>${sectionLabel}</h2>`;
+            mainBodyHTML += generateSectionHTML(section.id, allCohortStats, commonData);
+            mainBodyHTML += `</section>`;
         });
         
-        const fullRawContent = titlePageHTML + mainContentHTML;
-        const abbreviationsHTML = _generateAbbreviationsHTML(fullRawContent);
-        
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = titlePageHTML;
-        const titlePageElement = tempDiv.querySelector('#title_main');
-        if (titlePageElement) {
-            const summaryElement = titlePageElement.querySelector('p > strong');
-            if (summaryElement && summaryElement.parentElement) {
-                summaryElement.parentElement.insertAdjacentHTML('afterend', abbreviationsHTML);
-            } else {
-                 titlePageElement.innerHTML += abbreviationsHTML;
+        let titlePageHTML = generateSectionHTML('title_main', allCohortStats, commonData);
+        const abbreviationsHTML = _generateAbbreviationsHTML(mainBodyHTML);
+
+        if (abbreviationsHTML) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = titlePageHTML;
+            const keyResultsList = tempDiv.querySelector('h4+ul'); 
+            if (keyResultsList) {
+                keyResultsList.insertAdjacentHTML('afterend', abbreviationsHTML);
+                titlePageHTML = tempDiv.innerHTML;
             }
         }
-        titlePageHTML = tempDiv.innerHTML;
-
+        
         const allReferences = commonData?.references || {};
-        const { processedHtml, referencesHtml } = window.referencesGenerator.processAndNumberReferences(mainContentHTML, allReferences);
+        const { processedHtml, referencesHtml } = window.generators.referencesGenerator.processAndNumberReferences(mainBodyHTML, allReferences);
         
         const stardHtml = generateSectionHTML('stard_checklist', allCohortStats, commonData);
 
